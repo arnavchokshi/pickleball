@@ -71,7 +71,10 @@ struct DinkVisionRuntimeConfiguration: Equatable {
         case .empty:
             return DinkVisionReplayListDataSource(loadPackages: { _ in [] })
         case .seeded:
-            return DinkVisionReplayListDataSource(loadPackages: { _ in [Self.seededReplayItem] })
+            return DinkVisionReplayListDataSource(
+                loadPackages: { _ in [Self.seededReplayItem] },
+                bundledSamplePackageIDs: [Self.seededReplayItem.sessionID]
+            )
         }
     }
 
@@ -93,8 +96,9 @@ struct DinkVisionRuntimeConfiguration: Equatable {
         preferences: UserDefaults = .standard
     ) -> DinkVisionUploadCoordinator {
         let client = makePresignedUploadClient(tokenStore: tokenStore)
+        let jobClient = makeRenderGatewayClient(tokenStore: tokenStore)
         return DinkVisionUploadCoordinator(
-            queue: UploadQueue(client: client),
+            queue: UploadQueue(client: client, jobClient: jobClient),
             packageRootURL: CameraCaptureController.defaultPackageRootURL(),
             hasAccessToken: { tokenStore.hasAccessToken },
             preferences: preferences

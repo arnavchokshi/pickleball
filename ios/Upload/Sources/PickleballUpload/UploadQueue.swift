@@ -12,6 +12,7 @@ public enum CaptureUploadStateKind: String, Codable, Equatable, Sendable {
 /// contract; the remaining fields preserve server identity and honest status.
 public struct CaptureUploadState: Codable, Equatable, Sendable {
     public var state: CaptureUploadStateKind
+    public var captureId: String?
     public var clipId: String?
     public var uploadedParts: [Int]
     public var bytesUploaded: Int64
@@ -20,11 +21,15 @@ public struct CaptureUploadState: Codable, Equatable, Sendable {
     public var lastError: String?
     public var serverStatus: String?
     public var jobId: String?
+    public var manifestUrl: String?
+    public var missingCapabilities: [RenderGatewayMissingCapability]
+    public var trustBands: [String: RenderGatewayTrustBand?]
     public var videoCompleted: Bool
     public var sidecarUploaded: Bool
 
     public init(
         state: CaptureUploadStateKind,
+        captureId: String? = nil,
         clipId: String? = nil,
         uploadedParts: [Int] = [],
         bytesUploaded: Int64 = 0,
@@ -33,10 +38,14 @@ public struct CaptureUploadState: Codable, Equatable, Sendable {
         lastError: String? = nil,
         serverStatus: String? = nil,
         jobId: String? = nil,
+        manifestUrl: String? = nil,
+        missingCapabilities: [RenderGatewayMissingCapability] = [],
+        trustBands: [String: RenderGatewayTrustBand?] = [:],
         videoCompleted: Bool = false,
         sidecarUploaded: Bool = false
     ) {
         self.state = state
+        self.captureId = captureId
         self.clipId = clipId
         self.uploadedParts = uploadedParts
         self.bytesUploaded = bytesUploaded
@@ -45,6 +54,9 @@ public struct CaptureUploadState: Codable, Equatable, Sendable {
         self.lastError = lastError
         self.serverStatus = serverStatus
         self.jobId = jobId
+        self.manifestUrl = manifestUrl
+        self.missingCapabilities = missingCapabilities
+        self.trustBands = trustBands
         self.videoCompleted = videoCompleted
         self.sidecarUploaded = sidecarUploaded
     }
@@ -56,6 +68,7 @@ public struct CaptureUploadState: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case state
+        case captureId = "capture_id"
         case clipId = "clip_id"
         case uploadedParts = "uploaded_parts"
         case bytesUploaded = "bytes_uploaded"
@@ -64,8 +77,96 @@ public struct CaptureUploadState: Codable, Equatable, Sendable {
         case lastError = "last_error"
         case serverStatus = "server_status"
         case jobId = "job_id"
+        case manifestUrl = "manifest_url"
+        case missingCapabilities = "missing_capabilities"
+        case trustBands = "trust_bands"
         case videoCompleted = "video_completed"
         case sidecarUploaded = "sidecar_uploaded"
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        state = try container.decode(CaptureUploadStateKind.self, forKey: .state)
+        captureId = try container.decodeIfPresent(String.self, forKey: .captureId)
+        clipId = try container.decodeIfPresent(String.self, forKey: .clipId)
+        uploadedParts = try container.decodeIfPresent([Int].self, forKey: .uploadedParts) ?? []
+        bytesUploaded = try container.decodeIfPresent(Int64.self, forKey: .bytesUploaded) ?? 0
+        totalBytes = try container.decode(Int64.self, forKey: .totalBytes)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        lastError = try container.decodeIfPresent(String.self, forKey: .lastError)
+        serverStatus = try container.decodeIfPresent(String.self, forKey: .serverStatus)
+        jobId = try container.decodeIfPresent(String.self, forKey: .jobId)
+        manifestUrl = try container.decodeIfPresent(String.self, forKey: .manifestUrl)
+        missingCapabilities = try container.decodeIfPresent([RenderGatewayMissingCapability].self, forKey: .missingCapabilities) ?? []
+        trustBands = try container.decodeIfPresent([String: RenderGatewayTrustBand?].self, forKey: .trustBands) ?? [:]
+        videoCompleted = try container.decodeIfPresent(Bool.self, forKey: .videoCompleted) ?? false
+        sidecarUploaded = try container.decodeIfPresent(Bool.self, forKey: .sidecarUploaded) ?? false
+    }
+}
+
+public struct CaptureReplayReady: Equatable, Sendable {
+    public var captureId: String
+    public var clipId: String
+    public var jobId: String
+    public var manifestURL: URL
+    public var status: RenderGatewayJobStatus
+    public var missingCapabilities: [RenderGatewayMissingCapability]
+    public var trustBands: [String: RenderGatewayTrustBand?]
+}
+
+public enum CaptureReplayNotReady: Equatable, Sendable {
+    case notUploaded
+    case uploading
+    case processing(String?)
+    case failed(String?)
+    case missingIdentity
+    case identityMismatch(expectedCaptureId: String, persistedCaptureId: String)
+    case missingManifest
+    case invalidManifestURL(String)
+}
+
+public enum CaptureReplayAvailability: Equatable, Sendable {
+    case ready(CaptureReplayReady)
+    case notReady(CaptureReplayNotReady)
+}
+
+extension CaptureUploadState {
+    /// Fail-closed row routing. A replay can open only when the persisted
+    /// capture -> clip -> job -> manifest chain belongs to the selected row.
+    public func replayAvailability(expectedCaptureId: String) -> CaptureReplayAvailability {
+        guard let captureId else {
+            return .notReady(.missingIdentity)
+        }
+        guard captureId == expectedCaptureId else {
+            return .notReady(.identityMismatch(expectedCaptureId: expectedCaptureId, persistedCaptureId: captureId))
+        }
+        switch state {
+        case .queued: return .notReady(.notUploaded)
+        case .uploading: return .notReady(.uploading)
+        case .failed: return .notReady(.failed(lastError))
+        case .uploaded: break
+        }
+        guard let clipId, !clipId.isEmpty, let jobId, !jobId.isEmpty else {
+            return .notReady(.missingIdentity)
+        }
+        guard let status = serverStatus.flatMap(RenderGatewayJobStatus.init(rawValue:)), status == .complete || status == .partial else {
+            return .notReady(.processing(serverStatus))
+        }
+        guard let manifestUrl, !manifestUrl.isEmpty else {
+            return .notReady(.missingManifest)
+        }
+        guard let manifestURL = URL(string: manifestUrl), manifestURL.scheme != nil else {
+            return .notReady(.invalidManifestURL(manifestUrl))
+        }
+        return .ready(CaptureReplayReady(
+            captureId: captureId,
+            clipId: clipId,
+            jobId: jobId,
+            manifestURL: manifestURL,
+            status: status,
+            missingCapabilities: missingCapabilities,
+            trustBands: trustBands
+        ))
     }
 }
 
@@ -119,6 +220,13 @@ public protocol UploadQueueClient: Sendable {
     func listClips() async throws -> [ServerClipRecord]
 }
 
+public protocol RenderGatewayJobClient: Sendable {
+    func fetchJobStatus(_ statusPath: String) async throws -> RenderGatewayJob
+    func manifestURL(for job: RenderGatewayJob) -> URL?
+}
+
+extension RenderGatewayClient: RenderGatewayJobClient {}
+
 public enum UploadQueueError: Error, Equatable, Sendable {
     case missingVideo(String)
     case missingSidecar(String)
@@ -138,14 +246,20 @@ public actor UploadQueue {
     }
 
     private let client: any UploadQueueClient
+    private let jobClient: (any RenderGatewayJobClient)?
     private let partSizeBytes: Int64
     private var pending: [CaptureUploadPackage] = []
     private var attempts: [String: ActiveAttempt] = [:]
     private var isDraining = false
     private var activePackageID: String?
 
-    public init(client: any UploadQueueClient, partSizeBytes: Int64 = UploadQueue.defaultPartSizeBytes) {
+    public init(
+        client: any UploadQueueClient,
+        jobClient: (any RenderGatewayJobClient)? = nil,
+        partSizeBytes: Int64 = UploadQueue.defaultPartSizeBytes
+    ) {
         self.client = client
+        self.jobClient = jobClient
         self.partSizeBytes = partSizeBytes
     }
 
@@ -156,8 +270,9 @@ public actor UploadQueue {
             throw UploadQueueError.missingSidecar(package.sidecarURL.path)
         }
         var state = (try? Self.readState(for: package))
-            ?? CaptureUploadState(state: .queued, totalBytes: totalBytes)
+            ?? CaptureUploadState(state: .queued, captureId: package.packageID, totalBytes: totalBytes)
         guard state.state != .uploaded else { return state }
+        state.captureId = package.packageID
         state.state = .queued
         state.totalBytes = totalBytes
         state.updatedAt = Date()
@@ -223,9 +338,48 @@ public actor UploadQueue {
         do {
             let clip = try await client.listClips().first { $0.id == clipID }
             if let clip {
-                state.serverStatus = clip.status
+                state.captureId = package.packageID
+                if state.jobId != clip.jobId {
+                    state.manifestUrl = nil
+                    state.missingCapabilities = []
+                    state.trustBands = [:]
+                }
                 state.jobId = clip.jobId
-                state.lastError = nil
+                if let jobId = clip.jobId, let jobClient {
+                    let job = try await jobClient.fetchJobStatus("/api/jobs/\(jobId)")
+                    guard job.id == jobId else {
+                        state.manifestUrl = nil
+                        state.lastError = "Job identity mismatch: expected \(jobId), received \(job.id)"
+                        state.updatedAt = Date()
+                        try? Self.writeState(state, for: package)
+                        return state
+                    }
+                    if let jobClipId = job.clipId, jobClipId != clipID {
+                        state.manifestUrl = nil
+                        state.lastError = "Clip identity mismatch: expected \(clipID), received \(jobClipId)"
+                        state.updatedAt = Date()
+                        try? Self.writeState(state, for: package)
+                        return state
+                    }
+                    state.serverStatus = job.status.rawValue
+                    state.missingCapabilities = job.effectiveMissingCapabilities
+                    state.trustBands = job.effectiveTrustBands
+                    if job.isInspectable {
+                        state.manifestUrl = jobClient.manifestURL(for: job)?.absoluteString
+                        state.lastError = state.manifestUrl == nil
+                            ? "Inspectable job \(jobId) did not advertise a manifest URL"
+                            : nil
+                    } else {
+                        state.manifestUrl = nil
+                        state.lastError = job.status == .failed ? (job.error ?? "Job failed") : nil
+                    }
+                } else {
+                    state.serverStatus = clip.status
+                    state.manifestUrl = nil
+                    state.missingCapabilities = []
+                    state.trustBands = [:]
+                    state.lastError = nil
+                }
             } else {
                 state.lastError = "Uploaded clip \(clipID) was not returned by GET /api/clips"
             }
@@ -246,6 +400,7 @@ public actor UploadQueue {
     private func process(_ package: CaptureUploadPackage) async {
         do {
             var state = try Self.readState(for: package)
+            state.captureId = package.packageID
             state.state = .uploading
             state.updatedAt = Date()
             state.lastError = nil
@@ -263,6 +418,10 @@ public actor UploadQueue {
                 attempt = ActiveAttempt(target: target, completedParts: [])
                 attempts[package.packageID] = attempt
                 state.clipId = target.id
+                state.jobId = nil
+                state.manifestUrl = nil
+                state.missingCapabilities = []
+                state.trustBands = [:]
                 state.uploadedParts = []
                 state.bytesUploaded = 0
                 state.videoCompleted = false

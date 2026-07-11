@@ -3,6 +3,7 @@ import Foundation
 import CoreGraphics
 import PickleballCapture
 import PickleballCore
+import PickleballUpload
 @testable import Pickleball
 
 final class DinkVisionStateTests: XCTestCase {
@@ -244,6 +245,63 @@ final class DinkVisionStateTests: XCTestCase {
         let rows = try DinkVisionReplayListDataSource(packageRootURL: root).loadRows()
 
         XCTAssertTrue(rows.isEmpty)
+    }
+
+    @MainActor
+    func testReplayRouterNeverUsesFixtureForRealCaptureAndPreservesPartialState() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dinkvision-real-replay-route-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        try Self.writeCapture(root: root, sessionID: "capture-own", startedAt: "2026-07-10T10:00:00Z", duration: 30)
+        let row = try XCTUnwrap(DinkVisionReplayListDataSource(packageRootURL: root).loadRows().first)
+        XCTAssertEqual(row.source, .capture("capture-own"))
+        XCTAssertEqual(DinkVisionReplayRouter.route(row: row, uploadState: nil), .notReady(.notUploaded))
+
+        let state = CaptureUploadState(
+            state: .uploaded,
+            captureId: "capture-own",
+            clipId: "clip-own",
+            totalBytes: 10,
+            serverStatus: "partial",
+            jobId: "job-own",
+            manifestUrl: "https://api.example.test/api/jobs/job-own/manifest",
+            missingCapabilities: [
+                RenderGatewayMissingCapability(capability: "body", reason: "BODY output missing"),
+            ],
+            trustBands: [
+                "body": RenderGatewayTrustBand(fields: ["badge": .string("preview")]),
+            ]
+        )
+
+        guard case .manifest(let route) = DinkVisionReplayRouter.route(row: row, uploadState: state) else {
+            return XCTFail("partial output should be inspectable")
+        }
+        XCTAssertEqual(route.captureId, "capture-own")
+        XCTAssertEqual(route.jobId, "job-own")
+        XCTAssertEqual(route.status, .partial)
+        XCTAssertEqual(route.missingCapabilities.first?.capability, "body")
+        let bodyBand = route.trustBands["body"] ?? nil
+        XCTAssertEqual(bodyBand?.badge, "preview")
+
+        var wrongState = state
+        wrongState.captureId = "capture-other"
+        XCTAssertEqual(
+            DinkVisionReplayRouter.route(row: row, uploadState: wrongState),
+            .notReady(.identityMismatch(expectedCaptureId: "capture-own", persistedCaptureId: "capture-other"))
+        )
+    }
+
+    @MainActor
+    func testOnlyExplicitSeededSampleRowRoutesToBundledFixture() throws {
+        let configuration = DinkVisionRuntimeConfiguration.current(
+            arguments: ["app", "-dinkvision.walker", "-dinkvision.replays", "seeded"],
+            environment: [:],
+            infoDictionary: [:]
+        )
+        let row = try XCTUnwrap(configuration.makeReplayDataSource().loadRows().first)
+
+        XCTAssertEqual(row.source, .bundledSample)
+        XCTAssertEqual(DinkVisionReplayRouter.route(row: row, uploadState: nil), .bundledSample)
     }
 
     private static func writeCapture(

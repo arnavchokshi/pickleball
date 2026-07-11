@@ -1230,8 +1230,8 @@ private struct DinkVisionReplaysScreen: View {
     @State private var rows: [DinkVisionReplayRow] = []
     @State private var isLoading = true
     @State private var errorText: String?
-    @State private var selectedRow: DinkVisionReplayRow?
-    @State private var openingRow: DinkVisionReplayRow?
+    @State private var selectedReplay: DinkVisionReplaySelection?
+    @State private var openingReplay: DinkVisionReplaySelection?
     @State private var isVideoPickerPresented = false
     @StateObject private var importCoordinator: CameraRollImportCoordinator
     private let dataSource: DinkVisionReplayListDataSource
@@ -1285,7 +1285,9 @@ private struct DinkVisionReplaysScreen: View {
                                 DinkVisionReplayRowView(
                                     row: row,
                                     uploadState: uploadCoordinator.state(for: row.id),
-                                    onOpen: { openReplay(row) },
+                                    onOpen: {
+                                        openReplay(row, uploadState: uploadCoordinator.state(for: row.id))
+                                    },
                                     onUpload: { uploadCoordinator.requestUpload(item: row.item) },
                                     onRetry: { uploadCoordinator.requestRetry(item: row.item) }
                                 )
@@ -1297,9 +1299,9 @@ private struct DinkVisionReplaysScreen: View {
                     .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding)
                 }
 
-                if let openingRow {
+                if let openingReplay {
                     DinkVisionReplaySwooshOverlay(
-                        durationText: openingRow.durationText,
+                        durationText: openingReplay.row.durationText,
                         reduceMotion: reduceMotion
                     )
                     .transition(.opacity)
@@ -1330,10 +1332,14 @@ private struct DinkVisionReplaysScreen: View {
                     }
                 )
             }
-            .animation(.spring(response: 0.28, dampingFraction: 0.86), value: openingRow?.id)
-            .fullScreenCover(item: $selectedRow) { row in
-                DinkVisionReplayPlaybackScreen(row: row, configuration: configuration) {
-                    selectedRow = nil
+            .animation(.spring(response: 0.28, dampingFraction: 0.86), value: openingReplay?.id)
+            .fullScreenCover(item: $selectedReplay) { selection in
+                DinkVisionReplayPlaybackScreen(
+                    row: selection.row,
+                    route: selection.route,
+                    configuration: configuration
+                ) {
+                    selectedReplay = nil
                 }
             }
         }
@@ -1352,20 +1358,24 @@ private struct DinkVisionReplaysScreen: View {
         isLoading = false
     }
 
-    private func openReplay(_ row: DinkVisionReplayRow) {
+    private func openReplay(_ row: DinkVisionReplayRow, uploadState: CaptureUploadState?) {
+        let selection = DinkVisionReplaySelection(
+            row: row,
+            route: DinkVisionReplayRouter.route(row: row, uploadState: uploadState)
+        )
         let delay = DinkVisionReplayOpenTransition.durationNanoseconds(reducedMotion: reduceMotion)
         guard delay > 0 else {
-            selectedRow = row
+            selectedReplay = selection
             return
         }
 
-        openingRow = row
+        openingReplay = selection
         Task {
             try? await Task.sleep(nanoseconds: delay)
             await MainActor.run {
-                if openingRow?.id == row.id {
-                    selectedRow = row
-                    openingRow = nil
+                if openingReplay?.id == row.id {
+                    selectedReplay = selection
+                    openingReplay = nil
                 }
             }
         }
@@ -1630,6 +1640,7 @@ private struct DinkVisionEmptyReplaysView: View {
 
 private struct DinkVisionReplayPlaybackScreen: View {
     let row: DinkVisionReplayRow
+    let route: DinkVisionReplayRoute
     let configuration: DinkVisionRuntimeConfiguration
     let onClose: () -> Void
     @State private var loadedBundle: WorldBundle?
@@ -1672,7 +1683,7 @@ private struct DinkVisionReplayPlaybackScreen: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(row.title)
                         .font(.system(size: 17, weight: .heavy, design: .rounded))
-                    Text("Existing replay module. Bundled sample until this capture has server output.")
+                    Text(routeStatusText)
                         .font(.caption.weight(.semibold))
                         .lineLimit(2)
                 }
@@ -1695,11 +1706,65 @@ private struct DinkVisionReplayPlaybackScreen: View {
         }
         .accessibilityIdentifier("DinkVisionScreen-ReplayPlayback")
         .task {
-            do {
-                loadedBundle = try WorldBundle.loadBundledSample()
-            } catch {
-                loadError = "Could not load the replay viewer fixture."
+            switch route {
+            case .bundledSample:
+                do {
+                    loadedBundle = try WorldBundle.loadBundledSample()
+                } catch {
+                    loadError = "Could not load the explicit sample replay."
+                }
+            case .manifest(let manifestRoute):
+                let client = configuration.makeRenderGatewayClient()
+                do {
+                    loadedBundle = try await WorldBundle.load(
+                        manifestURL: manifestRoute.manifestURL,
+                        dataLoader: { url in try await client.fetchData(at: url) }
+                    )
+                } catch {
+                    loadError = "Could not load this capture's replay: \(String(describing: error))"
+                }
+            case .notReady(let reason):
+                loadError = Self.notReadyText(reason)
             }
+        }
+    }
+
+    private var routeStatusText: String {
+        switch route {
+        case .bundledSample:
+            return "Sample replay"
+        case .manifest(let manifestRoute):
+            if manifestRoute.status == .partial {
+                let names = manifestRoute.missingCapabilities.map(\.capability)
+                return names.isEmpty ? "Partial replay" : "Partial replay · Missing: \(names.joined(separator: ", "))"
+            }
+            if let loadedBundle, !loadedBundle.assetIssues.isEmpty {
+                return "Replay ready · \(loadedBundle.assetIssues.count) optional asset issue(s)"
+            }
+            return "Replay ready · job \(manifestRoute.jobId)"
+        case .notReady(let reason):
+            return Self.notReadyText(reason)
+        }
+    }
+
+    private static func notReadyText(_ reason: CaptureReplayNotReady) -> String {
+        switch reason {
+        case .notUploaded:
+            return "Replay not ready: upload this capture first."
+        case .uploading:
+            return "Replay not ready: upload is still in progress."
+        case .processing(let status):
+            return "Replay not ready: server status is \(status ?? "unknown")."
+        case .failed(let message):
+            return "Replay failed: \(message ?? "unknown error")"
+        case .missingIdentity:
+            return "Replay not ready: capture, clip, or job identity is missing."
+        case .identityMismatch:
+            return "Replay blocked: the saved output belongs to a different capture."
+        case .missingManifest:
+            return "Replay not ready: the job has no ready manifest."
+        case .invalidManifestURL:
+            return "Replay blocked: the saved manifest URL is invalid."
         }
     }
 }

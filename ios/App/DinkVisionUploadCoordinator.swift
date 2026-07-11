@@ -137,6 +137,7 @@ final class DinkVisionUploadCoordinator: ObservableObject {
             } catch {
                 states[packageID] = CaptureUploadState(
                     state: .failed,
+                    captureId: packageID,
                     totalBytes: states[packageID]?.totalBytes ?? 0,
                     lastError: String(describing: error)
                 )
@@ -191,6 +192,13 @@ extension CaptureUploadState {
         case .uploading:
             return "Uploading \(Int((fractionCompleted * 100).rounded()))%"
         case .uploaded:
+            if serverStatus == RenderGatewayJobStatus.partial.rawValue {
+                let count = missingCapabilities.count
+                return count == 1 ? "Partial — 1 capability missing" : "Partial — \(count) capabilities missing"
+            }
+            if serverStatus == RenderGatewayJobStatus.complete.rawValue, manifestUrl != nil {
+                return "Replay ready"
+            }
             if serverStatus == "uploaded", jobId == nil {
                 return "Uploaded — processing not started"
             }

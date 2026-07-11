@@ -244,6 +244,74 @@ final class UploadQueueTests: XCTestCase {
         XCTAssertEqual(requests[5].bodyData, fixture.sidecar)
         XCTAssertEqual(requests[0].request.value(forHTTPHeaderField: "Authorization"), "Bearer access-token")
     }
+
+    func testCompletedJobPersistsOwnCaptureClipJobManifestIdentity() async throws {
+        StubURLProtocol.box.reset()
+        defer { StubURLProtocol.box.reset() }
+        let fixture = try PackageFixture(
+            packageID: "capture-own",
+            video: Data("own-video".utf8),
+            sidecar: Data("own-sidecar".utf8)
+        )
+        defer { fixture.remove() }
+        StubURLProtocol.box.handler = { request in
+            XCTAssertEqual(request.url?.path, "/api/jobs/job_own")
+            return StubbedResponse(statusCode: 200, json: [
+                "id": "job_own",
+                "clip_id": "clip_1",
+                "status": "partial",
+                "missing_capabilities": [["capability": "body", "reason": "BODY output missing"]],
+                "trust_bands": ["body": ["badge": "preview", "stage": "BODY"]],
+                "result": ["manifest_url": "/api/jobs/job_own/manifest"],
+                "links": ["status": "/api/jobs/job_own"],
+            ])
+        }
+        let gateway = RenderGatewayClient(
+            baseURL: URL(string: "https://api.example.test")!,
+            session: makeStubbedSession()
+        )
+        let queue = UploadQueue(
+            client: FakeUploadQueueClient(listedJobId: "job_own"),
+            jobClient: gateway,
+            partSizeBytes: 4
+        )
+
+        _ = try await queue.enqueue(fixture.package)
+        await queue.processPending()
+
+        let state = try UploadQueue.readState(for: fixture.package)
+        XCTAssertEqual(state.captureId, "capture-own")
+        XCTAssertEqual(state.clipId, "clip_1")
+        XCTAssertEqual(state.jobId, "job_own")
+        XCTAssertEqual(state.serverStatus, "partial")
+        XCTAssertEqual(state.manifestUrl, "https://api.example.test/api/jobs/job_own/manifest")
+        XCTAssertEqual(state.missingCapabilities.first?.capability, "body")
+        guard case .ready(let ready) = state.replayAvailability(expectedCaptureId: "capture-own") else {
+            return XCTFail("matching capture should be inspectable")
+        }
+        XCTAssertEqual(ready.jobId, "job_own")
+        XCTAssertEqual(ready.manifestURL.absoluteString, state.manifestUrl)
+        XCTAssertEqual(
+            state.replayAvailability(expectedCaptureId: "capture-other"),
+            .notReady(.identityMismatch(expectedCaptureId: "capture-other", persistedCaptureId: "capture-own"))
+        )
+    }
+
+    func testUploadedRowWithoutReadyManifestHasTypedNotReadyState() {
+        let state = CaptureUploadState(
+            state: .uploaded,
+            captureId: "capture-1",
+            clipId: "clip-1",
+            totalBytes: 10,
+            serverStatus: "running",
+            jobId: "job-1"
+        )
+
+        XCTAssertEqual(
+            state.replayAvailability(expectedCaptureId: "capture-1"),
+            .notReady(.processing("running"))
+        )
+    }
 }
 
 private struct PackageFixture {
@@ -282,11 +350,17 @@ private actor FakeUploadQueueClient: UploadQueueClient {
     private var remainingSidecarFailures: Int
     private var sidecarData: Data?
     private let observedPackage: CaptureUploadPackage?
+    private let listedJobId: String?
     private var stateObservations: [CaptureUploadStateKind] = []
 
-    init(failSidecarCount: Int = 0, observedPackage: CaptureUploadPackage? = nil) {
+    init(
+        failSidecarCount: Int = 0,
+        observedPackage: CaptureUploadPackage? = nil,
+        listedJobId: String? = nil
+    ) {
         remainingSidecarFailures = failSidecarCount
         self.observedPackage = observedPackage
+        self.listedJobId = listedJobId
     }
 
     func createClip(filename: String, sizeBytes: Int64, partSizeBytes: Int64) async throws -> PresignedClipUploadTarget {
@@ -352,7 +426,7 @@ private actor FakeUploadQueueClient: UploadQueueClient {
             status: "uploaded",
             sizeBytes: 10,
             key: "raw/user/clip_1/clip.mov",
-            jobId: nil,
+            jobId: listedJobId,
             createdAt: "2026-07-09T12:00:00+00:00"
         )]
     }

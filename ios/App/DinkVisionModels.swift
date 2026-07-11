@@ -2,6 +2,7 @@ import Foundation
 import CoreGraphics
 import PickleballCapture
 import PickleballCore
+import PickleballUpload
 
 enum DinkVisionSplashPhase: Equatable {
     case settle
@@ -493,20 +494,78 @@ struct DinkVisionReplayRow: Identifiable, Equatable {
     var trusted3DText: String
     var ballTrustText: String
     var item: CaptureLibraryItem
+    var source: DinkVisionReplaySource
+}
+
+enum DinkVisionReplaySource: Equatable {
+    case capture(String)
+    case bundledSample
+}
+
+struct DinkVisionReplayManifestRoute: Equatable {
+    var captureId: String
+    var clipId: String
+    var jobId: String
+    var manifestURL: URL
+    var status: RenderGatewayJobStatus
+    var missingCapabilities: [RenderGatewayMissingCapability]
+    var trustBands: [String: RenderGatewayTrustBand?]
+}
+
+enum DinkVisionReplayRoute: Equatable {
+    case bundledSample
+    case manifest(DinkVisionReplayManifestRoute)
+    case notReady(CaptureReplayNotReady)
+}
+
+enum DinkVisionReplayRouter {
+    static func route(row: DinkVisionReplayRow, uploadState: CaptureUploadState?) -> DinkVisionReplayRoute {
+        switch row.source {
+        case .bundledSample:
+            return .bundledSample
+        case .capture(let captureId):
+            guard let uploadState else {
+                return .notReady(.notUploaded)
+            }
+            switch uploadState.replayAvailability(expectedCaptureId: captureId) {
+            case .ready(let ready):
+                return .manifest(DinkVisionReplayManifestRoute(
+                    captureId: ready.captureId,
+                    clipId: ready.clipId,
+                    jobId: ready.jobId,
+                    manifestURL: ready.manifestURL,
+                    status: ready.status,
+                    missingCapabilities: ready.missingCapabilities,
+                    trustBands: ready.trustBands
+                ))
+            case .notReady(let reason):
+                return .notReady(reason)
+            }
+        }
+    }
+}
+
+struct DinkVisionReplaySelection: Identifiable, Equatable {
+    var row: DinkVisionReplayRow
+    var route: DinkVisionReplayRoute
+    var id: String { row.id }
 }
 
 struct DinkVisionReplayListDataSource {
     var packageRootURL: URL
     var loadPackages: (URL) throws -> [CaptureLibraryItem]
+    var bundledSamplePackageIDs: Set<String>
 
     init(
         packageRootURL: URL = CameraCaptureController.defaultPackageRootURL(),
         loadPackages: @escaping (URL) throws -> [CaptureLibraryItem] = { url in
             try CaptureLibrary.listPackages(packageRootURL: url)
-        }
+        },
+        bundledSamplePackageIDs: Set<String> = []
     ) {
         self.packageRootURL = packageRootURL
         self.loadPackages = loadPackages
+        self.bundledSamplePackageIDs = bundledSamplePackageIDs
     }
 
     func loadRows() throws -> [DinkVisionReplayRow] {
@@ -526,7 +585,8 @@ struct DinkVisionReplayListDataSource {
             trustBadgeText: item.captureQualityGrade == .good ? "Trusted sidecar" : "Needs review",
             trusted3DText: sidecarTexts.trusted3D,
             ballTrustText: sidecarTexts.ball,
-            item: item
+            item: item,
+            source: bundledSamplePackageIDs.contains(item.sessionID) ? .bundledSample : .capture(item.sessionID)
         )
     }
 

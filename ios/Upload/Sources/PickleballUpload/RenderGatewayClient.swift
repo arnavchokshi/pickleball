@@ -106,8 +106,92 @@ public enum RenderGatewayJobStatus: String, Codable, Equatable, Sendable {
     case queued
     case running
     case complete
+    case partial
     case submitted
     case failed
+}
+
+/// Lossless JSON storage for server-owned provenance/trust fields. The native
+/// app has typed accessors for the fields it renders, while retaining fields
+/// added by the server instead of silently dropping them at decode time.
+public enum RenderGatewayJSONValue: Codable, Equatable, Sendable {
+    case string(String)
+    case number(Double)
+    case bool(Bool)
+    case object([String: RenderGatewayJSONValue])
+    case array([RenderGatewayJSONValue])
+    case null
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if container.decodeNil() {
+            self = .null
+        } else if let value = try? container.decode(Bool.self) {
+            self = .bool(value)
+        } else if let value = try? container.decode(Double.self) {
+            self = .number(value)
+        } else if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else if let value = try? container.decode([String: RenderGatewayJSONValue].self) {
+            self = .object(value)
+        } else {
+            self = .array(try container.decode([RenderGatewayJSONValue].self))
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .string(let value): try container.encode(value)
+        case .number(let value): try container.encode(value)
+        case .bool(let value): try container.encode(value)
+        case .object(let value): try container.encode(value)
+        case .array(let value): try container.encode(value)
+        case .null: try container.encodeNil()
+        }
+    }
+
+    public var stringValue: String? {
+        guard case .string(let value) = self else { return nil }
+        return value
+    }
+}
+
+public struct RenderGatewayMissingCapability: Codable, Equatable, Sendable {
+    public var capability: String
+    public var reason: String
+
+    public init(capability: String, reason: String) {
+        self.capability = capability
+        self.reason = reason
+    }
+}
+
+public struct RenderGatewayTrustBand: Codable, Equatable, Sendable {
+    public var fields: [String: RenderGatewayJSONValue]
+
+    public init(fields: [String: RenderGatewayJSONValue]) {
+        self.fields = fields
+    }
+
+    public init(from decoder: Decoder) throws {
+        fields = try decoder.singleValueContainer().decode([String: RenderGatewayJSONValue].self)
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(fields)
+    }
+
+    public var badge: String? { fields["badge"]?.stringValue }
+    public var stage: String? { fields["stage"]?.stringValue }
+    public var gateId: String? { fields["gate_id"]?.stringValue }
+    public var gateStatus: String? { fields["gate_status"]?.stringValue }
+    public var reason: String? { fields["reason"]?.stringValue }
+    public var reasons: [String]? {
+        guard case .array(let values) = fields["reasons"] else { return nil }
+        return values.compactMap(\.stringValue)
+    }
 }
 
 public struct RenderGatewayJobStep: Codable, Equatable, Sendable {
@@ -142,6 +226,11 @@ public struct RenderGatewayJobResult: Codable, Equatable, Sendable {
     public var manifestUrl: String?
     public var notes: [String]?
     public var remoteRunDir: String?
+    public var s3ArtifactsPrefix: String?
+    public var s3BundlePrefix: String?
+    public var missingCapabilities: [RenderGatewayMissingCapability]?
+    public var trustBands: [String: RenderGatewayTrustBand?]?
+    public var bundlePolicy: RenderGatewayJSONValue?
 }
 
 public struct RenderGatewayJobLinks: Codable, Equatable, Sendable {
@@ -151,15 +240,30 @@ public struct RenderGatewayJobLinks: Codable, Equatable, Sendable {
 
 public struct RenderGatewayJob: Codable, Equatable, Sendable {
     public var id: String
+    public var clipId: String?
     public var clip: String?
     public var status: RenderGatewayJobStatus
     public var progress: RenderGatewayJobProgress?
     public var error: String?
     public var result: RenderGatewayJobResult?
+    public var missingCapabilities: [RenderGatewayMissingCapability]?
+    public var trustBands: [String: RenderGatewayTrustBand?]?
     public var links: RenderGatewayJobLinks
 
     public var isActive: Bool {
         status == .queued || status == .running || status == .submitted
+    }
+
+    public var isInspectable: Bool {
+        status == .complete || status == .partial
+    }
+
+    public var effectiveMissingCapabilities: [RenderGatewayMissingCapability] {
+        result?.missingCapabilities ?? missingCapabilities ?? []
+    }
+
+    public var effectiveTrustBands: [String: RenderGatewayTrustBand?] {
+        result?.trustBands ?? trustBands ?? [:]
     }
 
     public static func decode(_ data: Data) throws -> RenderGatewayJob {
@@ -210,6 +314,23 @@ public final class RenderGatewayClient: @unchecked Sendable {
         return try Self.decodeJobResponse(data: data, response: response)
     }
 
+    public func fetchData(at url: URL) async throws -> Data {
+        if url.isFileURL {
+            return try Data(contentsOf: url)
+        }
+        var request = URLRequest(url: url)
+        applyAuthHeader(&request)
+        let (data, response) = try await session.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw RenderGatewayClientError.invalidResponse
+        }
+        guard (200..<300).contains(httpResponse.statusCode) else {
+            let message = String(data: data, encoding: .utf8) ?? "request failed"
+            throw RenderGatewayClientError.httpStatus(httpResponse.statusCode, message)
+        }
+        return data
+    }
+
     /// Sets `Authorization: Bearer <token>` when `accessTokenProvider` is
     /// configured and returns a non-empty token (INFRA-4). Existing callers
     /// that don't pass a provider are unaffected -- no header is added.
@@ -221,14 +342,22 @@ public final class RenderGatewayClient: @unchecked Sendable {
     }
 
     public func replayURL(for job: RenderGatewayJob) -> URL? {
-        guard let manifestPath = job.result?.manifestUrl else {
+        guard let manifestURL = manifestURL(for: job) else {
             return nil
         }
-        let manifestURL = Self.apiURL(path: manifestPath, baseURL: baseURL)
         var components = URLComponents(url: baseURL, resolvingAgainstBaseURL: false)
         components?.path = "/"
         components?.queryItems = [URLQueryItem(name: "manifest", value: manifestURL.absoluteString)]
         return components?.url
+    }
+
+    public func manifestURL(for job: RenderGatewayJob) -> URL? {
+        guard job.isInspectable,
+              let manifestPath = job.result?.manifestUrl?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !manifestPath.isEmpty else {
+            return nil
+        }
+        return Self.apiURL(path: manifestPath, baseURL: baseURL)
     }
 
     public static func apiURL(path: String, baseURL: URL) -> URL {

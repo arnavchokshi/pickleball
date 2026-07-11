@@ -217,6 +217,56 @@ final class UploadManifestTests: XCTestCase {
         XCTAssertTrue(job.isActive)
     }
 
+    func testPartialJobPreservesMissingCapabilitiesTrustBandsAndUnknownProvenance() throws {
+        let data = Data(
+            #"{"id":"job_1","clip_id":"clip_1","status":"partial","missing_capabilities":[{"capability":"body","reason":"BODY output missing"}],"trust_bands":{"body":{"badge":"preview","stage":"BODY","gate_id":"body_gate","evidence_path":"runs/body_gate.json"}},"result":{"manifest_url":"/api/jobs/job_1/manifest","s3_bundle_prefix":"bundles/clip_1/jobs/job_1/","bundle_policy":{"status":"partial"}},"links":{"status":"/api/jobs/job_1"}}"#.utf8
+        )
+
+        let job = try RenderGatewayJob.decode(data)
+
+        XCTAssertEqual(job.status, .partial)
+        XCTAssertEqual(job.clipId, "clip_1")
+        XCTAssertEqual(job.effectiveMissingCapabilities.first?.capability, "body")
+        let bodyBand = try XCTUnwrap(job.effectiveTrustBands["body"] ?? nil)
+        XCTAssertEqual(bodyBand.badge, "preview")
+        XCTAssertEqual(bodyBand.stage, "BODY")
+        XCTAssertEqual(bodyBand.gateId, "body_gate")
+        XCTAssertEqual(bodyBand.fields["evidence_path"], .string("runs/body_gate.json"))
+        XCTAssertEqual(job.result?.s3BundlePrefix, "bundles/clip_1/jobs/job_1/")
+        XCTAssertEqual(job.result?.bundlePolicy, .object(["status": .string("partial")]))
+        XCTAssertTrue(job.isInspectable)
+        XCTAssertFalse(job.isActive)
+    }
+
+    func testURLProtocolGatewayResolvesReadyManifestAndSendsAuthorization() async throws {
+        StubURLProtocol.box.reset()
+        defer { StubURLProtocol.box.reset() }
+        StubURLProtocol.box.handler = { request in
+            XCTAssertEqual(request.url?.path, "/api/jobs/job_own")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Bearer own-token")
+            return StubbedResponse(statusCode: 200, json: [
+                "id": "job_own",
+                "clip_id": "clip_own",
+                "status": "complete",
+                "result": ["manifest_url": "/api/jobs/job_own/manifest"],
+                "links": ["status": "/api/jobs/job_own"],
+            ])
+        }
+        let client = RenderGatewayClient(
+            baseURL: URL(string: "https://api.example.test")!,
+            session: makeStubbedSession(),
+            accessTokenProvider: { "own-token" }
+        )
+
+        let job = try await client.fetchJobStatus("/api/jobs/job_own")
+
+        XCTAssertEqual(job.id, "job_own")
+        XCTAssertEqual(
+            client.manifestURL(for: job)?.absoluteString,
+            "https://api.example.test/api/jobs/job_own/manifest"
+        )
+    }
+
     private static func sidecar(
         ondevicePoseTrack: String?,
         lidarDepthRefs: [String]
