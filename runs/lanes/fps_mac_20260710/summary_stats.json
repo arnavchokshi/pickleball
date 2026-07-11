@@ -1,0 +1,39 @@
+{
+  "playing_fps_stats": {
+    "n": 60,
+    "min": 116.0,
+    "p50": 119.9,
+    "p95": 120.3,
+    "max": 120.4,
+    "mean": 119.56
+  },
+  "paused_fps_stats": {
+    "n": 15,
+    "min": 118.0,
+    "p50": 120.0,
+    "p95": 120.1,
+    "max": 120.1,
+    "mean": 119.45
+  },
+  "renderer": {
+    "unmasked_vendor": "Google Inc. (Apple)",
+    "unmasked_renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "vendor": "WebKit",
+    "renderer": "WebKit WebGL"
+  },
+  "url": "http://127.0.0.1:5183/?manifest=/@fs/Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/after_wolv/demo_manifest.json&view=world",
+  "console_errors": [
+    "[error] Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "[error] Failed to load resource: the server responded with a status of 404 (Not Found)"
+  ],
+  "page_errors": [],
+  "initial_loaded_counts": {
+    "Players": "4",
+    "Coverage gaps": "0/4",
+    "Contacts": "0",
+    "Ball": "not visible",
+    "Warnings": "2 notices: missing mesh vertices, 2D-only ball frames outside solved arc coverage",
+    "3D FPS": "120.0"
+  },
+  "play_control_note": "clicked button:has-text(\"Play\")"
+}

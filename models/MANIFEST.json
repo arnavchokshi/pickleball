@@ -488,6 +488,28 @@
         "H100 runtime smoke on 2026-06-26 PDT used scripts/racketsport/smoke_mujoco_mjx.py and passed with jax 0.10.2, mujoco 3.10.0, mujoco-mjx 3.10.0, warp-lang 1.13.0, and JAX device cuda:0.",
         "This is runtime availability only; FOOT-2 still needs task-specific physics integration and validation."
       ]
+    },
+    {
+      "id": "osnet_x1_0_market1501",
+      "stage": "person_reid",
+      "use": "OSNet x1.0 ReID embedding checkpoint backing tracking.reid_model in best_stack.json (raw-pool global association appearance features)",
+      "source": "https://github.com/KaiyangZhou/deep-person-reid/blob/master/docs/MODEL_ZOO.md (osnet_x1_0, Market1501, same-domain ReID row) via https://drive.google.com/uc?id=1vduhq5DpN2q1g4fYEZfPI17MJeh9qyrA -- this exact Google Drive file id is also the URL the installed torchreid==0.2.5 package's own reid_model_factory.py maps to the key 'osnet_x1_0_market1501.pt'",
+      "license": "deep-person-reid code is MIT (LICENSE file, Copyright (c) 2018 Kaiyang Zhou; the installed torchreid==0.2.5 pip package is a separate MIT-licensed repackaging). The repo does not state a separate license for the pretrained checkpoint weights themselves. Market-1501 is the academic person-Re-ID benchmark dataset the weights were trained on; MODEL_ZOO.md reports 94.2% rank-1 / 82.6% mAP, 2.2M params, 0.98 GFLOPs for this row. No explicit weight-specific license or dataset-terms statement was found in the deep-person-reid README or MODEL_ZOO.md.",
+      "commercial_posture": "research_ok_verify_checkpoint_terms",
+      "status": "available_local",
+      "local_path": "models/checkpoints/osnet_x1_0_market1501.pt",
+      "sha256": "2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154",
+      "repo_commit": "f8cd150fdf77e8d9e1ed143b7f308c2c609ded50",
+      "fine_tuned_on_pickleball": false,
+      "training_data": ["official_osnet_x1_0_market1501_pretrained"],
+      "fallbacks": [],
+      "notes": [
+        "Restored on 2026-07-10 in lane runs/lanes/reid_restore_20260710/: best_stack.json entries.tracking.reid_model already pinned models/checkpoints/osnet_x1_0_market1501.pt, but the file was absent from disk, and the same-day fixp commit (0bdabbe67) made the tracking stage fail loud (best_stack_asset_missing) instead of silently falling back to loose-pool tracks.",
+        "Downloaded via `.venv/bin/python -m gdown 'https://drive.google.com/uc?id=1vduhq5DpN2q1g4fYEZfPI17MJeh9qyrA' -O models/checkpoints/osnet_x1_0_market1501.pt` (gdown 6.1.0); resulting file is 10,399,605 bytes and is a raw torch OrderedDict state_dict (no wrapper key), which threed/racketsport/person_reid_diagnostics.py:_extract_state_dict already handles via its all-string-keys fallback branch.",
+        "repo_commit above is deep-person-reid master HEAD as of 2026-07-10 (docs/MODEL_ZOO.md source-of-truth for the download link); it does not pin the checkpoint file itself, which predates this commit -- gdown surfaced the Google Drive file's own last-modified timestamp as local mtime 2021-03-31.",
+        "Loader-verified for real: threed/racketsport/person_reid_diagnostics.py:_make_osnet_embedder builds torchreid.models.build_model('osnet_x1_0', num_classes=1000, loss='softmax', pretrained=False), loads this checkpoint with torch.load(map_location='cpu', weights_only=False), then load_state_dict(..., strict=False) after shape-filtering (_matching_state_dict). Ran directly via `.venv/bin/python scripts/racketsport/run_raw_pool_person_authority.py` (which calls the identical threed/racketsport/raw_pool_person_authority.run_raw_pool_authority_candidate that scripts/racketsport/process_video.py:_attempt_global_association calls) against a 20-frame-trimmed copy of runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner's tracked_detections.json/raw_tracked_detections.json/court_calibration.json paired with the real local video eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4. Result: status ok, 150 real 512-dim L2-normalized OSNet embeddings extracted on cpu (runs/lanes/reid_restore_20260710/smoke_raw_pool/out/reid_embeddings.json), recorded model_sha256 matched this file's sha256, tracks.json produced.",
+        "commercial_posture mirrors sat_hmr_644_3dpw's 'research_ok_verify_checkpoint_terms' posture: another checkpoint whose code license is clear (MIT here) but whose training-dataset (here Market-1501, an academic benchmark) terms were not independently re-verified by this restoration."
+      ]
     }
   ],
   "notes": [
