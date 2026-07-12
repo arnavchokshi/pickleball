@@ -76,6 +76,21 @@ def test_translation_policy_and_mhr_wrapper_preserve_exactly_once_behavior() -> 
         mhr_decode.apply_pred_cam_t_once(points, pred_cam_t=[1.0, 2.0])
 
 
+def test_translation_to_metres_declares_cm_seam_without_numeric_drift() -> None:
+    assert coordinates.translation_to_metres([12.5, -7.25, 183.75], input_unit="cm") == (
+        0.125,
+        -0.0725,
+        1.8375000000000001,
+    )
+    assert coordinates.translation_to_metres([1.25, -0.5, 3.0], input_unit="m") == (
+        1.25,
+        -0.5,
+        3.0,
+    )
+    with pytest.raises(ValueError, match="input_unit"):
+        coordinates.translation_to_metres([1.0, 2.0, 3.0], input_unit="mm")
+
+
 def test_blessed_camera_matrix_builder_delegates_to_court_calibration() -> None:
     intrinsics = CameraIntrinsics(fx=1000.0, fy=900.0, cx=640.0, cy=360.0, dist=[], source="unit")
     assert coordinates.camera_matrix_from_intrinsics(intrinsics) == [

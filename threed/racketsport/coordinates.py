@@ -61,6 +61,8 @@ HOMOGRAPHY_PIXEL_CONVENTIONS: Final[tuple[HomographyPixelConvention, ...]] = (
 LEGACY_COURT_WORLD_FRAME: Final = "court_Z0"
 CANONICAL_COURT_WORLD_FRAME: Final = "court_netcenter_z_up_m"
 
+LengthUnit = Literal["m", "meter", "meters", "cm", "centimeter", "centimeters"]
+
 
 def resolve_world_coordinate_space(
     payload: Mapping[str, Any],
@@ -169,6 +171,37 @@ def camera_to_world_points(points_camera: Any, R: Any, t: Any) -> np.ndarray:
     return points @ camera_to_world.T + camera_center_world
 
 
+def translation_to_metres(
+    translation: Sequence[float],
+    *,
+    input_unit: LengthUnit | str,
+) -> tuple[float, float, float]:
+    """Normalize one explicit 3-D translation seam to metres.
+
+    This is a unit declaration and scalar conversion only.  It deliberately
+    preserves the historical ``float(value) * 0.01`` arithmetic used by the
+    paddle IPPE path for centimetres, so adopting the canonical API does not
+    alter its numeric payload.
+    """
+
+    if isinstance(translation, (str, bytes)):
+        raise ValueError("translation must be a 3-vector")
+    values = tuple(translation)
+    if len(values) != 3:
+        raise ValueError("translation must be a 3-vector")
+    normalized = str(input_unit).strip().lower()
+    if normalized in {"m", "meter", "meters"}:
+        scale_to_m = 1.0
+    elif normalized in {"cm", "centimeter", "centimeters"}:
+        scale_to_m = 0.01
+    else:
+        raise ValueError("input_unit must be 'cm' or 'm'")
+    converted = tuple(float(value) * scale_to_m for value in values)
+    if not all(np.isfinite(value) for value in converted):
+        raise ValueError("translation must contain finite values")
+    return converted  # type: ignore[return-value]
+
+
 def apply_translation_once(
     points: Any,
     translation: Sequence[float] | None,
@@ -233,11 +266,13 @@ __all__ = [
     "HOMOGRAPHY_PIXEL_CONVENTIONS",
     "HomographyPixelConvention",
     "LEGACY_COURT_WORLD_FRAME",
+    "LengthUnit",
     "apply_translation_once",
     "camera_matrix_from_intrinsics",
     "camera_to_world_points",
     "invert_extrinsics",
     "project_world_points",
     "resolve_world_coordinate_space",
+    "translation_to_metres",
     "world_to_camera_points",
 ]

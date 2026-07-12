@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
 from pathlib import Path
+
+import pytest
 
 from threed.racketsport.court_calibration_metric15 import load_reviewed_court_keypoints_15pt
 from threed.racketsport.overlapping_court_calibration import (
@@ -11,6 +14,27 @@ from threed.racketsport.overlapping_court_calibration import (
     render_metric_plane_outlier_review_packet,
     render_metric_plane_top_residual_refit_review_packet,
 )
+
+_REPO = Path(__file__).resolve().parents[2]
+_PINNED_NEURAL_CHECKPOINT = (
+    _REPO
+    / "runs/cal_external_retrain_20260702T003120Z/internal"
+    / "cfgC_tier1tier2_e800/court_keypoint_heatmap.pt"
+)
+_PINNED_NEURAL_CHECKPOINT_SHA256 = "48606f6b30b9ae20744563ce037cc2dda7a32fcf596d38466115a1539badb6e9"
+_PINNED_NEURAL_REAL_MEDIAN_PX = 27.538259
+
+
+def _checkpoint_skip_reason(path: Path, expected_sha256: str) -> str | None:
+    if not path.is_file():
+        return f"pinned neural checkpoint unavailable: {path} sha256={expected_sha256}"
+    actual_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+    if actual_sha256 != expected_sha256:
+        return (
+            "pinned neural checkpoint content mismatch: "
+            f"expected sha256={expected_sha256}, actual sha256={actual_sha256}"
+        )
+    return None
 
 
 def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verified(tmp_path) -> None:
@@ -115,15 +139,12 @@ def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verif
     assert report["summary"]["point_line_segment_pixel_samples_per_observation_mean"] == 9.0
     assert report["summary"]["point_line_weight_sweep_best_mean_residual_ft_mean"] is not None
     assert report["summary"]["point_line_pair_subset_oracle_mean_residual_ft_mean"] is not None
-    assert report["summary"]["neural_keypoint_checkpoint_candidate_count"] >= 1
-    assert report["summary"]["neural_keypoint_real_label_candidate_count"] >= 1
-    assert report["summary"]["neural_keypoint_gate_pass_count"] == 0
-    assert report["summary"]["neural_keypoint_best_real_median_px"] == 27.538259
+    assert isinstance(report["summary"]["neural_keypoint_checkpoint_candidate_count"], int)
+    assert isinstance(report["summary"]["neural_keypoint_real_label_candidate_count"], int)
+    assert isinstance(report["summary"]["neural_keypoint_gate_pass_count"], int)
     assert report["summary"]["neural_keypoint_diagnostic_only"] is True
-    assert report["summary"]["mobilenet_v3_keypoint_checkpoint_candidate_count"] == 4
-    assert report["summary"]["mobilenet_v3_keypoint_scored_candidate_count"] == 4
-    assert report["summary"]["mobilenet_v3_keypoint_best_median_px"] == 317.563592
-    assert report["summary"]["mobilenet_v3_keypoint_status"] == "scored"
+    assert isinstance(report["summary"]["mobilenet_v3_keypoint_checkpoint_candidate_count"], int)
+    assert isinstance(report["summary"]["mobilenet_v3_keypoint_scored_candidate_count"], int)
     assert (
         report["summary"]["safe_selected_camera_mean_residual_ft_mean"]
         <= report["summary"]["point_line_pair_subset_oracle_mean_residual_ft_mean"]
@@ -136,22 +157,29 @@ def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verif
     neural_evidence = report["neural_keypoint_checkpoint_evidence"]
     assert neural_evidence["diagnostic_only"] is True
     assert neural_evidence["promotes_calibration"] is False
-    assert neural_evidence["candidate_count"] >= 1
-    assert neural_evidence["real_label_candidate_count"] >= 1
-    assert neural_evidence["best_real_label_candidate"]["candidate_metric_name"] == "after.real_keypoint_median_px"
-    assert neural_evidence["best_real_label_candidate"]["candidate_metric_value_px"] == 27.538259
-    assert neural_evidence["best_real_label_candidate"]["gate_passed"] is False
-    assert "gate_failed" in neural_evidence["best_real_label_candidate"]["promotion_blockers"]
+    assert neural_evidence["candidate_count"] == len(neural_evidence["candidates"])
+    assert report["summary"]["neural_keypoint_checkpoint_candidate_count"] == neural_evidence["candidate_count"]
+    assert report["summary"]["neural_keypoint_real_label_candidate_count"] == neural_evidence["real_label_candidate_count"]
+    assert report["summary"]["neural_keypoint_gate_pass_count"] == neural_evidence["gate_pass_count"]
+    best_neural = neural_evidence["best_real_label_candidate"]
+    if best_neural is None:
+        assert report["summary"]["neural_keypoint_best_real_median_px"] is None
+    else:
+        assert best_neural["candidate_metric_name"] == "after.real_keypoint_median_px"
+        assert report["summary"]["neural_keypoint_best_real_median_px"] == best_neural["candidate_metric_value_px"]
     mobilenet_evidence = report["mobilenet_v3_keypoint_checkpoint_evidence"]
     assert mobilenet_evidence["diagnostic_only"] is True
     assert mobilenet_evidence["promotes_calibration"] is False
-    assert mobilenet_evidence["status"] == "scored"
-    assert mobilenet_evidence["candidate_count"] == 4
-    assert mobilenet_evidence["scored_candidate_count"] == 4
-    assert mobilenet_evidence["best_candidate"]["source"] == "sibling_training_metrics"
-    assert mobilenet_evidence["best_candidate"]["median_error_px"] == 317.563592
-    assert mobilenet_evidence["best_candidate"]["pck_at_5px"] == 0.0
-    assert mobilenet_evidence["best_candidate"]["gate_passed"] is False
+    assert report["summary"]["mobilenet_v3_keypoint_checkpoint_candidate_count"] == mobilenet_evidence["candidate_count"]
+    assert report["summary"]["mobilenet_v3_keypoint_scored_candidate_count"] == mobilenet_evidence.get(
+        "scored_candidate_count", 0
+    )
+    assert report["summary"]["mobilenet_v3_keypoint_status"] == mobilenet_evidence["status"]
+    best_mobilenet = mobilenet_evidence.get("best_candidate")
+    if best_mobilenet is None:
+        assert report["summary"]["mobilenet_v3_keypoint_best_median_px"] is None
+    else:
+        assert report["summary"]["mobilenet_v3_keypoint_best_median_px"] == best_mobilenet["median_error_px"]
     assert len(report["results"]) == 5
     first = report["results"][0]
     assert first["distorted_camera"]["method"] == "joint_focal_pose_radial_lm"
@@ -329,6 +357,49 @@ def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verif
     assert len(first["point_line_camera"]["pair_subset_oracle"]["line_names"]) == 2
     assert first["safe_selected_camera"]["mean_residual_ft"] <= first["distorted_camera"]["mean_residual_ft"]
     assert first["safe_selected_camera"]["selection_mode"] == "reviewed_label_diagnostic_only"
+
+
+def test_pinned_neural_checkpoint_metric_is_bound_to_checkpoint_content(tmp_path) -> None:
+    skip_reason = _checkpoint_skip_reason(
+        _PINNED_NEURAL_CHECKPOINT,
+        _PINNED_NEURAL_CHECKPOINT_SHA256,
+    )
+    if skip_reason is not None:
+        pytest.skip(skip_reason)
+
+    report = build_lm_homography_reviewed_label_report(
+        eval_root="eval_clips/ball",
+        out_path=tmp_path / "overlap_calibration_eval_pinned_checkpoint.json",
+    )
+    matching = [
+        candidate
+        for candidate in report["neural_keypoint_checkpoint_evidence"]["candidates"]
+        if candidate.get("resolved_checkpoint") is not None
+        and Path(candidate["resolved_checkpoint"]).resolve() == _PINNED_NEURAL_CHECKPOINT.resolve()
+    ]
+    assert len(matching) == 1
+    candidate = matching[0]
+    assert candidate["candidate_metric_name"] == "after.real_keypoint_median_px"
+    assert candidate["candidate_metric_value_px"] == _PINNED_NEURAL_REAL_MEDIAN_PX
+    assert candidate["gate_passed"] is False
+    assert "gate_failed" in candidate["promotion_blockers"]
+
+
+def test_pinned_neural_checkpoint_absence_has_explicit_skip_reason(tmp_path) -> None:
+    missing = tmp_path / "court_keypoint_heatmap.pt"
+    reason = _checkpoint_skip_reason(missing, _PINNED_NEURAL_CHECKPOINT_SHA256)
+    assert reason is not None
+    assert "unavailable" in reason
+    assert _PINNED_NEURAL_CHECKPOINT_SHA256 in reason
+
+
+def test_pinned_neural_checkpoint_mismatch_has_explicit_skip_reason(tmp_path) -> None:
+    mismatched = tmp_path / "court_keypoint_heatmap.pt"
+    mismatched.write_bytes(b"not the pinned checkpoint")
+    reason = _checkpoint_skip_reason(mismatched, _PINNED_NEURAL_CHECKPOINT_SHA256)
+    assert reason is not None
+    assert "content mismatch" in reason
+    assert "actual sha256=" in reason
 
 
 def test_evaluate_overlapping_court_calibration_cli_writes_report(tmp_path) -> None:

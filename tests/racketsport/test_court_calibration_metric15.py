@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -205,6 +207,47 @@ def test_metric_calibration_from_reviewed_keypoints_end_to_end(tmp_path):
     assert calibration.solved_over_frames == [idx * 30 for idx in range(8)]
     assert calibration.source == METRIC15_SOURCE_TAG
     assert "single_view_planar_full_calibration" in calibration.capture_quality.reasons
+
+
+def test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed_contract() -> None:
+    repo = Path(__file__).resolve().parents[2]
+    fixture = (
+        repo
+        / "eval_clips/ball/burlington_gold_0300_low_steep_corner/labels/court_keypoints.json"
+    )
+    assert hashlib.sha256(fixture.read_bytes()).hexdigest() == (
+        "537dbe0299a7069f258d373ada99758ff9238e6718d6bc6481365b614daa030f"
+    )
+
+    calibration = metric_calibration_from_reviewed_keypoints_15pt(fixture)
+    payload = calibration.model_dump(mode="json")
+    contract = payload.pop("coordinate_contract")
+
+    legacy_digest = hashlib.sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+    assert legacy_digest == "08f6c8ce1151bb0c654d3895910898cb51c694b61bddbaa59c574bf3754ee3a9"
+    assert contract == {
+        "camera_matrix_K": [
+            [payload["intrinsics"]["fx"], 0.0, payload["intrinsics"]["cx"]],
+            [0.0, payload["intrinsics"]["fy"], payload["intrinsics"]["cy"]],
+            [0.0, 0.0, 1.0],
+        ],
+        "camera_matrix_input_space": "camera_m",
+        "camera_matrix_output_space": "pixels_undistorted_native",
+        "extrinsics_convention": "world_to_camera_opencv_column",
+        "extrinsics_input_space": "world_court_netcenter_z_up_m",
+        "extrinsics_output_space": "camera_m",
+        "homography_convention": "world_xy_to_image_column",
+        "homography_input_space": "world_xy_homography_m",
+        "homography_output_space": "pixels_raw_native",
+        "homography_pixel_convention": "raw_pixels",
+    }
+
+    conflicting = calibration.model_dump(mode="json")
+    conflicting["coordinate_contract"]["camera_matrix_K"][0][0] += 1.0
+    with pytest.raises(ValueError, match="camera_matrix_K conflicts"):
+        CourtCalibration.model_validate(conflicting)
 
 
 def test_metric_calibration_rejects_non_pickleball_sport(tmp_path):

@@ -55,6 +55,7 @@ from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .capture_quality import score_capture_quality
+from .coordinates import camera_matrix_from_intrinsics, invert_extrinsics
 from .court_calibration import homography_from_planar_points, reprojection_error
 from .court_keypoint_net import PICKLEBALL_KEYPOINT_BY_NAME
 from .court_positioning import (
@@ -576,11 +577,15 @@ def metric_calibration_from_reviewed_keypoints_15pt(
         t=fit.t,
         camera_height_m=max(abs(camera_center_world[2]), 1e-6),
     )
+    camera_to_world_R, _camera_center_canonical = invert_extrinsics(
+        extrinsics.R,
+        extrinsics.t,
+    )
 
     geometry = CameraFloorGeometry(
         intrinsics={"fx": fit.fx, "fy": fit.fy, "cx": fit.cx, "cy": fit.cy},
         camera_origin_world=camera_center_world,
-        R_world_camera=_transpose(fit.R),
+        R_world_camera=camera_to_world_R.tolist(),
         floor_plane_point=[0.0, 0.0, 0.0],
         floor_plane_normal=[0.0, 0.0, 1.0],
     )
@@ -646,6 +651,18 @@ def metric_calibration_from_reviewed_keypoints_15pt(
         "world_pts": object_points,
         "source": source_tag,
         "solved_over_frames": solved_frames,
+        "coordinate_contract": {
+            "camera_matrix_K": camera_matrix_from_intrinsics(intrinsics),
+            "camera_matrix_input_space": "camera_m",
+            "camera_matrix_output_space": "pixels_undistorted_native",
+            "extrinsics_convention": "world_to_camera_opencv_column",
+            "extrinsics_input_space": "world_court_netcenter_z_up_m",
+            "extrinsics_output_space": "camera_m",
+            "homography_convention": "world_xy_to_image_column",
+            "homography_input_space": "world_xy_homography_m",
+            "homography_output_space": "pixels_raw_native",
+            "homography_pixel_convention": "raw_pixels",
+        },
     }
     return CourtCalibration.model_validate(payload)
 

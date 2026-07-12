@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import hashlib
+import json
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+
+from threed.racketsport.schemas import CourtCalibration
 
 from threed.racketsport.racket6dof import (
     SE3PoseConfidence,
@@ -177,6 +182,46 @@ def test_camera_paddle_pose_to_court_world_uses_calibration_extrinsics_and_meter
     assert world_pose.t == pytest.approx((1.0, 2.0, 2.0))
     assert world_pose.confidence == pytest.approx(0.82)
     assert world_pose.source == "pnp_ippe:court_Z0"
+
+
+def test_frozen_real_calibration_camera_world_and_cm_to_m_parity_is_exact() -> None:
+    repo = Path(__file__).resolve().parents[2]
+    fixture = (
+        repo
+        / "runs/lanes/w7_critique_20260709/wolv_world"
+        / "wolverine_mixed_0200_mid_steep_corner/court_calibration.json"
+    )
+    assert hashlib.sha256(fixture.read_bytes()).hexdigest() == (
+        "fb4e6f7f54d2c40e2c7b491e436261f747240945a6f0d154c4dd943e28edbacf"
+    )
+    calibration = CourtCalibration.model_validate_json(fixture.read_text(encoding="utf-8"))
+    assert "coordinate_contract" not in calibration.model_dump(mode="json")
+    pose = SE3PoseConfidence(
+        R=[
+            [0.9362933635841992, -0.3129918257854679, -0.1593450793079779],
+            [0.28962947762551555, 0.9447024859948943, -0.1537919979889642],
+            [0.19866933079506122, 0.09784339500725571, 0.975170327201816],
+        ],
+        t=[12.5, -7.25, 183.75],
+        confidence=0.8125,
+        source="frozen_ippe",
+    )
+
+    world_pose = camera_paddle_pose_to_court_world(
+        pose,
+        calibration,
+        input_translation_unit="cm",
+    )
+    numeric = {
+        "R": world_pose.R,
+        "t": world_pose.t,
+        "confidence": world_pose.confidence,
+        "source": world_pose.source,
+    }
+    digest = hashlib.sha256(
+        json.dumps(numeric, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+    ).hexdigest()
+    assert digest == "a5dd043e7eee0985eeb92686f83f9cff6a8ec35007e7571b50a09a63bb59163c"
 
 
 def test_smooth_racket_pose_samples_clamps_implausible_frame_jumps() -> None:

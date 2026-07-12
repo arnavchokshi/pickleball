@@ -11,6 +11,8 @@ from dataclasses import dataclass
 import math
 from typing import Mapping, Sequence
 
+from .coordinates import invert_extrinsics, translation_to_metres
+
 
 INCH_TO_CM = 2.54
 
@@ -323,15 +325,24 @@ def camera_paddle_pose_to_court_world(
     world-to-camera extrinsic transform.
     """
 
-    scale_to_m = _translation_scale_to_m(input_translation_unit)
     extrinsics = getattr(calibration, "extrinsics", None)
     if extrinsics is None:
         raise ValueError("calibration must include extrinsics")
     world_to_camera_R = _validate_rotation_matrix(getattr(extrinsics, "R", None))
     world_to_camera_t = _validate_vector(getattr(extrinsics, "t", None), "calibration.extrinsics.t", length=3)
 
-    camera_to_world_R = _transpose3(world_to_camera_R)
-    pose_t_camera_m = tuple(float(value) * scale_to_m for value in pose.t)
+    camera_to_world_R_array, _camera_center_world = invert_extrinsics(
+        world_to_camera_R,
+        world_to_camera_t,
+    )
+    camera_to_world_R = tuple(
+        tuple(float(value) for value in row)
+        for row in camera_to_world_R_array.tolist()
+    )
+    pose_t_camera_m = translation_to_metres(
+        pose.t,
+        input_unit=input_translation_unit,
+    )
     pose_t_minus_camera_origin = tuple(
         pose_t_camera_m[index] - world_to_camera_t[index]
         for index in range(3)
