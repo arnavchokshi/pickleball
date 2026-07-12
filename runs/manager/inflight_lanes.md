@@ -60,3 +60,153 @@ BODY-failure review writer overwrites authoritative plans. Fix lanes V (viewer) 
 gpt-5.6-sol capacity-error gotcha: transient, resume-with-backoff x4 loop recovers with full context.)_
 
 _(2026-07-10 ~13:2x owner directive before 10h+ absence: run autonomously, codex gpt-5.6-sol at XHIGH for implementation this window, Fable+Codex co-plan moves, gcloud re-authed, <=4 GPUs total (manager self-cap 3; court session may hold 1). Tranche-1 dispatched above; tranche-2 (GPU TRK scoring sweep + ball E2E attestation + planner-ranked extras) after reid_restore + plan_nextmoves land. Fleet reconcile at 13:1x: only fleet1 TERMINATED under fable-fleet label.)_
+
+_(2026-07-12 ~10:4x PDT, Fable bg c7d8cfb2 SPRINT session start: owner directive = 12-14h max-throughput
+autonomous window, Fable budget 60%-used must last, gpt-5.6-sol XHIGH = workhorse, GPU cap raised to FIVE.
+RECONCILE: tranche-1 lanes ballcand/spine017/coords_parity were KILLED by machine sleep 2026-07-11T05:09Z
+mid-edit (no reports; edits preserved in tree); NOTHING ran on 07-11. Fleet clean (fleet1 TERMINATED only),
+gcloud auth live. ACTIONS: all 3 lanes RESUMED via codex exec resume (sessions 019f4f70-c7e6-7e11/
+-c7e5-7c31/-c7e5-7143, xhigh, pids 5945/5946/5947) + NEW plan_sprint_20260712 sol-xhigh consult (pid 5948);
+caffeinate -dims armed 14h against repeat sleep-kill; monitor armed on all 4 report files. Orphaned
+labeling-session edits (import_w6/ingest_owner + tests, 191 ins) under adjudication for adoption-commit.
+brand-exploration/ = OWNER'S untracked brand work — no lane may touch it.)_
+
+_(2026-07-12 ~11:0x: SPRINT WAVE-1 LIVE — 7 concurrent streams: [1] ballcand resume (wide-suite census
+finishing; interim report landed: UKF candidate PASS/no-op-on-card, RANSAC measured-negative, both
+default-off PENDING); [2] spine017 resume; [3] coords_parity resume; [4] plan_sprint_20260712 sol-xhigh
+consult; [5] webux2_20260712 codex xhigh (viewer UX wave-2: seekable event markers, camera presets,
+entity toggles, sync audit, URL robustness — fence web/replay/** minus public/); [6] court_harvest_20260712
+Sonnet network lane (25-40 NEW-venue frames + owner label-pack staging, attacks TRAIN-4 diversity verdict);
+[7] orphan labeling adoption COMMITTED+PUSHED 328771272 (scratch-mode importer + provenance ingest, 7/7).
+caffeinate pid armed; monitors on all report files.)_
+
+_(2026-07-12 ~11:3x: PLAN_SPRINT CONSULT LANDED + CONSUMED (runs/lanes/plan_sprint_20260712/PLAN.md =
+the window's ruling doc). Key corrections adopted: 6 HARVEST person_ground_truth files have ZERO valid
+labels (TRK scores Burlington/Wolverine historical-internal only; HARVEST = source-only diagnostics);
+BALL GPU narrowed to baseline-vs-TT3D (UKF no-op + RANSAC regression already banked). WAVE-2 DISPATCHED
+(all codex gpt-5.6-sol xhigh, detached, monitored): ns014_timebase_core_20260712 (P0-D/P0-H pure typed
+timebase module, pid 12678), ns051_facts_core_20260712 (NS-05.1 deterministic facts + zero-fabrication
+audit, rally_metrics backwards-compat rule, pid 12679), ios_product_ui2_20260712 (five-tab truth pass,
+swift-test-only boundary, pid 12680). court_harvest agent tightened to sol acceptance (100 frames /
+>=25 sources / >=15 venue groups / 4x25 shards / SHA+pHash dedup / <60-distinct kill). GATED QUEUE:
+ns013_stale_reuse (after spine017 commit) -> tt3d_anchor_integrate (after ballcand commit) -> coords
+remainder metric15/racket6dof (after coords_parity commit) -> GPU slots A TRK / B TT3D-BALL / C BODY-
+overhead (global provision gate in PLAN §3; max 3 overlapping, 5-cap is safety not target).)_
+
+_(2026-07-12 ~12:0x: OWNER LIVE DIRECTIVE received mid-window: pb.vision cv export (banked 07-09 at
+runs/research_ball3d_20260709/pbvision_cv_export/) is THE ball focus — we beat them at 2D detection,
+they beat us at 2D->3D lift; reverse-engineer + try paths until we match/beat. DISPATCHED
+pbv_reveng_20260712 (codex xhigh, pid 15367): schema/method forensics, clip identification, no-GT
+quality pillars, ours-vs-theirs gap decomposition, reproduction map onto adopt sequence, reusable
+compare_vs_pbvision.py harness. pb.vision output = reference diagnostic ONLY (never training/GT).
+WEBUX2 RULED PASS + COMMITTED 006810cb7 + pushed (255/255 vitest + typecheck re-verified locally;
+713 insertions); Sonnet browser-verify pass launched (vite+playwright real-Metal checklist). NOTE:
+runs/lanes is gitignored — lane evidence stays local by policy.)_
+
+_(2026-07-12 ~13:0x: PBV_REVENG RULED PASS + deliverables promoted to tracked
+runs/research_pbv_reveng_20260712/ + committed/pushed. BALL PROGRAM for the rest of the window (fence-
+serialized): [BL-A] tt3d_anchor_integrate (after ballcand commit; ball_joint_anchor_search+arc_solver+
+arc_chain; + optional both-ends pinning behind flag; score offline w/ internal cards + pbv harness;
+kill fresh-candidate fallback >=5/11) -> [BL-C] UKF recovery-policy candidate (close 58-vs-183 coverage
+gap honestly; ball_ukf_fallback + arc_chain after BL-A) + radius-residual consumption; [BL-B] parallel
+after ballcand: WASB size-observation persistence + radius-vs-depth diagnostic (emission side only, no
+solver edits). GPU Slot B attests survivors E2E after stale-reuse close. ballcand/spine017/coords
+resumes still alive (wide suites).)_
+
+_(2026-07-12 ~13:4x: THREE MORE RULINGS. [1] court_harvest STAGED PASS-w/-attribution: 100 frames /
+28 sources / 27 channels (>=25/>=15 bars beat), 4x25-shard CVAT package validated dry-run (CVAT stack
+DOWN — not restarted per rule; owner one-command import staged), licenses all R&D-only standard-YT,
+SwingVision-overlay source correctly excluded as competitor-processed; honest gaps: camera-height/
+near-far strata placeholders, +/-2s scene-cut proxy only. Artifacts registered same-session
+(1e50931a9: 12 large files storage-allowlist both-sides + OWNER_GUIDE.md doc inventory; 18/18 policy
+tests green). [2] ios_product_ui2 RULED PASS-w/-attribution + COMMITTED f824a81e7: fabricated Stats
+placeholders killed, audited-facts-or-empty, 6 product-truth tests green on real iOS 26.5 sim
+(sim-verify Sonnet lane; 1 pre-existing device-only ANE bench fail attributed); SwiftPM 245/0/0.
+[3] pbv_reveng committed fb9ecad67 (see prior note). Sonnet passive-wait death x1 (ios simverify)
+recovered w/ standard resume order. Codex still live: ballcand/spine017/coords resumes + timebase +
+facts. Sonnet live: webux2 browser verify.)_
+
+_(2026-07-12 ~11:4x PDT, Fable bg 40bcb767 COURT-PRECISION session start: owner directive = deep
+research court find/track precision (pb.vision-class court lock; better player/ball placement +
+in/out), Fable fanout + gpt-5.6-sol ULTRA(xhigh, stated owner exception), ~10h autonomous. Fences
+honored vs sprint session c7d8cfb2 (ball/spine/coords resumes + timebase/facts/ios lanes live;
+court_calibration.py + metric15.py dirty = READ-ONLY this window; cvat_upload/data read-only).
+DISPATCHED: court_research_sol_20260712 (codex xhigh + web_search, read-only consult, owns only its
+lane dir) + court_precision_harness_20260712 (codex xhigh, owns NEW court_precision_* files + tests
+only) + Fable research-fanout workflow (~30 sonnet agents). Follow-on refinement/temporal-tracking
+lanes gated on harness baseline + research rulings.)_
+
+_(2026-07-12 ~14:3x: TRANCHE-1 LANDED — ballcand PASS 4fdb7b24d, spine017 PASS-w/-attr 7fab3804c,
+coords_parity PASS-w/-attr 0e97c09fe, all pushed; 5 shared wide-suite failures adjudicated (2 fixed by
+court-pack registration, F1 osnet coverage FIXED 3d5125d58, F3 reid-precondition test -> ns013 fence,
+F2 artifact-sensitive court pin -> coords_remainder2 fence). WAVE-3 DISPATCHED (codex xhigh):
+ns013_stale_reuse_20260712 (P0-C close + F3 repair, pid 34053, THE process_video owner now),
+tt3d_integrate_20260712 (BL-A: anchor search into arc chain + optional both-ends pinning, offline
+scoring incl pbv scorecards, kill >=5/11, pid 34054), coords_remainder2_20260712 (metric15+racket6dof
+parity + F2 hardening, pid 34055). GPU SLOT A LIVE: pickleball-h100-trkA provisioning via Sonnet lane
+trk_reid_apron_20260712 (frozen margin matrix, Burlington/Wolverine historical-internal only, HARVEST
+source-only, pin 3d5125d58; fleet row written; concurrency 1/5). webux2b viewer fix pair RULED PASS +
+committed (257/257): placeholder-occlusion + proportional timeline scrub.)_
+
+_(2026-07-12 ~15:0x, sprint session c7d8cfb2 ACK: concurrent court-precision session detected + fences
+mutually clean — they own court_research_sol_20260712 / court_precision_harness_20260712 (NEW
+court_precision_* files only) + a research fanout; I will NOT rule/commit their lanes; my
+coords_remainder2 owns court_calibration_metric15.py + racket6dof.py THIS window (declared 14:3x, they
+marked court files read-only). GPU cap coordination via this file + gpu_fleet.md: my planned peak 3/5
+(trkA live; BODY-overhead + ball-E2E queued); their provisions add on top — whoever provisions reads
+the fleet ledger first per standing rule. Timebase core committed f3cfcb932.)_
+
+_(2026-07-12 ~12:1x PDT, court session 40bcb767 update: RESEARCH LANDED — sol consult PASS (39 cited
+sources, 53-module census, 9-rank PLAN, refinement stub confirmed: refine_homography_with_lines =
+optimizer_not_wired + net-top-in-planar-fit suspect) + 58-agent fanout (7/10 load-bearing claims
+corroborated; pb.vision requires STATIC camera + CourtFocus lock = capture-constraint UX; TVCalib
+ablation: direct reprojection-loss optimization beats homography-then-refine; PnLCalib/NBJW = GPL,
+reimplement-from-paper only; MAGSAC++ = cv2.USAC_MAGSAC drop-in) persisted to
+runs/research_courtlock_20260712/. Harness lane still running (interim baselines: Wolverine M1 5.33px
+med @77.5% cov, Burlington 5.87px @83.3%, M2 honest-absent = no per-frame calibration exists anywhere,
+M5 1px ~= 12.6-17.3cm worst-direction). DISPATCHED wave-2: court_refine1_20260712 (codex xhigh; owns
+court_proposal_optimizer.py + new court_pose_refine.py + tests) + court_paintline2_20260712 (codex
+xhigh; owns court_line_bank.py + court_auto_evidence.py + court_line_keypoints.py additive-only +
+tests). Next: harness anti-gaming freeze on its completion -> manager re-score -> rank-3 temporal lock
+if capacity. Fanout cost note: 2.4M sonnet tokens (over 1M estimate).)_
+
+_(2026-07-12 ~16:1x: TT3D KILLED BY PRE-REGISTERED BAR (9/13 vs <5/11; pinning 8/13; tails worse) —
+lane PASS, candidate REJECTED, DP follow-on killed, GPU Slot B (ball E2E) CANCELLED per plan rank-7
+(saves an H100). Code committed default-off w/ banked negative 44d211eeb + tests 808770d24. Diagnosis:
+candidate density/event evidence is the bottleneck, not anchor state. BALL PROGRAM PIVOT: BL-C
+ball_recovery_20260712 DISPATCHED (recovery-policy v2: two-sided bridging + covariance-ceiling horizon
++ inflated-cov low-conf measurements, each separately killable; target = 58->183-class coverage w/
+ZERO violations, scored w/ pbv harness). coords_remainder2 PASS committed f15052ae1. facts core
+committed db3d87518; timebase f3cfcb932. Still live: ns013, sizeobs, ball_recovery, TRK GPU (trkA
+RUNNING ase1-b). Concurrent court session progressing (paintline2 etc. — theirs).)_
+
+_(2026-07-12 ~16:4x: P0-C CLOSED + COMMITTED 346ead692 (ns013 PASS-w/-attr; unfingerprinted_stale dead,
+migration attestation required, F3 hermetic). GPU SLOT C DISPATCHED: body_overhead_20260712 Sonnet lane
+(pickleball-h100-bodyC; persistent-worker/compile-cache/overlap levers one-at-a-time vs banked 244/705
+wolverine workload; >=15% accept bars w/ metric parity; wall cap 5h). spine_factshunk_20260712 codex
+lane dispatched (serialized spine owner: persist+enforce coaching_fact_audit.json before manifest).
+GPU concurrency mine: trkA + bodyC = 2; Slot B stays CANCELLED (TT3D kill). Live codex: sizeobs,
+ball_recovery, spine_factshunk.)_
+
+_(2026-07-12 ~18:0x: BALL PROGRAM CONVERGENCE — BL-C landed f0a009a73 (v2_one_sided PENDING marginal
+survivor; bridge REJECTED physics<100%; PB coverage target NOT closed 58/252) + BL-B landed 5672f2486
+(sidecar additive-proven; radius proxy = NULL depth signal R2=0.011). CONVERGENT DIAGNOSIS across
+TT3D-kill + recovery-no-op + proxy-null: upstream candidate/event evidence is THE ball-lift
+bottleneck. BL-E ball_anchor_boost_20260712 DISPATCHED (rank-4, last executable path: audio/kinematic/
+blur/court-proximity anchor-evidence fusion scored vs frozen reviewed event timing, PB reference-only)
++ BL-D ball_radius_est_20260712 running (dedicated apparent-radius estimator vs the dead proxy).
+TRK PENDING entry banked bacbf5a20 (margin 0.5/1.0 survive; worst IDF1 0.64->0.85, cov4 0.04->0.71;
+license-blocked R&D-only; RF-DETR NOT triggered). trkA torn down list-confirmed 1.655h ~$2-3.5.
+Live: bodyC GPU, spine_factshunk, ball_radius_est, ball_anchor_boost.)_
+
+_(2026-07-12 ~15:3x PDT, court session 40bcb767 CLOSE: court-precision wave COMMITTED 02d9acedf +
+research 9a4eba44b + North Star CAL row updated. Landed: frozen GT-free harness cpm_v2 (M4 ours
+6.61 vs pb 5.67px median Wolverine), hybrid paint-centerline evidence (default-off, covariance+
+provenance), guarded optimizer replacing the unwired stub (aggressive refinement PERMANENTLY KILLED
+on 3-round stability evidence — do not reopen without new independent labeled geometry), per-frame
+temporal court lock candidate (synthetic-proven, static-degenerate on real clips until a reviewed
+moving clip exists). CVAT UP w/ court-diversity tasks 88-91 ready for owner (mutable-attr sdk fix
+applied; import report in pack). All candidates PENDING; VERIFIED=0. No GPU used. Manager edits:
+list_scaffold_tools.py classifier (2 keywords). Next court moves are owner-gated (label 100 frames
+-> rank-8 semantic evidence model w/ source-disjoint splits) or capture-gated (moving-clip temporal
+proof; gold capture for promotion). Codex xhigh lanes: 4 + 5 resumes; fanout 58 sonnet agents 2.4M.)_

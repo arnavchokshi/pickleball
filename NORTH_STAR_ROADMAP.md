@@ -165,7 +165,7 @@ Numbers from different protocols are not compared directly.
 | Area | Built today | Best honest evidence | Binding next gate |
 |---|---|---|---|
 | DATA | Owner/public ingest, prelabel, CVAT review, dedup, PTS and protected-eval guards | 1,750 reviewed BALL rows prepared; only the 1,121 clip-folded/disagreement-selected card was scored | Uniform-random audit + true source groups + fresh untouched owner/HARVEST holdout with audio |
-| CAL | Manual/metric/profile paths, distortion and ChArUco tools, preview auto-find | Corrected owner PCK@5 is 0 for learned candidates; synthetic-only transfer failed twice | Profile + guided confirmation for v1; auto-find needs owner-viewpoint PCK@5 ≥0.95 and handheld/distortion gates |
+| CAL | Manual/metric/profile paths, distortion and ChArUco tools, preview auto-find, frozen GT-free precision harness, guarded refinement, hybrid paint evidence and temporal-lock candidates (all PENDING) | Corrected owner PCK@5 is 0 for learned candidates; synthetic-only transfer failed twice; harness M4 ours 6.61px vs pb.vision 5.67px median (Wolverine); aggressive local refinement killed on stability evidence | Profile + guided confirmation for v1; auto-find needs owner-viewpoint PCK@5 ≥0.95 and handheld/distortion gates |
 | TRK | YOLO26m, BoT-SORT/ReID, raw-pool association, court placement | Mean IDF1 about 0.852; worst about 0.756 with six switches and worst four-player coverage about 0.885 | Every fresh clip: IDF1 ≥0.85, zero switches, zero spectator FP, zero far-off-court FP, coverage ≥0.95 |
 | BALL | WASB default, candidate training, bounce/in-out, audio/events, arc/sanity chain | Standing anchor F1@20 0.7248, recall@20 0.626, hFP 0.063; candidate A is 0.6152/0.654/0.2506 on a different internal card | Same-protocol F1@20 ≥0.90, recall@20 ≥0.75, hFP ≤0.05 plus contact/in-out/tail gates on fresh data |
 | BODY | SAM-3D-Body runtime, mesh index, placement, grounding and foot-lock | External root-relative 59.7mm, PA 39.9mm, grounding-consistent 76.5mm; decode residual decomposed 2026-07-10 (FK-vs-head ~0, grounding exact, ~53mm = family-metric definition, intentional postchain 23.4mm p95; gate recalibration proposal owner-facing in runs/lanes/ns014_p22residual_20260709/REPORT.md) | Corrected decode gate; independent court-frame world-MPJPE ≤50mm; `grounding_metrics.max_foot_lock_slide_m` ≤0.03; no candidate-label promotion |
@@ -442,6 +442,8 @@ does not change the order above.
   (landed) -> TT3D joint-anchor-search inside the existing scipy fit -> BlurBall/audio
   anchor boosters -> both-ends pinning + inlier pass -> DP segmentation. Owner unlock:
   pb.vision raw "cv" JSON export on our clips. Evidence: runs/research_ball3d_20260709/.
+- Court window 2026-07-12: GT-free harness frozen; refinement killed on stability; hybrid paint
+  evidence + temporal lock PENDING; owner labeling live in CVAT 88-91. runs/research_courtlock_20260712/.
 - Cold-clip BODY frame-materialization bug FIXED (ns016, `7a6fd828e`); 1,200-frame cap
   exclusion residual booked to NS-04.2. Dual-track (Fable x Codex) owner-symptom deep review
   ruled root causes + the V/P/T/B/M fix-wave plan for framerate, missing-people, skeleton-gap,
