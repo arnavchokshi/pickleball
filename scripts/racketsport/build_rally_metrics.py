@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build per-rally per-player positional metrics for coaching-card facts."""
+"""Build deterministic per-rally metrics and evidence-linked coaching facts."""
 
 from __future__ import annotations
 
@@ -47,6 +47,11 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "rally_scope": payload["rally_scope"],
                 "rally_count": len(payload["rallies"]),
                 "player_count": payload["player_count"],
+                "audited_fact_count": len(payload["coaching_card_facts"].get("audited_facts", [])),
+                "omitted_fact_types": [
+                    omission["fact_type"]
+                    for omission in payload["coaching_card_facts"].get("omissions", [])
+                ],
             },
             indent=2,
             sort_keys=True,

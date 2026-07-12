@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://dinkvision.local/schemas/coaching_facts_schema.json",
+  "title": "Deterministic coaching facts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "source_run_dir",
+    "rally_scope",
+    "build_order",
+    "compatibility",
+    "priority_rule",
+    "source_artifacts",
+    "facts",
+    "audited_facts",
+    "omissions"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "artifact_type": {"const": "coaching_card_facts"},
+    "source_run_dir": {"type": "string", "minLength": 1},
+    "rally_scope": {"enum": ["rally_spans", "clip_fallback"]},
+    "build_order": {"const": "coaching_facts_before_manifest"},
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["facts_field", "authoritative_field", "user_facing"],
+      "properties": {
+        "facts_field": {"const": "legacy_v1_projection"},
+        "authoritative_field": {"const": "audited_facts"},
+        "user_facing": {"const": false}
+      }
+    },
+    "priority_rule": {
+      "type": "array",
+      "prefixItems": [
+        {"const": "contact_count_when_present"},
+        {"const": "kitchen_proximity_when_positive"},
+        {"const": "distance_covered_when_positive"},
+        {"const": "p95_speed_when_positive"},
+        {"const": "dominant_zone_occupancy"}
+      ],
+      "items": false,
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "source_artifacts": {
+      "type": "array",
+      "minItems": 2,
+      "items": {"$ref": "#/$defs/sourceArtifact"}
+    },
+    "facts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/legacyProjection"}
+    },
+    "audited_facts": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/auditedFact"}
+    },
+    "omissions": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/omission"}
+    }
+  },
+  "$defs": {
+    "sourceArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_id", "path", "sha256", "artifact_type"],
+      "properties": {
+        "source_id": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+        "path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "artifact_type": {"type": "string", "pattern": "^[A-Za-z0-9_.-]+$"}
+      }
+    },
+    "legacyProjection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rally_id",
+        "rally_scope",
+        "player_id",
+        "metric",
+        "value",
+        "unit",
+        "trust",
+        "frames_used",
+        "frames_total",
+        "coverage_fraction"
+      ],
+      "properties": {
+        "rally_id": {"type": "string"},
+        "rally_scope": {"enum": ["rally_spans", "clip_fallback"]},
+        "player_id": {"type": "string"},
+        "metric": {"enum": ["contact_count", "kitchen_proximity_s", "distance_covered_m", "p95_speed_mps", "zone_occupancy"]},
+        "value": {
+          "oneOf": [
+            {"type": "number"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["zone", "fraction"],
+              "properties": {
+                "zone": {"enum": ["kitchen", "transition", "baseline", "out_of_court"]},
+                "fraction": {"type": "number"}
+              }
+            }
+          ]
+        },
+        "unit": {"enum": ["count", "s", "m", "mps", "fraction"]},
+        "trust": {"enum": ["ok", "estimated", "unverified_cue"]},
+        "frames_used": {"type": "integer", "minimum": 0},
+        "frames_total": {"type": "integer", "minimum": 1},
+        "coverage_fraction": {"type": "number", "minimum": 0}
+      }
+    },
+    "auditedFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_id",
+        "fact_type",
+        "metric",
+        "value",
+        "unit",
+        "rally_id",
+        "entity",
+        "player_id",
+        "interval",
+        "coordinate_space",
+        "time_space",
+        "trust",
+        "coverage",
+        "rule",
+        "source_artifacts",
+        "evidence_locator",
+        "numeric_lineage"
+      ],
+      "properties": {
+        "fact_id": {"type": "string", "pattern": "^ns051\\.[0-9a-f]{20}$"},
+        "fact_type": {"enum": ["rally", "movement", "positioning", "recovery"]},
+        "metric": {"enum": ["rally_duration_s", "distance_covered_m", "dominant_zone_fraction", "return_to_kitchen_line_s"]},
+        "value": {
+          "oneOf": [
+            {"type": "number"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["zone", "fraction"],
+              "properties": {
+                "zone": {"enum": ["kitchen", "transition", "baseline", "out_of_court"]},
+                "fraction": {"type": "number", "minimum": 0, "maximum": 1}
+              }
+            }
+          ]
+        },
+        "unit": {"enum": ["s", "m", "fraction"]},
+        "rally_id": {"type": "string"},
+        "entity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "id"],
+          "properties": {
+            "type": {"enum": ["rally", "player"]},
+            "id": {"type": "string"}
+          }
+        },
+        "player_id": {"type": ["string", "null"]},
+        "interval": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["frame_start", "frame_end_exclusive", "pts_start_s", "pts_end_s"],
+          "properties": {
+            "frame_start": {"type": "integer", "minimum": 0},
+            "frame_end_exclusive": {"type": "integer", "minimum": 1},
+            "pts_start_s": {"type": "number", "minimum": 0},
+            "pts_end_s": {"type": "number", "minimum": 0}
+          }
+        },
+        "coordinate_space": {"enum": ["court_Z0_xy_m", "not_applicable"]},
+        "time_space": {"const": "source_video_pts_s"},
+        "trust": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provenance_band", "authority_band", "gate_id", "gate_status"],
+          "properties": {
+            "provenance_band": {"enum": ["measured", "model_estimated", "physics_predicted", "missing"]},
+            "authority_band": {"enum": ["preview", "low_confidence", "too_close_to_call"]},
+            "gate_id": {"const": "NS-05.1"},
+            "gate_status": {"const": "unpassed"}
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["frames_used", "frames_total", "fraction"],
+          "properties": {
+            "frames_used": {"type": "integer", "minimum": 0},
+            "frames_total": {"type": "integer", "minimum": 1},
+            "fraction": {"type": "number", "minimum": 0}
+          }
+        },
+        "rule": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "version"],
+          "properties": {
+            "id": {"enum": ["rally_duration", "gap_aware_distance", "dominant_court_zone", "descriptive_return_to_kitchen"]},
+            "version": {"const": "ns051.1"}
+          }
+        },
+        "source_artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/sourceArtifact"}
+        },
+        "evidence_locator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["uri", "source_id", "json_pointer"],
+          "properties": {
+            "uri": {"type": "string", "pattern": "^file://"},
+            "source_id": {"type": "string", "pattern": "^[a-z0-9_]+$"},
+            "json_pointer": {"type": "string", "pattern": "^/"}
+          }
+        },
+        "numeric_lineage": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["output_pointer", "formula_id", "source_ids", "source_json_pointers"],
+            "properties": {
+              "output_pointer": {"type": "string", "pattern": "^/"},
+              "formula_id": {"enum": ["pts_interval_difference_v1", "euclidean_valid_segments_sum_v1", "dominant_zone_fraction_v1", "outside_to_near_kitchen_transition_v1"]},
+              "source_ids": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^[a-z0-9_]+$"}},
+              "source_json_pointers": {"type": "array", "minItems": 1, "items": {"type": "string", "pattern": "^/"}}
+            }
+          }
+        }
+      }
+    },
+    "omission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fact_type", "status", "reason_code", "required_artifacts", "missing_artifacts", "required_gate_ids", "observed_artifacts"],
+      "properties": {
+        "fact_type": {"enum": ["shot", "landing", "contact"]},
+        "status": {"const": "absent"},
+        "reason_code": {"enum": ["required_artifact_missing", "required_gate_unpassed"]},
+        "required_artifacts": {"type": "array", "minItems": 2, "items": {"type": "string", "pattern": "^[a-z0-9_]+\\.json$"}},
+        "missing_artifacts": {"type": "array", "items": {"type": "string", "pattern": "^[a-z0-9_]+\\.json$"}},
+        "required_gate_ids": {"type": "array", "minItems": 2, "items": {"enum": ["shot_macro_f1_0_65", "shot_top2_accuracy_0_85", "BALL", "CAL", "event", "BODY", "contact"]}},
+        "observed_artifacts": {"type": "array", "items": {"$ref": "#/$defs/sourceArtifact"}}
+      }
+    }
+  }
+}

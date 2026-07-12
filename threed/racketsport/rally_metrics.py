@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from dataclasses import dataclass, field
@@ -19,6 +20,10 @@ FACTS_ARTIFACT_TYPE = "coaching_card_facts"
 BASELINE_BAND_M = 1.5
 KITCHEN_PROXIMITY_M = 0.5
 MIN_OK_COVERAGE = 0.8
+FACTS_SCHEMA_VERSION = 2
+FACT_RULE_VERSION = "ns051.1"
+COORDINATE_SPACE = "court_Z0_xy_m"
+TIME_SPACE = "source_video_pts_s"
 
 
 @dataclass(frozen=True)
@@ -83,7 +88,15 @@ def build_rally_metrics(run_dir: Path | str) -> dict[str, Any]:
     for span in spans:
         rally_payloads.append(_rally_payload(span, world=world, court_zones=court_zones, contacts=contacts))
 
-    facts = _coaching_card_facts(rally_payloads, source_run_dir=str(run_path), rally_scope=rally_scope)
+    facts = _coaching_card_facts(
+        rally_payloads,
+        source_run_dir=str(run_path.resolve()),
+        rally_scope=rally_scope,
+        run_path=run_path,
+        spans=spans,
+        world=world,
+        court_zones=court_zones,
+    )
     return {
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
@@ -565,17 +578,151 @@ def _coaching_card_facts(
     *,
     source_run_dir: str,
     rally_scope: str,
+    run_path: Path,
+    spans: Sequence[RallySpan],
+    world: WorldTrackData,
+    court_zones: Mapping[str, Any],
 ) -> dict[str, Any]:
-    facts = []
+    legacy_facts = []
     for rally in rallies:
         for player in rally["players"]:
             fact = _select_fact(rally_id=str(rally["id"]), rally_scope=str(rally["rally_scope"]), player=player)
-            facts.append(fact)
+            legacy_facts.append(fact)
+
+    source_artifacts = _facts_source_artifacts(run_path)
+    source_by_id = {source["source_id"]: source for source in source_artifacts}
+    audited_facts: list[dict[str, Any]] = []
+    for span_index, (span, rally) in enumerate(zip(spans, rallies)):
+        rally_source_id = (
+            "rally_spans"
+            if span.scope == "rally_spans" and "rally_spans" in source_by_id
+            else "virtual_world"
+        )
+        rally_source_pointer = f"/spans/{span_index}" if rally_source_id == "rally_spans" else "/players"
+        rally_frame_start = max(0, int(round(span.t0 * world.fps)))
+        audited_facts.append(
+            _audited_fact(
+                fact_type="rally",
+                metric="rally_duration_s",
+                value=round(span.t1 - span.t0, 6),
+                unit="s",
+                rally_id=span.rally_id,
+                entity_type="rally",
+                entity_id=span.rally_id,
+                player_id=None,
+                frame_start=rally_frame_start,
+                frame_end_exclusive=max(rally_frame_start + 1, int(round(span.t1 * world.fps))),
+                pts_start_s=span.t0,
+                pts_end_s=span.t1,
+                coordinate_space="not_applicable",
+                provenance_band="model_estimated",
+                frames_used=max(1, int(round((span.t1 - span.t0) * world.fps))),
+                frames_total=max(1, int(round((span.t1 - span.t0) * world.fps))),
+                rule_id="rally_duration",
+                formula_id="pts_interval_difference_v1",
+                sources=[source_by_id[rally_source_id]],
+                source_json_pointers=[rally_source_pointer],
+            )
+        )
+        rally_players = {
+            str(player["player_id"]): player
+            for player in rally["players"]
+            if isinstance(player, Mapping) and player.get("player_id") is not None
+        }
+        for player_index, player_track in enumerate(world.players):
+            player_payload = rally_players.get(player_track.player_id)
+            if player_payload is None:
+                continue
+            frames = tuple(frame for frame in player_track.frames if _time_in_span(frame.t, span))
+            if not frames:
+                continue
+            metrics = player_payload["metrics"]
+            world_pointer = f"/players/{player_index}/frames"
+            common_sources = [source_by_id["virtual_world"], source_by_id["court_zones"]]
+            common_kwargs = {
+                "rally_id": span.rally_id,
+                "entity_type": "player",
+                "entity_id": player_track.player_id,
+                "player_id": player_track.player_id,
+                "frame_start": min(frame.frame_index for frame in frames),
+                "frame_end_exclusive": max(frame.frame_index for frame in frames) + 1,
+                "pts_start_s": min(frame.t for frame in frames),
+                "pts_end_s": max(frame.t for frame in frames),
+                "coordinate_space": COORDINATE_SPACE,
+                "provenance_band": _fact_provenance_band(frames),
+                "frames_used": int(metrics["distance_covered_m"]["frames_used"]),
+                "frames_total": int(metrics["distance_covered_m"]["frames_total"]),
+                "sources": common_sources,
+                "source_json_pointers": [world_pointer, "/zones"],
+            }
+            audited_facts.append(
+                _audited_fact(
+                    fact_type="movement",
+                    metric="distance_covered_m",
+                    value=metrics["distance_covered_m"]["value"],
+                    unit="m",
+                    rule_id="gap_aware_distance",
+                    formula_id="euclidean_valid_segments_sum_v1",
+                    **common_kwargs,
+                )
+            )
+            zone, fraction = max(
+                metrics["zone_occupancy"]["value"].items(),
+                key=lambda item: (item[1], item[0]),
+            )
+            audited_facts.append(
+                _audited_fact(
+                    fact_type="positioning",
+                    metric="dominant_zone_fraction",
+                    value={"zone": zone, "fraction": round(float(fraction), 6)},
+                    unit="fraction",
+                    rule_id="dominant_court_zone",
+                    formula_id="dominant_zone_fraction_v1",
+                    **common_kwargs,
+                )
+            )
+            recovery = _first_return_to_kitchen(frames, court_zones=court_zones, fps=world.fps)
+            if recovery is not None:
+                recovery_start, recovery_end = recovery
+                audited_facts.append(
+                    _audited_fact(
+                        fact_type="recovery",
+                        metric="return_to_kitchen_line_s",
+                        value=round(recovery_end.t - recovery_start.t, 6),
+                        unit="s",
+                        rally_id=span.rally_id,
+                        entity_type="player",
+                        entity_id=player_track.player_id,
+                        player_id=player_track.player_id,
+                        frame_start=recovery_start.frame_index,
+                        frame_end_exclusive=recovery_end.frame_index + 1,
+                        pts_start_s=recovery_start.t,
+                        pts_end_s=recovery_end.t,
+                        coordinate_space=COORDINATE_SPACE,
+                        provenance_band=_fact_provenance_band((recovery_start, recovery_end)),
+                        frames_used=sum(
+                            1 for frame in frames if recovery_start.t <= frame.t <= recovery_end.t
+                        ),
+                        frames_total=int(metrics["distance_covered_m"]["frames_total"]),
+                        rule_id="descriptive_return_to_kitchen",
+                        formula_id="outside_to_near_kitchen_transition_v1",
+                        sources=common_sources,
+                        source_json_pointers=[world_pointer, "/zones"],
+                    )
+                )
+
+    audited_facts.sort(key=lambda fact: fact["fact_id"])
     return {
-        "schema_version": 1,
+        "schema_version": FACTS_SCHEMA_VERSION,
         "artifact_type": FACTS_ARTIFACT_TYPE,
         "source_run_dir": source_run_dir,
         "rally_scope": rally_scope,
+        "build_order": "coaching_facts_before_manifest",
+        "compatibility": {
+            "facts_field": "legacy_v1_projection",
+            "authoritative_field": "audited_facts",
+            "user_facing": False,
+        },
         "priority_rule": [
             "contact_count_when_present",
             "kitchen_proximity_when_positive",
@@ -583,8 +730,189 @@ def _coaching_card_facts(
             "p95_speed_when_positive",
             "dominant_zone_occupancy",
         ],
-        "facts": facts,
+        "source_artifacts": source_artifacts,
+        "facts": legacy_facts,
+        "audited_facts": audited_facts,
+        "omissions": _advanced_fact_omissions(run_path),
     }
+
+
+def _facts_source_artifacts(run_path: Path) -> list[dict[str, Any]]:
+    paths = {
+        "virtual_world": run_path / "virtual_world.json",
+        "court_zones": run_path / "court_zones.json",
+        "rally_spans": run_path / "rally_spans.json",
+        "contact_windows": run_path / "contact_windows.json",
+    }
+    return [_source_artifact(source_id, path) for source_id, path in paths.items() if path.is_file()]
+
+
+def _source_artifact(source_id: str, path: Path) -> dict[str, Any]:
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    artifact_type = payload.get("artifact_type") if isinstance(payload, Mapping) else None
+    return {
+        "source_id": source_id,
+        "path": str(path.resolve()),
+        "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "artifact_type": str(artifact_type) if artifact_type is not None else "unspecified_json",
+    }
+
+
+def _audited_fact(
+    *,
+    fact_type: str,
+    metric: str,
+    value: Any,
+    unit: str,
+    rally_id: str,
+    entity_type: str,
+    entity_id: str,
+    player_id: str | None,
+    frame_start: int,
+    frame_end_exclusive: int,
+    pts_start_s: float,
+    pts_end_s: float,
+    coordinate_space: str,
+    provenance_band: str,
+    frames_used: int,
+    frames_total: int,
+    rule_id: str,
+    formula_id: str,
+    sources: Sequence[Mapping[str, Any]],
+    source_json_pointers: Sequence[str],
+) -> dict[str, Any]:
+    identity = json.dumps(
+        [fact_type, metric, rally_id, entity_type, entity_id],
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode("utf-8")
+    fact = {
+        "fact_id": "ns051." + hashlib.sha256(identity).hexdigest()[:20],
+        "fact_type": fact_type,
+        "metric": metric,
+        "value": value,
+        "unit": unit,
+        "rally_id": rally_id,
+        "entity": {"type": entity_type, "id": entity_id},
+        "player_id": player_id,
+        "interval": {
+            "frame_start": frame_start,
+            "frame_end_exclusive": frame_end_exclusive,
+            "pts_start_s": round(float(pts_start_s), 6),
+            "pts_end_s": round(float(pts_end_s), 6),
+        },
+        "coordinate_space": coordinate_space,
+        "time_space": TIME_SPACE,
+        "trust": {
+            "provenance_band": provenance_band,
+            "authority_band": "preview",
+            "gate_id": "NS-05.1",
+            "gate_status": "unpassed",
+        },
+        "coverage": {
+            "frames_used": frames_used,
+            "frames_total": frames_total,
+            "fraction": round(_coverage(frames_used, frames_total), 6),
+        },
+        "rule": {"id": rule_id, "version": FACT_RULE_VERSION},
+        "source_artifacts": [dict(source) for source in sources],
+        "evidence_locator": {
+            "uri": Path(str(sources[0]["path"])).as_uri() + "#" + source_json_pointers[0],
+            "source_id": sources[0]["source_id"],
+            "json_pointer": source_json_pointers[0],
+        },
+    }
+    fact["numeric_lineage"] = [
+        {
+            "output_pointer": pointer,
+            "formula_id": formula_id,
+            "source_ids": [source["source_id"] for source in sources],
+            "source_json_pointers": list(source_json_pointers),
+        }
+        for pointer in _numeric_leaf_pointers(fact)
+    ]
+    return fact
+
+
+def _numeric_leaf_pointers(value: Any, pointer: str = "") -> list[str]:
+    if isinstance(value, bool) or value is None:
+        return []
+    if isinstance(value, (int, float)):
+        return [pointer or "/"]
+    if isinstance(value, Mapping):
+        pointers: list[str] = []
+        for key, item in value.items():
+            escaped = str(key).replace("~", "~0").replace("/", "~1")
+            pointers.extend(_numeric_leaf_pointers(item, f"{pointer}/{escaped}"))
+        return pointers
+    if isinstance(value, list):
+        pointers = []
+        for index, item in enumerate(value):
+            pointers.extend(_numeric_leaf_pointers(item, f"{pointer}/{index}"))
+        return pointers
+    return []
+
+
+def _fact_provenance_band(frames: Sequence[PlayerFrame]) -> str:
+    return "physics_predicted" if any(frame.estimated_input for frame in frames) else "model_estimated"
+
+
+def _first_return_to_kitchen(
+    frames: Sequence[PlayerFrame],
+    *,
+    court_zones: Mapping[str, Any],
+    fps: float,
+) -> tuple[PlayerFrame, PlayerFrame] | None:
+    ordered = sorted(frames, key=lambda frame: (frame.t, frame.frame_index))
+    start: PlayerFrame | None = None
+    previous: PlayerFrame | None = None
+    for frame in ordered:
+        if previous is not None and frame.t - previous.t > _max_gap_s(fps):
+            start = None
+        near_line = _near_kitchen_line(frame.track_world_xy, court_zones)
+        if start is None and not near_line:
+            start = frame
+        elif start is not None and near_line and frame.t > start.t:
+            return start, frame
+        previous = frame
+    return None
+
+
+def _advanced_fact_omissions(run_path: Path) -> list[dict[str, Any]]:
+    requirements = {
+        "shot": (
+            ("shot_classification.json", "shot_eval.json"),
+            ("shot_macro_f1_0_65", "shot_top2_accuracy_0_85"),
+        ),
+        "landing": (
+            ("ball_arc_solved.json", "court_calibration.json", "contact_windows_refined_v1.json"),
+            ("BALL", "CAL", "event"),
+        ),
+        "contact": (
+            ("contact_windows_refined_v1.json", "body_full_clip_gate.json", "contact_refinement_v1.json"),
+            ("BODY", "contact"),
+        ),
+    }
+    omissions = []
+    for fact_type, (artifact_names, gate_ids) in requirements.items():
+        observed = [
+            _source_artifact(Path(name).stem, run_path / name)
+            for name in artifact_names
+            if (run_path / name).is_file()
+        ]
+        missing = [name for name in artifact_names if not (run_path / name).is_file()]
+        omissions.append(
+            {
+                "fact_type": fact_type,
+                "status": "absent",
+                "reason_code": "required_artifact_missing" if missing else "required_gate_unpassed",
+                "required_artifacts": list(artifact_names),
+                "missing_artifacts": missing,
+                "required_gate_ids": list(gate_ids),
+                "observed_artifacts": observed,
+            }
+        )
+    return omissions
 
 
 def _select_fact(*, rally_id: str, rally_scope: str, player: Mapping[str, Any]) -> dict[str, Any]:
