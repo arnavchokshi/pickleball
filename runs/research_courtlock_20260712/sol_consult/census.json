@@ -1,0 +1,290 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-12T11:52:08-07:00",
+  "lane": "court_research_sol_20260712",
+  "policy": {
+    "code_mode": "read_only",
+    "verified": false,
+    "protected_labels_read": false,
+    "protected_clips": ["Outdoor", "Indoor"],
+    "diagnostic_clips_allowed": ["Burlington", "Wolverine"],
+    "pbvision_is_ground_truth": false,
+    "best_stack_delta": "none"
+  },
+  "provenance": {
+    "branch": "main",
+    "repo_head": "0e97c09fe1218b1a754222f879e40ae996e24657",
+    "worktree_note": "The lane specs and manager board state that court_calibration.py and court_calibration_metric15.py belong to another lane and may carry uncommitted edits. Initial file-scoped git diff, git diff --cached, and git status checks showed no worktree/index delta for either file; both were nevertheless treated as read-only. During final validation another lane's unstaged court_calibration_metric15.py edit became visible (coordinate helpers, extrinsics inversion, and coordinate-contract payload); court_calibration.py remained clean. This consult did not modify either file. HEAD also advanced concurrently from 0e97c09fe1218b1a754222f879e40ae996e24657 to a57476a39ffbdae6d137e958c6c8d81bf8e3c04f through unrelated commits.",
+    "validation_head": "a57476a39ffbdae6d137e958c6c8d81bf8e3c04f",
+    "foreign_uncommitted_at_validation": [
+      "threed/racketsport/court_calibration_metric15.py"
+    ],
+    "source_of_default_truth": [
+      "scripts/racketsport/process_video.py",
+      "threed/racketsport/orchestrator.py",
+      "configs/racketsport/best_stack.json"
+    ],
+    "evidence_documents": [
+      "NORTH_STAR_ROADMAP.md",
+      "RUNBOOK.md",
+      "runs/lanes/court_wave_20260709/WAVE_CLOSE.md",
+      "runs/lanes/court_wave_20260709/DESIGN_RULING.md",
+      "runs/lanes/court_train1_20260709/REPORT.md",
+      "runs/lanes/court_train4_20260710/REPORT.md",
+      "runs/lanes/court_data1_20260709/report.json",
+      "runs/lanes/court_ext1_20260709/REPORT.md",
+      "runs/research_pbv_reveng_20260712/METHOD_FORENSICS.md",
+      "runs/lanes/plan_sprint_20260712/PLAN.md",
+      "runs/lanes/court_precision_harness_20260712/spec.md"
+    ]
+  },
+  "default_pipeline_flow": [
+    {
+      "stage": "calibration",
+      "runner": "ManualCalibrationRunner or ExternalCalibrationRunner",
+      "inputs": ["capture_sidecar.json and optional court_keypoints.json", "court_corners.json converted to capture_sidecar.json", "court_calibration_metric15pt.json or explicit --court-calibration"],
+      "outputs": ["court_calibration.json", "court_zones.json", "net_plane.json", "court_line_evidence.json"]
+    },
+    {
+      "stage": "tracking",
+      "runner": "YOLO26m plus BoT-SORT/ReID or precomputed tracks",
+      "inputs": ["court_calibration.json"],
+      "outputs": ["tracks.json", "raw_tracked_detections.json", "tracked_detections.json"],
+      "coordinate_note": "Initial bbox-bottom-center projection uses the calibration homography into WORLD_XY_HOMOGRAPHY_M."
+    },
+    {
+      "stage": "camera_motion",
+      "runner": "threed.racketsport.camera_motion",
+      "inputs": ["source video", "court_calibration.json", "tracks.json"],
+      "outputs": ["camera_motion.json"],
+      "coordinate_note": "Each compensated M maps current-frame pixels into the calibration-reference frame; artifact remains preview/not gate verified."
+    },
+    {
+      "stage": "placement",
+      "runner": "rewrite_tracks_with_placement",
+      "inputs": ["tracks.json", "court_calibration.json", "optional native2d feet", "optional camera_motion.json"],
+      "outputs": ["placement.json", "rewritten tracks.json", "tracks_prewrite_backup.json", "foot_contact_phases.json"],
+      "coordinate_note": "Raw pixels are optionally undistorted when the calibration declares an undistorted-pixel homography; camera-motion M is applied before inverse-homography projection; covariance is propagated from pixel sigma through the homography Jacobian."
+    },
+    {
+      "stage": "ball and ball_arc",
+      "runner": "WASB plus manual-corner in/out plus calibrated arc reconstruction",
+      "inputs": ["ball_track.json", "optional original court_corners.json", "court_calibration.json for arc solver"],
+      "outputs": ["ball_track.json", "ball_inout_summary.json when court_corners is present", "ball_track_arc_solved.json", "ball_flight_sanity.json"],
+      "coordinate_note": "The current stage-6 in/out path independently rebuilds a native-pixel homography from court_corners.json; it does not consume court_calibration.json. The 3D arc path does consume court_calibration.json and emits court/world XYZ."
+    },
+    {
+      "stage": "body and grounding",
+      "runner": "SAM-3D-Body plus worldhmr/grounding",
+      "inputs": ["court_calibration.json", "rewritten tracks.json", "optional camera_motion.json"],
+      "outputs": ["skeleton3d.json", "smpl_motion.json", "grounding_metrics.json", "body_grounding_quality.json"],
+      "coordinate_note": "Track world_xy is the horizontal root anchor; BODY samples and meshes are emitted in court_Z0 world space. Camera-motion correction is limited to pixel-to-world grounding inputs."
+    },
+    {
+      "stage": "world and stats",
+      "runner": "virtual_world plus match/rally metrics",
+      "inputs": ["court_calibration.json", "tracks.json", "placement.json", "skeleton3d.json", "ball_track_arc_solved.json", "court_zones.json"],
+      "outputs": ["virtual_world.json", "confidence_gated_world.json", "match_stats.json", "rally_metrics.json"],
+      "coordinate_note": "Player, BODY, ball and paddle presentation is assembled in court_Z0; zone facts use metric track_world_xy against template court_zones."
+    }
+  ],
+  "calibration_paths": [
+    {
+      "name": "manual_four_corner",
+      "entry": "process_video.py --court-corners or --capture-sidecar with manual_court_taps",
+      "solve": "court_calibration.calibration_from_manual_taps via orchestrator.ManualCalibrationRunner",
+      "camera_model": "four planar corners, homography plus solvePnP-oriented artifact; fallback intrinsics may be estimated from declared corners",
+      "trust": "requires human-reviewed corners for product verification; reprojection of the four points is not independent accuracy proof"
+    },
+    {
+      "name": "arkit_metric_keypoints",
+      "entry": "--capture-sidecar plus --court-keypoints",
+      "solve": "court_calibration.metric_calibration_from_sidecar_and_keypoints",
+      "camera_model": "ARKit intrinsics, pose and floor plane plus court keypoints",
+      "trust": "future-facing no-tap path remains fail-closed by automatic evidence policy"
+    },
+    {
+      "name": "reviewed_metric15",
+      "entry": "explicit --court-calibration or auto-discovered labels/court_calibration_metric15pt.json",
+      "solve": "offline court_calibration_metric15.metric_calibration_from_reviewed_keypoints_15pt, then orchestrator.ExternalCalibrationRunner validates intrinsics.source=metric_15pt_reviewed",
+      "camera_model": "fx, fy, k1, k2 plus pose from reviewed 15-point evidence; emitted homography declares its pixel convention",
+      "trust": "reviewed input and trusted source, but still not a CAL promotion without the owner-viewpoint gate"
+    },
+    {
+      "name": "profile_reuse",
+      "entry": "profile_registry plus court_profile_match",
+      "solve": "frozen profile calibration verified by fingerprint, paint color and four outer lines",
+      "camera_model": "stored court/device/lens profile",
+      "trust": "implemented library and tests, not wired into process_video.py or orchestrator.py"
+    },
+    {
+      "name": "auto_find_preview",
+      "entry": "--allow-auto-court-corners-preview; server default true",
+      "solve": "five sampled frames -> court_line_keypoints -> best-confidence four corners -> manual runner",
+      "camera_model": "preview four-corner seed",
+      "trust": "model_estimated preview only; poor capture quality reasons retained; tracking gets a 2 m margin"
+    },
+    {
+      "name": "proposal_preview",
+      "entry": "--court-proposals-preview or standalone proposal/detector CLIs",
+      "solve": "line bank, regulation hypotheses, optional detector-v2/net-anchor proposals",
+      "camera_model": "proposal only",
+      "trust": "writes review/correction artifacts and hard-stops; never becomes court_calibration.json automatically"
+    }
+  ],
+  "downstream_consumers": [
+    {
+      "capability": "player placement and court membership",
+      "artifacts": ["court_calibration.json", "camera_motion.json", "tracks.json", "placement.json"],
+      "coordinates": "raw or undistorted image pixels -> calibration-reference pixels -> court/world XY metres",
+      "precision_dependency": "direct; homography bias moves every player anchor and can change on/off-court filtering"
+    },
+    {
+      "capability": "BODY grounding",
+      "artifacts": ["court_calibration.json", "tracks.json", "placement.json", "camera_motion.json", "skeleton3d.json", "smpl_motion.json"],
+      "coordinates": "camera-relative BODY offsets anchored to track_world_xy and emitted in court_Z0",
+      "precision_dependency": "direct horizontally; placement error becomes BODY root/feet placement error"
+    },
+    {
+      "capability": "BALL 3D",
+      "artifacts": ["court_calibration.json", "ball_track.json", "ball_track_arc_solved.json"],
+      "coordinates": "image pixels projected by the calibrated camera into court/world XYZ",
+      "precision_dependency": "direct for arc scale, bounce position, net clearance and fail-closed spatial sanity"
+    },
+    {
+      "capability": "BALL in/out",
+      "artifacts": ["court_corners.json", "ball_track.json", "ball_inout_summary.json"],
+      "coordinates": "native ball pixels -> separately rebuilt manual-corner court-plane XY",
+      "precision_dependency": "separate seam today; improvements to court_calibration.json do not automatically reach stage-6 in/out until integration unifies the authority"
+    },
+    {
+      "capability": "world replay and coaching facts",
+      "artifacts": ["court_calibration.json", "court_zones.json", "placement.json", "tracks.json", "virtual_world.json", "match_stats.json", "rally_metrics.json"],
+      "coordinates": "court_Z0 metres and regulation-zone polygons",
+      "precision_dependency": "direct for heatmaps, kitchen proximity, recovery and court-coverage facts"
+    }
+  ],
+  "refinement_and_temporal_hooks": [
+    {
+      "hook": "court_keypoint_net.refine_keypoint_xy_with_planar_homography",
+      "status": "offline learned-keypoint evaluation only",
+      "why_noop_or_worse": "Returns raw predictions when fewer than 8 channels agree within 30 px; failed cross-source models therefore usually no-op. It fits all named points using world x/y only, so the three net-top points lose their non-planar z and can worsen results. Four-point subset enumeration also ignores confidence and line evidence."
+    },
+    {
+      "hook": "court_proposal_optimizer.refine_homography_with_lines",
+      "status": "unwired stub",
+      "why_noop_or_worse": "run_guarded_line_refinement returns initial_h unchanged and score_homography_support returns four zeros; the wrapper explicitly records optimizer_not_wired."
+    },
+    {
+      "hook": "overlapping_court_calibration refinement family",
+      "status": "real offline diagnostic implementation, not default wired",
+      "why_noop_or_worse": "Contains LM homography, point+line, radial-distortion and metric-plane fits, but consumes reviewed points/line observations and has no default-pipeline integration or independent accept guard. Full intrinsics from one plane is explicitly marked unidentifiable/diagnostic-only."
+    },
+    {
+      "hook": "net_anchor_court.accept_candidate_correspondences",
+      "status": "proposal-only",
+      "why_noop_or_worse": "Can robustly test added named correspondences, but the proposal solver never writes court_calibration.json and its residual is self-consistency against the same correspondences."
+    },
+    {
+      "hook": "camera_motion.estimate_camera_motion",
+      "status": "default motion-conditional preview before placement",
+      "why_noop_or_worse": "Produces current-pixel-to-reference transforms and placement/worldhmr can consume them, but it does not emit per-frame calibrated camera parameters and BALL 3D does not consume camera_motion.json. A single bad reference or drift can therefore remain systemic."
+    },
+    {
+      "hook": "court_profile_match.verify_outer_court_lines",
+      "status": "implemented but not pipeline-wired",
+      "why_noop_or_worse": "Has useful 4.8 px median/12.3 px p95/three-line reuse guards but no process_video/orchestrator caller."
+    },
+    {
+      "hook": "court_auto_evidence and court_line_evidence",
+      "status": "default-wired evidence gate",
+      "why_noop_or_worse": "Scores detected segments against a fixed solved calibration but does not optimize the calibration; thresholded nearest-line selection can be circular if reused as an objective without fixed visibility and clutter competition."
+    }
+  ],
+  "modules": [
+    {"path":"threed/racketsport/court_calibration.py","pipeline_status":"wired_default","role":"Core homography/PnP, typed pixel/world projection, manual and ARKit metric solves.","precision_reuse":"Authority math; preserve typed raw/undistorted conventions and use its projection primitives."},
+    {"path":"threed/racketsport/court_calibration_metric15.py","pipeline_status":"offline_producer_pipeline_consumed","role":"Reviewed 15-point full metric single-view fit.","precision_reuse":"Best existing source for distortion-aware seed and reviewed calibration artifacts."},
+    {"path":"threed/racketsport/court_auto_evidence.py","pipeline_status":"wired_default","role":"Detect and aggregate automatic court/net line evidence from frames/video.","precision_reuse":"Primary evidence extractor and projected-template segment source for M1/M3 and refinement."},
+    {"path":"threed/racketsport/court_line_evidence.py","pipeline_status":"wired_default","role":"Semantic candidate-to-expected-line scoring and evidence aggregation.","precision_reuse":"Reuse scoring schema but harden objective against search-window circularity."},
+    {"path":"threed/racketsport/court_templates.py","pipeline_status":"wired_default","role":"Regulation court dimensions, corners and named line segments.","precision_reuse":"Canonical geometric model for every solve and sensitivity map."},
+    {"path":"threed/racketsport/court_zones.py","pipeline_status":"wired_default","role":"Regulation zone polygons and point classification.","precision_reuse":"Downstream effect measurement, not an image calibration solver."},
+    {"path":"threed/racketsport/court_line_keypoints.py","pipeline_status":"wired_preview","role":"Single-frame white-line/Hough semantic keypoints and four-corner preview.","precision_reuse":"Seed generator; replace integer/peak decisions with subpixel paired-edge evidence before trusting."},
+    {"path":"threed/racketsport/court_line_bank.py","pipeline_status":"wired_preview","role":"Hough/LSD/FastLine extraction, dedupe, merged line bank and direction clustering.","precision_reuse":"Natural home for classical/DeepLSD/EDLines ablations and subpixel line uncertainty."},
+    {"path":"threed/racketsport/court_regulation_proposals.py","pipeline_status":"wired_preview","role":"Generate regulation-court hypotheses from normalized line banks.","precision_reuse":"Keep top-K identity hypotheses until temporal/geometric evidence disambiguates multi-line courts."},
+    {"path":"threed/racketsport/court_proposals.py","pipeline_status":"wired_preview","role":"Fail-closed proposal artifacts and temporal consensus helpers.","precision_reuse":"Reuse proposal schema, confidence caps and correction handoff; never auto-promote."},
+    {"path":"threed/racketsport/court_proposal_optimizer.py","pipeline_status":"dead_stub","role":"Intended guarded line-distance homography refinement.","precision_reuse":"Highest-priority defect surface: scoring and optimization are explicitly placeholders."},
+    {"path":"threed/racketsport/court_detector_v2.py","pipeline_status":"standalone_preview_artifact_gate","role":"Orchestrates multi-hypothesis geometric detector v2.","precision_reuse":"Use as a coarse re-detection/keyframe prior; process_video only notices a pre-existing proposal artifact."},
+    {"path":"threed/racketsport/court_detector_v2_hypotheses.py","pipeline_status":"standalone_preview","role":"Creates geometric and optional neural-seed hypotheses.","precision_reuse":"Useful top-K hypothesis generation under ambiguous paint families."},
+    {"path":"threed/racketsport/court_detector_v2_surface.py","pipeline_status":"standalone_preview","role":"Court-surface/paint evidence and quad segmentation.","precision_reuse":"Independent paint mask can constrain line searches and clutter competition."},
+    {"path":"threed/racketsport/court_detector_v2_net.py","pipeline_status":"standalone_preview","role":"Net evidence extraction for detector v2.","precision_reuse":"M3 evidence and non-planar camera check, with center-sag contract required."},
+    {"path":"threed/racketsport/court_detector_v2_verify.py","pipeline_status":"standalone_preview","role":"Hypothesis self-verification against pixels, lines, net and tennis-overlay rejection.","precision_reuse":"Guard layer for keyframe re-detection; self-verification alone is not accuracy proof."},
+    {"path":"threed/racketsport/court_detector_v2_schema.py","pipeline_status":"standalone_preview","role":"Proposal artifact schemas.","precision_reuse":"Retain machine-readable blockers and non-promotion state."},
+    {"path":"threed/racketsport/court_detector_v2_model.py","pipeline_status":"training_scaffold","role":"Lightweight/mobilenet/resnet detector model experiments.","precision_reuse":"Only after owner-100 source-group split; avoid another large cross-source regressor."},
+    {"path":"threed/racketsport/net_anchor_court.py","pipeline_status":"standalone_proposal","role":"Training-free net-first proposal solver with line ladder, vanishing families and confidence caps.","precision_reuse":"Strong geometry prior and M3 source; keep proposal-only until independent gates."},
+    {"path":"threed/racketsport/overlapping_court_calibration.py","pipeline_status":"offline_diagnostic","role":"HSV/shadow/line evidence plus LM homography, radial camera, point-line and metric-plane fits.","precision_reuse":"Reuse real optimizers and shadow preprocessing in an ablation lane; add identifiability and independent accept guards."},
+    {"path":"threed/racketsport/court_profile_match.py","pipeline_status":"implemented_unwired","role":"Fingerprint/color/four-line validation for court profile reuse.","precision_reuse":"Best robust v1 path for recurring owned courts; wire only through integration handoff."},
+    {"path":"threed/racketsport/profile_registry.py","pipeline_status":"implemented_unwired_for_calibration","role":"Court/device/lens profile storage, fingerprints and matching.","precision_reuse":"Persist known intrinsics/distortion/court pose with consent and immutable provenance."},
+    {"path":"threed/racketsport/camera_motion.py","pipeline_status":"wired_preview","role":"Masked feature/flow similarity or homography motion to a reference frame, with smoothing and diagnostics.","precision_reuse":"Base for per-frame lock; retain raw transforms/covariance and keyframe reset events."},
+    {"path":"threed/racketsport/court_motion_mode.py","pipeline_status":"unwired_helper","role":"Classifies static/moving/untrusted motion from transforms.","precision_reuse":"Use as policy selector, but align its expected field names with camera_motion payload first."},
+    {"path":"threed/racketsport/placement.py","pipeline_status":"wired_default","role":"Foot/bbox covariance fusion and camera-motion-aware court-plane rewrite.","precision_reuse":"Existing correct downstream seam for per-frame pixel-to-reference transforms and uncertainty."},
+    {"path":"threed/racketsport/person_fast.py","pipeline_status":"wired_default_via_orchestrator","role":"BBox-bottom court projection and court filtering.","precision_reuse":"Audit declared homography pixel space on initial tracking; precision directly controls accepted people."},
+    {"path":"threed/racketsport/court_positioning.py","pipeline_status":"library_reachable","role":"ARKit floor backprojection, metric placement and boundary decisions.","precision_reuse":"Useful sensor/uncertainty math for native capture; separate from normal placement path."},
+    {"path":"threed/racketsport/court_positioning_artifacts.py","pipeline_status":"library_reachable","role":"Strict ARKit court/player/call artifact builders.","precision_reuse":"Schema/provenance reuse for on-device L0 evidence and abstention."},
+    {"path":"threed/racketsport/court_keypoint_net.py","pipeline_status":"offline_model_and_core_geometry","role":"Court U-Net primitives, subpixel heatmap decode and homography postprocess.","precision_reuse":"Reuse subpixel decoder; repair floor/net separation and confidence-aware robust fitting."},
+    {"path":"threed/racketsport/court_model_infer.py","pipeline_status":"standalone_candidate","role":"Stable adapter for pending court_unet_v2 checkpoint.","precision_reuse":"Coarse proposal prior only; checkpoint failed cross-source gates."},
+    {"path":"threed/racketsport/court_keypoint_lines.py","pipeline_status":"offline_training_inference","role":"Line-family masks, fitted lines and intersections.","precision_reuse":"Semantic line evidence is more reusable than direct keypoint regression at current data scale."},
+    {"path":"threed/racketsport/court_keypoint_eval.py","pipeline_status":"offline_gate","role":"Owner-viewpoint PCK, partial visibility and sanity evaluation.","precision_reuse":"Independent labeled gate once owner-100 labels return; not a GT-free metric."},
+    {"path":"threed/racketsport/court_partial_geometry.py","pipeline_status":"offline_helper","role":"Visible-floor partial homography fit.","precision_reuse":"Handle partial/occluded keyframes with explicit absent geometry."},
+    {"path":"threed/racketsport/court_template_competition.py","pipeline_status":"standalone_preview_helper","role":"Template/spacing competition for proposal evidence.","precision_reuse":"Essential anti-gaming check against wrong parallel line families and tennis overlays."},
+    {"path":"threed/racketsport/court_finding_technology_benchmark.py","pipeline_status":"offline_benchmark","role":"Runs and scores classical/learned court-finding technologies.","precision_reuse":"Reuse frozen candidate comparison harness; do not rerun killed transfer recipes."},
+    {"path":"threed/racketsport/court_cal_impact.py","pipeline_status":"offline_diagnostic","role":"Measures candidate effects on placement and approximate ball/court relationships.","precision_reuse":"Add downstream effect checks to harness so pixel gains cannot hide world regressions."},
+    {"path":"threed/racketsport/court_review_artifacts.py","pipeline_status":"offline_review","role":"Builds/saves reviewed calibration artifacts and protected-eval guards.","precision_reuse":"Use for owner correction provenance, never treat candidate predictions as GT."},
+    {"path":"threed/racketsport/court_corner_review.py","pipeline_status":"constant_only_in_default","role":"Build calibration from reviewed corner corrections; process_video imports only corner ordering.","precision_reuse":"Correction UI handoff source; not currently a default precision loop."},
+    {"path":"threed/racketsport/court_keypoint_labels.py","pipeline_status":"offline_data","role":"Partial keypoint label schema and loader.","precision_reuse":"Owner-100 partial visibility annotations and source-group provenance."},
+    {"path":"threed/racketsport/court_keypoint_geometric_loss.py","pipeline_status":"offline_training","role":"Collinearity, homography consistency and layout-spread losses.","precision_reuse":"Geometry prior only; cannot overcome source diversity and must exclude non-planar net tops from planar terms."},
+    {"path":"threed/racketsport/court_keypoint_labelspace_diagnostic.py","pipeline_status":"offline_diagnostic","role":"Detects label-space permutations/transforms.","precision_reuse":"Preflight owner labels and imported datasets before any training."},
+    {"path":"threed/racketsport/court_synth_scenes.py","pipeline_status":"offline_training","role":"Domain-randomized synthetic court scene renderer.","precision_reuse":"Synthetic minority augmentation only; two synthetic-only transfer failures forbid authority."},
+    {"path":"threed/racketsport/court_synth_stream.py","pipeline_status":"offline_training","role":"Zero-disk synthetic sample stream.","precision_reuse":"Same bounded minority role as court_synth_scenes."},
+    {"path":"threed/racketsport/court_assist_seed.py","pipeline_status":"unwired_helper","role":"Constraints for assisted court seeds.","precision_reuse":"Potential guided confirmation schema, not a default solver."},
+    {"path":"threed/racketsport/pickleball_line_family.py","pipeline_status":"offline_diagnostic","role":"Evidence-only paint-family and mixed-line diagnostics.","precision_reuse":"Use to reject dual-lined/tennis-overlay hypotheses and quantify family ambiguity."},
+    {"path":"threed/racketsport/calibration_overlay.py","pipeline_status":"offline_visualization","role":"SVG/image/video calibration overlays.","precision_reuse":"Human spot checks only; never accuracy evidence by itself."},
+    {"path":"threed/racketsport/net_plane.py","pipeline_status":"wired_default","role":"Regulation net-plane construction and projection.","precision_reuse":"M3 projection and BALL net checks; center sag truth contract remains unresolved."},
+    {"path":"threed/racketsport/ball_physics3d.py","pipeline_status":"wired_default_ball_arc","role":"Calibrated two-arc 3D reconstruction from image observations.","precision_reuse":"Downstream ablation target for court precision; camera residual alone is not ball accuracy proof."},
+    {"path":"threed/racketsport/ball_manual_court_inout.py","pipeline_status":"wired_when_manual_corners_supplied","role":"Native-pixel manual-corner bounce projection and uncertainty.","precision_reuse":"Must eventually consume the same per-frame court authority; currently separate from court_calibration.json."},
+    {"path":"threed/racketsport/ball_line_calls.py","pipeline_status":"library_consumer","role":"Classifies metric bounce XY against court/NVZ with uncertainty band.","precision_reuse":"Correct final decision logic once covariance is honest and calibration authority is unified."},
+    {"path":"threed/racketsport/worldhmr.py","pipeline_status":"wired_default","role":"Court_Z0 BODY grounding, camera-motion grounding correction and foot locks.","precision_reuse":"Downstream precision propagation and per-frame motion consumer."},
+    {"path":"threed/racketsport/virtual_world.py","pipeline_status":"wired_default","role":"Assembles replay world in court_Z0.","precision_reuse":"End-to-end placement audit surface, not a calibration optimizer."},
+    {"path":"threed/racketsport/person_court_membership.py","pipeline_status":"offline_diagnostic","role":"Source-only person membership evidence.","precision_reuse":"Detect calibration-driven on/off-court classification changes without claiming ID GT."}
+  ],
+  "cli_tools": [
+    {"path":"scripts/racketsport/process_video.py","status":"default_pipeline","role":"Authoritative 19-stage entrypoint and current calibration routing."},
+    {"path":"scripts/racketsport/calibrate.py","status":"standalone_core","role":"Manual calibration CLI."},
+    {"path":"scripts/racketsport/validate_metric_calibration_15pt.py","status":"standalone_reviewed","role":"Drive/validate reviewed metric15 calibration."},
+    {"path":"scripts/racketsport/calibrate_charuco_device.py","status":"standalone_profile","role":"Device/lens ChArUco intrinsics calibration."},
+    {"path":"scripts/racketsport/build_calibration_from_review.py","status":"standalone_review","role":"Convert reviewed corrections to calibration artifacts."},
+    {"path":"scripts/racketsport/render_calibration_overlay.py","status":"standalone_visualization","role":"Render calibration overlays for inspection."},
+    {"path":"scripts/racketsport/build_court_line_evidence.py","status":"standalone_evidence","role":"Build line/net evidence for an existing calibration."},
+    {"path":"scripts/racketsport/run_court_line_keypoints.py","status":"standalone_preview","role":"Run single-frame classical keypoint detector."},
+    {"path":"scripts/racketsport/build_court_proposals.py","status":"pipeline_preview_helper","role":"Line-bank regulation proposals used by --court-proposals-preview."},
+    {"path":"scripts/racketsport/run_court_detector_v2.py","status":"standalone_preview","role":"Generate detector-v2 proposal artifact; not default-generated."},
+    {"path":"scripts/racketsport/solve_net_anchor_court.py","status":"standalone_preview","role":"Generate net-first proposal artifact and overlays."},
+    {"path":"scripts/racketsport/evaluate_court_finding_technologies.py","status":"offline_benchmark","role":"Frozen comparison of court finding technologies."},
+    {"path":"scripts/racketsport/evaluate_court_keypoint_owner_gate.py","status":"offline_gate","role":"Owner-viewpoint PCK gate and optional flawed planar postprocess."},
+    {"path":"scripts/racketsport/evaluate_court_model_v2.py","status":"offline_gate","role":"court_unet_v2 labeled evaluation."},
+    {"path":"scripts/racketsport/evaluate_court_detector_v2.py","status":"offline_gate","role":"Detector-v2 proposal evaluation."},
+    {"path":"scripts/racketsport/evaluate_overlapping_court_calibration.py","status":"offline_diagnostic","role":"Point/line/distortion refinement experiments."},
+    {"path":"scripts/racketsport/court_calibration_impact_harness.py","status":"offline_diagnostic","role":"Downstream placement/ball impact comparisons."},
+    {"path":"scripts/racketsport/build_court_keypoint_labelspace_diagnostic.py","status":"offline_diagnostic","role":"Audit label-space mismatches."},
+    {"path":"scripts/racketsport/compare_court_proposals_to_reviewed_keypoints.py","status":"offline_gate","role":"Score proposals against reviewed keypoints."},
+    {"path":"scripts/racketsport/build_real_court_corpus.py","status":"offline_data","role":"Build source-grouped real court corpus."},
+    {"path":"scripts/racketsport/ingest_online_harvest.py","status":"offline_data","role":"Ingest licensed/provenanced diverse sources."},
+    {"path":"scripts/racketsport/calibrate_harvest_courts.py","status":"offline_data","role":"Solve harvested reviewed calibration frames."},
+    {"path":"scripts/racketsport/project_court_pseudo_labels.py","status":"offline_data_rejected_default","role":"Audit pseudo-label projection; safe default currently empty after camera-cut drift failures."},
+    {"path":"scripts/racketsport/train_court_keypoint_heatmap.py","status":"offline_training_killed_recipe","role":"Legacy small CNN/heatmap training; banked cross-source negative."},
+    {"path":"scripts/racketsport/train_court_model_v2.py","status":"offline_training_killed_recipe","role":"21M court_unet_v2 training; banked family-memorization negative."},
+    {"path":"scripts/racketsport/generate_synthetic_court_keypoints.py","status":"offline_training_bounded_only","role":"Synthetic data generation; synthetic-only repeats forbidden."},
+    {"path":"scripts/racketsport/classify_ball_line_calls.py","status":"standalone_consumer","role":"Metric in/out classification from world bounce coordinates."},
+    {"path":"scripts/racketsport/apply_manual_court_inout.py","status":"pipeline_helper","role":"Manual-corner bounce projection used conceptually by stage 6."},
+    {"path":"scripts/racketsport/player_court_membership.py","status":"offline_diagnostic","role":"Inspect person placement/membership changes."}
+  ]
+}
