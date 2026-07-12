@@ -146,6 +146,8 @@ class BallArcSolverConfig:
     endpoint_refinement_bounce_cap_m: float = 0.2
     endpoint_refinement_default_cap_m: float = 1.0
     fit_spin_scalar: bool = False
+    enable_both_ends_pinning_inlier_pass: bool = False
+    pinning_min_inliers: int = 3
     court_sport: str = "pickleball"
     court_margin_m: float = 4.0
     court_z_min_m: float = -0.15
@@ -225,6 +227,8 @@ class BallArcSolverConfig:
             raise ValueError("endpoint_refinement_bounce_cap_m must be positive")
         if self.endpoint_refinement_default_cap_m <= 0.0:
             raise ValueError("endpoint_refinement_default_cap_m must be positive")
+        if self.pinning_min_inliers < 2:
+            raise ValueError("pinning_min_inliers must be at least 2")
         if self.court_margin_m < 0.0:
             raise ValueError("court_margin_m must be non-negative")
         try:
@@ -520,7 +524,7 @@ def _fit_flight_segment_once(
     if not _finite_vec3(start_anchor.world_xyz) or not _finite_vec3(end_anchor.world_xyz):
         return _blocked_segment(segment_id, start_anchor, end_anchor, "nonfinite_anchor")
 
-    free_fit = _fit_free_flight_segment_once(
+    initial_free_fit = _fit_free_flight_segment_once(
         segment_id=segment_id,
         start_anchor=start_anchor,
         end_anchor=end_anchor,
@@ -531,8 +535,53 @@ def _fit_flight_segment_once(
         net_plane=net_plane,
         max_nfev=max_nfev,
     )
-    if not free_fit.status.startswith("fit"):
-        return free_fit
+    if not initial_free_fit.status.startswith("fit"):
+        return initial_free_fit
+
+    free_fit = initial_free_fit
+    fit_observations = observations
+    pinning_inlier_pass: dict[str, Any] = {
+        "enabled": bool(cfg.enable_both_ends_pinning_inlier_pass),
+        "status": "disabled",
+        "both_ends_pinned": False,
+        "first_pass_inlier_count": initial_free_fit.inlier_count,
+        "refit_observation_count": len(observations),
+    }
+    if cfg.enable_both_ends_pinning_inlier_pass:
+        first_pass_inlier_frames = set(initial_free_fit.inlier_frames)
+        fit_observations = tuple(obs for obs in observations if obs.frame in first_pass_inlier_frames)
+        pinning_inlier_pass.update(
+            {
+                "status": "refused_insufficient_inliers",
+                "both_ends_pinned": True,
+                "refit_observation_count": len(fit_observations),
+                "min_inliers": int(cfg.pinning_min_inliers),
+                "inlier_threshold_px": float(cfg.max_reprojection_inlier_px),
+            }
+        )
+        if len(fit_observations) >= cfg.pinning_min_inliers:
+            free_fit = _fit_free_flight_segment_once(
+                segment_id=segment_id,
+                start_anchor=start_anchor,
+                end_anchor=end_anchor,
+                observations=fit_observations,
+                calibration=calibration,
+                physics=phys,
+                config=cfg,
+                net_plane=net_plane,
+                max_nfev=max_nfev,
+                diagnostics={
+                    "dedicated_inlier_pass": True,
+                    "first_pass_inlier_frames": sorted(first_pass_inlier_frames),
+                },
+            )
+            pinning_inlier_pass["status"] = (
+                "refit" if free_fit.status.startswith("fit") else "refit_failed"
+            )
+        # Rank-5 candidate semantics: retain the original event anchors exactly.
+        # The final BVP is still scored on every observation below, so dropping
+        # outliers from this dedicated fit cannot hide the 2D tail.
+        refine_endpoints = False
 
     try:
         import numpy as np
@@ -556,7 +605,9 @@ def _fit_flight_segment_once(
         end_anchor,
         observations=observations,
         config=cfg,
-        frozen_for_candidate_association=candidate_endpoint_frozen,
+        frozen_for_candidate_association=(
+            candidate_endpoint_frozen or cfg.enable_both_ends_pinning_inlier_pass
+        ),
     )
     refined_start = start_anchor
     refined_end = end_anchor
@@ -601,6 +652,7 @@ def _fit_flight_segment_once(
         "bvp_anchor_fallback": anchor_bvp,
         "endpoint_refinement": endpoint_refinement,
         "legacy_free_fit": _fit_diagnostic_summary(free_fit),
+        "both_ends_pinning_inlier_pass": pinning_inlier_pass,
     }
     if not bool(bvp.get("converged")):
         if cfg.bvp_shooting_fallback_to_free_fit:

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 import hashlib
 import json
@@ -18,6 +18,15 @@ from threed.racketsport.ball_arc_solver import (
     _integrate_positions,
     solve_ball_arc_track,
 )
+from threed.racketsport.ball_joint_anchor_search import (
+    AnchorSearchRefusal,
+    BoundedPlane,
+    CameraModel,
+    ImageObservation,
+    JointAnchorSearchConfig,
+    NetConstraint,
+    search_joint_anchor_candidates,
+)
 from threed.racketsport.ball_bounce_candidates import BounceCandidateConfig, write_bounce_candidate_payload
 from threed.racketsport.ball_flight_sanity import apply_flight_sanity_demotions, evaluate_ball_flight_sanity
 from threed.racketsport.ball_ransac_arc_gate import write_ransac_arc_filtered_ball_track
@@ -27,6 +36,7 @@ from threed.racketsport.virtual_world import (
     ball_arc_segment_fail_closed_verdicts,
 )
 from threed.racketsport.court_templates import get_court_template
+from threed.racketsport.io_decode import frame_time_lookup
 from threed.racketsport.schemas import NetPlane, load_ball_candidates_file
 from pydantic import ValidationError
 
@@ -111,12 +121,18 @@ def run_default_ball_arc_chain(
     ransac_min_fit_points: int = 5,
     ransac_max_gap_frames: int = 6,
     enable_ukf_fallback: bool = False,
+    enable_joint_anchor_search: bool = False,
+    enable_joint_anchor_pinning: bool = False,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     """Run the default single-primary-track arc chain into ``out_dir``."""
 
     out_dir.mkdir(parents=True, exist_ok=True)
     generated_at = generated_at or utc_stamp()
+    if enable_joint_anchor_pinning and not enable_joint_anchor_search:
+        raise ValueError("joint-anchor pinning requires enable_joint_anchor_search=true")
+    if enable_joint_anchor_search and enable_ransac_arc_gate:
+        raise ValueError("joint-anchor search cannot be combined with the rejected RANSAC arm")
     effective_ball_track_path = ball_track_path
     ransac_summary: dict[str, Any] | None = None
     ransac_track_path: Path | None = None
@@ -172,6 +188,46 @@ def run_default_ball_arc_chain(
         )
         seed_extra_anchors = _anchors_from_arc_artifact(seed_run.artifact)
     solver_auto_bounces = None if seed_extra_anchors else auto_bounces
+    solver_config = replace(
+        default_ball_arc_solver_config(),
+        enable_both_ends_pinning_inlier_pass=bool(enable_joint_anchor_pinning),
+    )
+    joint_anchor_path: Path | None = None
+    joint_anchor_baseline_run: BallArcSolverRun | None = None
+    joint_anchor_payload: dict[str, Any] | None = None
+    joint_anchor_extra_anchors: list[AnchorEvent] = []
+    if enable_joint_anchor_search:
+        joint_anchor_baseline_run = solve_arc_with_flight_sanity(
+            clip=clip,
+            ball_track=ball_track,
+            calibration=calibration,
+            auto_bounce_candidates=solver_auto_bounces,
+            ball_candidate_sidecars=ball_candidate_sidecars,
+            contact_windows=None,
+            skeleton3d=None,
+            net_plane=net_plane_for_solve,
+            rally_spans=None,
+            frame_times=frame_times,
+            extra_anchors=seed_extra_anchors,
+            physics=PhysicsParameters.for_ball_type(ball_type),
+            config=default_ball_arc_solver_config(),
+            out_dir=out_dir / "tt3d_baseline_seed",
+            generated_at=generated_at,
+            write_events_selected=False,
+        )
+        joint_anchor_payload, joint_anchor_extra_anchors = _build_joint_anchor_candidate_sidecar(
+            clip=clip,
+            ball_track=ball_track,
+            calibration=calibration,
+            frame_times=frame_times,
+            net_plane=net_plane_for_solve,
+            baseline_artifact=joint_anchor_baseline_run.artifact,
+            source_ball_track_path=ball_track_path,
+            solver_config=solver_config,
+            generated_at=generated_at,
+        )
+        joint_anchor_path = out_dir / "ball_joint_anchor_candidates.json"
+
     run = solve_arc_with_flight_sanity(
         clip=clip,
         ball_track=ball_track,
@@ -183,9 +239,9 @@ def run_default_ball_arc_chain(
         net_plane=net_plane_for_solve,
         rally_spans=None,
         frame_times=frame_times,
-        extra_anchors=seed_extra_anchors,
+        extra_anchors=[*seed_extra_anchors, *joint_anchor_extra_anchors],
         physics=PhysicsParameters.for_ball_type(ball_type),
-        config=default_ball_arc_solver_config(),
+        config=solver_config,
         out_dir=out_dir,
         generated_at=generated_at,
         write_events_selected=False,
@@ -204,6 +260,17 @@ def run_default_ball_arc_chain(
         run.artifact["chain_config_degraded"] = chain_config_degraded
     net_plane_provenance = {"consumed_net_plane": net_plane_consumed, "reason": net_plane_reason}
     run.artifact["net_plane_provenance"] = net_plane_provenance
+    if joint_anchor_payload is not None and joint_anchor_path is not None:
+        _finalize_joint_anchor_candidate_sidecar(joint_anchor_payload, run.artifact)
+        write_json(joint_anchor_path, joint_anchor_payload)
+        run.artifact["joint_anchor_candidate"] = {
+            "enabled": True,
+            "pinning_enabled": bool(enable_joint_anchor_pinning),
+            "sidecar": joint_anchor_path.name,
+            "chosen_anchor_count": int(joint_anchor_payload["summary"]["chosen_anchor_count"]),
+            "candidate_only": True,
+            "marks_measured": False,
+        }
     write_json(run.artifact_path, run.artifact)
     ukf_fallback_path: Path | None = None
     ukf_fallback: dict[str, Any] | None = None
@@ -225,6 +292,9 @@ def run_default_ball_arc_chain(
     )
     ball_arc_render_path = out_dir / "ball_arc_render.json"
     write_json(ball_arc_render_path, ball_arc_render)
+    if joint_anchor_payload is not None and joint_anchor_path is not None:
+        _attach_joint_anchor_fail_closed_audit(joint_anchor_payload, run.artifact, ball_arc_render)
+        write_json(joint_anchor_path, joint_anchor_payload)
     summary = run.artifact.get("summary") if isinstance(run.artifact.get("summary"), Mapping) else {}
     render_summary = ball_arc_render.get("summary") if isinstance(ball_arc_render.get("summary"), Mapping) else {}
     bounce_summary = auto_bounces.get("summary") if isinstance(auto_bounces.get("summary"), Mapping) else {}
@@ -261,6 +331,13 @@ def run_default_ball_arc_chain(
                 "ball_track_ransac_candidate": ransac_track_path,
                 "ball_ransac_arc_gate_summary": ransac_summary_path,
                 "ball_ukf_fallback": ukf_fallback_path,
+                "joint_anchor_candidates": joint_anchor_path,
+                "joint_anchor_baseline_ball_track_arc_solved": (
+                    joint_anchor_baseline_run.artifact_path if joint_anchor_baseline_run is not None else None
+                ),
+                "joint_anchor_baseline_flight_sanity": (
+                    joint_anchor_baseline_run.flight_sanity_path if joint_anchor_baseline_run is not None else None
+                ),
                 "events_selected": events_selected_path,
                 "ball_arc_render": ball_arc_render_path,
                 "ball_flight_sanity": run.flight_sanity_path,
@@ -285,11 +362,18 @@ def run_default_ball_arc_chain(
             "net_plane_consumed_when_valid": True,
         },
     }
-    if enable_ransac_arc_gate or enable_ukf_fallback:
+    if enable_ransac_arc_gate or enable_ukf_fallback or enable_joint_anchor_search:
         manifest["candidate_flags"] = {
             "ransac_arc_gate": bool(enable_ransac_arc_gate),
             "ukf_fallback": bool(enable_ukf_fallback),
         }
+        if enable_joint_anchor_search:
+            manifest["candidate_flags"].update(
+                {
+                    "joint_anchor_search": True,
+                    "joint_anchor_pinning": bool(enable_joint_anchor_pinning),
+                }
+            )
         manifest["policy"]["candidate_flags_default_off"] = True
     if enable_ransac_arc_gate:
         manifest["summary"]["ransac_rejected_outlier_count"] = int(
@@ -301,6 +385,23 @@ def run_default_ball_arc_chain(
             ((ukf_fallback or {}).get("summary") or {}).get("recovered_sample_count") or 0
         )
         manifest["policy"]["ukf_predictions_never_measured"] = True
+    if joint_anchor_payload is not None:
+        manifest["summary"]["tt3d_baseline_fallback_segment_count"] = int(
+            joint_anchor_payload["summary"]["baseline_fallback_segment_count"]
+        )
+        manifest["summary"]["tt3d_candidate_fallback_segment_count"] = _fallback_segment_count(run.artifact)
+        manifest["summary"]["tt3d_chosen_anchor_count"] = int(
+            joint_anchor_payload["summary"]["chosen_anchor_count"]
+        )
+        manifest["policy"].update(
+            {
+                "joint_anchor_candidates_default_off": True,
+                "joint_anchor_hypotheses_never_measured": True,
+                "joint_anchor_raw_observations_immutable": True,
+                "joint_anchor_samples_use_existing_fail_closed_gates": True,
+                "joint_anchor_pinning_separately_killable": True,
+            }
+        )
     manifest["net_plane_provenance"] = net_plane_provenance
     if chain_config_degraded is not None:
         manifest["chain_config_degraded"] = chain_config_degraded
@@ -325,6 +426,12 @@ def run_default_ball_arc_chain(
         result_summary["ukf_recovered_sample_count"] = int(
             ((ukf_fallback or {}).get("summary") or {}).get("recovered_sample_count") or 0
         )
+    if joint_anchor_payload is not None:
+        result_summary["tt3d_baseline_fallback_segment_count"] = int(
+            joint_anchor_payload["summary"]["baseline_fallback_segment_count"]
+        )
+        result_summary["tt3d_candidate_fallback_segment_count"] = _fallback_segment_count(run.artifact)
+        result_summary["tt3d_chosen_anchor_count"] = int(joint_anchor_payload["summary"]["chosen_anchor_count"])
     if chain_config_degraded is not None:
         result_summary["chain_config_degraded"] = chain_config_degraded
     output_paths = {
@@ -340,6 +447,8 @@ def run_default_ball_arc_chain(
         output_paths["ball_ransac_arc_gate_summary"] = str(ransac_summary_path)
     if ukf_fallback_path is not None:
         output_paths["ball_ukf_fallback"] = str(ukf_fallback_path)
+    if joint_anchor_path is not None:
+        output_paths["ball_joint_anchor_candidates"] = str(joint_anchor_path)
     events_selected = manifest["outputs"].get("events_selected")
     if isinstance(events_selected, Mapping) and isinstance(events_selected.get("path"), str):
         output_paths["events_selected"] = str(events_selected["path"])
@@ -348,6 +457,305 @@ def run_default_ball_arc_chain(
         "summary": result_summary,
         "outputs": output_paths,
     }
+
+
+def _build_joint_anchor_candidate_sidecar(
+    *,
+    clip: str,
+    ball_track: Mapping[str, Any],
+    calibration: Mapping[str, Any],
+    frame_times: Mapping[str, Any] | None,
+    net_plane: Mapping[str, Any] | None,
+    baseline_artifact: Mapping[str, Any],
+    source_ball_track_path: Path,
+    solver_config: BallArcSolverConfig,
+    generated_at: str,
+) -> tuple[dict[str, Any], list[AnchorEvent]]:
+    """Search each baseline fallback span and adapt only rank-1 bounces.
+
+    Every ranked hypothesis remains in the sidecar. Lower-ranked hypotheses are
+    explicitly rejected before solver evaluation; rank-1 hypotheses still go
+    through the production optional-event selector and unchanged fail-closed
+    chain. The source ``ball_track`` mapping and file are never modified.
+    """
+
+    source_digest_before = _sha256(source_ball_track_path)
+    camera = CameraModel.from_calibration(calibration)
+    x_min, x_max, y_min, y_max, _ = _court_volume_bounds(solver_config)
+    court_plane = BoundedPlane(
+        point=(0.0, 0.0, 0.0),
+        normal=(0.0, 0.0, 1.0),
+        # For z-up the core's deterministic basis is u=-y, v=x. Court bounds
+        # are symmetric today, but the reversal is kept explicit.
+        u_bounds_m=(-y_max, -y_min),
+        v_bounds_m=(x_min, x_max),
+    )
+    try:
+        net = NetConstraint.from_solver_mapping(net_plane) if isinstance(net_plane, Mapping) else None
+    except (TypeError, ValueError):
+        net = None
+    search_config = JointAnchorSearchConfig(
+        max_time_seeds=15,
+        starts_per_seed=1,
+        max_ranked_candidates=5,
+        max_nfev=800,
+    )
+    time_map = frame_time_lookup(frame_times if frame_times is not None else ball_track.get("frame_times"))
+    frames = ball_track.get("frames")
+    raw_frames = list(frames) if isinstance(frames, Sequence) and not isinstance(frames, (str, bytes)) else []
+    fps = _artifact_fps(ball_track)
+    fallback_segments = [
+        segment
+        for segment in baseline_artifact.get("segments", [])
+        if isinstance(segment, Mapping) and str(segment.get("status") or "") == "fit_bvp_fallback"
+    ]
+    windows: list[dict[str, Any]] = []
+    proposed_anchors: list[AnchorEvent] = []
+    for ordinal, segment in enumerate(fallback_segments):
+        segment_id = int(segment.get("segment_id") or ordinal)
+        frame_start = int(segment.get("frame_start") or 0)
+        frame_end = int(segment.get("frame_end") or frame_start)
+        window_id = f"tt3d_window_{segment_id:03d}_{frame_start:06d}_{frame_end:06d}"
+        observations: list[ImageObservation] = []
+        for frame_index in range(max(0, frame_start), min(len(raw_frames) - 1, frame_end) + 1):
+            frame = raw_frames[frame_index]
+            if not isinstance(frame, Mapping) or frame.get("visible") is not True:
+                continue
+            xy = frame.get("xy")
+            if not isinstance(xy, Sequence) or isinstance(xy, (str, bytes)) or len(xy) < 2:
+                continue
+            try:
+                u, v = float(xy[0]), float(xy[1])
+                confidence = float(frame.get("conf", 1.0))
+                pts_s = float(time_map.get(frame_index, frame.get("t", frame_index / max(fps, 1e-9))))
+            except (TypeError, ValueError):
+                continue
+            if not all(math.isfinite(value) for value in (u, v, confidence, pts_s)) or confidence <= 0.0:
+                continue
+            observations.append(
+                ImageObservation(
+                    frame=frame_index,
+                    pts_s=pts_s,
+                    u=u,
+                    v=v,
+                    confidence=min(1.0, confidence),
+                )
+            )
+        window: dict[str, Any] = {
+            "window_id": window_id,
+            "baseline_segment_id": segment_id,
+            "frame_start": frame_start,
+            "frame_end": frame_end,
+            "baseline_status": "fit_bvp_fallback",
+            "observation_count": len(observations),
+            "hypotheses": [],
+        }
+        try:
+            result = search_joint_anchor_candidates(
+                observations,
+                camera,
+                court_plane,
+                net=net,
+                config=search_config,
+                seed=segment_id,
+            )
+        except AnchorSearchRefusal as exc:
+            window["status"] = "refused"
+            window["refusal"] = exc.to_json()
+            windows.append(window)
+            continue
+        window["status"] = "candidates_only"
+        window["search"] = {
+            key: value
+            for key, value in result.to_json().items()
+            if key != "candidates"
+        }
+        for candidate in result.candidates:
+            candidate_payload = candidate.to_json()
+            unique_candidate_id = f"{window_id}_{candidate.candidate_id}"
+            candidate_payload["candidate_id"] = unique_candidate_id
+            for anchor_payload in candidate_payload["anchor_events"]:
+                anchor_payload["anchor_id"] = f"{window_id}_{anchor_payload['anchor_id']}"
+                details = dict(anchor_payload.get("details") or {})
+                details.update(
+                    {
+                        "window_id": window_id,
+                        "candidate_id": unique_candidate_id,
+                        "candidate_rank": candidate.rank,
+                        "measured": False,
+                    }
+                )
+                anchor_payload["details"] = details
+            integration = {
+                "submitted_to_solver": candidate.rank == 1,
+                "disposition": "proposed_rank_1" if candidate.rank == 1 else "rejected_lower_rank",
+                "reason": "lowest_joint_search_cost" if candidate.rank == 1 else "not_lowest_joint_search_cost",
+            }
+            window["hypotheses"].append({"candidate": candidate_payload, "integration": integration})
+            if candidate.rank == 1:
+                bounce_payload = candidate_payload["anchor_events"][1]
+                proposed_anchors.append(_anchor_event_from_candidate_payload(bounce_payload))
+        windows.append(window)
+
+    source_digest_after = _sha256(source_ball_track_path)
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_joint_anchor_integration_candidates",
+        "generated_at": generated_at,
+        "clip_id": clip,
+        "status": "candidates_only",
+        "candidate_flag_default": False,
+        "hypothesis_only": True,
+        "search_method": "tt3d_pattern_piecewise_ballistic_huber_v1",
+        "inputs": {
+            "ball_track": str(source_ball_track_path),
+            "raw_observation_sha256_before": source_digest_before,
+            "raw_observation_sha256_after": source_digest_after,
+            "raw_observations_byte_identical": source_digest_before == source_digest_after,
+        },
+        "config": {
+            "window_policy": "each_existing_fit_bvp_fallback_segment",
+            "candidate_policy": "rank_1_bounce_to_existing_optional_event_selector",
+            "search": next(
+                (
+                    dict(item["search"]["config"])
+                    for item in windows
+                    if isinstance(item.get("search"), Mapping) and isinstance(item["search"].get("config"), Mapping)
+                ),
+                {},
+            ),
+            "both_ends_pinning_inlier_pass": bool(solver_config.enable_both_ends_pinning_inlier_pass),
+        },
+        "windows": windows,
+        "summary": {
+            "baseline_fallback_segment_count": len(fallback_segments),
+            "searched_window_count": sum(1 for item in windows if item["status"] == "candidates_only"),
+            "refused_window_count": sum(1 for item in windows if item["status"] == "refused"),
+            "hypothesis_count": sum(len(item["hypotheses"]) for item in windows),
+            "submitted_anchor_count": len(proposed_anchors),
+            "chosen_anchor_count": 0,
+            "solver_rejected_anchor_count": 0,
+        },
+        "policy": {
+            "candidate_only": True,
+            "marks_measured": False,
+            "alters_defaults": False,
+            "raw_observations_immutable": True,
+            "existing_event_selector_required": True,
+            "existing_flight_sanity_required": True,
+            "existing_rev11_fail_closed_required": True,
+            "protected_labels_read": False,
+        },
+    }
+    return payload, proposed_anchors
+
+
+def _anchor_event_from_candidate_payload(payload: Mapping[str, Any]) -> AnchorEvent:
+    details = dict(payload.get("details") or {})
+    if details.get("measured") is not False or payload.get("status") != "candidate_hypothesis":
+        raise ValueError("joint-anchor hypotheses must be explicitly unmeasured candidate_hypothesis events")
+    xyz = _required_vec3(payload.get("world_xyz"), "candidate.world_xyz")
+    return AnchorEvent(
+        anchor_id=str(payload["anchor_id"]),
+        kind=str(payload["kind"]),
+        t=float(payload["t"]),
+        frame=int(payload["frame"]),
+        world_xyz=xyz,
+        sigma_m=float(payload["sigma_m"]),
+        status="candidate_hypothesis",
+        immovable=False,
+        source=str(payload.get("source") or "tt3d_pattern_piecewise_ballistic_huber_v1"),
+        details=details,
+    )
+
+
+def _finalize_joint_anchor_candidate_sidecar(
+    payload: dict[str, Any],
+    artifact: Mapping[str, Any],
+) -> None:
+    event_selection = artifact.get("event_selection")
+    selected_rows = event_selection.get("selected", []) if isinstance(event_selection, Mapping) else []
+    rejected_rows = event_selection.get("rejected", []) if isinstance(event_selection, Mapping) else []
+    selected = {
+        str(item.get("anchor_id")): item
+        for item in selected_rows
+        if isinstance(item, Mapping) and item.get("anchor_id")
+    }
+    rejected = {
+        str(item.get("anchor_id")): item
+        for item in rejected_rows
+        if isinstance(item, Mapping) and item.get("anchor_id")
+    }
+    chosen_count = 0
+    rejected_count = 0
+    for window in payload["windows"]:
+        for hypothesis in window["hypotheses"]:
+            integration = hypothesis["integration"]
+            if not integration["submitted_to_solver"]:
+                continue
+            bounce = hypothesis["candidate"]["anchor_events"][1]
+            anchor_id = str(bounce["anchor_id"])
+            if anchor_id in selected:
+                row = selected[anchor_id]
+                integration.update(
+                    {
+                        "disposition": "chosen_by_existing_solver",
+                        "reason": str(row.get("selection_reason") or "selected"),
+                        "solver_selection": dict(row),
+                    }
+                )
+                chosen_count += 1
+            elif anchor_id in rejected:
+                row = rejected[anchor_id]
+                integration.update(
+                    {
+                        "disposition": "rejected_by_existing_solver",
+                        "reason": str(row.get("selection_reason") or "rejected"),
+                        "solver_selection": dict(row),
+                    }
+                )
+                rejected_count += 1
+            else:
+                integration.update(
+                    {
+                        "disposition": "rejected_not_returned_by_existing_solver",
+                        "reason": "anchor_absent_after_existing_ordering_and_selection",
+                    }
+                )
+                rejected_count += 1
+    payload["summary"]["chosen_anchor_count"] = chosen_count
+    payload["summary"]["solver_rejected_anchor_count"] = rejected_count
+    payload["summary"]["candidate_fallback_segment_count"] = _fallback_segment_count(artifact)
+
+
+def _attach_joint_anchor_fail_closed_audit(
+    payload: dict[str, Any],
+    artifact: Mapping[str, Any],
+    render_artifact: Mapping[str, Any],
+) -> None:
+    verdicts = ball_arc_segment_fail_closed_verdicts(
+        [segment for segment in artifact.get("segments", []) if isinstance(segment, Mapping)]
+    )
+    suppressed_ids = set(render_artifact.get("summary", {}).get("fail_closed_suppressed_segment_ids") or [])
+    untrusted_ids = {segment_id for segment_id, verdict in verdicts.items() if not bool(verdict.get("trusted"))}
+    fail_open_ids = sorted(untrusted_ids - suppressed_ids)
+    payload["fail_closed_audit"] = {
+        "policy": BALL_ARC_FAIL_CLOSED_POLICY,
+        "segment_count": len(verdicts),
+        "untrusted_segment_ids": sorted(untrusted_ids),
+        "suppressed_segment_ids": sorted(suppressed_ids),
+        "fail_open_segment_ids": fail_open_ids,
+        "fail_open_sample_count": 0 if not fail_open_ids else None,
+        "verdicts": {str(key): value for key, value in sorted(verdicts.items())},
+    }
+
+
+def _fallback_segment_count(artifact: Mapping[str, Any]) -> int:
+    return sum(
+        1
+        for segment in artifact.get("segments", [])
+        if isinstance(segment, Mapping) and str(segment.get("status") or "") == "fit_bvp_fallback"
+    )
 
 
 def build_ball_arc_render_artifact(
