@@ -2243,6 +2243,54 @@ def test_remote_body_command_quotes_hostile_run_dir_as_a_single_argument() -> No
     assert "rm" not in tokens
 
 
+def test_remote_body_command_omits_persistent_worker_env_by_default() -> None:
+    # body_overhead_20260712 Lever A: default-off. An unset (empty string)
+    # sam3dbody_persistent_worker_socket must not touch the generated remote
+    # command at all -- byte-for-byte the pre-experiment command.
+    config = _remote_config()
+
+    command = rbd._remote_body_command(remote_run_dir="/remote/run", config=config)
+
+    assert "SAM3DBODY_PERSISTENT_WORKER_SOCKET" not in command
+
+
+def test_remote_body_command_exports_persistent_worker_socket_when_configured() -> None:
+    # body_overhead_20260712 Lever A: opting in exports the socket path as an
+    # env var ahead of the gpu-lock-guarded runner invocation so it propagates
+    # to any subprocess.run() (no env= override) the remote runner spawns,
+    # including scripts/racketsport/run_sam3dbody_batch.py's own delegation shim.
+    config = _remote_config(sam3dbody_persistent_worker_socket="/tmp/sam3dbody_worker.sock")
+
+    command = rbd._remote_body_command(remote_run_dir="/remote/run", config=config)
+
+    tokens = shlex.split(command)
+    assert "SAM3DBODY_PERSISTENT_WORKER_SOCKET=/tmp/sam3dbody_worker.sock" in tokens
+    # still precedes the gpu-lock-guarded timeout invocation, not appended after it
+    assert command.index("SAM3DBODY_PERSISTENT_WORKER_SOCKET=") < command.index("timeout ")
+
+
+def test_remote_config_persistent_worker_socket_defaults_from_env_var(monkeypatch) -> None:  # noqa: ANN001
+    # process_video.py constructs RemoteConfig(...) with explicit named
+    # fields and never sets sam3dbody_persistent_worker_socket (it is
+    # read-only for this lane) -- SAM3DBODY_PERSISTENT_WORKER_SOCKET_CONFIG
+    # is the only opt-in path that does not require editing it.
+    monkeypatch.delenv("SAM3DBODY_PERSISTENT_WORKER_SOCKET_CONFIG", raising=False)
+    assert rbd.RemoteConfig().sam3dbody_persistent_worker_socket == ""
+
+    monkeypatch.setenv("SAM3DBODY_PERSISTENT_WORKER_SOCKET_CONFIG", "/tmp/from_env.sock")
+    assert rbd.RemoteConfig().sam3dbody_persistent_worker_socket == "/tmp/from_env.sock"
+
+
+def test_remote_body_command_quotes_hostile_persistent_worker_socket() -> None:
+    config = _remote_config(sam3dbody_persistent_worker_socket="/tmp/x'; rm -rf / #.sock")
+
+    command = rbd._remote_body_command(remote_run_dir="/remote/run", config=config)
+
+    tokens = shlex.split(command)
+    assert any(token.startswith("SAM3DBODY_PERSISTENT_WORKER_SOCKET=") for token in tokens)
+    assert "rm" not in tokens
+
+
 def test_remote_body_runner_script_embeds_hostile_clip_as_inert_string_literal() -> None:
     # dispatch_body_stage always validates clip ids first, but the generator
     # can be called directly: repr() embedding must keep a hostile clip id an

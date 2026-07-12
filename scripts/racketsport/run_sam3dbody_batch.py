@@ -278,6 +278,79 @@ def parse_sam3d_batch_timing_stdout(stdout: str) -> dict[str, Any] | None:
     return None
 
 
+def _run_batch_inference_and_write(
+    *,
+    estimator: Any,
+    requests: list[dict[str, Any]],
+    batch_payload: Mapping[str, Any],
+    optimization: Mapping[str, Any],
+    faces: Any,
+    runtime_environment: Mapping[str, Any],
+    mhr_correctives: Mapping[str, Any],
+    compile_warmup: Mapping[str, Any],
+    out_path: Path,
+    chunk_dir: Path,
+    chunk_format: str,
+    write_monolithic: bool,
+    timer: "_TimingRecorder",
+) -> tuple[list[dict[str, Any]], Any]:
+    """Build the output stream and run bucketed inference for one batch payload.
+
+    Factored out of `main()` (body_overhead_20260712, Lever A) with NO behavior
+    change: `main()` calls this with the exact same arguments it previously
+    inlined, and still owns its own try/except around the call (this function
+    raises on failure exactly like the inlined code did; it does not catch).
+    The persistent worker (sam3dbody_persistent_worker.py) calls this same
+    function against an already-loaded, already-compiled `estimator` across
+    multiple jobs so both paths execute byte-identical inference/output code.
+    """
+
+    clip_cam_int = _camera_intrinsics_tensor(
+        batch_payload["clip_intrinsics"]["matrix"] if batch_payload["clip_intrinsics"] is not None else None
+    )
+    metadata = _output_metadata(
+        optimization,
+        runtime_environment=runtime_environment,
+        mhr_correctives=mhr_correctives,
+        timing_events=timer.events,
+    )
+    output_stream = _BatchOutputStream(
+        out_path=out_path,
+        chunk_dir=chunk_dir,
+        request_ids=[str(request["request_id"]) for request in requests],
+        payload_header={
+            "schema_version": 1,
+            "artifact_type": "racketsport_sam3dbody_batch",
+            "request_count": len(requests),
+            "clip_intrinsics": batch_payload["clip_intrinsics"],
+            "optimization": optimization,
+            "metadata": metadata,
+            "bucket_plan": batch_payload["bucket_plan"],
+            "compile_warmup": compile_warmup,
+        },
+        write_monolithic=write_monolithic,
+        chunk_format=chunk_format,
+        timing=timer,
+        # Restore the pre-S4 direct handoff profile as default: pickle writes
+        # synchronously (no writer thread => no GIL contention with inference);
+        # binary/jsonl keep the async writer thread (opt-in, mmap-friendly).
+        async_write=(chunk_format != "pickle"),
+    )
+    return _run_bucketed_inference(
+        estimator,
+        requests,
+        bucket_plan=batch_payload["bucket_plan"],
+        clip_cam_int=clip_cam_int,
+        clip_intrinsics=batch_payload["clip_intrinsics"],
+        faces=faces,
+        body_input_size=optimization["sam3d_body_input_size_px"],
+        optimization=optimization,
+        output_stream=output_stream,
+        timing=timer,
+        materialize_streamed_frames=False,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description=(
@@ -339,6 +412,33 @@ def main(argv: list[str] | None = None) -> int:
         if getattr(args, required_name) is None:
             parser.error(f"--{required_name.replace('_', '-')} is required unless --convert-chunks is used")
 
+    # Experimental persistent-worker delegation (body_overhead_20260712, Lever A).
+    # Default-off: SAM3DBODY_PERSISTENT_WORKER_SOCKET is unset in every normal
+    # invocation (local dev, CI, and the committed default remote dispatch
+    # path), so this branch never executes and main()'s behavior below is
+    # byte-identical to before this experiment. When the env var IS set (only
+    # ever done by scripts/racketsport/remote_body_dispatch.py's opt-in
+    # RemoteConfig.sam3dbody_persistent_worker_socket knob, itself default-off),
+    # this process skips model construction entirely and forwards the job to
+    # an already-warm scripts/racketsport/sam3dbody_persistent_worker.py
+    # process over a local Unix socket, mirroring this script's own stdout
+    # marker / exit-code / output-file contract so nothing downstream
+    # (orchestrator.py's subprocess handling, timing attribution) needs to
+    # change to consume either path.
+    persistent_worker_socket = os.environ.get("SAM3DBODY_PERSISTENT_WORKER_SOCKET", "").strip()
+    if persistent_worker_socket:
+        from scripts.racketsport.sam3dbody_persistent_worker import submit_job_via_client
+
+        return submit_job_via_client(
+            socket_path=persistent_worker_socket,
+            requests_path=args.requests,
+            out_path=args.out,
+            chunk_dir=args.chunk_dir,
+            chunk_format=args.chunk_format,
+            no_monolithic_output=args.no_monolithic_output,
+            bucket_size=args.bucket_size,
+        )
+
     timer = _TimingRecorder()
     try:
         with timer.span("request_parse"):
@@ -393,49 +493,20 @@ def main(argv: list[str] | None = None) -> int:
             )
         mhr_correctives = _detect_mhr_correctives_active(estimator)
         faces = _json_safe(getattr(estimator, "faces", None))
-        clip_cam_int = _camera_intrinsics_tensor(
-            batch_payload["clip_intrinsics"]["matrix"] if batch_payload["clip_intrinsics"] is not None else None
-        )
-        metadata = _output_metadata(
-            optimization,
+        frames, batch_execution = _run_batch_inference_and_write(
+            estimator=estimator,
+            requests=requests,
+            batch_payload=batch_payload,
+            optimization=optimization,
+            faces=faces,
             runtime_environment=runtime_environment,
             mhr_correctives=mhr_correctives,
-            timing_events=timer.events,
-        )
-        output_stream = _BatchOutputStream(
+            compile_warmup=compile_warmup,
             out_path=args.out,
             chunk_dir=args.chunk_dir or _default_chunk_dir(args.out),
-            request_ids=[str(request["request_id"]) for request in requests],
-            payload_header={
-                "schema_version": 1,
-                "artifact_type": "racketsport_sam3dbody_batch",
-                "request_count": len(requests),
-                "clip_intrinsics": batch_payload["clip_intrinsics"],
-                "optimization": optimization,
-                "metadata": metadata,
-                "bucket_plan": batch_payload["bucket_plan"],
-                "compile_warmup": compile_warmup,
-            },
-            write_monolithic=not args.no_monolithic_output,
             chunk_format=args.chunk_format,
-            timing=timer,
-            # Restore the pre-S4 direct handoff profile as default: pickle writes
-            # synchronously (no writer thread => no GIL contention with inference);
-            # binary/jsonl keep the async writer thread (opt-in, mmap-friendly).
-            async_write=(args.chunk_format != "pickle"),
-        )
-        frames, batch_execution = _run_bucketed_inference(
-            estimator,
-            requests,
-            bucket_plan=batch_payload["bucket_plan"],
-            clip_cam_int=clip_cam_int,
-            clip_intrinsics=batch_payload["clip_intrinsics"],
-            faces=faces,
-            body_input_size=body_input_size,
-            optimization=optimization,
-            output_stream=output_stream,
-            timing=timer,
-            materialize_streamed_frames=False,
+            write_monolithic=not args.no_monolithic_output,
+            timer=timer,
         )
     except Exception as exc:
         _write_failure_output(

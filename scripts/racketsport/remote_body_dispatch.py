@@ -304,6 +304,27 @@ class RemoteConfig:
     transport_chunked_fallback_enabled: bool = True
     transport_chunked_fallback_chunk_bytes: int = DEFAULT_TRANSPORT_CHUNKED_FALLBACK_CHUNK_BYTES
     transport_chunked_fallback_bwlimit_kbps: int = DEFAULT_TRANSPORT_CHUNKED_FALLBACK_BWLIMIT_KBPS
+    # body_overhead_20260712 Lever A, experimental + default-off ("" means
+    # unset/disabled, byte-identical to pre-experiment behavior). When set to
+    # a remote filesystem path, the SAM3DBODY_PERSISTENT_WORKER_SOCKET env var
+    # is exported ahead of the remote BODY command so
+    # scripts/racketsport/run_sam3dbody_batch.py's own opt-in delegation shim
+    # forwards its job to an already-running
+    # scripts/racketsport/sam3dbody_persistent_worker.py process (started
+    # separately, outside this dispatch call) instead of constructing/
+    # compiling a fresh estimator. Only meaningful for self-dispatch (worker
+    # and the SSH-invoked command must share one filesystem); orchestrator.py
+    # and the SSH/rsync transport are untouched either way.
+    #
+    # Default reads an env var (still "" unless explicitly exported by the
+    # experiment harness) rather than a bare "" literal so this scoped lever
+    # can be toggled purely from the process_video.py CLI invocation's shell
+    # environment -- process_video.py itself constructs RemoteConfig(...)
+    # with explicit named fields and does NOT set this one (it is read-only
+    # for this lane), so this is the only way to opt in without editing it.
+    sam3dbody_persistent_worker_socket: str = field(
+        default_factory=lambda: os.environ.get("SAM3DBODY_PERSISTENT_WORKER_SOCKET_CONFIG", "")
+    )
 
     def ssh_option_args(self) -> list[str]:
         """`-o ...` host-key-verification options, shared by ssh and rsync -e."""
@@ -1697,11 +1718,17 @@ def _remote_body_command(
         f"--verify-version-stamp {q(remote_run_dir + '/' + VERSION_STAMP_ARTIFACT)} "
         f"--repo {q(config.repo)}"
     )
+    persistent_worker_env = (
+        f"SAM3DBODY_PERSISTENT_WORKER_SOCKET={q(config.sam3dbody_persistent_worker_socket)} "
+        if config.sam3dbody_persistent_worker_socket
+        else ""
+    )
     return (
         f"cd {q(config.repo)} && "
         f"{verifier} && "
         f"FAST_SAM_PYTHON={q(config.fast_sam_python)} FAST_SAM_ROOT={q(config.fast_sam_root)} "
         f"GPU_LOCK_TIMEOUT_S={int(config.lock_wait_timeout_s)} "
+        f"{persistent_worker_env}"
         f"timeout {int(config.command_timeout_s)}s {q(config.gpu_lock_script)} "
         f"{q(config.python)} {q(remote_run_dir + '/' + REMOTE_BODY_RUNNER_FILENAME)}"
     )
