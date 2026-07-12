@@ -29,6 +29,7 @@ ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
     "cvat_upload/exports/README.md",
     "cvat_upload/exports/w7_labels_20260709/README_INGEST_QUEUE_20260709.md",
     "cvat_upload/w7_audit_stratum_20260709/TASK_README.md",
+    "cvat_upload/court_diversity_20260712/OWNER_GUIDE.md",
     "cvat_upload/exports/court_keypoints_20260707/PARTIAL_EXPORT_NOTES_20260709.md",
     "cvat_upload/exports/w6_labelpack_20260708/SESSION_NOTES_20260709.md",
     "cvat_upload/exports/court_keypoints_20260707/README.md",
@@ -126,6 +127,18 @@ ALLOWED_DUPLICATE_TRACKED_BLOBS = {
 
 ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
     "cvat_upload/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_images.zip",
+    "cvat_upload/court_diversity_20260712/packages/court_diversity_20260712_shard1.zip",
+    "cvat_upload/court_diversity_20260712/packages/court_diversity_20260712_shard2.zip",
+    "cvat_upload/court_diversity_20260712/packages/court_diversity_20260712_shard3.zip",
+    "cvat_upload/court_diversity_20260712/packages/court_diversity_20260712_shard4.zip",
+    "cvat_upload/court_diversity_20260712/frames/jr_60WVlG4c__seg1_f005.png",
+    "cvat_upload/court_diversity_20260712/frames/jr_60WVlG4c__seg1_f008.png",
+    "cvat_upload/court_diversity_20260712/frames/jr_60WVlG4c__seg2_f005.png",
+    "cvat_upload/court_diversity_20260712/frames/jr_60WVlG4c__seg2_f007.png",
+    "cvat_upload/court_diversity_20260712/frames/ltIxlS0QJhg__seg1_f011.png",
+    "cvat_upload/court_diversity_20260712/frames/ltIxlS0QJhg__seg1_f012.png",
+    "cvat_upload/court_diversity_20260712/frames/ltIxlS0QJhg__seg2_f004.png",
+    "cvat_upload/court_diversity_20260712/frames/ltIxlS0QJhg__seg2_f012.png",
     # Local-only owner labeling packages regenerated from the wave-5 labelpack lane.
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_02_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",

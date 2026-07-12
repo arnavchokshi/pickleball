@@ -50,6 +50,18 @@ W6_LABELPACK_IMAGE_ZIPS = {
 
 ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
     "cvat_upload/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_images.zip",
+    "cvat_upload/court_diversity_20260712/frames/jr_60WVlG4c__seg1_f005.png",
+    "cvat_upload/court_diversity_20260712/frames/jr_60WVlG4c__seg1_f008.png",
+    "cvat_upload/court_diversity_20260712/frames/jr_60WVlG4c__seg2_f005.png",
+    "cvat_upload/court_diversity_20260712/frames/jr_60WVlG4c__seg2_f007.png",
+    "cvat_upload/court_diversity_20260712/frames/ltIxlS0QJhg__seg1_f011.png",
+    "cvat_upload/court_diversity_20260712/frames/ltIxlS0QJhg__seg1_f012.png",
+    "cvat_upload/court_diversity_20260712/frames/ltIxlS0QJhg__seg2_f004.png",
+    "cvat_upload/court_diversity_20260712/frames/ltIxlS0QJhg__seg2_f012.png",
+    "cvat_upload/court_diversity_20260712/packages/court_diversity_20260712_shard1.zip",
+    "cvat_upload/court_diversity_20260712/packages/court_diversity_20260712_shard2.zip",
+    "cvat_upload/court_diversity_20260712/packages/court_diversity_20260712_shard3.zip",
+    "cvat_upload/court_diversity_20260712/packages/court_diversity_20260712_shard4.zip",
     # Local-only wave-5 CVAT packages; evidence: runs/lanes/w5_labelpack_20260708/report.json.
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_01_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_02_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
