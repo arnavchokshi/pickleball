@@ -1,0 +1,231 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/racketsport/timebase_schema.json",
+  "title": "Racket-sport immutable timebase contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "vfr_policy",
+    "capture_id",
+    "frames",
+    "audio_times",
+    "acoustic_models",
+    "sensor_clock_mappings",
+    "rolling_shutter_model"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "artifact_type": {"const": "racketsport_timebase_contract"},
+    "vfr_policy": {"const": "encoded_pts_required"},
+    "capture_id": {"type": "string", "minLength": 1},
+    "frames": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/frame_time"}
+    },
+    "audio_times": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/audio_time"}
+    },
+    "acoustic_models": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/acoustic_model"}
+    },
+    "sensor_clock_mappings": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/sensor_clock_mapping"}
+    },
+    "rolling_shutter_model": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["model_id", "frame_readout_s", "direction", "frame_time_reference"],
+      "properties": {
+        "model_id": {"type": "string", "minLength": 1},
+        "frame_readout_s": {"type": "number", "minimum": 0},
+        "direction": {"enum": ["top_to_bottom", "bottom_to_top"]},
+        "frame_time_reference": {"const": "first_read_row"}
+      }
+    }
+  },
+  "$defs": {
+    "clock_domain": {
+      "enum": ["monotonic", "wall", "media", "audio"]
+    },
+    "correction_provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "source_clock",
+        "target_clock",
+        "model_id",
+        "offset_s",
+        "drift_ppm",
+        "uncertainty_s"
+      ],
+      "properties": {
+        "method": {"type": "string", "minLength": 1},
+        "source_clock": {"$ref": "#/$defs/clock_domain"},
+        "target_clock": {"$ref": "#/$defs/clock_domain"},
+        "model_id": {"type": "string", "minLength": 1},
+        "offset_s": {"type": "number"},
+        "drift_ppm": {"type": "number"},
+        "uncertainty_s": {"type": "number", "minimum": 0}
+      }
+    },
+    "raw_encoded_pts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_index", "pts_ticks", "timescale", "duration_ticks"],
+      "properties": {
+        "frame_index": {"type": "integer", "minimum": 0},
+        "pts_ticks": {"type": "integer"},
+        "timescale": {"type": "integer", "exclusiveMinimum": 0},
+        "duration_ticks": {"type": ["integer", "null"], "exclusiveMinimum": 0}
+      }
+    },
+    "corrected_pts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["corrected_time_s", "provenance"],
+      "properties": {
+        "corrected_time_s": {"type": "number"},
+        "provenance": {"$ref": "#/$defs/correction_provenance"}
+      }
+    },
+    "availability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason"],
+      "properties": {
+        "status": {"enum": ["present", "missing", "dropped"]},
+        "reason": {
+          "type": ["string", "null"],
+          "enum": [
+            null,
+            "capture_not_emitted",
+            "encoder_rejected",
+            "late_frame_discarded",
+            "decode_failed",
+            "pts_unavailable",
+            "sidecar_gap",
+            "explicitly_unavailable"
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"status": {"const": "present"}}, "required": ["status"]},
+          "then": {"properties": {"reason": {"type": "null"}}},
+          "else": {"properties": {"reason": {"type": "string"}}}
+        }
+      ]
+    },
+    "frame_time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["frame_index", "availability", "raw_encoded_pts", "corrected_pts"],
+      "properties": {
+        "frame_index": {"type": "integer", "minimum": 0},
+        "availability": {"$ref": "#/$defs/availability"},
+        "raw_encoded_pts": {"type": ["object", "null"]},
+        "corrected_pts": {"type": ["object", "null"]}
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "availability": {
+                "properties": {"status": {"const": "present"}},
+                "required": ["status"]
+              }
+            },
+            "required": ["availability"]
+          },
+          "then": {
+            "properties": {
+              "raw_encoded_pts": {"$ref": "#/$defs/raw_encoded_pts"},
+              "corrected_pts": {
+                "type": ["object", "null"]
+              }
+            }
+          },
+          "else": {
+            "properties": {
+              "raw_encoded_pts": {"type": "null"},
+              "corrected_pts": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {"properties": {"corrected_pts": {"type": "object"}}, "required": ["corrected_pts"]},
+          "then": {"properties": {"corrected_pts": {"$ref": "#/$defs/corrected_pts"}}}
+        }
+      ]
+    },
+    "audio_time": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["event_id", "raw_time_s", "raw_clock", "corrected_time_s", "correction"],
+      "properties": {
+        "event_id": {"type": "string", "minLength": 1},
+        "raw_time_s": {"type": "number"},
+        "raw_clock": {"$ref": "#/$defs/clock_domain"},
+        "corrected_time_s": {"type": ["number", "null"]},
+        "correction": {"type": ["object", "null"]}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"corrected_time_s": {"type": "number"}}, "required": ["corrected_time_s"]},
+          "then": {"properties": {"correction": {"$ref": "#/$defs/correction_provenance"}}},
+          "else": {"properties": {"correction": {"type": "null"}}}
+        }
+      ]
+    },
+    "acoustic_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model_id",
+        "source_to_microphone_distance_m",
+        "speed_of_sound_mps",
+        "air_temperature_c",
+        "relative_humidity_fraction",
+        "air_pressure_kpa",
+        "distance_uncertainty_m"
+      ],
+      "properties": {
+        "model_id": {"type": "string", "minLength": 1},
+        "source_to_microphone_distance_m": {"type": "number", "minimum": 0},
+        "speed_of_sound_mps": {"type": "number", "exclusiveMinimum": 0},
+        "air_temperature_c": {"type": "number"},
+        "relative_humidity_fraction": {"type": "number", "minimum": 0, "maximum": 1},
+        "air_pressure_kpa": {"type": "number", "exclusiveMinimum": 0},
+        "distance_uncertainty_m": {"type": "number", "minimum": 0}
+      }
+    },
+    "sensor_clock_mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mapping_id",
+        "source_clock",
+        "target_clock",
+        "reference_source_time_s",
+        "offset_s",
+        "drift_ppm",
+        "declared_tolerance_s"
+      ],
+      "properties": {
+        "mapping_id": {"type": "string", "minLength": 1},
+        "source_clock": {"$ref": "#/$defs/clock_domain"},
+        "target_clock": {"$ref": "#/$defs/clock_domain"},
+        "reference_source_time_s": {"type": "number"},
+        "offset_s": {"type": "number"},
+        "drift_ppm": {"type": "number"},
+        "declared_tolerance_s": {"type": "number", "exclusiveMinimum": 0}
+      }
+    }
+  }
+}
