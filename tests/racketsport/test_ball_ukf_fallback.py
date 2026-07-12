@@ -2,7 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from threed.racketsport.ball_ukf_fallback import UkfFallbackConfig, build_ukf_fallback
+from threed.racketsport.ball_ukf_fallback import (
+    RecoveryPolicyV2Config,
+    UkfFallbackConfig,
+    build_recovery_policy_v2,
+    build_ukf_fallback,
+)
 
 
 def _segment(
@@ -189,3 +194,116 @@ def test_each_remaining_hard_gate_refuses_the_whole_gap(
     assert result["samples"] == []
     assert result["summary"]["hard_gate_violation_count"] == 1
     assert result["refused_gaps"][0]["reason"] == expected_reason
+
+
+def test_v2_bridges_a_full_multi_segment_suppressed_span_with_honest_provenance() -> None:
+    artifact = _artifact(fallback_end=6)
+    artifact["segments"] = [
+        artifact["segments"][0],
+        _segment(1, 3, 4, status="fit_bvp_fallback", p0=(0.0, -2.7, 2.0), v0=(0.0, 3.0, 1.0)),
+        _segment(2, 4, 6, status="fit_bvp_fallback", p0=(0.0, -2.5, 2.0), v0=(0.0, 3.0, 1.0)),
+        _segment(3, 7, 9, status="fit", p0=(0.0, -2.3, 1.9), v0=(0.0, 3.0, -0.3)),
+    ]
+
+    result = build_recovery_policy_v2(artifact, generated_at="2026-07-12T00:00:00Z")
+
+    assert [sample["frame_index"] for sample in result["samples"]] == [3, 4, 5, 6]
+    assert result["summary"]["two_sided_bridge_gap_count"] == 1
+    assert result["policy_status"]["two_sided_requires_full_gap"] is True
+    for sample in result["samples"]:
+        assert sample["band"] == "physics_predicted"
+        assert sample["source"] == "physics_interpolated"
+        assert sample["measured"] is False
+        assert sample["horizon_age_frames"] >= 1
+        assert sample["position_covariance_max_m2"] <= 0.25
+
+
+def test_v2_two_sided_policy_is_separately_killable() -> None:
+    result = build_recovery_policy_v2(
+        _artifact(),
+        config=RecoveryPolicyV2Config(enable_two_sided_bridge=False),
+    )
+
+    assert result["samples"] == []
+    assert result["refused_gaps"][0]["reason"] == "two_sided_bridge_policy_disabled"
+
+
+def test_v2_one_sided_covariance_horizon_can_exceed_v1_twelve_frame_cap() -> None:
+    artifact = _artifact(fallback_end=20)
+    artifact["frames"] = [
+        {"t": index / 30.0, "visible": False, "xy": None, "conf": 0.0}
+        for index in range(30)
+    ]
+    artifact["segments"] = artifact["segments"][:2]
+
+    result = build_recovery_policy_v2(artifact)
+
+    assert result["summary"]["one_sided_gap_count"] == 1
+    assert len(result["samples"]) > 12
+    assert max(sample["position_covariance_max_m2"] for sample in result["samples"]) <= 0.25
+    assert all(sample["horizon_age_frames"] >= 1 for sample in result["samples"])
+
+
+def test_v2_covariance_one_sided_policy_is_separately_killable() -> None:
+    artifact = _artifact(fallback_end=9)
+    artifact["segments"] = artifact["segments"][:2]
+
+    result = build_recovery_policy_v2(
+        artifact,
+        config=RecoveryPolicyV2Config(enable_covariance_one_sided=False),
+    )
+
+    assert result["samples"] == []
+    assert result["refused_gaps"][0]["reason"] == "covariance_one_sided_policy_disabled"
+
+
+def test_v2_optional_low_confidence_2d_updates_keep_samples_predicted() -> None:
+    artifact = _artifact()
+    for index in (3, 4, 5):
+        artifact["frames"][index].update({"visible": True, "conf": 0.2, "xy": [960.0, 320.0]})
+    calibration = {
+        "intrinsics": {"fx": 1000.0, "fy": 1000.0, "cx": 960.0, "cy": 540.0},
+        "extrinsics": {
+            "R": [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],
+            "t": [0.0, 0.0, 12.0],
+        },
+    }
+
+    result = build_recovery_policy_v2(
+        artifact,
+        calibration=calibration,
+        config=RecoveryPolicyV2Config(enable_low_confidence_2d_updates=True),
+    )
+
+    assert result["summary"]["low_confidence_2d_update_count"] > 0
+    supported = [sample for sample in result["samples"] if sample["low_confidence_2d_measurement_support"]]
+    assert supported
+    assert all(sample["measured"] is False for sample in supported)
+    assert all(sample["band"] == "physics_predicted" for sample in supported)
+
+
+def test_v2_low_confidence_policy_is_separately_killable() -> None:
+    artifact = _artifact()
+    for index in (3, 4, 5):
+        artifact["frames"][index].update({"visible": True, "conf": 0.2, "xy": [960.0, 320.0]})
+
+    result = build_recovery_policy_v2(
+        artifact,
+        config=RecoveryPolicyV2Config(enable_low_confidence_2d_updates=False),
+    )
+
+    assert result["summary"]["low_confidence_2d_update_count"] == 0
+    assert all(not sample["low_confidence_2d_measurement_support"] for sample in result["samples"])
+
+
+def test_v2_contact_and_step_speed_gates_refuse_complete_bridge() -> None:
+    contact = build_recovery_policy_v2(
+        _artifact(),
+        contact_proposals={"events": [{"type": "contact", "frame": 4}]},
+    )
+    speed = build_recovery_policy_v2(_artifact(seed_speed_mps=36.0))
+
+    assert contact["samples"] == []
+    assert contact["refused_gaps"][0]["reason"] == "contact_proposal_inside_gap"
+    assert speed["samples"] == []
+    assert speed["refused_gaps"][0]["reason"] in {"step_speed_above_35_mps", "speed_above_ceiling"}

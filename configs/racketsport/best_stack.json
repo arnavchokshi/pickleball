@@ -996,6 +996,37 @@
           "runs/lanes/trk_reid_apron_20260712/vm_pull/"
         ]
       }
+    },
+    "ball.recovery_policy_v2_one_sided": {
+      "stage": "ball_arc",
+      "selection": "covariance-ceiling one-sided UKF recovery extension (forensics rank-1 survivor)",
+      "value": {
+        "enabled": false,
+        "candidate_flag": "enable_recovery_policy_v2_one_sided"
+      },
+      "status": "PENDING",
+      "gate": {
+        "name": "ball_fresh_gate_plus_coverage",
+        "metric_key": "emitted_coverage_zero_violations",
+        "bar": "coverage gain w/ 100% physics-plausible emitted intervals + 0 hard-gate violations on a fresh source-disjoint card (NS-03.BALL)",
+        "evidence_path": "runs/lanes/ball_recovery_20260712/report.json"
+      },
+      "provenance": {
+        "lane": "ball_recovery_20260712",
+        "commit": "5672f2486",
+        "date": "2026-07-12",
+        "evidence_paths": [
+          "runs/lanes/ball_recovery_20260712/report.json"
+        ]
+      },
+      "proven_against": {
+        "card": "Wolverine+Burlington internal (six-variant matrix)",
+        "internal_emitted_delta": "+23/900",
+        "physics_plausible_rate": "100% both cards",
+        "pb_rally_coverage": "58/252 unchanged (target NOT closed)",
+        "violations": 0
+      },
+      "notes": "Marginal survivor; bridge arms REJECTED (physics rate <100% despite +120 coverage). PB coverage parity requires a structural source of accepted boundaries (candidate/event evidence) per convergent TT3D+recovery+sizeobs diagnosis. VERIFIED=0."
     }
   },
   "selection_constant_coverage": {

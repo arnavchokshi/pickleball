@@ -147,6 +147,46 @@ def test_default_chain_candidate_flags_are_default_off_and_ransac_filters_only_w
     ukf_manifest = json.loads((tmp_path / "ukf" / "ball_chain_manifest.json").read_text(encoding="utf-8"))
     assert ukf_manifest["candidate_flags"] == {"ransac_arc_gate": False, "ukf_fallback": True}
 
+    captured_v2: dict[str, Any] = {}
+    _patch_default_chain_solver(monkeypatch, captured_v2)
+    v2 = ball_arc_chain.run_default_ball_arc_chain(
+        clip="unit_clip",
+        ball_track_path=ball_track_path,
+        court_calibration_path=calibration_path,
+        out_dir=tmp_path / "v2",
+        enable_recovery_policy_v2=True,
+        recovery_v2_enable_two_sided_bridge=True,
+        recovery_v2_enable_covariance_one_sided=False,
+        recovery_v2_enable_low_confidence_2d_updates=True,
+        generated_at="2026-07-05T00:00:00Z",
+    )
+    v2_path = Path(v2["outputs"]["ball_recovery_policy_v2"])
+    assert v2_path.is_file()
+    v2_payload = json.loads(v2_path.read_text(encoding="utf-8"))
+    assert v2_payload["candidate_flag"] == "ball.recovery_policy_v2"
+    assert v2_payload["candidate_flag_default"] is False
+    assert v2_payload["policy_status"]["two_sided_bridge"] == "enabled"
+    assert v2_payload["policy_status"]["covariance_one_sided"] == "disabled"
+    v2_manifest = json.loads((tmp_path / "v2" / "ball_chain_manifest.json").read_text(encoding="utf-8"))
+    assert v2_manifest["candidate_flags"] == {
+        "ransac_arc_gate": False,
+        "ukf_fallback": False,
+        "recovery_policy_v2": True,
+    }
+    assert v2_manifest["policy"]["recovery_v2_predictions_never_measured"] is True
+
+
+def test_default_chain_refuses_combining_conservative_v1_and_recovery_v2(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="separate candidate arms"):
+        ball_arc_chain.run_default_ball_arc_chain(
+            clip="unit_clip",
+            ball_track_path=tmp_path / "unused_ball_track.json",
+            court_calibration_path=tmp_path / "unused_calibration.json",
+            out_dir=tmp_path / "out",
+            enable_ukf_fallback=True,
+            enable_recovery_policy_v2=True,
+        )
+
 
 def test_default_chain_writes_events_selected_from_final_arc_solution(
     tmp_path: Path,

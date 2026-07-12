@@ -30,7 +30,11 @@ from threed.racketsport.ball_joint_anchor_search import (
 from threed.racketsport.ball_bounce_candidates import BounceCandidateConfig, write_bounce_candidate_payload
 from threed.racketsport.ball_flight_sanity import apply_flight_sanity_demotions, evaluate_ball_flight_sanity
 from threed.racketsport.ball_ransac_arc_gate import write_ransac_arc_filtered_ball_track
-from threed.racketsport.ball_ukf_fallback import build_ukf_fallback
+from threed.racketsport.ball_ukf_fallback import (
+    RecoveryPolicyV2Config,
+    build_recovery_policy_v2,
+    build_ukf_fallback,
+)
 from threed.racketsport.virtual_world import (
     BALL_ARC_FAIL_CLOSED_POLICY,
     ball_arc_segment_fail_closed_verdicts,
@@ -121,6 +125,10 @@ def run_default_ball_arc_chain(
     ransac_min_fit_points: int = 5,
     ransac_max_gap_frames: int = 6,
     enable_ukf_fallback: bool = False,
+    enable_recovery_policy_v2: bool = False,
+    recovery_v2_enable_two_sided_bridge: bool = True,
+    recovery_v2_enable_covariance_one_sided: bool = True,
+    recovery_v2_enable_low_confidence_2d_updates: bool = False,
     enable_joint_anchor_search: bool = False,
     enable_joint_anchor_pinning: bool = False,
     generated_at: str | None = None,
@@ -133,6 +141,8 @@ def run_default_ball_arc_chain(
         raise ValueError("joint-anchor pinning requires enable_joint_anchor_search=true")
     if enable_joint_anchor_search and enable_ransac_arc_gate:
         raise ValueError("joint-anchor search cannot be combined with the rejected RANSAC arm")
+    if enable_ukf_fallback and enable_recovery_policy_v2:
+        raise ValueError("conservative UKF v1 and recovery policy v2 are separate candidate arms")
     effective_ball_track_path = ball_track_path
     ransac_summary: dict[str, Any] | None = None
     ransac_track_path: Path | None = None
@@ -283,6 +293,23 @@ def run_default_ball_arc_chain(
             generated_at=generated_at,
         )
         write_json(ukf_fallback_path, ukf_fallback)
+    recovery_v2_path: Path | None = None
+    recovery_v2: dict[str, Any] | None = None
+    if enable_recovery_policy_v2:
+        recovery_v2_path = out_dir / "ball_recovery_policy_v2.json"
+        recovery_v2 = build_recovery_policy_v2(
+            run.artifact,
+            calibration=calibration,
+            contact_proposals=contact_windows,
+            net_plane=net_plane_for_solve,
+            config=RecoveryPolicyV2Config(
+                enable_two_sided_bridge=recovery_v2_enable_two_sided_bridge,
+                enable_covariance_one_sided=recovery_v2_enable_covariance_one_sided,
+                enable_low_confidence_2d_updates=recovery_v2_enable_low_confidence_2d_updates,
+            ),
+            generated_at=generated_at,
+        )
+        write_json(recovery_v2_path, recovery_v2)
     ball_arc_render = build_ball_arc_render_artifact(
         run.artifact,
         flight_sanity=run.flight_sanity,
@@ -331,6 +358,7 @@ def run_default_ball_arc_chain(
                 "ball_track_ransac_candidate": ransac_track_path,
                 "ball_ransac_arc_gate_summary": ransac_summary_path,
                 "ball_ukf_fallback": ukf_fallback_path,
+                "ball_recovery_policy_v2": recovery_v2_path,
                 "joint_anchor_candidates": joint_anchor_path,
                 "joint_anchor_baseline_ball_track_arc_solved": (
                     joint_anchor_baseline_run.artifact_path if joint_anchor_baseline_run is not None else None
@@ -362,11 +390,13 @@ def run_default_ball_arc_chain(
             "net_plane_consumed_when_valid": True,
         },
     }
-    if enable_ransac_arc_gate or enable_ukf_fallback or enable_joint_anchor_search:
+    if enable_ransac_arc_gate or enable_ukf_fallback or enable_recovery_policy_v2 or enable_joint_anchor_search:
         manifest["candidate_flags"] = {
             "ransac_arc_gate": bool(enable_ransac_arc_gate),
             "ukf_fallback": bool(enable_ukf_fallback),
         }
+        if enable_recovery_policy_v2:
+            manifest["candidate_flags"]["recovery_policy_v2"] = True
         if enable_joint_anchor_search:
             manifest["candidate_flags"].update(
                 {
@@ -385,6 +415,20 @@ def run_default_ball_arc_chain(
             ((ukf_fallback or {}).get("summary") or {}).get("recovered_sample_count") or 0
         )
         manifest["policy"]["ukf_predictions_never_measured"] = True
+    if enable_recovery_policy_v2:
+        manifest["summary"]["recovery_v2_recovered_sample_count"] = int(
+            ((recovery_v2 or {}).get("summary") or {}).get("recovered_sample_count") or 0
+        )
+        manifest["policy"].update(
+            {
+                "recovery_v2_predictions_never_measured": True,
+                "recovery_v2_two_sided_bridge": bool(recovery_v2_enable_two_sided_bridge),
+                "recovery_v2_covariance_one_sided": bool(recovery_v2_enable_covariance_one_sided),
+                "recovery_v2_low_confidence_2d_updates": bool(
+                    recovery_v2_enable_low_confidence_2d_updates
+                ),
+            }
+        )
     if joint_anchor_payload is not None:
         manifest["summary"]["tt3d_baseline_fallback_segment_count"] = int(
             joint_anchor_payload["summary"]["baseline_fallback_segment_count"]
@@ -426,6 +470,10 @@ def run_default_ball_arc_chain(
         result_summary["ukf_recovered_sample_count"] = int(
             ((ukf_fallback or {}).get("summary") or {}).get("recovered_sample_count") or 0
         )
+    if enable_recovery_policy_v2:
+        result_summary["recovery_v2_recovered_sample_count"] = int(
+            ((recovery_v2 or {}).get("summary") or {}).get("recovered_sample_count") or 0
+        )
     if joint_anchor_payload is not None:
         result_summary["tt3d_baseline_fallback_segment_count"] = int(
             joint_anchor_payload["summary"]["baseline_fallback_segment_count"]
@@ -447,6 +495,8 @@ def run_default_ball_arc_chain(
         output_paths["ball_ransac_arc_gate_summary"] = str(ransac_summary_path)
     if ukf_fallback_path is not None:
         output_paths["ball_ukf_fallback"] = str(ukf_fallback_path)
+    if recovery_v2_path is not None:
+        output_paths["ball_recovery_policy_v2"] = str(recovery_v2_path)
     if joint_anchor_path is not None:
         output_paths["ball_joint_anchor_candidates"] = str(joint_anchor_path)
     events_selected = manifest["outputs"].get("events_selected")

@@ -9,18 +9,21 @@ One-sided recovery is intentionally capped by
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 import math
 from typing import Any, Mapping, Sequence
 
 import numpy as np
 
+from .ball_joint_anchor_search import CameraModel, project_world
 from .virtual_world import ball_arc_segment_fail_closed_verdicts
 
 
 ARTIFACT_TYPE = "racketsport_ball_ukf_fallback_candidate"
 DEFAULT_MAX_ONE_SIDED_HORIZON_FRAMES = 12
+RECOVERY_POLICY_V2_MAX_POSITION_COVARIANCE_M2 = 0.25
+RECOVERY_POLICY_V2_MAX_STEP_SPEED_MPS = 35.0
 
 
 @dataclass(frozen=True)
@@ -69,6 +72,38 @@ class UkfFallbackConfig:
             raise ValueError("height bounds must be ordered")
         if self.court_x_min_m >= self.court_x_max_m or self.court_y_min_m >= self.court_y_max_m:
             raise ValueError("court bounds must be ordered")
+
+
+@dataclass(frozen=True)
+class RecoveryPolicyV2Config:
+    """Independent, default-off eligibility extensions for honest 3D recovery.
+
+    The 0.25 m^2 position-variance ceiling (0.50 m standard deviation on any
+    world axis) replaces v1's fixed 12-frame one-sided horizon. Two-sided
+    bridges must solve and pass gates over the complete suppressed span.
+    """
+
+    enable_two_sided_bridge: bool = True
+    enable_covariance_one_sided: bool = True
+    enable_low_confidence_2d_updates: bool = False
+    max_position_covariance_m2: float = RECOVERY_POLICY_V2_MAX_POSITION_COVARIANCE_M2
+    max_step_speed_mps: float = RECOVERY_POLICY_V2_MAX_STEP_SPEED_MPS
+    low_confidence_min: float = 0.05
+    low_confidence_max: float = 0.50
+    low_confidence_pixel_std_at_unit_conf: float = 12.0
+    low_confidence_innovation_chi2_max: float = 9.21
+
+    def __post_init__(self) -> None:
+        if self.max_position_covariance_m2 <= 0.0:
+            raise ValueError("max_position_covariance_m2 must be positive")
+        if self.max_step_speed_mps <= 0.0 or self.max_step_speed_mps > 35.0:
+            raise ValueError("max_step_speed_mps must be in (0, 35]")
+        if not (0.0 < self.low_confidence_min <= self.low_confidence_max <= 1.0):
+            raise ValueError("low-confidence bounds must satisfy 0 < min <= max <= 1")
+        if self.low_confidence_pixel_std_at_unit_conf <= 0.0:
+            raise ValueError("low_confidence_pixel_std_at_unit_conf must be positive")
+        if self.low_confidence_innovation_chi2_max <= 0.0:
+            raise ValueError("low_confidence_innovation_chi2_max must be positive")
 
 
 def build_ukf_fallback(
@@ -255,6 +290,336 @@ def build_ukf_fallback(
     }
 
 
+def build_recovery_policy_v2(
+    arc_solved: Mapping[str, Any],
+    *,
+    calibration: Mapping[str, Any] | None = None,
+    contact_proposals: Mapping[str, Any] | Sequence[Mapping[str, Any]] | None = None,
+    net_plane: Mapping[str, Any] | None = None,
+    config: RecoveryPolicyV2Config | None = None,
+    generated_at: str | None = None,
+) -> dict[str, Any]:
+    """Recover fail-closed spans without changing observations or 2D metrics."""
+
+    policy = config or RecoveryPolicyV2Config()
+    base = _config_from_artifact(arc_solved)
+    cfg = replace(base, max_position_covariance_m2=policy.max_position_covariance_m2)
+    frames_raw = arc_solved.get("frames")
+    frames = frames_raw if isinstance(frames_raw, list) else []
+    segments_raw = arc_solved.get("segments")
+    segments = [item for item in segments_raw if isinstance(item, Mapping)] if isinstance(segments_raw, list) else []
+    segments.sort(key=lambda item: (_int(item.get("frame_start"), 10**12), _int(item.get("segment_id"), 10**12)))
+    verdicts = ball_arc_segment_fail_closed_verdicts(segments)
+    contact_frames = _contact_frames(contact_proposals, arc_solved)
+    effective_net_y, effective_net_height = _net_geometry(net_plane, cfg)
+    camera: CameraModel | None = None
+    camera_refusal: str | None = None
+    if policy.enable_low_confidence_2d_updates:
+        if not isinstance(calibration, Mapping):
+            camera_refusal = "low_confidence_2d_updates_require_calibration"
+        else:
+            try:
+                camera = CameraModel.from_calibration(calibration)
+            except (TypeError, ValueError):
+                camera_refusal = "invalid_calibration_for_low_confidence_2d_updates"
+
+    samples: list[dict[str, Any]] = []
+    refused: list[dict[str, Any]] = []
+    attempted = recovered = bridge_recovered = one_sided_recovered = 0
+    contact_refused = hard_gate_violations = low_confidence_updates = covariance_truncations = 0
+    groups = _suppressed_segment_groups(segments, verdicts)
+    for first_index, last_index in groups:
+        span_segments = segments[first_index : last_index + 1]
+        left = segments[first_index - 1] if first_index > 0 and _accepted_fit(segments[first_index - 1], verdicts) else None
+        right = (
+            segments[last_index + 1]
+            if last_index + 1 < len(segments) and _accepted_fit(segments[last_index + 1], verdicts)
+            else None
+        )
+        raw_start = _int(span_segments[0].get("frame_start"), -1)
+        raw_end = _int(span_segments[-1].get("frame_end"), -1)
+        if raw_start < 0 or raw_end < raw_start:
+            continue
+        gap_start = raw_start + 1 if left is not None and _int(left.get("frame_end"), -2) == raw_start else raw_start
+        gap_end = raw_end - 1 if right is not None and _int(right.get("frame_start"), -2) == raw_end else raw_end
+        gap_frames = list(range(gap_start, gap_end + 1))
+        if not gap_frames:
+            continue
+        attempted += 1
+        segment_ids = [item.get("segment_id") for item in span_segments]
+        record = {
+            "segment_ids": segment_ids,
+            "frame_start": gap_start,
+            "frame_end": gap_end,
+            "frame_count": len(gap_frames),
+        }
+        if left is None and right is None:
+            refused.append({**record, "reason": "no_accepted_fit_boundary"})
+            continue
+        two_sided = left is not None and right is not None
+        if two_sided and not policy.enable_two_sided_bridge:
+            refused.append({**record, "reason": "two_sided_bridge_policy_disabled"})
+            continue
+        if not two_sided and not policy.enable_covariance_one_sided:
+            refused.append({**record, "reason": "covariance_one_sided_policy_disabled"})
+            continue
+        propagation_start = _int(left.get("frame_end"), gap_start) if left is not None else gap_start
+        propagation_end = _int(right.get("frame_start"), gap_end) if right is not None else gap_end
+        if any(propagation_start <= frame <= propagation_end for frame in contact_frames):
+            contact_refused += 1
+            refused.append({**record, "reason": "contact_proposal_inside_gap"})
+            continue
+        pts = _exact_pts(frames, gap_frames)
+        if pts is None:
+            refused.append({**record, "reason": "missing_or_non_monotonic_exact_pts"})
+            continue
+        try:
+            if left is not None:
+                states, covariances, update_frames = _forward_gap_v2(
+                    left,
+                    right,
+                    pts,
+                    gap_frames,
+                    frames,
+                    cfg,
+                    policy,
+                    camera if right is not None else None,
+                )
+                method = "ukf_v2_full_span_rts_bridge" if right is not None else "ukf_v2_covariance_forward"
+            else:
+                states, covariances = _backward_gap_v2(right, pts, frames, cfg)  # type: ignore[arg-type]
+                update_frames = set()
+                method = "ukf_v2_covariance_backward"
+        except (ValueError, np.linalg.LinAlgError, FloatingPointError):
+            refused.append({**record, "reason": "ukf_numerical_failure"})
+            continue
+
+        boundary_before = _accepted_boundary_state(left, frames, use_end=True, cfg=cfg)[0] if left is not None else None
+        boundary_after = _accepted_boundary_state(right, frames, use_end=False, cfg=cfg)[0] if right is not None else None
+        if two_sided:
+            violation = _first_hard_gate_violation(
+                (states, covariances),
+                cfg,
+                net_y_m=effective_net_y,
+                net_height_m=effective_net_height,
+                boundary_before=boundary_before,
+                boundary_after=boundary_after,
+                times=pts,
+                max_step_speed_mps=policy.max_step_speed_mps,
+            )
+            if violation is not None:
+                hard_gate_violations += 1
+                refused.append({**record, "reason": violation})
+                continue
+            selected = slice(0, len(states))
+        else:
+            selected, stop_reason = _covariance_safe_one_sided_slice(
+                states,
+                covariances,
+                pts,
+                cfg,
+                forward=left is not None,
+                net_y_m=effective_net_y,
+                net_height_m=effective_net_height,
+                boundary_before=boundary_before,
+                boundary_after=boundary_after,
+                max_step_speed_mps=policy.max_step_speed_mps,
+            )
+            if selected.start == selected.stop:
+                hard_gate_violations += 1
+                refused.append({**record, "reason": stop_reason or "no_covariance_safe_prefix"})
+                continue
+            if (selected.stop - selected.start) < len(states):
+                covariance_truncations += 1
+                refused.append(
+                    {
+                        **record,
+                        "reason": stop_reason or "one_sided_covariance_horizon_reached",
+                        "recovered_frame_start": gap_frames[selected.start],
+                        "recovered_frame_end": gap_frames[selected.stop - 1],
+                    }
+                )
+
+        chosen_frames = gap_frames[selected]
+        chosen_pts = pts[selected]
+        chosen_states = states[selected]
+        chosen_covariances = covariances[selected]
+        overlay_violation = _overlay_boundary_step_violation(
+            chosen_frames,
+            chosen_pts,
+            chosen_states,
+            frames,
+            left=left,
+            right=right,
+            max_step_speed_mps=policy.max_step_speed_mps,
+        )
+        if overlay_violation is not None:
+            hard_gate_violations += 1
+            refused.append({**record, "reason": overlay_violation})
+            continue
+        recovered += 1
+        bridge_recovered += int(two_sided)
+        one_sided_recovered += int(not two_sided)
+        low_confidence_updates += sum(frame in update_frames for frame in chosen_frames)
+        for offset, (frame_index, t, state, covariance) in enumerate(
+            zip(chosen_frames, chosen_pts, chosen_states, chosen_covariances, strict=True), start=1
+        ):
+            horizon_age = min(offset, len(chosen_frames) - offset + 1) if two_sided else (
+                offset if left is not None else len(chosen_frames) - offset + 1
+            )
+            original_segment_id = _segment_id_for_frame(span_segments, frame_index)
+            measurement_support = frame_index in update_frames
+            position_covariance = covariance[:3, :3]
+            samples.append(
+                {
+                    "frame_index": frame_index,
+                    "t": float(t),
+                    "segment_id": original_segment_id,
+                    "recovery_span_segment_ids": segment_ids,
+                    "world_xyz": [float(value) for value in state[:3]],
+                    "velocity_mps": [float(value) for value in state[3:]],
+                    "speed_mps": float(np.linalg.norm(state[3:])),
+                    "source": "physics_interpolated",
+                    "band": "physics_predicted",
+                    "trust_band": {
+                        "band": "low_confidence",
+                        "reason": "covariance_gated_recovery_policy_v2_candidate",
+                        "render_only": True,
+                    },
+                    "measured": False,
+                    "render_only": True,
+                    "not_for_detection_metrics": True,
+                    "method": method,
+                    "low_confidence_2d_measurement_support": measurement_support,
+                    "measurement_provenance": (
+                        "inflated_covariance_2d_support_never_measured" if measurement_support else None
+                    ),
+                    "covariance_position_m2": position_covariance.tolist(),
+                    "covariance_state": covariance.tolist(),
+                    "position_covariance_max_m2": float(np.max(np.diag(position_covariance))),
+                    "horizon_age_frames": int(horizon_age),
+                }
+            )
+
+    samples.sort(key=lambda item: (item["frame_index"], item["t"]))
+    return {
+        "schema_version": 2,
+        "artifact_type": ARTIFACT_TYPE,
+        "clip_id": str(arc_solved.get("clip_id") or ""),
+        "generated_at": generated_at or datetime.now(timezone.utc).isoformat(),
+        "candidate_flag": "ball.recovery_policy_v2",
+        "candidate_flag_default": False,
+        "render_only": True,
+        "not_for_detection_metrics": True,
+        "verified": False,
+        "source_policy": "accepted fits bound physics predictions; no recovered sample is measured",
+        "config": {"ukf": asdict(cfg), "recovery_policy_v2": asdict(policy)},
+        "policy_status": {
+            "two_sided_bridge": "enabled" if policy.enable_two_sided_bridge else "disabled",
+            "covariance_one_sided": "enabled" if policy.enable_covariance_one_sided else "disabled",
+            "low_confidence_2d_updates": (
+                camera_refusal or ("enabled" if policy.enable_low_confidence_2d_updates else "disabled")
+            ),
+            "one_sided_position_covariance_ceiling_m2": policy.max_position_covariance_m2,
+            "max_step_speed_mps": policy.max_step_speed_mps,
+            "two_sided_requires_full_gap": True,
+        },
+        "samples": samples,
+        "refused_gaps": refused,
+        "summary": {
+            "attempted_gap_count": attempted,
+            "recovered_gap_count": recovered,
+            "recovered_sample_count": len(samples),
+            "two_sided_bridge_gap_count": bridge_recovered,
+            "one_sided_gap_count": one_sided_recovered,
+            "one_sided_covariance_truncation_count": covariance_truncations,
+            "low_confidence_2d_update_count": low_confidence_updates,
+            "contact_refused_gap_count": contact_refused,
+            "hard_gate_violation_count": hard_gate_violations,
+            "refused_gap_count": len(refused),
+            "hard_gate_violations_emitted": 0,
+            "measured_recovered_sample_count": 0,
+        },
+    }
+
+
+def _suppressed_segment_groups(
+    segments: Sequence[Mapping[str, Any]], verdicts: Mapping[int, Mapping[str, Any]]
+) -> list[tuple[int, int]]:
+    groups: list[tuple[int, int]] = []
+    start: int | None = None
+    for index, segment in enumerate(segments):
+        segment_id = segment.get("segment_id")
+        verdict = verdicts.get(segment_id) if isinstance(segment_id, int) and not isinstance(segment_id, bool) else None
+        suppressed = not _accepted_fit(segment, verdicts) and not (verdict is not None and bool(verdict.get("trusted")))
+        if suppressed and start is None:
+            start = index
+        if not suppressed and start is not None:
+            groups.append((start, index - 1))
+            start = None
+    if start is not None:
+        groups.append((start, len(segments) - 1))
+    return groups
+
+
+def _segment_id_for_frame(segments: Sequence[Mapping[str, Any]], frame: int) -> Any:
+    for segment in segments:
+        if _int(segment.get("frame_start"), 10**12) <= frame <= _int(segment.get("frame_end"), -1):
+            return segment.get("segment_id")
+    return None
+
+
+def _overlay_boundary_step_violation(
+    gap_frames: Sequence[int],
+    times: Sequence[float],
+    states: Sequence[np.ndarray],
+    artifact_frames: Sequence[Any],
+    *,
+    left: Mapping[str, Any] | None,
+    right: Mapping[str, Any] | None,
+    max_step_speed_mps: float,
+) -> str | None:
+    timed_positions = [(float(t), np.asarray(state[:3], dtype=float)) for t, state in zip(times, states, strict=True)]
+    boundaries: list[tuple[float, np.ndarray]] = []
+    if left is not None and gap_frames:
+        left_index = _int(left.get("frame_end"), gap_frames[0] - 1)
+        boundary = _artifact_frame_position(artifact_frames, left_index)
+        if boundary is not None:
+            boundaries.append(boundary)
+    boundaries.extend(timed_positions)
+    if right is not None and gap_frames:
+        right_index = _int(right.get("frame_start"), gap_frames[-1] + 1)
+        boundary = _artifact_frame_position(artifact_frames, right_index)
+        if boundary is not None:
+            boundaries.append(boundary)
+    for (t0, p0), (t1, p1) in zip(boundaries, boundaries[1:], strict=False):
+        if t1 <= t0:
+            return "non_monotonic_boundary_pts"
+        if float(np.linalg.norm(p1 - p0) / (t1 - t0)) > max_step_speed_mps:
+            return "step_speed_above_35_mps"
+    return None
+
+
+def _artifact_frame_position(frames: Sequence[Any], index: int) -> tuple[float, np.ndarray] | None:
+    if index < 0 or index >= len(frames) or not isinstance(frames[index], Mapping):
+        return None
+    frame = frames[index]
+    xyz = frame.get("world_xyz")
+    t = frame.get("t")
+    if (
+        not isinstance(xyz, Sequence)
+        or isinstance(xyz, (str, bytes))
+        or len(xyz) != 3
+        or isinstance(t, bool)
+        or not isinstance(t, (int, float))
+    ):
+        return None
+    position = np.asarray([float(value) for value in xyz], dtype=float)
+    if not np.all(np.isfinite(position)) or not math.isfinite(float(t)):
+        return None
+    return float(t), position
+
+
 def _config_from_artifact(artifact: Mapping[str, Any]) -> UkfFallbackConfig:
     physics = artifact.get("physics_parameters")
     gravity = _float(physics.get("gravity_mps2"), 9.81) if isinstance(physics, Mapping) else 9.81
@@ -315,6 +680,162 @@ def _forward_gap(
         smooth_xs[k] = xs[k] + gain @ (smooth_xs[k + 1] - predicted[k])
         smooth_ps[k] = _symmetrize(ps[k] + gain @ (smooth_ps[k + 1] - predicted_covariances[k]) @ gain.T)
     return smooth_xs[1:-1], smooth_ps[1:-1]
+
+
+def _forward_gap_v2(
+    left: Mapping[str, Any],
+    right: Mapping[str, Any] | None,
+    pts: Sequence[float],
+    gap_frames: Sequence[int],
+    frames: Sequence[Any],
+    cfg: UkfFallbackConfig,
+    policy: RecoveryPolicyV2Config,
+    camera: CameraModel | None,
+) -> tuple[list[np.ndarray], list[np.ndarray], set[int]]:
+    left_state, left_t = _accepted_boundary_state(left, frames, use_end=True, cfg=cfg)
+    xs = [left_state]
+    ps = [_seed_covariance(cfg)]
+    predicted: list[np.ndarray] = []
+    predicted_covariances: list[np.ndarray] = []
+    cross_covariances: list[np.ndarray] = []
+    update_frames: set[int] = set()
+    before_t = left_t
+    for frame_index, after_t in zip(gap_frames, pts, strict=True):
+        x_next, p_next, cross = _ukf_predict(xs[-1], ps[-1], after_t - before_t, cfg)
+        predicted.append(x_next)
+        predicted_covariances.append(p_next)
+        cross_covariances.append(cross)
+        if camera is not None and policy.enable_low_confidence_2d_updates:
+            observation = _low_confidence_observation(frames, frame_index, policy)
+            if observation is not None:
+                updated = _pixel_measurement_update(x_next, p_next, observation, camera, policy)
+                if updated is not None:
+                    x_next, p_next = updated
+                    update_frames.add(frame_index)
+        xs.append(x_next)
+        ps.append(p_next)
+        before_t = after_t
+
+    if right is None:
+        return xs[1:], ps[1:], update_frames
+
+    terminal_state, right_t = _accepted_boundary_state(right, frames, use_end=False, cfg=cfg)
+    terminal_pred, terminal_cov, terminal_cross = _ukf_predict(xs[-1], ps[-1], right_t - pts[-1], cfg)
+    predicted.append(terminal_pred)
+    predicted_covariances.append(terminal_cov)
+    cross_covariances.append(terminal_cross)
+    terminal_measurement_covariance = np.diag(
+        [cfg.terminal_position_std_m**2] * 3 + [cfg.terminal_velocity_std_mps**2] * 3
+    )
+    terminal_x, terminal_p = _full_state_update(
+        terminal_pred, terminal_cov, terminal_state, terminal_measurement_covariance
+    )
+    xs.append(terminal_x)
+    ps.append(terminal_p)
+    smooth_xs = list(xs)
+    smooth_ps = list(ps)
+    for k in range(len(xs) - 2, -1, -1):
+        gain = cross_covariances[k] @ np.linalg.pinv(predicted_covariances[k])
+        smooth_xs[k] = xs[k] + gain @ (smooth_xs[k + 1] - predicted[k])
+        smooth_ps[k] = _symmetrize(
+            ps[k] + gain @ (smooth_ps[k + 1] - predicted_covariances[k]) @ gain.T
+        )
+    return smooth_xs[1:-1], smooth_ps[1:-1], update_frames
+
+
+def _backward_gap_v2(
+    right: Mapping[str, Any],
+    pts: Sequence[float],
+    frames: Sequence[Any],
+    cfg: UkfFallbackConfig,
+) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    x, current_t = _accepted_boundary_state(right, frames, use_end=False, cfg=cfg)
+    p = _seed_covariance(cfg)
+    states: list[np.ndarray] = []
+    covariances: list[np.ndarray] = []
+    for t in reversed(pts):
+        x, p, _ = _ukf_predict(x, p, t - current_t, cfg)
+        states.append(x)
+        covariances.append(p)
+        current_t = t
+    return list(reversed(states)), list(reversed(covariances))
+
+
+def _accepted_boundary_state(
+    segment: Mapping[str, Any],
+    frames: Sequence[Any],
+    *,
+    use_end: bool,
+    cfg: UkfFallbackConfig,
+) -> tuple[np.ndarray, float]:
+    frame_key = "frame_end" if use_end else "frame_start"
+    time_key = "t1" if use_end else "t0"
+    frame_index = _int(segment.get(frame_key), -1)
+    boundary = _artifact_frame_position(frames, frame_index)
+    t = boundary[0] if boundary is not None else _float(segment.get(time_key), 0.0)
+    state = _segment_state_at(segment, t, cfg)
+    if boundary is not None:
+        state[:3] = boundary[1]
+    return state, t
+
+
+def _low_confidence_observation(
+    frames: Sequence[Any], frame_index: int, policy: RecoveryPolicyV2Config
+) -> tuple[np.ndarray, float] | None:
+    if frame_index < 0 or frame_index >= len(frames) or not isinstance(frames[frame_index], Mapping):
+        return None
+    frame = frames[frame_index]
+    confidence = frame.get("conf")
+    xy = frame.get("xy")
+    if (
+        isinstance(confidence, bool)
+        or not isinstance(confidence, (int, float))
+        or not math.isfinite(float(confidence))
+        or not (policy.low_confidence_min <= float(confidence) <= policy.low_confidence_max)
+        or not isinstance(xy, Sequence)
+        or isinstance(xy, (str, bytes))
+        or len(xy) < 2
+    ):
+        return None
+    parsed = np.asarray([float(xy[0]), float(xy[1])], dtype=float)
+    if not np.all(np.isfinite(parsed)):
+        return None
+    return parsed, float(confidence)
+
+
+def _pixel_measurement_update(
+    x: np.ndarray,
+    p: np.ndarray,
+    observation: tuple[np.ndarray, float],
+    camera: CameraModel,
+    policy: RecoveryPolicyV2Config,
+) -> tuple[np.ndarray, np.ndarray] | None:
+    xy, confidence = observation
+    projected, depth = project_world(camera, x[:3])
+    if depth <= 0.0 or not all(math.isfinite(value) for value in projected):
+        return None
+    predicted_xy = np.asarray(projected, dtype=float)
+    h = np.zeros((2, 6), dtype=float)
+    epsilon = 1e-4
+    for axis in range(3):
+        shifted = x[:3].copy()
+        shifted[axis] += epsilon
+        shifted_xy, shifted_depth = project_world(camera, shifted)
+        if shifted_depth <= 0.0:
+            return None
+        h[:, axis] = (np.asarray(shifted_xy, dtype=float) - predicted_xy) / epsilon
+    sigma_px = policy.low_confidence_pixel_std_at_unit_conf / max(confidence, policy.low_confidence_min)
+    r = np.eye(2, dtype=float) * sigma_px * sigma_px
+    innovation = xy - predicted_xy
+    innovation_covariance = h @ p @ h.T + r
+    mahalanobis = float(innovation.T @ np.linalg.pinv(innovation_covariance) @ innovation)
+    if not math.isfinite(mahalanobis) or mahalanobis > policy.low_confidence_innovation_chi2_max:
+        return None
+    gain = p @ h.T @ np.linalg.pinv(innovation_covariance)
+    updated = x + gain @ innovation
+    identity = np.eye(6, dtype=float)
+    covariance = (identity - gain @ h) @ p @ (identity - gain @ h).T + gain @ r @ gain.T
+    return updated, _symmetrize(covariance)
 
 
 def _backward_gap(
@@ -428,6 +949,8 @@ def _first_hard_gate_violation(
     net_height_m: float,
     boundary_before: np.ndarray | None = None,
     boundary_after: np.ndarray | None = None,
+    times: Sequence[float] | None = None,
+    max_step_speed_mps: float | None = None,
 ) -> str | None:
     states, covariances = gap_states
     for state, covariance in zip(states, covariances, strict=True):
@@ -442,6 +965,21 @@ def _first_hard_gate_violation(
             return "speed_above_ceiling"
         if float(np.max(np.diag(covariance[:3, :3]))) > cfg.max_position_covariance_m2:
             return "covariance_above_ceiling"
+    if max_step_speed_mps is not None and times is not None:
+        timed_states: list[tuple[float, np.ndarray]] = list(zip(times, states, strict=True))
+        if boundary_before is not None and times:
+            first_dt = times[1] - times[0] if len(times) > 1 else 1.0 / 30.0
+            timed_states.insert(0, (times[0] - first_dt, boundary_before))
+        if boundary_after is not None and times:
+            last_dt = times[-1] - times[-2] if len(times) > 1 else 1.0 / 30.0
+            timed_states.append((times[-1] + last_dt, boundary_after))
+        for (t0, state0), (t1, state1) in zip(timed_states, timed_states[1:], strict=False):
+            dt = t1 - t0
+            if dt <= 0.0:
+                return "non_monotonic_boundary_pts"
+            step_speed = float(np.linalg.norm(state1[:3] - state0[:3]) / dt)
+            if step_speed > max_step_speed_mps:
+                return "step_speed_above_35_mps"
     net_path = [
         *([boundary_before] if boundary_before is not None else []),
         *states,
@@ -456,6 +994,53 @@ def _first_hard_gate_violation(
         if z_crossing < net_height_m - cfg.net_clearance_slack_m:
             return "net_clearance_below_slack"
     return None
+
+
+def _covariance_safe_one_sided_slice(
+    states: Sequence[np.ndarray],
+    covariances: Sequence[np.ndarray],
+    times: Sequence[float],
+    cfg: UkfFallbackConfig,
+    *,
+    forward: bool,
+    net_y_m: float,
+    net_height_m: float,
+    boundary_before: np.ndarray | None,
+    boundary_after: np.ndarray | None,
+    max_step_speed_mps: float,
+) -> tuple[slice, str | None]:
+    safe_count = 0
+    stop_reason: str | None = None
+    total = len(states)
+    for count in range(1, total + 1):
+        if forward:
+            selected_states = states[:count]
+            selected_covariances = covariances[:count]
+            selected_times = times[:count]
+            before = boundary_before
+            after = None
+        else:
+            selected_states = states[total - count :]
+            selected_covariances = covariances[total - count :]
+            selected_times = times[total - count :]
+            before = None
+            after = boundary_after
+        stop_reason = _first_hard_gate_violation(
+            (selected_states, selected_covariances),
+            cfg,
+            net_y_m=net_y_m,
+            net_height_m=net_height_m,
+            boundary_before=before,
+            boundary_after=after,
+            times=selected_times,
+            max_step_speed_mps=max_step_speed_mps,
+        )
+        if stop_reason is not None:
+            break
+        safe_count = count
+    if forward:
+        return slice(0, safe_count), stop_reason
+    return slice(total - safe_count, total), stop_reason
 
 
 def _exact_pts(frames: Sequence[Any], indices: Sequence[int]) -> list[float] | None:
@@ -570,6 +1155,10 @@ def _int(value: Any, default: int) -> int:
 __all__ = [
     "ARTIFACT_TYPE",
     "DEFAULT_MAX_ONE_SIDED_HORIZON_FRAMES",
+    "RECOVERY_POLICY_V2_MAX_POSITION_COVARIANCE_M2",
+    "RECOVERY_POLICY_V2_MAX_STEP_SPEED_MPS",
+    "RecoveryPolicyV2Config",
     "UkfFallbackConfig",
+    "build_recovery_policy_v2",
     "build_ukf_fallback",
 ]
