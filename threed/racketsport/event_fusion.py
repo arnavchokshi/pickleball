@@ -161,7 +161,12 @@ def fuse_contact_windows(
     used_ball_indices: set[int] = set()
     used_wrist_indices: set[int] = set()
 
+    # Optional audio is still evidence.  ``require_audio=False`` means each
+    # visual wrist+ball proposal survives when no nearby audio candidate
+    # exists; a nearby audio candidate augments that proposal instead of
+    # becoming a new hard gate.
     if not require_audio:
+        used_audio_indices: set[int] = set()
         for ball_idx, ball in enumerate(sorted_ball):
             if ball_idx in used_ball_indices:
                 continue
@@ -175,12 +180,26 @@ def fuse_contact_windows(
                 continue
 
             wrist_idx, wrist = wrist_match
-            source_times = (wrist.time_s, ball.time_s)
+            audio_match = _nearest_audio_to_visual_match(
+                ball=ball,
+                wrist=wrist,
+                candidates=normalized_audio,
+                used_indices=used_audio_indices,
+                max_time_delta_s=max_time_delta_s,
+            )
+            audio_idx, audio = audio_match if audio_match is not None else (None, None)
+            source_times = (
+                (wrist.time_s, ball.time_s, audio.time_s)
+                if audio is not None
+                else (wrist.time_s, ball.time_s)
+            )
             event_t = (min(source_times) + max(source_times)) / 2.0
             source_confidences = {
                 "wrist_vel": wrist.confidence,
                 "ball_inflection": ball.confidence,
             }
+            if audio is not None:
+                source_confidences["audio"] = audio.confidence
             confidence = round(sum(source_confidences.values()) / len(source_confidences), 12)
             frame = _event_frame(event_t, fps=fps, frame_times=frame_times)
 
@@ -199,6 +218,8 @@ def fuse_contact_windows(
             )
             used_ball_indices.add(ball_idx)
             used_wrist_indices.add(wrist_idx)
+            if audio_idx is not None:
+                used_audio_indices.add(audio_idx)
 
         events.sort(key=lambda event: (float(event["t"]), int(event["frame"])))
         if events or not allow_wrist_only_contact_hints:
@@ -429,7 +450,12 @@ def _coerce_audio_onset(
     if isinstance(candidate, AudioOnsetCandidate):
         return candidate
     if isinstance(candidate, Mapping):
-        time_s = _cue_time_s(candidate, fps=fps, frame_times=frame_times, name="audio_onset.time_s")
+        corrected_time_s = candidate.get("corrected_time_s")
+        time_s = (
+            _require_non_negative_time(corrected_time_s, "audio_onset.corrected_time_s")
+            if corrected_time_s is not None
+            else _cue_time_s(candidate, fps=fps, frame_times=frame_times, name="audio_onset.time_s")
+        )
         confidence = candidate.get("confidence", candidate.get("score", candidate.get("conf")))
     else:
         time_s = getattr(candidate, "time_s", getattr(candidate, "t", None))
@@ -471,6 +497,34 @@ def _nearest_ball_match(
     if not matches:
         return None
     return min(matches, key=lambda item: (abs(item[1].time_s - audio.time_s), -item[1].confidence, item[0]))
+
+
+def _nearest_audio_to_visual_match(
+    *,
+    ball: BallInflectionCandidate,
+    wrist: WristVelocityPeak,
+    candidates: Sequence[AudioOnsetCandidate],
+    used_indices: set[int],
+    max_time_delta_s: float,
+) -> tuple[int, AudioOnsetCandidate] | None:
+    center_t = (ball.time_s + wrist.time_s) / 2.0
+    matches = [
+        (idx, candidate)
+        for idx, candidate in enumerate(candidates)
+        if idx not in used_indices
+        and abs(candidate.time_s - ball.time_s) <= max_time_delta_s
+        and abs(candidate.time_s - wrist.time_s) <= max_time_delta_s
+    ]
+    if not matches:
+        return None
+    return min(
+        matches,
+        key=lambda item: (
+            abs(item[1].time_s - center_t),
+            -item[1].confidence,
+            item[0],
+        ),
+    )
 
 
 def _nearest_wrist_to_ball_match(

@@ -311,6 +311,101 @@ def test_fuse_contact_windows_accepts_image_only_ball_inflections_as_low_trust()
     ContactWindows.model_validate(payload)
 
 
+def test_optional_audio_is_used_when_present_without_becoming_required() -> None:
+    common = {
+        "fps": 100.0,
+        "wrist_velocity_peaks_payload": {
+            "peaks": [
+                {
+                    "time_s": 1.012,
+                    "player_id": 7,
+                    "wrist_world_xyz": [1.0, 0.0, 0.9],
+                    "speed_mps": 8.0,
+                    "confidence": 0.8,
+                }
+            ]
+        },
+        "ball_inflections_payload": {
+            "candidates": [
+                {
+                    "time_s": 1.008,
+                    "ball_world_xyz": [1.0, 0.0, 0.88],
+                    "confidence": 0.7,
+                }
+            ]
+        },
+        "require_audio": False,
+        "max_time_delta_s": 0.005,
+    }
+
+    without_audio = event_fusion.fuse_contact_windows_from_cue_payloads(
+        audio_onsets_payload={"onsets": []},
+        **common,
+    )
+    with_audio = event_fusion.fuse_contact_windows_from_cue_payloads(
+        audio_onsets_payload={
+            "onsets": [
+                {
+                    "time_s": 1.000,
+                    "raw_time_s": 1.000,
+                    "corrected_time_s": 1.010,
+                    "score": 0.9,
+                }
+            ]
+        },
+        **common,
+    )
+
+    assert without_audio["events"][0]["sources"].get("audio") is None
+    assert with_audio["events"][0]["sources"]["audio"] == pytest.approx(0.9)
+    assert with_audio["events"][0]["confidence"] != without_audio["events"][0]["confidence"]
+    ContactWindows.model_validate(with_audio)
+
+
+def test_optional_unmatched_audio_does_not_suppress_visual_contact() -> None:
+    payload = event_fusion.fuse_contact_windows_from_cue_payloads(
+        fps=100.0,
+        audio_onsets_payload={
+            "onsets": [
+                {
+                    "raw_time_s": 2.0,
+                    "corrected_time_s": 1.9,
+                    "score": 0.95,
+                }
+            ]
+        },
+        wrist_velocity_peaks_payload={
+            "peaks": [
+                {
+                    "time_s": 1.012,
+                    "player_id": 7,
+                    "wrist_world_xyz": [1.0, 0.0, 0.9],
+                    "speed_mps": 8.0,
+                    "confidence": 0.8,
+                }
+            ]
+        },
+        ball_inflections_payload={
+            "candidates": [
+                {
+                    "time_s": 1.008,
+                    "ball_world_xyz": [1.0, 0.0, 0.88],
+                    "confidence": 0.7,
+                }
+            ]
+        },
+        require_audio=False,
+        max_time_delta_s=0.005,
+    )
+
+    assert len(payload["events"]) == 1
+    assert payload["events"][0]["sources"] == {
+        "wrist_vel": pytest.approx(0.8),
+        "ball_inflection": pytest.approx(0.7),
+    }
+    ContactWindows.model_validate(payload)
+
+
 def test_vfr_contact_timing_uses_pts_table_and_constant_fps_would_drift(tmp_path: Path) -> None:
     clip = tmp_path / "vfr_contact.mp4"
     _make_vfr_clip(clip, durations_s=[0.04, 0.20, 0.04, 0.16, 0.04])

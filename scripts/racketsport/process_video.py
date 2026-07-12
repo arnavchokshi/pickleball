@@ -67,13 +67,19 @@ entrypoint (NORTH_STAR_ROADMAP.md's product goal). It chains, in order:
                       an RKT promotion.
  12. world         -- virtual_world.json + trust_bands.json (every entity
                       badged from real upstream gate/artifact state via
-                      threed.racketsport.trust_band, never invented).
+                      threed.racketsport.trust_band, never invented). Before
+                      world assembly it writes a separate post-BODY/paddle
+                      contact_windows_refined_v1.json generation when possible;
+                      raw contact_windows.json remains immutable.
  13. confidence    -- confidence_gated_world.json via the Wave-B additive
                       confidence gate (default on; --no-confidence-gate keeps
                       raw virtual_world.json as the viewer world).
- 14. manifest      -- replay_viewer_manifest.json, the same bundle shape
+ 14. match_stats   -- deterministic BODY+COURT-only facts consumer.
+ 15. coaching_facts -- existing deterministic position-only rally/facts builder;
+                      no language generation.
+ 16. manifest      -- replay_viewer_manifest.json, the same bundle shape
                       web/replay already loads.
- 15. verify        -- optional (--verify-viewer) headless load check of the
+ 17. verify        -- optional (--verify-viewer) headless load check of the
                       web viewer against the freshly built manifest.
 
 Resilience: every stage checks for an already-valid artifact first and skips
@@ -124,7 +130,16 @@ from threed.racketsport.confidence_gate import (  # noqa: E402
 from threed.racketsport.body_grounding_refine import GroundingRefineConfig, refine_body_grounding  # noqa: E402
 from threed.racketsport.body_compute import build_body_compute_execution, write_body_compute_execution  # noqa: E402
 from threed.racketsport.event_fusion import fuse_contact_windows_from_cue_payloads  # noqa: E402
+from threed.racketsport.contact_provenance import (  # noqa: E402
+    DEPENDENCY_HASH_MISMATCH,
+    PROVENANCE_SCHEMA_VERSION as CONTACT_PROVENANCE_SCHEMA_VERSION,
+    audio_provenance,
+    dependency_hashes_match,
+    dependency_snapshot,
+    file_dependency,
+)
 from threed.racketsport.match_stats import compute_match_stats_for_run_dir, write_match_stats_json  # noqa: E402
+from threed.racketsport.rally_metrics import build_rally_metrics  # noqa: E402
 from threed.racketsport.frame_rating import (  # noqa: E402
     DEFAULT_BALL_PROXIMITY_M,
     DEFAULT_HIGH_CONFIDENCE_SWING_FLOOR,
@@ -361,8 +376,9 @@ RUN_IDENTITY_DEPENDENCIES: dict[str, tuple[str, ...]] = {
     "paddle_pose": ("body",),
     "world": ("calibration", "tracking", "ball_fill", "body", "placement_refine", "grounding_refine", "paddle_pose"),
     "confidence_gate": ("world",),
-    "manifest": ("world", "confidence_gate"),
-    "match_stats": ("placement", "manifest"),
+    "match_stats": ("placement", "world"),
+    "coaching_facts": ("world", "match_stats"),
+    "manifest": ("world", "confidence_gate", "match_stats", "coaching_facts"),
     "verify": ("manifest",),
 }
 
@@ -415,10 +431,19 @@ RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
     "body": ("body_full_clip_gate.json", "body_mesh_readiness.json", "body_compute_execution.json"),
     "grounding_refine": ("body_grounding_refinement.json",),
     "paddle_pose": (PADDLE_POSE_ARTIFACT_NAME,),
-    "world": ("virtual_world.json", "trust_bands.json", "ball_fail_closed_verdicts.json"),
+    "world": (
+        "virtual_world.json",
+        "trust_bands.json",
+        "ball_fail_closed_verdicts.json",
+        "wrist_velocity_peaks_refined_v1.json",
+        "contact_windows_refined_v1.json",
+        "contact_refinement_v1.json",
+        "ball_arc_refined_dependencies_v1.json",
+    ),
     "confidence_gate": ("confidence_gated_world.json", "confidence_gate_summary.json"),
     "manifest": ("replay_viewer_manifest.json", "replay_scene.json", "replay_review"),
     "match_stats": ("match_stats.json",),
+    "coaching_facts": ("rally_metrics.json", "coaching_card_facts.json"),
 }
 
 
@@ -546,6 +571,11 @@ class ProcessVideoPipeline:
             "audio_onsets_v2.json",
             "audio_onsets.json",
             "contact_windows.json",
+            "contact_dependencies_v1.json",
+            "contact_windows_refined_v1.json",
+            "contact_refinement_v1.json",
+            "wrist_velocity_peaks_refined_v1.json",
+            "ball_arc_refined_dependencies_v1.json",
             "frame_compute_plan.json",
             "input_quality.json",
             "placement.json",
@@ -569,6 +599,8 @@ class ProcessVideoPipeline:
             "replay_scene.json",
             "replay_viewer_manifest.json",
             "match_stats.json",
+            "rally_metrics.json",
+            "coaching_card_facts.json",
         ):
             path = self.clip_dir / name
             if self.options.ball_track_reuse is not None and path.resolve() == self.options.ball_track_reuse.resolve():
@@ -718,7 +750,13 @@ class ProcessVideoPipeline:
             candidates = {
                 "events_selected": opts.events_selected,
                 "ball_track_arc_solved": opts.ball_track_arc_solved,
+                "ball_track": self.clip_dir / "ball_track.json",
+                "skeleton3d": self.clip_dir / "skeleton3d.json",
+                "audio": self.clip_dir / "audio_onsets_v2.json",
+                "calibration": self.clip_dir / "court_calibration.json",
             }
+        elif name == "world":
+            candidates = self._contact_dependency_paths(refined=True)
         elif name == "confidence_gate":
             candidates = {"confidence_calibration_curves": opts.confidence_calibration_curves}
         return {key: Path(value) for key, value in candidates.items() if value is not None}
@@ -854,8 +892,9 @@ class ProcessVideoPipeline:
             ("paddle_pose", self._stage_paddle_pose),
             ("world", self._stage_world),
             ("confidence_gate", self._stage_confidence_gate),
-            ("manifest", self._stage_manifest),
             ("match_stats", self._stage_match_stats),
+            ("coaching_facts", self._stage_coaching_facts),
+            ("manifest", self._stage_manifest),
         ]
         if self.options.verify_viewer:
             stage_fns.append(("verify", self._stage_verify))
@@ -2712,7 +2751,7 @@ class ProcessVideoPipeline:
                 court_calibration_path=calibration_path,
                 out_dir=self.clip_dir,
                 ball_candidate_paths=ball_candidate_paths,
-                contact_windows_path=_existing_optional_path(self.clip_dir / "contact_windows.json"),
+                contact_windows_path=_existing_optional_path(self._preferred_contact_windows_path()),
                 skeleton3d_path=_existing_optional_path(self.clip_dir / "skeleton3d.json"),
                 net_plane_path=_existing_optional_path(self.clip_dir / "net_plane.json"),
                 rally_spans_path=_existing_optional_path(self.clip_dir / "rally_spans.json"),
@@ -2766,14 +2805,19 @@ class ProcessVideoPipeline:
         ball_track_path = self.clip_dir / "ball_track.json"
         contact_windows_path = self.clip_dir / "contact_windows.json"
         notes: list[str] = []
+        reuse_refusal_reason = self._contact_reuse_refusal_reason(
+            provenance_path=self.clip_dir / "contact_dependencies_v1.json",
+            refined=False,
+        )
 
         if (
             contact_windows_path.is_file()
             and not self.options.force
             and self._identity_allows_reuse("events")
             and _valid_artifact("contact_windows", contact_windows_path)
+            and reuse_refusal_reason is None
         ):
-            artifacts = ["contact_windows.json"]
+            artifacts = ["contact_windows.json", "contact_dependencies_v1.json"]
             if tracks_path.is_file() and not (self.clip_dir / "frame_compute_plan.json").is_file():
                 contact_windows = _read_json(contact_windows_path)
                 tracks = validate_artifact_file("tracks", tracks_path)
@@ -2820,6 +2864,9 @@ class ProcessVideoPipeline:
                 artifacts=artifacts,
             )
 
+        if contact_windows_path.is_file() and reuse_refusal_reason is not None:
+            notes.append(f"reuse refused: {reuse_refusal_reason}")
+
         fps = _read_json(tracks_path).get("fps", 30.0) if tracks_path.is_file() else 30.0
 
         if _is_real_sam3d_skeleton(skeleton_path):
@@ -2848,10 +2895,16 @@ class ProcessVideoPipeline:
             _write_json(ball_inflections_path, ball_inflections)
             notes.append("no ball_track.json available; ball_inflections.json has zero candidates (wrist cues only)")
 
-        audio_onsets_payload: Any = []
+        audio_onsets_payload: Any = {
+            "status": "blocked",
+            "blockers": ["audio_disabled_by_flag"],
+            "onsets": [],
+        }
         if not self.options.skip_audio:
             audio_onsets_payload, audio_note = self._attempt_audio_onsets(fps)
             notes.append(audio_note)
+        else:
+            notes.append("audio disabled by --skip-audio; explicit reason audio_disabled_by_flag recorded")
 
         contact_windows = fuse_contact_windows_from_cue_payloads(
             fps=fps,
@@ -2863,6 +2916,14 @@ class ProcessVideoPipeline:
             allow_wrist_only_contact_hints=True,
         )
         _write_json(contact_windows_path, contact_windows)
+        self._write_contact_provenance(
+            path=self.clip_dir / "contact_dependencies_v1.json",
+            status="coarse",
+            contact_path=contact_windows_path,
+            raw_path=contact_windows_path,
+            audio_payload=audio_onsets_payload,
+            reason=None,
+        )
         cue_summary = _contact_cue_summary(
             contact_windows,
             wrist_payload=wrist_payload,
@@ -2877,7 +2938,12 @@ class ProcessVideoPipeline:
             f"{','.join(cue_summary['missing']) if cue_summary['missing'] else 'none'}"
         )
 
-        artifacts = ["wrist_velocity_peaks.json", "ball_inflections.json", "contact_windows.json"]
+        artifacts = [
+            "wrist_velocity_peaks.json",
+            "ball_inflections.json",
+            "contact_windows.json",
+            "contact_dependencies_v1.json",
+        ]
         plan: Mapping[str, Any] | None = None
         if tracks_path.is_file():
             tracks = validate_artifact_file("tracks", tracks_path)
@@ -2917,6 +2983,7 @@ class ProcessVideoPipeline:
             metrics={
                 "contact_event_count": len(events),
                 "contact_cues": cue_summary,
+                "reuse_refusal_reason": reuse_refusal_reason,
                 **self._mesh_coverage_plan_metrics(plan),
             },
         )
@@ -3140,9 +3207,345 @@ class ProcessVideoPipeline:
                 frame_rate=fps,
             )
             write_audio_onsets_v2(target, payload)
-            return payload, f"extracted audio_onsets_v2.json ({len(payload.get('onsets', []))} onsets; refines contact timing only)"
+            blockers = payload.get("blockers") if isinstance(payload.get("blockers"), list) else []
+            if blockers:
+                return payload, f"audio unavailable with explicit reason {blockers[0]}; contact windows use visual cues only"
+            return payload, f"extracted pop-tuned audio_onsets_v2.json ({len(payload.get('onsets', []))} onsets; raw/corrected timing preserved; detector remains review-only, not a learned classifier)"
         except Exception as exc:  # noqa: BLE001
-            return [], f"no usable audio track / audio onset extraction unavailable ({type(exc).__name__}: {exc}); contact windows use wrist+ball cues only"
+            return {
+                "status": "blocked",
+                "blockers": ["audio_extraction_error"],
+                "error": f"{type(exc).__name__}: {exc}",
+                "onsets": [],
+            }, f"audio extraction unavailable with explicit reason audio_extraction_error ({type(exc).__name__}: {exc}); contact windows use visual cues only"
+
+    def _contact_dependency_paths(self, *, refined: bool) -> dict[str, Path | None]:
+        paths: dict[str, Path | None] = {
+            "ball_track": self.clip_dir / "ball_track.json",
+            "skeleton3d": self.clip_dir / "skeleton3d.json",
+            "audio": self.clip_dir / "audio_onsets_v2.json",
+            "calibration": self.clip_dir / "court_calibration.json",
+        }
+        if refined:
+            paths.update(
+                {
+                    "raw_contact_windows": self.clip_dir / "contact_windows.json",
+                    "ball_inflections": self.clip_dir / "ball_inflections.json",
+                    "paddle": self.clip_dir / PADDLE_POSE_ARTIFACT_NAME,
+                }
+            )
+        return paths
+
+    def _contact_reuse_refusal_reason(self, *, provenance_path: Path, refined: bool) -> str | None:
+        if not provenance_path.is_file():
+            return "contact_dependency_hashes_missing"
+        recorded = _read_optional_json(provenance_path)
+        dependencies = recorded.get("dependencies") if isinstance(recorded, Mapping) else None
+        current = dependency_snapshot(self._contact_dependency_paths(refined=refined))
+        if not dependency_hashes_match(dependencies, current):
+            return DEPENDENCY_HASH_MISMATCH
+        return None
+
+    def _write_contact_provenance(
+        self,
+        *,
+        path: Path,
+        status: str,
+        contact_path: Path | None,
+        raw_path: Path | None,
+        audio_payload: Any,
+        reason: str | None,
+        reuse_refusal_reason: str | None = None,
+    ) -> dict[str, Any]:
+        audio_path = self.clip_dir / "audio_onsets_v2.json"
+        payload = {
+            "schema_version": CONTACT_PROVENANCE_SCHEMA_VERSION,
+            "artifact_type": "racketsport_contact_provenance_v1",
+            "status": status,
+            "reason": reason,
+            "contact_artifact": file_dependency(contact_path),
+            "raw_proposals": file_dependency(raw_path),
+            "dependencies": dependency_snapshot(self._contact_dependency_paths(refined=status == "refined")),
+            "audio": audio_provenance(
+                audio_payload,
+                source_path=audio_path if audio_path.is_file() else None,
+            ),
+            "provenance": {
+                "raw_proposals_immutable": True,
+                "refinement_version": "post_body_paddle_v1" if status == "refined" else "coarse_v1",
+                "reuse_refusal_reason": reuse_refusal_reason,
+            },
+        }
+        _write_json(path, payload)
+        return payload
+
+    def _preferred_contact_windows_path(self) -> Path:
+        refined = self.clip_dir / "contact_windows_refined_v1.json"
+        provenance = self.clip_dir / "contact_refinement_v1.json"
+        if (
+            refined.is_file()
+            and _valid_artifact("contact_windows", refined)
+            and self._contact_reuse_refusal_reason(provenance_path=provenance, refined=True) is None
+        ):
+            return refined
+        return self.clip_dir / "contact_windows.json"
+
+    def _refined_arc_dependency_paths(self) -> dict[str, Path | None]:
+        return {
+            "contact_windows_refined": self.clip_dir / "contact_windows_refined_v1.json",
+            "ball_track": self.clip_dir / "ball_track.json",
+            "calibration": self.clip_dir / "court_calibration.json",
+            "skeleton3d": self.clip_dir / "skeleton3d.json",
+            "paddle": self.clip_dir / PADDLE_POSE_ARTIFACT_NAME,
+            "audio": self.clip_dir / "audio_onsets_v2.json",
+        }
+
+    def _stage_refined_ball_arc(self) -> StageOutcome:
+        """Re-run the public BALL arc chain only when refined inputs changed."""
+
+        refined_path = self.clip_dir / "contact_windows_refined_v1.json"
+        refinement_path = self.clip_dir / "contact_refinement_v1.json"
+        refinement = _read_optional_json(refinement_path)
+        if (
+            not refined_path.is_file()
+            or not isinstance(refinement, Mapping)
+            or refinement.get("status") != "refined"
+            or self._contact_reuse_refusal_reason(provenance_path=refinement_path, refined=True) is not None
+        ):
+            return StageOutcome(
+                stage="ball_arc_refined",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["refined arc pass absent: no dependency-current post-BODY contact artifact"],
+                metrics={"reason": "missing_or_stale_refined_contacts"},
+            )
+        if self.options.no_ball_arc:
+            return StageOutcome(
+                stage="ball_arc_refined",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["--no-ball-arc set: refined contact artifact retained without an arc rerun"],
+                metrics={"reason": "disabled_by_flag"},
+            )
+
+        ball_track_path = self.clip_dir / "ball_track.json"
+        calibration_path = self.clip_dir / "court_calibration.json"
+        missing = [
+            name
+            for name, path in (("ball_track.json", ball_track_path), ("court_calibration.json", calibration_path))
+            if not path.is_file()
+        ]
+        if missing:
+            return StageOutcome(
+                stage="ball_arc_refined",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["refined arc pass absent: required input(s) missing: " + ", ".join(missing)],
+                metrics={"reason": "missing_inputs", "missing_inputs": missing},
+            )
+
+        provenance_path = self.clip_dir / "ball_arc_refined_dependencies_v1.json"
+        current_dependencies = dependency_snapshot(self._refined_arc_dependency_paths())
+        prior = _read_optional_json(provenance_path)
+        prior_dependencies = prior.get("dependencies") if isinstance(prior, Mapping) else None
+        artifact_paths = {
+            "ball_bounce_candidates": self.clip_dir / "ball_bounce_candidates.json",
+            "ball_track_arc_solved": self.clip_dir / "ball_track_arc_solved.json",
+            "ball_arc_render": self.clip_dir / "ball_arc_render.json",
+            "ball_flight_sanity": self.clip_dir / "ball_flight_sanity.json",
+            "ball_chain_manifest": self.clip_dir / "ball_chain_manifest.json",
+        }
+        if (
+            not self.options.force
+            and all(path.is_file() for path in artifact_paths.values())
+            and dependency_hashes_match(prior_dependencies, current_dependencies)
+        ):
+            return StageOutcome(
+                stage="ball_arc_refined",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["reused refined-contact arc outputs with matching dependency hashes"],
+                artifacts=[*artifact_paths, provenance_path.name],
+                metrics={"reason": "dependency_hashes_match", "reuse_refusal_reason": None},
+            )
+
+        reuse_refusal_reason = (
+            "refined_arc_dependency_hashes_missing"
+            if not provenance_path.is_file()
+            else DEPENDENCY_HASH_MISMATCH
+        )
+        started = time.monotonic()
+        try:
+            result = run_default_ball_arc_chain(
+                clip=self.options.clip,
+                ball_track_path=ball_track_path,
+                court_calibration_path=calibration_path,
+                out_dir=self.clip_dir,
+                ball_candidate_paths=self._resolved_ball_candidate_paths(),
+                contact_windows_path=refined_path,
+                skeleton3d_path=_existing_optional_path(self.clip_dir / "skeleton3d.json"),
+                net_plane_path=_existing_optional_path(self.clip_dir / "net_plane.json"),
+                rally_spans_path=_existing_optional_path(self.clip_dir / "rally_spans.json"),
+                frame_times_path=_existing_optional_path(self.clip_dir / "frame_times.json"),
+            )
+        except Exception as exc:  # noqa: BLE001 - downstream refinement is fail-closed
+            provenance_path.unlink(missing_ok=True)
+            return StageOutcome(
+                stage="ball_arc_refined",
+                status="degraded",
+                wall_seconds=time.monotonic() - started,
+                notes=[f"refined-contact arc rerun failed fail-closed ({type(exc).__name__}: {exc})"],
+                metrics={"reason": "arc_chain_exception", "reuse_refusal_reason": reuse_refusal_reason},
+            )
+
+        provenance = {
+            "schema_version": CONTACT_PROVENANCE_SCHEMA_VERSION,
+            "artifact_type": "racketsport_refined_arc_dependencies_v1",
+            "status": "refined",
+            "dependencies": current_dependencies,
+            "outputs": dependency_snapshot(artifact_paths),
+            "provenance": {
+                "contact_generation": "post_body_paddle_v1",
+                "contact_path": str(refined_path),
+                "reuse_refusal_reason": reuse_refusal_reason,
+            },
+        }
+        _write_json(provenance_path, provenance)
+        summary = result.get("summary") if isinstance(result.get("summary"), Mapping) else {}
+        return StageOutcome(
+            stage="ball_arc_refined",
+            status="ran",
+            wall_seconds=time.monotonic() - started,
+            notes=["re-ran the public BALL arc chain from dependency-current post-BODY refined contacts"],
+            artifacts=[*artifact_paths, provenance_path.name],
+            metrics={
+                "solver_status": str(result.get("status") or "unknown"),
+                "seed_anchor_count": summary.get("seed_anchor_count"),
+                "reuse_refusal_reason": reuse_refusal_reason,
+            },
+        )
+
+    def _refine_events_after_body(self) -> StageOutcome:
+        """Build a separate post-BODY contact generation without touching raw proposals."""
+
+        raw_path = self.clip_dir / "contact_windows.json"
+        refined_path = self.clip_dir / "contact_windows_refined_v1.json"
+        provenance_path = self.clip_dir / "contact_refinement_v1.json"
+        skeleton_path = self.clip_dir / "skeleton3d.json"
+        audio_path = self.clip_dir / "audio_onsets_v2.json"
+        audio_payload: Any = _read_optional_json(audio_path) if audio_path.is_file() else {
+            "status": "blocked",
+            "blockers": ["no_audio_stream"],
+            "onsets": [],
+        }
+
+        if not _is_real_sam3d_skeleton(skeleton_path):
+            refined_path.unlink(missing_ok=True)
+            self._write_contact_provenance(
+                path=provenance_path,
+                status="absent",
+                contact_path=None,
+                raw_path=raw_path if raw_path.is_file() else None,
+                audio_payload=audio_payload,
+                reason="missing_sam3d_skeleton3d",
+            )
+            return StageOutcome(
+                stage="events_refined",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["post-BODY event refinement absent: missing_sam3d_skeleton3d"],
+                artifacts=["contact_refinement_v1.json"],
+                metrics={"reason": "missing_sam3d_skeleton3d"},
+            )
+
+        if not raw_path.is_file():
+            refined_path.unlink(missing_ok=True)
+            self._write_contact_provenance(
+                path=provenance_path,
+                status="absent",
+                contact_path=None,
+                raw_path=None,
+                audio_payload=audio_payload,
+                reason="missing_raw_contact_proposals",
+            )
+            return StageOutcome(
+                stage="events_refined",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["post-BODY event refinement absent: missing_raw_contact_proposals"],
+                artifacts=["contact_refinement_v1.json"],
+                metrics={"reason": "missing_raw_contact_proposals"},
+            )
+
+        reuse_refusal_reason = self._contact_reuse_refusal_reason(
+            provenance_path=provenance_path,
+            refined=True,
+        )
+        if (
+            refined_path.is_file()
+            and not self.options.force
+            and _valid_artifact("contact_windows", refined_path)
+            and reuse_refusal_reason is None
+        ):
+            return StageOutcome(
+                stage="events_refined",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["reused post-BODY refined contacts with matching dependency hashes"],
+                artifacts=[refined_path.name, provenance_path.name],
+                metrics={"reason": "dependency_hashes_match", "reuse_refusal_reason": None},
+            )
+
+        ball_inflections_path = self.clip_dir / "ball_inflections.json"
+        if ball_inflections_path.is_file():
+            ball_inflections = _read_json(ball_inflections_path)
+        elif (self.clip_dir / "ball_track.json").is_file():
+            ball_inflections = build_ball_inflections_from_ball_track(
+                _read_json(self.clip_dir / "ball_track.json"),
+                frame_times=_existing_optional_path(self.clip_dir / "frame_times.json"),
+            )
+            _write_json(ball_inflections_path, ball_inflections)
+        else:
+            ball_inflections = {"schema_version": 1, "candidates": []}
+
+        wrist_payload = build_wrist_velocity_peaks_from_file(skeleton_path, require_lane_a=False)
+        _write_json(self.clip_dir / "wrist_velocity_peaks_refined_v1.json", wrist_payload)
+        fps = float(_read_json(skeleton_path).get("fps", 30.0) or 30.0)
+        refined = fuse_contact_windows_from_cue_payloads(
+            fps=fps,
+            frame_times=_existing_optional_path(self.clip_dir / "frame_times.json"),
+            audio_onsets_payload=audio_payload,
+            wrist_velocity_peaks_payload=wrist_payload,
+            ball_inflections_payload=ball_inflections,
+            require_audio=False,
+            allow_wrist_only_contact_hints=True,
+        )
+        _write_json(refined_path, refined)
+        self._write_contact_provenance(
+            path=provenance_path,
+            status="refined",
+            contact_path=refined_path,
+            raw_path=raw_path,
+            audio_payload=audio_payload,
+            reason=None,
+            reuse_refusal_reason=reuse_refusal_reason,
+        )
+        events = refined.get("events") if isinstance(refined, Mapping) else []
+        return StageOutcome(
+            stage="events_refined",
+            status="ran",
+            wall_seconds=0.0,
+            notes=[
+                "built separate post-BODY contact_windows_refined_v1.json; raw contact_windows.json left byte-immutable",
+                "same-run skeleton and paddle dependency hashes recorded; current deterministic fusion scores wrist/ball/audio cues",
+            ],
+            artifacts=["wrist_velocity_peaks_refined_v1.json", refined_path.name, provenance_path.name],
+            metrics={
+                "contact_event_count": len(events) if isinstance(events, list) else 0,
+                "reuse_refusal_reason": reuse_refusal_reason,
+                "paddle_dependency_present": (self.clip_dir / PADDLE_POSE_ARTIFACT_NAME).is_file(),
+            },
+        )
 
     # ------------------------------------------------------------------
     # stage 8: body
@@ -3725,9 +4128,17 @@ class ProcessVideoPipeline:
     # ------------------------------------------------------------------
 
     def _stage_world(self) -> StageOutcome:
+        refined_events = self._refine_events_after_body()
+        refined_arc = self._stage_refined_ball_arc()
         court_path = self.clip_dir / "court_calibration.json"
         if not court_path.is_file():
-            return StageOutcome(stage="world", status="blocked", wall_seconds=0.0, notes=["requires court_calibration.json"])
+            return StageOutcome(
+                stage="world",
+                status="blocked",
+                wall_seconds=0.0,
+                notes=["requires court_calibration.json", *refined_events.notes, *refined_arc.notes],
+                metrics={"events_refined": refined_events.as_dict(), "ball_arc_refined": refined_arc.as_dict()},
+            )
 
         tracks = _read_optional_json(self.clip_dir / "tracks.json")
         smpl_motion = _read_optional_json(self.clip_dir / "smpl_motion.json")
@@ -3778,13 +4189,21 @@ class ProcessVideoPipeline:
             stage="world",
             status="ran",
             wall_seconds=0.0,
-            notes=["assembled virtual_world.json with per-entity trust bands (never invented; read from real upstream state)"],
+            notes=[
+                *refined_events.notes,
+                *refined_arc.notes,
+                "assembled virtual_world.json with per-entity trust bands (never invented; read from real upstream state)",
+            ],
             artifacts=[
                 "virtual_world.json",
                 "trust_bands.json",
                 *([verdict_sidecar_name] if verdict_sidecar is not None else []),
             ],
-            metrics=dict(payload.get("summary", {})),
+            metrics={
+                **dict(payload.get("summary", {})),
+                "events_refined": refined_events.as_dict(),
+                "ball_arc_refined": refined_arc.as_dict(),
+            },
         )
 
     # ------------------------------------------------------------------
@@ -3823,7 +4242,7 @@ class ProcessVideoPipeline:
             ball_track_physics_filled=_read_optional_json(self.clip_dir / "ball_track_physics_filled.json"),
             physics_footlock=_read_optional_json(self.clip_dir / "physics_footlock.json"),
             racket_pose_estimate=_read_optional_json(self.clip_dir / "racket_pose_estimate.json") if self.options.paddle_pose else None,
-            contact_windows=_read_optional_json(self.clip_dir / "contact_windows.json"),
+            contact_windows=_read_optional_json(self._preferred_contact_windows_path()),
             calibration_curves=calibration_curves,
             config=ConfidenceGateConfig(),
         )
@@ -3894,14 +4313,15 @@ class ProcessVideoPipeline:
         if not vw_path.is_file():
             return StageOutcome(stage="manifest", status="blocked", wall_seconds=0.0, notes=["requires virtual_world.json"])
 
-        contact_windows_path = self.clip_dir / "contact_windows.json"
+        contact_windows_path = self._preferred_contact_windows_path()
         ball_inflections_path = self.clip_dir / "ball_inflections.json"
         ball_arc_solved_path = self.clip_dir / "ball_track_arc_solved.json"
         ball_arc_render_path = self.clip_dir / "ball_arc_render.json"
         ball_bounce_candidates_path = self.clip_dir / "ball_bounce_candidates.json"
         ball_flight_sanity_path = self.clip_dir / "ball_flight_sanity.json"
         reviewed_bounces_path = self.clip_dir / "reviewed_ball_bounces.json"
-        coaching_card_facts_path = self.clip_dir / "coaching_card_facts.json"
+        coaching_card_facts_path = self._finished_stage_artifact("coaching_facts", "coaching_card_facts.json")
+        match_stats_path = self._finished_stage_artifact("match_stats", "match_stats.json")
         rally_spans_path = self.clip_dir / "rally_spans.json"
         contact_metrics = self._ensure_contact_window_trust_notes(contact_windows_path) if contact_windows_path.is_file() else {}
         replay_scene_path, replay_metrics, replay_notes = self._build_replay_scene_for_manifest(
@@ -3952,7 +4372,7 @@ class ProcessVideoPipeline:
             ball_bounce_candidates_path=ball_bounce_candidates_path if ball_bounce_candidates_path.is_file() else None,
             ball_flight_sanity_path=ball_flight_sanity_path if ball_flight_sanity_path.is_file() else None,
             reviewed_bounces_path=reviewed_bounces_path if reviewed_bounces_path.is_file() else None,
-            coaching_card_facts_path=coaching_card_facts_path if coaching_card_facts_path.is_file() else None,
+            coaching_card_facts_path=coaching_card_facts_path,
             rally_spans_path=rally_spans_path if rally_spans_path.is_file() else None,
             annotation_sources=[],
             vite_allow_root=self.options.vite_allow_root,
@@ -3969,6 +4389,10 @@ class ProcessVideoPipeline:
             )
         out = self.clip_dir / "replay_viewer_manifest.json"
         write_replay_viewer_manifest(out, manifest)
+        if match_stats_path is not None:
+            written_manifest = _read_json(out)
+            written_manifest["match_stats_url"] = f"/@fs{match_stats_path.resolve().as_posix()}"
+            _write_json(out, written_manifest)
         representation_missing = representation in {"body_missing", "track_only"}
         return StageOutcome(
             stage="manifest",
@@ -4044,7 +4468,9 @@ class ProcessVideoPipeline:
     # ------------------------------------------------------------------
 
     def _stage_match_stats(self) -> StageOutcome:
+        out = self.clip_dir / "match_stats.json"
         if not self.options.match_stats:
+            out.unlink(missing_ok=True)
             return StageOutcome(
                 stage="match_stats",
                 status="skipped",
@@ -4059,6 +4485,7 @@ class ProcessVideoPipeline:
         }
         missing = [name for name, path in required.items() if not path.is_file()]
         if missing:
+            out.unlink(missing_ok=True)
             return StageOutcome(
                 stage="match_stats",
                 status="skipped",
@@ -4070,7 +4497,6 @@ class ProcessVideoPipeline:
                 metrics={"reason": "missing_inputs", "missing_inputs": missing, "consumer_only": True},
             )
 
-        out = self.clip_dir / "match_stats.json"
         try:
             payload = compute_match_stats_for_run_dir(self.clip_dir)
             write_match_stats_json(payload, out)
@@ -4111,12 +4537,65 @@ class ProcessVideoPipeline:
             return gated_path
         return self.clip_dir / "virtual_world.json"
 
+    def _stage_coaching_facts(self) -> StageOutcome:
+        rally_metrics_path = self.clip_dir / "rally_metrics.json"
+        coaching_facts_path = self.clip_dir / "coaching_card_facts.json"
+        required = {
+            "virtual_world.json": self.clip_dir / "virtual_world.json",
+            "court_zones.json": self.clip_dir / "court_zones.json",
+        }
+        missing = [name for name, path in required.items() if not path.is_file()]
+        if missing:
+            rally_metrics_path.unlink(missing_ok=True)
+            coaching_facts_path.unlink(missing_ok=True)
+            return StageOutcome(
+                stage="coaching_facts",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["deterministic coaching facts absent: required input(s) missing: " + ", ".join(missing)],
+                metrics={"reason": "missing_inputs", "missing_inputs": missing},
+            )
+
+        try:
+            payload = build_rally_metrics(self.clip_dir)
+            facts = payload.get("coaching_card_facts")
+            if not isinstance(facts, Mapping):
+                raise ValueError("deterministic rally_metrics builder returned no coaching_card_facts object")
+            _write_json(rally_metrics_path, payload)
+            _write_json(coaching_facts_path, facts)
+        except Exception as exc:  # noqa: BLE001 - facts are an explicit consumer boundary
+            (self.clip_dir / "rally_metrics.json").unlink(missing_ok=True)
+            (self.clip_dir / "coaching_card_facts.json").unlink(missing_ok=True)
+            return StageOutcome(
+                stage="coaching_facts",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[f"deterministic coaching facts builder failed: {type(exc).__name__}: {exc}"],
+                metrics={"reason": "consumer_exception", "error": f"{type(exc).__name__}: {exc}"},
+            )
+
+        facts_list = facts.get("facts") if isinstance(facts.get("facts"), list) else []
+        return StageOutcome(
+            stage="coaching_facts",
+            status="ran",
+            wall_seconds=0.0,
+            notes=[
+                "built deterministic rally_metrics.json and coaching_card_facts.json with the existing position-only facts builder",
+                "no language generation ran; facts remain evidence-linked preview inputs",
+            ],
+            artifacts=["rally_metrics.json", "coaching_card_facts.json"],
+            metrics={
+                "fact_count": len(facts_list),
+                "rally_count": len(payload.get("rallies", [])) if isinstance(payload.get("rallies"), list) else 0,
+                "rally_scope": payload.get("rally_scope"),
+            },
+        )
+
     def _ensure_contact_window_trust_notes(self, path: Path) -> dict[str, Any]:
         payload = _read_json(path)
         events = payload.get("events", []) if isinstance(payload, Mapping) else []
         if not isinstance(events, list):
             return {"contact_event_count": 0, "contact_event_trust_notes": {}}
-        changed = False
         note_counts: Counter[str] = Counter()
         for event in events:
             if not isinstance(event, dict):
@@ -4124,12 +4603,27 @@ class ProcessVideoPipeline:
             note = event.get("trust_band_note")
             if not isinstance(note, str) or not note.strip():
                 note = _contact_event_trust_note(event)
-                event["trust_band_note"] = note
-                changed = True
             note_counts[str(note)] += 1
-        if changed:
-            _write_json(path, payload)
         return {"contact_event_count": sum(note_counts.values()), "contact_event_trust_notes": dict(sorted(note_counts.items()))}
+
+    def _finished_stage_artifact(self, stage: str, artifact_name: str) -> Path | None:
+        """Return an artifact only when this run finished or safely reused its stage."""
+
+        path = self.clip_dir / artifact_name
+        if not path.is_file():
+            return None
+        outcome = next((item for item in reversed(self.stage_outcomes) if item.stage == stage), None)
+        if outcome is None:
+            return None
+        artifact_names = {Path(value).name for value in outcome.artifacts}
+        if outcome.status == "ran" and artifact_name in artifact_names:
+            return path
+        safely_reused = outcome.status == "skipped" and any(
+            "reused content-addressed stage generation" in note for note in outcome.notes
+        )
+        if safely_reused and artifact_name in artifact_names:
+            return path
+        return None
 
     def _build_replay_scene_for_manifest(
         self,
@@ -4232,9 +4726,18 @@ class ProcessVideoPipeline:
     def _write_summary(self, *, wall_seconds: float) -> dict[str, Any]:
         hard_failed = any(outcome.status == "failed" for outcome in self.stage_outcomes)
         any_gap = any(outcome.status in {"degraded", "blocked"} for outcome in self.stage_outcomes)
+        try:
+            video_identity: Mapping[str, Any] | None = self._source_content_identity().as_dict()
+        except Exception:  # noqa: BLE001 - summary must still be written for invalid/partial fixtures
+            video_identity = None
+        missing_capabilities = _minimum_bundle_missing_capabilities(
+            clip_dir=self.clip_dir,
+            stage_outcomes=self.stage_outcomes,
+            video_identity=video_identity,
+        )
         if hard_failed:
             status = "failed"
-        elif any_gap:
+        elif any_gap or missing_capabilities:
             status = "partial"
         else:
             status = "complete"
@@ -4250,10 +4753,16 @@ class ProcessVideoPipeline:
             "schema_version": 1,
             "artifact_type": "racketsport_process_video_pipeline_summary",
             "clip": self.options.clip,
-            "video": str(self.options.video),
+            "video": (
+                {**copy.deepcopy(dict(video_identity)), "path": str(self.options.video)}
+                if video_identity is not None
+                else {"path": str(self.options.video), "sha256": None, "size": None}
+            ),
+            "video_path": str(self.options.video),
             "run_dir": str(self.options.run_dir),
             "clip_dir": str(self.clip_dir),
             "status": status,
+            "missing_capabilities": missing_capabilities,
             "wall_seconds": round(wall_seconds, 3),
             "stages": stage_dicts,
             "trust_bands": self.trust_bands,
@@ -4300,6 +4809,114 @@ def _frame_cap_exclusion_record(tracks: Any, schedule: Mapping[str, Any]) -> dic
         "excluded_count": len(excluded),
         "excluded_frame_indexes": excluded,
     }
+
+
+def _minimum_bundle_missing_capabilities(
+    *,
+    clip_dir: Path,
+    stage_outcomes: Sequence[StageOutcome],
+    video_identity: Mapping[str, Any] | None = None,
+) -> list[dict[str, str]]:
+    """Evaluate the North Star 3.2 bundle from artifacts and stage notes only."""
+
+    requirements: tuple[tuple[str, tuple[str, ...], str, str | None], ...] = (
+        ("source_identity", (), "content-addressed source identity is missing", "ingest"),
+        ("capture_sidecar", ("capture_sidecar.json",), "capture sidecar is missing", "ingest"),
+        ("calibration", ("court_calibration.json",), "court/camera calibration is missing", "calibration"),
+        ("tracks", ("tracks.json",), "persistent player tracks are missing", "tracking"),
+        (
+            "body",
+            ("body_mesh_index/body_mesh_index.json", "body_mesh_index.json", "body_mesh.json"),
+            "declared BODY coverage/mesh artifact is missing",
+            "body",
+        ),
+        ("ball", ("ball_track.json",), "ball artifact is missing", "ball"),
+        (
+            "events",
+            ("contact_windows_refined_v1.json", "contact_windows.json"),
+            "event/contact artifact is missing",
+            "events",
+        ),
+        ("ball_arc", ("ball_track_arc_solved.json",), "ball arc artifact is missing", "ball_arc"),
+        ("paddle", (PADDLE_POSE_ARTIFACT_NAME,), "paddle artifact is missing", "paddle_pose"),
+        (
+            "fusion",
+            ("confidence_gated_world.json", "virtual_world.json"),
+            "fused-world artifact is missing",
+            "world",
+        ),
+        ("stats", ("match_stats.json",), "deterministic stats artifact is missing", "match_stats"),
+        (
+            "coaching",
+            ("coaching_card_facts.json",),
+            "deterministic coaching facts are missing",
+            "coaching_facts",
+        ),
+        ("assets", ("replay_scene.json",), "recursive replay assets are missing", "manifest"),
+        ("trust_bands", ("trust_bands.json",), "trust bands artifact is missing", "world"),
+        ("manifest", ("replay_viewer_manifest.json",), "replay manifest is missing", "manifest"),
+    )
+    by_stage = {outcome.stage: outcome for outcome in stage_outcomes}
+    missing: list[dict[str, str]] = []
+    source_identity_present = bool(
+        isinstance(video_identity, Mapping)
+        and isinstance(video_identity.get("sha256"), str)
+        and len(str(video_identity.get("sha256"))) == 64
+        and isinstance(video_identity.get("size"), int)
+    )
+    for capability, candidates, fallback, stage_name in requirements:
+        if capability == "source_identity":
+            present = source_identity_present
+        elif capability == "body":
+            present = any((clip_dir / candidate).is_file() for candidate in candidates) and (
+                clip_dir / "body_full_clip_gate.json"
+            ).is_file()
+        else:
+            present = any((clip_dir / candidate).is_file() for candidate in candidates)
+        if present:
+            continue
+        reason = fallback
+        outcome = by_stage.get(stage_name) if stage_name is not None else None
+        if outcome is not None and outcome.notes:
+            reason = f"stage {outcome.stage} {outcome.status}: {'; '.join(outcome.notes)}"
+        missing.append({"capability": capability, "reason": reason})
+    missing_urls = _missing_local_manifest_urls(clip_dir / "replay_viewer_manifest.json")
+    if missing_urls:
+        missing = [item for item in missing if item["capability"] != "manifest"]
+        missing.append(
+            {
+                "capability": "manifest",
+                "reason": "advertised URL(s) do not resolve: " + ", ".join(missing_urls),
+            }
+        )
+    return missing
+
+
+def _missing_local_manifest_urls(manifest_path: Path) -> list[str]:
+    payload = _read_optional_json(manifest_path)
+    if not isinstance(payload, Mapping):
+        return []
+    missing: list[str] = []
+
+    def walk(value: Any, key: str | None = None) -> None:
+        if isinstance(value, Mapping):
+            for child_key, child in value.items():
+                walk(child, str(child_key))
+        elif isinstance(value, list):
+            for child in value:
+                walk(child, key)
+        elif isinstance(value, str) and key is not None and (key == "url" or key.endswith("_url") or key == "court_glb"):
+            if value.startswith("/@fs/"):
+                target = Path("/" + value.removeprefix("/@fs/").lstrip("/"))
+            elif "://" in value or value.startswith("/"):
+                target = Path("/__unresolvable_external_url__")
+            else:
+                target = manifest_path.parent / value
+            if not target.is_file():
+                missing.append(value)
+
+    walk(payload)
+    return sorted(set(missing))
 
 
 def _content_hash(path: Path) -> str | None:

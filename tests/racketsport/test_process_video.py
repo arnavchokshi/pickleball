@@ -1239,7 +1239,7 @@ def test_manifest_uses_gated_world_and_replay_points_from_rally_span_with_event_
     assert (options.clip_dir / replay_scene["court_glb"]).is_file()
     assert (options.clip_dir / replay_scene["points"][0]["glb_url"]).is_file()
     contact_windows = json.loads((options.clip_dir / "contact_windows.json").read_text(encoding="utf-8"))
-    assert contact_windows["events"][0]["trust_band_note"] == "wrist+ball cues, unverified"
+    assert "trust_band_note" not in contact_windows["events"][0]
     assert outcome.metrics["replay_point_count"] == 1
     assert outcome.metrics["replay_point_source"] == "contact_windows"
     assert outcome.metrics["contact_event_trust_notes"]["wrist+ball cues, unverified"] == 1
@@ -1518,6 +1518,14 @@ def test_manifest_passes_existing_reviewed_bounces_coaching_facts_and_rally_span
         {"artifact_type": "racketsport_reviewed_ball_bounces", "status": "human_reviewed", "bounces": []},
     )
     _write_json(options.clip_dir / "coaching_card_facts.json", {"artifact_type": "racketsport_coaching_card_facts"})
+    pipeline.stage_outcomes.append(
+        process_video.StageOutcome(
+            stage="coaching_facts",
+            status="ran",
+            wall_seconds=0.0,
+            artifacts=["coaching_card_facts.json"],
+        )
+    )
     _write_json(
         options.clip_dir / "rally_spans.json",
         {"artifact_type": "racketsport_rally_spans", "not_ground_truth": True, "spans": []},
@@ -1787,8 +1795,9 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
         "paddle_pose",
         "world",
         "confidence_gate",
-        "manifest",
         "match_stats",
+        "coaching_facts",
+        "manifest",
     ]
     assert summary["status"] in {"complete", "partial"}
     # tracking/frames/body all blocked/degraded because no_gpu=True and no reuse artifacts given.
@@ -1812,8 +1821,381 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
     assert by_stage["manifest"]["status"] == "degraded"
     assert by_stage["manifest"]["metrics"]["representation_status"] == "body_missing"
     assert by_stage["match_stats"]["status"] in {"ran", "skipped"}
+    assert by_stage["coaching_facts"]["status"] in {"ran", "skipped"}
     assert (options.clip_dir / "virtual_world.json").is_file()
     assert (options.run_dir / "PIPELINE_SUMMARY.json").is_file()
+
+
+def test_summary_missing_capabilities_uses_stage_notes_and_forces_partial(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline.stage_outcomes = [
+        process_video.StageOutcome(
+            stage="body",
+            status="degraded",
+            wall_seconds=0.0,
+            notes=["BODY explicitly unavailable in test"],
+        )
+    ]
+
+    summary = pipeline._write_summary(wall_seconds=0.1)
+
+    missing = {item["capability"]: item["reason"] for item in summary["missing_capabilities"]}
+    assert summary["status"] == "partial"
+    assert "body" in missing
+    assert "BODY explicitly unavailable in test" in missing["body"]
+    assert "ball" in missing
+
+
+def test_coaching_facts_stage_uses_existing_deterministic_builder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    expected = {
+        "schema_version": 1,
+        "artifact_type": "rally_metrics",
+        "rallies": [],
+        "player_count": 0,
+        "rally_scope": "clip_fallback",
+        "coaching_card_facts": {"artifact_type": "coaching_card_facts", "facts": []},
+    }
+    calls: list[Path] = []
+
+    def _fake_builder(run_dir: Path) -> dict[str, Any]:
+        calls.append(Path(run_dir))
+        return expected
+
+    monkeypatch.setattr(process_video, "build_rally_metrics", _fake_builder)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    _write_json(options.clip_dir / "virtual_world.json", _virtual_world_payload())
+    _write_json(options.clip_dir / "court_zones.json", _match_stats_court_zones_payload())
+
+    outcome = pipeline._stage_coaching_facts()
+
+    assert calls == [options.clip_dir]
+    assert outcome.status == "ran"
+    assert json.loads((options.clip_dir / "rally_metrics.json").read_text()) == expected
+    assert json.loads((options.clip_dir / "coaching_card_facts.json").read_text()) == expected["coaching_card_facts"]
+
+
+def test_manifest_advertises_only_finished_stats_and_coaching(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "virtual_world.json", _virtual_world_payload())
+
+    pipeline._stage_manifest()
+    first = json.loads((options.clip_dir / "replay_viewer_manifest.json").read_text())
+    assert "match_stats_url" not in first
+    assert first.get("coaching_card_facts_url") is None
+
+    _write_json(options.clip_dir / "match_stats.json", {"artifact_type": "racketsport_match_stats"})
+    _write_json(options.clip_dir / "coaching_card_facts.json", {"artifact_type": "coaching_card_facts", "facts": []})
+    pipeline.stage_outcomes.extend(
+        [
+            process_video.StageOutcome(
+                stage="match_stats",
+                status="ran",
+                wall_seconds=0.0,
+                artifacts=["match_stats.json"],
+            ),
+            process_video.StageOutcome(
+                stage="coaching_facts",
+                status="ran",
+                wall_seconds=0.0,
+                artifacts=["rally_metrics.json", "coaching_card_facts.json"],
+            ),
+        ]
+    )
+    pipeline._stage_manifest()
+    second = json.loads((options.clip_dir / "replay_viewer_manifest.json").read_text())
+    assert second["match_stats_url"].endswith("/match_stats.json")
+    assert second["coaching_card_facts_url"].endswith("/coaching_card_facts.json")
+
+
+def test_manifest_does_not_advertise_stale_stats_from_skipped_stages(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "virtual_world.json", _virtual_world_payload())
+    _write_json(options.clip_dir / "match_stats.json", {"artifact_type": "racketsport_match_stats", "stale": True})
+    _write_json(
+        options.clip_dir / "coaching_card_facts.json",
+        {"artifact_type": "coaching_card_facts", "facts": [], "stale": True},
+    )
+    pipeline.stage_outcomes.extend(
+        [
+            process_video.StageOutcome(
+                stage="match_stats",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["required inputs missing"],
+            ),
+            process_video.StageOutcome(
+                stage="coaching_facts",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["required inputs missing"],
+            ),
+        ]
+    )
+
+    pipeline._stage_manifest()
+
+    manifest = json.loads((options.clip_dir / "replay_viewer_manifest.json").read_text())
+    assert "match_stats_url" not in manifest
+    assert manifest.get("coaching_card_facts_url") is None
+
+
+def test_post_body_refined_events_are_versioned_and_raw_is_immutable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    raw_path = options.clip_dir / "contact_windows.json"
+    _write_json(raw_path, _contact_windows_payload())
+    raw_bytes = raw_path.read_bytes()
+    _write_json(options.clip_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+    _write_json(options.clip_dir / "ball_track.json", _ball_track_payload(frame_count=3))
+    _write_json(
+        options.clip_dir / "ball_inflections.json",
+        {"schema_version": 1, "candidates": [{"time_s": 0.01, "ball_world_xyz": [0.0, 0.0, 1.0], "confidence": 0.8}]},
+    )
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(
+        options.clip_dir / "audio_onsets_v2.json",
+        {
+            "schema_version": 1,
+            "status": "review_only",
+            "onsets": [{"time_s": 0.01, "raw_time_s": 0.0, "corrected_time_s": 0.01, "score": 0.9}],
+        },
+    )
+    monkeypatch.setattr(
+        process_video,
+        "build_wrist_velocity_peaks_from_file",
+        lambda *args, **kwargs: {
+            "schema_version": 1,
+            "peaks": [{"time_s": 0.01, "player_id": 1, "wrist_world_xyz": [0.0, 0.0, 1.0], "speed_mps": 8.0, "confidence": 0.85}],
+        },
+    )
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._refine_events_after_body()
+
+    assert outcome.status == "ran"
+    assert raw_path.read_bytes() == raw_bytes
+    assert (options.clip_dir / "contact_windows_refined_v1.json").is_file()
+    provenance = json.loads((options.clip_dir / "contact_refinement_v1.json").read_text())
+    assert provenance["status"] == "refined"
+    assert provenance["raw_proposals"]["sha256"]
+    for dependency in ("ball_track", "skeleton3d", "audio", "calibration"):
+        assert provenance["dependencies"][dependency]["sha256"]
+    assert provenance["dependencies"]["paddle"]["status"] == "missing"
+    assert provenance["audio"]["timing"][0] == {
+        "raw_time_s": 0.0,
+        "corrected_time_s": 0.01,
+    }
+
+
+def test_post_body_refinement_records_absent_reason_without_body(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "contact_windows.json", _contact_windows_payload())
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._refine_events_after_body()
+
+    assert outcome.status == "skipped"
+    assert outcome.metrics["reason"] == "missing_sam3d_skeleton3d"
+    assert not (options.clip_dir / "contact_windows_refined_v1.json").exists()
+    provenance = json.loads((options.clip_dir / "contact_refinement_v1.json").read_text())
+    assert provenance["status"] == "absent"
+    assert provenance["reason"] == "missing_sam3d_skeleton3d"
+    assert provenance["audio"]["reason"] == "no_audio_stream"
+
+
+def test_refined_contact_reuse_refuses_dependency_hash_mismatch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "contact_windows.json", _contact_windows_payload())
+    _write_json(options.clip_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+    _write_json(options.clip_dir / "ball_track.json", _ball_track_payload(frame_count=3))
+    _write_json(options.clip_dir / "ball_inflections.json", {"schema_version": 1, "candidates": []})
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    monkeypatch.setattr(process_video, "build_wrist_velocity_peaks_from_file", lambda *args, **kwargs: {"schema_version": 1, "peaks": []})
+    pipeline = process_video.ProcessVideoPipeline(options)
+    first = pipeline._refine_events_after_body()
+    assert first.status == "ran"
+
+    skeleton = _sam3d_skeleton_payload()
+    skeleton["players"][0]["frames"][0]["joints_world"][0][0] = 99.0
+    _write_json(options.clip_dir / "skeleton3d.json", skeleton)
+    second = pipeline._refine_events_after_body()
+
+    assert second.status == "ran"
+    assert second.metrics["reuse_refusal_reason"] == "contact_dependency_hash_mismatch"
+
+
+def test_coarse_contact_reuse_refuses_typed_dependency_hash_mismatch(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    contact_path = options.clip_dir / "contact_windows.json"
+    ball_path = options.clip_dir / "ball_track.json"
+    _write_json(contact_path, _contact_windows_payload())
+    _write_json(ball_path, _ball_track_payload(frame_count=3))
+    pipeline = process_video.ProcessVideoPipeline(options)
+    provenance_path = options.clip_dir / "contact_dependencies_v1.json"
+    pipeline._write_contact_provenance(
+        path=provenance_path,
+        status="coarse",
+        contact_path=contact_path,
+        raw_path=contact_path,
+        audio_payload={"status": "blocked", "blockers": ["no_audio_stream"], "onsets": []},
+        reason=None,
+    )
+
+    assert pipeline._contact_reuse_refusal_reason(provenance_path=provenance_path, refined=False) is None
+    changed = _ball_track_payload(frame_count=3)
+    changed["frames"][0]["x_px"] = 999.0
+    _write_json(ball_path, changed)
+
+    assert (
+        pipeline._contact_reuse_refusal_reason(provenance_path=provenance_path, refined=False)
+        == "contact_dependency_hash_mismatch"
+    )
+
+
+def test_normal_events_path_records_no_audio_stream_reason(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.skip_audio = False
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "ball_track.json", _ball_track_payload(frame_count=3))
+    pipeline = process_video.ProcessVideoPipeline(options)
+    monkeypatch.setattr(
+        pipeline,
+        "_attempt_audio_onsets",
+        lambda fps: (
+            {"status": "blocked", "blockers": ["no_audio_stream"], "onsets": []},
+            "audio unavailable with explicit reason no_audio_stream",
+        ),
+    )
+
+    outcome = pipeline._stage_events()
+
+    provenance = json.loads((options.clip_dir / "contact_dependencies_v1.json").read_text())
+    assert outcome.status == "ran"
+    assert provenance["audio"]["status"] == "absent"
+    assert provenance["audio"]["reason"] == "no_audio_stream"
+
+
+def test_post_body_refined_contacts_rerun_arc_chain_dependency_safely(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_ball_arc = False
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "contact_windows.json", _contact_windows_payload())
+    _write_json(options.clip_dir / "skeleton3d.json", _sam3d_skeleton_payload())
+    _write_json(options.clip_dir / "ball_track.json", _ball_track_payload(frame_count=3))
+    _write_json(options.clip_dir / "ball_inflections.json", {"schema_version": 1, "candidates": []})
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    monkeypatch.setattr(
+        process_video,
+        "build_wrist_velocity_peaks_from_file",
+        lambda *args, **kwargs: {"schema_version": 1, "peaks": []},
+    )
+    calls: list[Path | None] = []
+
+    def _fake_arc(**kwargs: Any) -> dict[str, Any]:
+        calls.append(kwargs.get("contact_windows_path"))
+        for name in (
+            "ball_bounce_candidates.json",
+            "ball_track_arc_solved.json",
+            "ball_arc_render.json",
+            "ball_flight_sanity.json",
+            "ball_chain_manifest.json",
+        ):
+            _write_json(options.clip_dir / name, {"status": "ran", "call": len(calls)})
+        return {"status": "ran", "summary": {"seed_anchor_count": 0}}
+
+    monkeypatch.setattr(process_video, "run_default_ball_arc_chain", _fake_arc)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    assert pipeline._refine_events_after_body().status == "ran"
+
+    first = pipeline._stage_refined_ball_arc()
+    second = pipeline._stage_refined_ball_arc()
+
+    assert first.status == "ran"
+    assert second.status == "skipped"
+    assert second.metrics["reason"] == "dependency_hashes_match"
+    assert calls == [options.clip_dir / "contact_windows_refined_v1.json"]
+    provenance = json.loads((options.clip_dir / "ball_arc_refined_dependencies_v1.json").read_text())
+    assert provenance["dependencies"]["contact_windows_refined"]["sha256"]
+
+    changed = _ball_track_payload(frame_count=3)
+    changed["frames"][0]["x_px"] = 777.0
+    _write_json(options.clip_dir / "ball_track.json", changed)
+    assert pipeline._refine_events_after_body().status == "ran"
+    third = pipeline._stage_refined_ball_arc()
+
+    assert third.status == "ran"
+    assert third.metrics["reuse_refusal_reason"] == "contact_dependency_hash_mismatch"
+    assert calls == [
+        options.clip_dir / "contact_windows_refined_v1.json",
+        options.clip_dir / "contact_windows_refined_v1.json",
+    ]
+
+
+def test_ball_arc_prefers_refined_contact_windows_when_present(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_ball_arc = False
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "ball_track.json", _ball_track_payload(frame_count=3))
+    _write_json(options.clip_dir / "contact_windows.json", _contact_windows_payload())
+    _write_json(options.clip_dir / "contact_windows_refined_v1.json", _contact_windows_payload())
+    captured: dict[str, Any] = {}
+
+    def _fake_arc(**kwargs: Any) -> dict[str, Any]:
+        captured.update(kwargs)
+        for name in ("ball_bounce_candidates.json", "ball_track_arc_solved.json", "ball_arc_render.json", "ball_flight_sanity.json", "ball_chain_manifest.json"):
+            _write_json(options.clip_dir / name, {"status": "ran"})
+        return {"status": "ran", "summary": {}}
+
+    monkeypatch.setattr(process_video, "run_default_ball_arc_chain", _fake_arc)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._write_contact_provenance(
+        path=options.clip_dir / "contact_refinement_v1.json",
+        status="refined",
+        contact_path=options.clip_dir / "contact_windows_refined_v1.json",
+        raw_path=options.clip_dir / "contact_windows.json",
+        audio_payload={"status": "blocked", "blockers": ["no_audio_stream"], "onsets": []},
+        reason=None,
+    )
+    pipeline._stage_ball_arc()
+
+    assert captured["contact_windows_path"] == options.clip_dir / "contact_windows_refined_v1.json"
 
 
 def test_placement_stage_rewrites_tracks_after_tracking(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -3329,6 +3711,8 @@ def test_events_stage_fails_closed_without_prebody_sam3d_skeleton(
     wrist = json.loads((options.clip_dir / "wrist_velocity_peaks.json").read_text(encoding="utf-8"))
     assert wrist["status"] == "blocked"
     assert "missing_sam3d_skeleton3d" in wrist["blockers"]
+    provenance = json.loads((options.clip_dir / "contact_dependencies_v1.json").read_text(encoding="utf-8"))
+    assert provenance["audio"]["reason"] == "audio_disabled_by_flag"
     assert any("SAM-3D skeleton unavailable" in note for note in outcome.notes)
 
 
