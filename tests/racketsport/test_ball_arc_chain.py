@@ -85,6 +85,69 @@ def test_default_chain_records_degraded_marker_without_candidate_sidecars(
     assert result["summary"]["chain_config_degraded"] == "no_candidate_sidecars"
 
 
+def test_default_chain_candidate_flags_are_default_off_and_ransac_filters_only_when_enabled(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    ball_track = _ball_track_payload()
+    for index, frame in enumerate(ball_track["frames"]):
+        frame["xy"] = [20.0 + 8.0 * index, 30.0 + 2.0 * index + 0.45 * index * index]
+        frame["visible"] = True
+        frame["conf"] = 0.8
+    ball_track["frames"][4]["xy"][1] += 24.0
+    ball_track_path = _write_json(tmp_path / "ball_track.json", ball_track)
+    calibration_path = _write_json(tmp_path / "court_calibration.json", _calibration_payload())
+
+    captured_off: dict[str, Any] = {}
+    _patch_default_chain_solver(monkeypatch, captured_off)
+    off = ball_arc_chain.run_default_ball_arc_chain(
+        clip="unit_clip",
+        ball_track_path=ball_track_path,
+        court_calibration_path=calibration_path,
+        out_dir=tmp_path / "off",
+        generated_at="2026-07-05T00:00:00Z",
+    )
+    assert captured_off["ball_track"] == ball_track
+    assert "ball_track_ransac_candidate" not in off["outputs"]
+    assert "ball_ukf_fallback" not in off["outputs"]
+    off_manifest = json.loads((tmp_path / "off" / "ball_chain_manifest.json").read_text(encoding="utf-8"))
+    assert "candidate_flags" not in off_manifest
+
+    captured_on: dict[str, Any] = {}
+    _patch_default_chain_solver(monkeypatch, captured_on)
+    on = ball_arc_chain.run_default_ball_arc_chain(
+        clip="unit_clip",
+        ball_track_path=ball_track_path,
+        court_calibration_path=calibration_path,
+        out_dir=tmp_path / "on",
+        enable_ransac_arc_gate=True,
+        ransac_max_residual_px=5.0,
+        ransac_min_fit_points=4,
+        generated_at="2026-07-05T00:00:00Z",
+    )
+    assert captured_on["ball_track"]["frames"][4]["visible"] is False
+    assert Path(on["outputs"]["ball_track_ransac_candidate"]).is_file()
+    manifest = json.loads((tmp_path / "on" / "ball_chain_manifest.json").read_text(encoding="utf-8"))
+    assert manifest["candidate_flags"] == {"ransac_arc_gate": True, "ukf_fallback": False}
+
+    captured_ukf: dict[str, Any] = {}
+    _patch_default_chain_solver(monkeypatch, captured_ukf)
+    ukf = ball_arc_chain.run_default_ball_arc_chain(
+        clip="unit_clip",
+        ball_track_path=ball_track_path,
+        court_calibration_path=calibration_path,
+        out_dir=tmp_path / "ukf",
+        enable_ukf_fallback=True,
+        generated_at="2026-07-05T00:00:00Z",
+    )
+    ukf_path = Path(ukf["outputs"]["ball_ukf_fallback"])
+    assert ukf_path.is_file()
+    ukf_payload = json.loads(ukf_path.read_text(encoding="utf-8"))
+    assert ukf_payload["candidate_flag_default"] is False
+    ukf_manifest = json.loads((tmp_path / "ukf" / "ball_chain_manifest.json").read_text(encoding="utf-8"))
+    assert ukf_manifest["candidate_flags"] == {"ransac_arc_gate": False, "ukf_fallback": True}
+
+
 def test_default_chain_writes_events_selected_from_final_arc_solution(
     tmp_path: Path,
     monkeypatch: Any,

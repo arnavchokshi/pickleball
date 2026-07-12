@@ -20,6 +20,8 @@ from threed.racketsport.ball_arc_solver import (
 )
 from threed.racketsport.ball_bounce_candidates import BounceCandidateConfig, write_bounce_candidate_payload
 from threed.racketsport.ball_flight_sanity import apply_flight_sanity_demotions, evaluate_ball_flight_sanity
+from threed.racketsport.ball_ransac_arc_gate import write_ransac_arc_filtered_ball_track
+from threed.racketsport.ball_ukf_fallback import build_ukf_fallback
 from threed.racketsport.virtual_world import (
     BALL_ARC_FAIL_CLOSED_POLICY,
     ball_arc_segment_fail_closed_verdicts,
@@ -104,23 +106,44 @@ def run_default_ball_arc_chain(
     rally_spans_path: Path | None = None,
     frame_times_path: Path | None = None,
     ball_type: str = "outdoor",
+    enable_ransac_arc_gate: bool = False,
+    ransac_max_residual_px: float = 5.0,
+    ransac_min_fit_points: int = 5,
+    ransac_max_gap_frames: int = 6,
+    enable_ukf_fallback: bool = False,
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     """Run the default single-primary-track arc chain into ``out_dir``."""
 
     out_dir.mkdir(parents=True, exist_ok=True)
     generated_at = generated_at or utc_stamp()
+    effective_ball_track_path = ball_track_path
+    ransac_summary: dict[str, Any] | None = None
+    ransac_track_path: Path | None = None
+    ransac_summary_path: Path | None = None
+    if enable_ransac_arc_gate:
+        ransac_track_path = out_dir / "ball_track_ransac_candidate.json"
+        ransac_summary_path = out_dir / "ball_ransac_arc_gate_summary.json"
+        ransac_summary = write_ransac_arc_filtered_ball_track(
+            ball_track_path=ball_track_path,
+            out_path=ransac_track_path,
+            summary_path=ransac_summary_path,
+            max_residual_px=ransac_max_residual_px,
+            min_fit_points=ransac_min_fit_points,
+            max_gap_frames=ransac_max_gap_frames,
+        )
+        effective_ball_track_path = ransac_track_path
     bounce_candidates_path = out_dir / "ball_bounce_candidates.json"
     frame_times = read_optional_json_object(frame_times_path)
     auto_bounces = write_bounce_candidate_payload(
-        ball_track_path=ball_track_path,
+        ball_track_path=effective_ball_track_path,
         calibration_path=court_calibration_path,
         out_path=bounce_candidates_path,
         clip_id=clip,
         config=BounceCandidateConfig(),
         frame_times=frame_times,
     )
-    ball_track = read_json_object(ball_track_path, "ball_track")
+    ball_track = read_json_object(effective_ball_track_path, "ball_track")
     calibration = read_json_object(court_calibration_path, "court_calibration")
     candidate_paths = [Path(path) for path in ball_candidate_paths]
     ball_candidate_sidecars = [load_ball_candidates_file(path).model_dump() for path in candidate_paths]
@@ -170,16 +193,29 @@ def run_default_ball_arc_chain(
     run.artifact["configs"] = default_ball_chain_configs()
     run.artifact["inputs"] = {
         **dict(run.artifact.get("inputs") if isinstance(run.artifact.get("inputs"), Mapping) else {}),
-        "ball_track": str(ball_track_path),
+        "ball_track": str(effective_ball_track_path),
         "court_calibration": str(court_calibration_path),
         "ball_candidates": [str(path) for path in candidate_paths],
         "frame_times": str(frame_times_path or ""),
     }
+    if ransac_track_path is not None:
+        run.artifact["inputs"]["source_ball_track"] = str(ball_track_path)
     if chain_config_degraded is not None:
         run.artifact["chain_config_degraded"] = chain_config_degraded
     net_plane_provenance = {"consumed_net_plane": net_plane_consumed, "reason": net_plane_reason}
     run.artifact["net_plane_provenance"] = net_plane_provenance
     write_json(run.artifact_path, run.artifact)
+    ukf_fallback_path: Path | None = None
+    ukf_fallback: dict[str, Any] | None = None
+    if enable_ukf_fallback:
+        ukf_fallback_path = out_dir / "ball_ukf_fallback.json"
+        ukf_fallback = build_ukf_fallback(
+            run.artifact,
+            contact_proposals=contact_windows,
+            net_plane=net_plane_for_solve,
+            generated_at=generated_at,
+        )
+        write_json(ukf_fallback_path, ukf_fallback)
     ball_arc_render = build_ball_arc_render_artifact(
         run.artifact,
         flight_sanity=run.flight_sanity,
@@ -222,6 +258,9 @@ def run_default_ball_arc_chain(
                 "seed_anchor_ball_track_arc_solved": seed_run.artifact_path if seed_run is not None else None,
                 "seed_anchor_flight_sanity": seed_run.flight_sanity_path if seed_run is not None else None,
                 "ball_track_arc_solved": run.artifact_path,
+                "ball_track_ransac_candidate": ransac_track_path,
+                "ball_ransac_arc_gate_summary": ransac_summary_path,
+                "ball_ukf_fallback": ukf_fallback_path,
                 "events_selected": events_selected_path,
                 "ball_arc_render": ball_arc_render_path,
                 "ball_flight_sanity": run.flight_sanity_path,
@@ -246,6 +285,22 @@ def run_default_ball_arc_chain(
             "net_plane_consumed_when_valid": True,
         },
     }
+    if enable_ransac_arc_gate or enable_ukf_fallback:
+        manifest["candidate_flags"] = {
+            "ransac_arc_gate": bool(enable_ransac_arc_gate),
+            "ukf_fallback": bool(enable_ukf_fallback),
+        }
+        manifest["policy"]["candidate_flags_default_off"] = True
+    if enable_ransac_arc_gate:
+        manifest["summary"]["ransac_rejected_outlier_count"] = int(
+            (ransac_summary or {}).get("rejected_ransac_outlier_count") or 0
+        )
+        manifest["policy"]["ransac_inlier_gate_separate_from_segmentation"] = True
+    if enable_ukf_fallback:
+        manifest["summary"]["ukf_recovered_sample_count"] = int(
+            ((ukf_fallback or {}).get("summary") or {}).get("recovered_sample_count") or 0
+        )
+        manifest["policy"]["ukf_predictions_never_measured"] = True
     manifest["net_plane_provenance"] = net_plane_provenance
     if chain_config_degraded is not None:
         manifest["chain_config_degraded"] = chain_config_degraded
@@ -262,6 +317,14 @@ def run_default_ball_arc_chain(
         "ball_arc_render_sample_count": int(render_summary.get("sample_count") or 0),
         "ball_arc_render_bridge_sample_count": int(render_summary.get("bridge_sample_count") or 0),
     }
+    if enable_ransac_arc_gate:
+        result_summary["ransac_rejected_outlier_count"] = int(
+            (ransac_summary or {}).get("rejected_ransac_outlier_count") or 0
+        )
+    if enable_ukf_fallback:
+        result_summary["ukf_recovered_sample_count"] = int(
+            ((ukf_fallback or {}).get("summary") or {}).get("recovered_sample_count") or 0
+        )
     if chain_config_degraded is not None:
         result_summary["chain_config_degraded"] = chain_config_degraded
     output_paths = {
@@ -271,6 +334,12 @@ def run_default_ball_arc_chain(
         "ball_flight_sanity": str(run.flight_sanity_path),
         "ball_chain_manifest": str(manifest_path),
     }
+    if ransac_track_path is not None:
+        output_paths["ball_track_ransac_candidate"] = str(ransac_track_path)
+    if ransac_summary_path is not None:
+        output_paths["ball_ransac_arc_gate_summary"] = str(ransac_summary_path)
+    if ukf_fallback_path is not None:
+        output_paths["ball_ukf_fallback"] = str(ukf_fallback_path)
     events_selected = manifest["outputs"].get("events_selected")
     if isinstance(events_selected, Mapping) and isinstance(events_selected.get("path"), str):
         output_paths["events_selected"] = str(events_selected["path"])
