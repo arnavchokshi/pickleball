@@ -767,7 +767,11 @@ class ProcessVideoPipeline:
         return self._active_reuse_decisions.get(stage, True)
 
     def _identity_artifacts(self, name: str, outcome: StageOutcome) -> list[Path]:
-        values = [*RUN_IDENTITY_OUTPUTS.get(name, ()), *outcome.artifacts]
+        # Never sweep every declared filename from the flat run directory into
+        # a generation. The stage outcome is the executable claim about what
+        # this invocation actually produced; undeclared legacy siblings remain
+        # unfingerprinted and non-reusable.
+        values = [*outcome.artifacts]
         if name == "ingest":
             values.append(f"source{self.options.video.suffix.lower()}")
         mutable_later = {
@@ -936,12 +940,29 @@ class ProcessVideoPipeline:
         if self._run_stage_list(self._build_prefix_stage_fns() + [("frames", self._stage_frames)]):
             return
 
-        reuse_outcome = self._body_stage_reuse_skip()
+        # The pre-thread BODY shortcut must use the same trusted stage identity
+        # as the normal wrapper. Calling the stage-local file validator here
+        # would bypass `_active_reuse_decisions` and reopen legacy reuse only in
+        # overlap mode.
+        body_source_identity = self._source_content_identity()
+        body_spec = self._stage_identity_spec("body", self._stage_body)
+        body_decision = self._run_identity_store.decision(
+            body_spec,
+            body_source_identity,
+            force=self.options.force,
+        )
+        reuse_outcome = (
+            self._identity_reused_outcome("body", body_decision.manifest)
+            if body_decision.reusable and body_decision.manifest is not None
+            else None
+        )
         if reuse_outcome is not None:
             # Reuse semantics unchanged: valid BODY artifacts already exist,
             # so this run takes the plain serial path -- no thread spun up.
-            remaining = self._middle_stage_fns() + [("body", lambda: reuse_outcome)] + self._build_suffix_stage_fns()
-            self._run_stage_list(remaining)
+            if self._run_stage_list(self._middle_stage_fns()):
+                return
+            self.stage_outcomes.append(reuse_outcome)
+            self._run_stage_list(self._build_suffix_stage_fns())
             body_final = next((o for o in self.stage_outcomes if o.stage == "body"), None)
             self._parallel_body_block = {
                 "enabled": False,
@@ -1093,14 +1114,33 @@ class ProcessVideoPipeline:
                 source_identity,
                 force=self.options.force,
             )
-            # A legacy stage has no trusted manifest yet, so the wrapper cannot
-            # short-circuit it. It may still run its existing schema validator
-            # and adopt a valid artifact; only that successful stage outcome
-            # publishes the first content-addressed generation.
-            self._active_reuse_decisions[name] = decision.reusable or decision.reason == "unfingerprinted_stale"
+            # An unfingerprinted or mismatched stage must actually rebuild.
+            # Schema validity alone is not provenance and may never seed the
+            # first content-addressed generation.
+            self._active_reuse_decisions[name] = decision.reusable
             if decision.reusable and decision.manifest is not None:
                 return self._identity_reused_outcome(name, decision.manifest)
+            preexisting_artifact_roots = {
+                path.name
+                for path in self.clip_dir.iterdir()
+                if path != self._run_identity_store.store_dir
+            }
             outcome = fn()
+            skipped_preexisting_artifacts = outcome.status == "skipped" and any(
+                self._identity_artifact_root_existed(value, preexisting_artifact_roots)
+                for value in outcome.artifacts
+            )
+            if outcome.status == "reused" or skipped_preexisting_artifacts:
+                return StageOutcome(
+                    stage=name,
+                    status="failed",
+                    wall_seconds=time.monotonic() - started,
+                    notes=[
+                        f"refused {outcome.status} stage-local artifacts without a trusted fingerprint; "
+                        "rebuild the stage or install an explicit immutable migration_attestation "
+                        "with source hash, artifact hash, author, and timestamp"
+                    ],
+                )
         except _HardStageFailure as exc:
             return StageOutcome(stage=name, status="failed", wall_seconds=time.monotonic() - started, notes=[str(exc)])
         except Exception as exc:  # noqa: BLE001 - a stage bug must not crash the whole run
@@ -1129,6 +1169,15 @@ class ProcessVideoPipeline:
                     "this stage is not eligible for automatic reuse"
                 )
         return outcome
+
+    def _identity_artifact_root_existed(self, value: str, existing_roots: set[str]) -> bool:
+        path = Path(str(value).rstrip("/"))
+        if path.is_absolute():
+            try:
+                path = path.relative_to(self.clip_dir)
+            except ValueError:
+                return True
+        return bool(path.parts) and path.parts[0] in existing_roots
 
     # ------------------------------------------------------------------
     # stage 1: ingest

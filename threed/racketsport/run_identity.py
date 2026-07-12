@@ -21,6 +21,7 @@ import tempfile
 import uuid
 from contextlib import AbstractContextManager
 from dataclasses import dataclass, field
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
@@ -28,6 +29,7 @@ from typing import Any, Mapping, Sequence
 SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_stage_identity"
 STORE_DIR_NAME = ".run_identity"
+MIGRATION_ATTESTATION_PROVENANCE = "migration_attestation"
 _CHUNK_SIZE = 1024 * 1024
 
 
@@ -193,6 +195,7 @@ class StageTransaction(AbstractContextManager[Path]):
             "stage": self.spec.name,
             "fingerprint": self.fingerprint,
             "generation": generation_dir.relative_to(self.store.store_dir).as_posix(),
+            "manifest_sha256": sha256_file(generation_dir / "manifest.json"),
         }
         current_path = self.store.current_dir / f"{self.spec.name}.json"
         self.store._atomic_write_json(current_path, pointer)
@@ -273,6 +276,65 @@ class RunIdentityStore:
             metadata=metadata,
         )
 
+    def attest_migration(
+        self,
+        spec: StageSpec,
+        source: SourceIdentity,
+        *,
+        artifact: str | Path,
+        source_sha256: str,
+        artifact_sha256: str,
+        author: str,
+        timestamp: str,
+    ) -> dict[str, Any]:
+        """Explicitly bind one legacy/imported artifact to the current stage identity.
+
+        This is the only compatibility path for consuming an unfingerprinted stage
+        artifact. The caller must supply hashes instead of asking the store to infer
+        intent, and publication remains an immutable generation behind a
+        manifest-hashed current pointer.
+        """
+
+        if source_sha256 != source.sha256:
+            raise ValueError("migration source hash does not match the current source identity")
+        artifact_path = Path(artifact)
+        if not artifact_path.is_absolute():
+            artifact_path = self.run_dir / artifact_path
+        artifact_identity = fingerprint_path(artifact_path)
+        if artifact_identity.get("kind") == "missing":
+            raise ValueError(f"migration artifact does not exist: {artifact_path}")
+        if artifact_sha256 != artifact_identity.get("sha256"):
+            raise ValueError("migration artifact hash does not match the current artifact bytes")
+        if not isinstance(author, str) or not author.strip():
+            raise ValueError("migration attestation author must be non-empty")
+        if not self._timestamp_has_timezone(timestamp):
+            raise ValueError("migration attestation timestamp must be RFC3339 with a timezone")
+        if self.current_manifest(spec.name) is not None:
+            raise ValueError(f"stage {spec.name!r} already has a trusted current generation")
+
+        artifact_row = self.external_artifact_row(artifact_path)
+        attestation = {
+            "provenance": MIGRATION_ATTESTATION_PROVENANCE,
+            "source_sha256": source_sha256,
+            "artifact_sha256": artifact_sha256,
+            "artifact_path": artifact_row["path"],
+            "artifact_path_absolute": artifact_row["absolute"],
+            "author": author.strip(),
+            "timestamp": timestamp,
+        }
+        attestation["attestation_sha256"] = _sha256_bytes(_canonical_json(attestation))
+        with self.transaction(
+            spec,
+            source,
+            external_artifacts=[artifact_path],
+            metadata={"migration_attestation": attestation},
+        ):
+            pass
+        manifest = self.current_manifest(spec.name)
+        if manifest is None:
+            raise RuntimeError("migration attestation publication did not produce a trusted manifest")
+        return manifest
+
     def current_manifest(self, stage: str) -> dict[str, Any] | None:
         stage_name = _safe_stage_name(stage)
         pointer_path = self.current_dir / f"{stage_name}.json"
@@ -282,12 +344,18 @@ class RunIdentityStore:
             if not isinstance(generation, str):
                 return None
             generation_dir = self.store_dir / generation
-            manifest = json.loads((generation_dir / "manifest.json").read_text(encoding="utf-8"))
+            manifest_path = generation_dir / "manifest.json"
+            expected_manifest_sha256 = pointer.get("manifest_sha256")
+            if expected_manifest_sha256 is not None and sha256_file(manifest_path) != expected_manifest_sha256:
+                return None
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (FileNotFoundError, json.JSONDecodeError, OSError):
             return None
         if manifest.get("artifact_type") != ARTIFACT_TYPE or manifest.get("stage") != stage_name:
             return None
         manifest["_generation_dir"] = str(generation_dir)
+        if not self._migration_attestation_valid(manifest):
+            return None
         return manifest
 
     def current_stage_reusable(self, stage: str) -> bool:
@@ -328,6 +396,44 @@ class RunIdentityStore:
             "identity": fingerprint_path(candidate),
         }
 
+    @staticmethod
+    def _timestamp_has_timezone(value: str) -> bool:
+        if not isinstance(value, str) or "T" not in value:
+            return False
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        return parsed.tzinfo is not None
+
+    @staticmethod
+    def _migration_attestation_valid(manifest: Mapping[str, Any]) -> bool:
+        metadata = manifest.get("metadata")
+        if not isinstance(metadata, Mapping) or "migration_attestation" not in metadata:
+            return True
+        attestation = metadata.get("migration_attestation")
+        external = manifest.get("external_artifacts")
+        identity = manifest.get("identity")
+        if not isinstance(attestation, Mapping) or not isinstance(external, list) or len(external) != 1:
+            return False
+        if not isinstance(identity, Mapping) or not isinstance(identity.get("source"), Mapping):
+            return False
+        [artifact_row] = external
+        if not isinstance(artifact_row, Mapping) or not isinstance(artifact_row.get("identity"), Mapping):
+            return False
+        payload = {key: value for key, value in attestation.items() if key != "attestation_sha256"}
+        return (
+            attestation.get("provenance") == MIGRATION_ATTESTATION_PROVENANCE
+            and attestation.get("source_sha256") == identity["source"].get("sha256")
+            and attestation.get("artifact_sha256") == artifact_row["identity"].get("sha256")
+            and attestation.get("artifact_path") == artifact_row.get("path")
+            and attestation.get("artifact_path_absolute") == artifact_row.get("absolute")
+            and isinstance(attestation.get("author"), str)
+            and bool(str(attestation.get("author")).strip())
+            and RunIdentityStore._timestamp_has_timezone(str(attestation.get("timestamp", "")))
+            and attestation.get("attestation_sha256") == _sha256_bytes(_canonical_json(payload))
+        )
+
     def _external_path(self, value: str, absolute: bool) -> Path:
         return Path(value) if absolute else self.run_dir / value
 
@@ -356,6 +462,7 @@ class RunIdentityStore:
 
 __all__ = [
     "ARTIFACT_TYPE",
+    "MIGRATION_ATTESTATION_PROVENANCE",
     "RunIdentityStore",
     "ReuseDecision",
     "SCHEMA_VERSION",

@@ -2762,7 +2762,7 @@ def test_pipeline_blocks_wrist_cues_before_body_without_pose_fallback(
     monkeypatch.setattr(process_video, "dispatch_body_stage", _fake_dispatch)
     monkeypatch.setattr(process_video, "fuse_contact_windows_from_cue_payloads", lambda **kwargs: _contact_windows_payload())
 
-    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline = _pipeline_with_attested_legacy_prefix(options)
     summary = pipeline.run()
 
     by_stage = {stage["stage"]: stage for stage in summary["stages"]}
@@ -3326,17 +3326,130 @@ def test_global_association_uses_resolved_reid_device_and_batch64(tmp_path: Path
     assert any("device=mps" in note and "batch=64" in note for note in notes)
 
 
-def test_missing_pinned_reid_asset_fails_loud_instead_of_keeping_loose_pool(tmp_path: Path) -> None:
+def test_missing_pinned_reid_asset_fails_loud_instead_of_keeping_loose_pool(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
     options = _base_options(tmp_path, video=video, court_corners=None)
+    missing_pinned_reid = tmp_path / "pinned-assets" / "osnet_x1_0_market1501.pt"
+    monkeypatch.setattr(process_video, "DEFAULT_REID_MODEL", missing_pinned_reid)
     options.reid_model = process_video.DEFAULT_REID_MODEL
+    assert not options.reid_model.exists()
     options.clip_dir.mkdir(parents=True, exist_ok=True)
     _write_json(options.clip_dir / "tracked_detections.json", {"fps": 30.0, "frames": []})
     pipeline = process_video.ProcessVideoPipeline(options)
 
     with pytest.raises(process_video._HardStageFailure, match="best_stack_asset_missing.*tracking.reid_model"):
         pipeline._attempt_global_association()
+
+
+def test_identity_wrapper_rebuilds_unfingerprinted_stage_instead_of_authorizing_local_reuse(
+    tmp_path: Path,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    artifact = options.clip_dir / "probe.json"
+    _write_json(artifact, {"generation": "legacy-unfingerprinted"})
+    pipeline = process_video.ProcessVideoPipeline(options)
+    calls: list[str] = []
+
+    def probe_stage() -> process_video.StageOutcome:
+        if artifact.is_file() and pipeline._identity_allows_reuse("probe"):
+            return process_video.StageOutcome(
+                stage="probe",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["stage-local legacy reuse"],
+                artifacts=["probe.json"],
+            )
+        calls.append("rebuilt")
+        _write_json(artifact, {"generation": "fresh"})
+        return process_video.StageOutcome(
+            stage="probe",
+            status="ran",
+            wall_seconds=0.0,
+            artifacts=["probe.json"],
+        )
+
+    outcome = pipeline._run_stage_safely("probe", probe_stage)
+
+    assert outcome.status == "ran"
+    assert calls == ["rebuilt"]
+    assert json.loads(artifact.read_text(encoding="utf-8")) == {"generation": "fresh"}
+    assert pipeline._run_identity_store.current_manifest("probe") is not None
+
+
+def test_identity_wrapper_consumes_legacy_stage_only_after_explicit_migration_attestation(
+    tmp_path: Path,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    artifact = options.clip_dir / "probe.json"
+    _write_json(artifact, {"generation": "legacy-attested"})
+    pipeline = process_video.ProcessVideoPipeline(options)
+    calls: list[str] = []
+
+    def probe_stage() -> process_video.StageOutcome:
+        calls.append("ran")
+        return process_video.StageOutcome(stage="probe", status="ran", wall_seconds=0.0)
+
+    source = pipeline._source_content_identity()
+    spec = pipeline._stage_identity_spec("probe", probe_stage)
+    artifact_sha256 = process_video.fingerprint_path(artifact)["sha256"]
+    assert isinstance(artifact_sha256, str)
+    pipeline._run_identity_store.attest_migration(
+        spec,
+        source,
+        artifact=artifact,
+        source_sha256=source.sha256,
+        artifact_sha256=artifact_sha256,
+        author="migration-operator@example.com",
+        timestamp="2026-07-12T18:30:00Z",
+    )
+
+    outcome = pipeline._run_stage_safely("probe", probe_stage)
+
+    assert outcome.status == "skipped"
+    assert calls == []
+    assert "content-addressed stage generation" in " ".join(outcome.notes)
+
+
+@pytest.mark.parametrize("status", ["blocked", "degraded", "failed", "skipped"])
+def test_unfingerprinted_partial_failure_or_skip_never_seeds_first_generation(
+    tmp_path: Path,
+    status: process_video.StageStatus,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    artifact = options.clip_dir / "probe.json"
+    _write_json(artifact, {"generation": "legacy-unfingerprinted"})
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    def incomplete_stage() -> process_video.StageOutcome:
+        return process_video.StageOutcome(
+            stage="probe",
+            status=status,
+            wall_seconds=0.0,
+            notes=["simulated incomplete stage"],
+            artifacts=["probe.json"],
+        )
+
+    outcome = pipeline._run_stage_safely("probe", incomplete_stage)
+
+    if status == "skipped":
+        assert outcome.status == "failed"
+        assert "migration_attestation" in " ".join(outcome.notes)
+    else:
+        assert outcome.status == status
+    assert pipeline._run_identity_store.current_manifest("probe") is None
 
 
 def test_global_association_default_profile_declares_wolverine_internal_val_tuning() -> None:
@@ -5187,6 +5300,49 @@ def _overlap_ready_options(tmp_path: Path) -> process_video.PipelineOptions:
     return options
 
 
+def _attest_existing_stage_artifact(
+    pipeline: process_video.ProcessVideoPipeline,
+    stage: str,
+    artifact: Path,
+) -> None:
+    stage_fn = getattr(pipeline, f"_stage_{stage}")
+    source = pipeline._source_content_identity()
+    spec = pipeline._stage_identity_spec(stage, stage_fn)
+    artifact_sha256 = process_video.fingerprint_path(artifact)["sha256"]
+    assert isinstance(artifact_sha256, str)
+    pipeline._run_identity_store.attest_migration(
+        spec,
+        source,
+        artifact=artifact,
+        source_sha256=source.sha256,
+        artifact_sha256=artifact_sha256,
+        author="pytest-fixture",
+        timestamp="2026-07-12T18:30:00Z",
+    )
+
+
+def _pipeline_with_attested_legacy_prefix(
+    options: process_video.PipelineOptions,
+) -> process_video.ProcessVideoPipeline:
+    """Install explicit test-only attestations for legacy prefix fixtures."""
+
+    pipeline = process_video.ProcessVideoPipeline(options)
+    assert pipeline._run_stage_safely("ingest", pipeline._stage_ingest).status == "ran"
+    _attest_existing_stage_artifact(pipeline, "calibration", options.clip_dir / "court_calibration.json")
+    assert pipeline._run_stage_safely("input_quality", pipeline._stage_input_quality).status in {
+        "ran",
+        "skipped",
+        "degraded",
+    }
+    if options.tracks_reuse is not None:
+        _write_json(
+            options.clip_dir / "tracks.json",
+            json.loads(options.tracks_reuse.read_text(encoding="utf-8")),
+        )
+    _attest_existing_stage_artifact(pipeline, "tracking", options.clip_dir / "tracks.json")
+    return pipeline
+
+
 def _run_pipeline_with_schedule(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
@@ -5198,7 +5354,7 @@ def _run_pipeline_with_schedule(
     options.body_schedule = schedule
     monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite_tracks_with_placement_noop)
     monkeypatch.setattr(process_video, "dispatch_body_stage", dispatch_fn)
-    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline = _pipeline_with_attested_legacy_prefix(options)
     return pipeline.run()
 
 
@@ -5322,7 +5478,7 @@ def test_overlap_input_mutation_guard_trips_and_fails_closed(
 
     monkeypatch.setattr(process_video.ProcessVideoPipeline, "_stage_events", _mutating_stage_events)
 
-    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline = _pipeline_with_attested_legacy_prefix(options)
     summary = pipeline.run()
 
     body_stage = next(s for s in summary["stages"] if s["stage"] == "body")
@@ -5370,7 +5526,7 @@ def test_overlap_join_barrier_world_never_starts_before_body_thread_completes(
 
     monkeypatch.setattr(process_video, "build_virtual_world_state", _tracking_build_virtual_world_state)
 
-    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline = _pipeline_with_attested_legacy_prefix(options)
     pipeline.run()
 
     assert "body_start" in events
@@ -5396,6 +5552,14 @@ def test_overlap_takes_serial_path_with_no_thread_when_body_artifacts_valid_for_
         raise AssertionError("no-force BODY reuse must not dispatch (and must not spend a thread) in overlap mode")
 
     monkeypatch.setattr(process_video, "dispatch_body_stage", _fail_if_dispatched)
+
+    seeding_pipeline = _pipeline_with_attested_legacy_prefix(options)
+    assert not seeding_pipeline._run_stage_list(
+        seeding_pipeline._build_prefix_stage_fns()
+        + seeding_pipeline._middle_stage_fns()
+        + [("frames", seeding_pipeline._stage_frames)]
+    )
+    _attest_existing_stage_artifact(seeding_pipeline, "body", options.clip_dir / "skeleton3d.json")
 
     pipeline = process_video.ProcessVideoPipeline(options)
     summary = pipeline.run()

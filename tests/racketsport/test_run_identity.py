@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import shutil
 from pathlib import Path
 from typing import Callable
@@ -7,7 +8,7 @@ from typing import Callable
 import pytest
 
 from scripts.racketsport import process_video
-from threed.racketsport.run_identity import RunIdentityStore, SourceIdentity, StageSpec
+from threed.racketsport.run_identity import RunIdentityStore, SourceIdentity, StageSpec, sha256_file
 
 
 Builder = Callable[[Path], None]
@@ -217,7 +218,9 @@ def test_failed_transaction_keeps_partial_stage_dir_invisible_and_preserves_safe
     assert not (Path(str(safe_generation)) / "half-written.txt").exists()
 
 
-def test_legacy_run_without_manifest_is_stale_then_migrates_without_crashing(tmp_path: Path) -> None:
+def test_legacy_run_without_manifest_is_stale_then_rebuilds_without_adopting_legacy_artifact(
+    tmp_path: Path,
+) -> None:
     video = tmp_path / "clip.mp4"
     video.write_bytes(b"video")
     source = _source(video)
@@ -231,9 +234,110 @@ def test_legacy_run_without_manifest_is_stale_then_migrates_without_crashing(tmp
     assert decision.reusable is False
     assert decision.reason == "unfingerprinted_stale"
 
-    with store.transaction(spec, source, external_artifacts=[run_dir / "tracks.json"]):
-        pass
+    with store.transaction(spec, source) as stage_dir:
+        (stage_dir / "tracks.json").write_text('{"rebuilt": true}', encoding="utf-8")
     assert store.decision(spec, source).reusable is True
+    manifest = store.current_manifest("tracking")
+    assert manifest is not None
+    assert manifest["external_artifacts"] == []
+    assert _managed_path(store, "tracking", "tracks.json").read_text(encoding="utf-8") == '{"rebuilt": true}'
+
+
+def test_explicit_migration_attestation_is_hash_checked_and_separately_identified(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"video")
+    source = _source(video)
+    run_dir = tmp_path / "legacy_run"
+    run_dir.mkdir()
+    artifact = run_dir / "tracks.json"
+    artifact.write_text('{"legacy": true}', encoding="utf-8")
+    store = RunIdentityStore(run_dir)
+    spec = StageSpec("tracking", code={"version": 1})
+
+    manifest = store.attest_migration(
+        spec,
+        source,
+        artifact=artifact,
+        source_sha256=source.sha256,
+        artifact_sha256=sha256_file(artifact),
+        author="migration-operator@example.com",
+        timestamp="2026-07-12T18:30:00Z",
+    )
+
+    attestation = manifest["metadata"]["migration_attestation"]
+    assert attestation["provenance"] == "migration_attestation"
+    assert attestation["source_sha256"] == source.sha256
+    assert attestation["artifact_sha256"] == sha256_file(artifact)
+    assert attestation["author"] == "migration-operator@example.com"
+    assert attestation["timestamp"] == "2026-07-12T18:30:00Z"
+    assert store.decision(spec, source).reusable is True
+
+    artifact.write_text('{"silently_mutated": true}', encoding="utf-8")
+    decision = store.decision(spec, source)
+    assert decision.reusable is False
+    assert decision.reason == "artifact_hash_mismatch"
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "error"),
+    [
+        ("source_sha256", "0" * 64, "source hash"),
+        ("artifact_sha256", "0" * 64, "artifact hash"),
+        ("author", "", "author"),
+        ("timestamp", "2026-07-12 18:30:00", "timestamp"),
+    ],
+)
+def test_migration_attestation_rejects_untrusted_identity_fields(
+    tmp_path: Path,
+    field: str,
+    value: str,
+    error: str,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"video")
+    source = _source(video)
+    artifact = tmp_path / "tracks.json"
+    artifact.write_text('{"legacy": true}', encoding="utf-8")
+    store = RunIdentityStore(tmp_path / "run")
+    kwargs = {
+        "artifact": artifact,
+        "source_sha256": source.sha256,
+        "artifact_sha256": sha256_file(artifact),
+        "author": "migration-operator@example.com",
+        "timestamp": "2026-07-12T18:30:00Z",
+    }
+    kwargs[field] = value
+
+    with pytest.raises(ValueError, match=error):
+        store.attest_migration(StageSpec("tracking"), source, **kwargs)
+
+
+def test_migration_attestation_manifest_tampering_invalidates_current_pointer(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"video")
+    source = _source(video)
+    artifact = tmp_path / "tracks.json"
+    artifact.write_text('{"legacy": true}', encoding="utf-8")
+    store = RunIdentityStore(tmp_path / "run")
+    spec = StageSpec("tracking")
+    manifest = store.attest_migration(
+        spec,
+        source,
+        artifact=artifact,
+        source_sha256=source.sha256,
+        artifact_sha256=sha256_file(artifact),
+        author="migration-operator@example.com",
+        timestamp="2026-07-12T18:30:00Z",
+    )
+    manifest_path = Path(str(manifest["_generation_dir"])) / "manifest.json"
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    payload["metadata"]["migration_attestation"]["author"] = "tampered-author"
+    manifest_path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
+
+    assert store.current_manifest("tracking") is None
+    decision = store.decision(spec, source)
+    assert decision.reusable is False
+    assert decision.reason == "unfingerprinted_stale"
 
 
 def test_explicit_input_change_wins_over_existing_cached_generation(tmp_path: Path) -> None:
