@@ -45,7 +45,14 @@
         ]
       },
       "proven_against": {
-        "wolverine_suppressed_segments": [0, 2, 3, 4, 6, 8],
+        "wolverine_suppressed_segments": [
+          0,
+          2,
+          3,
+          4,
+          6,
+          8
+        ],
         "wolverine_suppressed_frame_count": 225,
         "wolverine_emitted_frame_count": 75,
         "wolverine_max_ball_height_m_after": 0.968,
@@ -965,34 +972,119 @@
     "DEFAULT_BODY_MODEL_MANIFEST": "BODY registry file location, not a default model/checkpoint/profile selection"
   },
   "model_manifest_coverage": {
-    "fast_sam_3d_body_dinov3": {"entry": "body.fast_sam_3d_body_production"},
-    "sam_3d_body_mhr_model": {"entry": "body.fast_sam_3d_body_production"},
-    "sat_hmr_644_3dpw": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "fallback asset, not default-selected"},
-    "moge_2_vitl_normal": {"entry": "body.detector_fov"},
-    "sam2_hiera_base_plus": {"entry": "court.profile_driven_cluster", "allowlist_reason": "racket/court adjacent asset, not default-selected"},
-    "grounding_dino_tiny_paddle_detector": {"entry": "court.profile_driven_cluster", "allowlist_reason": "racket/court adjacent asset, not default-selected"},
-    "grounding_dino_base_paddle_detector_failed_probe": {"entry": "tracking.dead_botsort_tracker_presets", "allowlist_reason": "failed probe, not default-selected"},
-    "sam2_hiera_tiny_racket_masks": {"entry": "court.profile_driven_cluster", "allowlist_reason": "racket/court adjacent asset, not default-selected"},
-    "yolo11n_paddle_cpu320_e2_failed_probe": {"entry": "tracking.dead_botsort_tracker_presets", "allowlist_reason": "failed probe, not default-selected"},
-    "yolo11n_paddle_a100_img960_e50_failed_probe": {"entry": "tracking.dead_botsort_tracker_presets", "allowlist_reason": "failed probe, not default-selected"},
-    "yolo26s_paddle_a100_img1280_e80_failed_probe": {"entry": "tracking.dead_botsort_tracker_presets", "allowlist_reason": "failed probe, not default-selected"},
-    "body4d_yolo_best_existing": {"entry": "body.detector_fov", "allowlist_reason": "legacy detector asset disabled by empty detector default"},
-    "yolo26m": {"entry": "body.detector_fov"},
-    "rtmw_l_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "rtmw_x_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "rtmw3d_x": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "motionbert_lift_smooth": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "rtmpose_m_body26_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "rtmpose_l_body26_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "rtmpose_x_body26_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "rtmpose_m_wholebody_256": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "rtmpose_l_wholebody_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "rtmpose_x_wholebody_384": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "retired pose stack, not default-selected"},
-    "tracknetv3": {"entry": "ball.seed_official_checkpoint", "allowlist_reason": "candidate detector, not default-selected"},
-    "tracknetv3_inpaintnet": {"entry": "ball.seed_official_checkpoint", "allowlist_reason": "candidate detector, not default-selected"},
-    "wasb_tennis_bmvc2023": {"entry": "ball.wasb_checkpoint"},
-    "sat_hmr": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "fallback asset, not default-selected"},
-    "multihmr2_b": {"entry": "body.fast_sam_3d_body_production", "allowlist_reason": "fallback asset, not default-selected"},
-    "mujoco_mjx": {"entry": "body.p22_lambda_foot_smoother", "allowlist_reason": "physics support asset, not default-selected"}
+    "fast_sam_3d_body_dinov3": {
+      "entry": "body.fast_sam_3d_body_production"
+    },
+    "sam_3d_body_mhr_model": {
+      "entry": "body.fast_sam_3d_body_production"
+    },
+    "sat_hmr_644_3dpw": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "fallback asset, not default-selected"
+    },
+    "moge_2_vitl_normal": {
+      "entry": "body.detector_fov"
+    },
+    "sam2_hiera_base_plus": {
+      "entry": "court.profile_driven_cluster",
+      "allowlist_reason": "racket/court adjacent asset, not default-selected"
+    },
+    "grounding_dino_tiny_paddle_detector": {
+      "entry": "court.profile_driven_cluster",
+      "allowlist_reason": "racket/court adjacent asset, not default-selected"
+    },
+    "grounding_dino_base_paddle_detector_failed_probe": {
+      "entry": "tracking.dead_botsort_tracker_presets",
+      "allowlist_reason": "failed probe, not default-selected"
+    },
+    "sam2_hiera_tiny_racket_masks": {
+      "entry": "court.profile_driven_cluster",
+      "allowlist_reason": "racket/court adjacent asset, not default-selected"
+    },
+    "yolo11n_paddle_cpu320_e2_failed_probe": {
+      "entry": "tracking.dead_botsort_tracker_presets",
+      "allowlist_reason": "failed probe, not default-selected"
+    },
+    "yolo11n_paddle_a100_img960_e50_failed_probe": {
+      "entry": "tracking.dead_botsort_tracker_presets",
+      "allowlist_reason": "failed probe, not default-selected"
+    },
+    "yolo26s_paddle_a100_img1280_e80_failed_probe": {
+      "entry": "tracking.dead_botsort_tracker_presets",
+      "allowlist_reason": "failed probe, not default-selected"
+    },
+    "body4d_yolo_best_existing": {
+      "entry": "body.detector_fov",
+      "allowlist_reason": "legacy detector asset disabled by empty detector default"
+    },
+    "yolo26m": {
+      "entry": "body.detector_fov"
+    },
+    "rtmw_l_384": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "rtmw_x_384": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "rtmw3d_x": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "motionbert_lift_smooth": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "rtmpose_m_body26_384": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "rtmpose_l_body26_384": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "rtmpose_x_body26_384": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "rtmpose_m_wholebody_256": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "rtmpose_l_wholebody_384": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "rtmpose_x_wholebody_384": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "retired pose stack, not default-selected"
+    },
+    "tracknetv3": {
+      "entry": "ball.seed_official_checkpoint",
+      "allowlist_reason": "candidate detector, not default-selected"
+    },
+    "tracknetv3_inpaintnet": {
+      "entry": "ball.seed_official_checkpoint",
+      "allowlist_reason": "candidate detector, not default-selected"
+    },
+    "wasb_tennis_bmvc2023": {
+      "entry": "ball.wasb_checkpoint"
+    },
+    "sat_hmr": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "fallback asset, not default-selected"
+    },
+    "multihmr2_b": {
+      "entry": "body.fast_sam_3d_body_production",
+      "allowlist_reason": "fallback asset, not default-selected"
+    },
+    "mujoco_mjx": {
+      "entry": "body.p22_lambda_foot_smoother",
+      "allowlist_reason": "physics support asset, not default-selected"
+    },
+    "osnet_x1_0_market1501": {
+      "entry": "tracking.reid_model"
+    }
   }
 }
