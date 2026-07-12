@@ -16,6 +16,11 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
 
+from .ball_size_observations import (
+    HEATMAP_THRESHOLD,
+    connected_component_blob_extents,
+    write_wasb_ball_size_observations,
+)
 from .ball_tracknet import ball_frame
 from .io_decode import time_for_frame
 from .schemas import BallCandidates, BallTrack
@@ -28,6 +33,7 @@ WASB_CONFIDENCE_SEMANTICS = "WASB heatmap peak value (0..1)"
 STATUS_TESTED = "TESTED-ON-REAL-DATA"
 DEFAULT_WASB_VISIBLE_THRESHOLD = 0.5
 DEFAULT_BALL_CANDIDATE_TOP_K = 5
+DEFAULT_EMIT_SIZE_OBSERVATIONS = True
 WASB_INPUT_WH = (512, 288)
 WASB_FRAMES_IN = 3
 WASB_FRAMES_OUT = 3
@@ -181,6 +187,10 @@ def run_official_wasb_predict(
     candidate_fps: float | None = None,
     primary_output: str | Path | None = None,
     input_preprocessing: str = DEFAULT_WASB_INPUT_PREPROCESSING,
+    emit_size_observations: bool = DEFAULT_EMIT_SIZE_OBSERVATIONS,
+    size_observations_out: str | Path | None = None,
+    size_observation_fps: float | None = None,
+    size_observation_frame_times: Any = None,
 ) -> dict[str, Any]:
     """Run official WASB model code on a video and write per-frame predictions CSV."""
 
@@ -259,6 +269,7 @@ def run_official_wasb_predict(
 
             det_results: dict[int, list[dict[str, Any]]] = defaultdict(list)
             confidence_results: dict[int, list[float]] = defaultdict(list)
+            size_observation_results: dict[int, list[dict[str, Any]]] = defaultdict(list)
             pending_tensors: list[Any] = []
             pending_indices: list[list[int]] = []
             window: deque[tuple[int, Any]] = deque(maxlen=WASB_FRAMES_IN)
@@ -296,6 +307,9 @@ def run_official_wasb_predict(
                             affine_inv=postprocess_affine_inv,
                             det_results=det_results,
                             confidence_results=confidence_results,
+                            size_observation_results=size_observation_results,
+                            cv2=cv2,
+                            np=np,
                             torch=torch,
                             device=torch_device,
                         )
@@ -312,6 +326,9 @@ def run_official_wasb_predict(
                     affine_inv=postprocess_affine_inv,
                     det_results=det_results,
                     confidence_results=confidence_results,
+                    size_observation_results=size_observation_results,
+                    cv2=cv2,
+                    np=np,
                     torch=torch,
                     device=torch_device,
                 )
@@ -355,6 +372,36 @@ def run_official_wasb_predict(
                 },
                 input_preprocessing=input_preprocessing,
             )
+        size_observation_sidecar_path: Path | None = None
+        if emit_size_observations:
+            size_observation_sidecar_path = (
+                Path(size_observations_out)
+                if size_observations_out is not None
+                else _ball_size_observations_sidecar_path(primary_output if primary_output is not None else out_csv)
+            )
+            observation_fps = _require_positive_float(
+                size_observation_fps if size_observation_fps is not None else source_fps,
+                "size_observation_fps",
+            )
+            write_wasb_ball_size_observations(
+                path=size_observation_sidecar_path,
+                fps=observation_fps,
+                frame_times=size_observation_frame_times,
+                source_mode="wasb_predict",
+                input_preprocessing=input_preprocessing,
+                primary_output=Path(primary_output) if primary_output is not None else Path(out_csv),
+                frame_ids=sorted(confidence_results),
+                raw_frame_observations=size_observation_results,
+                provenance={
+                    "video": str(video_path),
+                    "wasb_repo": str(repo),
+                    "wasb_checkpoint": str(checkpoint_path),
+                    "postprocessor": "TracknetV2Postprocessor",
+                    "blob_det_method": "concomp",
+                    "component_capture_point": "raw_heatmap_before_candidate_top_k",
+                    "overlap_resolution": "highest_frame_heatmap_peak_then_earliest_observation",
+                },
+            )
 
     out_path = Path(out_csv)
     _write_wasb_csv(out_path, rows)
@@ -381,6 +428,9 @@ def run_official_wasb_predict(
     if emit_candidates and candidate_sidecar_path is not None:
         runtime["candidates_out"] = str(candidate_sidecar_path)
         runtime["candidate_top_k"] = candidate_top_k
+    if emit_size_observations and size_observation_sidecar_path is not None:
+        runtime["size_observations_out"] = str(size_observation_sidecar_path)
+        runtime["size_observation_heatmap_threshold"] = HEATMAP_THRESHOLD
     return runtime
 
 
@@ -403,6 +453,7 @@ def run_wasb_or_convert(
     emit_candidates: bool = False,
     candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
     input_preprocessing: str = DEFAULT_WASB_INPUT_PREPROCESSING,
+    emit_size_observations: bool = DEFAULT_EMIT_SIZE_OBSERVATIONS,
 ) -> dict[str, Any]:
     """CLI-oriented entrypoint that converts CSV or runs official WASB-SBDT."""
 
@@ -442,6 +493,10 @@ def run_wasb_or_convert(
         candidate_fps=fps,
         primary_output=out,
         input_preprocessing=input_preprocessing,
+        emit_size_observations=emit_size_observations,
+        size_observations_out=_ball_size_observations_sidecar_path(out),
+        size_observation_fps=fps,
+        size_observation_frame_times=frame_times,
     )
     return write_ball_track_from_wasb_predictions(
         predictions_csv=prediction_csv_path,
@@ -659,6 +714,9 @@ def _process_wasb_batch(
     affine_inv: Any,
     det_results: dict[int, list[dict[str, Any]]],
     confidence_results: dict[int, list[float]],
+    size_observation_results: dict[int, list[dict[str, Any]]],
+    cv2: Any,
+    np: Any,
     torch: Any,
     device: Any,
 ) -> int:
@@ -674,6 +732,18 @@ def _process_wasb_batch(
             frame_heatmap = heatmaps[batch_index, output_index]
             confidence_results[int(frame_index)].append(float(frame_heatmap.max()))
             scale_results = pp_results[batch_index][output_index][0]
+            size_observation_results[int(frame_index)].append(
+                {
+                    "heatmap_peak": float(frame_heatmap.max()),
+                    "blobs": connected_component_blob_extents(
+                        frame_heatmap,
+                        affine_inv,
+                        cv2=cv2,
+                        np=np,
+                        threshold=HEATMAP_THRESHOLD,
+                    ),
+                }
+            )
             for xy, score in zip(scale_results["xys"], scale_results["scores"]):
                 det_results[int(frame_index)].append({"xy": xy, "score": float(score)})
     return len(tensors)
@@ -1041,6 +1111,10 @@ def _ball_candidates_sidecar_path(out: str | Path) -> Path:
     return Path(out).with_name("ball_candidates.json")
 
 
+def _ball_size_observations_sidecar_path(out: str | Path) -> Path:
+    return Path(out).with_name("ball_size_observations.json")
+
+
 def _add_runtime_metrics(runtime: dict[str, Any], *, processed_frame_count: int, fps: float) -> None:
     wall = runtime.get("wall_seconds")
     if not isinstance(wall, (int, float)) or wall <= 0:
@@ -1103,6 +1177,7 @@ def _wasb_repo_imports(src: Path) -> Iterator[None]:
 
 __all__ = [
     "DEFAULT_BALL_CANDIDATE_TOP_K",
+    "DEFAULT_EMIT_SIZE_OBSERVATIONS",
     "DEFAULT_WASB_VISIBLE_THRESHOLD",
     "WASB_CONFIDENCE_SEMANTICS",
     "checkpoint_metadata",

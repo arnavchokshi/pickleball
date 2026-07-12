@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ball_size_observations.schema.json",
+  "title": "WASB Ball Size Observations",
+  "description": "Emission-only raw WASB connected-component extents captured before candidate top-K truncation.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "fps",
+    "source",
+    "source_mode",
+    "input_preprocessing",
+    "primary_output",
+    "coordinate_space",
+    "heatmap_threshold",
+    "radius_proxy_definition",
+    "not_ground_truth",
+    "emission_only",
+    "provenance",
+    "frames"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "artifact_type": {"const": "racketsport_wasb_ball_size_observations"},
+    "fps": {"type": "number", "exclusiveMinimum": 0},
+    "source": {"const": "wasb"},
+    "source_mode": {"type": "string"},
+    "input_preprocessing": {"enum": ["official", "harness_v0"]},
+    "primary_output": {"type": "string"},
+    "coordinate_space": {"const": "source_pixels"},
+    "heatmap_threshold": {"const": 0.5},
+    "radius_proxy_definition": {
+      "const": "0.5 * sqrt(native_bbox_width_px * native_bbox_height_px)"
+    },
+    "not_ground_truth": {"const": true},
+    "emission_only": {"const": true},
+    "provenance": {"type": "object"},
+    "frames": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/frame"}
+    }
+  },
+  "$defs": {
+    "finiteNumber": {"type": "number"},
+    "blob": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "center_xy_px",
+        "extent_xyxy_px",
+        "width_px",
+        "height_px",
+        "component_pixel_count",
+        "component_area_px2",
+        "heatmap_peak",
+        "heatmap_weight_sum",
+        "radius_proxy_px",
+        "source_detector"
+      ],
+      "properties": {
+        "center_xy_px": {
+          "type": "array",
+          "prefixItems": [{"$ref": "#/$defs/finiteNumber"}, {"$ref": "#/$defs/finiteNumber"}],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "extent_xyxy_px": {
+          "type": "array",
+          "prefixItems": [
+            {"$ref": "#/$defs/finiteNumber"},
+            {"$ref": "#/$defs/finiteNumber"},
+            {"$ref": "#/$defs/finiteNumber"},
+            {"$ref": "#/$defs/finiteNumber"}
+          ],
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "width_px": {"type": "number", "exclusiveMinimum": 0},
+        "height_px": {"type": "number", "exclusiveMinimum": 0},
+        "component_pixel_count": {"type": "integer", "minimum": 1},
+        "component_area_px2": {"type": "number", "exclusiveMinimum": 0},
+        "heatmap_peak": {"type": "number", "minimum": 0, "maximum": 1},
+        "heatmap_weight_sum": {"type": "number", "exclusiveMinimum": 0},
+        "radius_proxy_px": {"type": "number", "exclusiveMinimum": 0},
+        "source_detector": {"const": "wasb_concomp"}
+      }
+    },
+    "frame": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "frame",
+        "pts_seconds",
+        "heatmap_peak",
+        "heatmap_observation_count",
+        "selected_heatmap_observation_index",
+        "blob_count",
+        "blobs"
+      ],
+      "properties": {
+        "frame": {"type": "integer", "minimum": 0},
+        "pts_seconds": {"type": "number", "minimum": 0},
+        "heatmap_peak": {"type": "number", "minimum": 0, "maximum": 1},
+        "heatmap_observation_count": {"type": "integer", "minimum": 1},
+        "selected_heatmap_observation_index": {"type": "integer", "minimum": 0},
+        "blob_count": {"type": "integer", "minimum": 0},
+        "blobs": {"type": "array", "items": {"$ref": "#/$defs/blob"}}
+      }
+    }
+  }
+}

@@ -9,6 +9,11 @@ import numpy as np
 import pytest
 from PIL import Image
 
+from threed.racketsport.ball_size_observations import (
+    WasbBallSizeObservations,
+    connected_component_blob_extents,
+    load_wasb_ball_size_observations,
+)
 from threed.racketsport.schemas import BallCandidates, BallTrack, validate_artifact_file
 from threed.racketsport.wasb_adapter import (
     WASB_CONFIDENCE_SEMANTICS,
@@ -128,6 +133,107 @@ def test_write_wasb_candidate_sidecar_is_opt_in_and_preserves_primary_track_byte
     assert sidecar.frames[0].candidates[0].xy == [321.0, 240.0]
     assert sidecar.frames[0].candidates[0].score == pytest.approx(0.95)
     assert sidecar.frames[0].candidates[0].source_detector == "wasb_concomp"
+
+
+def test_wasb_connected_component_extents_capture_every_raw_blob_before_topk() -> None:
+    cv2 = pytest.importorskip("cv2")
+    from threed.racketsport import wasb_adapter
+
+    heatmap = np.zeros((6, 8), dtype=np.float32)
+    heatmap[1:3, 1:4] = np.asarray([[0.51, 0.7, 0.51], [0.6, 0.9, 0.6]])
+    heatmap[4, 6] = 0.8
+    affine = np.asarray([[2.0, 0.0, 10.0], [0.0, 3.0, 20.0]], dtype=np.float32)
+
+    blobs = connected_component_blob_extents(heatmap, affine, cv2=cv2, np=np)
+
+    assert len(blobs) == 2
+    assert blobs[0]["heatmap_peak"] == pytest.approx(0.9)
+    assert blobs[0]["width_px"] == pytest.approx(6.0)
+    assert blobs[0]["height_px"] == pytest.approx(6.0)
+    assert blobs[0]["component_pixel_count"] == 6
+    assert blobs[0]["component_area_px2"] == pytest.approx(36.0)
+    assert blobs[0]["radius_proxy_px"] == pytest.approx(3.0)
+    assert blobs[1]["width_px"] == pytest.approx(2.0)
+    assert blobs[1]["height_px"] == pytest.approx(3.0)
+    assert len(wasb_adapter._topk_candidate_blobs(
+        [{"xy": blob["center_xy_px"], "score": blob["heatmap_peak"]} for blob in blobs],
+        top_k=1,
+        default_source_detector="wasb_concomp",
+    )) == 1
+    assert len(blobs) == 2
+
+
+def test_default_on_wasb_size_sidecar_is_pts_aligned_deterministic_and_track_byte_identical(
+    tmp_path: Path,
+) -> None:
+    cv2 = pytest.importorskip("cv2")
+    torch = pytest.importorskip("torch")
+    from threed.racketsport.wasb_adapter import run_wasb_or_convert
+
+    fake_repo = _write_fake_wasb_repo(tmp_path / "WASB-SBDT")
+    video = tmp_path / "moving_ball.mp4"
+    _write_moving_dot_video(video, cv2=cv2)
+    checkpoint = tmp_path / "lane_latest.pt"
+    torch.save({"state_dict": {}, "run_dir": Path("runs/lanes/ball_sizeobs_20260712")}, checkpoint)
+    frame_times = {"frames": [{"frame": 0, "pts_s": 0.001}, {"frame": 1, "pts_s": 0.041}, {"frame": 2, "pts_s": 0.082}]}
+
+    off_out = tmp_path / "off" / "ball_track.json"
+    on_out = tmp_path / "on" / "ball_track.json"
+    run_wasb_or_convert(
+        out=off_out,
+        fps=30.0,
+        frame_times=frame_times,
+        video=video,
+        checkpoint=checkpoint,
+        wasb_repo=fake_repo,
+        batch_size=1,
+        max_frames=3,
+        device="cpu",
+        emit_size_observations=False,
+        input_preprocessing="harness_v0",
+    )
+    on_summary = run_wasb_or_convert(
+        out=on_out,
+        fps=30.0,
+        frame_times=frame_times,
+        video=video,
+        checkpoint=checkpoint,
+        wasb_repo=fake_repo,
+        batch_size=1,
+        max_frames=3,
+        device="cpu",
+        input_preprocessing="harness_v0",
+    )
+
+    assert off_out.read_bytes() == on_out.read_bytes()
+    assert (off_out.parent / "ball_track_wasb_predictions.csv").read_bytes() == (
+        on_out.parent / "ball_track_wasb_predictions.csv"
+    ).read_bytes()
+    assert not (off_out.parent / "ball_size_observations.json").exists()
+    sidecar_path = on_out.parent / "ball_size_observations.json"
+    assert on_summary["runtime"]["size_observations_out"] == str(sidecar_path)
+    first_bytes = sidecar_path.read_bytes()
+    sidecar = load_wasb_ball_size_observations(sidecar_path)
+    assert isinstance(sidecar, WasbBallSizeObservations)
+    assert [frame.pts_seconds for frame in sidecar.frames] == pytest.approx([0.001, 0.041, 0.082])
+    assert [frame.frame for frame in sidecar.frames] == [0, 1, 2]
+    assert all(frame.blob_count == len(frame.blobs) for frame in sidecar.frames)
+    assert all(frame.blob_count == 1 for frame in sidecar.frames)
+    assert sidecar.radius_proxy_definition.startswith("0.5 * sqrt")
+
+    run_wasb_or_convert(
+        out=on_out,
+        fps=30.0,
+        frame_times=frame_times,
+        video=video,
+        checkpoint=checkpoint,
+        wasb_repo=fake_repo,
+        batch_size=1,
+        max_frames=3,
+        device="cpu",
+        input_preprocessing="harness_v0",
+    )
+    assert sidecar_path.read_bytes() == first_bytes
 
 
 def test_wasb_official_preprocessing_mode_is_legacy_bit_identical() -> None:
