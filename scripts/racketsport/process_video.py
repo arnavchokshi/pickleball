@@ -140,6 +140,7 @@ from threed.racketsport.contact_provenance import (  # noqa: E402
 )
 from threed.racketsport.match_stats import compute_match_stats_for_run_dir, write_match_stats_json  # noqa: E402
 from threed.racketsport.rally_metrics import build_rally_metrics  # noqa: E402
+from threed.racketsport.coaching_fact_audit import audit_coaching_facts_file  # noqa: E402
 from threed.racketsport.frame_rating import (  # noqa: E402
     DEFAULT_BALL_PROXIMITY_M,
     DEFAULT_HIGH_CONFIDENCE_SWING_FLOOR,
@@ -443,7 +444,7 @@ RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
     "confidence_gate": ("confidence_gated_world.json", "confidence_gate_summary.json"),
     "manifest": ("replay_viewer_manifest.json", "replay_scene.json", "replay_review"),
     "match_stats": ("match_stats.json",),
-    "coaching_facts": ("rally_metrics.json", "coaching_card_facts.json"),
+    "coaching_facts": ("rally_metrics.json", "coaching_card_facts.json", "coaching_fact_audit.json"),
 }
 
 
@@ -4370,6 +4371,14 @@ class ProcessVideoPipeline:
         ball_flight_sanity_path = self.clip_dir / "ball_flight_sanity.json"
         reviewed_bounces_path = self.clip_dir / "reviewed_ball_bounces.json"
         coaching_card_facts_path = self._finished_stage_artifact("coaching_facts", "coaching_card_facts.json")
+        coaching_fact_audit_path = self._finished_stage_artifact("coaching_facts", "coaching_fact_audit.json")
+        coaching_fact_audit = (
+            _read_optional_json(coaching_fact_audit_path)
+            if coaching_fact_audit_path is not None
+            else None
+        )
+        if not isinstance(coaching_fact_audit, Mapping) or coaching_fact_audit.get("verdict") != "pass":
+            coaching_card_facts_path = None
         match_stats_path = self._finished_stage_artifact("match_stats", "match_stats.json")
         rally_spans_path = self.clip_dir / "rally_spans.json"
         contact_metrics = self._ensure_contact_window_trust_notes(contact_windows_path) if contact_windows_path.is_file() else {}
@@ -4589,6 +4598,13 @@ class ProcessVideoPipeline:
     def _stage_coaching_facts(self) -> StageOutcome:
         rally_metrics_path = self.clip_dir / "rally_metrics.json"
         coaching_facts_path = self.clip_dir / "coaching_card_facts.json"
+        coaching_audit_path = self.clip_dir / "coaching_fact_audit.json"
+        manifest_path = self.clip_dir / "replay_viewer_manifest.json"
+
+        # A rebuilt facts generation must precede its manifest. Remove any
+        # prior generation now so the auditor can distinguish the current
+        # ordering and the downstream manifest stage cannot reuse stale URLs.
+        manifest_path.unlink(missing_ok=True)
         required = {
             "virtual_world.json": self.clip_dir / "virtual_world.json",
             "court_zones.json": self.clip_dir / "court_zones.json",
@@ -4597,12 +4613,26 @@ class ProcessVideoPipeline:
         if missing:
             rally_metrics_path.unlink(missing_ok=True)
             coaching_facts_path.unlink(missing_ok=True)
+            audit = _runner_coaching_audit_rejection(
+                code="missing_inputs",
+                path="/runner_inputs",
+                missing_inputs=missing,
+            )
+            _write_json(coaching_audit_path, audit)
             return StageOutcome(
                 stage="coaching_facts",
-                status="skipped",
+                status="degraded",
                 wall_seconds=0.0,
-                notes=["deterministic coaching facts absent: required input(s) missing: " + ", ".join(missing)],
-                metrics={"reason": "missing_inputs", "missing_inputs": missing},
+                notes=[
+                    "coaching_fact_audit rejected: reason=audit_missing_inputs; required input(s) missing: "
+                    + ", ".join(missing)
+                ],
+                artifacts=["coaching_fact_audit.json"],
+                metrics={
+                    "reason": "audit_missing_inputs",
+                    "missing_inputs": missing,
+                    "audit_issue_codes": ["missing_inputs"],
+                },
             )
 
         try:
@@ -4613,28 +4643,78 @@ class ProcessVideoPipeline:
             _write_json(rally_metrics_path, payload)
             _write_json(coaching_facts_path, facts)
         except Exception as exc:  # noqa: BLE001 - facts are an explicit consumer boundary
-            (self.clip_dir / "rally_metrics.json").unlink(missing_ok=True)
-            (self.clip_dir / "coaching_card_facts.json").unlink(missing_ok=True)
+            rally_metrics_path.unlink(missing_ok=True)
+            coaching_facts_path.unlink(missing_ok=True)
+            audit = _runner_coaching_audit_rejection(
+                code="builder_exception",
+                path="/runner_builder",
+                error=f"{type(exc).__name__}: {exc}",
+            )
+            _write_json(coaching_audit_path, audit)
             return StageOutcome(
                 stage="coaching_facts",
-                status="skipped",
+                status="degraded",
                 wall_seconds=0.0,
-                notes=[f"deterministic coaching facts builder failed: {type(exc).__name__}: {exc}"],
-                metrics={"reason": "consumer_exception", "error": f"{type(exc).__name__}: {exc}"},
+                notes=[f"coaching_fact_audit rejected: reason=builder_exception; {type(exc).__name__}: {exc}"],
+                artifacts=["coaching_fact_audit.json"],
+                metrics={
+                    "reason": "builder_exception",
+                    "error": f"{type(exc).__name__}: {exc}",
+                    "audit_issue_codes": ["builder_exception"],
+                },
             )
 
-        facts_list = facts.get("facts") if isinstance(facts.get("facts"), list) else []
+        try:
+            audit = audit_coaching_facts_file(coaching_facts_path, manifest_path=manifest_path)
+        except Exception as exc:  # noqa: BLE001 - audit rejection is typed and must not crash the bundle
+            audit = _runner_coaching_audit_rejection(
+                code="audit_exception",
+                path="/runner_audit",
+                error=f"{type(exc).__name__}: {exc}",
+            )
+        if not isinstance(audit, Mapping):
+            audit = _runner_coaching_audit_rejection(
+                code="invalid_audit_report",
+                path="/runner_audit",
+            )
+        _write_json(coaching_audit_path, audit)
+        if audit.get("verdict") != "pass":
+            rally_metrics_path.unlink(missing_ok=True)
+            coaching_facts_path.unlink(missing_ok=True)
+            raw_issue_codes = audit.get("issue_codes")
+            issue_codes = (
+                [str(code) for code in raw_issue_codes]
+                if isinstance(raw_issue_codes, list)
+                else ["invalid_audit_report"]
+            )
+            return StageOutcome(
+                stage="coaching_facts",
+                status="degraded",
+                wall_seconds=0.0,
+                notes=[
+                    "coaching_fact_audit rejected: reason=zero_fabrication_audit_rejected; issue_codes="
+                    + (",".join(issue_codes) if issue_codes else "unspecified_audit_rejection")
+                ],
+                artifacts=["coaching_fact_audit.json"],
+                metrics={
+                    "reason": "zero_fabrication_audit_rejected",
+                    "audit_issue_codes": issue_codes,
+                },
+            )
+
+        facts_list = facts.get("audited_facts") if isinstance(facts.get("audited_facts"), list) else []
         return StageOutcome(
             stage="coaching_facts",
             status="ran",
             wall_seconds=0.0,
             notes=[
-                "built deterministic rally_metrics.json and coaching_card_facts.json with the existing position-only facts builder",
+                "built deterministic rally_metrics.json and coaching_card_facts.json; zero-fabrication audit passed",
                 "no language generation ran; facts remain evidence-linked preview inputs",
             ],
-            artifacts=["rally_metrics.json", "coaching_card_facts.json"],
+            artifacts=["rally_metrics.json", "coaching_card_facts.json", "coaching_fact_audit.json"],
             metrics={
                 "fact_count": len(facts_list),
+                "audit_verdict": "pass",
                 "rally_count": len(payload.get("rallies", [])) if isinstance(payload.get("rallies"), list) else 0,
                 "rally_scope": payload.get("rally_scope"),
             },
@@ -4841,6 +4921,20 @@ class _HardStageFailure(RuntimeError):
 # ----------------------------------------------------------------------
 
 
+def _runner_coaching_audit_rejection(code: str, path: str, **details: Any) -> dict[str, Any]:
+    """Persist a typed fail-closed audit result when the auditor cannot pass."""
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "coaching_fact_zero_fabrication_audit",
+        "verdict": "reject",
+        "checked_fact_count": 0,
+        "checked_source_count": 0,
+        "issue_codes": [code],
+        "issues": [{"code": code, "path": path, **details}],
+    }
+
+
 def _frame_cap_exclusion_record(tracks: Any, schedule: Mapping[str, Any]) -> dict[str, Any]:
     tracked: set[int] = set()
     fps = float(getattr(tracks, "fps", 30.0) or 30.0)
@@ -4920,6 +5014,11 @@ def _minimum_bundle_missing_capabilities(
             present = any((clip_dir / candidate).is_file() for candidate in candidates) and (
                 clip_dir / "body_full_clip_gate.json"
             ).is_file()
+        elif capability == "coaching":
+            coaching_audit = _read_optional_json(clip_dir / "coaching_fact_audit.json")
+            present = (clip_dir / "coaching_card_facts.json").is_file() and (
+                isinstance(coaching_audit, Mapping) and coaching_audit.get("verdict") == "pass"
+            )
         else:
             present = any((clip_dir / candidate).is_file() for candidate in candidates)
         if present:

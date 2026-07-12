@@ -1518,12 +1518,13 @@ def test_manifest_passes_existing_reviewed_bounces_coaching_facts_and_rally_span
         {"artifact_type": "racketsport_reviewed_ball_bounces", "status": "human_reviewed", "bounces": []},
     )
     _write_json(options.clip_dir / "coaching_card_facts.json", {"artifact_type": "racketsport_coaching_card_facts"})
+    _write_json(options.clip_dir / "coaching_fact_audit.json", {"verdict": "pass"})
     pipeline.stage_outcomes.append(
         process_video.StageOutcome(
             stage="coaching_facts",
             status="ran",
             wall_seconds=0.0,
-            artifacts=["coaching_card_facts.json"],
+            artifacts=["coaching_card_facts.json", "coaching_fact_audit.json"],
         )
     )
     _write_json(
@@ -1821,7 +1822,9 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
     assert by_stage["manifest"]["status"] == "degraded"
     assert by_stage["manifest"]["metrics"]["representation_status"] == "body_missing"
     assert by_stage["match_stats"]["status"] in {"ran", "skipped"}
-    assert by_stage["coaching_facts"]["status"] in {"ran", "skipped"}
+    assert by_stage["coaching_facts"]["status"] in {"ran", "degraded"}
+    if by_stage["coaching_facts"]["status"] == "degraded":
+        assert by_stage["coaching_facts"]["metrics"]["audit_issue_codes"]
     assert (options.clip_dir / "virtual_world.json").is_file()
     assert (options.run_dir / "PIPELINE_SUMMARY.json").is_file()
 
@@ -1850,7 +1853,10 @@ def test_summary_missing_capabilities_uses_stage_notes_and_forces_partial(tmp_pa
     assert "ball" in missing
 
 
-def test_coaching_facts_stage_uses_existing_deterministic_builder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_coaching_facts_stage_persists_passing_audit_before_manifest(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     video = tmp_path / "clip.mp4"
     video.write_bytes(b"fake-video")
     options = _base_options(tmp_path, video=video, court_corners=None)
@@ -1861,25 +1867,141 @@ def test_coaching_facts_stage_uses_existing_deterministic_builder(tmp_path: Path
         "rallies": [],
         "player_count": 0,
         "rally_scope": "clip_fallback",
-        "coaching_card_facts": {"artifact_type": "coaching_card_facts", "facts": []},
+        "coaching_card_facts": {
+            "artifact_type": "coaching_card_facts",
+            "facts": [{"legacy": True}],
+            "audited_facts": [{"fact_id": "ns051.runner-pass"}],
+        },
     }
     calls: list[Path] = []
+    audit_calls: list[tuple[Path, Path]] = []
+    audit_report = {
+        "schema_version": 1,
+        "artifact_type": "coaching_fact_zero_fabrication_audit",
+        "verdict": "pass",
+        "checked_fact_count": 1,
+        "checked_source_count": 2,
+        "issue_codes": [],
+        "issues": [],
+    }
 
     def _fake_builder(run_dir: Path) -> dict[str, Any]:
         calls.append(Path(run_dir))
         return expected
 
+    def _fake_audit(path: Path, *, manifest_path: Path) -> dict[str, Any]:
+        audit_calls.append((Path(path), Path(manifest_path)))
+        assert Path(path).is_file()
+        assert not Path(manifest_path).exists()
+        return audit_report
+
     monkeypatch.setattr(process_video, "build_rally_metrics", _fake_builder)
+    monkeypatch.setattr(process_video, "audit_coaching_facts_file", _fake_audit)
     pipeline = process_video.ProcessVideoPipeline(options)
     _write_json(options.clip_dir / "virtual_world.json", _virtual_world_payload())
     _write_json(options.clip_dir / "court_zones.json", _match_stats_court_zones_payload())
+    _write_json(options.clip_dir / "replay_viewer_manifest.json", {"stale": True})
 
     outcome = pipeline._stage_coaching_facts()
 
     assert calls == [options.clip_dir]
+    assert audit_calls == [
+        (
+            options.clip_dir / "coaching_card_facts.json",
+            options.clip_dir / "replay_viewer_manifest.json",
+        )
+    ]
     assert outcome.status == "ran"
+    assert outcome.metrics["fact_count"] == 1
     assert json.loads((options.clip_dir / "rally_metrics.json").read_text()) == expected
     assert json.loads((options.clip_dir / "coaching_card_facts.json").read_text()) == expected["coaching_card_facts"]
+    assert json.loads((options.clip_dir / "coaching_fact_audit.json").read_text()) == audit_report
+    assert not (options.clip_dir / "replay_viewer_manifest.json").exists()
+
+
+def test_coaching_facts_audit_rejection_excludes_facts_and_keeps_bundle_partial(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    facts = {
+        "artifact_type": "coaching_card_facts",
+        "facts": [],
+        "audited_facts": [{"fact_id": "ns051.rejected"}],
+    }
+    monkeypatch.setattr(
+        process_video,
+        "build_rally_metrics",
+        lambda run_dir: {"rallies": [], "rally_scope": "clip_fallback", "coaching_card_facts": facts},
+    )
+    rejected_audit = {
+        "schema_version": 1,
+        "artifact_type": "coaching_fact_zero_fabrication_audit",
+        "verdict": "reject",
+        "checked_fact_count": 1,
+        "checked_source_count": 1,
+        "issue_codes": ["canonical_mismatch"],
+        "issues": [{"code": "canonical_mismatch", "path": "/audited_facts/0/value"}],
+    }
+    monkeypatch.setattr(process_video, "audit_coaching_facts_file", lambda *args, **kwargs: rejected_audit)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    _write_json(options.clip_dir / "virtual_world.json", _virtual_world_payload())
+    _write_json(options.clip_dir / "court_zones.json", _match_stats_court_zones_payload())
+
+    outcome = pipeline._stage_coaching_facts()
+    pipeline.stage_outcomes.append(outcome)
+    manifest_outcome = pipeline._stage_manifest()
+    pipeline.stage_outcomes.append(manifest_outcome)
+    summary = pipeline._write_summary(wall_seconds=0.1)
+
+    assert outcome.status == "degraded"
+    assert outcome.metrics["reason"] == "zero_fabrication_audit_rejected"
+    assert outcome.metrics["audit_issue_codes"] == ["canonical_mismatch"]
+    assert not (options.clip_dir / "rally_metrics.json").exists()
+    assert not (options.clip_dir / "coaching_card_facts.json").exists()
+    assert json.loads((options.clip_dir / "coaching_fact_audit.json").read_text()) == rejected_audit
+    manifest = json.loads((options.clip_dir / "replay_viewer_manifest.json").read_text())
+    assert manifest.get("coaching_card_facts_url") is None
+    assert summary["status"] == "partial"
+    coaching_gap = next(item for item in summary["missing_capabilities"] if item["capability"] == "coaching")
+    assert "zero_fabrication_audit_rejected" in coaching_gap["reason"]
+
+
+def test_coaching_facts_audit_persists_explicit_rejection_when_inputs_absent(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    _write_json(options.clip_dir / "coaching_card_facts.json", {"stale": True})
+    _write_json(options.clip_dir / "rally_metrics.json", {"stale": True})
+    _write_json(options.clip_dir / "replay_viewer_manifest.json", {"stale": True})
+
+    outcome = pipeline._stage_coaching_facts()
+
+    audit = json.loads((options.clip_dir / "coaching_fact_audit.json").read_text())
+    assert outcome.status == "degraded"
+    assert outcome.metrics == {
+        "reason": "audit_missing_inputs",
+        "missing_inputs": ["virtual_world.json", "court_zones.json"],
+        "audit_issue_codes": ["missing_inputs"],
+    }
+    assert audit["verdict"] == "reject"
+    assert audit["issue_codes"] == ["missing_inputs"]
+    assert audit["issues"] == [
+        {
+            "code": "missing_inputs",
+            "path": "/runner_inputs",
+            "missing_inputs": ["virtual_world.json", "court_zones.json"],
+        }
+    ]
+    assert not (options.clip_dir / "coaching_card_facts.json").exists()
+    assert not (options.clip_dir / "rally_metrics.json").exists()
+    assert not (options.clip_dir / "replay_viewer_manifest.json").exists()
 
 
 def test_manifest_advertises_only_finished_stats_and_coaching(tmp_path: Path) -> None:
@@ -1897,6 +2019,7 @@ def test_manifest_advertises_only_finished_stats_and_coaching(tmp_path: Path) ->
 
     _write_json(options.clip_dir / "match_stats.json", {"artifact_type": "racketsport_match_stats"})
     _write_json(options.clip_dir / "coaching_card_facts.json", {"artifact_type": "coaching_card_facts", "facts": []})
+    _write_json(options.clip_dir / "coaching_fact_audit.json", {"verdict": "pass"})
     pipeline.stage_outcomes.extend(
         [
             process_video.StageOutcome(
@@ -1909,7 +2032,7 @@ def test_manifest_advertises_only_finished_stats_and_coaching(tmp_path: Path) ->
                 stage="coaching_facts",
                 status="ran",
                 wall_seconds=0.0,
-                artifacts=["rally_metrics.json", "coaching_card_facts.json"],
+                artifacts=["rally_metrics.json", "coaching_card_facts.json", "coaching_fact_audit.json"],
             ),
         ]
     )
