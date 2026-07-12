@@ -1,0 +1,119 @@
+{
+  "objective_result": "PASS",
+  "method-hypothesis summary": {
+    "summary": "The supplied data is strongly consistent with a temporally selected, event-anchored, piecewise ballistic lift: hard shot/bounce geometry, global candidate rejection, robust deviation from noisy per-frame ball pixels, conservative omission, and rare explicit interpolation. The exact optimizer, filter, radius usage, drag, and Magnus usage are not facts exposed by the export.",
+    "coordinate_frame": "PB uses feet in a 20x44 corner-origin court frame. x_ours_m=(x_pb_ft-10)*0.3048; y_ours_m=(22-y_pb_ft)*0.3048; z_ours_m=z_pb_ft*0.3048.",
+    "camera": "One static segment spans frames 0..299 at 30 fps. FOV=1.212824996 rad. Twelve normalized court points carry confidence 0.924129..0.980230 and spread 0.001061..0.007502; spread semantics are undocumented.",
+    "selected_stream": "183/252 frames: 173 ball, 6 shot, 3 bounce, 1 net. Two emitted runs are 73..125 and 132..261. Only frame 116 is interpolated=true (1/183=0.546%); 69 frames are omitted.",
+    "anchors": "All six shot and three bounce positions reproject to their selected action pixel within 1.5e-12 px. All three bounce z values equal 0.037744399 m to numerical precision. Median boundary delta-velocity is 44.61x the interior median.",
+    "selection": "Selected type equals per-frame action argmax on only 80.87%. Omitted-frame max action confidence has p50/p95/max 0.542/0.938/0.968, and only three of seven bounce-confidence peaks >=0.5 are selected bounces.",
+    "radius_depth": "On 168 paired frames, radius_v vs inverse camera depth has Pearson r=0.850, Spearman r=0.774, and linear R2=0.722. This is cue evidence, not proof of causal use.",
+    "no_gt_pillars": {
+      "physics": "9/9 evaluable PB intervals pass the declared diagnostic; segment re-integration RMSE p50/max=0.0231/0.1350 m. This is self-consistency, not accuracy.",
+      "bounce": "Selected bounce z-minus-inferred-radius max error is below 3e-16 m; raw confidence peaks are not all plane-consistent and are not pseudo-GT by themselves.",
+      "reprojection": "All selected 3D p50/p95=23.37/206.37 px; ordinary ball p50/p95=25.35/213.18 px, while shot/bounce anchors are numerically exact. Undocumented distortion/internal candidates may contribute to the ordinary-ball tail."
+    }
+  },
+  "gap-decomposition table": [
+    {
+      "gap": "segmentation/anchoring",
+      "attribution": "primary structural",
+      "measurements": "Our current artifact: 0 contact anchors, 10 bounce anchors, 11 segments, 9/11 fallback; only 2/3 PB selected bounces matched within 2 frames. PB exports 6 shot, 3 bounce, 1 net boundaries with 44.61x boundary/interior median delta-v.",
+      "path": "TT3D joint anchor search, audio/Blur event evidence, then whole-rally DP if local search remains unstable."
+    },
+    {
+      "gap": "camera/scale",
+      "attribution": "ruled down as dominant",
+      "measurements": "Camera center delta 0.02694 m; horizontal-FOV delta 0.274 deg; PB-vs-our camera court projection p50/p95 8.93/13.00 px. Fit-only 3D still differs from PB by 4.64 m p50.",
+      "path": "Keep as a control; do not spend the next reproduction experiment on another camera solve."
+    },
+    {
+      "gap": "fit robustness and monocular depth",
+      "attribution": "major residual",
+      "measurements": "Our 2D coverage is 80.6% vs PB 58.7%, but overlap p95 is 163.76 px with 8 frames >50 px. Our fit reprojection p50 is 2.52 px yet fit-only 3D disagreement is 4.64 m p50. PB radius-depth R2 is 0.722; our artifact size_observation_count is 0.",
+      "path": "Dedicated inlier pass, both-ends constraints, then independent radius-depth residual."
+    },
+    {
+      "gap": "gap filling/emission policy",
+      "attribution": "largest immediate visible",
+      "measurements": "PB emits 183/252=72.6% with 0.55% explicit interpolation. Raw ours emits 252/252 with 229/252=90.9% fallback; gated ours emits 58/252=23.0% and has 196 hidden-no-prediction bands. PB-parity coverage gap is 125 frames/49.6 points.",
+      "path": "Seeded UKF/physics recovery between fail-open raw output and blanket suppression, always labeled predicted."
+    }
+  ],
+  "reproduction map ranking": [
+    {
+      "rank": 1,
+      "path": "UKF seeded from adjacent accepted fits behind fail-closed gates",
+      "gap_closed": "125-frame gated coverage deficit without exposing 229 weak fallback frames",
+      "expected_effect_size": "Up to +49.6 coverage points toward PB's 72.6% comparator coverage; accuracy effect unknown without GT.",
+      "kill_criteria": "Kill if recovered intervals reduce the current emitted 5/5 physics-plausible rate, create >35 m/s steps, worsen bounce/net plausibility, or are labeled measured."
+    },
+    {
+      "rank": 2,
+      "path": "TT3D joint anchor-state search (core landed; fresh frozen-harness run required)",
+      "gap_closed": "9/11 fallback and missed frame-104 bounce",
+      "expected_effect_size": "At least four recovered segments, satisfying standing fallback <5/11 kill target.",
+      "kill_criteria": "Kill/deprioritize if a fresh same-input candidate remains >=5/11 fallback; candidate density or event evidence is then the bottleneck."
+    },
+    {
+      "rank": 3,
+      "path": "ball_radius depth residual (#9)",
+      "gap_closed": "Planar/depth ambiguity after camera and 2D reprojection controls",
+      "expected_effect_size": "Consume supported size observations instead of 0; PB cue explains 72.2% of radius variance under inverse-depth regression. Meter accuracy effect is not estimable here.",
+      "kill_criteria": "Kill if held-out reprojection, bounce pseudo-GT, and segment stability do not improve under frozen 2D/camera inputs."
+    },
+    {
+      "rank": 4,
+      "path": "visual-gated audio plus BlurBall/WASB blur anchor boosters",
+      "gap_closed": "0 our contact anchors versus six PB typed shot boundaries; missed bounce event",
+      "expected_effect_size": "Add correctly timed candidate anchors before solver changes; exact count must come from reviewed event evidence, not PB.",
+      "kill_criteria": "Kill if frozen reviewed event timing/precision does not improve even if the competitor sequence looks closer."
+    },
+    {
+      "rank": 5,
+      "path": "both-ends pinning plus dedicated RANSAC/inlier pass",
+      "gap_closed": "8-frame >50 px 2D tail, fallback reprojection p50 455 px, accepted-fit depth instability",
+      "expected_effect_size": "Lower held-out/LOO reprojection and endpoint sensitivity; no honest meter estimate without independent GT.",
+      "kill_criteria": "Kill if accepted segments' held-out residual, endpoint stability, and bounce/net pseudo-GT do not improve."
+    },
+    {
+      "rank": 6,
+      "path": "whole-rally DP segmentation",
+      "gap_closed": "Global over-segmentation: 10 bounce anchors, no contacts, 11 segments",
+      "expected_effect_size": "Fewer spurious boundaries and more stable event intervals across detector perturbations.",
+      "kill_criteria": "Kill if fallback and boundary instability do not improve on the frozen clip set; never tune to PB's event count as if it were GT."
+    }
+  ],
+  "clip-match result": {
+    "matched": true,
+    "clip": "wolverine_mixed_0200_mid_steep_corner",
+    "pb_vid": "emwt3u5kzavy",
+    "mapping": "ours_frame = PB_global_frame; PB_rally_local_frame + 45",
+    "evidence": "2D r=0.9492 on 137 pairs at offset 0; paired pixel p50=5.69; 12-point court residual p50=5.67; 300 frames at 30 fps; camera center/FOV agreement.",
+    "local_source_sha256": "7f6c33b7cfd94a063405b68708d37d968cc1850e7435aa875f5b30f0afb6cb4b",
+    "processed_worlds": [
+      "runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner",
+      "runs/lanes/demo_beststack_render_20260710/after_wolv",
+      "runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner"
+    ],
+    "owner_ask": null,
+    "cryptographic_limit": "PB export contains no filename/source hash, so the PB-side source cannot be hash-matched."
+  },
+  "harness usage line": ".venv/bin/python runs/lanes/pbv_reveng_20260712/compare_vs_pbvision.py --pb-export runs/research_ball3d_20260709/pbvision_cv_export/cv_export.json --ours <our-run-dir-or-ball/world.json> --frame-offset auto --output <scorecard.json>",
+  "HONEST ISSUES": [
+    "PB is a competitor comparator, not ground truth; Bland-Altman and deltas measure disagreement, not accuracy.",
+    "The PB Euler convention and feet transform are inferred, though court/event reprojection and matched camera geometry strongly support them.",
+    "PB court_points have no exported semantic identities; PB-only court reprojection cannot be assigned without the matched local calibration.",
+    "interpolated=false is not proven measured: 39 selected rows have selected-action confidence below 0.5.",
+    "The radius-depth relationship is correlational and does not prove PB used radius in its objective.",
+    "The exact optimizer, temporal selector, filter, drag term, and Magnus term are hypothesis-not-fact.",
+    "Physics re-integration can pass a wrong but internally generated trajectory; our absurd raw fallbacks demonstrate this directly.",
+    "The lane physics/teleport/net thresholds are diagnostics, not product promotion gates.",
+    "PB bounce selections and event pixels are not independent reviewed GT; raw confidence peaks contain false/duplicate candidates.",
+    "Ordinary PB ball reprojection tail may include unexported distortion or candidates; exact event reprojection makes the anchor contrast real but does not expose hidden fields.",
+    "The source match is evidence-strong but not cryptographic on PB's side because the export omits source identity.",
+    "Only the current pulled raw arc and confidence-gated world were scored; TT3D, radius, audio/Blur, DP, inlier, and UKF effects remain predictions until fresh same-harness runs.",
+    "Protected Outdoor/Indoor clips were not read. VERIFIED=0 remains binding."
+  ],
+  "BEST-STACK DELTA (c)": "none"
+}
