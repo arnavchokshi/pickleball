@@ -920,3 +920,880 @@ def score_line_color_consistency_for_assignment(
         "mixed_layer_penalty": round(float(mixed_penalty), 4),
         "per_line": per_line,
     }
+
+
+# ---------------------------------------------------------------------------
+# Subpixel finite-width paint-band centerlines (CAL rank 2, additive opt-in).
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class PaintCenterlineSample:
+    """One supported paint-center observation and its normal uncertainty."""
+
+    xy: tuple[float, float]
+    left_edge_xy: tuple[float, float]
+    right_edge_xy: tuple[float, float]
+    normal: tuple[float, float]
+    normal_variance_px2: float
+    normal_covariance_px2: tuple[tuple[float, float], tuple[float, float]]
+    band_width_px: float
+    contrast: float
+    edge_fit_residual: float
+
+
+@dataclass(frozen=True)
+class PaintCenterlineCandidate:
+    """Subpixel centerline evidence for one finite-width bright paint band."""
+
+    endpoints: tuple[tuple[float, float], tuple[float, float]]
+    sampled_points: tuple[PaintCenterlineSample, ...]
+    support_length_px: float
+    coverage_fraction: float
+    band_width_px: float
+    band_width_p90_px: float
+    polarity: str
+    polarity_score: float
+    family_hint: str
+    orientation_hint: str
+    angle_deg: float
+    provider: str
+    preprocessing: str
+
+    def as_dict(self) -> dict[str, Any]:
+        """Return a JSON-compatible fixed candidate payload."""
+
+        return {
+            "endpoints": [[float(value) for value in point] for point in self.endpoints],
+            "sampled_points": [
+                {
+                    "xy": list(sample.xy),
+                    "left_edge_xy": list(sample.left_edge_xy),
+                    "right_edge_xy": list(sample.right_edge_xy),
+                    "normal": list(sample.normal),
+                    "normal_variance_px2": sample.normal_variance_px2,
+                    "normal_covariance_px2": [list(row) for row in sample.normal_covariance_px2],
+                    "band_width_px": sample.band_width_px,
+                    "contrast": sample.contrast,
+                    "edge_fit_residual": sample.edge_fit_residual,
+                }
+                for sample in self.sampled_points
+            ],
+            "support_length_px": self.support_length_px,
+            "coverage_fraction": self.coverage_fraction,
+            "band_width_px": self.band_width_px,
+            "band_width_p90_px": self.band_width_p90_px,
+            "polarity": self.polarity,
+            "polarity_score": self.polarity_score,
+            "family_hint": self.family_hint,
+            "orientation_hint": self.orientation_hint,
+            "angle_deg": self.angle_deg,
+            "provider": self.provider,
+            "preprocessing": self.preprocessing,
+        }
+
+
+@dataclass(frozen=True)
+class LegacyPaintEvidenceSample:
+    """One legacy evidence location to refine without changing its coverage."""
+
+    xy: tuple[float, float]
+    normal: tuple[float, float]
+    source_id: str | None = None
+
+
+@dataclass(frozen=True)
+class HybridPaintEvidenceSample:
+    """No-drop legacy sample with optional paired-edge subpixel refinement."""
+
+    xy: tuple[float, float]
+    legacy_xy: tuple[float, float]
+    normal: tuple[float, float]
+    normal_variance_px2: float
+    normal_covariance_px2: tuple[tuple[float, float], tuple[float, float]]
+    provenance: str
+    band_width_px: float | None
+    contrast: float | None
+    edge_fit_residual: float | None
+    source_id: str | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "xy": list(self.xy),
+            "legacy_xy": list(self.legacy_xy),
+            "normal": list(self.normal),
+            "normal_variance_px2": self.normal_variance_px2,
+            "normal_covariance_px2": [list(row) for row in self.normal_covariance_px2],
+            "provenance": self.provenance,
+            "band_width_px": self.band_width_px,
+            "contrast": self.contrast,
+            "edge_fit_residual": self.edge_fit_residual,
+            "source_id": self.source_id,
+        }
+
+
+@dataclass(frozen=True)
+class HybridPaintEvidenceSegment:
+    """Legacy segment whose samples are all preserved and selectively refined."""
+
+    legacy_endpoints: tuple[tuple[float, float], tuple[float, float]]
+    endpoints: tuple[tuple[float, float], tuple[float, float]]
+    sampled_points: tuple[HybridPaintEvidenceSample, ...]
+    support_length_px: float
+    band_refined_fraction: float
+
+
+def refine_legacy_paint_samples(
+    image_bgr: Any,
+    legacy_samples: Sequence[LegacyPaintEvidenceSample | Mapping[str, Any]],
+    *,
+    seed_calibration: Any | None = None,
+    preprocessing: str = "raw",
+    max_refined_band_width_px: float = 16.0,
+) -> list[HybridPaintEvidenceSample]:
+    """Refine confirmed paint bands and preserve every declined legacy sample.
+
+    Output cardinality and order always equal the input. A local profile moves
+    a sample only when both signed-gradient edges, bright-on-dark polarity, and
+    the applicable 2-inch width prior confirm. Otherwise the original point is
+    emitted exactly with ``provenance='legacy_raw'`` and deliberately higher
+    normal covariance. Bands above 10 px additionally require unsaturated
+    contrast and very low fit variance; the default 16 px hard cap makes broad
+    bands conservative fallbacks. Callers may raise it explicitly only after
+    measuring the same no-regression gate.
+    """
+
+    import cv2  # type: ignore[import-not-found]
+    import numpy as np
+
+    if image_bgr is None or not hasattr(image_bgr, "shape") or len(image_bgr.shape) < 2:
+        raise ValueError("image_bgr must be an image array")
+    if preprocessing not in {"raw", "shadow_compensated"}:
+        raise ValueError(f"unsupported paint centerline preprocessing: {preprocessing}")
+    if max_refined_band_width_px <= 0.0:
+        raise ValueError("max_refined_band_width_px must be positive")
+    normalized = [_coerce_legacy_paint_sample(sample) for sample in legacy_samples]
+    if not normalized:
+        return []
+
+    working = image_bgr
+    if preprocessing == "shadow_compensated":
+        from .overlapping_court_calibration import shadow_removal_preprocess
+
+        working, _metadata = shadow_removal_preprocess(image_bgr)
+    gray = cv2.GaussianBlur(_gray(working), (0, 0), 0.8).astype(np.float32)
+
+    width_windows: list[tuple[float, float]] = []
+    unit_normals: list[Any] = []
+    for sample in normalized:
+        normal = np.asarray(sample.normal, dtype=np.float64)
+        length = float(np.linalg.norm(normal))
+        if length <= 1e-9:
+            raise ValueError("legacy sample normal must be non-zero")
+        normal /= length
+        unit_normals.append(normal)
+        expected_width = _seed_expected_paint_width_px(seed_calibration, sample.xy, normal)
+        width_windows.append(_paint_width_window(gray.shape[:2], expected_width))
+
+    scan_radius = int(math.ceil(max(maximum for _minimum, maximum in width_windows) * 1.25 + 3.0))
+    scan_radius = max(7, min(80, scan_radius))
+    offsets = np.arange(-scan_radius, scan_radius + 1, dtype=np.float64)
+    points = np.asarray([sample.xy for sample in normalized], dtype=np.float64)
+    normals = np.asarray(unit_normals, dtype=np.float64)
+    map_x = (points[:, 0:1] + normals[:, 0:1] * offsets[None, :]).astype(np.float32)
+    map_y = (points[:, 1:2] + normals[:, 1:2] * offsets[None, :]).astype(np.float32)
+    profiles = cv2.remap(
+        gray,
+        map_x,
+        map_y,
+        interpolation=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=float("nan"),
+    )
+
+    results: list[HybridPaintEvidenceSample] = []
+    for sample, normal, profile, (min_width, max_width) in zip(
+        normalized, normals, profiles, width_windows, strict=True
+    ):
+        fit = _fit_bright_band_profile(profile, offsets, min_width=min_width, max_width=max_width)
+        if fit is not None:
+            left_offset, right_offset, contrast, edge_residual, normal_variance = fit
+            # The legacy observation must lie on or inside the confirmed band;
+            # this prevents a nearby parallel stripe from stealing refinement.
+            contains_legacy = left_offset <= 1.25 and right_offset >= -1.25
+            center_offset = (left_offset + right_offset) * 0.5
+            local_limit = max(1.5, (right_offset - left_offset) * 0.65)
+            high_confidence_width = (right_offset - left_offset) <= max_refined_band_width_px
+            width = right_offset - left_offset
+            broad_band_is_precise = width <= 10.0 or (contrast <= 120.0 and normal_variance <= 0.008)
+            if contains_legacy and high_confidence_width and broad_band_is_precise and abs(center_offset) <= local_limit:
+                refined = np.asarray(sample.xy, dtype=np.float64) + center_offset * normal
+                covariance = normal_variance * np.outer(normal, normal)
+                results.append(
+                    HybridPaintEvidenceSample(
+                        xy=(float(refined[0]), float(refined[1])),
+                        legacy_xy=sample.xy,
+                        normal=(float(normal[0]), float(normal[1])),
+                        normal_variance_px2=float(normal_variance),
+                        normal_covariance_px2=(
+                            (float(covariance[0, 0]), float(covariance[0, 1])),
+                            (float(covariance[1, 0]), float(covariance[1, 1])),
+                        ),
+                        provenance="band_refined",
+                        band_width_px=float(right_offset - left_offset),
+                        contrast=float(contrast),
+                        edge_fit_residual=float(edge_residual),
+                        source_id=sample.source_id,
+                    )
+                )
+                continue
+
+        raw_variance = max(4.0, (max_width * 0.5) ** 2 + 1.0)
+        covariance = raw_variance * np.outer(normal, normal)
+        results.append(
+            HybridPaintEvidenceSample(
+                xy=sample.xy,
+                legacy_xy=sample.xy,
+                normal=(float(normal[0]), float(normal[1])),
+                normal_variance_px2=float(raw_variance),
+                normal_covariance_px2=(
+                    (float(covariance[0, 0]), float(covariance[0, 1])),
+                    (float(covariance[1, 0]), float(covariance[1, 1])),
+                ),
+                provenance="legacy_raw",
+                band_width_px=None,
+                contrast=None,
+                edge_fit_residual=None,
+                source_id=sample.source_id,
+            )
+        )
+    return results
+
+
+def refine_legacy_paint_segments(
+    image_bgr: Any,
+    legacy_segments: Sequence[Any],
+    *,
+    seed_calibration: Any | None = None,
+    preprocessing: str = "raw",
+    sample_spacing_px: float = 8.0,
+    max_samples_per_segment: int = 8,
+    max_refinement_segments: int = 96,
+    max_refined_band_width_px: float = 16.0,
+) -> list[HybridPaintEvidenceSegment]:
+    """Sample a bounded proposal set and preserve every legacy segment.
+
+    The longest ``max_refinement_segments`` proposals receive bounded normal
+    scans. Remaining segments are emitted unchanged with high-covariance raw
+    endpoints, so runtime is bounded without a coverage drop.
+    """
+
+    if sample_spacing_px <= 0.0:
+        raise ValueError("sample_spacing_px must be positive")
+    if max_samples_per_segment < 2:
+        raise ValueError("max_samples_per_segment must be at least two")
+    if max_refinement_segments <= 0:
+        raise ValueError("max_refinement_segments must be positive")
+    prepared: list[
+        tuple[int, tuple[tuple[float, float], tuple[float, float]], float, tuple[LegacyPaintEvidenceSample, ...]]
+    ] = []
+    for segment_index, raw_segment in enumerate(legacy_segments):
+        p1, p2 = _coerce_legacy_segment(raw_segment)
+        length = math.dist(p1, p2)
+        if length <= 1e-6:
+            continue
+        direction = ((p2[0] - p1[0]) / length, (p2[1] - p1[1]) / length)
+        normal = (-direction[1], direction[0])
+        count = max(2, min(max_samples_per_segment, int(math.ceil(length / sample_spacing_px)) + 1))
+        samples: list[LegacyPaintEvidenceSample] = []
+        for sample_index in range(count):
+            t = sample_index / float(count - 1)
+            samples.append(
+                LegacyPaintEvidenceSample(
+                    xy=(p1[0] + (p2[0] - p1[0]) * t, p1[1] + (p2[1] - p1[1]) * t),
+                    normal=normal,
+                    source_id=f"segment_{segment_index}:sample_{sample_index}",
+                )
+            )
+        prepared.append((segment_index, (p1, p2), length, tuple(samples)))
+
+    selected_indexes = {
+        segment_index
+        for segment_index, _endpoints, _length, _samples in sorted(
+            prepared, key=lambda row: row[2], reverse=True
+        )[:max_refinement_segments]
+    }
+    flattened: list[LegacyPaintEvidenceSample] = []
+    selected_slices: dict[int, tuple[int, int]] = {}
+    for segment_index, _endpoints, _length, samples in prepared:
+        if segment_index not in selected_indexes:
+            continue
+        start = len(flattened)
+        flattened.extend(samples)
+        selected_slices[segment_index] = (start, len(flattened))
+    refined = refine_legacy_paint_samples(
+        image_bgr,
+        flattened,
+        seed_calibration=seed_calibration,
+        preprocessing=preprocessing,
+        max_refined_band_width_px=max_refined_band_width_px,
+    )
+    results: list[HybridPaintEvidenceSegment] = []
+    for segment_index, legacy_endpoints, length, legacy_samples in prepared:
+        selected_slice = selected_slices.get(segment_index)
+        if selected_slice is None:
+            samples = tuple(
+                _legacy_raw_hybrid_sample(
+                    sample,
+                    image_shape=image_bgr.shape[:2],
+                    seed_calibration=seed_calibration,
+                )
+                for sample in (legacy_samples[0], legacy_samples[-1])
+            )
+        else:
+            start, stop = selected_slice
+            samples = tuple(refined[start:stop])
+        refined_count = sum(sample.provenance == "band_refined" for sample in samples)
+        results.append(
+            HybridPaintEvidenceSegment(
+                legacy_endpoints=legacy_endpoints,
+                endpoints=(samples[0].xy, samples[-1].xy),
+                sampled_points=samples,
+                support_length_px=length,
+                band_refined_fraction=refined_count / float(len(samples)),
+            )
+        )
+    return results
+
+
+def _legacy_raw_hybrid_sample(
+    sample: LegacyPaintEvidenceSample,
+    *,
+    image_shape: Sequence[int],
+    seed_calibration: Any | None,
+) -> HybridPaintEvidenceSample:
+    import numpy as np
+
+    normal = np.asarray(sample.normal, dtype=np.float64)
+    normal /= max(float(np.linalg.norm(normal)), 1e-12)
+    expected_width = _seed_expected_paint_width_px(seed_calibration, sample.xy, normal)
+    _minimum, maximum = _paint_width_window(image_shape, expected_width)
+    variance = max(4.0, (maximum * 0.5) ** 2 + 1.0)
+    covariance = variance * np.outer(normal, normal)
+    return HybridPaintEvidenceSample(
+        xy=sample.xy,
+        legacy_xy=sample.xy,
+        normal=(float(normal[0]), float(normal[1])),
+        normal_variance_px2=float(variance),
+        normal_covariance_px2=(
+            (float(covariance[0, 0]), float(covariance[0, 1])),
+            (float(covariance[1, 0]), float(covariance[1, 1])),
+        ),
+        provenance="legacy_raw",
+        band_width_px=None,
+        contrast=None,
+        edge_fit_residual=None,
+        source_id=sample.source_id,
+    )
+
+
+def _coerce_legacy_paint_sample(
+    sample: LegacyPaintEvidenceSample | Mapping[str, Any],
+) -> LegacyPaintEvidenceSample:
+    if isinstance(sample, LegacyPaintEvidenceSample):
+        return sample
+    if not isinstance(sample, Mapping) or not _is_xy(sample.get("xy")) or not _is_xy(sample.get("normal")):
+        raise ValueError("legacy sample must contain xy and normal pairs")
+    return LegacyPaintEvidenceSample(
+        xy=(float(sample["xy"][0]), float(sample["xy"][1])),
+        normal=(float(sample["normal"][0]), float(sample["normal"][1])),
+        source_id=str(sample["source_id"]) if sample.get("source_id") is not None else None,
+    )
+
+
+def _coerce_legacy_segment(raw_segment: Any) -> tuple[tuple[float, float], tuple[float, float]]:
+    if isinstance(raw_segment, Mapping):
+        p1 = raw_segment.get("p1")
+        p2 = raw_segment.get("p2")
+    elif isinstance(raw_segment, Sequence) and len(raw_segment) == 2:
+        p1, p2 = raw_segment
+    else:
+        raise ValueError("legacy segment must contain two endpoints")
+    if not _is_xy(p1) or not _is_xy(p2):
+        raise ValueError("legacy segment endpoints must be xy pairs")
+    return ((float(p1[0]), float(p1[1])), (float(p2[0]), float(p2[1])))
+
+
+def detect_paint_centerline_candidates(
+    image_bgr: Any,
+    *,
+    seed_calibration: Any | None = None,
+    provider: str = "classical_paired_edges",
+    preprocessing: str = "raw",
+    min_support_length_px: float | None = None,
+    max_candidates: int = 96,
+) -> list[PaintCenterlineCandidate]:
+    """Detect finite-width bright court paint as paired signed-gradient edges.
+
+    This API is intentionally separate from the legacy Hough/LSD APIs. It does
+    not change their defaults. ``seed_calibration`` is optional; when supplied,
+    its world-to-image homography converts the regulation 2-inch paint width to
+    a local pixel-width prior. Without a seed, a deliberately loose image-scale
+    prior is used. ``preprocessing='shadow_compensated'`` is an explicit A/B
+    arm and imports the existing deterministic shadow normalizer lazily.
+
+    The classical provider merges Hough and locally available OpenCV LSD only
+    to propose orientations/extents; every returned line is located from the
+    two opposite signed-gradient edges. The LSD-only proposal arm is explicit via
+    ``provider='opencv_lsd_paired_edges'`` and uses the same paired-edge fit.
+    """
+
+    import cv2  # type: ignore[import-not-found]
+    import numpy as np
+
+    if image_bgr is None or not hasattr(image_bgr, "shape") or len(image_bgr.shape) < 2:
+        raise ValueError("image_bgr must be an image array")
+    if provider not in {"classical_paired_edges", "opencv_lsd_paired_edges"}:
+        raise ValueError(f"unsupported paint centerline provider: {provider}")
+    if preprocessing not in {"raw", "shadow_compensated"}:
+        raise ValueError(f"unsupported paint centerline preprocessing: {preprocessing}")
+    if max_candidates <= 0:
+        raise ValueError("max_candidates must be positive")
+
+    working = image_bgr
+    if preprocessing == "shadow_compensated":
+        from .overlapping_court_calibration import shadow_removal_preprocess
+
+        working, _metadata = shadow_removal_preprocess(image_bgr)
+    gray_u8 = _gray(working)
+    height, width = gray_u8.shape[:2]
+    if height <= 0 or width <= 0:
+        return []
+    gray = cv2.GaussianBlur(gray_u8, (0, 0), 0.8).astype(np.float32)
+    minimum_support = (
+        float(min_support_length_px)
+        if min_support_length_px is not None
+        else max(18.0, min(width, height) * 0.045)
+    )
+    if provider == "opencv_lsd_paired_edges":
+        proposal_rows = extract_lsd_line_segments(working)
+    else:
+        # The primary classical arm unions two locally available proposal
+        # mechanisms before the shared paired-edge fit. Hough contributes
+        # long stable extents; LSD recovers shorter/blurred paint fragments.
+        proposal_rows = dedupe_line_segments(
+            extract_hough_line_segments(working) + extract_lsd_line_segments(working)
+        )
+    proposal_rows = [row for row in proposal_rows if float(row.get("length_px", 0.0)) >= minimum_support]
+
+    candidates: list[PaintCenterlineCandidate] = []
+    for proposal in proposal_rows[:96]:
+        candidate = _paint_candidate_from_proposal(
+            gray,
+            proposal,
+            seed_calibration=seed_calibration,
+            provider=provider,
+            preprocessing=preprocessing,
+            minimum_support=minimum_support,
+        )
+        if candidate is not None:
+            candidates.append(candidate)
+    return _dedupe_paint_centerlines(candidates, max_candidates=max_candidates)
+
+
+def _paint_candidate_from_proposal(
+    gray: Any,
+    proposal: Mapping[str, Any],
+    *,
+    seed_calibration: Any | None,
+    provider: str,
+    preprocessing: str,
+    minimum_support: float,
+) -> PaintCenterlineCandidate | None:
+    import cv2  # type: ignore[import-not-found]
+    import numpy as np
+
+    p1 = np.asarray(proposal["p1"], dtype=np.float64)
+    p2 = np.asarray(proposal["p2"], dtype=np.float64)
+    delta = p2 - p1
+    proposal_length = float(np.linalg.norm(delta))
+    if proposal_length < minimum_support:
+        return None
+    direction = delta / proposal_length
+    normal = np.asarray([-direction[1], direction[0]], dtype=np.float64)
+    midpoint = (p1 + p2) * 0.5
+    expected_width = _seed_expected_paint_width_px(seed_calibration, midpoint, normal)
+    min_width, max_width = _paint_width_window(gray.shape[:2], expected_width)
+    scan_radius = int(math.ceil(max(7.0, max_width * 1.25 + 3.0)))
+
+    sample_count = max(8, min(56, int(math.ceil(proposal_length / 8.0)) + 1))
+    tangential = np.linspace(0.0, proposal_length, sample_count, dtype=np.float64)
+    offsets = np.arange(-scan_radius, scan_radius + 1, dtype=np.float64)
+    base = p1[None, :] + tangential[:, None] * direction[None, :]
+    map_x = (base[:, 0:1] + offsets[None, :] * normal[0]).astype(np.float32)
+    map_y = (base[:, 1:2] + offsets[None, :] * normal[1]).astype(np.float32)
+    profiles = cv2.remap(
+        gray,
+        map_x,
+        map_y,
+        interpolation=cv2.INTER_LINEAR,
+        borderMode=cv2.BORDER_CONSTANT,
+        borderValue=float("nan"),
+    )
+
+    raw_samples: list[tuple[float, PaintCenterlineSample]] = []
+    for sample_index, profile in enumerate(profiles):
+        fit = _fit_bright_band_profile(profile, offsets, min_width=min_width, max_width=max_width)
+        if fit is None:
+            continue
+        left_offset, right_offset, contrast, edge_residual, normal_variance = fit
+        center_offset = (left_offset + right_offset) * 0.5
+        center = base[sample_index] + center_offset * normal
+        left = base[sample_index] + left_offset * normal
+        right = base[sample_index] + right_offset * normal
+        covariance = normal_variance * np.outer(normal, normal)
+        raw_samples.append(
+            (
+                float(tangential[sample_index]),
+                PaintCenterlineSample(
+                    xy=(float(center[0]), float(center[1])),
+                    left_edge_xy=(float(left[0]), float(left[1])),
+                    right_edge_xy=(float(right[0]), float(right[1])),
+                    normal=(float(normal[0]), float(normal[1])),
+                    normal_variance_px2=float(normal_variance),
+                    normal_covariance_px2=(
+                        (float(covariance[0, 0]), float(covariance[0, 1])),
+                        (float(covariance[1, 0]), float(covariance[1, 1])),
+                    ),
+                    band_width_px=float(right_offset - left_offset),
+                    contrast=float(contrast),
+                    edge_fit_residual=float(edge_residual),
+                ),
+            )
+        )
+    if len(raw_samples) < max(5, int(math.ceil(sample_count * 0.22))):
+        return None
+
+    points = np.asarray([sample.xy for _, sample in raw_samples], dtype=np.float64)
+    center = np.median(points, axis=0)
+    centered = points - center
+    _values, vectors = np.linalg.eigh(centered.T @ centered)
+    fitted_direction = vectors[:, -1]
+    if float(np.dot(fitted_direction, direction)) < 0.0:
+        fitted_direction = -fitted_direction
+    fitted_normal = np.asarray([-fitted_direction[1], fitted_direction[0]], dtype=np.float64)
+    residuals = np.abs(centered @ fitted_normal)
+    median_residual = float(np.median(residuals))
+    mad = float(np.median(np.abs(residuals - median_residual)))
+    residual_limit = max(0.65, median_residual + 3.5 * max(0.08, 1.4826 * mad))
+    keep = residuals <= residual_limit
+    supported = [row for row, accepted in zip(raw_samples, keep, strict=True) if bool(accepted)]
+    if len(supported) < max(5, int(math.ceil(sample_count * 0.20))):
+        return None
+
+    points = np.asarray([sample.xy for _, sample in supported], dtype=np.float64)
+    center = np.mean(points, axis=0)
+    centered = points - center
+    _values, vectors = np.linalg.eigh(centered.T @ centered)
+    fitted_direction = vectors[:, -1]
+    if float(np.dot(fitted_direction, direction)) < 0.0:
+        fitted_direction = -fitted_direction
+    fitted_normal = np.asarray([-fitted_direction[1], fitted_direction[0]], dtype=np.float64)
+    projections = centered @ fitted_direction
+    endpoint_a = center + float(np.min(projections)) * fitted_direction
+    endpoint_b = center + float(np.max(projections)) * fitted_direction
+    support_length = _gap_aware_support_length([position for position, _sample in supported], proposal_length, sample_count)
+    coverage = min(1.0, support_length / max(proposal_length, 1e-6))
+    if support_length < minimum_support:
+        return None
+
+    adjusted_samples: list[PaintCenterlineSample] = []
+    covariance_axis = np.outer(fitted_normal, fitted_normal)
+    for _position, sample in supported:
+        covariance = sample.normal_variance_px2 * covariance_axis
+        adjusted_samples.append(
+            PaintCenterlineSample(
+                xy=sample.xy,
+                left_edge_xy=sample.left_edge_xy,
+                right_edge_xy=sample.right_edge_xy,
+                normal=(float(fitted_normal[0]), float(fitted_normal[1])),
+                normal_variance_px2=sample.normal_variance_px2,
+                normal_covariance_px2=(
+                    (float(covariance[0, 0]), float(covariance[0, 1])),
+                    (float(covariance[1, 0]), float(covariance[1, 1])),
+                ),
+                band_width_px=sample.band_width_px,
+                contrast=sample.contrast,
+                edge_fit_residual=sample.edge_fit_residual,
+            )
+        )
+    widths = [sample.band_width_px for sample in adjusted_samples]
+    contrasts = [sample.contrast for sample in adjusted_samples]
+    angle = math.degrees(math.atan2(float(fitted_direction[1]), float(fitted_direction[0])))
+    if angle < -90.0:
+        angle += 180.0
+    elif angle > 90.0:
+        angle -= 180.0
+    orientation, family = _paint_orientation_hints(angle)
+    return PaintCenterlineCandidate(
+        endpoints=(
+            (float(endpoint_a[0]), float(endpoint_a[1])),
+            (float(endpoint_b[0]), float(endpoint_b[1])),
+        ),
+        sampled_points=tuple(adjusted_samples),
+        support_length_px=float(support_length),
+        coverage_fraction=float(coverage),
+        band_width_px=float(_percentile(widths, 50.0)),
+        band_width_p90_px=float(_percentile(widths, 90.0)),
+        polarity="bright_band_on_darker_sides",
+        polarity_score=float(_percentile(contrasts, 25.0)),
+        family_hint=family,
+        orientation_hint=orientation,
+        angle_deg=float(angle),
+        provider=provider,
+        preprocessing=preprocessing,
+    )
+
+
+def _fit_bright_band_profile(
+    raw_profile: Any,
+    offsets: Any,
+    *,
+    min_width: float,
+    max_width: float,
+) -> tuple[float, float, float, float, float] | None:
+    import numpy as np
+
+    profile = np.asarray(raw_profile, dtype=np.float64)
+    finite = np.isfinite(profile)
+    if int(finite.sum()) < 9:
+        return None
+    if not bool(finite.all()):
+        valid_indexes = np.flatnonzero(finite)
+        profile = np.interp(np.arange(len(profile)), valid_indexes, profile[valid_indexes])
+    gradient = np.gradient(profile)
+    min_pixels = max(1, int(math.floor(min_width)))
+    max_pixels = min(len(profile) - 4, int(math.ceil(max_width)))
+    rising_candidates = _strong_local_peak_indexes(gradient, minimum=2.0, limit=7)
+    falling_candidates = _strong_local_peak_indexes(-gradient, minimum=2.0, limit=7)
+    best: tuple[float, int, int, float, float] | None = None
+    for left_index in rising_candidates:
+        if left_index < 2 or left_index >= len(profile) - min_pixels - 2:
+            continue
+        rising = float(gradient[left_index])
+        right_start = left_index + min_pixels
+        right_stop = min(len(profile) - 2, left_index + max_pixels + 1)
+        for right_index in falling_candidates:
+            if not (right_start <= right_index < right_stop):
+                continue
+            falling = float(-gradient[right_index])
+            inside = profile[left_index : right_index + 1]
+            left_outside = profile[max(0, left_index - 3) : left_index]
+            right_outside = profile[right_index + 1 : min(len(profile), right_index + 4)]
+            if left_outside.size == 0 or right_outside.size == 0:
+                continue
+            inside_level = float(np.median(inside))
+            left_level = float(np.median(left_outside))
+            right_level = float(np.median(right_outside))
+            contrast_left = inside_level - left_level
+            contrast_right = inside_level - right_level
+            polarity_contrast = min(contrast_left, contrast_right)
+            if polarity_contrast < 7.0:
+                continue
+            filled_threshold = max(left_level, right_level) + 0.45 * polarity_contrast
+            if float(np.mean(inside >= filled_threshold)) < 0.55:
+                continue
+            edge_balance = min(rising, falling) / max(rising, falling)
+            score = polarity_contrast * math.sqrt(max(0.0, rising * falling)) * edge_balance
+            if best is None or score > best[0]:
+                best = (score, left_index, right_index, polarity_contrast, inside_level)
+    if best is None:
+        return None
+    _score, left_index, right_index, contrast, inside_level = best
+    rising_response = gradient
+    falling_response = -gradient
+    left_position, left_residual = _subpixel_parabolic_peak(rising_response, left_index)
+    right_position, right_residual = _subpixel_parabolic_peak(falling_response, right_index)
+    left_offset = float(np.interp(left_position, np.arange(len(offsets)), offsets))
+    right_offset = float(np.interp(right_position, np.arange(len(offsets)), offsets))
+    width = right_offset - left_offset
+    if not (min_width <= width <= max_width):
+        return None
+    outside = np.concatenate(
+        [
+            profile[max(0, left_index - 4) : left_index],
+            profile[right_index + 1 : min(len(profile), right_index + 5)],
+        ]
+    )
+    noise = float(np.median(np.abs(outside - np.median(outside)))) * 1.4826 if outside.size else 0.0
+    left_strength = max(1.0, float(rising_response[left_index]))
+    right_strength = max(1.0, float(falling_response[right_index]))
+    left_sigma = 0.04 + 0.45 * (noise + left_residual + 0.5) / (left_strength + contrast + 1.0)
+    right_sigma = 0.04 + 0.45 * (noise + right_residual + 0.5) / (right_strength + contrast + 1.0)
+    normal_variance = max(0.0016, (left_sigma * left_sigma + right_sigma * right_sigma) / 4.0)
+    edge_residual = (left_residual + right_residual) * 0.5
+    # ``inside_level`` is kept in the computation above to ensure both edge
+    # contrasts are measured against one common band interior.
+    _ = inside_level
+    return (left_offset, right_offset, float(contrast), float(edge_residual), float(normal_variance))
+
+
+def _strong_local_peak_indexes(response: Any, *, minimum: float, limit: int) -> list[int]:
+    import numpy as np
+
+    values = np.asarray(response, dtype=np.float64)
+    if len(values) < 3:
+        return []
+    indexes = np.flatnonzero(
+        (values[1:-1] >= values[:-2])
+        & (values[1:-1] >= values[2:])
+        & (values[1:-1] > float(minimum))
+    ) + 1
+    if len(indexes) > limit:
+        strongest = np.argpartition(values[indexes], -limit)[-limit:]
+        indexes = indexes[strongest]
+    return sorted((int(index) for index in indexes), key=lambda index: float(values[index]), reverse=True)
+
+
+def _subpixel_parabolic_peak(response: Any, index: int) -> tuple[float, float]:
+    import numpy as np
+
+    values = np.asarray(response, dtype=np.float64)
+    if index <= 0 or index >= len(values) - 1:
+        return (float(index), 1.0)
+    left, center, right = float(values[index - 1]), float(values[index]), float(values[index + 1])
+    denominator = left - 2.0 * center + right
+    delta = 0.0 if abs(denominator) <= 1e-9 else 0.5 * (left - right) / denominator
+    delta = max(-0.75, min(0.75, delta))
+    peak = center - 0.25 * (left - right) * delta
+    fitted = np.asarray(
+        [
+            peak + 0.5 * denominator * (-1.0 - delta) ** 2,
+            peak + 0.5 * denominator * (0.0 - delta) ** 2,
+            peak + 0.5 * denominator * (1.0 - delta) ** 2,
+        ],
+        dtype=np.float64,
+    )
+    residual = float(np.sqrt(np.mean((np.asarray([left, center, right]) - fitted) ** 2)))
+    return (float(index) + float(delta), residual)
+
+
+def _paint_width_window(image_shape: Sequence[int], expected_width: float | None) -> tuple[float, float]:
+    height, width = int(image_shape[0]), int(image_shape[1])
+    scale = max(0.35, min(height, width) / 1080.0)
+    if expected_width is None or not math.isfinite(expected_width):
+        return (max(1.2, 1.5 * scale), max(12.0, 30.0 * scale))
+    return (
+        max(0.35, expected_width * 0.40),
+        max(3.2, min(64.0, expected_width * 2.1)),
+    )
+
+
+def _seed_expected_paint_width_px(seed_calibration: Any | None, point: Any, image_normal: Any) -> float | None:
+    if seed_calibration is None:
+        return None
+    import numpy as np
+
+    raw_homography = (
+        seed_calibration.get("homography")
+        if isinstance(seed_calibration, Mapping)
+        else getattr(seed_calibration, "homography", None)
+    )
+    if raw_homography is None:
+        return None
+    try:
+        homography = np.asarray(raw_homography, dtype=np.float64).reshape(3, 3)
+        inverse = np.linalg.inv(homography)
+        image_h = np.asarray([float(point[0]), float(point[1]), 1.0], dtype=np.float64)
+        world_h = inverse @ image_h
+        world = world_h[:2] / world_h[2]
+        epsilon_m = 0.01
+
+        def project(world_xy: Any) -> Any:
+            projected = homography @ np.asarray([float(world_xy[0]), float(world_xy[1]), 1.0])
+            return projected[:2] / projected[2]
+
+        origin = project(world)
+        jacobian = np.column_stack(
+            [
+                (project(world + np.asarray([epsilon_m, 0.0])) - origin) / epsilon_m,
+                (project(world + np.asarray([0.0, epsilon_m])) - origin) / epsilon_m,
+            ]
+        )
+        meters_per_normal_pixel = float(np.linalg.norm(np.linalg.solve(jacobian, image_normal)))
+        if meters_per_normal_pixel <= 1e-9:
+            return None
+        return float(0.0508 / meters_per_normal_pixel)
+    except (ValueError, TypeError, np.linalg.LinAlgError, ZeroDivisionError):
+        return None
+
+
+def _gap_aware_support_length(positions: Sequence[float], proposal_length: float, sample_count: int) -> float:
+    ordered = sorted(float(position) for position in positions)
+    if not ordered:
+        return 0.0
+    nominal_step = proposal_length / max(1, sample_count - 1)
+    support = nominal_step
+    for first, second in zip(ordered, ordered[1:]):
+        gap = second - first
+        if gap <= nominal_step * 1.65:
+            support += gap
+    return min(proposal_length, support)
+
+
+def _paint_orientation_hints(angle_deg: float) -> tuple[str, str]:
+    absolute = abs(angle_deg)
+    if absolute <= 15.0:
+        return ("near_horizontal", "cross_court_candidate")
+    if absolute >= 75.0:
+        return ("near_vertical", "longitudinal_candidate")
+    slope = "positive" if angle_deg > 0.0 else "negative"
+    dominant = "longitudinal_candidate" if absolute > 45.0 else "cross_court_candidate"
+    return (f"diagonal_{slope}", dominant)
+
+
+def _dedupe_paint_centerlines(
+    candidates: Sequence[PaintCenterlineCandidate],
+    *,
+    max_candidates: int,
+) -> list[PaintCenterlineCandidate]:
+    def quality(candidate: PaintCenterlineCandidate) -> float:
+        variance = _percentile(
+            [sample.normal_variance_px2 for sample in candidate.sampled_points],
+            50.0,
+        )
+        return candidate.support_length_px * candidate.coverage_fraction * candidate.polarity_score / max(0.01, variance)
+
+    selected: list[PaintCenterlineCandidate] = []
+    for candidate in sorted(candidates, key=quality, reverse=True):
+        candidate_mid = (
+            (candidate.endpoints[0][0] + candidate.endpoints[1][0]) * 0.5,
+            (candidate.endpoints[0][1] + candidate.endpoints[1][1]) * 0.5,
+        )
+        duplicate = False
+        for existing in selected:
+            if angle_diff_mod_180(candidate.angle_deg, existing.angle_deg) > 3.0:
+                continue
+            existing_mid = (
+                (existing.endpoints[0][0] + existing.endpoints[1][0]) * 0.5,
+                (existing.endpoints[0][1] + existing.endpoints[1][1]) * 0.5,
+            )
+            existing_line = (
+                existing.sampled_points[0].normal[0],
+                existing.sampled_points[0].normal[1],
+                -existing.sampled_points[0].normal[0] * existing_mid[0]
+                - existing.sampled_points[0].normal[1] * existing_mid[1],
+            )
+            offset = abs(
+                existing_line[0] * candidate_mid[0]
+                + existing_line[1] * candidate_mid[1]
+                + existing_line[2]
+            )
+            if offset <= max(1.25, 0.35 * max(existing.band_width_px, candidate.band_width_px)):
+                duplicate = True
+                break
+        if not duplicate:
+            selected.append(candidate)
+        if len(selected) >= max_candidates:
+            break
+    return selected

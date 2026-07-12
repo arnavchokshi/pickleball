@@ -58,8 +58,16 @@ def detect_court_keypoints_from_image(
     *,
     cv2_module: Any | None = None,
     white_threshold: int = 200,
+    line_evidence_provider: str = "legacy_hough",
+    seed_calibration: Any | None = None,
+    line_evidence_preprocessing: str = "raw",
 ) -> DetectedCourtKeypoints:
-    """Detect the pickleball court taxonomy from visible white court lines."""
+    """Detect the pickleball court taxonomy from visible court lines.
+
+    The historical white-mask/Hough path remains byte-stable by default.
+    Subpixel paired-edge paint centerlines are available only through the
+    explicit ``paint_centerline`` or ``paint_centerline_lsd`` opt-ins.
+    """
 
     cv2 = cv2_module or _cv2()
     if image is None or not hasattr(image, "shape") or len(image.shape) < 2:
@@ -69,10 +77,60 @@ def detect_court_keypoints_from_image(
         raise ValueError("image must have positive dimensions")
 
     mask = _white_line_mask(image, cv2_module=cv2, white_threshold=white_threshold)
-    segments = _detect_hough_segments(mask, cv2_module=cv2)
+    if line_evidence_provider == "legacy_hough":
+        segments = _detect_hough_segments(mask, cv2_module=cv2)
+    elif line_evidence_provider == "hybrid_paint_refinement":
+        from .court_line_bank import refine_legacy_paint_segments
+
+        legacy_segments = _detect_hough_segments(mask, cv2_module=cv2)
+        hybrid_segments = refine_legacy_paint_segments(
+            image,
+            legacy_segments,
+            seed_calibration=seed_calibration,
+            preprocessing=line_evidence_preprocessing,
+        )
+        segments = [segment.endpoints for segment in hybrid_segments]
+    else:
+        from .court_line_bank import detect_paint_centerline_candidates
+
+        provider_by_name = {
+            "paint_centerline": "classical_paired_edges",
+            "paint_centerline_lsd": "opencv_lsd_paired_edges",
+        }
+        if line_evidence_provider not in provider_by_name:
+            raise ValueError(f"unsupported line evidence provider: {line_evidence_provider}")
+        centerlines = detect_paint_centerline_candidates(
+            image,
+            seed_calibration=seed_calibration,
+            provider=provider_by_name[line_evidence_provider],
+            preprocessing=line_evidence_preprocessing,
+            min_support_length_px=max(40.0, min(width, height) * 0.12),
+        )
+        segments = [candidate.endpoints for candidate in centerlines]
     merged_lines = _merge_segments(segments)
     if len(merged_lines) < 4:
         raise ValueError("not enough court-line candidates were detected")
+
+    # Paired-edge candidates already represent one center per physical paint
+    # band, so prefer the full regulation-spacing interpretation. The legacy
+    # edge/Hough path keeps its historical high-support near-strip ordering.
+    if line_evidence_provider in {"paint_centerline", "paint_centerline_lsd"}:
+        semantic_candidate = _try_semantic_line_keypoints(
+            merged_lines,
+            mask=mask,
+            cv2_module=cv2,
+            width=float(width),
+            height=float(height),
+        )
+        if semantic_candidate is not None:
+            keypoints, semantic_segments, confidence = semantic_candidate
+            return DetectedCourtKeypoints(
+                keypoints=keypoints,
+                semantic_lines=semantic_segments,
+                raw_segment_count=len(segments),
+                merged_line_count=len(merged_lines),
+                confidence=confidence,
+            )
 
     high_support_candidate = _try_high_support_near_strip_keypoints(
         merged_lines,

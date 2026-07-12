@@ -105,6 +105,7 @@ TASK_HINTS = {
     "calibrate": ("CAL", "CAL-2"),
     "check_eval_regression": ("EVAL", "EVAL-1"),
     "corpus_dashboard": ("DATA", "P0-4"),
+    "court_precision_harness": ("CAL", "CAL-2"),
     "doctor": ("ENV", "ENV-2"),
     "extract_label_frames": ("DATA", "DATA-1"),
     "finetune_pose": ("BODY", "BODY-4"),
@@ -259,6 +260,8 @@ def _category(stem: str) -> str:
         or "court_keypoint" in normalized
         or "court_detector" in normalized
         or "court_proposal" in normalized
+        or "court_precision" in normalized
+        or "court_temporal" in normalized
         or "net_anchor_court" in normalized
     ):
         return "calibration"

@@ -38,6 +38,8 @@ def build_auto_court_line_evidence_from_frame(
     cv2_module: Any | None = None,
     required_line_ids: Sequence[str] | None = None,
     required_net_ids: Sequence[str] | None = None,
+    line_evidence_provider: str = "legacy_hough",
+    line_evidence_preprocessing: str = "raw",
 ) -> CourtLineEvidence:
     cv2 = cv2_module or _cv2()
     frame_path = Path(frame_path)
@@ -54,6 +56,8 @@ def build_auto_court_line_evidence_from_frame(
         cv2_module=cv2,
         required_line_ids=required_line_ids,
         required_net_ids=required_net_ids,
+        line_evidence_provider=line_evidence_provider,
+        line_evidence_preprocessing=line_evidence_preprocessing,
     )
 
 
@@ -68,6 +72,8 @@ def build_auto_court_line_evidence_from_video(
     cv2_module: Any | None = None,
     required_line_ids: Sequence[str] | None = None,
     required_net_ids: Sequence[str] | None = None,
+    line_evidence_provider: str = "legacy_hough",
+    line_evidence_preprocessing: str = "raw",
 ) -> CourtLineEvidence:
     """Sample a video and aggregate semantic court-line evidence across frames."""
 
@@ -99,6 +105,8 @@ def build_auto_court_line_evidence_from_video(
                     cv2_module=cv2,
                     required_line_ids=resolved_required_line_ids,
                     required_net_ids=resolved_required_net_ids,
+                    line_evidence_provider=line_evidence_provider,
+                    line_evidence_preprocessing=line_evidence_preprocessing,
                 )
             )
     finally:
@@ -120,7 +128,10 @@ def build_auto_court_line_evidence_from_video(
         required_line_ids=resolved_required_line_ids,
         required_net_ids=resolved_required_net_ids,
     )
-    evidence.source = "auto_hough_template_video"
+    if line_evidence_provider == "legacy_hough":
+        evidence.source = "auto_hough_template_video"
+    else:
+        evidence.source = f"auto_{line_evidence_provider}_template_video"
     return evidence
 
 
@@ -135,6 +146,8 @@ def build_auto_court_line_evidence_from_image(
     cv2_module: Any | None = None,
     required_line_ids: Sequence[str] | None = None,
     required_net_ids: Sequence[str] | None = None,
+    line_evidence_provider: str = "legacy_hough",
+    line_evidence_preprocessing: str = "raw",
 ) -> CourtLineEvidence:
     """Detect line candidates and aggregate semantic court evidence."""
 
@@ -143,7 +156,13 @@ def build_auto_court_line_evidence_from_image(
     resolved_required_line_ids = tuple(required_line_ids) if required_line_ids is not None else required_court_line_ids(calibration.sport)
     resolved_required_net_ids = tuple(required_net_ids) if required_net_ids is not None else required_court_net_ids(calibration.sport)
     calibration = calibration_for_image_size(calibration, width=int(width), height=int(height))
-    candidates = detect_image_line_segments(image, cv2_module=cv2)
+    candidates = detect_image_line_segments(
+        image,
+        cv2_module=cv2,
+        evidence_provider=line_evidence_provider,
+        seed_calibration=calibration,
+        preprocessing=line_evidence_preprocessing,
+    )
     expected_lines = projected_template_line_segments(calibration)
     observations = [
         select_best_line_observation(
@@ -151,7 +170,11 @@ def build_auto_court_line_evidence_from_image(
             expected_segment=expected,
             candidate_segments=candidates,
             frame_indexes=frame_indexes,
-            source="auto_hough_template",
+            source=(
+                "auto_hough_template"
+                if line_evidence_provider == "legacy_hough"
+                else f"auto_{line_evidence_provider}_template"
+            ),
             min_confidence=0.5,
         )
         for line_id, expected in expected_lines.items()
@@ -178,7 +201,11 @@ def build_auto_court_line_evidence_from_image(
     if top_net_observation is None and top_net_rejection_reason is not None:
         if top_net_rejection_reason not in evidence.aggregate.reasons:
             evidence.aggregate.reasons.append(top_net_rejection_reason)
-    evidence.source = "auto_hough_template"
+    evidence.source = (
+        "auto_hough_template"
+        if line_evidence_provider == "legacy_hough"
+        else f"auto_{line_evidence_provider}_template"
+    )
     return evidence
 
 
@@ -252,12 +279,55 @@ def detect_image_line_segments(
     cv2_module: Any | None = None,
     min_line_length_px: int = 25,
     max_line_gap_px: int = 12,
+    evidence_provider: str = "legacy_hough",
+    seed_calibration: Any | None = None,
+    preprocessing: str = "raw",
 ) -> list[Segment2]:
-    """Return raw image-space line segments from edge/Hough detection."""
+    """Return image-space line segments from an explicit evidence provider.
+
+    ``legacy_hough`` preserves the historical implementation and remains the
+    default. ``hybrid_paint_refinement`` preserves every legacy segment while
+    refining confirmed band samples; ``paint_centerline`` and
+    ``paint_centerline_lsd`` remain the Round-1 provider-swap diagnostics.
+    """
 
     cv2 = cv2_module or _cv2()
     if image is None:
         raise ValueError("image is required")
+    if evidence_provider == "hybrid_paint_refinement":
+        from .court_line_bank import refine_legacy_paint_segments
+
+        legacy_segments = detect_image_line_segments(
+            image,
+            cv2_module=cv2,
+            min_line_length_px=min_line_length_px,
+            max_line_gap_px=max_line_gap_px,
+            evidence_provider="legacy_hough",
+        )
+        refined = refine_legacy_paint_segments(
+            image,
+            legacy_segments,
+            seed_calibration=seed_calibration,
+            preprocessing=preprocessing,
+        )
+        return [segment.endpoints for segment in refined]
+    if evidence_provider != "legacy_hough":
+        from .court_line_bank import detect_paint_centerline_candidates
+
+        provider_by_name = {
+            "paint_centerline": "classical_paired_edges",
+            "paint_centerline_lsd": "opencv_lsd_paired_edges",
+        }
+        if evidence_provider not in provider_by_name:
+            raise ValueError(f"unsupported line evidence provider: {evidence_provider}")
+        candidates = detect_paint_centerline_candidates(
+            image,
+            seed_calibration=seed_calibration,
+            provider=provider_by_name[evidence_provider],
+            preprocessing=preprocessing,
+            min_support_length_px=float(min_line_length_px),
+        )
+        return [candidate.endpoints for candidate in candidates]
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY) if len(image.shape) == 3 else image
     blurred = cv2.GaussianBlur(gray, (3, 3), 0)
     edges = cv2.Canny(blurred, 50, 150, apertureSize=3)
