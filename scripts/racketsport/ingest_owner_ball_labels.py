@@ -69,6 +69,7 @@ class ImageRow:
     clip_id: str
     frame_index: int
     disagreement_type: str
+    provenance_class: str
     width: int
     height: int
     boxes: tuple[CvatVideoBox, ...]
@@ -126,6 +127,7 @@ def build_reviewed_corpus(
             )
         _reconcile_labelpack_session(zip_report, rows, labelpack)
         skip_counts: Counter[str] = Counter()
+        added_provenance_counts: Counter[str] = Counter()
         added_count = 0
         for row in rows:
             if len(row.boxes) > 1:
@@ -150,8 +152,10 @@ def build_reviewed_corpus(
             _merge_row(payload, row, source_path=str(zip_path))
             new_row_keys.add(row.row_key)
             added_rows.append(row)
+            added_provenance_counts[row.provenance_class] += 1
             added_count += 1
         zip_report["added_reviewed_rows"] = added_count
+        zip_report["added_provenance_class_counts"] = dict(sorted(added_provenance_counts.items()))
         zip_report["skip_reason_counts"] = dict(sorted(skip_counts.items()))
         zip_report["skipped_row_count"] = sum(skip_counts.values())
         zip_reports.append(zip_report)
@@ -164,6 +168,7 @@ def build_reviewed_corpus(
     new_counts = _counts_for_payloads(payloads, source_classes=source_classes, only_row_keys=new_row_keys)
     loso_manifest = _write_loso_manifest(out / "loso_fold_manifest.json", payloads, source_classes=source_classes)
     md5_manifest = _write_md5_manifest(out / "corpus_md5_manifest.json", reviewed_root, counts)
+    row_provenance_manifest = _write_row_provenance_manifest(out / "row_provenance_manifest.json", added_rows)
     manifest_md5 = _file_md5(out / "corpus_md5_manifest.json")
     report = {
         "schema_version": 1,
@@ -190,6 +195,8 @@ def build_reviewed_corpus(
         "new_counts": new_counts,
         "fold_manifest_path": str(out / "loso_fold_manifest.json"),
         "fold_manifest": loso_manifest,
+        "row_provenance_manifest_path": str(out / "row_provenance_manifest.json"),
+        "row_provenance_manifest": row_provenance_manifest,
         "summary": {
             "base_reviewed_row_count": base_reviewed_row_count,
             "new_reviewed_row_count": new_counts["totals"]["reviewed_row_count"],
@@ -248,12 +255,14 @@ def _parse_cvat_images_zip(zip_path: Path) -> tuple[list[ImageRow], dict[str, An
     source_counts: Counter[str] = Counter()
     clip_counts: Counter[str] = Counter()
     disagreement_counts: Counter[str] = Counter()
+    provenance_counts: Counter[str] = Counter()
     for image in root.findall("image"):
         row = _parse_image_row(image)
         rows.append(row)
         source_counts[row.source_id] += 1
         clip_counts[row.clip_id] += 1
         disagreement_counts[row.disagreement_type] += 1
+        provenance_counts[row.provenance_class] += 1
         box_count += len(row.boxes)
         box_count_by_image[len(row.boxes)] += 1
         for box in row.boxes:
@@ -273,6 +282,7 @@ def _parse_cvat_images_zip(zip_path: Path) -> tuple[list[ImageRow], dict[str, An
         "source_counts": dict(sorted(source_counts.items())),
         "clip_counts": dict(sorted(clip_counts.items())),
         "disagreement_type_counts": dict(sorted(disagreement_counts.items())),
+        "provenance_class_counts": dict(sorted(provenance_counts.items())),
         "visibility_level_counts": dict(sorted(visibility_levels.items())),
         "center_convention_counts": dict(sorted(center_conventions.items())),
         "schema_checks": {
@@ -285,7 +295,7 @@ def _parse_cvat_images_zip(zip_path: Path) -> tuple[list[ImageRow], dict[str, An
 
 def _parse_image_row(image: ElementTree.Element) -> ImageRow:
     image_name = _required_attr(image, "name")
-    source_id, clip_id, frame_index, disagreement_type = _parse_image_name(image_name)
+    source_id, clip_id, frame_index, disagreement_type, provenance_class = _parse_image_name(image_name)
     image_id = _int_attr(image, "id", minimum=0)
     width = _int_attr(image, "width", minimum=1)
     height = _int_attr(image, "height", minimum=1)
@@ -301,15 +311,23 @@ def _parse_image_row(image: ElementTree.Element) -> ImageRow:
         clip_id=clip_id,
         frame_index=frame_index,
         disagreement_type=disagreement_type,
+        provenance_class=provenance_class,
         width=width,
         height=height,
         boxes=boxes,
     )
 
 
-def _parse_image_name(name: str) -> tuple[str, str, int, str]:
+def _parse_image_name(name: str) -> tuple[str, str, int, str, str]:
     stem = Path(name).stem
     parts = stem.split("__")
+    if len(parts) == 3 and re.fullmatch(r"abs_\d+", parts[2]):
+        source_id, clip_id, frame_token = parts
+        if not clip_id.startswith(f"{source_id}_rally_"):
+            raise OwnerBallLabelIngestError(
+                f"scratch owner label source/rally mismatch in {name}: {source_id} != {clip_id}"
+            )
+        return source_id, clip_id, int(frame_token.removeprefix("abs_")), "uniform-random-scratch", "scratch"
     if len(parts) < 5:
         raise OwnerBallLabelIngestError(f"unexpected owner label image name: {name}")
     source_id = parts[1]
@@ -318,7 +336,7 @@ def _parse_image_name(name: str) -> tuple[str, str, int, str]:
     if not re.fullmatch(r"f\d+", frame_token):
         raise OwnerBallLabelIngestError(f"unexpected owner label frame token in {name}: {frame_token}")
     disagreement_type = parts[4].replace("_", "-")
-    return source_id, clip_id, int(frame_token[1:]), disagreement_type
+    return source_id, clip_id, int(frame_token[1:]), disagreement_type, "prelabel-lineage-unknown"
 
 
 def _parse_image_box(box: ElementTree.Element, *, frame_index: int, track_id: int) -> CvatVideoBox:
@@ -674,6 +692,29 @@ def _write_md5_manifest(path: Path, reviewed_root: Path, counts: Mapping[str, An
     return manifest
 
 
+def _write_row_provenance_manifest(path: Path, rows: Sequence[ImageRow]) -> dict[str, Any]:
+    ordered = sorted(rows, key=lambda row: (row.clip_id, row.frame_index, row.image_name))
+    counts = Counter(row.provenance_class for row in ordered)
+    manifest = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_owner_ball_row_provenance_manifest",
+        "counts": dict(sorted(counts.items())),
+        "rows": [
+            {
+                "row_key": row.row_key,
+                "source_id": row.source_id,
+                "clip_id": row.clip_id,
+                "frame_index": row.frame_index,
+                "image_name": row.image_name,
+                "provenance_class": row.provenance_class,
+            }
+            for row in ordered
+        ],
+    }
+    _write_json(path, manifest)
+    return manifest
+
+
 def _reconcile_labelpack_session(report: dict[str, Any], rows: Sequence[ImageRow], labelpack: Mapping[str, Any]) -> None:
     session_id = report.get("session_id")
     sessions = {
@@ -755,6 +796,9 @@ def _source_id_from_clip(clip_id: str) -> str:
 
 
 def _session_id_from_zip(path: Path) -> str | None:
+    scratch_match = re.search(r"audit[_-]stratum[_-]uniform(\d+)", path.name)
+    if scratch_match:
+        return f"audit_stratum_uniform{int(scratch_match.group(1))}"
     match = re.search(r"session[_-](\d+)", path.name)
     if not match:
         return None
@@ -873,6 +917,7 @@ def main(argv: list[str] | None = None) -> int:
                 "manifest_md5": report["manifest_md5"],
                 "summary": report["summary"],
                 "fold_manifest_path": report["fold_manifest_path"],
+                "row_provenance_manifest_path": report["row_provenance_manifest_path"],
             },
             indent=2,
             sort_keys=True,

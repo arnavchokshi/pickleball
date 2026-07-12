@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 from pathlib import Path
 
 CLI_PATH = Path("scripts/racketsport/import_w6_labelpack_tasks.py")
@@ -97,3 +98,44 @@ def test_w6_labelpack_import_second_run_skips_existing_tasks(tmp_path: Path) -> 
     assert {task["skip_reason"] for task in second["tasks"]} == {"already_imported"}
     assert len(client.projects.created_specs) == 1
     assert len(client.tasks.created_specs) == 2
+
+
+def test_w6_importer_supports_images_only_scratch_task_without_annotation_import(tmp_path: Path) -> None:
+    importer = importlib.import_module("scripts.racketsport.import_w6_labelpack_tasks")
+    image_zip = tmp_path / "uniform350_images.zip"
+    image_zip.write_bytes(b"placeholder")
+    manifest = tmp_path / "package_manifest.json"
+    manifest.write_text(
+        json.dumps(
+            {
+                "artifact_type": "w7_audit_stratum_package_manifest",
+                "labeling_mode": "scratch",
+                "project_name": "racketsport_w7_ball_audit_20260709",
+                "ball_sessions": [
+                    {
+                        "session_id": "audit_stratum_uniform350",
+                        "task_name": "w7_audit_stratum_uniform350",
+                        "image_zip": str(image_zip),
+                        "frame_count": 350,
+                        "prelabels_present": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    jobs = importer.build_import_jobs(manifest)
+    assert len(jobs) == 1
+    assert jobs[0]["task_name"] == "w7_audit_stratum_uniform350"
+    assert jobs[0]["labeling_mode"] == "scratch"
+    assert jobs[0]["prelabel_zip"] is None
+
+    client = _FakeClient()
+    report = importer.import_labelpack_tasks(
+        client=client,
+        jobs=jobs,
+        ledger_path=tmp_path / "import_report.json",
+    )
+    assert report["summary"]["created_task_count"] == 1
+    assert client.tasks._tasks[0].imported_annotations == []

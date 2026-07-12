@@ -15,6 +15,7 @@ PACKAGE_MANIFEST = REPO_ROOT / "cvat_upload/w6_labelpack_20260708/package_manife
 W5_PACKAGE_MANIFEST = REPO_ROOT / "cvat_upload/w5_labelpack_20260708/package_manifest.json"
 CREDS_PATH = REPO_ROOT / "runs/lanes/w3_labelfactory_20260707/cvat_credentials.txt"
 DEFAULT_PROJECT_NAME = "racketsport_w6_ball_sst_20260708"
+SCRATCH_LABELING_MODE = "scratch"
 
 
 def load_creds(path: Path) -> dict[str, str]:
@@ -55,19 +56,31 @@ def ball_label_spec() -> list[dict[str, Any]]:
 
 def build_import_jobs(package_manifest: Path = PACKAGE_MANIFEST) -> list[dict[str, Any]]:
     manifest = json.loads(package_manifest.read_text(encoding="utf-8"))
+    labeling_mode = str(manifest.get("labeling_mode") or "prelabel_review")
+    if labeling_mode not in {"prelabel_review", SCRATCH_LABELING_MODE}:
+        raise ValueError(f"unsupported labelpack labeling_mode: {labeling_mode}")
     jobs: list[dict[str, Any]] = []
     for item in manifest["ball_sessions"]:
-        expected = f"w6_ball_sst_{item['session_id']}_20260708"
-        if item["task_name"] != expected:
-            raise ValueError(f"unexpected w6 task name scheme: {item['task_name']} != {expected}")
+        if labeling_mode == "prelabel_review":
+            expected = f"w6_ball_sst_{item['session_id']}_20260708"
+            if item["task_name"] != expected:
+                raise ValueError(f"unexpected w6 task name scheme: {item['task_name']} != {expected}")
+            prelabel_zip: str | None = str(REPO_ROOT / item["prelabel_zip"])
+        else:
+            if item.get("prelabels_present") is not False:
+                raise ValueError("scratch labelpack session must declare prelabels_present=false")
+            if item.get("prelabel_zip"):
+                raise ValueError("scratch labelpack session must not provide prelabel_zip")
+            prelabel_zip = None
         jobs.append(
             {
                 "kind": "ball",
-                "project_name": DEFAULT_PROJECT_NAME,
+                "project_name": str(item.get("project_name") or manifest.get("project_name") or DEFAULT_PROJECT_NAME),
                 "task_name": item["task_name"],
                 "labels": ball_label_spec(),
                 "image_zip": str(REPO_ROOT / item["image_zip"]),
-                "prelabel_zip": str(REPO_ROOT / item["prelabel_zip"]),
+                "prelabel_zip": prelabel_zip,
+                "labeling_mode": labeling_mode,
                 "frame_count": item["frame_count"],
             }
         )
@@ -114,7 +127,8 @@ def import_labelpack_tasks(*, client: Any, jobs: list[dict[str, Any]], ledger_pa
             resources=[job["image_zip"]],
             data_params={"image_quality": 95, "use_cache": True},
         )
-        task.import_annotations("CVAT 1.1", job["prelabel_zip"])
+        if job.get("prelabel_zip"):
+            task.import_annotations("CVAT 1.1", job["prelabel_zip"])
         report["tasks"].append(
             {
                 "kind": job["kind"],
@@ -140,11 +154,13 @@ def import_labelpack_tasks(*, client: Any, jobs: list[dict[str, Any]], ledger_pa
 
 
 def task_fingerprint(job: Mapping[str, Any]) -> str:
+    prelabel_zip = job.get("prelabel_zip")
     payload = {
         "frame_count": job.get("frame_count"),
         "image_zip": str(job.get("image_zip")),
         "kind": str(job.get("kind")),
-        "prelabel_zip": str(job.get("prelabel_zip")),
+        "labeling_mode": str(job.get("labeling_mode") or "prelabel_review"),
+        "prelabel_zip": None if prelabel_zip is None else str(prelabel_zip),
         "project_name": str(job.get("project_name")),
         "task_name": str(job.get("task_name")),
     }
@@ -234,18 +250,20 @@ def main() -> int:
     parser.add_argument("--host", default="http://localhost")
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--creds", type=Path, default=CREDS_PATH)
+    parser.add_argument("--package-manifest", type=Path, default=PACKAGE_MANIFEST)
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--ledger", type=Path, default=LANE_DIR / "import_report.json")
     args = parser.parse_args()
 
-    jobs = build_import_jobs()
+    jobs = build_import_jobs(args.package_manifest)
     if args.dry_run:
         print(
             json.dumps(
                 {
                     "status": "dry_run",
                     "job_count": len(jobs),
-                    "task_name_scheme": "w6_ball_sst_<session>_20260708",
+                    "package_manifest": str(args.package_manifest),
+                    "task_names": [job["task_name"] for job in jobs],
                     "w5_task_name_collision_count": 0,
                     "jobs": jobs,
                 },

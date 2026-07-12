@@ -199,6 +199,45 @@ def _write_cvat_images_zip(path: Path, *, protected: bool = False) -> None:
         archive.writestr("annotations.xml", xml)
 
 
+def _write_scratch_labelpack_manifest(path: Path) -> None:
+    path.write_text(
+        json.dumps(
+            {
+                "artifact_type": "w7_audit_stratum_package_manifest",
+                "labeling_mode": "scratch",
+                "ball_sessions": [
+                    {
+                        "session_id": "audit_stratum_uniform350",
+                        "task_name": "w7_audit_stratum_uniform350",
+                        "frame_count": 1,
+                        "clip_counts": {"Ezz6HDNHlnk_rally_0004": 1},
+                        "source_classes": {"Ezz6HDNHlnk": "outdoor_night_fenced"},
+                        "disagreement_type_counts": {"uniform-random-scratch": 1},
+                        "prelabels_present": False,
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+
+def _write_scratch_cvat_images_zip(path: Path) -> None:
+    xml = """<?xml version="1.0" encoding="utf-8"?>
+<annotations>
+  <version>1.1</version>
+  <meta><job><id>99</id><size>1</size><mode>annotation</mode></job></meta>
+  <image id="0" name="Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_000010.png" width="1920" height="1080">
+    <box label="ball" source="manual" occluded="0" xtl="10" ytl="20" xbr="30" ybr="40" z_order="0">
+      <attribute name="visibility_level">clear</attribute>
+    </box>
+  </image>
+</annotations>
+"""
+    with zipfile.ZipFile(path, "w") as archive:
+        archive.writestr("annotations.xml", xml)
+
+
 def test_ingest_owner_ball_labels_merges_sparse_rows_and_accounts_skips(tmp_path: Path) -> None:
     from scripts.racketsport.ingest_owner_ball_labels import build_reviewed_corpus
     from scripts.racketsport.train_ball_stage2 import sparse_tracknet_labels_from_cvat
@@ -292,6 +331,41 @@ def test_ingest_owner_ball_labels_manifest_is_deterministic(tmp_path: Path) -> N
     assert (tmp_path / "out_a" / "corpus_md5_manifest.json").read_bytes() == (
         tmp_path / "out_b" / "corpus_md5_manifest.json"
     ).read_bytes()
+
+
+def test_ingest_owner_ball_labels_accepts_abs_scratch_names_and_carries_provenance(tmp_path: Path) -> None:
+    from scripts.racketsport.ingest_owner_ball_labels import build_reviewed_corpus
+
+    base_root = tmp_path / "base"
+    _write_base_clip(base_root)
+    manifest = tmp_path / "package_manifest.json"
+    _write_scratch_labelpack_manifest(manifest)
+    export_zip = tmp_path / "w7_audit_stratum_uniform350_annotations.zip"
+    _write_scratch_cvat_images_zip(export_zip)
+
+    report = build_reviewed_corpus(
+        base_cvat_export_root=base_root,
+        export_zips=[export_zip],
+        labelpack_manifest=manifest,
+        out_root=tmp_path / "out",
+    )
+
+    zip_report = report["zip_reports"][0]
+    assert zip_report["labelpack_reconcile"]["status"] == "PASS"
+    assert zip_report["provenance_class_counts"] == {"scratch": 1}
+    assert zip_report["added_provenance_class_counts"] == {"scratch": 1}
+    provenance = json.loads((tmp_path / "out" / "row_provenance_manifest.json").read_text(encoding="utf-8"))
+    assert provenance["counts"] == {"scratch": 1}
+    assert provenance["rows"] == [
+        {
+            "clip_id": "Ezz6HDNHlnk_rally_0004",
+            "frame_index": 10,
+            "image_name": "Ezz6HDNHlnk__Ezz6HDNHlnk_rally_0004__abs_000010.png",
+            "provenance_class": "scratch",
+            "row_key": "Ezz6HDNHlnk_rally_0004:000010",
+            "source_id": "Ezz6HDNHlnk",
+        }
+    ]
 
 
 def test_ingest_owner_ball_labels_cli_help_is_indexed() -> None:
