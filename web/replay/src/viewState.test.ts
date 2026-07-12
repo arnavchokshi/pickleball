@@ -4,7 +4,9 @@ import {
   DEFAULT_VIEW_STATE,
   applyViewPreset,
   entityFocusStyle,
+  loadPersistedViewState,
   parseViewStateFromSearch,
+  persistViewState,
   sceneLayerSnapshotForTime,
   toggleViewLayer,
   viewStateToSearch,
@@ -205,6 +207,9 @@ describe("view-state URL persistence", () => {
       handJointPoints: false,
       implausibleSkeletons: false,
       debugPointClouds: false,
+      contactSurfaces: false,
+      targetZones: false,
+      ghostPositioning: false,
     });
     expect(DEFAULT_VIEW_STATE.focus).toBeNull();
   });
@@ -226,7 +231,7 @@ describe("view-state URL persistence", () => {
   });
 
   it("treats an explicit layers query as the shareable source of truth", () => {
-    const parsed = parseViewStateFromSearch("?layers=ball,paddles,players,mesh,events,hands,implausible,debug");
+    const parsed = parseViewStateFromSearch("?layers=ball,paddles,players,mesh,events,contact-surfaces,target-zones,ghost-positioning,hands,implausible,debug");
 
     expect(parsed.layers.ballDot).toBe(true);
     expect(parsed.layers.paddles).toBe(true);
@@ -237,6 +242,26 @@ describe("view-state URL persistence", () => {
     expect(parsed.layers.implausibleSkeletons).toBe(true);
     expect(parsed.layers.ballTrail).toBe(false);
     expect(parsed.layers.debugPointClouds).toBe(true);
+    expect(parsed.layers.contactSurfaces).toBe(true);
+    expect(parsed.layers.targetZones).toBe(true);
+    expect(parsed.layers.ghostPositioning).toBe(true);
+  });
+
+  it("persists every entity toggle and lets an explicit share URL win over storage", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    };
+    const customized = toggleViewLayer(toggleViewLayer(DEFAULT_VIEW_STATE, "targetZones"), "ballTrail");
+
+    persistViewState(customized, storage);
+    expect(loadPersistedViewState("", storage)).toEqual(customized);
+    expect(loadPersistedViewState("?layers=ghost-positioning", storage).layers).toMatchObject({
+      ballTrail: false,
+      targetZones: false,
+      ghostPositioning: true,
+    });
   });
 });
 

@@ -70,6 +70,8 @@ import {
   parseReviewedBounces,
   parseViewerManifest,
   parseVirtualWorld,
+  resolveCanonicalPlaybackTime,
+  resolveViewerManifestUrls,
   activePaddleFramesForTime,
   playerPresenceForTime,
   playerTrailPointsForTime,
@@ -121,7 +123,8 @@ import {
   clearFocus,
   entityFocusStyle,
   eventMarkersForTime,
-  parseViewStateFromSearch,
+  loadPersistedViewState,
+  persistViewState,
   sceneLayerSnapshotForTime,
   toggleViewLayer,
   viewStateToSearch,
@@ -134,7 +137,8 @@ import {
 
 export { CoachingCardPanel, coachingCardForTimeline } from "./CoachingCard";
 
-export type CameraPreset = "broadcast" | "behind_baseline" | "top_down" | "paddle_review" | "shot_trails";
+export type ProductCameraPreset = "court" | "follow_player" | "free_orbit";
+export type CameraPreset = ProductCameraPreset | "broadcast" | "behind_baseline" | "top_down" | "paddle_review" | "shot_trails";
 type CameraDragKind = "pan" | "orbit";
 type CameraDragCommand = { kind: CameraDragKind; dx: number; dy: number; seq: number };
 
@@ -434,13 +438,83 @@ export function contactReadoutText(
     : "3D contact: none";
 }
 
+export type EntityLayerCounts = {
+  playerMeshCount: number;
+  playerSkeletonCount: number;
+  ballTrailCount: number;
+  paddleCount: number;
+  contactSurfaceCount: number;
+  targetZoneCount: number;
+  ghostPositionCount: number;
+  contactSurfaceDeclared?: boolean;
+  targetZoneDeclared?: boolean;
+  ghostPositionDeclared?: boolean;
+};
+
+export function entityLayerEmptyStates(layers: ViewState["layers"], counts: EntityLayerCounts): string[] {
+  const messages: string[] = [];
+  if (layers.playerSolidMeshes && counts.playerMeshCount === 0) messages.push("Player meshes: no data at this time");
+  if (layers.playerSkeletons && counts.playerSkeletonCount === 0) messages.push("Player skeletons: no data at this time");
+  if (layers.ballTrail && counts.ballTrailCount === 0) messages.push("Ball trail: no data at this time");
+  if (layers.paddles && counts.paddleCount === 0) messages.push("Paddles: no data at this time");
+  if (layers.contactSurfaces && counts.contactSurfaceCount === 0) messages.push(counts.contactSurfaceDeclared ? "Contact surfaces: referenced, renderer not ready" : "Contact surfaces: artifact not supplied");
+  if (layers.targetZones && counts.targetZoneCount === 0) messages.push(counts.targetZoneDeclared ? "Target zones: referenced, renderer not ready" : "Target zones: artifact not supplied");
+  if (layers.ghostPositioning && counts.ghostPositionCount === 0) messages.push(counts.ghostPositionDeclared ? "Ghost positioning: referenced, renderer not ready" : "Ghost positioning: artifact not supplied");
+  return messages;
+}
+
 const CAMERA_PRESET_LABELS: Record<CameraPreset, string> = {
+  court: "Court",
+  follow_player: "Follow player",
+  free_orbit: "Free orbit",
   broadcast: "Broadcast",
   behind_baseline: "Behind",
   top_down: "Top",
   paddle_review: "Paddles",
   shot_trails: "Trails",
 };
+
+const PRODUCT_CAMERA_PRESETS: readonly ProductCameraPreset[] = ["court", "follow_player", "free_orbit"];
+const CAMERA_PREFERENCE_STORAGE_KEY = "pickleball.replay.camera.v2";
+
+export type CameraPreference = { preset: ProductCameraPreset; playerId: number | null };
+type ViewerStorage = Pick<Storage, "getItem" | "setItem">;
+
+export function loadCameraPreference(storage?: ViewerStorage | null): CameraPreference {
+  const fallback: CameraPreference = { preset: "court", playerId: null };
+  if (!storage) return fallback;
+  try {
+    const raw = storage.getItem(CAMERA_PREFERENCE_STORAGE_KEY);
+    if (!raw) return fallback;
+    const value = JSON.parse(raw) as Partial<CameraPreference>;
+    const preset = PRODUCT_CAMERA_PRESETS.includes(value.preset as ProductCameraPreset) ? value.preset as ProductCameraPreset : "court";
+    const playerId = typeof value.playerId === "number" && Number.isInteger(value.playerId) ? value.playerId : null;
+    return { preset, playerId };
+  } catch {
+    return fallback;
+  }
+}
+
+export function persistCameraPreference(preference: CameraPreference, storage?: ViewerStorage | null): void {
+  if (!storage) return;
+  try {
+    storage.setItem(CAMERA_PREFERENCE_STORAGE_KEY, JSON.stringify(preference));
+  } catch {
+    // Storage can be denied; replay remains fully usable for this session.
+  }
+}
+
+export function cameraTransitionDurationMs(prefersReducedMotion: boolean): number {
+  return prefersReducedMotion ? 0 : 280;
+}
+
+function viewerStorage(): ViewerStorage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 const DEFAULT_SHOT_TRAIL_FILTERS: ShotTrailFilters = {
   playerId: null,
@@ -509,6 +583,7 @@ function scheduleViewerIdleWork(callback: () => void): () => void {
 export default function App() {
   const initialTime = useMemo(() => startTimeFromSearch(window.location.search), []);
   const hasExplicitInitialTime = useMemo(() => hasExplicitReviewStartTime(window.location.search), []);
+  const initialCameraPreference = useMemo(() => loadCameraPreference(viewerStorage()), []);
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
   const [world, setWorld] = useState<VirtualWorld>(() => parseVirtualWorld(sampleWorld));
   const [labelOverlay, setLabelOverlay] = useState<LabelOverlayPayload>(() => parseLabelOverlayPayload(null));
@@ -539,12 +614,16 @@ export default function App() {
   const [videoDuration, setVideoDuration] = useState(0);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [capabilityErrors, setCapabilityErrors] = useState<Record<string, string>>({});
-  const [cameraPreset, setCameraPreset] = useState<CameraPreset>("broadcast");
+  const [cameraPreset, setCameraPreset] = useState<CameraPreset>(initialCameraPreference.preset);
+  const [cameraFollowPlayerId, setCameraFollowPlayerId] = useState<number | null>(initialCameraPreference.playerId);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
+    typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
   const [replayViewMode, setReplayViewMode] = useState<ReplayViewMode>(() => replayViewFromSearch(window.location.search));
   const [cameraResetToken, setCameraResetToken] = useState(0);
   const [cameraDragCommand, setCameraDragCommand] = useState<CameraDragCommand | null>(null);
   const [showShotsPanel, setShowShotsPanel] = useState(false);
-  const [viewState, setViewState] = useState<ViewState>(() => parseViewStateFromSearch(window.location.search));
+  const [viewState, setViewState] = useState<ViewState>(() => loadPersistedViewState(window.location.search, viewerStorage()));
   const [fps, setFps] = useState(0);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const bodyMeshChunkCacheRef = useRef<Map<number, BodyMesh>>(new Map());
@@ -585,7 +664,10 @@ export default function App() {
     let cancelled = false;
     async function load() {
       try {
-        const manifestPayload = parseViewerManifest(await fetchJson(resolvedManifestUrl));
+        const manifestPayload = resolveViewerManifestUrls(
+          parseViewerManifest(await fetchJson(resolvedManifestUrl)),
+          resolvedManifestUrl,
+        );
         const worldPayload = parseVirtualWorld(await fetchJson(manifestPayload.virtual_world_url));
         const optionalErrors: Record<string, string> = {};
         const recordOptionalError = (capability: string, error: unknown) => {
@@ -856,7 +938,22 @@ export default function App() {
     if (nextSearch !== window.location.search) {
       window.history.replaceState(null, "", `${window.location.pathname}${nextSearch}${window.location.hash}`);
     }
+    persistViewState(viewState, viewerStorage());
   }, [viewState]);
+
+  useEffect(() => {
+    if (!PRODUCT_CAMERA_PRESETS.includes(cameraPreset as ProductCameraPreset)) return;
+    persistCameraPreference({ preset: cameraPreset as ProductCameraPreset, playerId: cameraFollowPlayerId }, viewerStorage());
+  }, [cameraFollowPlayerId, cameraPreset]);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPrefersReducedMotion(media.matches);
+    update();
+    media.addEventListener?.("change", update);
+    return () => media.removeEventListener?.("change", update);
+  }, []);
 
   useEffect(() => {
     let animationFrame = 0;
@@ -866,8 +963,10 @@ export default function App() {
       const video = videoRef.current;
       if (video && !video.paused && now - lastSampleMs >= minIntervalMs) {
         lastSampleMs = now;
-        if (Math.abs(video.currentTime - currentTimeRef.current) > 0.004) {
-          setCurrentTime(video.currentTime);
+        const canonicalTime = resolveCanonicalPlaybackTime(video.currentTime, video.duration, currentTimeRef.current);
+        if (Math.abs(canonicalTime - currentTimeRef.current) > 0.004) {
+          currentTimeRef.current = canonicalTime;
+          setCurrentTime(canonicalTime);
         }
       }
       animationFrame = window.requestAnimationFrame(tick);
@@ -958,6 +1057,21 @@ export default function App() {
     () => eventMarkersForTime(world, contactWindows, currentTime),
     [contactWindows, currentTime, world],
   );
+  const entityEmptyStates = useMemo(
+    () => entityLayerEmptyStates(viewState.layers, {
+      playerMeshCount: sceneLayers.playerSolidMeshes.objectCount,
+      playerSkeletonCount: sceneLayers.playerSkeletons.objectCount,
+      ballTrailCount: sceneLayers.ballTrail.objectCount,
+      paddleCount: sceneLayers.paddles.objectCount,
+      contactSurfaceCount: 0,
+      targetZoneCount: 0,
+      ghostPositionCount: 0,
+      contactSurfaceDeclared: Boolean(manifest?.contact_surfaces_url),
+      targetZoneDeclared: Boolean(manifest?.target_zones_url),
+      ghostPositionDeclared: Boolean(manifest?.ghost_positions_url),
+    }),
+    [manifest?.contact_surfaces_url, manifest?.ghost_positions_url, manifest?.target_zones_url, sceneLayers, viewState.layers],
+  );
   const eventMarkerEmpty =
     viewState.layers.eventMarkers &&
     worldEventMarkers.length === 0 &&
@@ -978,8 +1092,8 @@ export default function App() {
     [currentTime, resolvedBallSamples],
   );
   const timelineMarkers = useMemo(
-    () => timelineMarkersFromArtifacts(contactWindows, ballInflections, reviewedBounces),
-    [contactWindows, ballInflections, reviewedBounces],
+    () => timelineMarkersFromArtifacts(contactWindows, ballInflections, reviewedBounces, shots),
+    [contactWindows, ballInflections, reviewedBounces, shots],
   );
   const timelineDuration = videoDuration > 0 ? videoDuration : coverage.lastTime ?? 0;
   const timelineChapters = useMemo(
@@ -1010,8 +1124,11 @@ export default function App() {
   );
   const seekTo = (seconds: number) => {
     const video = videoRef.current;
-    if (video) video.currentTime = Math.max(0, seconds);
-    setCurrentTime(Math.max(0, seconds));
+    const duration = video && Number.isFinite(video.duration) ? video.duration : timelineDuration;
+    const canonicalTime = resolveCanonicalPlaybackTime(seconds, duration, currentTimeRef.current);
+    if (video) video.currentTime = canonicalTime;
+    currentTimeRef.current = canonicalTime;
+    setCurrentTime(canonicalTime);
   };
 
   const jumpToEvent = (direction: "previous" | "next") => {
@@ -1020,8 +1137,10 @@ export default function App() {
   };
 
   const syncVideoTime = (video: HTMLVideoElement) => {
-    if (Math.abs(video.currentTime - currentTimeRef.current) > 0.004) {
-      setCurrentTime(video.currentTime);
+    const canonicalTime = resolveCanonicalPlaybackTime(video.currentTime, video.duration, currentTimeRef.current);
+    if (Math.abs(canonicalTime - currentTimeRef.current) > 0.004) {
+      currentTimeRef.current = canonicalTime;
+      setCurrentTime(canonicalTime);
     }
   };
 
@@ -1061,8 +1180,7 @@ export default function App() {
 
   const selectShot = (shot: ShotRecord) => {
     setSelectedShotId(shot.shot_id);
-    setCurrentTime(shot.t);
-    if (videoRef.current) videoRef.current.currentTime = shot.t;
+    seekTo(shot.t);
   };
 
   const writeCorrection = (shot: ShotRecord) => {
@@ -1092,7 +1210,7 @@ export default function App() {
   const toggleShotsPanel = () => {
     if (showShotsPanel) {
       setShowShotsPanel(false);
-      if (cameraPreset === "shot_trails") selectCameraPreset("broadcast");
+      if (cameraPreset === "shot_trails") selectCameraPreset("court");
       return;
     }
     setShowShotsPanel(true);
@@ -1242,6 +1360,9 @@ export default function App() {
                 onSeeked={(event) => syncVideoTime(event.currentTarget)}
                 onSeeking={(event) => syncVideoTime(event.currentTarget)}
                 onTimeUpdate={(event) => syncVideoTime(event.currentTarget)}
+                onPause={(event) => syncVideoTime(event.currentTarget)}
+                onPlay={(event) => syncVideoTime(event.currentTarget)}
+                onRateChange={(event) => syncVideoTime(event.currentTarget)}
               />
             ) : (
               <div className="empty-video">Load a replay manifest with ?manifest=...</div>
@@ -1292,7 +1413,7 @@ export default function App() {
           ) : (
           <>
           <div className="camera-preset-bar" role="group" aria-label="3D camera">
-            {(Object.keys(CAMERA_PRESET_LABELS) as CameraPreset[]).map((preset) => (
+            {PRODUCT_CAMERA_PRESETS.map((preset) => (
               <button
                 key={preset}
                 type="button"
@@ -1304,6 +1425,20 @@ export default function App() {
                 {CAMERA_PRESET_LABELS[preset]}
               </button>
             ))}
+            <label className="follow-player-select">
+              <span>Follow</span>
+              <select
+                aria-label="Follow player"
+                value={cameraFollowPlayerId ?? playerIds[0] ?? ""}
+                onChange={(event) => {
+                  const playerId = Number(event.currentTarget.value);
+                  setCameraFollowPlayerId(Number.isInteger(playerId) ? playerId : null);
+                  selectCameraPreset("follow_player");
+                }}
+              >
+                {playerIds.map((playerId) => <option key={playerId} value={playerId}>P{playerId}</option>)}
+              </select>
+            </label>
           </div>
           <Canvas
             dpr={[1.5, 2]}
@@ -1320,6 +1455,9 @@ export default function App() {
               preset={cameraPreset}
               activePaddles={activePaddles}
               selectedPlayerId={viewState.selectedPlayerId}
+              followPlayerId={cameraFollowPlayerId ?? viewState.selectedPlayerId ?? playerIds[0] ?? null}
+              currentTime={currentTime}
+              prefersReducedMotion={prefersReducedMotion}
               resetToken={cameraResetToken}
               dragCommand={cameraDragCommand}
             />
@@ -1399,6 +1537,11 @@ export default function App() {
             </div>
           ) : null}
           {eventMarkerEmpty ? <div className="event-empty-reason">Events: no marker evidence at this time</div> : null}
+          {entityEmptyStates.length ? (
+            <div className="layer-empty-strip" aria-label="Unavailable entity layers">
+              {entityEmptyStates.map((message) => <span key={message}>{message}</span>)}
+            </div>
+          ) : null}
           {sceneLayers.debugPointClouds.visible ? <MeshDebugReadout snapshot={meshDebugSnapshot} /> : null}
           <div className="world-mini-readout">
             <span>{CAMERA_PRESET_LABELS[cameraPreset]}</span>
@@ -1859,6 +2002,11 @@ function TimelineStrip({
         <button type="button" className="event-nav-button" onClick={onNextEvent} disabled={!hasNextEvent}>
           Next Event
         </button>
+        <div className="timeline-provenance-legend" aria-label="Marker provenance">
+          <span className="measured">Measured</span>
+          <span className="model_estimated">Model estimated</span>
+          <span className="physics_predicted">Physics predicted</span>
+        </div>
       </div>
       <div
         className="timeline-track"
@@ -1907,9 +2055,9 @@ function TimelineStrip({
           <button
             key={`${marker.kind}-${marker.t}-${index}`}
             type="button"
-            className={`timeline-marker ${marker.kind} ${marker.badge} ${marker.humanReviewed ? "human-reviewed" : ""}`}
+            className={`timeline-marker ${marker.kind} ${marker.provenance} ${marker.badge} ${marker.humanReviewed ? "human-reviewed" : ""}`}
             style={{ left: `${Math.min(100, Math.max(0, (marker.t / duration) * 100))}%` }}
-            title={`${marker.label} (${marker.humanReviewed ? "human reviewed, " : ""}${marker.badge.replace("_", " ")}, confidence ${marker.confidence.toFixed(2)})`}
+            title={`${marker.label} (${marker.provenance.replace("_", " ")}; ${marker.humanReviewed ? "human reviewed, " : ""}${marker.badge.replace("_", " ")}, confidence ${marker.confidence.toFixed(2)})`}
             aria-label={`Jump to ${marker.label}`}
             onClick={(event) => {
               event.stopPropagation();
@@ -1927,12 +2075,11 @@ function TimelineStrip({
 
 function TrustBandPanel({ label, trustBand }: { label: string; trustBand?: TrustBand | null }) {
   return (
-    <div className="trust-band-card">
+    <div className="trust-band-card compact" title={trustBand?.reason ?? "No trust-band provenance on this artifact."}>
       <div className="trust-band-header">
         <span>{label}</span>
         <span className={`trust-badge-chip ${trustBand?.badge ?? "none"}`}>{trustBandChipText(trustBand)}</span>
       </div>
-      <p>{trustBand?.reason ?? "No trust-band provenance on this artifact."}</p>
     </div>
   );
 }
@@ -2013,6 +2160,9 @@ function OrbitRig({
   preset,
   activePaddles,
   selectedPlayerId,
+  followPlayerId,
+  currentTime,
+  prefersReducedMotion,
   resetToken,
   dragCommand,
 }: {
@@ -2020,15 +2170,27 @@ function OrbitRig({
   preset: CameraPreset;
   activePaddles: ActivePaddleFrame[];
   selectedPlayerId: number | null;
+  followPlayerId: number | null;
+  currentTime: number;
+  prefersReducedMotion: boolean;
   resetToken: number;
   dragCommand: CameraDragCommand | null;
 }) {
   const { camera, gl } = useThree();
   const controlsRef = useRef<MapControls | null>(null);
+  const transitionRef = useRef<{
+    startedAtMs: number;
+    durationMs: number;
+    fromPosition: ThreeVector3;
+    fromTarget: ThreeVector3;
+    toPosition: ThreeVector3;
+    toTarget: ThreeVector3;
+  } | null>(null);
   const pose = useMemo(
-    () => cameraPresetPose(world, preset, activePaddles, selectedPlayerId),
-    [activePaddles, selectedPlayerId, world, preset],
+    () => cameraPresetPose(world, preset, activePaddles, followPlayerId ?? selectedPlayerId, currentTime),
+    [activePaddles, currentTime, followPlayerId, selectedPlayerId, world, preset],
   );
+  const poseKey = `${preset}:${pose.position.join(",")}:${pose.target.join(",")}:${resetToken}`;
   useEffect(() => {
     const controls = new MapControls(camera, gl.domElement);
     camera.up.set(0, 0, 1);
@@ -2049,7 +2211,30 @@ function OrbitRig({
       controlsRef.current = null;
       controls.dispose();
     };
-  }, [camera, gl, pose.position, pose.target, resetToken, world]);
+  }, [camera, gl, world]);
+  useEffect(() => {
+    const controls = controlsRef.current;
+    if (!controls || preset === "free_orbit") {
+      transitionRef.current = null;
+      return;
+    }
+    const durationMs = cameraTransitionDurationMs(prefersReducedMotion);
+    if (durationMs === 0) {
+      camera.position.set(...pose.position);
+      controls.target.set(...pose.target);
+      controls.update();
+      transitionRef.current = null;
+      return;
+    }
+    transitionRef.current = {
+      startedAtMs: performance.now(),
+      durationMs,
+      fromPosition: camera.position.clone(),
+      fromTarget: controls.target.clone(),
+      toPosition: new ThreeVector3(...pose.position),
+      toTarget: new ThreeVector3(...pose.target),
+    };
+  }, [camera, poseKey, prefersReducedMotion, preset]);
   useEffect(() => {
     const controls = controlsRef.current;
     if (!controls || !dragCommand) return;
@@ -2060,7 +2245,19 @@ function OrbitRig({
     }
     controls.update();
   }, [camera, dragCommand]);
-  useFrame(() => controlsRef.current?.update());
+  useFrame(() => {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    const transition = transitionRef.current;
+    if (transition) {
+      const rawProgress = Math.min(1, Math.max(0, (performance.now() - transition.startedAtMs) / transition.durationMs));
+      const progress = 1 - Math.pow(1 - rawProgress, 3);
+      camera.position.lerpVectors(transition.fromPosition, transition.toPosition, progress);
+      controls.target.lerpVectors(transition.fromTarget, transition.toTarget, progress);
+      if (rawProgress >= 1) transitionRef.current = null;
+    }
+    controls.update();
+  });
   return null;
 }
 
@@ -3184,9 +3381,29 @@ export function cameraPresetPose(
   preset: CameraPreset,
   activePaddles: ActivePaddleFrame[] = [],
   selectedPlayerId: number | null = null,
+  currentTime = 0,
 ): { position: Vec3; target: Vec3 } {
   const bounds = courtBounds(world);
   const groundTarget: Vec3 = [bounds.centerX, bounds.centerY, 0.35];
+  if (preset === "court") return topDownCameraPose(bounds, false);
+  if (preset === "follow_player") {
+    const selectedPlayer = selectedPlayerId === null ? undefined : world.players.find((player) => player.id === selectedPlayerId);
+    const floor = selectedPlayer ? floorWorldForFrame(frameForTime(selectedPlayer, currentTime)) : null;
+    if (floor) {
+      const target: Vec3 = [floor[0], floor[1], Math.max(0.8, floor[2] + 1.05)];
+      return {
+        position: [target[0] + 2.4, target[1] - 3.2, target[2] + 2.1],
+        target,
+      };
+    }
+    return topDownCameraPose(bounds, false);
+  }
+  if (preset === "free_orbit") {
+    return {
+      position: [bounds.centerX + bounds.width * 0.7, bounds.minY - bounds.length * 0.44, Math.max(4.8, bounds.length * 0.42)],
+      target: groundTarget,
+    };
+  }
   if (preset === "paddle_review") {
     const paddlePose = paddleReviewCameraPose(activePaddles, selectedPlayerId);
     if (paddlePose) return paddlePose;

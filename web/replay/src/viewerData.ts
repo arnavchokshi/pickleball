@@ -1,3 +1,5 @@
+import type { RacketsportShots } from "./shotTrails";
+
 export type Vec2 = [number, number];
 export type Vec3 = [number, number, number];
 export type Matrix3 = [Vec3, Vec3, Vec3];
@@ -84,6 +86,9 @@ export type ViewerManifest = {
   rally_spans_url?: string;
   rally_metrics_url?: string;
   coaching_card_facts_url?: string;
+  contact_surfaces_url?: string;
+  target_zones_url?: string;
+  ghost_positions_url?: string;
   label_overlays: LabelOverlay[];
   annotation_sources: AnnotationSource[];
   notes: string[];
@@ -382,15 +387,18 @@ export type ReviewedBounces = {
 };
 
 export type TimelineMarker = {
-  kind: "contact" | "bounce" | "net_cross" | "ball_inflection" | "reviewed_bounce";
+  kind: "contact" | "bounce" | "net_cross" | "ball_inflection" | "reviewed_bounce" | "shot";
   t: number;
   t0: number;
   t1: number;
   confidence: number;
   badge: TrustBadge;
+  provenance: EvidenceProvenance;
   label: string;
   humanReviewed?: boolean;
 };
+
+export type EvidenceProvenance = "measured" | "model_estimated" | "physics_predicted";
 
 export type TimelineChapter = {
   index: number;
@@ -544,6 +552,14 @@ export function resolveTimeSample<T extends { t: number }>(
     staleAgeSeconds,
     insideCoverage,
   };
+}
+
+/** One video-PTS master clock for seek, scrub, pause, and playback-rate events. */
+export function resolveCanonicalPlaybackTime(videoTime: number, durationSeconds: number, fallback = 0): number {
+  const finiteFallback = Number.isFinite(fallback) ? Math.max(0, fallback) : 0;
+  if (!Number.isFinite(videoTime)) return finiteFallback;
+  const duration = Number.isFinite(durationSeconds) && durationSeconds >= 0 ? durationSeconds : Number.POSITIVE_INFINITY;
+  return Math.min(duration, Math.max(0, videoTime));
 }
 
 export type VirtualWorldBallFrame = {
@@ -727,7 +743,61 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
   if (value.ball_flight_sanity_url !== null && value.ball_flight_sanity_url !== undefined) {
     manifest.ball_flight_sanity_url = readString(value.ball_flight_sanity_url, "manifest.ball_flight_sanity_url");
   }
+  for (const key of ["contact_surfaces_url", "target_zones_url", "ghost_positions_url"] as const) {
+    if (value[key] !== null && value[key] !== undefined) manifest[key] = readString(value[key], `manifest.${key}`);
+  }
   return manifest;
+}
+
+const MANIFEST_OPTIONAL_URL_KEYS = [
+  "shots_url",
+  "ball_arc_solved_url",
+  "ball_arc_render_url",
+  "auto_bounce_candidates_url",
+  "ball_bounce_candidates_url",
+  "ball_flight_sanity_url",
+  "rally_spans_url",
+  "rally_metrics_url",
+  "coaching_card_facts_url",
+  "contact_surfaces_url",
+  "target_zones_url",
+  "ghost_positions_url",
+] as const;
+
+export function resolveViewerManifestUrls(manifest: ViewerManifest, manifestUrl: string): ViewerManifest {
+  const resolved: ViewerManifest = {
+    ...manifest,
+    video_url: resolveManifestChildUrl(manifestUrl, manifest.video_url),
+    virtual_world_url: resolveManifestChildUrl(manifestUrl, manifest.virtual_world_url),
+    replay_scene_url: resolveNullableManifestChildUrl(manifestUrl, manifest.replay_scene_url),
+    body_mesh_url: resolveNullableManifestChildUrl(manifestUrl, manifest.body_mesh_url),
+    body_mesh_index_url: resolveNullableManifestChildUrl(manifestUrl, manifest.body_mesh_index_url),
+    physics_refinement_url: resolveNullableManifestChildUrl(manifestUrl, manifest.physics_refinement_url),
+    contact_windows_url: resolveNullableManifestChildUrl(manifestUrl, manifest.contact_windows_url),
+    reviewed_bounces_url: resolveNullableManifestChildUrl(manifestUrl, manifest.reviewed_bounces_url),
+    ball_inflections_url: resolveNullableManifestChildUrl(manifestUrl, manifest.ball_inflections_url),
+    events_selected_url: resolveNullableManifestChildUrl(manifestUrl, manifest.events_selected_url),
+    label_overlays: manifest.label_overlays.map((overlay) => ({ ...overlay, url: resolveManifestChildUrl(manifestUrl, overlay.url) })),
+    annotation_sources: manifest.annotation_sources.map((source) => ({ ...source, url: resolveManifestChildUrl(manifestUrl, source.url) })),
+  };
+  for (const key of MANIFEST_OPTIONAL_URL_KEYS) {
+    const value = manifest[key];
+    if (value) resolved[key] = resolveManifestChildUrl(manifestUrl, value);
+  }
+  return resolved;
+}
+
+export function resolveManifestChildUrl(manifestUrl: string, childUrl: string): string {
+  if (/^[a-z][a-z0-9+.-]*:/i.test(childUrl)) return childUrl;
+  const runtimeBase = typeof window === "undefined" ? "http://localhost/" : window.location.href;
+  const absoluteManifest = new URL(manifestUrl, runtimeBase);
+  const resolved = new URL(childUrl, absoluteManifest);
+  if (/^[a-z][a-z0-9+.-]*:/i.test(manifestUrl)) return resolved.href;
+  return resolved.pathname + resolved.search + resolved.hash;
+}
+
+function resolveNullableManifestChildUrl(manifestUrl: string, childUrl: string | null): string | null {
+  return childUrl === null ? null : resolveManifestChildUrl(manifestUrl, childUrl);
 }
 
 export function parseCoachingCardFacts(input: unknown): CoachingCardFacts {
@@ -1562,6 +1632,7 @@ export function timelineMarkersFromArtifacts(
   contactWindows: ContactWindows | null,
   ballInflections: BallInflections | null,
   reviewedBounces: ReviewedBounces | null = null,
+  shots: RacketsportShots | null = null,
 ): TimelineMarker[] {
   const markers: TimelineMarker[] = [];
   for (const event of contactWindows?.events ?? []) {
@@ -1572,6 +1643,7 @@ export function timelineMarkersFromArtifacts(
       t1: event.window.t1,
       confidence: event.confidence,
       badge: contactEventBadge(event),
+      provenance: typeof event.sources.human_review === "number" && event.sources.human_review >= 0.5 ? "measured" : "model_estimated",
       label: `${event.type}${event.player_id !== null ? ` (p${event.player_id})` : ""} @ ${event.t.toFixed(2)}s`,
     });
   }
@@ -1583,6 +1655,7 @@ export function timelineMarkersFromArtifacts(
       t1: candidate.time_s,
       confidence: candidate.confidence,
       badge: ballInflectionBadge(),
+      provenance: "model_estimated",
       label: `ball inflection @ ${candidate.time_s.toFixed(2)}s`,
     });
   }
@@ -1594,8 +1667,21 @@ export function timelineMarkersFromArtifacts(
       t1: bounce.t,
       confidence: 1,
       badge: "preview",
+      provenance: "measured",
       label: `reviewed bounce ${bounce.review_id} @ ${bounce.t.toFixed(2)}s`,
       humanReviewed: true,
+    });
+  }
+  for (const shot of shots?.shots ?? []) {
+    markers.push({
+      kind: "shot",
+      t: shot.t,
+      t0: shot.t,
+      t1: shot.t,
+      confidence: shot.confidence,
+      badge: shot.confidence >= 0.45 ? "preview" : "low_confidence",
+      provenance: "model_estimated",
+      label: `shot ${shot.shot_type ?? "unclassified"}${shot.player_id !== null ? ` (p${shot.player_id})` : ""} @ ${shot.t.toFixed(2)}s`,
     });
   }
   return markers.sort((left, right) => left.t - right.t);

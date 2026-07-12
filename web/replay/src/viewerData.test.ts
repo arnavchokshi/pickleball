@@ -63,6 +63,8 @@ import {
   worldWarningsReadout,
   worldStats,
   resolveTimeSample,
+  resolveCanonicalPlaybackTime,
+  resolveViewerManifestUrls,
 } from "./viewerData";
 
 describe("canonical entity time resolution", () => {
@@ -71,6 +73,17 @@ describe("canonical entity time resolution", () => {
     expect(resolved.insideCoverage).toBe(true);
     expect(resolved.sample).toBeUndefined();
     expect(resolved.staleAgeSeconds).toBe(0.5);
+  });
+
+  it("keeps scrub, pause, and rate-change clock updates on one clamped canonical PTS", () => {
+    const scrub = resolveCanonicalPlaybackTime(3.4, 3.0);
+    const paused = resolveCanonicalPlaybackTime(scrub, 3.0);
+    const rateChanged = resolveCanonicalPlaybackTime(paused, 3.0);
+
+    expect(scrub).toBe(3.0);
+    expect(paused).toBe(scrub);
+    expect(rateChanged).toBe(scrub);
+    expect(resolveCanonicalPlaybackTime(Number.NaN, 3.0, 1.25)).toBe(1.25);
   });
 
   it("marks all-null poses missing and retains only a prior floor anchor", () => {
@@ -535,6 +548,58 @@ const realCoachingCardFactsFixture = {
 describe("viewer data contracts", () => {
   it("parses the local replay viewer manifest with overlay trust flags", () => {
     expect(parseViewerManifest(manifest)).toEqual(manifest);
+  });
+
+  it("resolves every relative child URL against an http manifest without checkout assumptions", () => {
+    const resolved = resolveViewerManifestUrls(
+      parseViewerManifest({
+        ...manifest,
+        video_url: "media/source.mp4",
+        virtual_world_url: "world/virtual_world.json",
+        replay_scene_url: "./scene/replay_scene.json",
+        label_overlays: [{ ...manifest.label_overlays[0], url: "labels/players.json" }],
+      }),
+      "https://cdn.example.com/runs/clip/replay_viewer_manifest.json",
+    );
+
+    expect(resolved.video_url).toBe("https://cdn.example.com/runs/clip/media/source.mp4");
+    expect(resolved.virtual_world_url).toBe("https://cdn.example.com/runs/clip/world/virtual_world.json");
+    expect(resolved.replay_scene_url).toBe("https://cdn.example.com/runs/clip/scene/replay_scene.json");
+    expect(resolved.label_overlays[0].url).toBe("https://cdn.example.com/runs/clip/labels/players.json");
+  });
+
+  it("preserves file-scheme parity for relative and root-absolute manifest children", () => {
+    const resolved = resolveViewerManifestUrls(
+      parseViewerManifest({
+        ...manifest,
+        video_url: "media/source.mp4",
+        virtual_world_url: "/shared/virtual_world.json",
+      }),
+      "file:///Users/reviewer/run/replay_viewer_manifest.json",
+    );
+
+    expect(resolved.video_url).toBe("file:///Users/reviewer/run/media/source.mp4");
+    expect(resolved.virtual_world_url).toBe("file:///shared/virtual_world.json");
+  });
+
+  it("resolves relative manifest bases while preserving already-absolute children", () => {
+    const resolved = resolveViewerManifestUrls(
+      parseViewerManifest({
+        ...manifest,
+        video_url: "media/source.mp4",
+        virtual_world_url: "https://assets.example.com/world.json",
+        contact_surfaces_url: "derived/contact_surfaces.json",
+        target_zones_url: "derived/target_zones.json",
+        ghost_positions_url: "derived/ghost_positions.json",
+      }),
+      "/runs/clip/replay_viewer_manifest.json",
+    );
+
+    expect(resolved.video_url).toBe("/runs/clip/media/source.mp4");
+    expect(resolved.virtual_world_url).toBe("https://assets.example.com/world.json");
+    expect(resolved.contact_surfaces_url).toBe("/runs/clip/derived/contact_surfaces.json");
+    expect(resolved.target_zones_url).toBe("/runs/clip/derived/target_zones.json");
+    expect(resolved.ghost_positions_url).toBe("/runs/clip/derived/ghost_positions.json");
   });
 
   it("accepts an optional coaching-card facts manifest pointer without requiring old manifests to have it", () => {
@@ -2129,6 +2194,54 @@ describe("timeline markers and coaching-card metrics", () => {
     expect(markers.map((marker) => marker.t)).toEqual([1.0, 2.0]);
     expect(markers[0].badge).toBe("low_confidence");
     expect(markers[1].badge).toBe("preview");
+    expect(markers[0].provenance).toBe("model_estimated");
+    expect(markers[1].provenance).toBe("measured");
+  });
+
+  it("adds directly seekable shot markers and keeps provenance separate from authority", () => {
+    const markers = timelineMarkersFromArtifacts(
+      {
+        schema_version: 1,
+        events: [{
+          type: "contact",
+          t: 1,
+          frame: 30,
+          player_id: 2,
+          confidence: 1,
+          sources: { human_review: 1 },
+          window: { t0: 0.98, t1: 1.02, importance: 1 },
+        }],
+      },
+      null,
+      null,
+      {
+        schema_version: 1,
+        artifact_type: "racketsport_shots",
+        clip_id: "clip",
+        policy: { internal_val_only: true, not_for_detection_metrics: true, not_ground_truth: true },
+        shots: [{
+          shot_id: "shot_1",
+          event_anchor_id: "contact_1",
+          segment_id: 1,
+          player_id: 2,
+          shot_type: "drive",
+          shot_type_abstained: false,
+          outcome: { call: "in", faults: [], let_candidate: false },
+          confidence: 0.8,
+          speed_mph: null,
+          t: 1.01,
+          frame: 30,
+          peak_height_m: null,
+          landing: null,
+        }],
+      },
+    );
+
+    expect(markers.map((marker) => [marker.kind, marker.t, marker.provenance])).toEqual([
+      ["contact", 1, "measured"],
+      ["shot", 1.01, "model_estimated"],
+    ]);
+    expect(markers[0].badge).toBe("preview");
   });
 
   it("parses reviewed bounce artifacts and promotes them into labeled timeline events", () => {
@@ -2147,6 +2260,7 @@ describe("timeline markers and coaching-card metrics", () => {
     expect(markers[0].label).toBe("reviewed bounce bounce_0003 @ 4.45s");
     expect(markers[0].badge).toBe("preview");
     expect(markers[0].humanReviewed).toBe(true);
+    expect(markers[0].provenance).toBe("measured");
   });
 
   it("parses real-shaped rally spans and makes them authoritative timeline chapters", () => {

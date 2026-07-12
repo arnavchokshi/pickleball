@@ -11,6 +11,7 @@ import {
   bodyMeshMaterialForTrustBadge,
   adjacentBodyMeshWindow,
   cameraPresetPose,
+  cameraTransitionDurationMs,
   cocoWholeBodyCoreBoneNames,
   createSolidBodyMeshGeometryCache,
   defaultReviewStartTime,
@@ -20,6 +21,9 @@ import {
   handJointPointsForFrame,
   hasExplicitReviewStartTime,
   manifestUrlFromSearch,
+  loadCameraPreference,
+  persistCameraPreference,
+  entityLayerEmptyStates,
   loadOptionalArtifact,
   paddleRenderGeometryForFrame,
   shouldRenderReplayScenePointClouds,
@@ -39,6 +43,21 @@ describe("manifestUrlFromSearch", () => {
 
   it("does not fall back to a checkout-specific absolute path", () => {
     expect(manifestUrlFromSearch("")).toBeNull();
+  });
+});
+
+describe("camera preference and motion contract", () => {
+  it("persists the last product camera preset and selected follow player", () => {
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+    };
+
+    persistCameraPreference({ preset: "follow_player", playerId: 2 }, storage);
+    expect(loadCameraPreference(storage)).toEqual({ preset: "follow_player", playerId: 2 });
+    expect(cameraTransitionDurationMs(false)).toBeGreaterThan(0);
+    expect(cameraTransitionDurationMs(true)).toBe(0);
   });
 });
 
@@ -155,8 +174,22 @@ describe("viewer truth wiring", () => {
     expect(source).toContain('aria-label="Entity trust badges"');
     expect(source).toContain("Events: no marker evidence at this time");
     expect(source).toContain("showNormals={viewState.layers.paddleNormals}");
+    expect(source).toContain('onPause={(event) => syncVideoTime(event.currentTarget)}');
+    expect(source).toContain('onRateChange={(event) => syncVideoTime(event.currentTarget)}');
+    expect(source).toContain('className="trust-band-card compact"');
     expect(source).not.toContain("function Ball(");
     expect(source).not.toContain("function BallGhostMarkerRing(");
+  });
+
+  it("styles marker provenance separately from authority and reuses the existing render loop for camera easing", () => {
+    const source = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+    const styles = readFileSync(resolve(process.cwd(), "src/styles.css"), "utf8");
+    expect(source).toContain("marker.provenance");
+    expect(source).toContain("camera.position.lerpVectors");
+    expect(source.match(/useFrame\(/g)?.length).toBe(2);
+    expect(styles).toContain(".timeline-marker.measured");
+    expect(styles).toContain(".timeline-marker.model_estimated");
+    expect(styles).toContain(".timeline-marker.physics_predicted");
   });
 });
 
@@ -201,6 +234,9 @@ describe("ViewLayerPanel", () => {
     expect(html).toContain("Paddles");
     expect(html).toContain("Skeletons");
     expect(html).toContain("Solid meshes");
+    expect(html).toContain("Contact surfaces");
+    expect(html).toContain("Target zones");
+    expect(html).toContain("Ghost positioning");
     expect(html).toContain("data-layer-key=\"paddles\"");
     expect(html).toContain("data-layer-key=\"playerSkeletons\"");
     expect(html).toContain("data-layer-key=\"floorContactMarkers\"");
@@ -212,6 +248,23 @@ describe("ViewLayerPanel", () => {
     expect(html).toContain("<details class=\"layer-group debug-layer-group\">");
     expect(html).toContain("Implausible skeletons");
     expect(html).toContain("Point clouds");
+  });
+
+  it("names every enabled entity layer that has no renderable data", () => {
+    expect(entityLayerEmptyStates(DEFAULT_VIEW_STATE.layers, {
+      playerMeshCount: 0,
+      playerSkeletonCount: 0,
+      ballTrailCount: 0,
+      paddleCount: 0,
+      contactSurfaceCount: 0,
+      targetZoneCount: 0,
+      ghostPositionCount: 0,
+    })).toEqual(expect.arrayContaining([
+      "Player meshes: no data at this time",
+      "Player skeletons: no data at this time",
+      "Ball trail: no data at this time",
+      "Paddles: no data at this time",
+    ]));
   });
 
   it("marks focus presets and player chips as active when selected", () => {
@@ -858,6 +911,31 @@ describe("courtBounds and cameraPresetPose", () => {
     // top_down looks straight down at court level.
     expect(topDown.target[2]).toBe(0);
     expect(topDown.position[2]).toBeGreaterThan(broadcast.position[2]);
+  });
+
+  it("supports court, selectable follow-player, and free-orbit product presets", () => {
+    const player: VirtualWorldPlayer = {
+      id: 7,
+      representation: "track_only",
+      frames: [{
+        t: 0,
+        track_world_xy: [1.2, 4.4],
+        floor_world_xyz: [1.2, 4.4, 0],
+        joints_world: [],
+        joint_conf: [],
+        mesh_vertices_world: [],
+        joint_count: 0,
+        mesh_vertex_count: 0,
+      }],
+    };
+    const followed = cameraPresetPose(makeWorld([player]), "follow_player", [], 7, 0);
+    const court = cameraPresetPose(world, "court");
+    const orbit = cameraPresetPose(world, "free_orbit");
+
+    expect(followed.target[0]).toBeCloseTo(1.2);
+    expect(followed.target[1]).toBeCloseTo(4.4);
+    expect(court).not.toEqual(followed);
+    expect(orbit.position).not.toEqual(followed.position);
   });
 
   it("frames the selected player's active paddle with a close review camera", () => {

@@ -27,6 +27,9 @@ export type ViewLayerKey =
   | "playerTrails"
   | "floorContactMarkers"
   | "eventMarkers"
+  | "contactSurfaces"
+  | "targetZones"
+  | "ghostPositioning"
   | "handJointPoints"
   | "implausibleSkeletons"
   | "debugPointClouds";
@@ -49,6 +52,9 @@ export const VIEW_LAYER_DEFINITIONS: ViewLayerDefinition[] = [
   { key: "playerTrails", label: "Player trails", description: "Recent player floor paths", group: "Players", queryToken: "ptrails" },
   { key: "floorContactMarkers", label: "Floor/contact", description: "Player floor and contact discs", group: "Events", queryToken: "floor" },
   { key: "eventMarkers", label: "Events", description: "Contact and bounce markers", group: "Events", queryToken: "events" },
+  { key: "contactSurfaces", label: "Contact surfaces", description: "Contact-plane geometry when supplied", group: "Events", queryToken: "contact-surfaces" },
+  { key: "targetZones", label: "Target zones", description: "Coaching target regions when supplied", group: "Events", queryToken: "target-zones" },
+  { key: "ghostPositioning", label: "Ghost positioning", description: "Reference player positions when supplied", group: "Players", queryToken: "ghost-positioning" },
   { key: "handJointPoints", label: "Hand points", description: "Optional whole-body hand joint dots", group: "Debug", queryToken: "hands" },
   {
     key: "implausibleSkeletons",
@@ -87,6 +93,9 @@ export const DEFAULT_VIEW_LAYERS: ViewLayers = {
   playerTrails: false,
   floorContactMarkers: false,
   eventMarkers: true,
+  contactSurfaces: false,
+  targetZones: false,
+  ghostPositioning: false,
   handJointPoints: false,
   implausibleSkeletons: false,
   debugPointClouds: false,
@@ -97,6 +106,51 @@ export const DEFAULT_VIEW_STATE: ViewState = {
   focus: null,
   selectedPlayerId: null,
 };
+
+export const VIEW_STATE_STORAGE_KEY = "pickleball.replay.view-state.v2";
+
+type ViewStateStorage = Pick<Storage, "getItem" | "setItem">;
+
+export function loadPersistedViewState(search: string, storage?: ViewStateStorage | null): ViewState {
+  const params = new URLSearchParams(search.startsWith("?") ? search.slice(1) : search);
+  if (params.has("layers") || params.has("focus") || params.has("player")) return parseViewStateFromSearch(search);
+  if (!storage) return parseViewStateFromSearch(search);
+  try {
+    const raw = storage.getItem(VIEW_STATE_STORAGE_KEY);
+    if (!raw) return parseViewStateFromSearch(search);
+    const value = JSON.parse(raw) as Partial<ViewState>;
+    const layers = { ...DEFAULT_VIEW_LAYERS };
+    for (const definition of VIEW_LAYER_DEFINITIONS) {
+      const stored = value.layers?.[definition.key];
+      if (typeof stored === "boolean") layers[definition.key] = stored;
+    }
+    const focus = validFocus(value.focus) ? value.focus : null;
+    return {
+      layers,
+      focus,
+      selectedPlayerId: focus?.kind === "player" ? focus.playerId : null,
+    };
+  } catch {
+    return parseViewStateFromSearch(search);
+  }
+}
+
+export function persistViewState(state: ViewState, storage?: ViewStateStorage | null): void {
+  if (!storage) return;
+  try {
+    storage.setItem(VIEW_STATE_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // Persistence is an enhancement; storage denial must not break replay.
+  }
+}
+
+function validFocus(value: unknown): value is FocusState {
+  if (value === null) return true;
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { kind?: unknown; playerId?: unknown };
+  if (candidate.kind === "ball") return true;
+  return candidate.kind === "player" && typeof candidate.playerId === "number" && Number.isInteger(candidate.playerId);
+}
 
 export type ViewPreset = "default" | "ballFocus" | "playerFocus";
 
@@ -314,6 +368,9 @@ export function sceneLayerSnapshotForTime({
     playerTrails: layerStatus(viewState.layers.playerTrails, playerTrailCount),
     floorContactMarkers: layerStatus(viewState.layers.floorContactMarkers, floorMarkerCount),
     eventMarkers: layerStatus(viewState.layers.eventMarkers, eventMarkerCount),
+    contactSurfaces: layerStatus(viewState.layers.contactSurfaces, 0),
+    targetZones: layerStatus(viewState.layers.targetZones, 0),
+    ghostPositioning: layerStatus(viewState.layers.ghostPositioning, 0),
     handJointPoints: layerStatus(viewState.layers.handJointPoints, handPointCount),
     implausibleSkeletons: layerStatus(viewState.layers.implausibleSkeletons, implausibleSkeletonCount),
     debugPointClouds: layerStatus(viewState.layers.debugPointClouds, pointCloudCount),

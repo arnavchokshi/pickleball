@@ -877,9 +877,34 @@ dd {
 
 .timeline-controls {
   display: flex;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   margin-bottom: 7px;
 }
+
+.timeline-provenance-legend {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+  color: rgb(244 247 237 / 68%);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.timeline-provenance-legend span::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 4px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.timeline-provenance-legend .measured { color: #63d9ff; }
+.timeline-provenance-legend .model_estimated { color: #ffb454; }
+.timeline-provenance-legend .physics_predicted { color: #9a8cff; }
 
 .event-nav-button,
 .layer-toggle,
@@ -992,6 +1017,18 @@ dd {
   border-radius: 999px;
 }
 
+.timeline-marker.shot {
+  width: 10px;
+  height: 10px;
+  top: 12px;
+  border-radius: 2px;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.timeline-marker.shot .timeline-marker-label {
+  transform: translateX(-50%) rotate(-45deg);
+}
+
 .timeline-marker-label {
   position: absolute;
   left: 50%;
@@ -1030,6 +1067,13 @@ dd {
 .timeline-marker.low_confidence {
   background: #8a8f98;
   opacity: 0.85;
+}
+
+.timeline-marker.measured { background: #63d9ff; }
+.timeline-marker.model_estimated { background: #ffb454; }
+.timeline-marker.physics_predicted {
+  background: #9a8cff;
+  box-shadow: inset 0 0 0 1px rgb(244 247 237 / 58%);
 }
 
 .timeline-playhead {
@@ -1263,6 +1307,28 @@ dd {
   background: var(--lime);
   color: var(--ink);
   border-color: var(--lime);
+}
+
+.follow-player-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 5px 3px 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: rgb(7 16 13 / 78%);
+  color: var(--cream);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.follow-player-select select {
+  border: 0;
+  border-radius: 4px;
+  padding: 3px 5px;
+  background: rgb(244 247 237 / 12%);
+  color: var(--cream);
+  font: inherit;
 }
 
 .layer-panel-header,
@@ -1698,6 +1764,23 @@ dd {
   padding: 5px 7px;
 }
 
+.trust-band-card.compact {
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 3px 4px 3px 8px;
+}
+
+.trust-band-card.compact .trust-band-header {
+  gap: 5px;
+  margin: 0;
+  font-size: 10px;
+}
+
+.trust-band-card.compact .trust-badge-chip {
+  padding: 2px 6px;
+  font-size: 9px;
+}
+
 .entity-trust-strip .trust-band-card p {
   display: none;
 }
@@ -1717,6 +1800,32 @@ dd {
   position: absolute;
   top: 12px;
   z-index: 3;
+}
+
+.layer-empty-strip {
+  position: absolute;
+  right: 12px;
+  bottom: 48px;
+  z-index: 3;
+  display: grid;
+  gap: 4px;
+  max-width: min(330px, calc(100% - 24px));
+  padding: 6px 8px;
+  border: 1px dashed rgb(255 180 84 / 46%);
+  border-radius: 7px;
+  background: rgb(30 32 35 / 78%);
+  color: rgb(255 225 190 / 78%);
+  font-size: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timeline-marker-label,
+  .camera-preset,
+  .layer-toggle,
+  .focus-button,
+  .player-chip {
+    transition: none !important;
+  }
 }
 
 .event-empty-reason {
