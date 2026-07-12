@@ -954,6 +954,33 @@
       },
       "proven_against": null,
       "notes": "Product-infra fence; web/replay and ios are out of scope."
+    },
+    "tracking.association_court_margin": {
+      "stage": "tracking",
+      "selection": "positive court-margin + OSNet global association candidate (deepreview S2 recovery)",
+      "value": {
+        "enabled": false,
+        "candidate_flag": "association_court_margin_m",
+        "surviving_arms_m": [
+          0.5,
+          1.0
+        ],
+        "strongest_arm_m": 1.0,
+        "rejected_arm_m": 2.0
+      },
+      "status": "PENDING",
+      "proven_against": {
+        "card": "Burlington/Wolverine historical-internal person GT (frozen 4-arm matrix, trk_reid_apron_20260712, pin 3d5125d58)",
+        "worst_clip_idf1_control": 0.6425,
+        "worst_clip_idf1_margin1p0": 0.8516,
+        "worst_clip_cov4_control": 0.0433,
+        "worst_clip_cov4_margin1p0": 0.7117,
+        "new_switches": 0,
+        "new_spectator_fp": 0,
+        "new_far_off_court_fp": 0,
+        "full_bar_cov4_ge_0p95": false
+      },
+      "notes": "candidate_survives_internal_e2e ONLY; margin_2.0 REJECTED (new switch + 24 far-off-court FP frames); osnet_x1_0_market1501 weight license UNRESOLVED (Market1501 research-clause risk) -> R&D-only until NS-07.3 license ruling; no default flip; VERIFIED=0."
     }
   },
   "selection_constant_coverage": {
