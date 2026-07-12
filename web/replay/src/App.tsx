@@ -1972,7 +1972,7 @@ function FpsProbe({ onSample }: { onSample: (fps: number) => void }) {
   return null;
 }
 
-function TimelineStrip({
+export function TimelineStrip({
   durationSeconds,
   currentTime,
   markers,
@@ -2035,20 +2035,14 @@ function TimelineStrip({
           const left = Math.min(100, Math.max(0, (chapter.t0 / duration) * 100));
           const right = Math.min(100, Math.max(left, (chapter.t1 / duration) * 100));
           return (
-            <button
+            <div
               key={chapter.index}
-              type="button"
               className={`timeline-chapter ${chapter.badge}`}
               style={{ left: `${left}%`, width: `${Math.max(1.4, right - left)}%` }}
               title={`${chapter.label} ${chapter.t0.toFixed(2)}s-${chapter.t1.toFixed(2)}s`}
-              aria-label={`Jump to ${chapter.label}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSeek(chapter.t0);
-              }}
             >
               <span>{chapter.label}</span>
-            </button>
+            </div>
           );
         })}
         {markers.map((marker, index) => (

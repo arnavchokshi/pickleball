@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { readFileSync } from "node:fs";
@@ -27,11 +27,13 @@ import {
   loadOptionalArtifact,
   paddleRenderGeometryForFrame,
   shouldRenderReplayScenePointClouds,
+  TimelineStrip,
   updateFpsSample,
   vertexDebugPointsForFrame,
 } from "./App";
 import { parseBodyMesh, solidBodyMeshFramesForTime } from "./viewerData";
-import type { ActivePaddleFrame, BodyMesh, TimelineChapter, VirtualWorld, VirtualWorldPaddleFrame, VirtualWorldPlayer } from "./viewerData";
+import { timelineChaptersFromMarkers } from "./viewerData";
+import type { ActivePaddleFrame, BodyMesh, TimelineChapter, TimelineMarker, VirtualWorld, VirtualWorldPaddleFrame, VirtualWorldPlayer } from "./viewerData";
 import { DEFAULT_VIEW_STATE, applyViewPreset } from "./viewState";
 
 describe("manifestUrlFromSearch", () => {
@@ -190,6 +192,71 @@ describe("viewer truth wiring", () => {
     expect(styles).toContain(".timeline-marker.measured");
     expect(styles).toContain(".timeline-marker.model_estimated");
     expect(styles).toContain(".timeline-marker.physics_predicted");
+  });
+
+  it("keeps passive player-gap notices below camera controls and out of hit testing", () => {
+    const styles = readFileSync(resolve(process.cwd(), "src/styles.css"), "utf8");
+    const playerGapRule = styles.match(/\.player-gap-strip\s*\{([^}]*)\}/)?.[1] ?? "";
+    const cameraRule = styles.match(/\.camera-preset-bar\s*\{([^}]*)\}/)?.[1] ?? "";
+
+    expect(playerGapRule).toMatch(/pointer-events:\s*none/);
+    expect(playerGapRule).toMatch(/z-index:\s*1/);
+    expect(cameraRule).toMatch(/z-index:\s*2/);
+  });
+});
+
+describe("TimelineStrip", () => {
+  it("seeks proportionally through a single dense chapter while preserving exact marker seeks and labels", () => {
+    const duration = 10;
+    const markers: TimelineMarker[] = Array.from({ length: 56 }, (_, index) => {
+      const t = 0.37 + (9.83 - 0.37) * (index / 55);
+      return {
+        kind: "ball_inflection",
+        t,
+        t0: t,
+        t1: t,
+        confidence: 0.8,
+        badge: "low_confidence",
+        provenance: "model_estimated",
+        label: `ball inflection @ ${t.toFixed(2)}s`,
+      };
+    });
+    const chapters = timelineChaptersFromMarkers(markers, duration);
+    const seeks: number[] = [];
+    let nextEventCalls = 0;
+    const strip = TimelineStrip({
+      durationSeconds: duration,
+      currentTime: 0,
+      markers,
+      chapters,
+      onSeek: (seconds) => seeks.push(seconds),
+      onPreviousEvent: () => undefined,
+      onNextEvent: () => { nextEventCalls += 1; },
+    });
+    const track = React.Children.toArray(strip.props.children)[1] as React.ReactElement<any>;
+
+    expect(chapters).toHaveLength(1);
+    expect(renderToStaticMarkup(strip)).toContain("Rally 1");
+    track.props.onClick({
+      clientX: 510,
+      currentTarget: { getBoundingClientRect: () => ({ left: 10, width: 1000 }) },
+    });
+    expect(seeks.at(-1)).toBeCloseTo(duration * 0.5, 6);
+
+    const trackChildren = React.Children.toArray(track.props.children) as React.ReactElement<any>[];
+    const chapter = trackChildren.find((child) => String(child.props.className ?? "").startsWith("timeline-chapter "));
+    expect(chapter?.props.onClick).toBeUndefined();
+    const marker = trackChildren.find((child) => String(child.props.className ?? "").startsWith("timeline-marker "));
+    expect(marker).toBeDefined();
+    const stopPropagation = vi.fn();
+    marker?.props.onClick({ stopPropagation });
+    expect(stopPropagation).toHaveBeenCalledOnce();
+    expect(seeks.at(-1)).toBeCloseTo(markers[0].t, 9);
+
+    const preventDefault = vi.fn();
+    track.props.onKeyDown({ key: "ArrowRight", preventDefault });
+    expect(preventDefault).toHaveBeenCalledOnce();
+    expect(nextEventCalls).toBe(1);
   });
 });
 
