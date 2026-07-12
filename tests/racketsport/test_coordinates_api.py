@@ -10,7 +10,8 @@ import numpy as np
 import pytest
 
 from threed.racketsport import coordinates, mhr_decode
-from threed.racketsport.schemas import CameraIntrinsics
+from threed.racketsport.court_calibration import project_world_points as project_world_points_legacy
+from threed.racketsport.schemas import CameraIntrinsics, CourtExtrinsics
 
 
 def test_coordinate_vocabulary_and_homography_conventions_are_stable() -> None:
@@ -82,3 +83,44 @@ def test_blessed_camera_matrix_builder_delegates_to_court_calibration() -> None:
         [0.0, 900.0, 360.0],
         [0.0, 0.0, 1.0],
     ]
+
+
+def test_world_declarations_decode_legacy_and_canonical_fields() -> None:
+    expected = coordinates.CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M
+    assert coordinates.resolve_world_coordinate_space({"world_frame": "court_Z0"}) == expected
+    assert coordinates.resolve_world_coordinate_space({"coordinate_frame": "court_netcenter_z_up_m"}) == expected
+    assert coordinates.resolve_world_coordinate_space({"coordinate_space": expected.value}) == expected
+    assert coordinates.resolve_world_coordinate_space({}) == expected
+    with pytest.raises(ValueError, match="unsupported world coordinate space"):
+        coordinates.resolve_world_coordinate_space(
+            {"coordinate_space": coordinates.CoordinateSpace.CAMERA_M.value}
+        )
+
+
+def test_typed_pinhole_adapter_preserves_distorted_intrinsics_legacy_math_exactly() -> None:
+    intrinsics = CameraIntrinsics(
+        fx=1187.5,
+        fy=1179.25,
+        cx=951.0,
+        cy=537.5,
+        dist=[0.17, -0.08, 0.002, -0.001],
+        source="distorted_synthetic_parity",
+    )
+    extrinsics = CourtExtrinsics(
+        R=[[0.9998, -0.0175, 0.009], [0.0174, 0.9998, 0.004], [-0.0091, -0.0038, 0.99995]],
+        t=[0.25, -0.1, 14.5],
+        camera_height_m=14.5,
+    )
+    world = [[-3.1, -6.7, 0.0], [0.2, 0.4, 1.15], [2.9, 6.5, 0.0]]
+
+    legacy = project_world_points_legacy(extrinsics, intrinsics, world)
+    typed = coordinates.project_world_points(
+        extrinsics,
+        intrinsics,
+        world,
+        input_space=coordinates.CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M,
+        output_space=coordinates.CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        reference_space=coordinates.CoordinateSpace.PIXELS_RAW_NATIVE,
+    )
+
+    assert typed == legacy

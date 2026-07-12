@@ -33,7 +33,7 @@ already adopted the vocabulary.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Final, Literal, Sequence
+from typing import Any, Final, Literal, Mapping, Sequence
 
 import numpy as np
 
@@ -57,6 +57,81 @@ HOMOGRAPHY_PIXEL_CONVENTIONS: Final[tuple[HomographyPixelConvention, ...]] = (
     "raw_pixels",
     "undistorted_pixels",
 )
+
+LEGACY_COURT_WORLD_FRAME: Final = "court_Z0"
+CANONICAL_COURT_WORLD_FRAME: Final = "court_netcenter_z_up_m"
+
+
+def resolve_world_coordinate_space(
+    payload: Mapping[str, Any],
+    *,
+    default: CoordinateSpace = CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M,
+) -> CoordinateSpace:
+    """Resolve canonical and legacy world declarations without rewriting values.
+
+    Older skeleton and paddle artifacts only carry ``world_frame="court_Z0"``.
+    New artifacts may additionally carry the typed ``coordinate_space`` and the
+    schema's canonical ``coordinate_frame``.  Missing declarations retain the
+    historical court-world assumption so old callers and fixtures remain valid.
+    Conflicting explicit declarations fail closed instead of silently relabeling
+    coordinates.
+    """
+
+    declarations: list[CoordinateSpace] = []
+    coordinate_space = payload.get("coordinate_space")
+    if coordinate_space is not None:
+        declarations.append(CoordinateSpace(str(coordinate_space)))
+
+    coordinate_frame = payload.get("coordinate_frame")
+    if coordinate_frame is not None:
+        if str(coordinate_frame) != CANONICAL_COURT_WORLD_FRAME:
+            raise ValueError(f"unsupported coordinate_frame: {coordinate_frame}")
+        declarations.append(CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M)
+
+    world_frame = payload.get("world_frame")
+    if world_frame is not None:
+        if str(world_frame) not in {LEGACY_COURT_WORLD_FRAME, CANONICAL_COURT_WORLD_FRAME}:
+            raise ValueError(f"unsupported world_frame: {world_frame}")
+        declarations.append(CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M)
+
+    if not declarations:
+        return default
+    if any(space != declarations[0] for space in declarations[1:]):
+        raise ValueError("conflicting world coordinate declarations")
+    if declarations[0] != CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M:
+        raise ValueError(f"unsupported world coordinate space: {declarations[0]}")
+    return declarations[0]
+
+
+def project_world_points(
+    extrinsics: Any,
+    intrinsics: Any,
+    world_points: Any,
+    *,
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+    reference_space: CoordinateSpace,
+) -> list[list[float]]:
+    """Canonical typed adapter for the repository's legacy pinhole projection.
+
+    The existing math produces ideal/native pinhole pixels and does not apply
+    lens distortion, so ``output_space`` must be
+    ``PIXELS_UNDISTORTED_NATIVE``.  ``reference_space`` declares the raster
+    convention of evidence compared with the projection (for example raw
+    detector boxes).  It is metadata at this parity-only seam: no distortion,
+    resize, crop, or reference-frame transform is introduced here.
+    """
+
+    from .court_calibration import project_world_points_typed as _project
+
+    return _project(
+        extrinsics,
+        intrinsics,
+        world_points,
+        input_space=input_space,
+        output_space=output_space,
+        reference_space=reference_space,
+    )
 
 
 def invert_extrinsics(R: Any, t: Any) -> tuple[np.ndarray, np.ndarray]:
@@ -153,12 +228,16 @@ def _points3(value: Any, *, name: str) -> np.ndarray:
 
 
 __all__ = [
+    "CANONICAL_COURT_WORLD_FRAME",
     "CoordinateSpace",
     "HOMOGRAPHY_PIXEL_CONVENTIONS",
     "HomographyPixelConvention",
+    "LEGACY_COURT_WORLD_FRAME",
     "apply_translation_once",
     "camera_matrix_from_intrinsics",
     "camera_to_world_points",
     "invert_extrinsics",
+    "project_world_points",
+    "resolve_world_coordinate_space",
     "world_to_camera_points",
 ]

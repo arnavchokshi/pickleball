@@ -520,6 +520,16 @@ def test_artifact_contract_top_level_fields() -> None:
     assert out["rkt_gate_unscoreable"] is True
     assert out["trust"] == "estimated_from_wrist"
     assert out["world_frame"] == "court_Z0"
+    assert out["coordinate_frame"] == "court_netcenter_z_up_m"
+    assert out["coordinate_space"] == "world_court_netcenter_z_up_m"
+    assert out["input_coordinate_space"] == "world_court_netcenter_z_up_m"
+    assert out["parameters"]["coordinate_contract"] == {
+        "world_input": "world_court_netcenter_z_up_m",
+        "pinhole_output": "pixels_undistorted_native",
+        "detector_reference": "pixels_raw_native",
+        "transform_applied": False,
+        "parity_note": "declaration_only_no_distortion_resize_crop_or_reference_transform",
+    }
     assert out["translation_unit"] == "m"
     assert "players" in out and isinstance(out["players"], list)
     assert "hidden_frames" in out
@@ -534,6 +544,8 @@ def test_artifact_contract_per_frame_fields_match_virtual_world_consumption_cont
     # Required by virtual_world._paddle_frame:
     assert isinstance(frame["t"], float)
     assert frame["world_frame"] == "court_Z0"
+    assert frame["coordinate_frame"] == "court_netcenter_z_up_m"
+    assert frame["coordinate_space"] == "world_court_netcenter_z_up_m"
     assert frame["translation_unit"] == "m"
     assert isinstance(frame["conf"], float)
     pose = frame["pose_se3"]

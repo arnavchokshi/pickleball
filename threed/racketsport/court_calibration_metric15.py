@@ -279,7 +279,7 @@ def aggregate_reviewed_keypoints_native_px(
     (one independently-reviewed frame plus `reviewed_static_camera_copy` duplicates), so
     median-aggregating across them is a robustness step, not a source of new
     information -- consistent with the CAL static-camera aggregation policy in
-    `MASTER_PLAN.md`. Returns (native_points_by_name, per_point_frame_stdev_px,
+    `NORTH_STAR_ROADMAP.md`. Returns (native_points_by_name, per_point_frame_stdev_px,
     native_image_size).
     """
 

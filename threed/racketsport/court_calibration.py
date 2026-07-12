@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 from .capture_quality import score_capture_quality
+from .coordinates import CoordinateSpace
 from .court_templates import Sport, get_court_template
 from .schemas import (
     CameraIntrinsics,
@@ -135,6 +136,39 @@ def project_image_points_to_world(
     return projected
 
 
+def project_image_points_to_world_typed(
+    homography: Iterable[Iterable[float]],
+    image_pts: Iterable[Iterable[float]],
+    *,
+    input_space: CoordinateSpace,
+    homography_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+) -> list[list[float]]:
+    """Declare the homography seam's input/reference/output spaces.
+
+    This parity-only adapter deliberately delegates to the historical
+    projection unchanged.  ``homography_space`` is the raster convention in
+    which the matrix was fit; a differing ``input_space`` is surfaced to the
+    caller but is not silently converted by this adapter.
+    """
+
+    input_space = CoordinateSpace(input_space)
+    homography_space = CoordinateSpace(homography_space)
+    output_space = CoordinateSpace(output_space)
+    raster_spaces = {
+        CoordinateSpace.PIXELS_RAW_NATIVE,
+        CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        CoordinateSpace.PIXELS_PREVIEW_SCALED,
+    }
+    if input_space not in raster_spaces:
+        raise ValueError(f"image input space must be a raster space, got {input_space}")
+    if homography_space not in raster_spaces:
+        raise ValueError(f"homography reference space must be a raster space, got {homography_space}")
+    if output_space != CoordinateSpace.WORLD_XY_HOMOGRAPHY_M:
+        raise ValueError(f"homography output space must be world_xy_homography_m, got {output_space}")
+    return project_image_points_to_world(homography, image_pts)
+
+
 def project_world_points(
     extrinsics: CourtExtrinsics,
     intrinsics: CameraIntrinsics,
@@ -158,6 +192,39 @@ def project_world_points(
             ]
         )
     return projected
+
+
+def project_world_points_typed(
+    extrinsics: CourtExtrinsics,
+    intrinsics: CameraIntrinsics,
+    world_pts: Iterable[Iterable[float]],
+    *,
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+    reference_space: CoordinateSpace,
+) -> list[list[float]]:
+    """Typed declaration around the unchanged ideal pinhole projection.
+
+    ``reference_space`` records whether downstream evidence is raw,
+    undistorted, or preview-scaled.  The legacy math remains ideal/native and
+    therefore always emits ``PIXELS_UNDISTORTED_NATIVE``; this function does
+    not pretend that a raw/reference declaration performs a conversion.
+    """
+
+    input_space = CoordinateSpace(input_space)
+    output_space = CoordinateSpace(output_space)
+    reference_space = CoordinateSpace(reference_space)
+    if input_space != CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M:
+        raise ValueError(f"pinhole projection input must be court world metres, got {input_space}")
+    if output_space != CoordinateSpace.PIXELS_UNDISTORTED_NATIVE:
+        raise ValueError(f"legacy pinhole output is undistorted native pixels, got {output_space}")
+    if reference_space not in {
+        CoordinateSpace.PIXELS_RAW_NATIVE,
+        CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        CoordinateSpace.PIXELS_PREVIEW_SCALED,
+    }:
+        raise ValueError(f"projection reference must be a raster space, got {reference_space}")
+    return project_world_points(extrinsics, intrinsics, world_pts)
 
 
 def reprojection_error(

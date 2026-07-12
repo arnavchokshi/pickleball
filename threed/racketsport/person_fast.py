@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .court_calibration import project_image_points_to_world
+from .coordinates import CoordinateSpace
+from .court_calibration import project_image_points_to_world_typed
 from .court_templates import Sport, get_court_template
 from .court_zones import classify_point
 from .schemas import CourtCalibration
@@ -22,13 +23,21 @@ def person_detection_from_bbox(
     *,
     bbox_xyxy: tuple[float, float, float, float],
     confidence: float,
+    bbox_space: CoordinateSpace = CoordinateSpace.PIXELS_RAW_NATIVE,
+    homography_space: CoordinateSpace = CoordinateSpace.PIXELS_RAW_NATIVE,
 ) -> PersonDetection:
     x1, y1, x2, y2 = [float(value) for value in bbox_xyxy]
     if x2 < x1 or y2 < y1:
         raise ValueError("bbox_xyxy must be ordered as x1, y1, x2, y2")
 
     foot_image = [(x1 + x2) / 2.0, y2]
-    foot_world_xy = project_image_points_to_world(calibration.homography, [foot_image])[0]
+    foot_world_xy = project_image_points_to_world_typed(
+        calibration.homography,
+        [foot_image],
+        input_space=bbox_space,
+        homography_space=homography_space,
+        output_space=CoordinateSpace.WORLD_XY_HOMOGRAPHY_M,
+    )[0]
     return PersonDetection(
         bbox_xyxy=(x1, y1, x2, y2),
         confidence=float(confidence),

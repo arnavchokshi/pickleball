@@ -70,6 +70,13 @@ from typing import Any, Mapping, Sequence
 import numpy as np
 from scipy.spatial.transform import Rotation
 
+from .coordinates import (
+    CANONICAL_COURT_WORLD_FRAME,
+    LEGACY_COURT_WORLD_FRAME,
+    CoordinateSpace,
+    project_world_points as project_world_points_typed,
+    resolve_world_coordinate_space,
+)
 from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 from .paddle_proxy import (
     DEFAULT_GRIP_OFFSET_M,
@@ -85,7 +92,9 @@ SOURCE = "wrist_palm_grip_fused"
 # recognizes; this estimator's output stays estimated-class per spec, so it deliberately rides the
 # same recognized status rather than inventing a new one virtual_world would silently drop.
 TRUST = _WRIST_PROXY_TRUST
-WORLD_FRAME = "court_Z0"
+WORLD_FRAME = LEGACY_COURT_WORLD_FRAME
+WORLD_COORDINATE_FRAME = CANONICAL_COURT_WORLD_FRAME
+WORLD_COORDINATE_SPACE = CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M
 DEFAULT_HANDLE_LENGTH_IN = 5.25
 # Regulation-common paddle dims (16" x 8" is the ubiquitous production shape; the proxy's
 # 15.5" x 7.5" was conservative). Physical constants, applied identically to every clip.
@@ -100,6 +109,24 @@ _BAND_BASE_CONF = {
     BAND_PALM_FITTED: 0.55,
     BAND_GRIP_EXTRAPOLATED: 0.30,
 }
+
+
+def _project_world_points_for_raw_detector_reference(
+    extrinsics: Any,
+    intrinsics: Any,
+    world_points: Any,
+) -> list[list[float]]:
+    """Project unchanged pinhole pixels while declaring raw detector reference evidence."""
+
+    return project_world_points_typed(
+        extrinsics,
+        intrinsics,
+        world_points,
+        input_space=WORLD_COORDINATE_SPACE,
+        output_space=CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        reference_space=CoordinateSpace.PIXELS_RAW_NATIVE,
+    )
+
 
 DEFAULT_MIN_SEGMENT_DURATION_S = 2.0
 DEFAULT_SEGMENT_BREAK_ANGLE_DEG = 60.0
@@ -408,8 +435,6 @@ def _verify_handedness_with_detector_boxes(
     only external-trained detector predictions are legal solver input.
     """
 
-    from .court_calibration import project_world_points
-
     by_frame: dict[int, list[tuple[tuple[float, float, float, float], float]]] = {}
     for frame_idx, bbox, conf in detector_records:
         by_frame.setdefault(frame_idx, []).append((bbox, conf))
@@ -431,7 +456,7 @@ def _verify_handedness_with_detector_boxes(
             if wrist is None or _joint_conf(frame.get("joint_conf"), cfg["wrist"]) < min_joint_confidence:
                 continue
             try:
-                wrist_px = project_world_points(
+                wrist_px = _project_world_points_for_raw_detector_reference(
                     calibration_model.extrinsics, calibration_model.intrinsics, [tuple(float(v) for v in wrist)]
                 )[0]
             except (ValueError, ZeroDivisionError):
@@ -475,8 +500,6 @@ def _per_frame_side_votes(
     """Per-frame hand-side votes from detector-box proximity: for each frame with wrist-gated
     boxes, the side whose projected wrist is closest to the nearest gated box wins the frame."""
 
-    from .court_calibration import project_world_points
-
     by_frame: dict[int, list[tuple[tuple[float, float, float, float], float]]] = {}
     for frame_idx, bbox, conf in detector_records:
         by_frame.setdefault(frame_idx, []).append((bbox, conf))
@@ -498,7 +521,7 @@ def _per_frame_side_votes(
             if wrist is None or _joint_conf(frame.get("joint_conf"), cfg["wrist"]) < min_joint_confidence:
                 continue
             try:
-                wrist_px = project_world_points(
+                wrist_px = _project_world_points_for_raw_detector_reference(
                     calibration_model.extrinsics, calibration_model.intrinsics, [tuple(float(v) for v in wrist)]
                 )[0]
             except (ValueError, ZeroDivisionError):
@@ -816,7 +839,6 @@ def _detector_box_correction(
     wrist_gate_radius_px: float,
     max_correction_m: float,
 ) -> tuple[np.ndarray, dict[str, Any]]:
-    from .court_calibration import project_world_points
     from .schemas import CourtCalibration
 
     try:
@@ -836,7 +858,9 @@ def _detector_box_correction(
         if sample is None:
             continue
         try:
-            wrist_px = project_world_points(calib.extrinsics, calib.intrinsics, [tuple(float(v) for v in sample.wrist)])[0]
+            wrist_px = _project_world_points_for_raw_detector_reference(
+                calib.extrinsics, calib.intrinsics, [tuple(float(v) for v in sample.wrist)]
+            )[0]
         except (ValueError, ZeroDivisionError):
             continue
         box_center = ((bbox[0] + bbox[2]) / 2.0, (bbox[1] + bbox[3]) / 2.0)
@@ -844,7 +868,9 @@ def _detector_box_correction(
             continue
         face_center_world = sample.wrist + sample.rotation @ t_g
         try:
-            face_px = project_world_points(calib.extrinsics, calib.intrinsics, [tuple(float(v) for v in face_center_world)])[0]
+            face_px = _project_world_points_for_raw_detector_reference(
+                calib.extrinsics, calib.intrinsics, [tuple(float(v) for v in face_center_world)]
+            )[0]
         except (ValueError, ZeroDivisionError):
             continue
         depth = _camera_depth(calib.extrinsics, face_center_world)
@@ -1430,6 +1456,7 @@ def build_paddle_pose_fused_from_skeleton(
     if one_euro_min_cutoff <= 0.0 or one_euro_d_cutoff <= 0.0 or one_euro_beta < 0.0:
         raise ValueError("one_euro parameters must be positive (beta must be non-negative)")
 
+    input_coordinate_space = resolve_world_coordinate_space(skeleton3d)
     dims = _paddle_dims(paddle_dims_in)
     grip_to_face_center_m = _grip_to_face_center_m(dims)
     prior_translation = np.array([0.0, grip_offset_m + grip_to_face_center_m, 0.0])
@@ -1615,13 +1642,11 @@ def build_paddle_pose_fused_from_skeleton(
                 )
                 t_g = t_g + box_correction
                 if calibration_model is not None and detector_records:
-                    from .court_calibration import project_world_points as _pwp
-
                     seg_gated_boxes = _gated_boxes_by_frame(
                         detector_records,
                         seg_samples,
                         calibration_model,
-                        _pwp,
+                        _project_world_points_for_raw_detector_reference,
                         wrist_gate_radius_px=detector_box_wrist_gate_radius_px,
                     )
                     if seg_gated_boxes:
@@ -1632,7 +1657,7 @@ def build_paddle_pose_fused_from_skeleton(
                             gated_boxes=seg_gated_boxes,
                             dims=dims,
                             calibration_model=calibration_model,
-                            project_world_points=_pwp,
+                            project_world_points=_project_world_points_for_raw_detector_reference,
                             search_deg=detector_box_roll_search_deg,
                         )
                 gated_boxes_all.update(seg_gated_boxes)
@@ -1668,14 +1693,12 @@ def build_paddle_pose_fused_from_skeleton(
         composed.sort(key=lambda c: c.t)
         deviation_info: dict[str, Any] | None = None
         if use_detector_boxes and gated_boxes_all and calibration_model is not None:
-            from .court_calibration import project_world_points as _pwp
-
             deviation_info = _per_frame_box_deviation(
                 raw_samples,
                 composed,
                 gated_boxes=gated_boxes_all,
                 calibration_model=calibration_model,
-                project_world_points=_pwp,
+                project_world_points=_project_world_points_for_raw_detector_reference,
                 max_deviation_m=per_frame_deviation_max_m,
                 decay=per_frame_deviation_decay,
                 slew_m_per_frame=per_frame_deviation_slew_m,
@@ -1809,10 +1832,20 @@ def build_paddle_pose_fused_from_skeleton(
             ),
         },
         "world_frame": WORLD_FRAME,
+        "coordinate_frame": WORLD_COORDINATE_FRAME,
+        "coordinate_space": WORLD_COORDINATE_SPACE.value,
+        "input_coordinate_space": input_coordinate_space.value,
         "translation_unit": "m",
         "fps": fps,
         "source_path": str(source_path or ""),
         "parameters": {
+            "coordinate_contract": {
+                "world_input": input_coordinate_space.value,
+                "pinhole_output": CoordinateSpace.PIXELS_UNDISTORTED_NATIVE.value,
+                "detector_reference": CoordinateSpace.PIXELS_RAW_NATIVE.value,
+                "transform_applied": False,
+                "parity_note": "declaration_only_no_distortion_resize_crop_or_reference_transform",
+            },
             "dominant_hand": dominant_hand,
             "dominant_hand_by_player": {str(key): value for key, value in sorted(hand_overrides.items())},
             "grip_offset_m": round(float(grip_offset_m), 6),
@@ -1853,6 +1886,7 @@ def build_paddle_pose_fused_from_skeleton(
         "notes": [
             "This is a fused wrist+palm+grip-transform estimate for render continuity only, not true paddle 6DoF.",
             "The RKT face-angle/contact gate remains unscoreable until true paddle-corner/reference GT exists.",
+            "Legacy world_frame=court_Z0 is retained; coordinate_frame and coordinate_space are canonical additive fields.",
         ],
     }
 
@@ -1876,6 +1910,8 @@ def _frame_payload(
         },
         "conf": conf,
         "world_frame": WORLD_FRAME,
+        "coordinate_frame": WORLD_COORDINATE_FRAME,
+        "coordinate_space": WORLD_COORDINATE_SPACE.value,
         "translation_unit": "m",
         "source": SOURCE,
         "reprojection_error_px": None,
