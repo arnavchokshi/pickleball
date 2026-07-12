@@ -95,7 +95,7 @@ final class DinkVisionStateTests: XCTestCase {
     func testBrandV4AccentSitesStayLimitedToOwnerApprovedScreens() {
         XCTAssertEqual(
             DinkVisionAccentSite.allCases,
-            [.replaysEmptyState, .statsSampleWatermark, .profileCompletedStep, .permissionPrimer, .coachPlaceholder]
+            [.replaysEmptyState, .statsEmptyState, .profileCompletedStep, .permissionPrimer, .coachEmptyState]
         )
     }
 
@@ -155,13 +155,17 @@ final class DinkVisionStateTests: XCTestCase {
     }
 
     @MainActor
-    func testCoachPlaceholderIsClearlyComingSoonWithoutFakeFeatures() {
-        let model = DinkVisionCoachPlaceholderModel.brandV4
+    func testLegacyUnauditedFactsAreNeverUserFacing() throws {
+        let legacy = try JSONSerialization.data(withJSONObject: [
+            "facts": [[
+                "metric": "distance_covered_m",
+                "value": 99,
+                "unit": "m",
+                "trust": "ok",
+            ]],
+        ])
 
-        XCTAssertEqual(model.title, "Your pocket coach is training...")
-        XCTAssertEqual(model.roadmapID, "P6")
-        XCTAssertTrue(model.isComingSoon)
-        XCTAssertTrue(model.fakeFeatureBullets.isEmpty)
+        XCTAssertTrue(DinkVisionFactsDocumentDecoder.decode(legacy, sessionID: "capture").isEmpty)
     }
 
     @MainActor

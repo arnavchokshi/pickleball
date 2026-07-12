@@ -1,22 +1,43 @@
 import SwiftUI
+import UIKit
 
 enum DinkVisionBrand {
     static let displayName = "DinkVision"
 }
 
 enum DinkVisionColor {
-    static let cream = Color(hex: 0xF4EEE3)
-    static let courtGreen = Color(hex: 0x2E5B3F)
-    static let courtGreenDeep = Color(hex: 0x234731)
-    static let ink = Color(hex: 0x141414)
+    static let cream = adaptive(light: 0xF4EEE3, dark: 0x111512, highContrastLight: 0xFFFDF7, highContrastDark: 0x000000)
+    static let courtGreen = adaptive(light: 0x2E5B3F, dark: 0x63B782, highContrastLight: 0x17472D, highContrastDark: 0x7DE5A2)
+    static let courtGreenDeep = adaptive(light: 0x234731, dark: 0x315E43, highContrastLight: 0x123520, highContrastDark: 0x4D8A63)
+    static let ink = adaptive(light: 0x141414, dark: 0xF7F1E7, highContrastLight: 0x000000, highContrastDark: 0xFFFFFF)
     static let ballYellow = Color(hex: 0xF2C63F)
     static let trailBlue = Color(hex: 0x3E8EF0)
     static let trailRed = Color(hex: 0xE8503A)
     static let trailYellow = Color(hex: 0xF2C63F)
-    static let cardWhite = Color.white
-    static let line = Color(hex: 0xE7DFD1)
-    static let mutedText = Color(hex: 0x8D8577)
+    static let cardWhite = adaptive(light: 0xFFFFFF, dark: 0x1D231F, highContrastLight: 0xFFFFFF, highContrastDark: 0x080A09)
+    static let line = adaptive(light: 0xE7DFD1, dark: 0x465148, highContrastLight: 0xB8AD9C, highContrastDark: 0xAAB8AE)
+    static let mutedText = adaptive(light: 0x6F685F, dark: 0xC8BFB2, highContrastLight: 0x49443E, highContrastDark: 0xE8E0D6)
     static let success = Color(hex: 0x43D17C)
+
+    private static func adaptive(
+        light: Int,
+        dark: Int,
+        highContrastLight: Int,
+        highContrastDark: Int
+    ) -> Color {
+        Color(uiColor: UIColor { traits in
+            let isDark = traits.userInterfaceStyle == .dark
+            let isHighContrast = traits.accessibilityContrast == .high
+            let hex: Int
+            switch (isDark, isHighContrast) {
+            case (false, false): hex = light
+            case (true, false): hex = dark
+            case (false, true): hex = highContrastLight
+            case (true, true): hex = highContrastDark
+            }
+            return UIColor(hex: hex)
+        })
+    }
 }
 
 enum DinkVisionMetric {
@@ -31,6 +52,17 @@ extension Color {
             red: Double((hex >> 16) & 0xFF) / 255.0,
             green: Double((hex >> 8) & 0xFF) / 255.0,
             blue: Double(hex & 0xFF) / 255.0
+        )
+    }
+}
+
+private extension UIColor {
+    convenience init(hex: Int) {
+        self.init(
+            red: CGFloat((hex >> 16) & 0xFF) / 255.0,
+            green: CGFloat((hex >> 8) & 0xFF) / 255.0,
+            blue: CGFloat(hex & 0xFF) / 255.0,
+            alpha: 1
         )
     }
 }

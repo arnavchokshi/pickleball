@@ -53,7 +53,6 @@ private struct DinkVisionAppRootView: View {
             }
         }
         .background(DinkVisionColor.cream)
-        .preferredColorScheme(.light)
     }
 }
 
@@ -232,7 +231,7 @@ private struct DinkVisionTabShell: View {
     var isActive: Bool = true
     private let configuration: DinkVisionRuntimeConfiguration
     @Binding private var isSignedIn: Bool
-    @State private var selectedTab: DinkVisionTabKind = .record
+    @State private var selectedTab: DinkVisionTabKind = .coldLaunchDefault
     @StateObject private var recordModel: CaptureViewModel
     @StateObject private var uploadCoordinator: DinkVisionUploadCoordinator
     @State private var finishedRecordingPrompt: CameraRecordingResult?
@@ -261,11 +260,19 @@ private struct DinkVisionTabShell: View {
                         uploadCoordinator: uploadCoordinator
                     )
                 case .stats:
-                    DinkVisionStatsScreen()
+                    DinkVisionStatsScreen(
+                        dataSource: DinkVisionFactsLibraryDataSource(
+                            replayDataSource: configuration.makeReplayDataSource()
+                        )
+                    )
                 case .record:
                     DinkVisionRecordScreen(isActive: isActive, model: recordModel)
                 case .coach:
-                    DinkVisionCoachScreen()
+                    DinkVisionCoachScreen(
+                        dataSource: DinkVisionFactsLibraryDataSource(
+                            replayDataSource: configuration.makeReplayDataSource()
+                        )
+                    )
                 case .profile:
                     DinkVisionProfileScreen(
                         isSignedIn: isSignedIn,
@@ -374,26 +381,47 @@ private struct DinkVisionTabBar: View {
                 tabRail(edge: railEdge, containerSize: proxy.size)
                     .zIndex(1)
 
-                Button {
-                    Task {
-                        await handleRecordTap()
-                    }
-                } label: {
-                    DinkVisionTexturedRecordButton(
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let presentation = DinkVisionRecordingPresentation(
                         isRecording: recordModel.isRecording,
-                        isEnabled: canRecordFromTab,
-                        reduceMotion: reduceMotion,
-                        forcePressed: forceRecordPressed
+                        startedAt: recordModel.recordingStartedAt,
+                        now: context.date
                     )
+                    Button {
+                        Task {
+                            await handleRecordTap()
+                        }
+                    } label: {
+                        ZStack {
+                            DinkVisionTexturedRecordButton(
+                                isRecording: recordModel.isRecording,
+                                isEnabled: canRecordFromTab,
+                                reduceMotion: reduceMotion,
+                                forcePressed: forceRecordPressed
+                            )
+                            if let elapsed = presentation.elapsedText {
+                                Text(elapsed)
+                                    .font(.caption.monospacedDigit().weight(.black))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(DinkVisionColor.trailRed, in: Capsule())
+                                    .overlay(Capsule().stroke(DinkVisionColor.ink, lineWidth: 2))
+                                    .offset(y: -(layout.recordButtonDiameter / 2 + 18))
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(!canRecordFromTab)
+                    .frame(width: layout.recordButtonDiameter + 14, height: layout.recordButtonDiameter + 14)
+                    .contentShape(Circle())
+                    .position(placement.center)
+                    .zIndex(2)
+                    .accessibilityLabel(presentation.accessibilityLabel)
+                    .accessibilityValue(presentation.accessibilityValue)
+                    .accessibilityIdentifier("DinkVisionRecordButton")
                 }
-                .buttonStyle(.plain)
-                .disabled(!canRecordFromTab)
-                .frame(width: layout.recordButtonDiameter + 14, height: layout.recordButtonDiameter + 14)
-                .contentShape(Circle())
-                .position(placement.center)
-                .zIndex(2)
-                .accessibilityLabel(recordModel.isRecording ? "Stop recording" : "Start recording")
-                .accessibilityIdentifier("DinkVisionRecordButton")
             }
         }
         .accessibilityIdentifier("DinkVisionTabBarOverlay")
@@ -967,7 +995,7 @@ private struct DinkVisionRecordScreen: View {
         }
         .padding(22)
         .frame(maxWidth: 270)
-        .background(.white, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+        .background(DinkVisionColor.cardWhite, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
         .overlay(alignment: .topTrailing) {
             SketchSlashes(color: DinkVisionColor.ink, lineWidth: 4)
                 .frame(width: 38, height: 38)
@@ -1187,41 +1215,40 @@ private struct LiveBallTrajectoryOverlay: View {
 }
 
 private struct DinkVisionCoachScreen: View {
-    private let model = DinkVisionCoachPlaceholderModel.brandV4
+    let dataSource: DinkVisionFactsLibraryDataSource
+    @State private var facts: [DinkVisionProductFact] = []
 
     var body: some View {
-        ZStack(alignment: .bottom) {
+        ZStack {
             DinkVisionColor.cream.ignoresSafeArea()
-            VStack(spacing: 18) {
-                Spacer(minLength: 44)
-                ZStack(alignment: .topTrailing) {
-                    DotGrid(rows: 4, columns: 5, dotSize: 9, color: DinkVisionColor.ink.opacity(0.18))
-                        .frame(width: 150, height: 120)
-                        .offset(x: 54, y: -34)
-                    DinkVisionOwnerLockup(height: 148)
-                        .padding(.top, 12)
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    DinkVisionScreenHeader(
+                        title: "Coach",
+                        subtitle: "Deterministic observations, linked to evidence"
+                    )
+                    if facts.isEmpty {
+                        DinkVisionFactsEmptyState(
+                            title: "No verified facts yet",
+                            detail: "Coach stays quiet until an audited fact with provenance and an evidence link is available.",
+                            accentSite: .coachEmptyState
+                        )
+                    } else {
+                        ForEach(facts) { fact in
+                            DinkVisionFactCard(fact: fact, coachingSurface: true)
+                        }
+                    }
                 }
-                Text(model.title)
-                    .font(.system(size: 25, weight: .heavy, design: .rounded))
-                    .foregroundStyle(DinkVisionColor.ink)
-                    .multilineTextAlignment(.center)
-                    .minimumScaleFactor(0.78)
-                    .lineLimit(2)
-                Text("Coming soon · roadmap \(model.roadmapID)")
-                    .font(.system(size: 12, weight: .black, design: .rounded))
-                    .foregroundStyle(DinkVisionColor.mutedText)
-                    .textCase(.uppercase)
-                Spacer(minLength: DinkVisionChromeLayout.scrollBottomPadding)
+                .padding(.horizontal, 16)
+                .padding(.top, 58)
+                .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding)
             }
-            .padding(.horizontal, 24)
-
-            HandArrow(color: DinkVisionColor.trailRed, lineWidth: 6)
-                .frame(width: 118, height: 82)
-                .rotationEffect(.degrees(112))
-                .offset(x: -8, y: -DinkVisionChromeLayout.tabOverlayHeight - 8)
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("DinkVisionScreen-Coach")
+        .task {
+            facts = dataSource.loadFacts()
+        }
     }
 }
 
@@ -1471,6 +1498,10 @@ private struct DinkVisionReplayRowView: View {
     let onRetry: () -> Void
 
     var body: some View {
+        let status = DinkVisionReplayStatusPresentation(
+            uploadState: uploadState,
+            isSample: row.source == .bundledSample
+        )
         VStack(alignment: .leading, spacing: 10) {
             Button(action: onOpen) {
                 rowContent
@@ -1479,7 +1510,7 @@ private struct DinkVisionReplayRowView: View {
             .accessibilityIdentifier("DinkVisionReplayRow-\(row.id)")
 
             HStack(spacing: 8) {
-                Text(uploadState?.dinkVisionStateTitle ?? "Local")
+                Text(status.title)
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 9)
@@ -1507,13 +1538,21 @@ private struct DinkVisionReplayRowView: View {
                         .accessibilityIdentifier("DinkVisionUpload-\(row.id)")
                 }
             }
+            if let detail = status.detail {
+                Text(detail)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("DinkVisionReplayStatusDetail-\(row.id)")
+            }
         }
         .padding(12)
         .background(
             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                .fill(.white)
+                .fill(DinkVisionColor.cardWhite)
         )
         .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(row.title), \(status.title), \(status.detail ?? "")")
     }
 
     private var rowContent: some View {
@@ -1543,6 +1582,16 @@ private struct DinkVisionReplayRowView: View {
                     .font(.system(size: 10, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .padding(6)
+                if row.source == .bundledSample {
+                    Text("SAMPLE")
+                        .font(.caption2.weight(.black))
+                        .foregroundStyle(DinkVisionColor.ink)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(DinkVisionColor.ballYellow, in: Capsule())
+                        .offset(x: -48, y: -42)
+                        .accessibilityLabel("Sample replay, not a real session")
+                }
             }
 
             VStack(alignment: .leading, spacing: 5) {
@@ -1569,12 +1618,17 @@ private struct DinkVisionReplayRowView: View {
     }
 
     private var stateChipColor: Color {
-        switch uploadState?.state {
-        case .queued: return DinkVisionColor.trailBlue
-        case .uploading: return DinkVisionColor.ink
-        case .uploaded: return DinkVisionColor.courtGreen
+        switch DinkVisionReplayStatusPresentation(
+            uploadState: uploadState,
+            isSample: row.source == .bundledSample
+        ).state {
+        case .sample: return DinkVisionColor.trailYellow
+        case .local: return DinkVisionColor.mutedText
+        case .queued, .uploading: return DinkVisionColor.trailBlue
+        case .processing: return DinkVisionColor.ink
+        case .partial: return DinkVisionColor.trailYellow
+        case .ready: return DinkVisionColor.courtGreen
         case .failed: return DinkVisionColor.trailRed
-        case nil: return DinkVisionColor.mutedText
         }
     }
 
@@ -1619,7 +1673,7 @@ private struct DinkVisionEmptyReplaysView: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(22)
-        .background(.white, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+        .background(DinkVisionColor.cardWhite, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
         .overlay(alignment: .topTrailing) {
             SketchSlashes(color: DinkVisionColor.ink, lineWidth: 5)
                 .frame(width: 42, height: 42)
@@ -1770,21 +1824,31 @@ private struct DinkVisionReplayPlaybackScreen: View {
 }
 
 private struct DinkVisionStatsScreen: View {
+    let dataSource: DinkVisionFactsLibraryDataSource
+    @State private var facts: [DinkVisionProductFact] = []
+
     var body: some View {
         ZStack {
             DinkVisionColor.cream.ignoresSafeArea()
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
-                    DinkVisionScreenHeader(title: "Match Overview", subtitle: "Sample data - unlocks after your first match")
-                    sampleWatermark
-                    DinkVisionCourtMapCard()
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                        StatTile(title: "Shots tracked", value: "324", accent: DinkVisionColor.trailBlue, style: .spark)
-                        StatTile(title: "Dink %", value: "41%", accent: DinkVisionColor.courtGreen, style: .ring)
-                        StatTile(title: "Winners", value: "18", accent: DinkVisionColor.trailRed, style: .spark)
-                        StatTile(title: "Avg speed", value: "31mph", accent: DinkVisionColor.trailYellow, style: .spark)
+                VStack(alignment: .leading, spacing: 14) {
+                    DinkVisionScreenHeader(
+                        title: "Stats",
+                        subtitle: "Decoded facts only — no estimates disguised as measurements"
+                    )
+                    if facts.isEmpty {
+                        DinkVisionFactsEmptyState(
+                            title: "No verified facts yet",
+                            detail: "Stats appear after an audited facts artifact is available for one of your real sessions.",
+                            accentSite: .statsEmptyState
+                        )
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 154), spacing: 12)], spacing: 12) {
+                            ForEach(facts) { fact in
+                                DinkVisionFactCard(fact: fact, coachingSurface: false)
+                            }
+                        }
                     }
-                    DinkVisionPlaceholderAnalysisCards()
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 58)
@@ -1793,164 +1857,90 @@ private struct DinkVisionStatsScreen: View {
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("DinkVisionScreen-Stats")
-    }
-
-    private var sampleWatermark: some View {
-        HStack {
-            Spacer()
-            ZStack(alignment: .topTrailing) {
-                DotGrid(rows: 3, columns: 4, dotSize: 8, color: DinkVisionColor.ink.opacity(0.72))
-                    .frame(width: 72, height: 54)
-                    .offset(x: -72, y: 18)
-                HandArrow()
-                    .frame(width: 86, height: 60)
-                    .rotationEffect(.degrees(4))
-                    .offset(x: -42, y: 6)
-                Text("Sample data")
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .foregroundStyle(DinkVisionColor.ink)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .background(DinkVisionColor.ballYellow, in: Capsule())
-            }
-            .frame(width: 180, height: 72, alignment: .topTrailing)
-            .accessibilityLabel("Sample data, not real match stats")
+        .task {
+            facts = dataSource.loadFacts()
         }
     }
 }
 
-private struct DinkVisionCourtMapCard: View {
-    var body: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous)
-                .fill(DinkVisionColor.courtGreen)
-            CourtMapLines()
-                .stroke(DinkVisionColor.cream.opacity(0.9), lineWidth: 3)
-                .padding(14)
-            TrailArcThumbnail()
-                .stroke(DinkVisionColor.trailBlue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                .padding(30)
-            TrailArcThumbnail()
-                .stroke(DinkVisionColor.trailRed, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                .rotationEffect(.degrees(8))
-                .padding(42)
-            Circle()
-                .fill(DinkVisionColor.ballYellow)
-                .frame(width: 11, height: 11)
-                .offset(x: 86, y: -16)
-        }
-        .frame(height: 164)
-    }
-}
-
-private struct CourtMapLines: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.addRoundedRect(in: rect, cornerSize: CGSize(width: 10, height: 10))
-        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.midX, y: rect.maxY))
-        path.move(to: CGPoint(x: rect.minX + rect.width * 0.33, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.33, y: rect.maxY))
-        path.move(to: CGPoint(x: rect.minX + rect.width * 0.66, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.minX + rect.width * 0.66, y: rect.maxY))
-        return path
-    }
-}
-
-private enum StatTileStyle {
-    case spark
-    case ring
-}
-
-private struct StatTile: View {
+private struct DinkVisionFactsEmptyState: View {
     let title: String
-    let value: String
-    let accent: Color
-    let style: StatTileStyle
+    let detail: String
+    let accentSite: DinkVisionAccentSite
+
+    var body: some View {
+        return DinkVisionCard {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(title)
+                        .font(.title3.weight(.heavy))
+                        .foregroundStyle(DinkVisionColor.ink)
+                    Text(detail)
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(DinkVisionColor.mutedText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 8)
+                DotGrid(rows: 4, columns: 4, dotSize: 7, color: DinkVisionColor.ballYellow)
+                    .frame(width: 62, height: 62)
+                    .accessibilityHidden(true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("DinkVisionFactsEmpty-\(String(describing: accentSite))")
+    }
+}
+
+private struct DinkVisionFactCard: View {
+    let fact: DinkVisionProductFact
+    let coachingSurface: Bool
 
     var body: some View {
         DinkVisionCard {
-            VStack(alignment: .leading, spacing: 7) {
-                Text(title)
-                    .font(.system(size: 12, weight: .heavy, design: .rounded))
-                    .foregroundStyle(DinkVisionColor.mutedText)
-                    .textCase(.uppercase)
-                    .lineLimit(2)
-                Text(value)
-                    .font(.system(size: value.count > 4 ? 34 : 44, weight: .black, design: .rounded))
-                    .foregroundStyle(DinkVisionColor.ink)
-                    .minimumScaleFactor(0.64)
-                    .lineLimit(1)
-                if style == .spark {
-                    Sparkline(accent: accent)
-                        .stroke(accent, style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                        .frame(height: 28)
-                } else {
-                    RingMeter(accent: accent)
-                        .frame(width: 46, height: 46)
+            VStack(alignment: .leading, spacing: 9) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(coachingSurface ? "Observed fact" : fact.label)
+                        .font(.caption.weight(.heavy))
+                        .foregroundStyle(DinkVisionColor.mutedText)
+                        .textCase(.uppercase)
+                    Spacer()
+                    Text(fact.authority.displayName)
+                        .font(.caption2.weight(.black))
+                        .foregroundStyle(authorityColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .overlay(Capsule().stroke(authorityColor, lineWidth: 1.5))
                 }
+                if coachingSurface {
+                    Text(fact.label)
+                        .font(.headline.weight(.heavy))
+                        .foregroundStyle(DinkVisionColor.ink)
+                }
+                Text(fact.valueText)
+                    .font(.largeTitle.monospacedDigit().weight(.black))
+                    .foregroundStyle(DinkVisionColor.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text("\(fact.provenance.rawValue.replacingOccurrences(of: "_", with: " ")) · session \(fact.sessionID)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+                Text("Evidence: \(fact.evidenceLocator)")
+                    .font(.caption2.monospaced().weight(.semibold))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+                    .lineLimit(2)
+                    .textSelection(.enabled)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .overlay(alignment: .topTrailing) {
-            Text("sample")
-                .font(.system(size: 8, weight: .heavy, design: .rounded))
-                .foregroundStyle(DinkVisionColor.mutedText.opacity(0.76))
-                .padding(10)
-        }
-    }
-}
-
-private struct Sparkline: Shape {
-    let accent: Color
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX + 4, y: rect.midY + 5))
-        path.addQuadCurve(to: CGPoint(x: rect.midX, y: rect.midY - 4), control: CGPoint(x: rect.width * 0.25, y: rect.minY + 2))
-        path.addQuadCurve(to: CGPoint(x: rect.maxX - 4, y: rect.midY - 8), control: CGPoint(x: rect.width * 0.75, y: rect.maxY))
-        return path
-    }
-}
-
-private struct RingMeter: View {
-    let accent: Color
-
-    var body: some View {
-        ZStack {
-            Circle()
-                .stroke(DinkVisionColor.line, lineWidth: 7)
-            Circle()
-                .trim(from: 0, to: 0.41)
-                .stroke(accent, style: StrokeStyle(lineWidth: 7, lineCap: .round))
-                .rotationEffect(.degrees(-90))
-        }
-    }
-}
-
-private struct DinkVisionPlaceholderAnalysisCards: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            placeholder(title: "Heat map", detail: "Sample placeholder until server wiring lands")
-            placeholder(title: "Shot placement", detail: "Sample placeholder until your replay is processed")
-        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(fact.label), \(fact.valueText), \(fact.authority.displayName), \(fact.provenance.rawValue), evidence available")
     }
 
-    private func placeholder(title: String, detail: String) -> some View {
-        DinkVisionCard {
-            HStack {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(title)
-                        .font(.system(size: 17, weight: .heavy, design: .rounded))
-                        .foregroundStyle(DinkVisionColor.ink)
-                    Text(detail)
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(DinkVisionColor.mutedText)
-                }
-                Spacer()
-                PerforatedBallView(fill: DinkVisionColor.line, hole: .white)
-                    .frame(width: 46, height: 46)
-            }
+    private var authorityColor: Color {
+        switch fact.authority {
+        case .verified: return DinkVisionColor.courtGreen
+        case .preview: return DinkVisionColor.trailBlue
+        case .lowConfidence: return DinkVisionColor.trailRed
+        case .tooCloseToCall: return DinkVisionColor.mutedText
         }
     }
 }
@@ -1970,6 +1960,7 @@ private struct DinkVisionProfileScreen: View {
                 VStack(alignment: .leading, spacing: 14) {
                     DinkVisionScreenHeader(title: "Set up your court", subtitle: "5 quick steps - better tracking forever")
                     accountAndUploadSettings
+                    privacySettings
                     profileChecklist
                     capturePolicyExplainer
                     appInfo
@@ -1984,11 +1975,15 @@ private struct DinkVisionProfileScreen: View {
     }
 
     private var accountAndUploadSettings: some View {
-        DinkVisionCard {
+        let settings = DinkVisionProfileSettingsModel.current(
+            isSignedIn: isSignedIn,
+            autoUploadAfterRecording: autoUploadAfterRecording
+        )
+        return DinkVisionCard {
             VStack(alignment: .leading, spacing: 12) {
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(isSignedIn ? "Signed in" : "Local mode")
+                        Text(settings.accountTitle)
                             .font(.system(size: 17, weight: .heavy, design: .rounded))
                             .foregroundStyle(DinkVisionColor.ink)
                         Text(isSignedIn ? "Uploads use your account." : "Record and local replays work without an account.")
@@ -2011,8 +2006,34 @@ private struct DinkVisionProfileScreen: View {
                 Text("Off by default. When enabled, a signed-out upload prompts for sign-in without blocking recording.")
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(DinkVisionColor.mutedText)
+                Text(settings.uploadTitle)
+                    .font(.caption.weight(.heavy))
+                    .foregroundStyle(DinkVisionColor.courtGreen)
             }
         }
+    }
+
+    private var privacySettings: some View {
+        let settings = DinkVisionProfileSettingsModel.current(
+            isSignedIn: isSignedIn,
+            autoUploadAfterRecording: autoUploadAfterRecording
+        )
+        return DinkVisionCard {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("Privacy", systemImage: "hand.raised.fill")
+                    .font(.headline.weight(.heavy))
+                    .foregroundStyle(DinkVisionColor.ink)
+                Text(settings.nonOwnerRetentionTitle)
+                    .font(.body.weight(.heavy))
+                    .foregroundStyle(DinkVisionColor.courtGreen)
+                Text(settings.nonOwnerRetentionDetail)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(DinkVisionColor.mutedText)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("DinkVisionNonOwnerRetention")
     }
 
     private var profileChecklist: some View {
@@ -2051,7 +2072,7 @@ private struct DinkVisionProfileScreen: View {
                     .padding(14)
                     .background {
                         RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous)
-                            .fill(.white)
+                            .fill(DinkVisionColor.cardWhite)
                         if step.status == .complete {
                             HStack {
                                 Spacer()
@@ -2200,7 +2221,11 @@ private struct FlowLayout<Content: View>: View {
 }
 
 #Preview("Stats") {
-    DinkVisionStatsScreen()
+    DinkVisionStatsScreen(
+        dataSource: DinkVisionFactsLibraryDataSource(
+            replayDataSource: DinkVisionReplayListDataSource(loadPackages: { _ in [] })
+        )
+    )
 }
 
 #Preview("Profile") {

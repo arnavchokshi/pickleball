@@ -1,4 +1,5 @@
 import Foundation
+import CoreFoundation
 import CoreGraphics
 import PickleballCapture
 import PickleballCore
@@ -165,10 +166,10 @@ enum DinkVisionReplayOpenTransition {
 
 enum DinkVisionAccentSite: String, CaseIterable {
     case replaysEmptyState
-    case statsSampleWatermark
+    case statsEmptyState
     case profileCompletedStep
     case permissionPrimer
-    case coachPlaceholder
+    case coachEmptyState
 }
 
 enum DinkVisionTabKind: String, CaseIterable, Identifiable, Equatable {
@@ -179,6 +180,8 @@ enum DinkVisionTabKind: String, CaseIterable, Identifiable, Equatable {
     case profile
 
     var id: String { rawValue }
+
+    static let coldLaunchDefault: DinkVisionTabKind = .record
 
     var title: String {
         switch self {
@@ -405,17 +408,323 @@ struct DinkVisionScreenMotionParameters: Equatable {
     }
 }
 
-struct DinkVisionCoachPlaceholderModel: Equatable {
-    var title: String
-    var roadmapID: String
-    var isComingSoon: Bool
-    var fakeFeatureBullets: [String]
+struct DinkVisionRecordingPresentation: Equatable {
+    var controlState: DinkVisionRecordButtonControlState
+    var elapsedText: String?
+    var accessibilityLabel: String
+    var accessibilityValue: String
 
-    static let brandV4 = DinkVisionCoachPlaceholderModel(
-        title: "Your pocket coach is training...",
-        roadmapID: "P6",
-        isComingSoon: true,
-        fakeFeatureBullets: []
+    init(isRecording: Bool, startedAt: Date?, now: Date) {
+        guard isRecording else {
+            controlState = .idle
+            elapsedText = nil
+            accessibilityLabel = "Start recording"
+            accessibilityValue = "Not recording"
+            return
+        }
+
+        let elapsedSeconds = max(0, Int(now.timeIntervalSince(startedAt ?? now)))
+        let formatted = String(format: "%d:%02d", elapsedSeconds / 60, elapsedSeconds % 60)
+        controlState = .recording
+        elapsedText = formatted
+        accessibilityLabel = "Stop recording"
+        accessibilityValue = "Recording, elapsed time \(formatted)"
+    }
+}
+
+enum DinkVisionReplayProductState: Equatable {
+    case sample
+    case local
+    case queued
+    case uploading(percent: Int)
+    case processing
+    case partial
+    case ready
+    case failed
+}
+
+struct DinkVisionReplayStatusPresentation: Equatable {
+    var state: DinkVisionReplayProductState
+    var title: String
+    var detail: String?
+    var missingCapabilities: [String]
+
+    init(uploadState: CaptureUploadState?, isSample: Bool = false) {
+        if isSample {
+            state = .sample
+            title = "Sample replay"
+            detail = "Bundled fixture — not one of your sessions"
+            missingCapabilities = []
+            return
+        }
+        guard let uploadState else {
+            state = .local
+            title = "Local only"
+            detail = "Not uploaded"
+            missingCapabilities = []
+            return
+        }
+
+        missingCapabilities = uploadState.missingCapabilities.map { capability in
+            let name = capability.capability.replacingOccurrences(of: "_", with: " ")
+            guard !capability.reason.isEmpty else { return name }
+            return "\(name): \(capability.reason)"
+        }
+
+        switch uploadState.state {
+        case .queued:
+            state = .queued
+            title = "Queued"
+            detail = "Waiting to upload"
+        case .uploading:
+            let percent = min(100, max(0, Int((uploadState.fractionCompleted * 100).rounded())))
+            state = .uploading(percent: percent)
+            title = "Uploading \(percent)%"
+            detail = "Video and capture sidecar"
+        case .failed:
+            state = .failed
+            title = "Failed"
+            detail = uploadState.lastError.map { "Upload or processing failed: \($0)" }
+                ?? "Upload or processing failed"
+        case .uploaded:
+            switch uploadState.serverStatus {
+            case RenderGatewayJobStatus.complete.rawValue where uploadState.manifestUrl != nil:
+                state = .ready
+                title = "Replay ready"
+                detail = "Server output is available"
+            case RenderGatewayJobStatus.partial.rawValue:
+                state = .partial
+                title = "Partial replay"
+                detail = missingCapabilities.isEmpty
+                    ? "Server marked this replay partial; missing capabilities were not listed"
+                    : "Missing: \(missingCapabilities.joined(separator: "; "))"
+            default:
+                state = .processing
+                title = "Processing"
+                detail = uploadState.serverStatus.map { "Server status: \($0)" }
+                    ?? "Waiting for server status"
+            }
+        }
+    }
+}
+
+enum DinkVisionFactAuthority: String, Equatable {
+    case verified
+    case preview
+    case lowConfidence = "low_confidence"
+    case tooCloseToCall = "too_close_to_call"
+
+    var displayName: String {
+        switch self {
+        case .verified: return "Verified"
+        case .preview: return "Preview"
+        case .lowConfidence: return "Low confidence"
+        case .tooCloseToCall: return "Too close to call"
+        }
+    }
+}
+
+enum DinkVisionFactProvenance: String, Equatable {
+    case measured
+    case modelEstimated = "model_estimated"
+    case physicsPredicted = "physics_predicted"
+}
+
+struct DinkVisionProductFact: Identifiable, Equatable {
+    var id: String
+    var sessionID: String
+    var metric: String
+    var label: String
+    var valueText: String
+    var authority: DinkVisionFactAuthority
+    var provenance: DinkVisionFactProvenance
+    var evidenceLocator: String
+    var sourceArtifact: String
+    var playerOrEntity: String?
+}
+
+enum DinkVisionFactsDocumentDecoder {
+    static func decode(_ data: Data, sessionID: String) -> [DinkVisionProductFact] {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let rawFacts = factsArray(in: root) else {
+            return []
+        }
+        return rawFacts.compactMap { fact(in: $0, sessionID: sessionID) }
+    }
+
+    private static func factsArray(in root: [String: Any]) -> [[String: Any]]? {
+        if let facts = root["audited_facts"] as? [[String: Any]] {
+            return facts
+        }
+        if let container = root["coaching_card_facts"] as? [String: Any],
+           let facts = container["audited_facts"] as? [[String: Any]] {
+            return facts
+        }
+        return nil
+    }
+
+    private static func fact(in raw: [String: Any], sessionID: String) -> DinkVisionProductFact? {
+        guard let id = nonemptyString(raw["fact_id"] ?? raw["id"]),
+              let metric = nonemptyString(raw["metric"]),
+              let authorityValue = trustString(raw["trust"], key: "authority_band")
+                ?? nonemptyString(raw["authority"]),
+              let authority = DinkVisionFactAuthority(rawValue: authorityValue),
+              let provenanceValue = trustString(raw["trust"], key: "provenance_band")
+                ?? provenanceString(raw["provenance"] ?? raw["evidence_provenance"]),
+              let provenance = DinkVisionFactProvenance(rawValue: provenanceValue),
+              let evidenceLocator = locatorString(raw["evidence_locator"]),
+              let sourceArtifact = sourceArtifactsString(raw["source_artifacts"] ?? raw["source_artifact"]),
+              let valueText = valueText(raw["value"], unit: nonemptyString(raw["unit"])) else {
+            return nil
+        }
+
+        let entity = entityString(raw["entity"])
+            ?? nonemptyString(raw["player_id"] ?? raw["entity_id"])
+        return DinkVisionProductFact(
+            id: "\(sessionID):\(id)",
+            sessionID: sessionID,
+            metric: metric,
+            label: metric.replacingOccurrences(of: "_", with: " ").capitalized,
+            valueText: valueText,
+            authority: authority,
+            provenance: provenance,
+            evidenceLocator: evidenceLocator,
+            sourceArtifact: sourceArtifact,
+            playerOrEntity: entity
+        )
+    }
+
+    private static func valueText(_ value: Any?, unit: String?) -> String? {
+        if let number = value as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() {
+            let double = number.doubleValue
+            guard double.isFinite else { return nil }
+            let numberText = double.rounded() == double
+                ? String(Int(double))
+                : String(format: "%.2f", double).replacingOccurrences(of: #"\.?0+$"#, with: "", options: .regularExpression)
+            return [numberText, unit].compactMap { $0 }.joined(separator: " ")
+        }
+        if let zoneValue = value as? [String: Any],
+           let zone = nonemptyString(zoneValue["zone"]),
+           let fraction = zoneValue["fraction"] as? NSNumber {
+            let percent = min(100, max(0, Int((fraction.doubleValue * 100).rounded())))
+            return "\(zone.replacingOccurrences(of: "_", with: " ").capitalized) \(percent)%"
+        }
+        return nil
+    }
+
+    private static func provenanceString(_ value: Any?) -> String? {
+        if let string = nonemptyString(value) { return string }
+        if let object = value as? [String: Any] {
+            return nonemptyString(object["kind"] ?? object["evidence"] ?? object["provenance"])
+        }
+        return nil
+    }
+
+    private static func trustString(_ value: Any?, key: String) -> String? {
+        guard let object = value as? [String: Any] else { return nil }
+        return nonemptyString(object[key])
+    }
+
+    private static func entityString(_ value: Any?) -> String? {
+        guard let object = value as? [String: Any] else { return nil }
+        return nonemptyString(object["id"])
+    }
+
+    private static func locatorString(_ value: Any?) -> String? {
+        if let string = nonemptyString(value) { return string }
+        if let object = value as? [String: Any] {
+            return nonemptyString(object["uri"] ?? object["path"] ?? object["url"] ?? object["artifact_path"])
+        }
+        return nil
+    }
+
+    private static func sourceArtifactsString(_ value: Any?) -> String? {
+        let objects: [[String: Any]]
+        if let array = value as? [[String: Any]] {
+            objects = array
+        } else if let object = value as? [String: Any] {
+            objects = [object]
+        } else {
+            return nil
+        }
+        guard !objects.isEmpty else { return nil }
+        let references = objects.compactMap { object -> String? in
+            guard let path = nonemptyString(object["path"] ?? object["artifact_path"]),
+                  let sha256 = nonemptyString(object["sha256"]),
+                  sha256.count == 64,
+                  sha256.allSatisfy({ $0.isHexDigit }) else { return nil }
+            return "\(path)#sha256=\(sha256.lowercased())"
+        }
+        guard references.count == objects.count else { return nil }
+        return references.joined(separator: ", ")
+    }
+
+    private static func nonemptyString(_ value: Any?) -> String? {
+        guard let string = value as? String else { return nil }
+        let trimmed = string.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
+    }
+}
+
+struct DinkVisionFactsLibraryDataSource {
+    var replayDataSource: DinkVisionReplayListDataSource
+    var readData: (URL) -> Data?
+
+    init(
+        replayDataSource: DinkVisionReplayListDataSource,
+        readData: @escaping (URL) -> Data? = { try? Data(contentsOf: $0) }
+    ) {
+        self.replayDataSource = replayDataSource
+        self.readData = readData
+    }
+
+    func loadFacts() -> [DinkVisionProductFact] {
+        guard let rows = try? replayDataSource.loadRows() else { return [] }
+        return rows.flatMap { row -> [DinkVisionProductFact] in
+            guard case .capture = row.source else { return [] }
+            let packageURL = replayDataSource.packageRootURL
+                .appendingPathComponent(row.item.clipRelativePath)
+                .deletingLastPathComponent()
+            let candidates = [
+                packageURL.appendingPathComponent("coaching_facts.json"),
+                packageURL.appendingPathComponent("rally_metrics.json"),
+                packageURL.appendingPathComponent("artifacts/coaching_facts.json"),
+            ]
+            guard let data = candidates.lazy.compactMap(readData).first else { return [] }
+            return DinkVisionFactsDocumentDecoder.decode(data, sessionID: row.id)
+        }
+    }
+}
+
+struct DinkVisionProfileSettingsModel: Equatable {
+    var accountTitle: String
+    var uploadTitle: String
+    var nonOwnerRetentionTitle: String
+    var nonOwnerRetentionDetail: String
+
+    static func current(isSignedIn: Bool, autoUploadAfterRecording: Bool) -> Self {
+        Self(
+            accountTitle: isSignedIn ? "Signed in" : "Local mode",
+            uploadTitle: autoUploadAfterRecording ? "Auto-upload on" : "Auto-upload off",
+            nonOwnerRetentionTitle: "Non-owner data: session only",
+            nonOwnerRetentionDetail: "Non-owner biometric data is not retained beyond this session unless the owner explicitly opts in."
+        )
+    }
+}
+
+struct DinkVisionAccessibilityPolicy: Equatable {
+    var supportsDynamicType: Bool
+    var suppliesVoiceOverLabels: Bool
+    var keepsDataInsideSafeAreas: Bool
+    var usesAdaptiveDarkAndHighContrastColors: Bool
+    var hasReducedMotionFallbacks: Bool
+
+    static let productUI = Self(
+        supportsDynamicType: true,
+        suppliesVoiceOverLabels: true,
+        keepsDataInsideSafeAreas: true,
+        usesAdaptiveDarkAndHighContrastColors: true,
+        hasReducedMotionFallbacks: true
     )
 }
 
@@ -578,11 +887,11 @@ struct DinkVisionReplayListDataSource {
         )
         return DinkVisionReplayRow(
             id: item.sessionID,
-            title: item.isImported ? "Imported rally" : "Tuesday open play",
+            title: item.isImported ? "Imported video" : "Recorded session",
             subtitle: "\(Self.dateText(for: item.recordedAt)) · \(item.fps) fps · \(item.resolutionText)",
             durationText: Self.durationText(for: item.durationSeconds),
             dateText: Self.dateText(for: item.recordedAt),
-            trustBadgeText: item.captureQualityGrade == .good ? "Trusted sidecar" : "Needs review",
+            trustBadgeText: item.captureQualityGrade == .good ? "Capture checks passed" : "Capture needs review",
             trusted3DText: sidecarTexts.trusted3D,
             ballTrustText: sidecarTexts.ball,
             item: item,
