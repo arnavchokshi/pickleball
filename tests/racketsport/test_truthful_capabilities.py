@@ -146,6 +146,9 @@ ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
     "cvat_upload/w5_labelpack_20260708/packages/ball_session_04_640f_73VurrTKCZ8_Ezz6HDNHlnk_images.zip",
     "cvat_upload/w5_labelpack_20260708/packages/court_kp_relabel_HyUqT7zFiwk_zwCtH_i1_S4_images.zip",
     "ios/Replay/Sources/PickleballReplay/Resources/RealityReplayFixture/body_mesh_animated_budget53.usdz",
+    # pb.vision 11-min export dropped 2026-07-13 (reference diagnostic only, never training/GT).
+    "data/pbvision_11min_20260713/cv_export.json",
+    "data/pbvision_11min_20260713/source_video.mp4",
     "ios/Replay/Sources/PickleballReplay/Resources/WorldFixture/virtual_world.json",
     "tests/racketsport/fixtures/solid_mesh_real_window_000/body_mesh_faces.json",
 } | W6_LABELPACK_IMAGE_ZIPS
