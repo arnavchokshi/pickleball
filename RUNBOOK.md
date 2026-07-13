@@ -1,6 +1,6 @@
 # Process Video Runbook
 
-Last updated: 2026-07-09.
+Last updated: 2026-07-13.
 
 `scripts/racketsport/process_video.py` is the current one-command pipeline for a
 video-to-scrubber bundle. It is the entrypoint future agents should start from
@@ -24,15 +24,16 @@ choose `--body-local`. The remote host intentionally has no universal default;
 without either choice BODY may be blocked and the command can still return a
 partial bundle.
 
-### P0 run-isolation warning
+### Content-addressed run identity
 
-Until North Star task `NS-01.3 Content-addressed DAG` lands, use a new `--out` and
-globally unique `--clip` for every source video. Do not point a new upload at
-an existing clip directory: `--force` does not replace `source.*`, and
-schema-valid downstream artifacts do not carry complete source/model/config
-fingerprints. Also verify that explicit calibration/tracks/ball inputs were
-actually selected; existing clip-local artifacts currently take precedence in
-several stages.
+North Star task `NS-01.3 Content-addressed DAG` is engineering-complete. Stage
+reuse now requires exact source/code/model/config/input/upstream identities;
+unfingerprinted or stale artifacts rebuild unless they carry an explicit
+migration attestation. Generated stage directories are published as immutable,
+transactional generations. `--force` is a bounded rebuild override, never the
+authority for artifact identity or correctness. Continue to use a stable
+source-specific `--clip` and a lane/run-specific `--out` for clear provenance;
+legacy run directories need migration attestation rather than name-based trust.
 
 Swift-encoded version-1 sidecars now share the Python strict contract for live
 recordings, missing-sensor captures, and camera-roll imports. The checked-in
@@ -54,8 +55,8 @@ Manual four-corner seed path:
   --out runs/process_video_<clip>_<fresh_run_id>
 ```
 
-`<fresh_run_id>` must name a never-before-used output directory until P0 cache
-identity is fixed.
+Use a lane/run-specific `<fresh_run_id>` for inspectable provenance. Identity
+safety no longer depends on the directory being new.
 
 Reuse precomputed tracks or ball track when evaluating downstream stages:
 
@@ -92,7 +93,7 @@ CPU/skeleton-only smoke:
 | Manual corner seed | `--court-corners` | `court_corners.json` with declared `image_size`. |
 | Capture sidecar | `--capture-sidecar` | Pre-built sidecar, e.g. ARKit/manual capture metadata. |
 | Court keypoints | `--court-keypoints` | Optional no-tap/metric path paired with a capture sidecar. |
-| Solved calibration | `--court-calibration` | Preferred when available and validated, but an existing clip-local calibration currently wins. Use a new run directory. |
+| Solved calibration | `--court-calibration` | Explicit `--court-calibration` wins. Otherwise explicit `--court-corners`/`--capture-sidecar` inputs win; only when none are supplied does the runner auto-discover `<video_dir>/labels/court_calibration_metric15pt.json`. |
 | Tracks reuse | `--tracks` | Reuses a valid `tracks.json` only when no existing clip-local track wins; use a new run directory. |
 | Ball reuse | `--ball-track` | Reuses a valid `ball_track.json` only when no existing clip-local ball track wins; use a new run directory. |
 | Arc/contact sidecars | `--events-selected`, `--ball-track-arc-solved` | Optional ball-aware mesh scheduling inputs. |
@@ -158,7 +159,10 @@ before fresh BALL/audio and does not yet trim all downstream decoding.
     refinement when inputs exist.
 15. **paddle_pose** - write a fail-closed, render-only estimated paddle artifact
     when BODY wrist/palm evidence exists.
-16. **world** - compose `virtual_world.json` and `trust_bands.json`.
+16. **world** - currently calls `_refine_events_after_body()` and
+    `_stage_refined_ball_arc()` before composing `virtual_world.json` and
+    `trust_bands.json`; those refinements remain hidden inside `world` until
+    explicit timed stages land.
 17. **confidence_gate** - write `confidence_gated_world.json` unless
     `--no-confidence-gate` is set.
 18. **manifest** - write `replay_viewer_manifest.json` and optional point scene.
@@ -180,7 +184,7 @@ not simulate that target by leaving stale artifacts in the clip directory.
 | `--sport {pickleball,tennis}` | Sport/rules hint for downstream court/event semantics. Pickleball is the v1 product target. |
 | `--max-players {2,4}` | Expected player count for tracking/BODY selection. Use 4 for doubles clips. |
 | `--court-proposals-preview` | Write fail-closed court proposals/correction task when no trusted calibration seed exists; preview only. |
-| `--force` | Clears a bounded set of generated files. It does **not** replace `source.*` or invalidate every directory/dependency; it is not a safe substitute for a new run directory. |
+| `--force` | Requests bounded regeneration/cleanup. Exact content identity remains authoritative; `--force` does not make mismatched artifacts current or prove correctness. |
 | `--max-frames` | Cap frames for smoke runs only. Do not use capped runs as promotion evidence. |
 | `--device` | Device hint for tracking/ReID/pose code that supports it, e.g. `cuda:0`, `mps`, or `cpu`. |
 | `--no-global-association` | Skip raw-pool global association after loose-pool tracking. |
@@ -223,11 +227,14 @@ not simulate that target by leaving stale artifacts in the clip directory.
 
 ## Remote BODY Runtime
 
-Fast SAM-3D-Body runs through `scripts/racketsport/remote_body_dispatch.py`;
-remote dispatch is the default BODY path unless `--body-local` or `--no-gpu` is set.
-The remote path is operational plumbing plus model execution. A completed remote
-run can still be `partial`, skeleton-only, or gated by downstream trust bands, so
-these flags are not promotion evidence by themselves.
+The active SAM-3D-Body implementation runs through
+`scripts/racketsport/remote_body_dispatch.py`; remote dispatch is the default BODY
+path unless `--body-local` or `--no-gpu` is set. The legacy
+`--remote-fast-sam-*` flag spellings below are compatibility names for runtime
+plumbing; they do not select the separately benchmarked Fast-SAM-3D-Body
+challenger, which remains rejected. A completed remote run can still be
+`partial`, skeleton-only, or gated by downstream trust bands, so these flags are
+not promotion evidence by themselves.
 
 There is no persistent/default remote host. The reviewer-snapshot H100 was a
 lane-specific transient worker, not a reusable endpoint. Before using any
@@ -243,8 +250,8 @@ missing/partial rather than replaced by legacy pose output.
 | `--remote-ssh-key` | SSH key used for the remote worker connection. |
 | `--remote-repo` | Repo path on the remote worker; it must match the committed pipeline layout. |
 | `--remote-python` | Python used for remote repo-side orchestration. |
-| `--remote-fast-sam-python` | Python used for the Fast SAM-3D-Body environment. |
-| `--remote-fast-sam-root` | Fast SAM-3D-Body checkout/root on the remote worker. |
+| `--remote-fast-sam-python` | Compatibility-named flag for the Python used by the active SAM-3D-Body remote environment. |
+| `--remote-fast-sam-root` | Compatibility-named flag for the active SAM-3D-Body checkout/root on the remote worker. |
 | `--remote-lock-wait-timeout-s` | Maximum wait for the shared remote GPU lock. |
 | `--remote-command-timeout-s` | Maximum wall-clock time for the remote BODY command after the lock is held. |
 | `--sam3d-body-input-size-px` | BODY input-size benchmark/runtime knob. Changing it creates a new run condition. |
@@ -296,11 +303,15 @@ Common outputs include:
 - `confidence_gated_world.json`
 - `trust_bands.json`
 - `replay_viewer_manifest.json`
-- `match_stats.json` when placement/court inputs exist; current same-run
-  manifest does not link it
+- `match_stats.json` when the BODY+COURT consumer stage succeeds
+- `rally_metrics.json`, `coaching_card_facts.json`, and
+  `coaching_fact_audit.json` when deterministic fact generation and the
+  zero-fabrication audit succeed
 
-`rally_metrics.json` and `coaching_card_facts.json` have standalone builders
-but are not production `process_video.py` stages today.
+`match_stats` and audited deterministic `coaching_facts` run before `manifest`.
+The manifest links stats only from a finished current stage and links coaching
+facts only after the audit passes. Wording/reference/user-facing product
+coaching remains unverified; no language generation runs in this path.
 
 Treat each artifact according to its trust band. Existence and schema validity
 are not accuracy proof.
@@ -351,11 +362,10 @@ Common traps and fixes:
 
 ## Status Interpretation
 
-`process_video.py` returns success for `complete` and `partial` summary status.
-That means the bundle is inspectable; it does not mean the system is verified.
-Current server runners can still map an exit-0 partial run to `complete` and
-“Replay ready”; inspect the clip-local summary and manifest contents rather
-than trusting the outer job label until P0-F is fixed.
+`process_video.py` exit 0 includes `complete` or `partial` by contract. Consumers
+must inspect summary status, missing/degraded capabilities, and manifest URLs;
+exit 0 alone does not mean ready or verified. The server status core has scoped
+proof, but end-to-end API/app propagation and a physical trace remain open.
 Promotion still depends on the gates in `NORTH_STAR_ROADMAP.md`.
 
 ## Legacy Contract CLI

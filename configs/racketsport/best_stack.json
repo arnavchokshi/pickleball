@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "revision": 11,
-  "updated": "2026-07-10",
+  "updated": "2026-07-13",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
     "Explicit CLI flag overrides manifest defaults; absent manifest entry is a hard error on decision paths.",
@@ -349,7 +349,7 @@
         ]
       },
       "proven_against": null,
-      "notes": "Local checkpoint is not staged in this checkout; the manifest records the current default selector without fabricating an available checkpoint claim."
+      "notes": "Checkpoint is present locally and loader-smoke-verified; checkpoint availability does not clear the separate fresh-clip tracking gate or promote the pending tracking candidate."
     },
     "tracking.global_association_profile": {
       "stage": "tracking",

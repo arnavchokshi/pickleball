@@ -1,6 +1,6 @@
 # Ball Tracking Pipeline
 
-Last updated: 2026-07-03.
+Last updated: 2026-07-13.
 
 This is the focused ball-stage contract. It exists because ball code comments
 refer to section numbers here. The global product plan and current BALL gate
@@ -45,14 +45,25 @@ before producing authoritative metrics.
 
 ## 4. Output Contracts
 
-| Artifact | Meaning |
-|---|---|
-| `ball_track.json` | image-space samples with visibility/confidence/source. |
-| `ball_inflections.json` | trajectory-turn candidates. |
-| `audio_onsets.json` | audio pop/onset candidates. |
-| `contact_windows.json` | fused candidate contact windows. |
-| `ball_track_physics_filled.json` | render-honest filled/derived samples. |
-| `events_selected.json` | manually or physically selected event set when available. |
+Here, `measured` names an image-space observation/sample role, not reviewed GT
+or promotion; model-produced observations retain model-estimated provenance.
+`predicted` is physics-derived/render-only, and `diagnostic` is never authority.
+
+| Artifact | Trust label | Meaning |
+|---|---|---|
+| `ball_track.json` | measured/model-estimated | Selected image-space samples with visibility, confidence, and source; not reviewed GT. |
+| `ball_candidates.json` | measured/model-estimated | Raw top-K detector candidate evidence retained separately from the selected track. |
+| `ball_inflections.json` | diagnostic | Trajectory-turn proposals; not contact authority. |
+| `audio_onsets.json` | measured/diagnostic | Audio pop/onset observations used only as candidate cues. |
+| `contact_windows.json` | diagnostic/model-estimated | Pre-BODY fused candidate contact windows. |
+| `contact_windows_refined_v1.json` | diagnostic/model-estimated | Separate post-BODY contact candidates; raw `contact_windows.json` remains immutable. |
+| `ball_bounce_candidates.json` | diagnostic | Auto-proposed bounce anchors; not accepted bounce truth. |
+| `ball_size_observations.json` | measured/diagnostic | Source-pixel WASB heatmap/blob extents; emission-only, not GT or depth authority. |
+| `ball_track_arc_solved.json` | predicted | Physics-predicted 3D arc segments; render-only and self-kill gated. |
+| `ball_arc_render.json` | predicted | Dense render samples derived from accepted solved arcs; never measured evidence. |
+| `ball_flight_sanity.json` | diagnostic | Flight-sanity demotions and failure reasons; not 3D accuracy proof. |
+| `ball_track_physics_filled.json` | predicted | Render-honest filled/derived samples. |
+| `events_selected.json` | diagnostic/reviewed when applicable | Manually or physically selected event set when available; provenance controls authority. |
 
 ## 5. Runtime Policy
 
@@ -122,7 +133,8 @@ Promotion requires reviewed-label evidence, not artifact existence:
 | in/out | confident calls agree with review; uncertain calls become gray-zone. |
 | replay | replay consumes ball samples with correct trust bands. |
 
-Until these pass, BALL remains `SCAFFOLD, not VERIFIED`.
+BALL is `WIRED_DEFAULT` and partially measured, not VERIFIED; component and
+product gates remain open.
 
 ## 10. Default 3D Ball Chain (2026-07-05)
 

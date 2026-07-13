@@ -24,12 +24,12 @@ until their explicit gates pass on the required real labels, device runs, or
 runtime evidence. Do not promote a row because a smoke test, copied fixture,
 internal-val run, browser load, or schema validation passed.
 
-The 2026-07-09 deep review also found P0 product-correctness blockers in the
-Swift/Python sidecar, production upload call, source/cache identity,
-raw/undistorted coordinates, partial/complete propagation, artifact packaging,
-and same-run BODY→event/arc feedback. Read the North Star and
-`runs/CV_PIPELINE_DEEP_REVIEW_20260709.md` before launching another isolated
-model campaign.
+The 2026-07-09 deep review found eight P0 product-correctness families. P0-C
+engineering is closed, and coordinate/timebase plus deterministic-facts cores
+have landed; consumer adoption, physical proof, honest status/recursive
+packaging, and explicit refined-event/arc evidence remain open. Read the North
+Star and `runs/CV_PIPELINE_DEEP_REVIEW_20260709.md` before launching another
+isolated model campaign.
 
 ## Repo Map
 
