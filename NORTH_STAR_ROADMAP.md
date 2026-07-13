@@ -1,6 +1,6 @@
 # DinkVision North Star
 
-Last updated: 2026-07-10.
+Last updated: 2026-07-13.
 Status: `VERIFIED=0`.
 
 ## Authority and reading rule
@@ -151,12 +151,12 @@ These are more important than another isolated model campaign:
 |---|---|---|---|
 | P0-A | Swift and Python v1 sidecars disagree | A real capture can fail before CV begins. | Swift-encoded golden fixtures and one physical sidecar validate on the server. |
 | P0-B | Presigned video+sidecar upload and clip-status refresh are code-wired, but ready job → manifest → matching replay is unwired and multipart attempt state is not restart-safe | A relaunch can duplicate/orphan an upload, and “Open” still selects the local row rather than the uploaded run. | Mid-part and sidecar-failure relaunch tests preserve/abort one server attempt; one physical record/import → upload → GPU → own replay trace. |
-| P0-C | Source identity and reuse are not content-addressed; `--force` is incomplete | New metadata/models can reuse old pixels or results. | Source/code/model/config/upstream hashes invalidate exactly the dependent closure. |
-| P0-D | Raw, undistorted, reference, and world coordinates are inconsistent | Lens-edge geometry creates systematic player/ball/paddle errors. | One declared transform API passes distorted synthetic and real iPhone tests. |
+| P0-C | CLOSED (engineering, 2026-07-12, `ns013_stale_reuse`): content-addressed identity and exact dependent-closure invalidation landed; unfingerprinted stale reuse is dead | Legacy run dirs need migration attestation. | Closed at engineering level; product promotion still gated by VERIFIED. |
+| P0-D | Typed transform/coordinate contract landed (coords/timebase cores) but stages do not consume it yet | Lens-edge geometry still creates systematic player/ball/paddle errors. | Stage-adopted transform API passes distorted synthetic and real iPhone tests. |
 | P0-E | `partial` can become server `complete`/“Replay ready” | Missing capabilities are hidden from users. | Status, missing capabilities, and trust bands survive worker/API/app unchanged. |
 | P0-F | Directory assets and post-manifest facts can be omitted | Meshes/stats/coaching may exist but never reach the app. | Recursive atomic packaging; stats/coaching before manifest; every URL checked. |
-| P0-G | Extracted audio is ignored on the normal event path; events run before fresh BODY/paddle, can reuse stale contacts, omit ball-size depth, and collapse planar paddle ambiguity | Available evidence cannot improve contacts/flight and an early guess can look measured. | Dependency-safe coarse → deep → refined events/arcs; audio/diameter affect independent error; both IPPE poses and corrected confidence survive to fusion. |
-| P0-H | Capture evidence can silently truncate or diverge from the encoded movie; native intrinsics, dropped-frame reasons, ARKit pose time, crop/orientation, and sensor clocks are not one contract | Long/high-FPS sessions can carry plausible but mis-timed or mis-scaled evidence into every lane. | Physical 30-second and 5-minute captures have no silent truncation, monotonic encoded PTS, and an aligned sample or explicit missing/drop reason per frame. |
+| P0-G | Post-BODY refined events/arcs and a ball-size sidecar landed (currently hidden inside `world`); audio is still ignored on the normal path, size depth unused, planar paddle ambiguity collapses | Available evidence cannot yet improve contacts/flight and an early guess can look measured. | Explicit timed refined stages; audio/diameter affect independent error; both IPPE poses and corrected confidence survive to fusion. |
+| P0-H | Typed timebase core landed but UNWIRED; capture evidence can still silently truncate or diverge; intrinsics, drops, ARKit pose time, crop/orientation, and sensor clocks are not one wired contract | Long/high-FPS sessions can carry plausible but mis-timed or mis-scaled evidence into every lane. | Wired contract; physical 30-second and 5-minute captures have no silent truncation, monotonic encoded PTS, and an aligned sample or explicit missing/drop reason per frame. |
 
 ### 2.2 Capability snapshot
 
@@ -165,15 +165,15 @@ Numbers from different protocols are not compared directly.
 | Area | Built today | Best honest evidence | Binding next gate |
 |---|---|---|---|
 | DATA | Owner/public ingest, prelabel, CVAT review, dedup, PTS and protected-eval guards | 1,750 reviewed BALL rows prepared; only the 1,121 clip-folded/disagreement-selected card was scored | Uniform-random audit + true source groups + fresh untouched owner/HARVEST holdout with audio |
-| CAL | Manual/metric/profile paths, distortion and ChArUco tools, preview auto-find, frozen GT-free precision harness, guarded refinement, hybrid paint evidence and temporal-lock candidates (all PENDING) | Corrected owner PCK@5 is 0 for learned candidates; synthetic-only transfer failed twice; harness M4 ours 6.61px vs pb.vision 5.67px median (Wolverine); aggressive local refinement killed on stability evidence | Profile + guided confirmation for v1; auto-find needs owner-viewpoint PCK@5 ≥0.95 and handheld/distortion gates |
-| TRK | YOLO26m, BoT-SORT/ReID, raw-pool association, court placement | Mean IDF1 about 0.852; worst about 0.756 with six switches and worst four-player coverage about 0.885 | Every fresh clip: IDF1 ≥0.85, zero switches, zero spectator FP, zero far-off-court FP, coverage ≥0.95 |
-| BALL | WASB default, candidate training, bounce/in-out, audio/events, arc/sanity chain | Standing anchor F1@20 0.7248, recall@20 0.626, hFP 0.063; candidate A is 0.6152/0.654/0.2506 on a different internal card | Same-protocol F1@20 ≥0.90, recall@20 ≥0.75, hFP ≤0.05 plus contact/in-out/tail gates on fresh data |
-| BODY | SAM-3D-Body runtime, mesh index, placement, grounding and foot-lock | External root-relative 59.7mm, PA 39.9mm, grounding-consistent 76.5mm; decode residual decomposed 2026-07-10 (FK-vs-head ~0, grounding exact, ~53mm = family-metric definition, intentional postchain 23.4mm p95; gate recalibration proposal owner-facing in runs/lanes/ns014_p22residual_20260709/REPORT.md) | Corrected decode gate; independent court-frame world-MPJPE ≤50mm; `grounding_metrics.max_foot_lock_slide_m` ≤0.03; no candidate-label promotion |
+| CAL | Manual/metric/profile paths, distortion and ChArUco tools, preview auto-find, frozen GT-free precision harness, guarded refinement, hybrid paint evidence and temporal-lock candidates (all PENDING) | Corrected owner PCK@5 is 0 for learned candidates; synthetic-only transfer failed twice; harness M1 3.01/6.22px med/p90 Wolverine (3.81/8.86 Burlington); M4 ours 6.61px vs pb.vision 5.67px median; aggressive local refinement killed on stability evidence | Profile + guided confirmation for v1; auto-find needs owner-viewpoint PCK@5 ≥0.95 and handheld/distortion gates |
+| TRK | YOLO26m, BoT-SORT/ReID, raw-pool association, court placement | Mean IDF1 about 0.852; worst about 0.756, six switches (broad internal); 2-clip margin-1.0 PENDING lifts worst IDF1 0.6425→0.8516, cov4 0.0433→0.7117 (internal-use license owner-approved 2026-07-13; fresh full bar unmet) | Every fresh clip: IDF1 ≥0.85, zero switches, zero spectator FP, zero far-off-court FP, coverage ≥0.95 |
+| BALL | WASB default, candidate training, bounce/in-out, audio/events, arc/sanity chain | Standing anchor F1@20 0.7248, recall@20 0.626, hFP 0.063; candidate A 0.6152/0.654/0.2506 (different internal card); 2D→3D wall = upstream candidate/event evidence (TT3D/bridge/size-proxy killed 2026-07-12; recovery-v2 marginal PENDING; rally-3D coverage 58/252 vs pb.vision 183/252) | Same-protocol F1@20 ≥0.90, recall@20 ≥0.75, hFP ≤0.05 plus contact/in-out/tail gates on fresh data |
+| BODY | SAM-3D-Body runtime, mesh index, placement, grounding and foot-lock | External root-relative 59.7mm, PA 39.9mm, grounding-consistent 76.5mm; decode residual decomposed 2026-07-10 (FK-vs-head ~0, grounding exact, ~53mm = family-metric definition, intentional postchain 23.4mm p95; gate recalibration proposal owner-facing in runs/lanes/ns014_p22residual_20260709/REPORT.md); skeleton-direct foot-slide 20.8-48.4mm breaches 30mm on 3/4 clips (old gate-stream proxy passed — gate open) | Corrected decode gate; independent court-frame world-MPJPE ≤50mm; `grounding_metrics.max_foot_lock_slide_m` ≤0.03; no candidate-label promotion |
 | RKT | Default-wired wrist/palm/grip `estimated_preview` | Rectangle IoU about 0.224-0.331; no true pose/contact GT | Marker/corner GT; checked-in promotion gates: face-angle p90 ≤5° and contact-point p90 ≤3cm. The old 30° bar is an interim candidate milestone only. |
 | EVENTS/PHYS | Ball/audio/wrist fusion, fill, confidence bands and foot postprocessing | Useful internal slide reductions; no reviewed product event gate | Contact timing p90 ≤40ms, bounce-vs-hit/in-out gates, corrected acoustic/A/V timing, no standalone regression |
 | REPLAY/STATS | Web/native boundaries, ghost previews, movement stats | Scoped viewer load; prior proof had low FPS and missing ball/contact/paddle/trust content | Current full bundle, full computed-frame mesh policy, native/web visual/perf/every-URL proof |
-| COACHING | Movement metrics and shot/fact scaffolds | Placement/court stats only; no verified user-facing coach | Deterministic facts before manifest, reference/faithfulness checks, zero fabricated numbers |
-| E2E | A 19-outcome CLI plus code-wired video/sidecar upload and clip-status refresh | Swift package tests are scoped code proof; ready-manifest routing, restart safety, and a current physical-app bundle remain unproved | Complete NS-01 through NS-05, then one clean current-stack reproduction |
+| COACHING | Deterministic facts plus runner-enforced zero-fabrication audit before manifest (NS-05.1 core landed) | Facts abstain without evidence; no verified user-facing coach | Reference/faithfulness checks, wording layer, owner and ≥4.0 player audit, zero fabricated numbers |
+| E2E | A 20-stage CLI (21/22 with rally_gating/verify) plus code-wired video/sidecar upload and clip-status refresh | Swift package tests are scoped code proof; ready-manifest routing, restart safety, and a current physical-app bundle remain unproved | Complete NS-01 through NS-05, then one clean current-stack reproduction |
 
 The active BODY stack is SAM-3D-Body only. RTMW, RTMW3D, RTMPose, and MMPose
 are retired from the pickleball pipeline. The separately tested
@@ -396,17 +396,16 @@ are not weakened to hit a headline.
 
 Do not start another broad model search. The next executable goals are:
 
-Scoped passes completed since 2026-07-09 (evidence in the named lane dirs; none are
-capability promotions): NS-01.1 sidecar contract; NS-01.2a upload lifecycle code path
-(capture-to-S3 route live); NS-01.3 content-addressed run identity (`ns013_rundag`);
-NS-02 gold-capture package plus ChArUco OpenCV-5 port (`ns021_goldcapture`); NS-02.3-02.5
-evaluation reset (`ns02_evalreset`); the NS-01.4 typed-coordinates slice and decode-residual
-decomposition (`ns014_p22residual`).
+Scoped passes completed since 2026-07-09 (named lane dirs; none are promotions):
+NS-01.1 sidecar contract; NS-01.2a upload route live; NS-01.3 run identity plus P0-C
+engineering close; NS-02 gold-capture pack, ChArUco port, and evaluation reset; NS-01.4
+typed coords/timebase cores plus parity x3 (cores UNWIRED); NS-01.7 post-BODY refined-
+events slice; NS-05.1 facts core plus runner enforcement; decode-residual decomposition.
 
 | Order | Agent goal | Scope boundary | Required handoff |
 |---:|---|---|---|
-| 1 | **NS-01.4/01.5 Coordinates, status, packaging** | Adopt the typed transform API across stages plus one encoded/time convention and honest server/app delivery; no model tuning | Distortion/clock/drop tests, minimum bundle, partial propagation, every-URL proof |
-| 2 | **NS-01.6/01.7 Spine and evidence plumbing** | One `process_video.py` owner; audio, post-BODY events, dependency hashes, ball size, both paddle hypotheses | Cold/reuse/partial/failure tests plus modality ablations; no promotion claim |
+| 1 | **NS-01.4/01.5 Adopt landed cores; finish status/packaging** | Wire the landed coordinate/timebase contracts through real stage consumers plus honest server/app delivery; no model tuning | Distorted-synthetic and real-iPhone tests, minimum bundle, partial propagation, every-URL proof |
+| 2 | **NS-01.6/01.7 Spine and evidence plumbing** | One `process_video.py` owner; make post-BODY refined events/arc explicit timed stages (now ~122s hidden in `world`); audio normal-path, ball size, both paddle hypotheses | Cold/reuse/partial/failure tests plus modality ablations; no promotion claim |
 | 3 | **NS-01.2b Physical upload proof** | After identity/status/packaging/restart settle; production app and real device | Saved record/import → upload → job → manifest → matching replay trace |
 | Parallel now | **NS-02.1/02.2 gold capture execution + owner scratch labeling** | Owner half-day capture per the ns021 checklist; extra cameras remain GT-only; labeling per the R2 pivot | Surveyed points, sync proof, versioned lane-specific labels |
 
@@ -421,7 +420,7 @@ In-flight background lanes may finish and save their reports, but they do not
 supersede this queue. A running process, incomplete report, or speed number
 does not change the order above.
 
-**Dated evidence pointers (2026-07-09/10 — rulings stand; detail lives under `runs/`):**
+**Dated evidence pointers (2026-07-09 through 2026-07-13 — rulings stand; detail under `runs/`):**
 
 - Fail-closed world BALL emission is WIRED_DEFAULT (best_stack rev 11; wolverine max
   ball z 23.53m -> 0.97m) after the owner-critique fail-open finding. Remaining viewer
@@ -437,11 +436,12 @@ does not change the order above.
   stratum + disagreement-mined hard frames + venue diversity; provenance classifier is a
   standing pre-training corpus check. Open owner decision: exclude/down-weight confirmed
   rows in training mixes. Evidence: runs/lanes/w7_ballretrain2_20260709/.
-- Ball 2D->3D lift is the owner-ruled top ball priority (pb.vision existence proof; same
-  architecture class, gap = robustness engineering). Adopt sequence: fail-closed overlay
-  (landed) -> TT3D joint-anchor-search inside the existing scipy fit -> BlurBall/audio
-  anchor boosters -> both-ends pinning + inlier pass -> DP segmentation. Owner unlock:
-  pb.vision raw "cv" JSON export on our clips. Evidence: runs/research_ball3d_20260709/.
+- Ball 2D->3D lift verdicts 2026-07-12: TT3D anchors, gap-bridging, and the free size
+  proxy all killed same-protocol; recovery-v2 marginal PENDING (+23/900 internal, pb card
+  unchanged). Convergent diagnosis: the wall is upstream candidate/event evidence — next
+  unlock is owner labels plus fresh boundary evidence; pb.vision exports stay reference-
+  only, never GT/training. Evidence: runs/research_pbv_reveng_20260712/ and
+  runs/lanes/{tt3d_integrate,ball_recovery,ball_sizeobs,ball_radius_est}_20260712/.
 - Court window 2026-07-12: GT-free harness frozen; refinement killed on stability; hybrid paint
   evidence + temporal lock PENDING; owner labeling live in CVAT 88-91. runs/research_courtlock_20260712/.
 - Cold-clip BODY frame-materialization bug FIXED (ns016, `7a6fd828e`); 1,200-frame cap
