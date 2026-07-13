@@ -8,6 +8,7 @@ __pycache__/
 .DS_Store
 **/.DS_Store
 .claude/settings.local.json
+.xcode-home/
 .benchmarks/
 .stray_agent_outputs/
 node_modules/
