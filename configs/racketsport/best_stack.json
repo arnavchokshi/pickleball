@@ -980,11 +980,11 @@
         "new_far_off_court_fp": 0,
         "full_bar_cov4_ge_0p95": false
       },
-      "notes": "candidate_survives_internal_e2e ONLY; margin_2.0 REJECTED (new switch + 24 far-off-court FP frames); osnet_x1_0_market1501 weight license UNRESOLVED (Market1501 research-clause risk) -> R&D-only until NS-07.3 license ruling; no default flip; VERIFIED=0.",
+      "notes": "candidate_survives_internal_e2e; margin_2.0 REJECTED (new switch + 24 far-off-court FP frames); OWNER RULING 2026-07-13: OSNet weight license fine for internal/private use \u2014 promotion now gate-blocked only (fresh-clip cov4>=0.95); commercial launch re-reviews at NS-07.3; no default flip without owner word; VERIFIED=0.",
       "gate": {
         "name": "trk_fresh_clip_full_gate",
         "metric_key": "worst_clip_idf1_and_cov4",
-        "bar": "every fresh clip IDF1>=0.85, 0 switches, 0 spectator FP, 0 far-off-court FP, coverage>=0.95 (NORTH_STAR NS-03.TRK) + OSNet weight-license resolution (NS-07.3)",
+        "bar": "every fresh clip IDF1>=0.85, 0 switches, 0 spectator FP, 0 far-off-court FP, coverage>=0.95 (NORTH_STAR NS-03.TRK); license blocker REMOVED by owner ruling 2026-07-13 (internal/private use)",
         "evidence_path": "runs/lanes/trk_reid_apron_20260712/report.json"
       },
       "provenance": {
