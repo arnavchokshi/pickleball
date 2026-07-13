@@ -1,5 +1,12 @@
 # Held-out eval ledger (CAL/TRK/BALL/BODY/RKT, held-out CVAT labels)
 
+> **Navigation banner (added 2026-07-13; rows below are immutable history):** current authority
+> is `NORTH_STAR_ROADMAP.md`. References to `BUILD_CHECKLIST.md` in historical rows resolve to
+> `runs/archive/root_docs_20260709/BUILD_CHECKLIST.md`. The RKT row's
+> `docs/racketsport/RKT_TRUE_CORNER_CAPTURE_PROTOCOL.md` never existed in-tree; see
+> `runs/lanes/racket_6dof_20260702T085827Z/STATUS.md` and the North Star RKT row instead.
+
+
 **[HARDEN note, 2026-07-02, appended without editing anything above/below]:** this file is a
 high-contention, hand-edited Markdown file with no enforced write lock (flagged in
 `runs/manager/codex_lanes/reports/review_harden_20260702.md`, finding 5) -- concurrent
