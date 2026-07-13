@@ -275,6 +275,23 @@ class CourtGsdModel(BaseModel):
     samples: list[CourtGsdSample] = Field(default_factory=list)
 
 
+class CourtCalibrationCoordinateContract(BaseModel):
+    """Additive typed declarations beside legacy CAL matrices."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    camera_matrix_K: Matrix3
+    camera_matrix_input_space: Literal["camera_m"]
+    camera_matrix_output_space: Literal["pixels_undistorted_native"]
+    extrinsics_convention: Literal["world_to_camera_opencv_column"]
+    extrinsics_input_space: Literal["world_court_netcenter_z_up_m"]
+    extrinsics_output_space: Literal["camera_m"]
+    homography_convention: Literal["world_xy_to_image_column"]
+    homography_input_space: Literal["world_xy_homography_m"]
+    homography_output_space: Literal["pixels_raw_native", "pixels_undistorted_native"]
+    homography_pixel_convention: Literal["raw_pixels", "undistorted_pixels"]
+
+
 class CourtCalibration(StrictArtifact):
     sport: Literal["pickleball", "tennis"]
     coordinate_frame: Literal["court_netcenter_z_up_m"] | None = None
@@ -292,6 +309,10 @@ class CourtCalibration(StrictArtifact):
     world_pts: list[Vector3] = Field(min_length=4)
     source: str | None = None
     solved_over_frames: list[int] | None = None
+    coordinate_contract: CourtCalibrationCoordinateContract | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
 
     @model_validator(mode="after")
     def _point_lists_must_be_paired(self) -> CourtCalibration:
@@ -318,6 +339,22 @@ class CourtCalibration(StrictArtifact):
             assert self.solved_over_frames is not None
             if any(frame < 0 for frame in self.solved_over_frames):
                 raise ValueError("solved_over_frames must be non-negative")
+        if self.coordinate_contract is not None:
+            if self.coordinate_frame != "court_netcenter_z_up_m":
+                raise ValueError("coordinate_contract requires coordinate_frame=court_netcenter_z_up_m")
+            expected_k = [
+                [float(self.intrinsics.fx), 0.0, float(self.intrinsics.cx)],
+                [0.0, float(self.intrinsics.fy), float(self.intrinsics.cy)],
+                [0.0, 0.0, 1.0],
+            ]
+            if self.coordinate_contract.camera_matrix_K != expected_k:
+                raise ValueError("coordinate_contract.camera_matrix_K conflicts with intrinsics")
+            expected_homography_output = {
+                "raw_pixels": "pixels_raw_native",
+                "undistorted_pixels": "pixels_undistorted_native",
+            }[self.coordinate_contract.homography_pixel_convention]
+            if self.coordinate_contract.homography_output_space != expected_homography_output:
+                raise ValueError("coordinate_contract homography declarations conflict")
         return self
 
 
