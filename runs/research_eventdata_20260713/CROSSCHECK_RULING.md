@@ -37,3 +37,17 @@ sol xhigh web survey). Owner hypothesis (public bootstrap data exists) VINDICATE
 4. License ledger: NC-flagged sets = R&D/bootstrap only; commercially-clean spine exists (Zenodo
    shuttlecock CC BY 4.0 + jhong93 BSD-3 labels + ShuttleSet MIT + our own labels) for the eventual
    NS-07.3 relicense pass.
+
+## ACQUISITION CORRECTIONS (Stage-0 empirical, 2026-07-13 — supersede where conflicting)
+- jhong93/spot RANK-1 CONFIRMED empirically: 33,791 events reproduce exactly, +-frame window eval
+  verified in util/eval.py, all 28 source videos live. Rank-1 stands unconditionally.
+- Extended OpenTT stroke frame = CONTACT frame (evidence in data/event_public_20260713/ANSWERS.md)
+  -> direct HIT supervision, not onset-shifted.
+- Shuttlecock Zenodo (14677727) DEMOTED: test split ships NO ground-truth HitFrame (model-generated
+  per its own README); part1.zip follow-up pending. The commercially-clean spine = jhong93 BSD-3
+  labels + ShuttleSet MIT + our own labels (PadelTracker100 windows = context only).
+- Squash audio: 0 confirmed structured labels on the fetched assets — dropped from the audio pillar
+  unless figshare assets prove otherwise; TT Sounds remains the audio-pretrain anchor (NC-flagged).
+- ON DISK NOW (data/event_public_20260713, 6.1GB, manifests+ledger): ~130k labeled events
+  (jhong93 33,791 / F3Set 43,655 / ShuttleSet+22 88,840 partial-overlap / OpenTTGames 4,271 /
+  TT Sounds 5,702 audio / GolfDB 11,200).
