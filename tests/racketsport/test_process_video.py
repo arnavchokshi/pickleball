@@ -3468,6 +3468,90 @@ def test_missing_pinned_reid_asset_fails_loud_instead_of_keeping_loose_pool(
         pipeline._attempt_global_association()
 
 
+def test_owner_directed_margin_profile_reads_frozen_arm_from_best_stack() -> None:
+    entry = process_video.BEST_STACK_MANIFEST.entry("tracking.association_court_margin")
+
+    assert process_video.DEFAULT_ASSOCIATION_COURT_MARGIN_M == entry.value["strongest_arm_m"]
+    config, profile_name = process_video._raw_pool_authority_config_for_profile(
+        process_video.OWNER_DIRECTED_MARGIN1P0_ASSOCIATION_PROFILE,
+        expected_players=4,
+        reid_device="cpu",
+        reid_batch_size=64,
+    )
+
+    assert profile_name == process_video.OWNER_DIRECTED_MARGIN1P0_ASSOCIATION_PROFILE
+    assert config.court_margin_m == 1.0
+    assert config.appearance_weight == 1.0
+    assert config.motion_weight == 1.0
+    assert config.side_prior_weight == 0.25
+    assert config.cardinality_backfill is False
+
+
+def test_tracking_stage_reuses_frozen_raw_pool_through_production_association(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    raw_pool = tmp_path / "frozen_raw_pool"
+    _write_json(raw_pool / "tracks.json", _tracks_payload())
+    _write_json(
+        raw_pool / "raw_tracked_detections.json",
+        {
+            "fps": 30.0,
+            "frames": [
+                {
+                    "frame": 0,
+                    "detections": [
+                        {
+                            "bbox": [100.0, 100.0, 130.0, 180.0],
+                            "conf": 0.91,
+                            "class": "person",
+                            "track_id": 10,
+                        }
+                    ],
+                }
+            ],
+        },
+    )
+    _write_json(raw_pool / "tracked_detections.json", {"fps": 30.0, "frames": []})
+    _write_json(raw_pool / "metrics.json", {"counts": {"bbox_scale_status": "identity"}})
+    embeddings = tmp_path / "source_only_osnet_embeddings.json"
+    _write_json(embeddings, {"source_only": True, "uses_cvat_labels": False, "detections": []})
+
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = True
+    options.tracking_raw_pool_reuse = raw_pool
+    options.tracking_reid_embeddings_reuse = embeddings
+    options.global_association_profile = process_video.OWNER_DIRECTED_MARGIN1P0_ASSOCIATION_PROFILE
+    options.reid_model = tmp_path / "osnet.pt"
+    options.reid_model.write_bytes(b"fake checkpoint")
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    captured: dict[str, Any] = {}
+
+    def _fake_authority(**kwargs):  # noqa: ANN001
+        captured.update(kwargs)
+        out_dir = Path(kwargs["out_dir"])
+        refined = _tracks_payload()
+        refined["players"][0]["id"] = 77
+        _write_json(out_dir / "tracks.json", refined)
+        return {"tracks_path": str(out_dir / "tracks.json")}
+
+    monkeypatch.setattr(process_video, "run_raw_pool_authority_candidate", _fake_authority)
+    monkeypatch.setattr(process_video, "resolve_reid_device", lambda _device: "cpu")
+
+    outcome = pipeline._stage_tracking()
+
+    assert outcome.status == "ran"
+    assert outcome.trust_badge == "preview"
+    assert captured["raw_pool_dir"] == options.clip_dir
+    assert captured["embedding_export_path"] == embeddings
+    assert captured["config"].court_margin_m == 1.0
+    assert json.loads((options.clip_dir / "tracks.json").read_text(encoding="utf-8"))["players"][0]["id"] == 77
+    assert any("embedding_reuse=True" in note for note in outcome.notes)
+
+
 def test_identity_wrapper_rebuilds_unfingerprinted_stage_instead_of_authorizing_local_reuse(
     tmp_path: Path,
 ) -> None:
@@ -3575,10 +3659,11 @@ def test_unfingerprinted_partial_failure_or_skip_never_seeds_first_generation(
     assert pipeline._run_identity_store.current_manifest("probe") is None
 
 
-def test_global_association_default_profile_declares_wolverine_internal_val_tuning() -> None:
+def test_global_association_default_profile_declares_owner_directed_margin1_osnet() -> None:
     profile = process_video.RAW_POOL_GLOBAL_ASSOCIATION_PROFILES[process_video.DEFAULT_GLOBAL_ASSOCIATION_PROFILE]
 
-    assert "Wolverine internal-val" in profile.note
+    assert process_video.DEFAULT_GLOBAL_ASSOCIATION_PROFILE == process_video.OWNER_DIRECTED_MARGIN1P0_ASSOCIATION_PROFILE
+    assert "Owner-directed production candidate" in profile.note
     config, profile_name = process_video._raw_pool_authority_config_for_profile(
         process_video.DEFAULT_GLOBAL_ASSOCIATION_PROFILE,
         expected_players=4,
@@ -3586,7 +3671,7 @@ def test_global_association_default_profile_declares_wolverine_internal_val_tuni
         reid_batch_size=64,
     )
     assert profile_name == process_video.DEFAULT_GLOBAL_ASSOCIATION_PROFILE
-    assert config.court_margin_m == 2.0
+    assert config.court_margin_m == 1.0
     assert config.reid_device == "mps"
 
 
@@ -4124,7 +4209,7 @@ def test_tracking_stage_runs_raw_pool_authority_over_exported_pool(
     assert call["ground_truth_path"] is None
     assert call["config"].reid_device == "mps"
     assert call["config"].reid_batch_size == 64
-    assert call["config"].court_margin_m == 2.0
+    assert call["config"].court_margin_m == 1.0
     assert (options.clip_dir / "raw_tracked_detections.json").is_file()
     assert (options.clip_dir / "tracked_detections.json").is_file()
     assert (options.clip_dir / "metrics.json").is_file()

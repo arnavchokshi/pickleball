@@ -17,7 +17,7 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 11
+    assert manifest.revision == 12
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
     assert len(manifest.entries) >= 30
 
@@ -110,6 +110,15 @@ def test_best_stack_manifest_integrity() -> None:
         eval_profiles.value["profiles"]["outdoor_webcam_iynbd_1500_long_high_baseline"]["profile"]
         == "outdoor_preregistered_unshopped_base"
     )
+    association_margin = manifest.entry("tracking.association_court_margin")
+    assert association_margin.status == "WIRED_DEFAULT"
+    assert association_margin.value["enabled"] is True
+    assert association_margin.value["margin_m"] == 1.0
+    assert association_margin.value["fallback_candidate_m"] == 0.5
+    assert association_margin.gate["name"] == "trk_fresh_clip_full_gate"
+    assert association_margin.proven_against["full_bar_cov4_ge_0p95"] is False
+    assert association_margin.provenance["lane"] == "trk_flip_20260713"
+    assert "NOT an accuracy-gate promotion" in association_margin.notes
 
     pending_without_gate = [
         key for key, entry in manifest.entries.items() if entry.status == "PENDING" and entry.gate is None

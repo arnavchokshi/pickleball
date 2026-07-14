@@ -229,6 +229,9 @@ INPUT_QUALITY_MODES = tuple(str(mode) for mode in BEST_STACK_MANIFEST.value("inp
 DEFAULT_INPUT_QUALITY_MODE = str(BEST_STACK_MANIFEST.value("input_quality.preflight")["mode"])
 DEFAULT_MATCH_STATS_ENABLED = bool(BEST_STACK_MANIFEST.value("stats.match_stats_v0")["enabled"])
 DEFAULT_REID_MODEL = BEST_STACK_MANIFEST.path_value("tracking.reid_model", must_exist=False)
+DEFAULT_ASSOCIATION_COURT_MARGIN_M = float(
+    BEST_STACK_MANIFEST.value("tracking.association_court_margin")["strongest_arm_m"]
+)
 DEFAULT_WASB_CHECKPOINT = BEST_STACK_MANIFEST.path_value("ball.wasb_checkpoint")
 DEFAULT_WASB_REPO = BEST_STACK_MANIFEST.path_value("ball.wasb_repo")
 DEFAULT_CONFIDENCE_CALIBRATION_CURVES = BEST_STACK_MANIFEST.path_value("confidence.calibration_curves")
@@ -311,7 +314,17 @@ class RawPoolGlobalAssociationProfile:
 # The default raw-pool association profile is intentionally explicit and now
 # manifest-owned. Per-clip evaluation overrides below remain eval-only.
 DEFAULT_GLOBAL_ASSOCIATION_PROFILE = BEST_STACK_MANIFEST.string_value("tracking.global_association_profile")
+OWNER_DIRECTED_MARGIN1P0_ASSOCIATION_PROFILE = "owner_directed_margin1p0_osnet"
 RAW_POOL_GLOBAL_ASSOCIATION_PROFILES: dict[str, RawPoolGlobalAssociationProfile] = {
+    OWNER_DIRECTED_MARGIN1P0_ASSOCIATION_PROFILE: RawPoolGlobalAssociationProfile(
+        name=OWNER_DIRECTED_MARGIN1P0_ASSOCIATION_PROFILE,
+        note=(
+            "Owner-directed production candidate from trk_reid_apron_20260712: OSNet global association "
+            "with every RawPoolAuthorityConfig knob at its frozen default except the best_stack-selected "
+            "positive court margin. This is a default-stack selection candidate, not an accuracy promotion."
+        ),
+        court_margin_m=DEFAULT_ASSOCIATION_COURT_MARGIN_M,
+    ),
     "wolverine_internal_val_trk12_cfg151_minconf03_margin1_appw05_backfill": RawPoolGlobalAssociationProfile(
         name="wolverine_internal_val_trk12_cfg151_minconf03_margin1_appw05_backfill",
         note=(
@@ -340,8 +353,8 @@ RAW_POOL_GLOBAL_ASSOCIATION_PROFILES: dict[str, RawPoolGlobalAssociationProfile]
         max_merge_cost=3.0,
         cardinality_backfill=True,
     ),
-    DEFAULT_GLOBAL_ASSOCIATION_PROFILE: RawPoolGlobalAssociationProfile(
-        name=DEFAULT_GLOBAL_ASSOCIATION_PROFILE,
+    "wolverine_internal_val_trk10_iter2_margin2": RawPoolGlobalAssociationProfile(
+        name="wolverine_internal_val_trk10_iter2_margin2",
         note="Wolverine internal-val tuned TRK-10 profile: iter2 with court_margin_m=2.0.",
         court_margin_m=2.0,
     ),
@@ -385,7 +398,11 @@ RUN_IDENTITY_DEPENDENCIES: dict[str, tuple[str, ...]] = {
 
 RUN_IDENTITY_CONFIG_KEYS: dict[str, tuple[str, ...]] = {
     "input_quality": ("input_quality.preflight",),
-    "tracking": ("tracking.reid_model", "tracking.global_association_profile"),
+    "tracking": (
+        "tracking.reid_model",
+        "tracking.global_association_profile",
+        "tracking.association_court_margin",
+    ),
     "camera_motion": ("camera_motion.policy",),
     "placement": ("placement.undistort",),
     "ball": ("ball.wasb_checkpoint", "ball.wasb_repo", "ball.detection_stride"),
@@ -468,6 +485,8 @@ class PipelineOptions:
     input_quality_mode: str = DEFAULT_INPUT_QUALITY_MODE
 
     tracks_reuse: Path | None = None
+    tracking_raw_pool_reuse: Path | None = None
+    tracking_reid_embeddings_reuse: Path | None = None
     global_association: bool = True
     global_association_profile: str | None = None
     reid_model: Path = DEFAULT_REID_MODEL
@@ -699,6 +718,8 @@ class ProcessVideoPipeline:
                 "max_players": opts.max_players,
                 "max_frames": opts.max_frames,
                 "device": opts.device,
+                "raw_pool_reuse": opts.tracking_raw_pool_reuse is not None,
+                "reid_embeddings_reuse": opts.tracking_reid_embeddings_reuse is not None,
             },
             "rally_gating": {"enabled": opts.rally_gating, "pad_seconds": opts.rally_gating_pad_seconds},
             "ball": {
@@ -737,7 +758,11 @@ class ProcessVideoPipeline:
                 "court_corners": opts.court_corners,
             }
         elif name == "tracking":
-            candidates = {"tracks": opts.tracks_reuse}
+            candidates = {
+                "tracks": opts.tracks_reuse,
+                "raw_pool": opts.tracking_raw_pool_reuse,
+                "reid_embeddings": opts.tracking_reid_embeddings_reuse,
+            }
         elif name == "camera_motion":
             candidates = {"camera_motion": opts.camera_motion_path}
         elif name == "placement":
@@ -1513,7 +1538,7 @@ class ProcessVideoPipeline:
             and self._identity_allows_reuse("tracking")
             and _valid_artifact("tracks", target)
         ):
-            self.trust_bands["track"] = derive_track_trust_band(idf1=None, evidence_path=str(target))
+            self.trust_bands["track"] = self._selected_track_trust_band(evidence_path=str(target))
             return StageOutcome(
                 stage="tracking",
                 status="skipped",
@@ -1534,6 +1559,43 @@ class ProcessVideoPipeline:
                 wall_seconds=0.0,
                 notes=[f"reused already-computed champion tracks.json from {opts.tracks_reuse} (resume/reuse path)"],
                 artifacts=["tracks.json"],
+                trust_badge=self.trust_bands["track"]["badge"],
+            )
+
+        if opts.tracking_raw_pool_reuse is not None:
+            raw_pool_dir = opts.tracking_raw_pool_reuse
+            if not raw_pool_dir.is_dir():
+                raise _HardStageFailure(f"--tracking-raw-pool {raw_pool_dir} is not a directory")
+            source_tracks = raw_pool_dir / "tracks.json"
+            if not _valid_artifact("tracks", source_tracks):
+                raise _HardStageFailure(
+                    f"--tracking-raw-pool {raw_pool_dir} has no valid loose-pool tracks.json"
+                )
+            if not _has_raw_pool_artifact(raw_pool_dir):
+                raise _HardStageFailure(
+                    f"--tracking-raw-pool {raw_pool_dir} has no tracked_detections.json or "
+                    "raw_tracked_detections.json"
+                )
+            copied_artifacts = ["tracks.json"]
+            for raw_pool_name in ("tracks.json", "raw_tracked_detections.json", "tracked_detections.json", "metrics.json"):
+                source = raw_pool_dir / raw_pool_name
+                if source.is_file():
+                    _copy_json(source, self.clip_dir / raw_pool_name)
+                    if raw_pool_name not in copied_artifacts:
+                        copied_artifacts.append(raw_pool_name)
+
+            notes = [
+                f"reused frozen loose tracking pool from {raw_pool_dir}; source directory is content-fingerprinted"
+            ]
+            if opts.global_association:
+                notes.extend(self._attempt_global_association())
+            self.trust_bands["track"] = self._selected_track_trust_band(evidence_path=str(target))
+            return StageOutcome(
+                stage="tracking",
+                status="ran",
+                wall_seconds=0.0,
+                notes=notes,
+                artifacts=copied_artifacts,
                 trust_badge=self.trust_bands["track"]["badge"],
             )
 
@@ -1601,7 +1663,7 @@ class ProcessVideoPipeline:
             if (self.clip_dir / raw_pool_name).is_file():
                 artifacts.append(raw_pool_name)
 
-        self.trust_bands["track"] = derive_track_trust_band(idf1=None, evidence_path=str(target))
+        self.trust_bands["track"] = self._selected_track_trust_band(evidence_path=str(target))
         return StageOutcome(
             stage="tracking",
             status="ran",
@@ -1680,6 +1742,21 @@ class ProcessVideoPipeline:
             },
         )
 
+    def _selected_track_trust_band(self, *, evidence_path: str) -> dict[str, Any]:
+        band = derive_track_trust_band(idf1=None, evidence_path=evidence_path)
+        selected_profile = self.options.global_association_profile or DEFAULT_GLOBAL_ASSOCIATION_PROFILE
+        if self.options.global_association and selected_profile == OWNER_DIRECTED_MARGIN1P0_ASSOCIATION_PROFILE:
+            band = {
+                **band,
+                "gate_status": "owner_directed_stack_selection_preview",
+                "badge": "preview",
+                "reason": (
+                    "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate "
+                    "has not passed (coverage remains below 0.95); preview only, VERIFIED=0."
+                ),
+            }
+        return band
+
     def _attempt_global_association(self) -> list[str]:
         opts = self.options
         if not _has_raw_pool_artifact(self.clip_dir):
@@ -1713,13 +1790,16 @@ class ProcessVideoPipeline:
                 calibration_path=self.clip_dir / "court_calibration.json",
                 out_dir=out_dir,
                 reid_model_path=opts.reid_model,
-                embedding_export_path=None,
+                embedding_export_path=opts.tracking_reid_embeddings_reuse,
                 ground_truth_path=None,
                 expected_players=opts.max_players,
                 config=authority_config,
             )
         except Exception as exc:  # noqa: BLE001
-            return [f"raw-pool global association failed ({type(exc).__name__}: {exc}); kept loose-pool tracks.json"]
+            raise _HardStageFailure(
+                f"raw-pool global association failed ({type(exc).__name__}: {exc}); loose-pool tracks.json "
+                "is not an honest substitute for the wired default"
+            ) from exc
 
         refined_tracks = Path(report["tracks_path"])
         if refined_tracks.is_file() and _valid_artifact("tracks", refined_tracks):
@@ -1727,9 +1807,13 @@ class ProcessVideoPipeline:
             return [
                 "refined tracks.json with raw-pool global association "
                 f"(profile={profile_name}, osnet ReID + motion, device={resolved_reid_device}, "
-                f"batch={reid_batch_size}, out_dir={out_dir})"
+                f"batch={reid_batch_size}, embedding_reuse={opts.tracking_reid_embeddings_reuse is not None}, "
+                f"out_dir={out_dir})"
             ]
-        return ["raw-pool global association ran but produced no valid tracks.json; kept loose-pool tracks.json"]
+        raise _HardStageFailure(
+            "raw-pool global association ran but produced no valid tracks.json; loose-pool tracks.json "
+            "is not an honest substitute for the wired default"
+        )
 
     def _stage_camera_motion(self) -> StageOutcome:
         opts = self.options
@@ -6854,12 +6938,20 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
     if not isinstance(match_stats, dict):
         match_stats = {"enabled": bool(match_stats)}
     match_stats["enabled"] = bool(options.match_stats)
+    association_profile_name = options.global_association_profile or DEFAULT_GLOBAL_ASSOCIATION_PROFILE
+    association_profile = RAW_POOL_GLOBAL_ASSOCIATION_PROFILES[association_profile_name]
+    association_court_margin = copy.deepcopy(BEST_STACK_MANIFEST.value("tracking.association_court_margin"))
+    if not isinstance(association_court_margin, dict):
+        association_court_margin = {}
+    association_court_margin["enabled"] = bool(options.global_association)
+    association_court_margin["margin_m"] = float(association_profile.court_margin_m)
     return {
         "ball.wasb_checkpoint": _path_summary(options.wasb_checkpoint),
         "ball.wasb_repo": _path_summary(options.wasb_repo),
         "ball.arc_chain": not options.no_ball_arc,
         "tracking.reid_model": _path_summary(options.reid_model),
-        "tracking.global_association_profile": options.global_association_profile or DEFAULT_GLOBAL_ASSOCIATION_PROFILE,
+        "tracking.global_association_profile": association_profile_name,
+        "tracking.association_court_margin": association_court_margin,
         "confidence.calibration_curves": _path_summary(
             options.confidence_calibration_curves or DEFAULT_CONFIDENCE_CALIBRATION_CURVES
         ),
@@ -6895,6 +6987,9 @@ def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any
         "ball.arc_chain": BEST_STACK_MANIFEST.value("ball.arc_chain"),
         "tracking.reid_model": BEST_STACK_MANIFEST.path_value("tracking.reid_model", must_exist=False).as_posix(),
         "tracking.global_association_profile": BEST_STACK_MANIFEST.string_value("tracking.global_association_profile"),
+        "tracking.association_court_margin": copy.deepcopy(
+            BEST_STACK_MANIFEST.value("tracking.association_court_margin")
+        ),
         "confidence.calibration_curves": BEST_STACK_MANIFEST.path_value("confidence.calibration_curves").as_posix(),
         "mesh.coverage_mode": BEST_STACK_MANIFEST.string_value("mesh.coverage_mode"),
         "mesh.byte_budget_mib": BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib"),
@@ -7148,6 +7243,12 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         court_proposals_preview=args.court_proposals_preview,
         input_quality_mode=str(args.input_quality_mode),
         tracks_reuse=Path(args.tracks).expanduser().resolve() if args.tracks else None,
+        tracking_raw_pool_reuse=Path(args.tracking_raw_pool).expanduser().resolve()
+        if args.tracking_raw_pool
+        else None,
+        tracking_reid_embeddings_reuse=Path(args.tracking_reid_embeddings).expanduser().resolve()
+        if args.tracking_reid_embeddings
+        else None,
         global_association=not args.no_global_association,
         global_association_profile=args.global_association_profile,
         reid_model=Path(args.reid_model).expanduser().resolve(),
@@ -7253,6 +7354,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--device", default=None, help="Device hint for tracking/pose (e.g. cuda:0).")
 
     parser.add_argument("--tracks", help="Reuse an already-computed tracks.json instead of running live tracking.")
+    parser.add_argument(
+        "--tracking-raw-pool",
+        help=(
+            "Reuse a frozen loose-pool tracking directory containing tracks.json plus raw/geometry detections, "
+            "then run the normal production global-association step. Intended for reproducible scoring."
+        ),
+    )
+    parser.add_argument(
+        "--tracking-reid-embeddings",
+        help=(
+            "Reuse a source-only OSNet embedding export in the production global-association step. The pinned "
+            "OSNet checkpoint must still exist; labeled/promoted embedding artifacts are rejected downstream."
+        ),
+    )
     parser.add_argument("--no-global-association", action="store_true", help="Skip the raw-pool global-association refinement step after BoT-SORT loose-pool tracking.")
     parser.add_argument(
         "--global-association-profile",

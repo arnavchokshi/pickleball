@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 11,
+  "revision": 12,
   "updated": "2026-07-13",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
@@ -353,20 +353,35 @@
     },
     "tracking.global_association_profile": {
       "stage": "tracking",
-      "selection": "production default raw-pool global association profile",
-      "value": "wolverine_internal_val_trk10_iter2_margin2",
+      "selection": "owner-directed margin-1.0m + OSNet production global association profile",
+      "value": "owner_directed_margin1p0_osnet",
       "status": "WIRED_DEFAULT",
-      "gate": null,
+      "gate": {
+        "name": "owner_directed_stack_selection_not_accuracy_promotion",
+        "metric_key": "production_path_reproduction",
+        "bar": "Burlington/Wolverine frozen production-entry reproduction within 0.0001 IDF1/cov4 and exact zero switches; VERIFIED remains 0",
+        "evidence_path": "runs/lanes/trk_flip_20260713/preflip_score/person_track_gt_scoring_report.json"
+      },
       "provenance": {
-        "lane": "beststack_core_20260708",
-        "commit": "865c8d9f5",
-        "date": "2026-07-08",
+        "lane": "trk_flip_20260713",
+        "commit": "worktree",
+        "date": "2026-07-13",
         "evidence_paths": [
-          "runs/lanes/beststack_core_20260708/audit_result_full.json"
+          "runs/lanes/trk_reid_apron_20260712/report.json",
+          "runs/lanes/trk_flip_20260713/preflip_score/person_track_gt_scoring_report.json",
+          "runs/lanes/trk_flip_20260713/report.json"
         ]
       },
-      "proven_against": null,
-      "notes": "Deliberate default. No-flag runs use this manifest production profile for every clip; per-clip Burlington/Wolverine/Outdoor profiles are declared under tracking.eval_only_association_profiles and require explicit eval/internal-val selection."
+      "proven_against": {
+        "burlington_idf1": 0.8830775880700238,
+        "burlington_cov4": 0.7116666666666667,
+        "burlington_switches": 0,
+        "wolverine_idf1": 0.8515962036238136,
+        "wolverine_cov4": 0.76,
+        "wolverine_switches": 0,
+        "reproduction_tolerance_abs": 0.0001
+      },
+      "notes": "OWNER RULING 2026-07-13 ('do the flip with better accuracy'): no-flag runs use margin 1.0m plus OSNet global association with otherwise frozen RawPoolAuthorityConfig defaults. This is an owner-directed stack selection, NOT an accuracy-gate promotion; TRK remains preview and VERIFIED=0. Per-clip internal-val profiles remain explicit eval-only choices."
     },
     "tracking.eval_only_association_profiles": {
       "stage": "tracking",
@@ -957,10 +972,12 @@
     },
     "tracking.association_court_margin": {
       "stage": "tracking",
-      "selection": "positive court-margin + OSNet global association candidate (deepreview S2 recovery)",
+      "selection": "owner-directed positive court margin for OSNet global association (deepreview S2 recovery)",
       "value": {
-        "enabled": false,
+        "enabled": true,
+        "margin_m": 1.0,
         "candidate_flag": "association_court_margin_m",
+        "fallback_candidate_m": 0.5,
         "surviving_arms_m": [
           0.5,
           1.0
@@ -968,9 +985,9 @@
         "strongest_arm_m": 1.0,
         "rejected_arm_m": 2.0
       },
-      "status": "PENDING",
+      "status": "WIRED_DEFAULT",
       "proven_against": {
-        "card": "Burlington/Wolverine historical-internal person GT (frozen 4-arm matrix, trk_reid_apron_20260712, pin 3d5125d58)",
+        "card": "Burlington/Wolverine historical-internal person GT; frozen sweep plus process_video production-entry reproduction",
         "worst_clip_idf1_control": 0.6425,
         "worst_clip_idf1_margin1p0": 0.8516,
         "worst_clip_cov4_control": 0.0433,
@@ -978,22 +995,37 @@
         "new_switches": 0,
         "new_spectator_fp": 0,
         "new_far_off_court_fp": 0,
-        "full_bar_cov4_ge_0p95": false
+        "full_bar_cov4_ge_0p95": false,
+        "production_reproduction": {
+          "tolerance_abs": 0.0001,
+          "burlington": {
+            "idf1": 0.8830775880700238,
+            "cov4": 0.7116666666666667,
+            "switches": 0
+          },
+          "wolverine": {
+            "idf1": 0.8515962036238136,
+            "cov4": 0.76,
+            "switches": 0
+          }
+        }
       },
-      "notes": "candidate_survives_internal_e2e; margin_2.0 REJECTED (new switch + 24 far-off-court FP frames); OWNER RULING 2026-07-13: OSNet weight license fine for internal/private use \u2014 promotion now gate-blocked only (fresh-clip cov4>=0.95); commercial launch re-reviews at NS-07.3; no default flip without owner word; VERIFIED=0.",
+      "notes": "PROMOTED TO WIRED_DEFAULT per OWNER RULING 2026-07-13 ('do the flip with better accuracy'). This is a production-stack selection, NOT an accuracy-gate promotion: margin_1.0 reproduced the sweep through process_video, but cov4 remains 0.7117-0.7600 versus the 0.95 full bar. Margin 0.5m stays documented as the fallback candidate; margin 2.0m remains REJECTED (new switch + 24 far-off-court FP frames). OSNet license is owner-approved for internal/private use; commercial launch re-reviews at NS-07.3. TRK stays preview; VERIFIED=0.",
       "gate": {
         "name": "trk_fresh_clip_full_gate",
         "metric_key": "worst_clip_idf1_and_cov4",
         "bar": "every fresh clip IDF1>=0.85, 0 switches, 0 spectator FP, 0 far-off-court FP, coverage>=0.95 (NORTH_STAR NS-03.TRK); license blocker REMOVED by owner ruling 2026-07-13 (internal/private use)",
-        "evidence_path": "runs/lanes/trk_reid_apron_20260712/report.json"
+        "evidence_path": "runs/lanes/trk_flip_20260713/report.json"
       },
       "provenance": {
-        "lane": "trk_reid_apron_20260712",
-        "commit": "3d5125d58",
-        "date": "2026-07-12",
+        "lane": "trk_flip_20260713",
+        "commit": "worktree",
+        "date": "2026-07-13",
         "evidence_paths": [
           "runs/lanes/trk_reid_apron_20260712/report.json",
-          "runs/lanes/trk_reid_apron_20260712/vm_pull/"
+          "runs/lanes/trk_reid_apron_20260712/vm_pull/",
+          "runs/lanes/trk_flip_20260713/preflip_score/person_track_gt_scoring_report.json",
+          "runs/lanes/trk_flip_20260713/report.json"
         ]
       }
     },
@@ -1063,6 +1095,7 @@
   },
   "selection_constant_coverage": {
     "DEFAULT_REID_MODEL": "tracking.reid_model",
+    "DEFAULT_ASSOCIATION_COURT_MARGIN_M": "tracking.association_court_margin",
     "DEFAULT_WASB_CHECKPOINT": "ball.wasb_checkpoint",
     "DEFAULT_WASB_REPO": "ball.wasb_repo",
     "DEFAULT_CONFIDENCE_CALIBRATION_CURVES": "confidence.calibration_curves",
