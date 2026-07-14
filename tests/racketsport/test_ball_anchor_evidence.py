@@ -71,6 +71,46 @@ def test_audio_source_uses_corrected_time_and_preserves_spine_provenance(tmp_pat
     assert source["spine_audio_provenance"]["status"] == "present"
 
 
+def test_audio_source_repairs_corrected_order_and_preserves_classified_event_type(tmp_path: Path) -> None:
+    audio_path = tmp_path / "audio_onsets_v2.json"
+    audio_path.write_text("{}\n", encoding="utf-8")
+    track = {"fps": 30.0, "frames": [_hidden_frame(index / 30.0) for index in range(61)]}
+
+    payload = build_anchor_evidence_payload(
+        ball_track=track,
+        calibration=None,
+        audio_onsets={
+            "onsets": [
+                {
+                    "raw_time_s": 1.10,
+                    "corrected_time_s": 1.00,
+                    "corrected_order": 1,
+                    "class_label": "contact",
+                    "confidence": 0.8,
+                },
+                {
+                    "raw_time_s": 0.95,
+                    "corrected_time_s": 0.90,
+                    "corrected_order": 0,
+                    "class_label": "bounce",
+                    "confidence": 0.9,
+                },
+            ]
+        },
+        clip_id="classified-audio",
+        audio_source_path=audio_path,
+    )
+
+    by_time = sorted(payload["candidates"], key=lambda item: item["t"])
+    assert [item["anchor_type"] for item in by_time] == ["bounce", "contact"]
+    first_source = by_time[0]["sources"][0]
+    second_source = by_time[1]["sources"][0]
+    assert first_source["classification"] == "bounce"
+    assert first_source["corrected_order"] == 0
+    assert second_source["classification"] == "contact"
+    assert second_source["corrected_order"] == 1
+
+
 def test_kinematics_uses_low_confidence_raw_candidate_below_acceptance_threshold() -> None:
     track = {
         "fps": 30.0,
@@ -82,8 +122,9 @@ def test_kinematics_uses_low_confidence_raw_candidate_below_acceptance_threshold
     }
     raw = {
         "fps": 30.0,
+        "artifact_type": "racketsport_wasb_below_threshold_candidates",
         "frames": [
-            {"frame": 1, "candidates": [{"xy": [100.0, 115.0], "score": 0.4, "source_detector": "wasb_concomp"}]}
+            {"frame": 1, "pts_seconds": 0.041, "candidates": [{"xy": [100.0, 115.0], "score": 0.4, "source_detector": "wasb_concomp"}]}
         ],
     }
 
@@ -99,6 +140,7 @@ def test_kinematics_uses_low_confidence_raw_candidate_below_acceptance_threshold
     assert payload["source_summary"][SOURCE_KINEMATICS]["cues_below_accepted_confidence_threshold"] >= 1
     candidate = payload["candidates"][0]
     assert candidate["anchor_type"] == "bounce"
+    assert candidate["t"] == pytest.approx(0.041)
     kinematic = next(source for source in candidate["sources"] if source["source_type"] == SOURCE_KINEMATICS)
     assert kinematic["raw_candidate_support"] is True
     assert kinematic["below_accepted_confidence_support"] is True
@@ -106,6 +148,9 @@ def test_kinematics_uses_low_confidence_raw_candidate_below_acceptance_threshold
         item.get("artifact") == "ball_candidates" and item.get("below_primary_selection") is True
         for item in kinematic["trajectory_inputs"]
     )
+    raw_input = next(item for item in kinematic["trajectory_inputs"] if item.get("artifact") == "ball_candidates")
+    assert raw_input["pts_seconds"] == pytest.approx(0.041)
+    assert raw_input["source_artifact_type"] == "racketsport_wasb_below_threshold_candidates"
 
 
 def test_kinematics_emits_vertical_flip_and_direction_break_with_court_hypothesis() -> None:
@@ -181,6 +226,49 @@ def test_blur_transition_contributes_typed_contact_candidate() -> None:
     assert candidate["anchor_type"] == "contact"
     assert candidate["source_types"] == [SOURCE_BLUR]
     assert candidate["position_hypotheses"][0]["space"] == "image_px"
+
+
+def test_blur_vertical_motion_reversal_contributes_typed_bounce_with_provenance() -> None:
+    payload = build_anchor_evidence_payload(
+        ball_track={"fps": 30.0, "frames": [_hidden_frame(index / 30.0) for index in range(6)]},
+        calibration=None,
+        blur_sidecar={
+            "artifact_type": "racketsport_ball_blur_sidecar",
+            "frames": [
+                {
+                    "frame_index": 1,
+                    "center_xy": [50.0, 50.0],
+                    "blur_length_px": 8.0,
+                    "blur_angle_deg": 70.0,
+                    "quality": "clear",
+                },
+                {
+                    "frame_index": 2,
+                    "center_xy": [52.0, 60.0],
+                    "blur_length_px": 2.0,
+                    "blur_angle_deg": 5.0,
+                    "quality": "clear",
+                },
+                {
+                    "frame_index": 3,
+                    "center_xy": [54.0, 50.0],
+                    "blur_length_px": 8.0,
+                    "blur_angle_deg": 110.0,
+                    "quality": "clear",
+                },
+            ],
+        },
+        clip_id="blur-bounce",
+        config=AnchorEvidenceConfig(source_min_separation_s=0.01),
+    )
+
+    candidate = next(item for item in payload["candidates"] if item["anchor_type"] == "bounce")
+    source = next(item for item in candidate["sources"] if item["source_type"] == SOURCE_BLUR)
+    assert source["cue_type"] == "motion_blur_bounce_transition"
+    assert source["proposal_type"] == "bounce"
+    assert source["vertical_velocity_sign_flip"] is True
+    assert source["signature_frames"] == [1, 2, 3]
+    assert source["extraction"] == "frame_difference_ball_crop_principal_axis"
 
 
 def test_fusion_ranks_multisource_agreement_above_isolated_audio(tmp_path: Path) -> None:

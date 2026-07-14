@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 from collections import defaultdict, deque
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Iterator
@@ -34,6 +34,8 @@ STATUS_TESTED = "TESTED-ON-REAL-DATA"
 DEFAULT_WASB_VISIBLE_THRESHOLD = 0.5
 DEFAULT_BALL_CANDIDATE_TOP_K = 5
 DEFAULT_EMIT_SIZE_OBSERVATIONS = True
+DEFAULT_EMIT_BELOW_THRESHOLD_CANDIDATES = False
+DEFAULT_BELOW_THRESHOLD_CANDIDATE_FLOOR = 0.05
 WASB_INPUT_WH = (512, 288)
 WASB_FRAMES_IN = 3
 WASB_FRAMES_OUT = 3
@@ -191,6 +193,11 @@ def run_official_wasb_predict(
     size_observations_out: str | Path | None = None,
     size_observation_fps: float | None = None,
     size_observation_frame_times: Any = None,
+    emit_below_threshold_candidates: bool = DEFAULT_EMIT_BELOW_THRESHOLD_CANDIDATES,
+    below_threshold_candidates_out: str | Path | None = None,
+    below_threshold_candidate_floor: float = DEFAULT_BELOW_THRESHOLD_CANDIDATE_FLOOR,
+    below_threshold_candidate_fps: float | None = None,
+    below_threshold_candidate_frame_times: Any = None,
 ) -> dict[str, Any]:
     """Run official WASB model code on a video and write per-frame predictions CSV."""
 
@@ -210,6 +217,15 @@ def run_official_wasb_predict(
         raise ValueError("batch_size must be positive")
     candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    if emit_below_threshold_candidates:
+        below_threshold_candidate_floor = _parse_below_threshold_candidate_floor(
+            below_threshold_candidate_floor,
+            acceptance_threshold=visible_threshold,
+        )
+    else:
+        # The additive sidecar is default-off. Keep every legacy invocation valid,
+        # including callers whose acceptance threshold is below the sidecar floor.
+        below_threshold_candidate_floor = DEFAULT_BELOW_THRESHOLD_CANDIDATE_FLOOR
     input_preprocessing = _normalize_input_preprocessing(input_preprocessing)
     normalized_range = _normalize_video_range(video_range)
 
@@ -270,6 +286,9 @@ def run_official_wasb_predict(
             det_results: dict[int, list[dict[str, Any]]] = defaultdict(list)
             confidence_results: dict[int, list[float]] = defaultdict(list)
             size_observation_results: dict[int, list[dict[str, Any]]] = defaultdict(list)
+            below_threshold_candidate_results: dict[int, list[dict[str, Any]]] | None = (
+                defaultdict(list) if emit_below_threshold_candidates else None
+            )
             pending_tensors: list[Any] = []
             pending_indices: list[list[int]] = []
             window: deque[tuple[int, Any]] = deque(maxlen=WASB_FRAMES_IN)
@@ -308,6 +327,9 @@ def run_official_wasb_predict(
                             det_results=det_results,
                             confidence_results=confidence_results,
                             size_observation_results=size_observation_results,
+                            below_threshold_candidate_results=below_threshold_candidate_results,
+                            below_threshold_candidate_floor=below_threshold_candidate_floor,
+                            acceptance_threshold=visible_threshold,
                             cv2=cv2,
                             np=np,
                             torch=torch,
@@ -326,7 +348,10 @@ def run_official_wasb_predict(
                     affine_inv=postprocess_affine_inv,
                     det_results=det_results,
                     confidence_results=confidence_results,
-                    size_observation_results=size_observation_results,
+                        size_observation_results=size_observation_results,
+                        below_threshold_candidate_results=below_threshold_candidate_results,
+                        below_threshold_candidate_floor=below_threshold_candidate_floor,
+                        acceptance_threshold=visible_threshold,
                     cv2=cv2,
                     np=np,
                     torch=torch,
@@ -402,6 +427,37 @@ def run_official_wasb_predict(
                     "overlap_resolution": "highest_frame_heatmap_peak_then_earliest_observation",
                 },
             )
+        below_threshold_sidecar_path: Path | None = None
+        if emit_below_threshold_candidates:
+            assert below_threshold_candidate_results is not None
+            below_threshold_sidecar_path = (
+                Path(below_threshold_candidates_out)
+                if below_threshold_candidates_out is not None
+                else _below_threshold_candidates_sidecar_path(primary_output if primary_output is not None else out_csv)
+            )
+            below_threshold_fps = _require_positive_float(
+                below_threshold_candidate_fps if below_threshold_candidate_fps is not None else source_fps,
+                "below_threshold_candidate_fps",
+            )
+            _write_wasb_below_threshold_candidates_sidecar(
+                path=below_threshold_sidecar_path,
+                fps=below_threshold_fps,
+                frame_times=below_threshold_candidate_frame_times,
+                source_mode="wasb_predict",
+                input_preprocessing=input_preprocessing,
+                primary_output=Path(primary_output) if primary_output is not None else Path(out_csv),
+                frame_ids=sorted(confidence_results),
+                raw_frame_observations=below_threshold_candidate_results,
+                candidate_score_floor=below_threshold_candidate_floor,
+                acceptance_threshold=visible_threshold,
+                provenance={
+                    "video": str(video_path),
+                    "wasb_repo": str(repo),
+                    "wasb_checkpoint": str(checkpoint_path),
+                    "component_capture_point": "raw_heatmap_before_primary_acceptance",
+                    "overlap_resolution": "highest_frame_heatmap_peak_then_earliest_observation",
+                },
+            )
 
     out_path = Path(out_csv)
     _write_wasb_csv(out_path, rows)
@@ -431,6 +487,10 @@ def run_official_wasb_predict(
     if emit_size_observations and size_observation_sidecar_path is not None:
         runtime["size_observations_out"] = str(size_observation_sidecar_path)
         runtime["size_observation_heatmap_threshold"] = HEATMAP_THRESHOLD
+    if emit_below_threshold_candidates and below_threshold_sidecar_path is not None:
+        runtime["below_threshold_candidates_out"] = str(below_threshold_sidecar_path)
+        runtime["below_threshold_candidate_floor"] = below_threshold_candidate_floor
+        runtime["below_threshold_acceptance_threshold"] = visible_threshold
     return runtime
 
 
@@ -454,15 +514,29 @@ def run_wasb_or_convert(
     candidate_top_k: int = DEFAULT_BALL_CANDIDATE_TOP_K,
     input_preprocessing: str = DEFAULT_WASB_INPUT_PREPROCESSING,
     emit_size_observations: bool = DEFAULT_EMIT_SIZE_OBSERVATIONS,
+    emit_below_threshold_candidates: bool = DEFAULT_EMIT_BELOW_THRESHOLD_CANDIDATES,
+    below_threshold_candidate_floor: float = DEFAULT_BELOW_THRESHOLD_CANDIDATE_FLOOR,
 ) -> dict[str, Any]:
     """CLI-oriented entrypoint that converts CSV or runs official WASB-SBDT."""
 
     candidate_top_k = _require_positive_int(candidate_top_k, "candidate_top_k")
     visible_threshold = _parse_confidence(visible_threshold, "visible_threshold")
+    if emit_below_threshold_candidates:
+        below_threshold_candidate_floor = _parse_below_threshold_candidate_floor(
+            below_threshold_candidate_floor,
+            acceptance_threshold=visible_threshold,
+        )
+    else:
+        below_threshold_candidate_floor = DEFAULT_BELOW_THRESHOLD_CANDIDATE_FLOOR
     input_preprocessing = _normalize_input_preprocessing(input_preprocessing)
     if predictions_csv is not None:
         if emit_candidates:
             raise ValueError("WASB emit_candidates requires official inference; predictions CSV has only tracked argmax rows")
+        if emit_below_threshold_candidates:
+            raise ValueError(
+                "WASB emit_below_threshold_candidates requires official inference; "
+                "predictions CSV has no raw heatmaps"
+            )
         return write_ball_track_from_wasb_predictions(
             predictions_csv=predictions_csv,
             fps=fps,
@@ -497,6 +571,11 @@ def run_wasb_or_convert(
         size_observations_out=_ball_size_observations_sidecar_path(out),
         size_observation_fps=fps,
         size_observation_frame_times=frame_times,
+        emit_below_threshold_candidates=emit_below_threshold_candidates,
+        below_threshold_candidates_out=_below_threshold_candidates_sidecar_path(out),
+        below_threshold_candidate_floor=below_threshold_candidate_floor,
+        below_threshold_candidate_fps=fps,
+        below_threshold_candidate_frame_times=frame_times,
     )
     return write_ball_track_from_wasb_predictions(
         predictions_csv=prediction_csv_path,
@@ -715,6 +794,9 @@ def _process_wasb_batch(
     det_results: dict[int, list[dict[str, Any]]],
     confidence_results: dict[int, list[float]],
     size_observation_results: dict[int, list[dict[str, Any]]],
+    below_threshold_candidate_results: dict[int, list[dict[str, Any]]] | None,
+    below_threshold_candidate_floor: float,
+    acceptance_threshold: float,
     cv2: Any,
     np: Any,
     torch: Any,
@@ -744,6 +826,20 @@ def _process_wasb_batch(
                     ),
                 }
             )
+            if below_threshold_candidate_results is not None:
+                below_threshold_candidate_results[int(frame_index)].append(
+                    {
+                        "heatmap_peak": float(frame_heatmap.max()),
+                        "candidates": _below_threshold_heatmap_candidates(
+                            frame_heatmap,
+                            affine_inv,
+                            candidate_score_floor=below_threshold_candidate_floor,
+                            acceptance_threshold=acceptance_threshold,
+                            cv2=cv2,
+                            np=np,
+                        ),
+                    }
+                )
             for xy, score in zip(scale_results["xys"], scale_results["scores"]):
                 det_results[int(frame_index)].append({"xy": xy, "score": float(score)})
     return len(tensors)
@@ -845,6 +941,129 @@ def _topk_candidate_blobs(
         )
     candidates.sort(key=lambda item: (-float(item["score"]), float(item["xy"][0]), float(item["xy"][1])))
     return candidates[:top_k]
+
+
+def _below_threshold_heatmap_candidates(
+    heatmap: Any,
+    affine_inv: Any,
+    *,
+    candidate_score_floor: float,
+    acceptance_threshold: float,
+    cv2: Any,
+    np: Any,
+) -> list[dict[str, Any]]:
+    floor = _parse_below_threshold_candidate_floor(
+        candidate_score_floor,
+        acceptance_threshold=acceptance_threshold,
+    )
+    blobs = connected_component_blob_extents(
+        heatmap,
+        affine_inv,
+        cv2=cv2,
+        np=np,
+        threshold=math.nextafter(floor, -math.inf),
+    )
+    candidates = [
+        {
+            "xy": [float(blob["center_xy_px"][0]), float(blob["center_xy_px"][1])],
+            "score": float(blob["heatmap_peak"]),
+            "source_detector": "wasb_concomp_below_acceptance",
+        }
+        for blob in blobs
+        if floor <= float(blob["heatmap_peak"]) < float(acceptance_threshold)
+    ]
+    candidates.sort(key=lambda item: (-float(item["score"]), float(item["xy"][0]), float(item["xy"][1])))
+    return candidates
+
+
+def _write_wasb_below_threshold_candidates_sidecar(
+    *,
+    path: str | Path,
+    fps: float,
+    frame_times: Any,
+    source_mode: str,
+    input_preprocessing: str,
+    primary_output: str | Path,
+    frame_ids: Sequence[int],
+    raw_frame_observations: Mapping[int, Sequence[Mapping[str, Any]]],
+    candidate_score_floor: float,
+    acceptance_threshold: float,
+    provenance: Mapping[str, Any],
+) -> dict[str, Any]:
+    fps = _require_positive_float(fps, "fps")
+    input_preprocessing = _normalize_input_preprocessing(input_preprocessing)
+    floor = _parse_below_threshold_candidate_floor(
+        candidate_score_floor,
+        acceptance_threshold=acceptance_threshold,
+    )
+    frames: list[dict[str, Any]] = []
+    candidate_count = 0
+    for frame in sorted({int(value) for value in frame_ids}):
+        observations = list(raw_frame_observations.get(frame, []))
+        if not observations:
+            raise ValueError(f"missing raw WASB below-threshold observation for frame {frame}")
+        selected_index, selected = min(
+            enumerate(observations),
+            key=lambda item: (-float(item[1]["heatmap_peak"]), int(item[0])),
+        )
+        candidates = []
+        for raw_candidate in selected.get("candidates", []):
+            xy = raw_candidate.get("xy")
+            if not isinstance(xy, Sequence) or isinstance(xy, (str, bytes)) or len(xy) != 2:
+                raise ValueError("below-threshold candidate xy must contain exactly two numbers")
+            score = _saturate_candidate_score(raw_candidate.get("score"), "below_threshold_candidate.score")
+            if score < floor or score >= acceptance_threshold:
+                raise ValueError("below-threshold candidate score must be within [floor, acceptance_threshold)")
+            candidates.append(
+                {
+                    "xy": [
+                        _parse_float(xy[0], "below_threshold_candidate.x"),
+                        _parse_float(xy[1], "below_threshold_candidate.y"),
+                    ],
+                    "score": score,
+                    "source_detector": str(
+                        raw_candidate.get("source_detector") or "wasb_concomp_below_acceptance"
+                    ),
+                }
+            )
+        candidates.sort(
+            key=lambda item: (-float(item["score"]), float(item["xy"][0]), float(item["xy"][1]))
+        )
+        candidate_count += len(candidates)
+        frames.append(
+            {
+                "frame": frame,
+                "pts_seconds": time_for_frame(frame, frame_times=frame_times, fps=fps),
+                "heatmap_observation_count": len(observations),
+                "selected_heatmap_observation_index": selected_index,
+                "candidates": candidates,
+            }
+        )
+    payload = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_wasb_below_threshold_candidates",
+        "fps": fps,
+        "source": "wasb",
+        "source_mode": str(source_mode),
+        "input_preprocessing": input_preprocessing,
+        "primary_output": str(primary_output),
+        "coordinate_space": "source_pixels",
+        "candidate_score_floor": floor,
+        "acceptance_threshold": float(acceptance_threshold),
+        "threshold_interval": "floor_inclusive_acceptance_exclusive",
+        "not_ground_truth": True,
+        "candidate_prediction": True,
+        "default_emission": False,
+        "provenance": dict(provenance),
+        "summary": {
+            "frame_count": len(frames),
+            "frame_with_candidates_count": sum(1 for item in frames if item["candidates"]),
+            "candidate_count": candidate_count,
+        },
+        "frames": frames,
+    }
+    _write_json(Path(path), payload)
+    return payload
 
 
 def _write_wasb_csv(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -1058,6 +1277,14 @@ def _parse_confidence(value: object, name: str) -> float:
     return number
 
 
+def _parse_below_threshold_candidate_floor(value: object, *, acceptance_threshold: float) -> float:
+    floor = _parse_confidence(value, "below_threshold_candidate_floor")
+    acceptance = _parse_confidence(acceptance_threshold, "acceptance_threshold")
+    if floor >= acceptance:
+        raise ValueError("below_threshold_candidate_floor must be below the acceptance threshold")
+    return floor
+
+
 def _normalize_input_preprocessing(value: object) -> str:
     mode = str(value or DEFAULT_WASB_INPUT_PREPROCESSING)
     if mode not in WASB_INPUT_PREPROCESSING_MODES:
@@ -1113,6 +1340,10 @@ def _ball_candidates_sidecar_path(out: str | Path) -> Path:
 
 def _ball_size_observations_sidecar_path(out: str | Path) -> Path:
     return Path(out).with_name("ball_size_observations.json")
+
+
+def _below_threshold_candidates_sidecar_path(out: str | Path) -> Path:
+    return Path(out).with_name("ball_candidates_below_threshold.json")
 
 
 def _add_runtime_metrics(runtime: dict[str, Any], *, processed_frame_count: int, fps: float) -> None:
@@ -1177,6 +1408,8 @@ def _wasb_repo_imports(src: Path) -> Iterator[None]:
 
 __all__ = [
     "DEFAULT_BALL_CANDIDATE_TOP_K",
+    "DEFAULT_BELOW_THRESHOLD_CANDIDATE_FLOOR",
+    "DEFAULT_EMIT_BELOW_THRESHOLD_CANDIDATES",
     "DEFAULT_EMIT_SIZE_OBSERVATIONS",
     "DEFAULT_WASB_VISIBLE_THRESHOLD",
     "WASB_CONFIDENCE_SEMANTICS",

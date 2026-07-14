@@ -17,10 +17,12 @@ from scipy import ndimage, signal
 
 from threed.racketsport.audio_onsets import (
     ARTIFACT_TYPE,
+    DEFAULT_SPEED_OF_SOUND_MPS,
     _decode_video_audio_mono,
     _ffprobe_audio_stream,
     _optional_int,
     _read_wav_mono,
+    finalize_audio_onset_timing,
 )
 
 
@@ -54,6 +56,9 @@ def build_audio_onsets_v2_from_wav(
     min_hfc_evidence: float = DEFAULT_MIN_HFC_EVIDENCE,
     clip: str | None = None,
     frame_rate: float | None = None,
+    source_to_microphone_distance_m: float | None = None,
+    distance_uncertainty_m: float = 0.0,
+    speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
 ) -> dict[str, Any]:
     """Build v2 review-only onset cues from a PCM WAV file."""
 
@@ -77,6 +82,9 @@ def build_audio_onsets_v2_from_wav(
         min_hfc_evidence=min_hfc_evidence,
         clip=clip,
         frame_rate=frame_rate,
+        source_to_microphone_distance_m=source_to_microphone_distance_m,
+        distance_uncertainty_m=distance_uncertainty_m,
+        speed_of_sound_mps=speed_of_sound_mps,
     )
 
 
@@ -98,6 +106,9 @@ def build_audio_onsets_v2_from_video(
     duration_s: float | None = None,
     clip: str | None = None,
     frame_rate: float | None = None,
+    source_to_microphone_distance_m: float | None = None,
+    distance_uncertainty_m: float = 0.0,
+    speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
 ) -> dict[str, Any]:
     """Build v2 onset cues from a video's first audio stream, or a blocker."""
 
@@ -137,6 +148,9 @@ def build_audio_onsets_v2_from_video(
             thresholds=thresholds,
             clip=clip,
             frame_rate=frame_rate,
+            source_to_microphone_distance_m=source_to_microphone_distance_m,
+            distance_uncertainty_m=distance_uncertainty_m,
+            speed_of_sound_mps=speed_of_sound_mps,
         )
 
     samples = _decode_video_audio_mono(
@@ -171,6 +185,9 @@ def build_audio_onsets_v2_from_video(
         },
         clip=clip,
         frame_rate=frame_rate,
+        source_to_microphone_distance_m=source_to_microphone_distance_m,
+        distance_uncertainty_m=distance_uncertainty_m,
+        speed_of_sound_mps=speed_of_sound_mps,
     )
 
 
@@ -195,6 +212,9 @@ def build_audio_onsets_v2_from_samples(
     source_metadata: Mapping[str, Any] | None = None,
     clip: str | None = None,
     frame_rate: float | None = None,
+    source_to_microphone_distance_m: float | None = None,
+    distance_uncertainty_m: float = 0.0,
+    speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
 ) -> dict[str, Any]:
     """Build v2 onset cues from mono floating-point samples in [-1, 1]."""
 
@@ -274,6 +294,9 @@ def build_audio_onsets_v2_from_samples(
         },
         clip=clip,
         frame_rate=frame_rate,
+        source_to_microphone_distance_m=source_to_microphone_distance_m,
+        distance_uncertainty_m=distance_uncertainty_m,
+        speed_of_sound_mps=speed_of_sound_mps,
     )
 
 
@@ -397,8 +420,17 @@ def _artifact(
     source_metadata: Mapping[str, Any] | None = None,
     clip: str | None = None,
     frame_rate: float | None = None,
+    source_to_microphone_distance_m: float | None = None,
+    distance_uncertainty_m: float = 0.0,
+    speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
 ) -> dict[str, Any]:
-    enriched_onsets = _attach_nearest_frames(onsets, frame_rate=frame_rate)
+    ordered_onsets, timing = finalize_audio_onset_timing(
+        onsets,
+        source_to_microphone_distance_m=source_to_microphone_distance_m,
+        distance_uncertainty_m=distance_uncertainty_m,
+        speed_of_sound_mps=speed_of_sound_mps,
+    )
+    enriched_onsets = _attach_nearest_frames(ordered_onsets, frame_rate=frame_rate)
     return {
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
@@ -420,6 +452,7 @@ def _artifact(
             **dict(thresholds),
         },
         "source_metadata": dict(source_metadata or {}),
+        "timing": timing,
         "onsets": enriched_onsets,
     }
 

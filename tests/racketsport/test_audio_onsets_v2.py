@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from threed.racketsport.audio_onsets_v2 import build_audio_onsets_v2_from_samples
 
@@ -89,6 +90,30 @@ def test_audio_onsets_v2_prefers_pop_band_over_low_frequency_thud() -> None:
     nearest_pop = min(payload["onsets"], key=lambda item: abs(float(item["time_s"]) - pop_s))
     assert abs(float(nearest_pop["time_s"]) - pop_s) <= 0.006
     assert all(abs(float(item["time_s"]) - low_thud_s) > 0.040 for item in payload["onsets"])
+
+
+def test_audio_onsets_v2_normal_path_preserves_raw_and_applies_typed_propagation_correction() -> None:
+    sample_rate_hz = 24_000
+    onset_s = 0.713
+    payload = build_audio_onsets_v2_from_samples(
+        _synthetic_pop(sample_rate_hz=sample_rate_hz, duration_s=1.4, onset_s=onset_s),
+        sample_rate_hz=sample_rate_hz,
+        source="synthetic_pop",
+        source_path=Path("synthetic.wav"),
+        source_to_microphone_distance_m=17.15,
+        distance_uncertainty_m=0.343,
+        speed_of_sound_mps=343.0,
+    )
+
+    nearest = min(payload["onsets"], key=lambda item: abs(float(item["raw_time_s"]) - onset_s))
+    assert abs(float(nearest["raw_time_s"]) - onset_s) <= 0.006
+    assert float(nearest["corrected_time_s"]) == pytest.approx(float(nearest["raw_time_s"]) - 0.05)
+    assert nearest["time_s"] == nearest["corrected_time_s"]
+    assert nearest["timing_provenance"]["method"] == "acoustic_distance_over_declared_speed"
+    assert nearest["timing_provenance"]["source_clock"] == "audio"
+    assert nearest["timing_provenance"]["target_clock"] == "media"
+    assert payload["timing"]["propagation_corrected_onset_count"] == payload["summary"]["onset_count"]
+    assert [item["onset_order"] for item in payload["onsets"]] == list(range(len(payload["onsets"])))
 
 
 def test_run_build_audio_onsets_v2_cli_help_runs_from_repo_root() -> None:

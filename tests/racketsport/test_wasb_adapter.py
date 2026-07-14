@@ -236,6 +236,156 @@ def test_default_on_wasb_size_sidecar_is_pts_aligned_deterministic_and_track_byt
     assert sidecar_path.read_bytes() == first_bytes
 
 
+def test_below_threshold_heatmap_candidates_keep_floor_and_exclude_acceptance_threshold() -> None:
+    cv2 = pytest.importorskip("cv2")
+    from threed.racketsport import wasb_adapter
+
+    heatmap = np.zeros((7, 11), dtype=np.float32)
+    heatmap[1, 1] = 0.05
+    heatmap[1, 4] = 0.20
+    heatmap[1, 7] = 0.499
+    heatmap[5, 9] = 0.50
+    affine = np.eye(2, 3, dtype=np.float32)
+
+    candidates = wasb_adapter._below_threshold_heatmap_candidates(
+        heatmap,
+        affine,
+        candidate_score_floor=0.05,
+        acceptance_threshold=0.5,
+        cv2=cv2,
+        np=np,
+    )
+
+    assert [item["score"] for item in candidates] == pytest.approx([0.499, 0.20, 0.05])
+    assert np.asarray([item["xy"] for item in candidates]) == pytest.approx(
+        np.asarray([[7.0, 1.0], [4.0, 1.0], [1.0, 1.0]])
+    )
+    assert all(item["source_detector"] == "wasb_concomp_below_acceptance" for item in candidates)
+
+
+def test_below_threshold_sidecar_has_exact_pts_floor_position_and_deterministic_order(tmp_path: Path) -> None:
+    from threed.racketsport import wasb_adapter
+
+    path = tmp_path / "ball_candidates_below_threshold.json"
+    frame_times = {"frames": [{"frame": 2, "pts_s": 0.08125}, {"frame": 5, "pts_s": 0.2045}]}
+    observations = {
+        2: [
+            {
+                "heatmap_peak": 0.8,
+                "candidates": [
+                    {"xy": [9.0, 8.0], "score": 0.05},
+                    {"xy": [3.0, 4.0], "score": 0.49},
+                ],
+            }
+        ],
+        5: [{"heatmap_peak": 0.9, "candidates": []}],
+    }
+
+    payload = wasb_adapter._write_wasb_below_threshold_candidates_sidecar(
+        path=path,
+        fps=30.0,
+        frame_times=frame_times,
+        source_mode="wasb_predict",
+        input_preprocessing="official",
+        primary_output="ball_track.json",
+        frame_ids=[5, 2],
+        raw_frame_observations=observations,
+        candidate_score_floor=0.05,
+        acceptance_threshold=0.5,
+        provenance={"test": "exact_pts"},
+    )
+    first_bytes = path.read_bytes()
+
+    assert payload["candidate_score_floor"] == 0.05
+    assert payload["acceptance_threshold"] == 0.5
+    assert payload["threshold_interval"] == "floor_inclusive_acceptance_exclusive"
+    assert [item["frame"] for item in payload["frames"]] == [2, 5]
+    assert [item["pts_seconds"] for item in payload["frames"]] == pytest.approx([0.08125, 0.2045])
+    assert payload["frames"][0]["candidates"] == [
+        {"xy": [3.0, 4.0], "score": 0.49, "source_detector": "wasb_concomp_below_acceptance"},
+        {"xy": [9.0, 8.0], "score": 0.05, "source_detector": "wasb_concomp_below_acceptance"},
+    ]
+    assert payload["summary"] == {
+        "frame_count": 2,
+        "frame_with_candidates_count": 1,
+        "candidate_count": 2,
+    }
+
+    wasb_adapter._write_wasb_below_threshold_candidates_sidecar(
+        path=path,
+        fps=30.0,
+        frame_times=frame_times,
+        source_mode="wasb_predict",
+        input_preprocessing="official",
+        primary_output="ball_track.json",
+        frame_ids=[2, 5],
+        raw_frame_observations=observations,
+        candidate_score_floor=0.05,
+        acceptance_threshold=0.5,
+        provenance={"test": "exact_pts"},
+    )
+    assert path.read_bytes() == first_bytes
+
+
+def test_below_threshold_flag_is_default_off_and_preserves_every_existing_output_byte(tmp_path: Path) -> None:
+    cv2 = pytest.importorskip("cv2")
+    torch = pytest.importorskip("torch")
+    from threed.racketsport.wasb_adapter import run_wasb_or_convert
+
+    fake_repo = _write_fake_wasb_repo(tmp_path / "WASB-SBDT")
+    video = tmp_path / "moving_ball.mp4"
+    _write_moving_dot_video(video, cv2=cv2)
+    checkpoint = tmp_path / "lane_latest.pt"
+    torch.save({"state_dict": {}, "run_dir": Path("runs/lanes/ball_evidence_q_20260713")}, checkpoint)
+    frame_times = {"frames": [{"frame": 0, "pts_s": 0.001}, {"frame": 1, "pts_s": 0.041}, {"frame": 2, "pts_s": 0.082}]}
+
+    out = tmp_path / "run" / "ball_track.json"
+    common = {
+        "fps": 30.0,
+        "frame_times": frame_times,
+        "video": video,
+        "checkpoint": checkpoint,
+        "wasb_repo": fake_repo,
+        "batch_size": 1,
+        "max_frames": 3,
+        "device": "cpu",
+        "emit_candidates": True,
+        "candidate_top_k": 3,
+        "input_preprocessing": "harness_v0",
+    }
+    run_wasb_or_convert(out=out, **common)
+    existing_bytes = {
+        filename: (out.parent / filename).read_bytes()
+        for filename in (
+            "ball_track.json",
+            "ball_track_wasb_predictions.csv",
+            "ball_candidates.json",
+            "ball_size_observations.json",
+        )
+    }
+    assert not (out.parent / "ball_candidates_below_threshold.json").exists()
+    on_summary = run_wasb_or_convert(
+        out=out,
+        emit_below_threshold_candidates=True,
+        below_threshold_candidate_floor=0.05,
+        **common,
+    )
+
+    for filename in (
+        "ball_track.json",
+        "ball_track_wasb_predictions.csv",
+        "ball_candidates.json",
+        "ball_size_observations.json",
+    ):
+        assert existing_bytes[filename] == (out.parent / filename).read_bytes()
+    sidecar_path = out.parent / "ball_candidates_below_threshold.json"
+    assert on_summary["runtime"]["below_threshold_candidates_out"] == str(sidecar_path)
+    sidecar = json.loads(sidecar_path.read_text(encoding="utf-8"))
+    assert [item["pts_seconds"] for item in sidecar["frames"]] == pytest.approx([0.001, 0.041, 0.082])
+    assert sidecar["candidate_score_floor"] == 0.05
+    assert sidecar["acceptance_threshold"] == 0.5
+
+
 def test_wasb_official_preprocessing_mode_is_legacy_bit_identical() -> None:
     cv2 = pytest.importorskip("cv2")
     torch = pytest.importorskip("torch")
@@ -334,6 +484,26 @@ def test_run_wasb_ball_cli_converts_existing_predictions(tmp_path: Path) -> None
     payload = json.loads(out.read_text(encoding="utf-8"))
     assert payload["input_preprocessing"] == "official"
     assert BallTrack.model_validate(payload).source == "wasb"
+
+
+def test_disabled_below_threshold_sidecar_does_not_constrain_legacy_visible_threshold(tmp_path: Path) -> None:
+    from threed.racketsport.wasb_adapter import run_wasb_or_convert
+
+    csv_path = tmp_path / "clip_wasb.csv"
+    out = tmp_path / "ball_track.json"
+    csv_path.write_text("Frame,Visibility,X,Y,Confidence\n0,1,321,240,0.02\n", encoding="utf-8")
+
+    summary = run_wasb_or_convert(
+        predictions_csv=csv_path,
+        fps=60.0,
+        out=out,
+        visible_threshold=0.01,
+        emit_below_threshold_candidates=False,
+        below_threshold_candidate_floor=0.9,
+    )
+
+    assert summary["frame_count"] == 1
+    assert not (tmp_path / "ball_candidates_below_threshold.json").exists()
 
 
 def test_wasb_outputs_stamp_input_preprocessing_on_track_metadata_and_candidates(tmp_path: Path) -> None:

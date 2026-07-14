@@ -11,8 +11,11 @@ import math
 import struct
 import subprocess
 import wave
+from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
+
+from .timebase import AcousticPropagationModel, ClockDomain
 
 
 ARTIFACT_TYPE = "racketsport_audio_onsets"
@@ -21,6 +24,10 @@ DEFAULT_FRAME_SIZE_S = 0.020
 DEFAULT_HOP_S = 0.005
 DEFAULT_THRESHOLD_SCORE = 0.55
 DEFAULT_MIN_SEPARATION_S = 0.080
+DEFAULT_SPEED_OF_SOUND_MPS = 343.0
+DEFAULT_AIR_TEMPERATURE_C = 20.0
+DEFAULT_RELATIVE_HUMIDITY_FRACTION = 0.50
+DEFAULT_AIR_PRESSURE_KPA = 101.325
 
 
 def build_audio_onsets_from_wav(
@@ -33,6 +40,9 @@ def build_audio_onsets_from_wav(
     clip: str | None = None,
     frame_rate: float | None = None,
     analysis_sample_rate_hz: int | None = None,
+    source_to_microphone_distance_m: float | None = None,
+    distance_uncertainty_m: float = 0.0,
+    speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
 ) -> dict[str, Any]:
     """Build review-only onset cues from a PCM WAV file."""
 
@@ -50,6 +60,9 @@ def build_audio_onsets_from_wav(
         clip=clip,
         frame_rate=frame_rate,
         analysis_sample_rate_hz=analysis_sample_rate_hz,
+        source_to_microphone_distance_m=source_to_microphone_distance_m,
+        distance_uncertainty_m=distance_uncertainty_m,
+        speed_of_sound_mps=speed_of_sound_mps,
     )
 
 
@@ -66,6 +79,9 @@ def build_audio_onsets_from_video(
     duration_s: float | None = None,
     clip: str | None = None,
     frame_rate: float | None = None,
+    source_to_microphone_distance_m: float | None = None,
+    distance_uncertainty_m: float = 0.0,
+    speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
 ) -> dict[str, Any]:
     """Build onset cues from a video's first audio stream, or an explicit blocker."""
 
@@ -98,6 +114,9 @@ def build_audio_onsets_from_video(
                 "duration_limit_s": duration_s,
                 "analysis_sample_rate_hz": analysis_sample_rate_hz or sample_rate_hz,
             },
+            source_to_microphone_distance_m=source_to_microphone_distance_m,
+            distance_uncertainty_m=distance_uncertainty_m,
+            speed_of_sound_mps=speed_of_sound_mps,
         )
 
     samples = _decode_video_audio_mono(path, sample_rate_hz=sample_rate_hz, start_s=start_s, duration_s=duration_s)
@@ -120,6 +139,9 @@ def build_audio_onsets_from_video(
             "window_start_s": start_s,
             "window_duration_s": duration_s,
         },
+        source_to_microphone_distance_m=source_to_microphone_distance_m,
+        distance_uncertainty_m=distance_uncertainty_m,
+        speed_of_sound_mps=speed_of_sound_mps,
     )
 
 
@@ -137,6 +159,9 @@ def build_audio_onsets_from_samples(
     clip: str | None = None,
     frame_rate: float | None = None,
     analysis_sample_rate_hz: int | None = None,
+    source_to_microphone_distance_m: float | None = None,
+    distance_uncertainty_m: float = 0.0,
+    speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
 ) -> dict[str, Any]:
     """Build onset cues from mono floating-point samples in [-1, 1]."""
 
@@ -179,6 +204,9 @@ def build_audio_onsets_from_samples(
                 "analysis_sample_rate_hz": analysis_sample_rate_hz or sample_rate_hz,
             },
             source_metadata=source_metadata,
+            source_to_microphone_distance_m=source_to_microphone_distance_m,
+            distance_uncertainty_m=distance_uncertainty_m,
+            speed_of_sound_mps=speed_of_sound_mps,
         )
 
     deltas = [max(0.0, energies[idx][1] - energies[idx - 1][1]) for idx in range(1, len(energies))]
@@ -228,6 +256,9 @@ def build_audio_onsets_from_samples(
             "analysis_sample_rate_hz": analysis_sample_rate_hz or sample_rate_hz,
         },
         source_metadata=source_metadata,
+        source_to_microphone_distance_m=source_to_microphone_distance_m,
+        distance_uncertainty_m=distance_uncertainty_m,
+        speed_of_sound_mps=speed_of_sound_mps,
     )
 
 
@@ -252,8 +283,17 @@ def _artifact(
     source_metadata: Mapping[str, Any] | None = None,
     clip: str | None = None,
     frame_rate: float | None = None,
+    source_to_microphone_distance_m: float | None = None,
+    distance_uncertainty_m: float = 0.0,
+    speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
 ) -> dict[str, Any]:
-    enriched_onsets = _attach_nearest_frames(onsets, frame_rate=frame_rate)
+    ordered_onsets, timing = finalize_audio_onset_timing(
+        onsets,
+        source_to_microphone_distance_m=source_to_microphone_distance_m,
+        distance_uncertainty_m=distance_uncertainty_m,
+        speed_of_sound_mps=speed_of_sound_mps,
+    )
+    enriched_onsets = _attach_nearest_frames(ordered_onsets, frame_rate=frame_rate)
     return {
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
@@ -274,8 +314,148 @@ def _artifact(
             **dict(thresholds),
         },
         "source_metadata": dict(source_metadata or {}),
+        "timing": timing,
         "onsets": enriched_onsets,
     }
+
+
+def finalize_audio_onset_timing(
+    onsets: Sequence[Mapping[str, Any]],
+    *,
+    source_to_microphone_distance_m: float | None = None,
+    distance_uncertainty_m: float = 0.0,
+    speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
+    model_id: str = "audio_acoustic_propagation_v1",
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Preserve raw times, derive media times, and order by corrected chronology.
+
+    A per-onset ``source_to_microphone_distance_m`` overrides the shared
+    distance.  This supports classified upstream cues whose estimated source
+    positions differ.  If no distance is available the correction is an
+    explicit identity, rather than an undocumented propagation assumption.
+    """
+
+    shared_distance = _optional_non_negative(
+        source_to_microphone_distance_m,
+        "source_to_microphone_distance_m",
+    )
+    distance_uncertainty_m = _require_non_negative(distance_uncertainty_m, "distance_uncertainty_m")
+    speed_of_sound_mps = _require_positive(speed_of_sound_mps, "speed_of_sound_mps")
+    prepared: list[dict[str, Any]] = []
+    excluded_pre_roll: list[dict[str, Any]] = []
+    for input_index, onset in enumerate(onsets):
+        item = dict(onset)
+        raw_time_s = _require_non_negative(
+            float(item.get("raw_time_s", item.get("time_s"))),
+            "onset.raw_time_s",
+        )
+        item_distance = _optional_non_negative(
+            item.get("source_to_microphone_distance_m", shared_distance),
+            "onset.source_to_microphone_distance_m",
+        )
+        if item_distance is None:
+            corrected_time_s = raw_time_s
+            correction = {
+                "method": "identity_distance_unavailable",
+                "source_clock": ClockDomain.AUDIO.value,
+                "target_clock": ClockDomain.MEDIA.value,
+                "model_id": None,
+                "offset_s": 0.0,
+                "drift_ppm": 0.0,
+                "uncertainty_s": None,
+                "applied": False,
+            }
+        else:
+            acoustic = AcousticPropagationModel(
+                model_id=model_id,
+                source_to_microphone_distance_m=item_distance,
+                speed_of_sound_mps=speed_of_sound_mps,
+                air_temperature_c=DEFAULT_AIR_TEMPERATURE_C,
+                relative_humidity_fraction=DEFAULT_RELATIVE_HUMIDITY_FRACTION,
+                air_pressure_kpa=DEFAULT_AIR_PRESSURE_KPA,
+                distance_uncertainty_m=distance_uncertainty_m,
+            )
+            corrected = acoustic.correct_audio_time(
+                f"audio_onset_{input_index:06d}",
+                raw_time_s,
+                raw_clock=ClockDomain.AUDIO,
+            )
+            assert corrected.corrected_time_s is not None and corrected.correction is not None
+            if corrected.corrected_time_s < 0.0:
+                excluded_pre_roll.append(
+                    {
+                        "input_order": input_index,
+                        "raw_time_s": round(raw_time_s, 9),
+                        "corrected_time_s": round(corrected.corrected_time_s, 9),
+                        "reason": "propagation_corrected_time_before_media_zero",
+                        "timing_provenance": {
+                            **asdict(corrected.correction),
+                            "source_clock": corrected.correction.source_clock.value,
+                            "target_clock": corrected.correction.target_clock.value,
+                            "applied": True,
+                            "source_to_microphone_distance_m": item_distance,
+                            "speed_of_sound_mps": speed_of_sound_mps,
+                        },
+                    }
+                )
+                continue
+            corrected_time_s = corrected.corrected_time_s
+            correction = {
+                **asdict(corrected.correction),
+                "source_clock": corrected.correction.source_clock.value,
+                "target_clock": corrected.correction.target_clock.value,
+                "applied": True,
+                "source_to_microphone_distance_m": item_distance,
+                "speed_of_sound_mps": speed_of_sound_mps,
+            }
+        item["raw_time_s"] = round(raw_time_s, 9)
+        item["corrected_time_s"] = round(corrected_time_s, 9)
+        item["time_s"] = round(corrected_time_s, 9)
+        item["timing_provenance"] = correction
+        item["_input_index"] = input_index
+        prepared.append(item)
+
+    for raw_order, item in enumerate(
+        sorted(prepared, key=lambda value: (float(value["raw_time_s"]), int(value["_input_index"])))
+    ):
+        item["raw_order"] = raw_order
+    prepared.sort(
+        key=lambda value: (
+            float(value["corrected_time_s"]),
+            int(value["raw_order"]),
+            int(value["_input_index"]),
+        )
+    )
+    changed_order_count = 0
+    applied_count = 0
+    for corrected_order, item in enumerate(prepared):
+        item["corrected_order"] = corrected_order
+        item["onset_order"] = corrected_order
+        changed_order_count += int(int(item["raw_order"]) != corrected_order)
+        applied_count += int(bool(item["timing_provenance"]["applied"]))
+        del item["_input_index"]
+
+    timing = {
+        "ordering_policy": "ascending_corrected_time_s_then_raw_order",
+        "raw_timing_preserved": True,
+        "corrected_timing_preserved": True,
+        "correction_model": "AcousticPropagationModel" if applied_count or excluded_pre_roll else None,
+        "correction_model_id": model_id if applied_count or excluded_pre_roll else None,
+        "distance_policy": (
+            "per_onset_then_shared_distance"
+            if shared_distance is not None or applied_count
+            else "identity_when_source_distance_unavailable"
+        ),
+        "shared_source_to_microphone_distance_m": shared_distance,
+        "speed_of_sound_mps": speed_of_sound_mps,
+        "distance_uncertainty_m": distance_uncertainty_m,
+        "onset_count": len(prepared),
+        "propagation_corrected_onset_count": applied_count,
+        "excluded_pre_roll_onset_count": len(excluded_pre_roll),
+        "excluded_pre_roll_onsets": excluded_pre_roll,
+        "corrected_order_differs_from_raw_order_count": changed_order_count,
+    }
+    return prepared, timing
 
 
 def _attach_nearest_frames(onsets: list[dict[str, Any]], *, frame_rate: float | None) -> list[dict[str, Any]]:
@@ -409,10 +589,17 @@ def _require_finite(value: float, name: str) -> float:
     return value
 
 
+def _optional_non_negative(value: Any, name: str) -> float | None:
+    if value is None:
+        return None
+    return _require_non_negative(float(value), name)
+
+
 __all__ = [
     "ARTIFACT_TYPE",
     "build_audio_onsets_from_samples",
     "build_audio_onsets_from_video",
     "build_audio_onsets_from_wav",
+    "finalize_audio_onset_timing",
     "write_audio_onsets",
 ]

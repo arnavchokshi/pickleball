@@ -102,7 +102,7 @@ def build_anchor_evidence_payload(
             config=cfg,
         )
     )
-    cues.extend(_blur_cues(blur_sidecar, fps=fps, config=cfg))
+    cues.extend(_blur_cues(blur_sidecar, ball_track=track, fps=fps, config=cfg))
 
     bounds = _court_bounds(calibration) if isinstance(calibration, Mapping) else None
     if isinstance(calibration, Mapping):
@@ -185,8 +185,8 @@ def _audio_cues(
         return []
     source = Path(source_path) if source_path is not None else None
     spine_provenance = audio_provenance(provenance_payload, source_path=source)
-    cues: list[dict[str, Any]] = []
-    for index, item in enumerate(raw_items):
+    normalized: list[tuple[int, Mapping[str, Any], float, float | None, float]] = []
+    for input_index, item in enumerate(raw_items):
         if not isinstance(item, Mapping):
             continue
         corrected = _nonnegative_float(item.get("corrected_time_s"))
@@ -200,21 +200,58 @@ def _audio_cues(
         confidence = _confidence(item.get("confidence", item.get("score", item.get("conf", 0.0))))
         if confidence <= 0.0:
             continue
+        normalized.append((input_index, item, time_s, raw, confidence))
+    normalized.sort(
+        key=lambda value: (
+            float(value[2]),
+            _int_or_none(value[1].get("corrected_order", value[1].get("onset_order"))) or 0,
+            value[0],
+        )
+    )
+    cues: list[dict[str, Any]] = []
+    for corrected_order, (input_index, item, time_s, raw, confidence) in enumerate(normalized):
+        corrected = _nonnegative_float(item.get("corrected_time_s"))
+        classified_type = str(
+            item.get("event_type", item.get("class_label", item.get("onset_class", "pop_transient")))
+        ).lower()
+        if classified_type in {"bounce", "ball_bounce"}:
+            type_scores = {"bounce": confidence, "contact": 0.25 * confidence}
+            cue_type = "classified_audio_bounce_onset"
+        else:
+            type_scores = {"contact": confidence, "bounce": 0.25 * confidence}
+            cue_type = (
+                "classified_audio_contact_onset"
+                if classified_type in {"contact", "shot", "ball_contact", "pop"}
+                else "heuristic_audio_pop_onset"
+            )
         cues.append(
             {
-                "cue_id": f"audio_{index:04d}",
+                "cue_id": f"audio_{corrected_order:04d}",
                 "source_type": SOURCE_AUDIO,
-                "cue_type": "corrected_audio_onset",
+                "cue_type": cue_type,
                 "t": time_s,
                 "frame": int(round(time_s * fps)),
                 "confidence": confidence,
-                "type_scores": {"contact": confidence, "bounce": 0.25 * confidence},
+                "type_scores": type_scores,
                 "source": {
                     "source_type": SOURCE_AUDIO,
+                    "cue_type": cue_type,
                     "confidence": confidence,
                     "raw_time_s": raw,
                     "corrected_time_s": corrected if corrected is not None else time_s,
                     "timing_used": "corrected_time_s" if corrected is not None else "raw_time_s",
+                    "input_order": input_index,
+                    "raw_order": _int_or_none(item.get("raw_order")),
+                    "corrected_order": corrected_order,
+                    "artifact_corrected_order": _int_or_none(
+                        item.get("corrected_order", item.get("onset_order"))
+                    ),
+                    "classification": classified_type,
+                    "timing_provenance": (
+                        dict(item["timing_provenance"])
+                        if isinstance(item.get("timing_provenance"), Mapping)
+                        else None
+                    ),
                     "spine_audio_provenance": spine_provenance,
                 },
                 "support": [],
@@ -370,7 +407,7 @@ def _trajectory_samples(
         confidence = _confidence(chosen["confidence"])
         samples[frame_index] = {
             "frame": frame_index,
-            "t": frame_index / fps,
+            "t": float(chosen["t"]) if chosen.get("t") is not None else frame_index / fps,
             "xy": chosen["xy"],
             "confidence": confidence,
             "accepted": False,
@@ -380,6 +417,8 @@ def _trajectory_samples(
                 "accepted": False,
                 "confidence": confidence,
                 "source_detector": chosen.get("source_detector"),
+                "pts_seconds": chosen.get("t"),
+                "source_artifact_type": chosen.get("artifact_type"),
                 "distance_to_interpolated_primary_px": round(distance, 6),
                 "below_accepted_confidence": confidence < config.accepted_visibility_threshold,
                 "below_primary_selection": True,
@@ -391,6 +430,7 @@ def _trajectory_samples(
 def _blur_cues(
     payload: Mapping[str, Any] | None,
     *,
+    ball_track: Mapping[str, Any],
     fps: float,
     config: AnchorEvidenceConfig,
 ) -> list[dict[str, Any]]:
@@ -400,6 +440,7 @@ def _blur_cues(
     if not isinstance(records, Sequence) or isinstance(records, (str, bytes)):
         return []
     normalized: list[dict[str, Any]] = []
+    track_times = _track_times_by_frame(ball_track, fps=fps)
     for record in records:
         if not isinstance(record, Mapping):
             continue
@@ -412,51 +453,113 @@ def _blur_cues(
         normalized.append(
             {
                 "frame": frame,
-                "t": frame / fps,
+                "t": track_times.get(frame, frame / fps),
                 "length": length,
                 "angle": angle,
                 "xy": xy,
                 "quality": str(record.get("quality", "unknown")),
+                "velocity_angle": _nonnegative_float(record.get("velocity_angle_deg")),
+                "angle_delta_to_velocity": _nonnegative_float(
+                    record.get("angle_delta_to_track_velocity_deg")
+                ),
                 "record": record,
             }
         )
     normalized.sort(key=lambda item: item["frame"])
     cues: list[dict[str, Any]] = []
-    for previous, current in zip(normalized, normalized[1:]):
+    for index, current in enumerate(normalized):
+        previous = normalized[index - 1] if index > 0 else None
+        following = normalized[index + 1] if index + 1 < len(normalized) else None
+        if previous is None:
+            continue
         if int(current["frame"]) - int(previous["frame"]) > 2:
             continue
-        scale = max(float(previous["length"]), float(current["length"]), 1.0)
-        relative_change = abs(float(current["length"]) - float(previous["length"])) / scale
-        angle_change = _angle_delta_180(previous.get("angle"), current.get("angle"))
+        if following is not None and int(following["frame"]) - int(current["frame"]) > 2:
+            following = None
+        comparison = following if following is not None else current
+        scale = max(float(previous["length"]), float(comparison["length"]), 1.0)
+        signed_length_change = float(comparison["length"]) - float(previous["length"])
+        relative_change = abs(signed_length_change) / scale
+        blur_angle_change = _angle_delta_180(previous.get("angle"), comparison.get("angle"))
+        center_direction_change = None
+        vertical_velocity_sign_flip = False
+        velocity_before: tuple[float, float] | None = None
+        velocity_after: tuple[float, float] | None = None
+        if following is not None:
+            before_dt = max(float(current["t"]) - float(previous["t"]), 1e-9)
+            after_dt = max(float(following["t"]) - float(current["t"]), 1e-9)
+            velocity_before = (
+                (float(current["xy"][0]) - float(previous["xy"][0])) / before_dt,
+                (float(current["xy"][1]) - float(previous["xy"][1])) / before_dt,
+            )
+            velocity_after = (
+                (float(following["xy"][0]) - float(current["xy"][0])) / after_dt,
+                (float(following["xy"][1]) - float(current["xy"][1])) / after_dt,
+            )
+            center_direction_change = _direction_break_deg(velocity_before, velocity_after)
+            vertical_velocity_sign_flip = (
+                velocity_before[1] >= config.min_vertical_speed_px_s
+                and velocity_after[1] <= -config.min_vertical_speed_px_s
+            )
+        transition_angle = max(
+            value
+            for value in (blur_angle_change, center_direction_change, 0.0)
+            if value is not None
+        )
         if relative_change < config.blur_min_relative_change and (
-            angle_change is None or angle_change < config.blur_min_angle_change_deg
+            transition_angle < config.blur_min_angle_change_deg
         ):
             continue
         quality_factor = 1.0 if current["quality"] == "clear" else 0.65
         strength = max(
             relative_change / max(config.blur_min_relative_change, 1e-9),
-            (angle_change or 0.0) / max(config.blur_min_angle_change_deg, 1e-9),
+            transition_angle / max(config.blur_min_angle_change_deg, 1e-9),
         )
         confidence = min(1.0, quality_factor * (0.3 + 0.35 * min(strength, 2.0)))
+        proposal_type = "bounce" if vertical_velocity_sign_flip else "shot"
+        cue_type = f"motion_blur_{proposal_type}_transition"
+        type_scores = (
+            {"bounce": confidence, "contact": 0.25 * confidence}
+            if proposal_type == "bounce"
+            else {"contact": confidence, "bounce": 0.30 * confidence}
+        )
         cues.append(
             {
                 "cue_id": f"blur_{int(current['frame']):06d}",
                 "source_type": SOURCE_BLUR,
-                "cue_type": "blur_transition",
+                "cue_type": cue_type,
                 "t": float(current["t"]),
                 "frame": int(current["frame"]),
                 "xy": list(current["xy"]),
                 "confidence": confidence,
-                "type_scores": {"contact": confidence, "bounce": 0.4 * confidence},
+                "type_scores": type_scores,
                 "source": {
                     "source_type": SOURCE_BLUR,
-                    "cue_type": "blur_transition",
+                    "cue_type": cue_type,
+                    "proposal_type": proposal_type,
                     "confidence": confidence,
                     "frame": int(current["frame"]),
                     "relative_length_change": round(relative_change, 6),
-                    "angle_change_deg": angle_change,
+                    "signed_length_change_px": round(signed_length_change, 6),
+                    "blur_angle_change_deg": blur_angle_change,
+                    "center_direction_change_deg": (
+                        None if center_direction_change is None else round(center_direction_change, 6)
+                    ),
+                    "vertical_velocity_sign_flip": vertical_velocity_sign_flip,
+                    "center_velocity_before_px_s": (
+                        None if velocity_before is None else [round(value, 6) for value in velocity_before]
+                    ),
+                    "center_velocity_after_px_s": (
+                        None if velocity_after is None else [round(value, 6) for value in velocity_after]
+                    ),
+                    "signature_frames": [
+                        int(item["frame"])
+                        for item in (previous, current, following)
+                        if item is not None
+                    ],
                     "quality": current["quality"],
                     "artifact_type": payload.get("artifact_type"),
+                    "extraction": "frame_difference_ball_crop_principal_axis",
                 },
                 "support": [],
                 "position_hypotheses": [
@@ -469,6 +572,19 @@ def _blur_cues(
             }
         )
     return _suppress_nearby_source_cues(cues, min_separation_s=config.source_min_separation_s)
+
+
+def _track_times_by_frame(track: Mapping[str, Any], *, fps: float) -> dict[int, float]:
+    frames = track.get("frames")
+    if not isinstance(frames, Sequence) or isinstance(frames, (str, bytes)):
+        return {}
+    output: dict[int, float] = {}
+    for frame_index, item in enumerate(frames):
+        if not isinstance(item, Mapping):
+            continue
+        time_s = _nonnegative_float(item.get("t"))
+        output[frame_index] = time_s if time_s is not None else frame_index / fps
+    return output
 
 
 def _court_plane_cue(
@@ -692,6 +808,9 @@ def _raw_candidates_by_frame(payload: Mapping[str, Any]) -> dict[int, list[dict[
         if not isinstance(raw_frame, Mapping):
             continue
         frame = _int_or_none(raw_frame.get("frame", raw_frame.get("frame_index")))
+        pts_seconds = _nonnegative_float(
+            raw_frame.get("pts_seconds", raw_frame.get("pts_s", raw_frame.get("time_s")))
+        )
         candidates = raw_frame.get("candidates")
         if frame is None or not isinstance(candidates, Sequence) or isinstance(candidates, (str, bytes)):
             continue
@@ -707,6 +826,8 @@ def _raw_candidates_by_frame(payload: Mapping[str, Any]) -> dict[int, list[dict[
                     "xy": xy,
                     "confidence": _confidence(candidate.get("score", candidate.get("confidence", 0.0))),
                     "source_detector": candidate.get("source_detector"),
+                    "t": pts_seconds,
+                    "artifact_type": payload.get("artifact_type"),
                 }
             )
         output[frame] = items
