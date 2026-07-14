@@ -1052,7 +1052,13 @@
           "runs/lanes/ball_evidence_q_20260713/report.json"
         ]
       },
-      "notes": "Byte-parity of all existing outputs proven (fake-official harness; real-inference parity re-proven in the v1 re-score lane); gates PENDING-owner-review of the union event set; VERIFIED=0."
+      "notes": "Byte-parity of all existing outputs proven (fake-official harness; real-inference parity re-proven in the v1 re-score lane); gates PENDING-owner-review of the union event set; VERIFIED=0.",
+      "proven_against": {
+        "card": "focused-test + byte-parity evidence only (fake-official WASB harness; real-inference parity re-proven in v1 re-score)",
+        "focused_tests": "82/82 lane, 32/32 manager re-verified",
+        "byte_parity": "ball_track/predictions/candidates/size_observations all byte-identical flag-on",
+        "reviewed_union_gate": "PENDING-owner-review"
+      }
     }
   },
   "selection_constant_coverage": {
