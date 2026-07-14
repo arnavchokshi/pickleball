@@ -43,3 +43,15 @@ pb.vision's OWN demo video — R&D reference ONLY, never GT/training). VERIFIED=
   Offline-scored vs internal cards + (after MOVE 1) the 11-min scorecard. UNWIRED candidate.
 - Recovery-v2 re-enable + solver wiring only behind MOVE 2/3 gates. Landing/in-out promotion still
   requires NS-02 independent truth.
+
+## ADDENDUM 2026-07-13 ~03:0x — MOVE-3 v1 verdict (real below-threshold pools)
+ball_global_track REJECTED_INTERNAL, stronger than v0: real MPS WASB regeneration produced genuine
+0.05-floor pools (987/4624 sub-0.5 candidates; real-inference byte-parity re-proven, closing the
+MOVE-2 fake-harness caveat) and the UNMODIFIED module still refused both rallies with the IDENTICAL
+131-frame membership hole — 129/131 hole frames DO carry candidates; the gate rejects them as
+trajectory-inconsistent. Input starvation REFUTED as the cause. PRECISE REMAINING LEVERS:
+(1) event boundaries INSIDE long segments (131 frames ~ 4.4s spans multiple shots; single-segment
+ballistic membership cannot bridge unmarked direction changes) -> MOVE-2's audio-anchored event
+chain applies on real captures WITH audio (internal cards have none); (2) detector recall/positional
+accuracy in fast/occluded spans -> NS-02/03 label flywheel + learned radius/detector heads.
+Evidence: runs/lanes/ball_gt_rescore_20260713/ (scoring_table_v1_real.json, parity proof, real pools).
