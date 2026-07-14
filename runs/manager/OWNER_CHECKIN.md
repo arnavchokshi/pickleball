@@ -1,9 +1,12 @@
-# Owner check-in — THE single always-current file (updated 2026-07-13 ~01:0x, doc/org session)
+# Owner check-in — THE single always-current file (updated 2026-07-14, handoff for account switch)
 
-⭐ HEADLINE: Docs reconciled + repo reorganized after the 07-12 sprint/court windows; a fresh-clone
-break was found+fixed (stranded schema hunk). Fleet EMPTY (~$3-9 spent 07-12). One ball lane
-(anchor-evidence fusion, the last executable ball-lift path) finishing overnight — early signal is
-an honest kill, which would make further ball-3D gains YOUR-LABEL-GATED. VERIFIED=0 unchanged.
+⭐ HEADLINE: TRK "people disappearing" FIXED in the default stack (margin-1.0+OSNet WIRED_DEFAULT rev
+12; worst-clip IDF1 0.64→0.85, preview-band). pb.vision fully decoded from your 11-min clip — their
+ball-3D edge is TRAINED contact/event detection, nothing exotic; your "public data exists" hypothesis
+was VINDICATED (~130k public hit/bounce events now on disk + 117 bootstrap pickleball labels). Ball
+event-head training is the concrete path, gated on your 5-min spot-check. The 41-rally head-to-head
+died on the Fable spend limit mid-run (no result — RE-RUN needed). Fleet EMPTY, orphan VM deleted.
+FULL DETAIL for the next session: `runs/HANDOFF_20260714.md`. VERIFIED=0 unchanged.
 
 ## Do these (easiest first)
 1. **Court labels, ~1h, highest value:** Docker Desktop -> CVAT up, then
@@ -17,7 +20,11 @@ an honest kill, which would make further ball-3D gains YOUR-LABEL-GATED. VERIFIE
    "stage fps test" and I stage a Wolverine replay URL — first real-device fps number ever.
 5. **NS-01.2b physical proof (~15 min, signed device):** one 30s record -> upload -> open own
    replay on the real app.
-6. **Gold capture half-day (standing):** paddle 6DoF, ball-3D depth, and BODY accuracy are all
+6. **2-min data unlocks (from the event-data research — your hypothesis was right):** submit the
+   CoachAI Badminton Challenge Track-1 access form (videos+hit-frames shipped together):
+   https://forms.gle/znfgo4Bvp3t9h8wk9 — and optionally email the BFMD authors (arXiv 2603.25533)
+   for their badminton hit+landing set.
+7. **Gold capture half-day (standing):** paddle 6DoF, ball-3D depth, and BODY accuracy are all
    capped until this exists. `runs/lanes/ns021_goldcapture_20260709/OWNER_HALF_DAY_CHECKLIST.md`.
 
 ## Best results so far (accuracy + time; ALL internal/protocol-caveated, none promotion-gated)

@@ -1,6 +1,6 @@
 # DinkVision North Star
 
-Last updated: 2026-07-13.
+Last updated: 2026-07-14.
 Status: `VERIFIED=0`.
 
 ## Authority and reading rule
@@ -166,11 +166,11 @@ Numbers from different protocols are not compared directly.
 |---|---|---|---|
 | DATA | Owner/public ingest, prelabel, CVAT review, dedup, PTS and protected-eval guards | 1,750 reviewed BALL rows prepared; only the 1,121 clip-folded/disagreement-selected card was scored | Uniform-random audit + true source groups + fresh untouched owner/HARVEST holdout with audio |
 | CAL | Manual/metric/profile paths, distortion and ChArUco tools, preview auto-find, frozen GT-free precision harness, guarded refinement, hybrid paint evidence and temporal-lock candidates (all PENDING) | Corrected owner PCK@5 is 0 for learned candidates; synthetic-only transfer failed twice; harness M1 3.01/6.22px med/p90 Wolverine (3.81/8.86 Burlington); M4 ours 6.61px vs pb.vision 5.67px median; aggressive local refinement killed on stability evidence | Profile + guided confirmation for v1; auto-find needs owner-viewpoint PCK@5 ≥0.95 and handheld/distortion gates |
-| TRK | YOLO26m, BoT-SORT/ReID, raw-pool association, court placement | Mean IDF1 about 0.852; worst about 0.756, six switches (broad internal); 2-clip margin-1.0 PENDING lifts worst IDF1 0.6425→0.8516, cov4 0.0433→0.7117 (internal-use license owner-approved 2026-07-13; fresh full bar unmet) | Every fresh clip: IDF1 ≥0.85, zero switches, zero spectator FP, zero far-off-court FP, coverage ≥0.95 |
-| BALL | WASB default, candidate training, bounce/in-out, audio/events, arc/sanity chain | Standing anchor F1@20 0.7248, recall@20 0.626, hFP 0.063; candidate A 0.6152/0.654/0.2506 (different internal card); 2D→3D wall = upstream candidate/event evidence (TT3D/bridge/size-proxy killed 2026-07-12; recovery-v2 marginal PENDING; rally-3D coverage 58/252 vs pb.vision 183/252) | Same-protocol F1@20 ≥0.90, recall@20 ≥0.75, hFP ≤0.05 plus contact/in-out/tail gates on fresh data |
+| TRK | YOLO26m, BoT-SORT/ReID, raw-pool association, court placement; margin-1.0m+OSNet now WIRED_DEFAULT (rev 12) preview-band | Mean IDF1 about 0.852; the flip lifts worst-clip IDF1 0.6425→0.8516, cov4 0.0433→0.7117, 0 new switches (owner-directed default 2026-07-13, internal-use license ok; fresh full bar cov4≥0.95 unmet, stays preview) | Every fresh clip: IDF1 ≥0.85, zero switches, zero spectator FP, zero far-off-court FP, coverage ≥0.95 |
+| BALL | WASB default, candidate training, bounce/in-out, audio/events, arc/sanity chain | Standing anchor F1@20 0.7248, recall@20 0.626, hFP 0.063; candidate A 0.6152/0.654/0.2506 (different internal card); 2D→3D wall (11-min pb.vision study 07-13) = MISSING TRAINED CONTACT/EVENT DETECTION, not solver/camera/candidate-density (all geometry-only paths killed; ~130k public hit/bounce events acquired for an event-head + 117 audio-bootstrap pickleball labels) | Same-protocol F1@20 ≥0.90, recall@20 ≥0.75, hFP ≤0.05 plus contact/in-out/tail gates on fresh data |
 | BODY | SAM-3D-Body runtime, mesh index, placement, grounding and foot-lock | External root-relative 59.7mm, PA 39.9mm, grounding-consistent 76.5mm; decode residual decomposed 2026-07-10 (FK-vs-head ~0, grounding exact, ~53mm = family-metric definition, intentional postchain 23.4mm p95; gate recalibration proposal owner-facing in runs/lanes/ns014_p22residual_20260709/REPORT.md); skeleton-direct foot-slide 20.8-48.4mm breaches 30mm on 3/4 clips (old gate-stream proxy passed — gate open) | Corrected decode gate; independent court-frame world-MPJPE ≤50mm; `grounding_metrics.max_foot_lock_slide_m` ≤0.03; no candidate-label promotion |
 | RKT | Default-wired wrist/palm/grip `estimated_preview` | Rectangle IoU about 0.224-0.331; no true pose/contact GT | Marker/corner GT; checked-in promotion gates: face-angle p90 ≤5° and contact-point p90 ≤3cm. The old 30° bar is an interim candidate milestone only. |
-| EVENTS/PHYS | Ball/audio/wrist fusion, fill, confidence bands and foot postprocessing | Useful internal slide reductions; no reviewed product event gate | Contact timing p90 ≤40ms, bounce-vs-hit/in-out gates, corrected acoustic/A/V timing, no standalone regression |
+| EVENTS/PHYS | Ball/audio/wrist fusion, fill, confidence bands and foot postprocessing | Useful internal slide reductions; no reviewed product event gate; audio onset chain + below-threshold candidates landed; ~130k public event labels + 117 audio-bootstrap Tier-A pickleball windows staged for a trained event head (owner spot-check gates GPU) | Contact timing p90 ≤40ms, bounce-vs-hit/in-out gates, corrected acoustic/A/V timing, no standalone regression |
 | REPLAY/STATS | Web/native boundaries, ghost previews, movement stats | Scoped viewer load; prior proof had low FPS and missing ball/contact/paddle/trust content | Current full bundle, full computed-frame mesh policy, native/web visual/perf/every-URL proof |
 | COACHING | Deterministic facts plus runner-enforced zero-fabrication audit before manifest (NS-05.1 core landed) | Facts abstain without evidence; no verified user-facing coach | Reference/faithfulness checks, wording layer, owner and ≥4.0 player audit, zero fabricated numbers |
 | E2E | A 20-stage CLI (21/22 with rally_gating/verify) plus code-wired video/sidecar upload and clip-status refresh | Swift package tests are scoped code proof; ready-manifest routing, restart safety, and a current physical-app bundle remain unproved | Complete NS-01 through NS-05, then one clean current-stack reproduction |
@@ -401,6 +401,8 @@ NS-01.1 sidecar contract; NS-01.2a upload route live; NS-01.3 run identity plus 
 engineering close; NS-02 gold-capture pack, ChArUco port, and evaluation reset; NS-01.4
 typed coords/timebase cores plus parity x3 (cores UNWIRED); NS-01.7 post-BODY refined-
 events slice; NS-05.1 facts core plus runner enforcement; decode-residual decomposition.
+TRK margin-1.0+OSNet flipped to WIRED_DEFAULT (rev 12, preview); pb.vision 11-min decoded +
+~130k public event labels acquired for the ball event-head path. Full detail: runs/HANDOFF_20260714.md.
 
 | Order | Agent goal | Scope boundary | Required handoff |
 |---:|---|---|---|
@@ -408,6 +410,7 @@ events slice; NS-05.1 facts core plus runner enforcement; decode-residual decomp
 | 2 | **NS-01.6/01.7 Spine and evidence plumbing** | One `process_video.py` owner; make post-BODY refined events/arc explicit timed stages (now ~122s hidden in `world`); audio normal-path, ball size, both paddle hypotheses | Cold/reuse/partial/failure tests plus modality ablations; no promotion claim |
 | 3 | **NS-01.2b Physical upload proof** | After identity/status/packaging/restart settle; production app and real device | Saved record/import → upload → job → manifest → matching replay trace |
 | Parallel now | **NS-02.1/02.2 gold capture execution + owner scratch labeling** | Owner half-day capture per the ns021 checklist; extra cameras remain GT-only; labeling per the R2 pivot | Surveyed points, sync proof, versioned lane-specific labels |
+| Parallel now | **Ball event-head evidence track** (NS-03.EVENTS-class, unblocked by public data) | Re-run the 41-rally pb.vision head-to-head; train an audio then video contact/event head on the ~130k public + 117 bootstrap labels; feed typed boundaries to the existing global-track gate | Reviewed-union event set, ≥0.90 spot-check, source-disjoint contact p90 ≤40ms; deployment waits for the gate |
 
 After NS-02 gates exist, dispatch CAL/TRK/BALL/BODY/RKT as file-fenced parallel
 NS-03 lanes in the exact row order above. First challengers are the existing
@@ -422,32 +425,26 @@ does not change the order above.
 
 **Dated evidence pointers (2026-07-09 through 2026-07-13 — rulings stand; detail under `runs/`):**
 
-- Fail-closed world BALL emission is WIRED_DEFAULT (best_stack rev 11; wolverine max
-  ball z 23.53m -> 0.97m) after the owner-critique fail-open finding. Remaining viewer
-  defects (seek-snap sync, renderer-bound mesh fps, absolute manifest paths, tap-tier
-  trust dead-end) feed NS-01.4/01.6. Evidence: runs/lanes/w7_ball3ddiag_20260709/,
-  runs/lanes/w7_critique_20260709/, runs/lanes/demo_beststack_20260710/.
-- Wolverine promoted-stack wall 489.4s +/-1.6% (x6); BODY is 78.6% of wall with only
-  5.5s steady inference — orchestration overhead is NS-06's biggest lever. Evidence:
-  runs/lanes/w7_speedgate_20260709/results.json.
-- Confirm-heavy labeling stopped paying: fixed-block step-matched curve 0.361 control ->
-  0.614 (1k) -> 0.571 (3k); ~74.8% of the 2,388-row corpus is byte-identical confirmed
-  prelabels, which inflates same-lineage scores. Pivot: uniform-random scratch audit
-  stratum + disagreement-mined hard frames + venue diversity; provenance classifier is a
-  standing pre-training corpus check. Open owner decision: exclude/down-weight confirmed
-  rows in training mixes. Evidence: runs/lanes/w7_ballretrain2_20260709/.
-- Ball 2D->3D lift verdicts 2026-07-12: TT3D anchors, gap-bridging, and the free size
-  proxy all killed same-protocol; recovery-v2 marginal PENDING (+23/900 internal, pb card
-  unchanged). Convergent diagnosis: the wall is upstream candidate/event evidence — next
-  unlock is owner labels plus fresh boundary evidence; pb.vision exports stay reference-
-  only, never GT/training. Evidence: runs/research_pbv_reveng_20260712/ and
-  runs/lanes/{tt3d_integrate,ball_recovery,ball_sizeobs,ball_radius_est}_20260712/.
-- Court window 2026-07-12: GT-free harness frozen; refinement killed on stability; hybrid paint
-  evidence + temporal lock PENDING; owner labeling live in CVAT 88-91. runs/research_courtlock_20260712/.
-- Cold-clip BODY frame-materialization bug FIXED (ns016, `7a6fd828e`); 1,200-frame cap
-  exclusion residual booked to NS-04.2. Dual-track (Fable x Codex) owner-symptom deep review
-  ruled root causes + the V/P/T/B/M fix-wave plan for framerate, missing-people, skeleton-gap,
-  hidden-ball, and paddle symptoms. Evidence: runs/research_deepreview_20260710/RULINGS.md.
+- **START HERE for detail: `runs/HANDOFF_20260714.md`** — full record of the 07-12→14 ball/pb.vision
+  program, the event-head plan, and exact ordered next steps.
+- Ball 2D→3D (07-12/13): ALL geometry-only paths killed same-protocol (TT3D / gap-bridging /
+  size-proxy / anchor-fusion / global-track-on-real-pools / direction-break). The 11-min pb.vision
+  study decoded their pipeline (per-rally global ballistic track + TRAINED event+radius heads = their
+  edge; our 2D coverage already beats theirs). Wall = missing trained contact detection, not
+  solver/camera/candidate-density. Owner hypothesis vindicated: ~130k public hit/bounce events
+  acquired (`data/event_public_20260713`) + 117 audio-bootstrap Tier-A labels; recipe = audio+video
+  event head → typed boundaries → global track. 41-rally head-to-head INCOMPLETE (died on Fable spend
+  limit; RE-RUN). Evidence: runs/research_pbv11_20260713/, runs/research_eventdata_20260713/.
+- Speed: Wolverine promoted-stack wall 489.4s (x6); BODY 78.6% of wall, 5.5s steady inference; `world`
+  now runs ~122s of intended refined-arc solve — reuse-aware solve is NS-06's biggest lever.
+- Labeling: confirm-heavy stopped paying (0.361→0.614(1k)→0.571(3k); ~74.8% byte-identical prelabels
+  inflate scores). Pivot: uniform-random scratch audit + hard frames + venue diversity. Open owner
+  decision: exclude/down-weight confirmed rows. Evidence: runs/lanes/w7_ballretrain2_20260709/.
+- Court window 2026-07-12: GT-free harness frozen; aggressive refinement PERMANENTLY killed on
+  stability; hybrid paint + temporal lock PENDING; ~1px gap = seed quality (pb static-camera lock),
+  not math; owner labeling live in CVAT 88-91. runs/research_courtlock_20260712/.
+- Fail-closed world BALL emission WIRED_DEFAULT; cold-clip BODY bug FIXED (ns016); dual-track deep
+  review V/P/T/B/M fix-wave. Evidence: runs/research_deepreview_20260710/RULINGS.md.
 
 ### Owner-only asks
 
@@ -455,7 +452,7 @@ does not change the order above.
 |---:|---|---|---|
 | 1 | Provide a short signed-device/Xcode session for one real sidecar and upload trace after NS-01.1/01.2a land | Immediate product-contract and upload gate | Simulator/golden fixtures proceed; physical proof remains blocked. |
 | 2 | Schedule one half-day cross-lane gold capture with product phone, two high-FPS phones, surveyed court/net, ChArUco, audio/LED sync, and paddle markers | Independent truth for CAL/BODY/BALL-3D/RKT/contact | All affected lanes remain unverified; engineering prepares tooling. |
-| 3 | Continue BALL labeling with a uniform-random audit stratum | Representative source-group evaluation and the 3k checkpoint | Train/score only current reviewed data; no promotion. |
+| 3 | BALL/court labeling: 5-min event-label spot-check (gates event-head training) + court diversity pack (100 frames/28 venues) + CVAT 87-91 + uniform-random audit | Event-head unlock, court diversity wall, representative eval | Train/score only reviewed data; no promotion. |
 | 4 | Approve biometric/video retention and deletion behavior before non-owner persistence | Friend launch and profile reuse | Session-only non-owner processing; persist no biometric profile. |
 | 5 | Commit owner + one ≥4.0-rated player to the later coaching audit | Usefulness ≥8/10 and fabrication 0/300 gate | Build deterministic facts/rubric only. |
 | 6 | Supply invoice-backed cloud cost during NS-06 | Honest product economics | Report conservative ranges, not precise cost. |
