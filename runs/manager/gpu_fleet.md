@@ -9,7 +9,9 @@ Full per-wave history (waves 4-7, NS-014, demo, court, 2026-07-12 sprint) is pre
 ## Current fleet state (2026-07-13, doc/org session)
 
 EMPTY — zero running VMs. Only `pickleball-a100-fleet1` exists, TERMINATED (disk intact, historical
-snapshot source). Last list-reconcile: 2026-07-12 sprint close.
+snapshot source). Last list-reconcile: 2026-07-12 sprint close. **UNVERIFIED as of 2026-07-13
+pbv11_headtohead attempt** — gcloud auth was dead (reauth required) so no fresh live list could run;
+do not treat this row as freshly confirmed until the next successful `gcloud compute instances list`.
 
 | vm_name | zone | gpu | model | status | lane | $/hr | created_at | notes |
 |---|---|---|---|---|---|---|---|---|
@@ -37,9 +39,34 @@ snapshot source). Last list-reconcile: 2026-07-12 sprint close.
 - **Auth:** owner gcloud refresh token (hello@); SA key creation org-blocked; dead auth = typed STOP
   for one owner login. Fleet IPs RECYCLE across restarts — always --remote-host + refresh known_hosts.
 
+## 2026-07-13 pbv11_headtohead lane — RESUMED (owner reauthed; manager-verified list works)
+
+- RECONCILE at resume: live list shows ONLY pickleball-a100-fleet1 TERMINATED under fable-fleet=pickleball
+  (matches ledger); fleet RUNNING count 0/5 -> provision gate PASS. (Non-fleet VM body4d-waker-ctrl RUNNING
+  in usc1-a is NOT a pickleball fleet VM; untouched.)
+- pickleball-h100-pbv11 (H100 a3-highgpu-1g SPOT, ladder ase1-b/-c, usc1-a/-b, euw4-b, pd-balanced 200GB
+  FROM pickleball-fleet-snap-20260709-w7close, 120s backoff, 6-attempt/30-min no-attempt cap) — PROVISIONING
+  (Sonnet lane pbv11_headtohead_20260713, self-tearing, wall cap 5h from RUNNING, 60-min idle self-stop,
+  compute-mode DEFAULT). Mission: MOVE 1 baseline head-to-head — ONE full promoted-stack run (best_stack
+  defaults, --body-local, audio ON) of the 697s pb.vision demo video (sha 272a2132..., R&D reference ONLY),
+  fresh content-addressed generation, code pinned to 541f89d9a160eca8498a7b7419a7c2bc7f5b4a0e via git bundle
+  (sha fe9191b0dda0...a508), per-stage timings, pull + two-sided md5, then Mac-side per-rally
+  compare_vs_pbvision scorecard + owner union event set. Denylist scan 1 CLEAN (pre-copy). DELETE +
+  list-confirm + cost at end no matter what.
+
+## 2026-07-13 pbv11_headtohead lane — STOP at provision gate (auth dead)
+
+- pbv11_headtohead_20260713: STOP before any provision, 0 VMs created, $0 cost. `gcloud compute instances list` (and application-default token refresh) failed with 'Reauthentication failed. cannot prompt during non-interactive execution' for the fleet account hello@swayformations.com (project gifted-electron-498923-h1, correct active config). Live reconciliation of this ledger's 'EMPTY, zero running VMs' claim could NOT be performed this session — treat it as UNVERIFIED, not freshly confirmed, until the owner reauths and a fresh `gcloud compute instances list --filter=labels.fable-fleet=pickleball` is run. Needs ONE interactive `gcloud auth login` (owner) before this lane or any GPU lane can resume. See runs/lanes/pbv11_headtohead_20260713/report.json for full evidence.
+
 ## Most recent wave (2026-07-12 sprint — full rows in archive)
 
 - pickleball-h100-trka: DONE+DELETED 2026-07-12T20:27Z list-confirmed, 1.655h ~$2-3.5
   (TRK ReID/apron margin sweep; margin 0.5/1.0 survive internal, 2.0 rejected).
 - pickleball-h100-bodyc: DONE+DELETED 2026-07-12T22:17Z list-confirmed, 1.37h ~$0.8-5.8
   (BODY overhead levers all 3 honest-rejected; found world-stage 122s cost attribution).
+
+- pickleball-h100-pbv11 (H100 a3 SPOT, ase1-b) — head-to-head lane; STOP'd once on dead auth, resumed
+  after owner re-auth, reached BVP solver phase, then the driving process DIED on the Fable-5 monthly
+  spend limit before writing any scorecard. VM left TERMINATED (spot stop). Manager DELETED it 2026-07-14,
+  disks list-confirmed 0. No head-to-head result produced — re-run per runs/HANDOFF_20260714.md.
+  FLEET NOW EMPTY.
