@@ -6,16 +6,16 @@ teardown. A session MUST reconcile this against `gcloud compute instances list
 Full per-wave history (waves 4-7, NS-014, demo, court, 2026-07-12 sprint) is preserved verbatim in
 `runs/manager/archive/gpu_fleet_history_20260707_20260712.md`.
 
-## Current fleet state (2026-07-13, doc/org session)
+## Current fleet state (2026-07-15, Track A manager session)
 
-EMPTY — zero running VMs. Only `pickleball-a100-fleet1` exists, TERMINATED (disk intact, historical
-snapshot source). Last list-reconcile: 2026-07-12 sprint close. **UNVERIFIED as of 2026-07-13
-pbv11_headtohead attempt** — gcloud auth was dead (reauth required) so no fresh live list could run;
-do not treat this row as freshly confirmed until the next successful `gcloud compute instances list`.
+RECONCILED LIVE 2026-07-15: `gcloud compute instances list` succeeded (hello@, project
+gifted-electron-498923-h1). Only `pickleball-a100-fleet1` TERMINATED under fable-fleet=pickleball
+(matches prior EMPTY claim — now freshly confirmed); non-fleet `body4d-waker-ctrl` e2-micro RUNNING
+in usc1-a, untouched. Fleet RUNNING count 0/5 → provision gate PASS for the pbv11 re-run.
 
 | vm_name | zone | gpu | model | status | lane | $/hr | created_at | notes |
 |---|---|---|---|---|---|---|---|---|
-| (none running) | | | | | | | | |
+| pickleball-h100-pbv11r | ladder ase1-b/-c,usc1-a/-b,euw4-b | H100-80GB | a3-highgpu-1g SPOT | PROVISIONING | pbv11_headtohead_20260713 RE-RUN | ≤$5 | 2026-07-15 | Self-tearing, wall cap 5h from RUNNING, 60-min idle self-stop, 6-attempt/30-min no-attempt cap, term-action STOP, compute-mode DEFAULT. Boot from pickleball-fleet-snap-20260709-w7close (pd-balanced 200GB). Pin ac0b14ab0 (main tip; includes 03a0085ab audio chain + rev-12 TRK flip). KNOWN SNAPSHOT GAP: transfer models/checkpoints/osnet_x1_0_market1501.pt (sha 2809d322…, 10,399,605 B) — tracking fails loud without it. DELETE + list-confirm + disks 0 + cost at end no matter what. |
 
 ## Standing policy (owner-set)
 
