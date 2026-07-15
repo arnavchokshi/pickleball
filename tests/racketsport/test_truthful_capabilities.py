@@ -474,8 +474,9 @@ def test_runbook_documents_current_process_video_entrypoint() -> None:
         "**paddle_pose**",
         "**world**",
         "**confidence_gate**",
-        "**manifest**",
         "**match_stats**",
+        "**coaching_facts**",
+        "**manifest**",
         "**verify**",
     ]
     last_index = -1

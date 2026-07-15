@@ -1,6 +1,6 @@
 # Process Video Runbook
 
-Last updated: 2026-07-13.
+Last updated: 2026-07-15.
 
 `scripts/racketsport/process_video.py` is the current one-command pipeline for a
 video-to-scrubber bundle. It is the entrypoint future agents should start from
@@ -123,9 +123,9 @@ be called CAL promotion.
 After argument parsing and option construction succeed, `process_video.py`
 writes `PIPELINE_SUMMARY.json` even on partial runs. Pre-flight argument/path
 failures can exit before any run directory or `PIPELINE_SUMMARY.json` exists.
-The default serial path has 19 stage outcomes. Optional `rally_gating` makes
-20 and optional viewer verification makes 20; enabling both makes 21. The order
-is:
+The default serial path has 20 stage outcomes. Optional `rally_gating` makes
+21, and optional viewer verification also makes 21; enabling both makes 22. The
+order is:
 
 1. **ingest** - validate video and build/consume capture sidecar.
 2. **calibration** - create or consume `court_calibration.json`, court zones, net
@@ -165,12 +165,17 @@ before fresh BALL/audio and does not yet trim all downstream decoding.
     explicit timed stages land.
 17. **confidence_gate** - write `confidence_gated_world.json` unless
     `--no-confidence-gate` is set.
-18. **manifest** - write `replay_viewer_manifest.json` and optional point scene.
-19. **match_stats** - default-on fail-open placement/court movement stats. It
-    currently runs after the manifest, so the same-run manifest does not
-    advertise it.
-Optional final stage: **verify** via `--verify-viewer`. It is stage 20 without
-rally gating and stage 21 with rally gating.
+18. **match_stats** - default-on fail-open placement/court movement stats.
+19. **coaching_facts** - build deterministic rally metrics and coaching facts,
+    then run the zero-fabrication audit before the manifest. This stage fails
+    closed: on audit failure the facts are excluded and the bundle stays
+    `partial`.
+20. **manifest** - write `replay_viewer_manifest.json` and optional point scene,
+    linking only finished current stats and audited coaching facts.
+Optional final stage: **verify** via `--verify-viewer`. It is stage 21 without
+rally gating and stage 22 with rally gating.
+
+`match_stats` and audited deterministic `coaching_facts` run before `manifest`.
 
 The target architecture adds an explicit post-BODY event/arc/placement refine
 pass, then global fusion, stats and coaching, and builds the manifest last. Do
@@ -365,7 +370,8 @@ Common traps and fixes:
 `process_video.py` exit 0 includes `complete` or `partial` by contract. Consumers
 must inspect summary status, missing/degraded capabilities, and manifest URLs;
 exit 0 alone does not mean ready or verified. The server status core has scoped
-proof, but end-to-end API/app propagation and a physical trace remain open.
+proof through the runner, worker, database, and API path; app-side propagation
+is code-wired, but the owner-gated physical end-to-end trace remains open.
 Promotion still depends on the gates in `NORTH_STAR_ROADMAP.md`.
 
 ## Legacy Contract CLI
