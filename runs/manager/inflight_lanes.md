@@ -10,7 +10,7 @@ labeling packages (storage-allowlisted, intentionally untracked).
 
 | lane | kind | session/task id | resume command | owned files | vm | expected done | dispatched |
 |---|---|---|---|---|---|---|---|
-| trackH_webux3_20260716 | Track H MANAGER (overnight, replay viewer usability): friction audit of web/replay against real bundles (demo_beststack fresh_wolv full bundle + trk_flip degraded bundle), Codex fix lanes, manager browser re-verification (Playwright), FPS before/after; fence = web/replay/** + runs/lanes/webux3_*_20260716/** + runs/manager/trackH_20260716/** ONLY (no pipeline files) | Track H manager session 2026-07-16 | manager notes at runs/manager/trackH_20260716/; lane dirs runs/lanes/webux3_* | web/replay/** + own lane dirs | none (local browser) | overnight; dated report | 2026-07-16 |
+| trackH_webux3_20260716 | Track H MANAGER (overnight, replay viewer usability): manager browser friction audit DONE (12 ranked findings + FPS baseline 37.5 court-play / 11.25 follow-play headed-Metal, runs/lanes/webux3_audit_20260716/FRICTION_AUDIT_20260716.md); fix lane webux3_fixes_20260716 DISPATCHED (Codex gpt-5.6-sol high, nohup PID 62107, T1-T11 ranked scope, spec.md in lane dir); manager re-verifies in-browser before ruling; fence = web/replay/** + runs/lanes/webux3_*_20260716/** + runs/manager/trackH_20260716/** ONLY (no pipeline files) | Track H manager session 2026-07-16 | report at runs/lanes/webux3_fixes_20260716/report.json; resume: codex session id in lane log.txt | web/replay/** + own lane dirs | none (local browser) | overnight; dated report | 2026-07-16 ~03:0x |
 | ballarc_scale_guard_20260715 | Codex gpt-5.6-sol high: ball_arc per-segment wall-clock guard (loud typed timeout per trust contract) + segment-7 pool-explosion diagnosis + regression test from pulled real artifacts; CPU-only proof on the salvaged 697s inputs | Track A manager; codex session 019f68e2-4784-7463-af04-ccaa74c5ab09 (died overnight on model capacity + Mac sleep at ~85% done, RESUMED 2026-07-16 ~00:15 PDT as detached nohup, log_resume.txt) | report at runs/lanes/ballarc_scale_guard_20260715/report.json when done; if it dies again: codex exec [flags] resume 019f68e2-4784… with a state brief | threed/racketsport/ball_arc_solver.py + ball_arc_chain.py + its tests + lane dir (fence excludes process_video.py, ball_physics3d.py, timebase files) | none (CPU local) | hours; manager rules on report | 2026-07-16 (coordinator GO, order 1) |
 | ~~pbv_harness_v2_20260715~~ | RULED **ADOPT (scoped pass)** 2026-07-16 by Track A manager, manager-verified with real exit codes: frozen original byte-identical to HEAD (md5 4ebd6c53 both sides), regression A all 3 cards BYTE_IDENTICAL to frozen scorecards, manager's independent 3rd full-scale run EXIT 0 md5-identical (59e03035), tests 4/4 EXIT 0. Root cause: PB segment 92 vz 271.9m/s outside ±60m/s bounds → typed fail-closed `physics_fit_skipped` (1/490 segments), no clamp, no silent drop. Full-11-min scoring GREEN → MOVE-1 prerequisite 2/3 met. | bs7v1lnvu CLOSED | — | runs/lanes/pbv_harness_v2_20260715/** | — | DONE | 2026-07-16 |
 
@@ -21,6 +21,19 @@ after Track C's window-close landed (coordinator go); OWNER_CHECKIN "Running rig
 also refreshed to 07-16 truth. HARD RULE standing: NO third MOVE-1 GPU attempt
 without the coordinator's explicit go; prerequisites = ballarc guard adopted + harness v2 green +
 trusted CAL seed.)_
+
+_(2026-07-16 ~01:2x Track A manager: pbv11_calsolve_20260716 RULED **BLOCKED (honest kill accepted)**,
+manager-verified: the line-evidence 15-intersection solve is REAL (camera median 2.61px; refreshed
+evidence 1.64px; independent validator auto_calibration_ready TRUE incl. top_net 3.49px; overlay
+visual PASS — projected top-net lands on the actual net tape as a solve OUTPUT) but ingestion is
+rejected one gate earlier than the correction-gate premise: threed/racketsport/orchestrator.py:327
+TRUSTED_INTRINSICS_SOURCES allowlists ONLY metric_15pt_reviewed. Lane refused to relabel (correct).
+Banked: owner_cal_seed/court_calibration_solved.json (corrected_unverified) + solve_diagnostics +
+validator evidence + reference-only pb-camera delta. FORWARD ROUTES (staged, not executed): [a]
+spine/CAL policy owner ruling on an honest preview source class for single-view line-evidence
+solves; [b] owner ~10-min 15-pt review via court_keypoint_review_server.py ->
+build_calibration_from_review.py -> legit metric_15pt_reviewed artifact. NOT an authorization for
+MOVE-1 #3.)_
 
 _(2026-07-16 ~01:3x Track A manager, overnight window (coordinator conditional GPU GO active): CRITICAL
 PREFLIGHT FINDING — the banked 4-corner seed alone does NOT unblock metric stages: capture grade stays

@@ -1,0 +1,223 @@
+{
+  "artifact_type": "racketsport_process_video_pipeline_summary",
+  "best_stack": {
+    "manifest_revision": 12,
+    "overrides": {},
+    "resolved": {
+      "ball.arc_chain": true,
+      "ball.detection_stride": 1,
+      "ball.wasb_checkpoint": "/Users/arnavchokshi/Desktop/pickleball/models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+      "ball.wasb_repo": "/Users/arnavchokshi/Desktop/pickleball/third_party/WASB-SBDT",
+      "body.detector_fov": {
+        "detector_name": "",
+        "fov_checkpoint_model_id": "moge_2_vitl_normal",
+        "fov_checkpoint_required_when_fov_enabled": true,
+        "fov_name": ""
+      },
+      "body.experimental_body_array_native": true,
+      "body.schedule": "serial",
+      "body.skeleton_stride": 2,
+      "camera_motion.policy": {
+        "disable_flag_default": false,
+        "enable_flag_default": false,
+        "estimator": "hardened",
+        "flow_backend": "lk",
+        "mode": "auto",
+        "person_masks": true,
+        "threshold": 2.5
+      },
+      "confidence.calibration_curves": "/Users/arnavchokshi/Desktop/pickleball/runs/waveb_confidence_gate_20260702T183158Z/calibration_curves.json",
+      "input_quality.preflight": {
+        "allowed_modes": [
+          "advisory",
+          "strict",
+          "off"
+        ],
+        "band_on_rejection": "degraded_input",
+        "mode": "advisory",
+        "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+        "sampling": {
+          "sample_cadence_s": 1.0,
+          "sample_frame_count": 5
+        },
+        "thresholds": {
+          "max_duration_s": 900.0,
+          "max_luminance_mean": 0.98,
+          "max_missing_required_court_lines": 0,
+          "min_blur_laplacian_var": 25.0,
+          "min_camera_height_m": 1.0,
+          "min_duration_s": 1.0,
+          "min_fps": 30.0,
+          "min_full_court_corner_visibility_fraction": 1.0,
+          "min_height_px": 360,
+          "min_luminance_mean": 0.02,
+          "min_width_px": 640
+        }
+      },
+      "mesh.byte_budget_mib": 300.0,
+      "mesh.coverage_mode": "ball_aware",
+      "mesh.target_frame_budget": null,
+      "paddle.fused_estimator": {
+        "artifact": "racket_pose_estimate.json",
+        "enabled": true,
+        "source": "wrist_palm_grip_fused",
+        "trust_band": "estimated_preview"
+      },
+      "placement.undistort": true,
+      "stats.match_stats_v0": {
+        "artifact": "match_stats.json",
+        "consumer_only": true,
+        "enabled": true,
+        "excluded_inputs": [
+          "ball",
+          "paddle"
+        ],
+        "opt_out_flag": "--no-match-stats",
+        "required_inputs": [
+          "placement.json",
+          "court_zones.json"
+        ]
+      },
+      "tracking.association_court_margin": {
+        "candidate_flag": "association_court_margin_m",
+        "enabled": true,
+        "fallback_candidate_m": 0.5,
+        "margin_m": 1.0,
+        "rejected_arm_m": 2.0,
+        "strongest_arm_m": 1.0,
+        "surviving_arms_m": [
+          0.5,
+          1.0
+        ]
+      },
+      "tracking.global_association_profile": "owner_directed_margin1p0_osnet",
+      "tracking.reid_model": "/Users/arnavchokshi/Desktop/pickleball/models/checkpoints/osnet_x1_0_market1501.pt"
+    }
+  },
+  "camera_motion_auto": {
+    "enabled": false,
+    "forced": "auto",
+    "probe_wall_seconds": 0.0,
+    "sampled_frame_count": 0,
+    "score": null,
+    "threshold": 2.5
+  },
+  "clip": "pbvision_11min_20260713",
+  "clip_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_calsolve_20260716/gate_preflight/pbvision_11min_20260713",
+  "degraded_reasons": [
+    {
+      "reasons": [
+        "calibration spine failed while consuming --court-calibration /Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_solved.json: calibration failed: /Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_solved.json: intrinsics.source='line_evidence_intersections_15pt_single_view_planar' is not a trusted external calibration source (expected one of ['metric_15pt_reviewed']); refusing to consume an unreviewed/guessed calibration through --court-calibration"
+      ],
+      "stage": "calibration",
+      "status": "failed"
+    }
+  ],
+  "missing_capabilities": [
+    {
+      "capability": "capture_sidecar",
+      "reason": "stage ingest ran: ingested /Users/arnavchokshi/Desktop/pickleball/data/pbvision_11min_20260713/source_video.mp4 as source.mp4 (1280x720 @ 30.000fps); wrote frame_times.json from ffprobe PTS; wrote schema-valid timebase_contract.json with exact ffprobe PTS and explicit frame availability"
+    },
+    {
+      "capability": "calibration",
+      "reason": "stage calibration failed: calibration spine failed while consuming --court-calibration /Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_solved.json: calibration failed: /Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_solved.json: intrinsics.source='line_evidence_intersections_15pt_single_view_planar' is not a trusted external calibration source (expected one of ['metric_15pt_reviewed']); refusing to consume an unreviewed/guessed calibration through --court-calibration"
+    },
+    {
+      "capability": "tracks",
+      "reason": "persistent player tracks are missing"
+    },
+    {
+      "capability": "body",
+      "reason": "declared BODY coverage/mesh artifact is missing"
+    },
+    {
+      "capability": "ball",
+      "reason": "ball artifact is missing"
+    },
+    {
+      "capability": "events",
+      "reason": "event/contact artifact is missing"
+    },
+    {
+      "capability": "ball_arc",
+      "reason": "ball arc artifact is missing"
+    },
+    {
+      "capability": "paddle",
+      "reason": "paddle artifact is missing"
+    },
+    {
+      "capability": "fusion",
+      "reason": "fused-world artifact is missing"
+    },
+    {
+      "capability": "stats",
+      "reason": "deterministic stats artifact is missing"
+    },
+    {
+      "capability": "coaching",
+      "reason": "deterministic coaching facts are missing"
+    },
+    {
+      "capability": "assets",
+      "reason": "recursive replay assets are missing"
+    },
+    {
+      "capability": "trust_bands",
+      "reason": "trust bands artifact is missing"
+    },
+    {
+      "capability": "manifest",
+      "reason": "replay manifest is missing"
+    }
+  ],
+  "run_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_calsolve_20260716/gate_preflight",
+  "schema_version": 1,
+  "stages": [
+    {
+      "artifacts": [
+        "source.mp4",
+        "frame_times.json",
+        "timebase_decode_evidence.json",
+        "timebase_contract.json"
+      ],
+      "metrics": {},
+      "notes": [
+        "ingested /Users/arnavchokshi/Desktop/pickleball/data/pbvision_11min_20260713/source_video.mp4 as source.mp4 (1280x720 @ 30.000fps)",
+        "wrote frame_times.json from ffprobe PTS",
+        "wrote schema-valid timebase_contract.json with exact ffprobe PTS and explicit frame availability"
+      ],
+      "stage": "ingest",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 31.263
+    },
+    {
+      "artifacts": [],
+      "metrics": {},
+      "notes": [
+        "calibration spine failed while consuming --court-calibration /Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_solved.json: calibration failed: /Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_solved.json: intrinsics.source='line_evidence_intersections_15pt_single_view_planar' is not a trusted external calibration source (expected one of ['metric_15pt_reviewed']); refusing to consume an unreviewed/guessed calibration through --court-calibration"
+      ],
+      "stage": "calibration",
+      "status": "failed",
+      "trust_badge": null,
+      "wall_seconds": 0.004
+    }
+  ],
+  "status": "failed",
+  "trust_bands": {},
+  "video": {
+    "path": "/Users/arnavchokshi/Desktop/pickleball/data/pbvision_11min_20260713/source_video.mp4",
+    "sha256": "272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383",
+    "size": 119911668,
+    "timing": {
+      "duration_s": 697.4,
+      "fps": 30.0,
+      "frame_count": 20922,
+      "height": 720,
+      "width": 1280
+    }
+  },
+  "video_path": "/Users/arnavchokshi/Desktop/pickleball/data/pbvision_11min_20260713/source_video.mp4",
+  "wall_seconds": 31.439
+}

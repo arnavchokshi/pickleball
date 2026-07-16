@@ -1,0 +1,57 @@
+{
+  "artifact_type": "pbv11_reference_only_camera_delta",
+  "competitor_camera_role": "reference_only_diagnostic_after_our_solve_and_gate_attempt",
+  "competitor_camera_used_as_solve_input": false,
+  "ours": {
+    "camera_center_court_frame_m": [
+      5.198863099121324,
+      -8.74601546438496,
+      1.3479992135071441
+    ],
+    "horizontal_fov_degrees": 81.48435300841619,
+    "intrinsics_source": "line_evidence_intersections_15pt_single_view_planar",
+    "pitch_radians_in_pb_reference_convention": -0.16352364444113013,
+    "position_feet_in_pb_reference_convention": [
+      27.056637464309134,
+      50.694276458120605,
+      4.422569597464383
+    ],
+    "roll_radians_in_pb_reference_convention": -0.00457655931058452,
+    "yaw_radians_in_pb_reference_convention": -2.4205851437984505
+  },
+  "pbvision_reference": {
+    "camera_segment": [
+      0,
+      20921
+    ],
+    "horizontal_fov_degrees_assuming_export_fov_is_horizontal": 86.51625244932333,
+    "pitch_radians": -0.18542778972764204,
+    "position_export_units_assumed_feet": [
+      27.276579959521857,
+      51.0112654222746,
+      5.050947348878949
+    ],
+    "roll_radians": -1.3807971231738492e-05,
+    "source": "data/pbvision_11min_20260713/cv_export.json camera.cameraSegments[0]",
+    "yaw_radians": -2.428380403911086
+  },
+  "reference_frame_mapping_assumption": {
+    "formula": "pb_x_ft=ours_x_ft+10; pb_y_ft=-ours_y_ft+22; pb_z_ft=ours_z_ft",
+    "reason": "maps our net-centered 20x44ft court coordinates to the competitor export's apparent corner-origin court coordinates",
+    "status": "diagnostic_assumption_not_ground_truth"
+  },
+  "signed_ours_minus_pbvision": {
+    "fov_degrees": -5.03189944090714,
+    "pitch_degrees": 1.2550319254963107,
+    "position_feet": [
+      -0.21994249521272335,
+      -0.31698896415399336,
+      -0.628377751414566
+    ],
+    "position_norm_feet": 0.7373705352482309,
+    "position_norm_meters": 0.2247505391436608,
+    "roll_degrees": -0.2614264125022929,
+    "yaw_degrees": 0.4466538457142419
+  },
+  "status": "reference_only_not_validation_not_solve_input"
+}
