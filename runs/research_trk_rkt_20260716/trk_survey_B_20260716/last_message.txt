@@ -1,0 +1,18 @@
+Completed the independent lane B survey:
+
+- [SURVEY.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/trk_survey_B_20260716/SURVEY.md)
+- [livechecks.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/trk_survey_B_20260716/livechecks.md)
+
+Top findings:
+
+- RF-DETR-L (`rf-detr-large-2026.pth`) remains the first detector benchmark; Seg-L/XL follows for reusable masks.
+- The current SportsMOT leader claims 87.2 HOTA, but its gain is predominantly global association; selective masks contribute only about +1.5–1.8 HOTA in its ablations.
+- McByte’s published runtime is only 3–5 FPS on A100—roughly 12–20× source duration for 60 FPS video.
+- SAM2.1-B+ drops to 17.8 FPS at three targets and 12.4 FPS at five; selective hard-window propagation is more practical than always-on VOS.
+- Public YOLO26m is real, NMS-free by default, and AGPL-3.0/Enterprise licensed. The baseline must pin weight SHA, package version, head mode, resolution, and thresholds.
+- OSNet’s MIT code does not clear its Market-1501 checkpoint: Market-1501 is academic-only. KPR remains Hippocratic-license blocked; SapiensID and SAM-MT are noncommercial.
+- No surveyed tracker directly solves four enrolled players plus open-set spectator rejection. Owned hard-negative supervision and a soft court-footpoint prior remain application-specific necessities.
+- SportsMOT, DanceTrack video, and SoccerNet are R&D-only datasets; owned, cleared clips are the viable product-training route.
+
+No GPU work or pipeline/config changes were performed. `VERIFIED=0` remains binding. Memory was used only to locate the prior July 9 research context; all survey findings were checked against current primary sources and live artifacts.
+

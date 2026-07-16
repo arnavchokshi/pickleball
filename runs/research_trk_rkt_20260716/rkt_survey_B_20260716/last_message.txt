@@ -1,0 +1,16 @@
+Completed the independent lane-B survey. **VERIFIED=0 remains binding.**
+
+- Synthetic-only is **unsupported** at ≤5° p90; synthetic + small real is plausible but unproven.
+- Minimum credible owner rig: three phones total, two high-speed GT views, ChArUco calibration, paddle decals, and audio/LED sync targeting ≤1 ms.
+- Biggest gap: no commercially usable dataset combines tiny blurred paddle 6DoF, ball impact geometry, and synchronized contact GT.
+- Surprise: event cameras achieved millimeter-scale successful contact localization, but sunlight caused tennis contour success to collapse from 24/26 to 3/20.
+- RacketVision supplies five 2D keypoints—not metric pose or contact GT.
+- TT4D’s sports-specific orientation error was 26.4 ± 4.4°, supporting temporal inference only as an interim prior.
+
+Deliverables:
+
+- [SURVEY.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/rkt_survey_B_20260716/SURVEY.md)
+- [livechecks.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/rkt_survey_B_20260716/livechecks.md)
+
+All cited ranked URLs appear in the live-check ledger. No sibling research directory, pipeline code, configuration, or GPU was touched.
+

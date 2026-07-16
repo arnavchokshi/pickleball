@@ -1,0 +1,15 @@
+Completed the independent lane A survey:
+
+- [SURVEY.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/trk_survey_A_20260716/SURVEY.md)
+- [livechecks.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/trk_survey_A_20260716/livechecks.md)
+
+Top findings:
+
+- RF-DETR-L remains the first detector benchmark, followed by RF-DETR-Seg-L. Exact open checkpoints returned HTTP 200, but official materials provide no person-class, CrowdHuman, or MOT20-det numbers—crowded-scene leverage remains unverified. [Official RF-DETR repository](https://github.com/roboflow/rf-detr)
+- The most likely coverage gain is local role-specific fine-tuning with player, spectator, passer, truncation, and empty-frame supervision. SportsMOT is highly relevant but CC BY-NC 4.0; DanceTrack videos are also research-only. [SportsMOT](https://github.com/MCG-NJU/SportsMOT), [DanceTrack](https://github.com/DanceTrack/DanceTrack)
+- The main post-July-9 surprise is SAM-MT: faster multi-target mask propagation, but its checkpoint is CC BY-NC-SA 4.0, the GitHub code has no license file, and training code is absent. [Paper](https://arxiv.org/abs/2607.08688), [model card](https://huggingface.co/FudanCVL/SAM-MT/blob/main/README.md)
+- RF-DETR added an unreleased `scale_jitter=False` control that prevents crop augmentation from clipping border annotations—directly relevant to frame-edge players. [Upstream commit](https://github.com/roboflow/rf-detr/commit/69b12dbf8d40)
+- No surveyed public ReID checkpoint has a clean code/weights/training-data commercial chain. KPR reconfirms Hippocratic License 3.0; Market-1501 checkpoints remain academic-use only.
+- Recommended order: RF-DETR-L → RF-DETR-Seg-L → D-FINE-L/DEIMv2 controls → local detector fine-tuning → ReID → McByte → CAMELTrack only if still necessary.
+- No GPU dispatch or full model download occurred. No sibling survey directory was read. **VERIFIED=0 remains binding.**
+

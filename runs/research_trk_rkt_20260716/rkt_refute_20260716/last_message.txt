@@ -1,0 +1,11 @@
+Completed independent primary-source verification.
+
+[REFUTATION.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/rkt_refute_20260716/REFUTATION.md) · [livechecks.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/rkt_refute_20260716/livechecks.md)
+
+C1 CONFIRM · C2 REFUTE · C3 CONFIRM · C4 CONFIRM · C5 CONFIRM  
+C6 CONFIRM · C7 REFUTE · C8 PARTIAL · C9 PARTIAL · C10 CONFIRM
+
+Material changes: RACE-6D’s 76.7 AR is **84.0 FPS**; 16.6 belongs to CRT-6D ([paper](https://openaccess.thecvf.com/content/CVPR2026F/html/Ha_RACE-6D_Real-time_Accurate_Coarse-to-finE_Object_6D_Pose_Transformer_CVPRF_2026_paper.html)). Kubric is active, while Isaac Sim now has split Apache/proprietary licensing ([NVIDIA](https://docs.isaacsim.omniverse.nvidia.com/latest/common/licenses-isaac-sim.html)). SAM-6D has a nested MIT license but no project-wide license. A generic rigid-object blur package exists, so only the sports-equipment-specific absence is supportable.
+
+No GPU or large downloads. Published numbers remain non-pickleball evidence; `VERIFIED=0` stands.
+

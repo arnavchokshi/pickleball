@@ -1,0 +1,18 @@
+Completed the independent second-vote review:
+
+[REFUTATION.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/trk_refute_20260716/REFUTATION.md)  
+[livechecks.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/trk_refute_20260716/livechecks.md)
+
+- C1 CONFIRM
+- C2 CONFIRM
+- C3 REFUTE — public MIT implementation now exists
+- C4 PARTIAL
+- C5 PARTIAL — both assets exist; `_e25` is current
+- C6 PARTIAL — eight sizes; L was mapped to the wrong HF artifact
+- C7 PARTIAL — real release, but not independent from DEIMv2
+- C8 PARTIAL — “100 samples” means domain labels on proposed boxes
+- C9 PARTIAL — Market-1501 restrictions absent from the current official page
+- C10 CONFIRM
+
+No GPU work or checkpoint downloads were performed. Published results remain motivation only; VERIFIED=0 stands.
+

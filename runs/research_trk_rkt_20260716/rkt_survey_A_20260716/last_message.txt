@@ -1,0 +1,27 @@
+Completed the independent lane A survey:
+
+- [SURVEY.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/rkt_survey_A_20260716/SURVEY.md)
+- [livechecks.md](/Users/arnavchokshi/Desktop/pickleball/runs/research_trk_rkt_20260716/rkt_survey_A_20260716/livechecks.md)
+
+Top findings:
+
+- No off-the-shelf method publishes evidence for <80 px, blurred, near-planar paddle 6DoF from one consumer RGB camera.
+- The best first route remains [RacketVision](https://ojs.aaai.org/index.php/AAAI/article/download/37362/41324) keypoints → both IPPE solutions → temporal hypothesis graph.
+- RacketVision’s reported 5–10 px average keypoint error may support the interim 30° milestone, but does not substantiate 5° p90—especially because side-keypoint PCK falls to 64.8–80.1%.
+- [RACE-6D](https://github.com/Yoonwoo-Ha/RACE-6D) is the strongest new trained challenger: monocular RGB, exact-CAD compatible, 16.6 FPS. Code is live; checkpoints are not released.
+- GigaPose/MegaPose/RefPose are best treated as offline crop-conditioned oracles and proposal refiners. Their BOP results contain no small-object or motion-blur validation.
+- Category-level SOTA remains predominantly RGB-D household-object work; no paddle category model exists.
+- Blur-aware training and exposure-integrated rendering are better-supported research directions than deblur-first processing.
+- Synthetic pretraining is worthwhile, but published sim2real evidence does not support synthetic-only 5° p90.
+
+Biggest gap: the paddle face is genuinely weakly observable during edge-on, blurred, occluded contact frames. DinkVision must build an uncertainty-preserving temporal resolver and gate-credible owner GT; model selection alone cannot solve this.
+
+GT recommendation: marker-to-CAD calibration, asymmetric non-coplanar marker cluster, synchronized ≥240 Hz reference capture, validated p90 ≤1°/5 mm, sub-millisecond timing, piezo contact timing, and impact-tape contact-location checks. Two unsynchronized phones are training evidence, not automatically gate-credible.
+
+Surprises:
+
+- RacketVision weights are live—411 MB and 107 MB—but the model repository has no model card/license and flags all six pickle files as unsafe.
+- Its dataset is MIT-labeled, yet commercial rights remain unclear because the source material is professional YouTube broadcasts.
+- The closest 2026 high-speed racket research changes sensors to event cameras plus OptiTrack, reinforcing the single-phone product gap.
+
+No sibling survey directory was read, no GPU work was dispatched, and `VERIFIED=0` remains unchanged.
