@@ -1,0 +1,283 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test -project ios/Pickleball.xcodeproj -scheme Pickleball -destination platform=iOS,id=B03696B6-6481-5FCD-A79C-105DA3F08F98 "-only-testing:PickleballAppUITests/RecordStopUITests" -allowProvisioningUpdates -derivedDataPath /tmp/ios_recordpath_device_uitest_dd -resultBundlePath /tmp/ios_recordpath_device_uitest_dd/RecordStop2.xcresult
+
+Resolve Package Graph
+
+
+Resolved source packages:
+  PickleballIOS: /Users/arnavchokshi/Desktop/pickleball/ios @ local
+
+Writing result bundle at path:
+	/tmp/ios_recordpath_device_uitest_dd/RecordStop2.xcresult
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (18 targets)
+    Target 'PickleballAppUITests' in project 'Pickleball'
+        ➜ Explicit dependency on target 'Pickleball' in project 'Pickleball'
+    Target 'PickleballAppTests' in project 'Pickleball'
+        ➜ Explicit dependency on target 'Pickleball' in project 'Pickleball'
+        ➜ Explicit dependency on target 'PickleballCapture' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'Pickleball' in project 'Pickleball'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCapture' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCalibration' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballFastTier' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballGuidance' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballUpload' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballReplay' in project 'PickleballIOS'
+    Target 'PickleballReplay' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballReplay' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballIOS_PickleballReplay' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballFastTier' in project 'PickleballIOS'
+    Target 'PickleballReplay' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballIOS_PickleballReplay' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballFastTier' in project 'PickleballIOS'
+    Target 'PickleballIOS_PickleballReplay' in project 'PickleballIOS' (no dependencies)
+    Target 'PickleballUpload' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballUpload' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'PickleballUpload' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'PickleballGuidance' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballGuidance' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'PickleballFastTier' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballFastTier' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'PickleballCalibration' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCalibration' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'PickleballCalibration' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'PickleballCapture' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCapture' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballGuidance' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballFastTier' in project 'PickleballIOS'
+    Target 'PickleballCapture' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballGuidance' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballFastTier' in project 'PickleballIOS'
+    Target 'PickleballFastTier' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'PickleballGuidance' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'PickleballCore' in project 'PickleballIOS'
+        ➜ Explicit dependency on target 'PickleballCore' in project 'PickleballIOS'
+    Target 'PickleballCore' in project 'PickleballIOS' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/ibtool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/arnavchokshi/Desktop/pickleball/ios/App/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+Build description signature: ab6b1fd8eb496b38983acbc37159a8b1
+Build description path: /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/XCBuildData/ab6b1fd8eb496b38983acbc37159a8b1.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk /tmp/ios_recordpath_device_uitest_dd/SDKStatCaches.noindex/iphoneos26.5-23F81a-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+    cd /Users/arnavchokshi/Desktop/pickleball/ios/Pickleball.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.5.sdk -o /tmp/ios_recordpath_device_uitest_dd/SDKStatCaches.noindex/iphoneos26.5-23F81a-32daed1954a7d5dd0789fcaf2a9bb78b.sdkstatcache
+
+ProcessInfoPlistFile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCore.framework/Info.plist /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/PickleballIOS.build/Debug-iphoneos/PickleballCore.build/empty-PickleballCore.plist (in target 'PickleballCore' from project 'PickleballIOS')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-infoPlistUtility /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/PickleballIOS.build/Debug-iphoneos/PickleballCore.build/empty-PickleballCore.plist -producttype com.apple.product-type.framework -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCore.framework/Info.plist
+
+ProcessInfoPlistFile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework/Info.plist /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/PickleballIOS.build/Debug-iphoneos/PickleballCapture\ product.build/empty-PickleballCapture_-36C43C27378F128_PackageProduct.plist (in target 'PickleballCapture' from project 'PickleballIOS')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-infoPlistUtility /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/PickleballIOS.build/Debug-iphoneos/PickleballCapture\ product.build/empty-PickleballCapture_-36C43C27378F128_PackageProduct.plist -producttype com.apple.product-type.framework -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework/Info.plist
+
+ProcessInfoPlistFile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballIOS_PickleballReplay.bundle/Info.plist /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/PickleballIOS.build/Debug-iphoneos/PickleballIOS_PickleballReplay.build/empty-PickleballIOS_PickleballReplay.plist (in target 'PickleballIOS_PickleballReplay' from project 'PickleballIOS')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-infoPlistUtility /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/PickleballIOS.build/Debug-iphoneos/PickleballIOS_PickleballReplay.build/empty-PickleballIOS_PickleballReplay.plist -producttype com.apple.product-type.bundle -expandbuildsettings -format binary -platform iphoneos -requiredArchitecture arm64 -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballIOS_PickleballReplay.bundle/Info.plist
+
+Copy /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -bitcode-strip all -bitcode-strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip -resolve-src-symlinks -remove-static-executable /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework/PickleballCapture_-36C43C27378F128_PackageProduct -r -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework/PickleballCapture_-36C43C27378F128_PackageProduct
+Copy /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PickleballIOS_PickleballReplay.bundle /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballIOS_PickleballReplay.bundle (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballIOS_PickleballReplay.bundle /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app
+
+Copy /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCore.framework /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCore.framework (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -bitcode-strip all -bitcode-strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip -resolve-src-symlinks -remove-static-executable /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCore.framework /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCore.framework/PickleballCore -r -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCore.framework/PickleballCore
+
+ProcessInfoPlistFile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Info.plist /Users/arnavchokshi/Desktop/pickleball/ios/App/Info.plist (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-infoPlistUtility /Users/arnavchokshi/Desktop/pickleball/ios/App/Info.plist -producttype com.apple.product-type.application -genpkginfo /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PkgInfo -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/Pickleball.build/LaunchScreen-SBPartialInfo.plist -additionalcontentfile /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/Pickleball.build/assetcatalog_generated_info.plist -scanforprivacyfile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework -scanforprivacyfile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCore.framework -scanforprivacyfile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PickleballIOS_PickleballReplay.bundle -requiredArchitecture arm64 -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Info.plist
+
+CopySwiftLibs /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-swiftStdLibTool --copy --verbose --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --scan-executable /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Pickleball.debug.dylib --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/SystemExtensions --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Extensions --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks --strip-bitcode --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/Pickleball.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+CodeSign /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    
+    Signing Identity:     "Apple Development: Arnav Chokshi (8RGCNL479F)"
+    Provisioning Profile: "iOS Team Provisioning Profile: *"
+                          (4f2d896d-6fdf-41e0-8f41-73db32ed91fa)
+    
+    /usr/bin/codesign --force --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --timestamp\=none --preserve-metadata\=identifier,entitlements,flags --generate-entitlement-der /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework
+
+CodeSign /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCore.framework (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    
+    Signing Identity:     "Apple Development: Arnav Chokshi (8RGCNL479F)"
+    Provisioning Profile: "iOS Team Provisioning Profile: *"
+                          (4f2d896d-6fdf-41e0-8f41-73db32ed91fa)
+    
+    /usr/bin/codesign --force --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --timestamp\=none --preserve-metadata\=identifier,entitlements,flags --generate-entitlement-der /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Frameworks/PickleballCore.framework
+
+Copy /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/PickleballIOS_PickleballReplay.bundle /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballIOS_PickleballReplay.bundle (in target 'PickleballAppTests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballIOS_PickleballReplay.bundle /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest
+
+Copy /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework (in target 'PickleballAppTests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -bitcode-strip all -bitcode-strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip -resolve-src-symlinks -remove-static-executable /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework/PickleballCapture_-36C43C27378F128_PackageProduct -r -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework/PickleballCapture_-36C43C27378F128_PackageProduct
+
+Copy /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks/PickleballCore.framework /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCore.framework (in target 'PickleballAppTests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -bitcode-strip all -bitcode-strip-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip -resolve-src-symlinks -remove-static-executable /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCore.framework /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCore.framework/PickleballCore -r -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks/PickleballCore.framework/PickleballCore
+
+CodeSign /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework (in target 'PickleballAppTests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    
+    Signing Identity:     "Apple Development: Arnav Chokshi (8RGCNL479F)"
+    
+    /usr/bin/codesign --force --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --timestamp\=none --preserve-metadata\=identifier,entitlements,flags --generate-entitlement-der /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework
+
+ProcessInfoPlistFile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Info.plist /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/PickleballAppTests.build/empty-PickleballAppTests.plist (in target 'PickleballAppTests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-infoPlistUtility /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/PickleballAppTests.build/empty-PickleballAppTests.plist -producttype com.apple.product-type.bundle.unit-test -expandbuildsettings -format binary -platform iphoneos -scanforprivacyfile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/PickleballIOS_PickleballReplay.bundle -requiredArchitecture arm64 -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Info.plist
+
+CopySwiftLibs /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest (in target 'PickleballAppTests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-swiftStdLibTool --copy --verbose --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --scan-executable /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/PickleballAppTests --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/PlugIns --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/SystemExtensions --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Extensions --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PackageFrameworks/PickleballCapture_-36C43C27378F128_PackageProduct.framework --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/PickleballAppTests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+CodeSign /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks/PickleballCore.framework (in target 'PickleballAppTests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    
+    Signing Identity:     "Apple Development: Arnav Chokshi (8RGCNL479F)"
+    
+    /usr/bin/codesign --force --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --timestamp\=none --preserve-metadata\=identifier,entitlements,flags --generate-entitlement-der /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest/Frameworks/PickleballCore.framework
+
+CodeSign /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest (in target 'PickleballAppTests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    
+    Signing Identity:     "Apple Development: Arnav Chokshi (8RGCNL479F)"
+    
+    /usr/bin/codesign --force --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --timestamp\=none --generate-entitlement-der /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest
+/tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/PlugIns/PickleballAppTests.xctest: replacing existing signature
+
+CodeSign /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Pickleball.debug.dylib (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    
+    Signing Identity:     "Apple Development: Arnav Chokshi (8RGCNL479F)"
+    Provisioning Profile: "iOS Team Provisioning Profile: *"
+                          (4f2d896d-6fdf-41e0-8f41-73db32ed91fa)
+    
+    /usr/bin/codesign --force --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --timestamp\=none --generate-entitlement-der /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Pickleball.debug.dylib
+/tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/Pickleball.debug.dylib: replacing existing signature
+
+CodeSign /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/__preview.dylib (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    
+    Signing Identity:     "Apple Development: Arnav Chokshi (8RGCNL479F)"
+    Provisioning Profile: "iOS Team Provisioning Profile: *"
+                          (4f2d896d-6fdf-41e0-8f41-73db32ed91fa)
+    
+    /usr/bin/codesign --force --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --timestamp\=none --generate-entitlement-der /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/__preview.dylib
+/tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app/__preview.dylib: replacing existing signature
+
+CodeSign /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    
+    Signing Identity:     "Apple Development: Arnav Chokshi (8RGCNL479F)"
+    Provisioning Profile: "iOS Team Provisioning Profile: *"
+                          (4f2d896d-6fdf-41e0-8f41-73db32ed91fa)
+    
+    /usr/bin/codesign --force --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --entitlements /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/Pickleball.build/Pickleball.app.xcent --timestamp\=none --generate-entitlement-der /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app
+/tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app: replacing existing signature
+
+Validate /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app (in target 'Pickleball' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-validationUtility /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/Pickleball.app -shallow-bundle -infoplist-subpath Info.plist
+
+ProcessInfoPlistFile /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballAppUITests-Runner.app/PlugIns/PickleballAppUITests.xctest/Info.plist /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/PickleballAppUITests.build/empty-PickleballAppUITests.plist (in target 'PickleballAppUITests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-infoPlistUtility /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/PickleballAppUITests.build/empty-PickleballAppUITests.plist -producttype com.apple.product-type.bundle.ui-testing -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/PickleballAppUITests.build/ProductTypeInfoPlistAdditions.plist -requiredArchitecture arm64 -o /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballAppUITests-Runner.app/PlugIns/PickleballAppUITests.xctest/Info.plist
+
+CopySwiftLibs /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballAppUITests-Runner.app/PlugIns/PickleballAppUITests.xctest (in target 'PickleballAppUITests' from project 'Pickleball')
+    cd /Users/arnavchokshi/Desktop/pickleball/ios
+    builtin-swiftStdLibTool --copy --verbose --sign ECD327C9E3042E64E07F331CEAEC4C0C1F4BCBA1 --scan-executable /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballAppUITests-Runner.app/PlugIns/PickleballAppUITests.xctest/PickleballAppUITests --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballAppUITests-Runner.app/PlugIns/PickleballAppUITests.xctest/Frameworks --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballAppUITests-Runner.app/PlugIns/PickleballAppUITests.xctest/PlugIns --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballAppUITests-Runner.app/PlugIns/PickleballAppUITests.xctest/SystemExtensions --scan-folder /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballAppUITests-Runner.app/PlugIns/PickleballAppUITests.xctest/Extensions --platform iphoneos --toolchain /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain --destination /tmp/ios_recordpath_device_uitest_dd/Build/Products/Debug-iphoneos/PickleballAppUITests-Runner.app/PlugIns/PickleballAppUITests.xctest/Frameworks --strip-bitcode --scan-executable /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/libXCTestSwiftSupport.dylib --strip-bitcode-tool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/bitcode_strip --emit-dependency-info /tmp/ios_recordpath_device_uitest_dd/Build/Intermediates.noindex/Pickleball.build/Debug-iphoneos/PickleballAppUITests.build/SwiftStdLibToolInputDependencies.dep --filter-for-swift-os
+
+2026-07-16 01:03:47.608 xcodebuild[58865:6533238] [MT] Run Destination Preflight: The destination is not ready.
+Error Domain=com.apple.dt.deviceprep Code=-3 "Unlock arnav  to Continue" UserInfo={NSRecoveryAttempter=<_DVTErrorRecoveryHandler: 0x99271aa30>, NSLocalizedRecoveryOptions=(
+    "Cancel Testing"
+), NSLocalizedRecoverySuggestion=Xcode cannot launch PickleballAppUITests on arnav  because the device is locked., DVTRecoveryBlockKey=<__NSMallocBlock__: 0x98df1f630>, NSLocalizedDescription=Unlock arnav  to Continue}
+2026-07-16 01:03:47.608 xcodebuild[58865:6533238] [MT] Run Destination Preflight: Waiting for the destination to become ready.
+Resolve Package Graph
+
+Reload Package ‘ios’
+
+2026-07-16 01:09:32.829 xcodebuild[58865:6558795]  IDETestOperationsObserverDebug: Failure collecting diagnostics from devices: Process exited with error 1:
+ ERROR: The operation couldn?t be completed. (CoreDeviceCLISupport.DiagnoseError error 0.)
+This tool generates files that allow Apple to investigate issues with your
+computer and help improve Apple products. The files might contain personal
+information found on your device or associated with your Apple Account(s),
+including but not limited to your name, serial numbers of your device,
+your device name, your device's location over the last one to two days,
+your attached peripheral devices, your user name, your email address and
+email settings, file paths, file names, Siri suggestions, your computer's
+IP addresses, and network connection information.
+
+This information is used by Apple in accordance with its privacy policy
+(www.apple.com/privacy) and is not shared with any other company. By using
+this tool and sending the results to Apple, you consent to Apple using the
+contents of these files to improve Apple products.
+
+An error occurred while running devicectl diagnose. Will archive the diagnostics collected thus far.
+Wrote file to /tmp/ios_recordpath_device_uitest_dd/RecordStop2.xcresult/Staging/1_Test/Diagnostics/devicectl_diagnostics.zip
+Partial devicectl diagnose bundle located here: /tmp/ios_recordpath_device_uitest_dd/RecordStop2.xcresult/Staging/1_Test/Diagnostics/devicectl_diagnostics.zip
+
+2026-07-16 01:09:32.849 xcodebuild[58865:6533238] [MT] IDETestOperationsObserverDebug: 347.407 elapsed -- Testing started completed.
+2026-07-16 01:09:32.849 xcodebuild[58865:6533238] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-07-16 01:09:32.849 xcodebuild[58865:6533238] [MT] IDETestOperationsObserverDebug: 347.407 sec, +347.407 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/ios_recordpath_device_uitest_dd/RecordStop2.xcresult
+
+Testing failed:
+	PickleballAppUITests-Runner encountered an error (Early unexpected exit, operation never finished bootstrapping - no restart will be attempted. (Underlying Error: Lost pending connection to the test runner before launch.))
+
+** TEST FAILED **
+
+Testing started

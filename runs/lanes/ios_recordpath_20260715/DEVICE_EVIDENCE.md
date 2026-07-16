@@ -36,6 +36,12 @@ foregrounded; all 57 accessibility snapshots are springboard-empty. DO NOT count
 evidence about the record UI. Rerun required once install settles (best-effort overnight; phone
 may lock).
 
+## 3b. UI test retry (01:09) — device LOCKED
+Retry of RecordStopUITests failed pre-launch: "Xcode cannot launch PickleballAppUITests on arnav
+because the device is locked" (owner asleep). Inconclusive by lock, not a product signal. Device
+work resumes with the owner's 60-second morning script (device_build/MORNING_SCRIPT.md), whose
+steps 1-2 answer the banner-visibility question directly.
+
 ## 4. Open question carried to wave 2 (ios_recordvis_20260716)
 On-device visual confirmation that the blocked banner RENDERS (state machine provably reaches it;
 simulator portrait screenshot proves the layout renders it). Wave 2 makes blocked states

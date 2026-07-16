@@ -1,0 +1,13 @@
+getpwuid_r did not find a match for uid 501
+Timestamp               Ty Process[PID:TID]
+2026-07-16 08:57:20.715 I  Pickleball[15762:6cd0d7] [com.arnavchokshi.pickleball:RecordPath] First-appearance orientation refresh landscapeRight -> portrait
+2026-07-16 08:57:20.719 I  Pickleball[15762:6cd0d7] [com.arnavchokshi.pickleball:RecordPath] State idle -> requestingAccess; reason=prepare
+2026-07-16 08:57:20.755 I  Pickleball[15762:6cd19c] [com.arnavchokshi.pickleball:RecordPath] Permission request entered: camera then microphone
+2026-07-16 08:57:20.761 I  Pickleball[15762:6cd19c] [com.arnavchokshi.pickleball:RecordPath] Camera permission already determined
+2026-07-16 08:57:20.765 I  Pickleball[15762:6cd19c] [com.arnavchokshi.pickleball:RecordPath] Microphone permission already determined
+2026-07-16 08:57:20.772 I  Pickleball[15762:6cd19c] [com.arnavchokshi.pickleball:RecordPath] Permission request terminal camera=authorized microphone=authorized
+2026-07-16 08:57:20.774 I  Pickleball[15762:6cd19c] [com.arnavchokshi.pickleball:RecordPath] Configure entered mode=standard60 orientation=portrait
+2026-07-16 08:57:20.774 E  Pickleball[15762:6cd19c] [com.arnavchokshi.pickleball:RecordPath] Configure blocked: landscape required
+2026-07-16 08:57:20.778 I  Pickleball[15762:6cd0d7] [com.arnavchokshi.pickleball:RecordPath] State requestingAccess -> blocked("Rotate to landscape to record"); reason=preparation error
+2026-07-16 08:57:20.779 I  Pickleball[15762:6cd0d7] [com.arnavchokshi.pickleball:RecordPath] Posting blocked-state accessibility announcement
+2026-07-16 08:57:20.779 I  Pickleball[15762:6cd0d7] [com.arnavchokshi.pickleball:RecordPath] Preparation attempt reached terminal state=blocked("Rotate to landscape to record")

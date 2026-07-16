@@ -399,6 +399,154 @@ final class CaptureViewModelTests: XCTestCase {
         XCTAssertTrue(model.isRecordButtonEnabled)
     }
 
+    @MainActor
+    func testBlockedModelPublishesPersistentRotateGuidanceBeforeAnyTap() async {
+        let controller = FakeCameraCaptureController()
+        controller.configureError = CameraCaptureControllerError.landscapeRequired
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            }
+        )
+
+        await model.prepare(isLandscapeViewport: false)
+
+        XCTAssertEqual(model.status, .blocked("Rotate to landscape to record"))
+        XCTAssertEqual(model.recordGuidancePresentation?.kind, .rotateToLandscape)
+        XCTAssertEqual(model.recordGuidancePresentation?.title, "Rotate to landscape")
+        XCTAssertTrue(model.recordGuidancePresentation?.isPersistent == true)
+        XCTAssertEqual(model.recordGuidancePresentation?.accentClusterCount, 1)
+
+        controller.configureError = nil
+        await model.prepare(isLandscapeViewport: true)
+
+        XCTAssertEqual(model.status, .ready)
+        XCTAssertNil(model.recordGuidancePresentation)
+    }
+
+    @MainActor
+    func testBlockedAndPreparingTapsPublishImmediateVisibleReactions() async {
+        let blockedController = FakeCameraCaptureController()
+        blockedController.configureError = CameraCaptureControllerError.landscapeRequired
+        let blockedModel = CaptureViewModel(
+            controller: blockedController,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            }
+        )
+        await blockedModel.prepare()
+        let blockedSequence = blockedModel.recordTapFeedback.sequence
+
+        let blockedReaction = blockedModel.noteRecordControlTap()
+
+        XCTAssertEqual(blockedModel.recordTapFeedback.sequence, blockedSequence + 1)
+        XCTAssertEqual(blockedReaction.kind, .blocked)
+        XCTAssertTrue(blockedReaction.hasVisibleConsequence)
+        XCTAssertTrue(blockedReaction.usesWarningHaptic)
+        XCTAssertEqual(blockedReaction.reducedMotionEmphasis, .staticHighlight)
+
+        let preparingController = FakeCameraCaptureController()
+        preparingController.configureDelayNanoseconds = 100_000_000
+        let preparingModel = CaptureViewModel(
+            controller: preparingController,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            },
+            preparationTimeoutNanoseconds: 1_000_000_000
+        )
+        let preparation = Task { await preparingModel.prepare() }
+        while preparingModel.status != .requestingAccess {
+            await Task.yield()
+        }
+
+        let preparingReaction = preparingModel.noteRecordControlTap()
+
+        XCTAssertEqual(preparingReaction.kind, .preparing)
+        XCTAssertEqual(preparingReaction.message, "Setting up camera…")
+        XCTAssertTrue(preparingReaction.hasVisibleConsequence)
+        _ = await preparation.value
+    }
+
+    @MainActor
+    func testRecordButtonAccessibilityContractIsPresentAndEnabledInAllStates() async {
+        let idle = CaptureViewModel()
+        assertRecordButtonAccessible(idle)
+
+        let preparingController = FakeCameraCaptureController()
+        preparingController.configureDelayNanoseconds = 100_000_000
+        let preparing = CaptureViewModel(
+            controller: preparingController,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            },
+            preparationTimeoutNanoseconds: 1_000_000_000
+        )
+        let preparation = Task { await preparing.prepare() }
+        while preparing.status != .requestingAccess {
+            await Task.yield()
+        }
+        assertRecordButtonAccessible(preparing)
+        _ = await preparation.value
+        assertRecordButtonAccessible(preparing)
+
+        let blockedController = FakeCameraCaptureController()
+        blockedController.configureError = CameraCaptureControllerError.landscapeRequired
+        let blocked = CaptureViewModel(
+            controller: blockedController,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            }
+        )
+        await blocked.prepare()
+        assertRecordButtonAccessible(blocked)
+
+        let recordingController = FakeCameraCaptureController()
+        let recording = CaptureViewModel(
+            controller: recordingController,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            }
+        )
+        await recording.prepare()
+        await recording.toggleRecording()
+        assertRecordButtonAccessible(recording)
+        XCTAssertEqual(recording.status, .recording)
+    }
+
+    @MainActor
+    func testEveryBlockedEntryPostsTheVoiceOverAnnouncementAtModelBoundary() async {
+        let controller = FakeCameraCaptureController()
+        controller.configureError = CameraCaptureControllerError.landscapeRequired
+        var announcements: [String] = []
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            },
+            announceBlockedState: { announcements.append($0) }
+        )
+
+        await model.prepare()
+        await model.prepare()
+
+        XCTAssertEqual(announcements, [
+            "Recording blocked. Rotate to landscape to record",
+            "Recording blocked. Rotate to landscape to record",
+        ])
+    }
+
+    @MainActor
+    private func assertRecordButtonAccessible(
+        _ model: CaptureViewModel,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertTrue(model.recordButtonAccessibility.elementExists, file: file, line: line)
+        XCTAssertTrue(model.recordButtonAccessibility.isEnabled, file: file, line: line)
+        XCTAssertTrue(model.isRecordButtonEnabled, file: file, line: line)
+    }
+
     fileprivate static func captureDescriptor(sessionID: String) throws -> CapturePackageDescriptor {
         try CapturePackageDescriptor(
             sessionID: sessionID,

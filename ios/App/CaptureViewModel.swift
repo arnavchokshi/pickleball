@@ -31,6 +31,7 @@ final class CaptureViewModel: ObservableObject {
     @Published private(set) var permissions = CapturePermissionSnapshot(camera: .notDetermined, microphone: .notDetermined)
     @Published private(set) var replayBenchmarkStatus: ReplayBenchmarkStatus = .idle
     @Published private(set) var status: Status = .idle
+    @Published private(set) var recordTapFeedback = RecordControlTapFeedback.initial
     @Published private(set) var capturePolicyEnforcement: CapturePolicyEnforcementReport?
     @Published private(set) var recordFlowPhase: DinkVisionRecordFlowPhase = .idle
     @Published private(set) var setupPassStatus: DinkVisionSetupPassStatus = .idle
@@ -70,6 +71,7 @@ final class CaptureViewModel: ObservableObject {
     private var activeRecordActionID: UUID?
     private let preparationTimeoutNanoseconds: UInt64
     private let orientationResolver: (Bool) -> CaptureDeviceOrientation
+    private let announceBlockedState: (String) -> Void
 
     static let modes: [CaptureMode] = [.standard60, .swing120, .ballPhysics240, .quality4K60]
     static let preparationTimeoutMessage = "Camera setup took too long. Tap Retry."
@@ -81,7 +83,10 @@ final class CaptureViewModel: ObservableObject {
             await CameraCaptureController.requestPermissions()
         },
         preparationTimeoutNanoseconds: UInt64 = 8_000_000_000,
-        orientationResolver: ((Bool) -> CaptureDeviceOrientation)? = nil
+        orientationResolver: ((Bool) -> CaptureDeviceOrientation)? = nil,
+        announceBlockedState: @escaping (String) -> Void = { announcement in
+            UIAccessibility.post(notification: .announcement, argument: announcement)
+        }
     ) {
         self.controller = controller
         self.requestPermissions = requestPermissions
@@ -89,6 +94,7 @@ final class CaptureViewModel: ObservableObject {
         self.orientationResolver = orientationResolver ?? { fallbackIsLandscape in
             Self.deviceOrientation(fallbackIsLandscape: fallbackIsLandscape)
         }
+        self.announceBlockedState = announceBlockedState
     }
 
     deinit {
@@ -108,10 +114,19 @@ final class CaptureViewModel: ObservableObject {
     }
 
     var isRecordButtonEnabled: Bool {
-        if case .requestingAccess = status {
-            return false
-        }
-        return true
+        recordButtonAccessibility.isEnabled
+    }
+
+    var recordControlState: RecordControlState {
+        Self.recordControlState(for: status)
+    }
+
+    var recordButtonAccessibility: RecordControlAccessibilityState {
+        RecordControlInteractionPolicy.accessibility(for: recordControlState)
+    }
+
+    var recordGuidancePresentation: RecordGuidancePresentation? {
+        RecordControlInteractionPolicy.guidance(for: recordControlState)
     }
 
     var blockedReason: String? {
@@ -237,7 +252,21 @@ final class CaptureViewModel: ObservableObject {
         await beginPreparation(requestAccess: true)
     }
 
-    func handleRecordTap() async {
+    @discardableResult
+    func noteRecordControlTap() -> RecordControlTapReaction {
+        let reaction = RecordControlInteractionPolicy.tapReaction(for: recordControlState)
+        recordTapFeedback = RecordControlTapFeedback(
+            sequence: recordTapFeedback.sequence + 1,
+            reaction: reaction
+        )
+        Self.recordPathLogger.info("Record tap visible reaction sequence=\(self.recordTapFeedback.sequence, privacy: .public) kind=\(String(describing: reaction.kind), privacy: .public)")
+        return reaction
+    }
+
+    func handleRecordTap(registerVisibleFeedback: Bool = true) async {
+        if registerVisibleFeedback {
+            noteRecordControlTap()
+        }
         Self.recordPathLogger.info("Record tap entered state=\(String(describing: self.status), privacy: .public)")
         switch status {
         case .idle, .blocked:
@@ -533,6 +562,13 @@ final class CaptureViewModel: ObservableObject {
         status = newStatus
         recordFlowPhase = phase
         Self.recordPathLogger.info("State \(String(describing: previousStatus), privacy: .public) -> \(String(describing: newStatus), privacy: .public); reason=\(reason, privacy: .public)")
+        if let announcement = RecordControlInteractionPolicy.blockedAnnouncement(
+            previous: Self.recordControlState(for: previousStatus),
+            current: Self.recordControlState(for: newStatus)
+        ) {
+            Self.recordPathLogger.info("Posting blocked-state accessibility announcement")
+            announceBlockedState(announcement)
+        }
     }
 
     private func block(_ message: String, phase: DinkVisionRecordFlowPhase, reason: String) {
@@ -960,6 +996,21 @@ final class CaptureViewModel: ObservableObject {
             return .landscapeRight
         default:
             return fallbackIsLandscape ? .landscapeRight : .portrait
+        }
+    }
+
+    nonisolated private static func recordControlState(for status: Status) -> RecordControlState {
+        switch status {
+        case .idle:
+            return .idle
+        case .requestingAccess:
+            return .preparing
+        case .ready, .finished:
+            return .ready
+        case .recording:
+            return .recording
+        case .blocked(let reason):
+            return .blocked(reason: reason)
         }
     }
 

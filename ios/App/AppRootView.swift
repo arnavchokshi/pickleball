@@ -388,16 +388,14 @@ private struct DinkVisionTabBar: View {
                         now: context.date
                     )
                     Button {
-                        Task {
-                            await handleRecordTap()
-                        }
+                        handleRecordTap()
                     } label: {
                         ZStack {
                             DinkVisionTexturedRecordButton(
                                 isRecording: recordModel.isRecording,
-                                isEnabled: canRecordFromTab,
                                 reduceMotion: reduceMotion,
-                                forcePressed: forceRecordPressed
+                                forcePressed: forceRecordPressed,
+                                tapFeedback: recordModel.recordTapFeedback
                             )
                             if let elapsed = presentation.elapsedText {
                                 Text(elapsed)
@@ -413,7 +411,6 @@ private struct DinkVisionTabBar: View {
                         }
                     }
                     .buttonStyle(.plain)
-                    .disabled(!canRecordFromTab)
                     .frame(width: layout.recordButtonDiameter + 14, height: layout.recordButtonDiameter + 14)
                     .contentShape(Circle())
                     .position(placement.center)
@@ -511,14 +508,18 @@ private struct DinkVisionTabBar: View {
         }
     }
 
-    private var canRecordFromTab: Bool {
-        recordModel.isRecordButtonEnabled
-    }
-
-    private func handleRecordTap() async {
+    private func handleRecordTap() {
         selectedTab = .record
-        DinkVisionHaptics.impact(.medium)
-        await recordModel.handleRecordTap()
+        let reaction = recordModel.noteRecordControlTap()
+        if reaction.usesWarningHaptic {
+            DinkVisionHaptics.notification(.warning)
+        } else {
+            DinkVisionHaptics.impact(.medium)
+        }
+        Task {
+            await Task.yield()
+            await recordModel.handleRecordTap(registerVisibleFeedback: false)
+        }
     }
 }
 
@@ -567,16 +568,24 @@ private enum DinkVisionHaptics {
         generator.prepare()
         generator.impactOccurred()
     }
+
+    @MainActor
+    static func notification(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+        let generator = UINotificationFeedbackGenerator()
+        generator.prepare()
+        generator.notificationOccurred(type)
+    }
 }
 
 private struct DinkVisionTexturedRecordButton: View {
     var isRecording: Bool
-    var isEnabled: Bool
     var reduceMotion: Bool
     var forcePressed: Bool = false
+    var tapFeedback: RecordControlTapFeedback
     @State private var isPressed = false
     @State private var breath = false
     @State private var wobbleDegrees: Double = 0
+    @State private var attentionHighlight = false
 
     private let layout = DinkVisionChromeLayout.tabLayout
 
@@ -588,6 +597,14 @@ private struct DinkVisionTexturedRecordButton: View {
                 .scaleEffect(visual.scale * (breathScale(for: visual)))
                 .rotationEffect(.degrees(wobbleDegrees))
                 .shadow(color: .black.opacity(isPressed ? 0.16 : 0.28), radius: isPressed ? 5 : 12, y: isPressed ? 3 : 8)
+                .overlay {
+                    Circle()
+                        .stroke(
+                            attentionHighlight ? DinkVisionColor.trailRed : Color.clear,
+                            lineWidth: attentionHighlight ? 7 : 0
+                        )
+                        .padding(-7)
+                }
 
             if isRecording {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
@@ -598,7 +615,6 @@ private struct DinkVisionTexturedRecordButton: View {
             }
         }
         .frame(width: 86, height: 86)
-        .opacity(isEnabled ? 1 : 0.62)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: DinkVisionRecordButtonVisual.idle.breathingDurationSeconds).repeatForever(autoreverses: true)) {
@@ -617,11 +633,49 @@ private struct DinkVisionTexturedRecordButton: View {
                 }
             }
         }
+        .onChange(of: tapFeedback.sequence) { _, sequence in
+            guard tapFeedback.reaction.kind != .standard else {
+                return
+            }
+            showAttentionReaction(sequence: sequence)
+        }
         .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .onChanged { _ in isPressed = true }
                 .onEnded { _ in isPressed = false }
         )
+    }
+
+    private func showAttentionReaction(sequence: Int) {
+        attentionHighlight = true
+        if !reduceMotion {
+            wobbleDegrees = -3
+            withAnimation(.easeInOut(duration: 0.08)) {
+                wobbleDegrees = 3
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                guard tapFeedback.sequence == sequence else { return }
+                withAnimation(.easeInOut(duration: 0.08)) {
+                    wobbleDegrees = -2
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+                guard tapFeedback.sequence == sequence else { return }
+                withAnimation(.easeInOut(duration: 0.08)) {
+                    wobbleDegrees = 0
+                }
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
+            guard tapFeedback.sequence == sequence else { return }
+            if reduceMotion {
+                attentionHighlight = false
+            } else {
+                withAnimation(.easeOut(duration: 0.12)) {
+                    attentionHighlight = false
+                }
+            }
+        }
     }
 
     private var visualState: DinkVisionRecordButtonVisual {
@@ -779,8 +833,10 @@ private struct DinkVisionSideRoundedRectangle: Shape {
 private struct DinkVisionRecordScreen: View {
     var isActive: Bool
     @ObservedObject private var model: CaptureViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isCourtOverlayEnabled = true
     @State private var selectedPolicyHint: String?
+    @State private var guidanceEmphasized = false
 
     init(
         isActive: Bool = true,
@@ -817,12 +873,18 @@ private struct DinkVisionRecordScreen: View {
                     if let blockedReason = model.blockedReason {
                         blockedReasonBanner(blockedReason)
                             .padding(.top, 10)
+                            .padding(.leading, proxy.size.width > proxy.size.height ? DinkVisionMetric.tabBarHeight : 0)
                     }
                     Spacer(minLength: 20)
                     recordFooter
                         .padding(.bottom, DinkVisionChromeLayout.scrollBottomPadding)
                 }
                 .padding(.horizontal, 18)
+
+                if let guidance = model.recordGuidancePresentation,
+                   guidance.kind != .preparing {
+                    recordGuidanceOverlay(guidance, proxy: proxy)
+                }
 
                 if case .saving = model.recordFlowPhase {
                     saveCard(title: "Saving\nsidecar", detail: "local")
@@ -852,7 +914,7 @@ private struct DinkVisionRecordScreen: View {
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
                 }
             }
-            .animation(.spring(response: 0.32, dampingFraction: 0.86), value: model.recordFlowPhase)
+            .animation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.86), value: model.recordFlowPhase)
             .accessibilityIdentifier("DinkVisionScreen-Record")
             .task(id: isActive) {
                 guard isActive else {
@@ -868,6 +930,12 @@ private struct DinkVisionRecordScreen: View {
                 Task {
                     await model.updateOrientation(isLandscapeViewport: proxy.size.width > proxy.size.height)
                 }
+            }
+            .onChange(of: model.recordTapFeedback.sequence) { _, sequence in
+                guard model.recordTapFeedback.reaction.kind != .standard else {
+                    return
+                }
+                emphasizeGuidance(for: sequence)
             }
         }
         .background(DinkVisionColor.courtGreen)
@@ -939,30 +1007,154 @@ private struct DinkVisionRecordScreen: View {
 
     private func blockedReasonBanner(_ reason: String) -> some View {
         Button {
-            Task {
-                await model.prepare()
-            }
+            retryCapture()
         } label: {
-            Label {
-                VStack(spacing: 2) {
+            HStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.title2.weight(.black))
+                VStack(alignment: .leading, spacing: 4) {
                     Text(reason)
-                    Text("Retry")
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("Tap to retry")
+                        .font(.subheadline.weight(.black))
                         .underline()
                 }
-            } icon: {
-                Image(systemName: "exclamationmark.triangle.fill")
+                Spacer(minLength: 4)
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .font(.title2.weight(.black))
             }
-            .font(.system(size: 14, weight: .heavy, design: .rounded))
+            .font(.headline.weight(.heavy))
+            .fontDesign(.rounded)
             .foregroundStyle(DinkVisionColor.ink)
-            .multilineTextAlignment(.center)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-            .background(DinkVisionColor.cream, in: Capsule())
-            .shadow(color: .black.opacity(0.20), radius: 10, y: 4)
+            .multilineTextAlignment(.leading)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(guidanceSurfaceFill, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(DinkVisionColor.ink, lineWidth: guidanceEmphasized ? 5 : 3)
+            }
+            .shadow(color: .black.opacity(0.28), radius: 14, y: 6)
+            .scaleEffect(guidanceScale)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(reason) Retry")
         .accessibilityIdentifier("DinkVisionRecordBlockedReason")
+    }
+
+    @ViewBuilder
+    private func recordGuidanceOverlay(
+        _ guidance: RecordGuidancePresentation,
+        proxy: GeometryProxy
+    ) -> some View {
+        let isLandscape = proxy.size.width > proxy.size.height
+        ViewThatFits(in: .vertical) {
+            VStack {
+                Spacer(minLength: isLandscape ? 76 : 150)
+                blockerPrompt(guidance)
+                Spacer(minLength: isLandscape ? 68 : DinkVisionChromeLayout.scrollBottomPadding + 74)
+            }
+            ScrollView {
+                blockerPrompt(guidance)
+                    .padding(.vertical, 12)
+            }
+            .scrollIndicators(.hidden)
+        }
+        .padding(.leading, isLandscape ? DinkVisionMetric.tabBarHeight + 24 : 18)
+        .padding(.trailing, 18)
+        .padding(.top, max(8, proxy.safeAreaInsets.top))
+        .padding(.bottom, max(8, proxy.safeAreaInsets.bottom))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private func blockerPrompt(_ guidance: RecordGuidancePresentation) -> some View {
+        Button {
+            retryCapture()
+        } label: {
+            VStack(spacing: 12) {
+                Image(systemName: guidance.systemImage)
+                    .font(.system(.largeTitle, design: .rounded, weight: .black))
+                    .symbolRenderingMode(.monochrome)
+                Text(guidance.title)
+                    .font(.title2.weight(.black))
+                    .fontDesign(.rounded)
+                    .multilineTextAlignment(.center)
+                Text(guidance.message)
+                    .font(.body.weight(.semibold))
+                    .fontDesign(.rounded)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let actionTitle = guidance.actionTitle {
+                    Label(actionTitle, systemImage: "arrow.clockwise")
+                        .font(.headline.weight(.black))
+                        .fontDesign(.rounded)
+                        .foregroundStyle(DinkVisionColor.cream)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 10)
+                        .background(DinkVisionColor.ink, in: Capsule())
+                }
+            }
+            .foregroundStyle(DinkVisionColor.ink)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 22)
+            .frame(maxWidth: 430)
+            .background(guidanceSurfaceFill, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous)
+                    .stroke(DinkVisionColor.ink, lineWidth: guidanceEmphasized ? 6 : 3)
+            }
+            .overlay(alignment: .topTrailing) {
+                SketchSlashes(color: DinkVisionColor.trailRed, lineWidth: 4)
+                    .frame(width: 42, height: 42)
+                    .padding(14)
+                    .accessibilityHidden(true)
+            }
+            .shadow(color: .black.opacity(0.32), radius: 24, y: 12)
+            .scaleEffect(guidanceScale)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(guidance.title). \(guidance.message). Retry")
+        .accessibilityIdentifier("DinkVisionRecordBlockerPrompt")
+    }
+
+    private var guidanceSurfaceFill: Color {
+        guidanceEmphasized ? DinkVisionColor.ballYellow : DinkVisionColor.cream
+    }
+
+    private var guidanceScale: CGFloat {
+        guard !reduceMotion else { return 1 }
+        return guidanceEmphasized ? 1.035 : 1
+    }
+
+    private func retryCapture() {
+        DinkVisionHaptics.notification(.warning)
+        emphasizeGuidance(for: model.recordTapFeedback.sequence)
+        Task {
+            await Task.yield()
+            await model.prepare()
+        }
+    }
+
+    private func emphasizeGuidance(for sequence: Int) {
+        if reduceMotion {
+            guidanceEmphasized = true
+        } else {
+            withAnimation(.spring(response: 0.18, dampingFraction: 0.56)) {
+                guidanceEmphasized = true
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
+            guard model.recordTapFeedback.sequence == sequence else { return }
+            if reduceMotion {
+                guidanceEmphasized = false
+            } else {
+                withAnimation(.easeOut(duration: 0.14)) {
+                    guidanceEmphasized = false
+                }
+            }
+        }
     }
 
     private var recordingBadge: some View {
@@ -1001,23 +1193,28 @@ private struct DinkVisionRecordScreen: View {
     private var permissionPrimer: some View {
         VStack(spacing: 12) {
             DinkVisionOwnerMark(height: 82)
-            Text("Camera + mic")
+            Text(model.recordGuidancePresentation?.title ?? "Setting up camera…")
                 .font(.system(size: 22, weight: .heavy, design: .rounded))
                 .foregroundStyle(DinkVisionColor.ink)
-            Text("Accept access, then the record button is ready.")
+            Text(model.recordGuidancePresentation?.message ?? "Approve Camera + Microphone if asked.")
                 .font(.system(size: 13, weight: .bold, design: .rounded))
                 .foregroundStyle(DinkVisionColor.mutedText)
                 .multilineTextAlignment(.center)
         }
         .padding(22)
         .frame(maxWidth: 270)
-        .background(DinkVisionColor.cardWhite, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+        .background(guidanceSurfaceFill, in: RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DinkVisionMetric.cardRadius, style: .continuous)
+                .stroke(DinkVisionColor.ink, lineWidth: guidanceEmphasized ? 5 : 0)
+        }
         .overlay(alignment: .topTrailing) {
             SketchSlashes(color: DinkVisionColor.ink, lineWidth: 4)
                 .frame(width: 38, height: 38)
                 .offset(x: -18, y: -10)
         }
         .shadow(color: .black.opacity(0.20), radius: 24, y: 12)
+        .scaleEffect(guidanceScale)
         .transition(.opacity.combined(with: .scale(scale: 0.96)))
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("DinkVisionPermissionPrimer")
@@ -1025,9 +1222,6 @@ private struct DinkVisionRecordScreen: View {
 
     private var shouldShowPermissionPrimer: Bool {
         if case .requestingAccess = model.status {
-            return true
-        }
-        if case .permissionDenied = model.recordFlowPhase {
             return true
         }
         return false
