@@ -1,0 +1,7 @@
+getpwuid_r did not find a match for uid 501
+Timestamp               Ty Process[PID:TID]
+2026-07-16 00:39:44.260 I  Pickleball[49761:6248fd] [com.arnavchokshi.pickleball:RecordPath] First-appearance orientation refresh landscapeRight -> portrait
+2026-07-16 00:39:44.265 I  Pickleball[49761:6248fd] [com.arnavchokshi.pickleball:RecordPath] State idle -> requestingAccess; reason=prepare
+2026-07-16 00:39:44.321 I  Pickleball[49761:624915] [com.arnavchokshi.pickleball:RecordPath] Permission request entered: camera then microphone
+2026-07-16 00:39:52.559 E  Pickleball[49761:6248fd] [com.arnavchokshi.pickleball:RecordPath] Preparation watchdog expired after 8.000000 seconds
+2026-07-16 00:39:52.559 I  Pickleball[49761:6248fd] [com.arnavchokshi.pickleball:RecordPath] State requestingAccess -> blocked("Camera setup took too long. Tap Retry."); reason=bounded preparation watchdog

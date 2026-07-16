@@ -1,6 +1,7 @@
 #if os(iOS)
 @preconcurrency import AVFoundation
 import Foundation
+import OSLog
 import PickleballCore
 import PickleballGuidance
 
@@ -17,8 +18,8 @@ public protocol CameraCaptureControlling: AnyObject, Sendable {
         packageRootURL: URL
     ) async throws -> CapturePackageDescriptor
 
-    func startPreview() async
-    func stopPreview() async
+    func startPreview() async throws
+    func stopPreview() async throws
     func performARKitSetupPass(timeoutSeconds: Double) async -> ARKitSetupPassSidecar
     func startRecording() async throws -> CapturePackageDescriptor
     func stopRecording() async throws
@@ -71,6 +72,10 @@ extension CameraCaptureControlling {
 }
 
 public final class QueuedCameraCaptureController: CameraCaptureControlling, @unchecked Sendable {
+    private static let recordPathLogger = Logger(
+        subsystem: "com.arnavchokshi.pickleball",
+        category: "RecordPath"
+    )
     public let controller: CameraCaptureController
     private let sessionQueue: CameraSessionQueue
 
@@ -115,16 +120,20 @@ public final class QueuedCameraCaptureController: CameraCaptureControlling, @unc
         }
     }
 
-    public func startPreview() async {
-        _ = try? await sessionQueue.run {
-            self.controller.startPreview()
+    public func startPreview() async throws {
+        Self.recordPathLogger.info("Queued preview start requested")
+        try await sessionQueue.run {
+            try self.controller.startPreview()
         }
+        Self.recordPathLogger.info("Queued preview start completed")
     }
 
-    public func stopPreview() async {
-        _ = try? await sessionQueue.run {
-            self.controller.stopPreview()
+    public func stopPreview() async throws {
+        Self.recordPathLogger.info("Queued preview stop requested")
+        try await sessionQueue.run {
+            try self.controller.stopPreview()
         }
+        Self.recordPathLogger.info("Queued preview stop completed")
     }
 
     public func performARKitSetupPass(timeoutSeconds: Double = 4.0) async -> ARKitSetupPassSidecar {
@@ -132,7 +141,12 @@ public final class QueuedCameraCaptureController: CameraCaptureControlling, @unc
     }
 
     public func latestGravity() async -> [Double] {
-        (try? await sessionQueue.run { self.controller.latestGravity }) ?? [0, -1, 0]
+        do {
+            return try await sessionQueue.run { self.controller.latestGravity }
+        } catch {
+            Self.recordPathLogger.error("Gravity read failed; using explicit fallback: \(String(describing: error), privacy: .public)")
+            return [0, -1, 0]
+        }
     }
 
     public func startRecording() async throws -> CapturePackageDescriptor {
@@ -152,11 +166,21 @@ public final class QueuedCameraCaptureController: CameraCaptureControlling, @unc
     }
 
     public func currentLiveGuidanceSample() async -> LiveGuidanceSample {
-        (try? await sessionQueue.run { self.controller.currentLiveGuidanceSample() }) ?? LiveGuidanceSample()
+        do {
+            return try await sessionQueue.run { self.controller.currentLiveGuidanceSample() }
+        } catch {
+            Self.recordPathLogger.error("Live guidance read failed; reporting unavailable: \(String(describing: error), privacy: .public)")
+            return LiveGuidanceSample()
+        }
     }
 
     public func currentPolicyEnforcementReport() async -> CapturePolicyEnforcementReport? {
-        try? await sessionQueue.run { self.controller.currentPolicyEnforcementReport() }
+        do {
+            return try await sessionQueue.run { self.controller.currentPolicyEnforcementReport() }
+        } catch {
+            Self.recordPathLogger.error("Policy read failed; reporting unavailable: \(String(describing: error), privacy: .public)")
+            return nil
+        }
     }
 
     public func setProfileCapturePayload(_ payload: ProfileCapturePayload?) {

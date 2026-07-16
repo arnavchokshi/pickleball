@@ -1,0 +1,87 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild test-without-building -xctestrun /tmp/ios_recordpath_manager_tests_dd/Build/Products/Pickleball_iphonesimulator26.5-arm64.xctestrun -destination "platform=iOS Simulator,id=C719AFE6-FE07-48BF-A042-534A6FEF8748" "-only-testing:PickleballAppTests" -resultBundlePath /tmp/ios_recordpath_manager_tests_dd/AppTests.xcresult
+
+2026-07-16 00:15:14.450 xcodebuild[46142:6376266] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Writing result bundle at path:
+	/tmp/ios_recordpath_manager_tests_dd/AppTests.xcresult
+
+2026-07-16 00:15:14.486 xcodebuild[46142:6376266] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-07-16 00:15:16.912 xcodebuild[46142:6376266] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-07-16 00:15:17.340 xcodebuild[46142:6376266] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-07-16 00:15:17.450 xcodebuild[46142:6376266] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+2026-07-16 00:15:20.182 xcodebuild[46142:6376266] [MT] IDERunDestination: Supported platforms for the buildables in the current scheme is empty.
+Testing started
+Test suite 'ANELatencyBenchmarkTests' started on 'Clone 1 of DinkVision-Test - Pickleball (47162)'
+Test case 'ANELatencyBenchmarkTests.testMeasureOnDeviceLatencyForConvertedModels()' failed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.354 seconds)
+Test suite 'LiveOverlayCaptureViewModelTests' started on 'Clone 1 of DinkVision-Test - Pickleball (47162)'
+Test case 'LiveOverlayCaptureViewModelTests.testBallIndicatorPolicyDefaultAlwaysComingSoonRegardlessOfInput()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'LiveOverlayCaptureViewModelTests.testDefaultCameraControllerGuidanceSampleFailsClosedThroughTheRealEvaluator()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.006 seconds)
+Test case 'LiveOverlayCaptureViewModelTests.testInitialLiveOverlayStateIsHonestlyEmptyBeforeAnySignalArrives()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.002 seconds)
+Test case 'LiveOverlayCaptureViewModelTests.testLiveOverlayFrameBuildsPlayerFootRingsForCameraPreview()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.002 seconds)
+Test case 'LiveOverlayCaptureViewModelTests.testLiveOverlayFramePrefersEngineSizedFootRingsForCameraPreview()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.002 seconds)
+Test case 'LiveOverlayCaptureViewModelTests.testTrackingBallStateBuildsTrailAndCandidateContactOverlayForCameraPreview()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.002 seconds)
+Test suite 'CaptureViewModelTests' started on 'Clone 1 of DinkVision-Test - Pickleball (47162)'
+Test case 'CaptureViewModelTests.testC1ConfigureWatchdogCannotLeaveRecordButtonDisabledForever()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.043 seconds)
+Test case 'CaptureViewModelTests.testC2ARKitSetupStallTimesOutToLoudBlockedState()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.030 seconds)
+Test case 'CaptureViewModelTests.testC3PreviewOwnershipFailureSurfacesBlockedReasonAndRetry()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.004 seconds)
+Test case 'CaptureViewModelTests.testC4ConcurrentPrepareCallsCoalesceIntoOnePreparation()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.054 seconds)
+Test case 'CaptureViewModelTests.testC5DeniedTCCPermissionsAreActionableAndRetryable()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.004 seconds)
+Test case 'CaptureViewModelTests.testC6FirstAppearanceOrientationRefreshPrecedesConfiguration()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.009 seconds)
+Test case 'CaptureViewModelTests.testInitialCaptureStateIsIdleAndCameraFree()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.002 seconds)
+Test case 'CaptureViewModelTests.testPortraitRecordTapCanRetryInLandscapeAndStartRecording()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.024 seconds)
+Test case 'CaptureViewModelTests.testPrepareRunsARKitSetupPassBeforeStartingAVCapturePreview()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.004 seconds)
+Test case 'CaptureViewModelTests.testPrepareSurfacesCapturePolicyViolations()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.006 seconds)
+Test case 'CaptureViewModelTests.testPrepareUsesInjectedAsyncCameraController()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.006 seconds)
+Test case 'CaptureViewModelTests.testProfileChecklistRecordsStepMetadataForSidecarPayload()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.002 seconds)
+Test case 'CaptureViewModelTests.testRecordingStartWatchdogCannotBecomeAnotherSilentTap()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.039 seconds)
+Test case 'CaptureViewModelTests.testRefreshAfterFinishedRecordingRerunsStaleSetupPassAndRestartsPreview()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.023 seconds)
+Test case 'CaptureViewModelTests.testToggleRecordingAwaitsInjectedControllerAndStoresReturnedDescriptor()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.005 seconds)
+Test case 'CaptureViewModelTests.testToggleRecordingDoesNotStartWhenCameraPreparationIsBlocked()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.007 seconds)
+Test suite 'AppFlowTests' started on 'Clone 1 of DinkVision-Test - Pickleball (47162)'
+Test case 'AppFlowTests.testLaunchFlowStartsOnSplashThenMovesHomeThenCamera()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.002 seconds)
+Test case 'AppFlowTests.testOpenRealityReplayNavigatesFromHomeAndReturnHomeNavigatesBack()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'AppFlowTests.testOpenWorldViewerNavigatesFromHomeAndReturnHomeNavigatesBack()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'AppFlowTests.testSignedOutAuthGateLeavesRecordAndLocalReplaysReachable()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test suite 'UploadWiringTests' started on 'Clone 1 of DinkVision-Test - Pickleball (47162)'
+Test case 'UploadWiringTests.testCameraRollSelectionCoordinatorProducesUploadableLibraryItem()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.002 seconds)
+Test case 'UploadWiringTests.testRuntimeBaseURLOverrideThreadsToAllNetworkClients()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test suite 'DinkVisionProductTruthTests' started on 'Clone 1 of DinkVision-Test - Pickleball (47162)'
+Test case 'DinkVisionProductTruthTests.testAccessibilityPolicyRequiresDynamicTypeVoiceOverSafeAreaContrastAndReducedMotion()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionProductTruthTests.testFactsDecoderRendersOnlySourceLinkedDecodedValuesAndRejectsFabricationPaths()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.007 seconds)
+Test case 'DinkVisionProductTruthTests.testFiveTabOrderColdLaunchAndRecordingStopPresentation()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionProductTruthTests.testProfileSurfacesCurrentAccountUploadAndSessionOnlyNonOwnerPrivacyDefault()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionProductTruthTests.testReplayPresentationsCoverEveryHonestLifecycleStateAndDisclosePartialCapabilities()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionProductTruthTests.testSampleFactsNeverEnterRealStatsOrCoachDataSource()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.004 seconds)
+Test suite 'DinkVisionStateTests' started on 'Clone 1 of DinkVision-Test - Pickleball (47162)'
+Test case 'DinkVisionStateTests.testBrandV4AccentSitesStayLimitedToOwnerApprovedScreens()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests.testCenterRecordTabLayoutKeepsRecordAsRaisedMiddleItem()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests.testLegacyUnauditedFactsAreNeverUserFacing()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests.testOnlyExplicitSeededSampleRowRoutesToBundledFixture()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests.testPolicyChipMapperSeparatesEISLockAndLandscapeSignals()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests.testReplayListDataSourceLoadsRealLocalCapturesNewestFirst()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.024 seconds)
+Test case 'DinkVisionStateTests.testReplayListDataSourceReadsOptionalRealTrustSidecarFieldsWhenPresent()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.004 seconds)
+Test case 'DinkVisionStateTests.testReplayListDataSourceReturnsEmptyRowsWhenCaptureDirectoryIsMissing()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests2026-07-16 00:17:38.246 xcodebuild[46142:6376266] [MT] IDETestOperationsObserverDebug: 141.304 elapsed -- Testing started completed.
+2026-07-16 00:17:38.246 xcodebuild[46142:6376266] [MT] IDETestOperationsObserverDebug: 0.000 sec, +0.000 sec -- start
+2026-07-16 00:17:38.246 xcodebuild[46142:6376266] [MT] IDETestOperationsObserverDebug: 141.305 sec, +141.305 sec -- end
+
+Test session results, code coverage, and logs:
+	/tmp/ios_recordpath_manager_tests_dd/AppTests.xcresult
+
+Failing tests:
+	ANELatencyBenchmarkTests.testMeasureOnDeviceLatencyForConvertedModels()
+
+** TEST EXECUTE FAILED **
+
+.testReplayOpenTrailIsBriefAndDisabledForReducedMotion()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests.testReplayRouterNeverUsesFixtureForRealCaptureAndPreservesPartialState()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.004 seconds)
+Test case 'DinkVisionStateTests.testSplashLidGeometryMatchesOwnerArtworkFrame()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests.testSplashLidsCoverOnlyTheEyeLensAndOpenToZeroCoverage()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.000 seconds)
+Test case 'DinkVisionStateTests.testSplashStateMachineRunsSettleBlinkOpenUpThenCompletes()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.000 seconds)
+Test case 'DinkVisionStateTests.testSplashStateMachineUsesCrossfadeWhenReducedMotionIsEnabled()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests.testStrokeDrawOnAndStickerMotionRespectReducedMotion()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionStateTests.testTexturedRecordButtonStateMachineMatchesOwnerSpec()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.000 seconds)
+Test suite 'DinkVisionTabLayoutGeometryTests' started on 'Clone 1 of DinkVision-Test - Pickleball (47162)'
+Test case 'DinkVisionTabLayoutGeometryTests.testLandscapeLeadingRailPlacementFullyExposesButtonIntoContent()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionTabLayoutGeometryTests.testLandscapeTrailingRailPlacementFullyExposesButtonIntoContent()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)
+Test case 'DinkVisionTabLayoutGeometryTests.testPortraitPlacementPreservesExistingBottomBarGeometry()' passed on 'Clone 1 of DinkVision-Test - Pickleball (47162)' (0.001 seconds)

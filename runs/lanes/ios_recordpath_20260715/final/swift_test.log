@@ -1,0 +1,652 @@
+[0/1] Planning build
+Building for debugging...
+[0/3] Write sources
+[1/3] Write swift-version--58304C5D6DBC2206.txt
+[3/5] Emitting module PickleballCapture
+[4/5] Compiling PickleballCapture CameraCaptureController.swift
+Build complete! (1.33s)
+Test Suite 'All tests' started at 2026-07-15 20:27:18.061.
+Test Suite 'PickleballIOSPackageTests.xctest' started at 2026-07-15 20:27:18.065.
+Test Suite 'ARSessionProviderTests' started at 2026-07-15 20:27:18.065.
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testCameraOwnershipRejectsSimultaneousARAndAVCapture]' started.
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testCameraOwnershipRejectsSimultaneousARAndAVCapture]' passed (0.004 seconds).
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testCoreMotionOnlyFrameSamplesDoNotFabricateARKitPose]' started.
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testCoreMotionOnlyFrameSamplesDoNotFabricateARKitPose]' passed (0.001 seconds).
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testFakeARProviderPoseSamplesPopulateSidecarWithSetupPassAndCoreMotionPTS]' started.
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testFakeARProviderPoseSamplesPopulateSidecarWithSetupPassAndCoreMotionPTS]' passed (0.003 seconds).
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testLegacyARProviderPoseSamplesStillRoundTripForFixtureCompatibility]' started.
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testLegacyARProviderPoseSamplesStillRoundTripForFixtureCompatibility]' passed (0.001 seconds).
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testSetupPassStopsARBeforeAVCaptureOwnershipCanStart]' started.
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testSetupPassStopsARBeforeAVCaptureOwnershipCanStart]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testSetupPassUnavailableStopsProviderAndReportsReason]' started.
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testSetupPassUnavailableStopsProviderAndReportsReason]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testSetupRefreshPolicyUsesAgeAndGravityDelta]' started.
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testSetupRefreshPolicyUsesAgeAndGravityDelta]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testUnavailableSetupPassKeepsSidecarHonest]' started.
+Test Case '-[PickleballCaptureTests.ARSessionProviderTests testUnavailableSetupPassKeepsSidecarHonest]' passed (0.000 seconds).
+Test Suite 'ARSessionProviderTests' passed at 2026-07-15 20:27:18.076.
+	 Executed 8 tests, with 0 failures (0 unexpected) in 0.010 (0.012) seconds
+Test Suite 'AssistedCourtSeedTests' started at 2026-07-15 20:27:18.076.
+Test Case '-[PickleballCalibrationTests.AssistedCourtSeedTests testAssistedSeedEncodesStableJSON]' started.
+Test Case '-[PickleballCalibrationTests.AssistedCourtSeedTests testAssistedSeedEncodesStableJSON]' passed (0.000 seconds).
+Test Case '-[PickleballCalibrationTests.AssistedCourtSeedTests testOneInsideTapIsNotTrustedCalibration]' started.
+Test Case '-[PickleballCalibrationTests.AssistedCourtSeedTests testOneInsideTapIsNotTrustedCalibration]' passed (0.000 seconds).
+Test Case '-[PickleballCalibrationTests.AssistedCourtSeedTests testTapOutsideFrameFails]' started.
+Test Case '-[PickleballCalibrationTests.AssistedCourtSeedTests testTapOutsideFrameFails]' passed (0.000 seconds).
+Test Case '-[PickleballCalibrationTests.AssistedCourtSeedTests testTwoLineTapsRequireLineLabel]' started.
+Test Case '-[PickleballCalibrationTests.AssistedCourtSeedTests testTwoLineTapsRequireLineLabel]' passed (0.000 seconds).
+Test Suite 'AssistedCourtSeedTests' passed at 2026-07-15 20:27:18.078.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'AuthApiClientTests' started at 2026-07-15 20:27:18.078.
+Test Case '-[PickleballUploadTests.AuthApiClientTests test401LoginSurfacesReadableErrorAndStoresNothing]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests test401LoginSurfacesReadableErrorAndStoresNothing]' passed (0.010 seconds).
+Test Case '-[PickleballUploadTests.AuthApiClientTests test403RegisterSurfacesInvalidInviteDetail]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests test403RegisterSurfacesInvalidInviteDetail]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.AuthApiClientTests testLoginStoresAccessAndRefreshTokensAndSendsNativeTrue]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests testLoginStoresAccessAndRefreshTokensAndSendsNativeTrue]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.AuthApiClientTests testLogoutSendsRefreshTokenHeaderAndClearsLocalTokensEvenOnServerFailure]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests testLogoutSendsRefreshTokenHeaderAndClearsLocalTokensEvenOnServerFailure]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRefreshSendsStoredRefreshTokenAsHeaderAndRotatesBothTokens]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRefreshSendsStoredRefreshTokenAsHeaderAndRotatesBothTokens]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRefreshWithNoStoredTokenThrowsMissingRefreshTokenWithoutMakingARequest]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRefreshWithNoStoredTokenThrowsMissingRefreshTokenWithoutMakingARequest]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRegisterSendsInviteCodeAndDecodesCreatedUser]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRegisterSendsInviteCodeAndDecodesCreatedUser]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRenderGatewayClientOmitsAuthorizationHeaderWhenNoTokenProviderIsSet]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRenderGatewayClientOmitsAuthorizationHeaderWhenNoTokenProviderIsSet]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRenderGatewayClientOmitsAuthorizationHeaderWhenProviderReturnsNil]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRenderGatewayClientOmitsAuthorizationHeaderWhenProviderReturnsNil]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRenderGatewayClientSetsAuthorizationHeaderWhenTokenProviderIsSet]' started.
+Test Case '-[PickleballUploadTests.AuthApiClientTests testRenderGatewayClientSetsAuthorizationHeaderWhenTokenProviderIsSet]' passed (0.001 seconds).
+Test Suite 'AuthApiClientTests' passed at 2026-07-15 20:27:18.095.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.016 (0.018) seconds
+Test Suite 'AuthTokenStoreTests' started at 2026-07-15 20:27:18.095.
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testAccessTokenRoundTripsThroughFakeKeychain]' started.
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testAccessTokenRoundTripsThroughFakeKeychain]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testClearAllRemovesBothTokensAndIsSafeToCallWhenAlreadyEmpty]' started.
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testClearAllRemovesBothTokensAndIsSafeToCallWhenAlreadyEmpty]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testDistinctServicesDoNotLeakTokensBetweenEachOther]' started.
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testDistinctServicesDoNotLeakTokensBetweenEachOther]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testOverwritingAnExistingTokenReplacesItRatherThanFailing]' started.
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testOverwritingAnExistingTokenReplacesItRatherThanFailing]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testRefreshTokenRoundTripsThroughFakeKeychainIndependentlyOfAccessToken]' started.
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testRefreshTokenRoundTripsThroughFakeKeychainIndependentlyOfAccessToken]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testTwoStoresOverTheSameKeychainAndServiceShareState]' started.
+Test Case '-[PickleballUploadTests.AuthTokenStoreTests testTwoStoresOverTheSameKeychainAndServiceShareState]' passed (0.000 seconds).
+Test Suite 'AuthTokenStoreTests' passed at 2026-07-15 20:27:18.097.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'CalibrationSeedValidationTests' started at 2026-07-15 20:27:18.097.
+Test Case '-[PickleballCalibrationTests.CalibrationSeedValidationTests testARKitSeedIsValidWhenIntrinsicsPoseAndCourtPlaneArePlausible]' started.
+Test Case '-[PickleballCalibrationTests.CalibrationSeedValidationTests testARKitSeedIsValidWhenIntrinsicsPoseAndCourtPlaneArePlausible]' passed (0.000 seconds).
+Test Case '-[PickleballCalibrationTests.CalibrationSeedValidationTests testCourtPlaneRejectsNonFiniteOrNonUnitNormals]' started.
+Test Case '-[PickleballCalibrationTests.CalibrationSeedValidationTests testCourtPlaneRejectsNonFiniteOrNonUnitNormals]' passed (0.000 seconds).
+Test Case '-[PickleballCalibrationTests.CalibrationSeedValidationTests testIntrinsicsMustMatchImageBoundsAndFocalPlausibility]' started.
+Test Case '-[PickleballCalibrationTests.CalibrationSeedValidationTests testIntrinsicsMustMatchImageBoundsAndFocalPlausibility]' passed (0.000 seconds).
+Test Case '-[PickleballCalibrationTests.CalibrationSeedValidationTests testSeedRequiresEitherCompleteARKitSeedOrValidManualFallback]' started.
+Test Case '-[PickleballCalibrationTests.CalibrationSeedValidationTests testSeedRequiresEitherCompleteARKitSeedOrValidManualFallback]' passed (0.000 seconds).
+Test Suite 'CalibrationSeedValidationTests' passed at 2026-07-15 20:27:18.098.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'CameraRollVideoImportTests' started at 2026-07-15 20:27:18.098.
+Test Case '-[PickleballCaptureTests.CameraRollVideoImportTests testImportedSidecarLeavesLiveOnlySensorFieldsAbsentWithReasons]' started.
+Test Case '-[PickleballCaptureTests.CameraRollVideoImportTests testImportedSidecarLeavesLiveOnlySensorFieldsAbsentWithReasons]' passed (0.008 seconds).
+Test Case '-[PickleballCaptureTests.CameraRollVideoImportTests testImporterCopiesPickedVideoIntoPipelineCapturePackage]' started.
+Test Case '-[PickleballCaptureTests.CameraRollVideoImportTests testImporterCopiesPickedVideoIntoPipelineCapturePackage]' passed (0.004 seconds).
+Test Suite 'CameraRollVideoImportTests' passed at 2026-07-15 20:27:18.111.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.012 (0.013) seconds
+Test Suite 'CameraSessionQueueTests' started at 2026-07-15 20:27:18.111.
+Test Case '-[PickleballCaptureTests.CameraSessionQueueTests testRunExecutesWorkOffMainThread]' started.
+Test Case '-[PickleballCaptureTests.CameraSessionQueueTests testRunExecutesWorkOffMainThread]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CameraSessionQueueTests testRunSerializesQueuedWork]' started.
+Test Case '-[PickleballCaptureTests.CameraSessionQueueTests testRunSerializesQueuedWork]' passed (0.137 seconds).
+Test Suite 'CameraSessionQueueTests' passed at 2026-07-15 20:27:18.248.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.137 (0.137) seconds
+Test Suite 'CaptureGuidanceEvaluatorTests' started at 2026-07-15 20:27:18.248.
+Test Case '-[PickleballGuidanceTests.CaptureGuidanceEvaluatorTests testBadGuidanceSampleFlagsEveryCaptureQualityRule]' started.
+Test Case '-[PickleballGuidanceTests.CaptureGuidanceEvaluatorTests testBadGuidanceSampleFlagsEveryCaptureQualityRule]' passed (0.001 seconds).
+Test Case '-[PickleballGuidanceTests.CaptureGuidanceEvaluatorTests testGoodGuidanceSampleStaysSilent]' started.
+Test Case '-[PickleballGuidanceTests.CaptureGuidanceEvaluatorTests testGoodGuidanceSampleStaysSilent]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.CaptureGuidanceEvaluatorTests testMissingGuidanceMeasurementsFailClosed]' started.
+Test Case '-[PickleballGuidanceTests.CaptureGuidanceEvaluatorTests testMissingGuidanceMeasurementsFailClosed]' passed (0.000 seconds).
+Test Suite 'CaptureGuidanceEvaluatorTests' passed at 2026-07-15 20:27:18.250.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'CaptureLibraryTests' started at 2026-07-15 20:27:18.250.
+Test Case '-[PickleballCaptureTests.CaptureLibraryTests testCaptureLibraryListsRecordedAndImportedPackagesWithImportBadgeState]' started.
+Test Case '-[PickleballCaptureTests.CaptureLibraryTests testCaptureLibraryListsRecordedAndImportedPackagesWithImportBadgeState]' passed (0.007 seconds).
+Test Suite 'CaptureLibraryTests' passed at 2026-07-15 20:27:18.258.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.007 (0.007) seconds
+Test Suite 'CapturePackageTests' started at 2026-07-15 20:27:18.258.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCapturePackageDescriptorRejectsUnsafeSessionIdentifiers]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCapturePackageDescriptorRejectsUnsafeSessionIdentifiers]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCapturePackageDescriptorTracksPortraitCaptureMetadata]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCapturePackageDescriptorTracksPortraitCaptureMetadata]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCapturePackageDescriptorUsesPipelineSafePathsAndSidecarFirstUploadOrder]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCapturePackageDescriptorUsesPipelineSafePathsAndSidecarFirstUploadOrder]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCaptureReadinessRequiresCameraMicrophoneAndWritablePackage]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCaptureReadinessRequiresCameraMicrophoneAndWritablePackage]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCaptureReadinessRequiresLandscapePolicy]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCaptureReadinessRequiresLandscapePolicy]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCaptureSessionIDFactoryAvoidsSameSecondPackageCollisions]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testCaptureSessionIDFactoryAvoidsSameSecondPackageCollisions]' passed (0.001 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testDefaultCapturePackageDescriptorIsLandscapeRecordable]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testDefaultCapturePackageDescriptorIsLandscapeRecordable]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testPipelineSensorManifestDeclaresAllCaptureInputsNeededDownstream]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testPipelineSensorManifestDeclaresAllCaptureInputsNeededDownstream]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSensorManifestAcceptsARKitSeedWithoutManualFallback]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSensorManifestAcceptsARKitSeedWithoutManualFallback]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSensorManifestAcceptsManualFallbackWithoutARKitSeed]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSensorManifestAcceptsManualFallbackWithoutARKitSeed]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSensorManifestRequiresEitherARKitSeedOrManualFallback]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSensorManifestRequiresEitherARKitSeedOrManualFallback]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSensorManifestTreatsLidarDepthAsOptionalTierAInput]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSensorManifestTreatsLidarDepthAsOptionalTierAInput]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSwiftCapabilityManifestSeparatesImplementedCaptureScaffoldFromPlannedPipeline]' started.
+Test Case '-[PickleballCaptureTests.CapturePackageTests testSwiftCapabilityManifestSeparatesImplementedCaptureScaffoldFromPlannedPipeline]' passed (0.000 seconds).
+Test Suite 'CapturePackageTests' passed at 2026-07-15 20:27:18.262.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.003 (0.004) seconds
+Test Suite 'CapturePolicyEnforcementTests' started at 2026-07-15 20:27:18.262.
+Test Case '-[PickleballCaptureTests.CapturePolicyEnforcementTests testPolicyEnforcementPassesOnlyWhenLandscapeLockedAndStabilizationOff]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyEnforcementTests testPolicyEnforcementPassesOnlyWhenLandscapeLockedAndStabilizationOff]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyEnforcementTests testPolicyEnforcementReportsEveryCaptureViolation]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyEnforcementTests testPolicyEnforcementReportsEveryCaptureViolation]' passed (0.000 seconds).
+Test Suite 'CapturePolicyEnforcementTests' passed at 2026-07-15 20:27:18.262.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'CapturePolicyTests' started at 2026-07-15 20:27:18.262.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testBallPhysicsModeUsesBinned720p240HEVCPolicy]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testBallPhysicsModeUsesBinned720p240HEVCPolicy]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testFocusExposurePolicyKeepsContinuousWhenRecordLocksAreUnavailable]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testFocusExposurePolicyKeepsContinuousWhenRecordLocksAreUnavailable]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testFocusExposurePolicyUsesContinuousPreviewAndLocksOnlyAtRecordStart]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testFocusExposurePolicyUsesContinuousPreviewAndLocksOnlyAtRecordStart]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testLockedSettingsClampShutterISOAndFocusToCaptureBounds]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testLockedSettingsClampShutterISOAndFocusToCaptureBounds]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testOrientationPolicySupportsPortraitAndLandscapeVideoTransforms]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testOrientationPolicySupportsPortraitAndLandscapeVideoTransforms]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testPortraitPolicyUsesDisplayResolutionForPhoneUprightCaptures]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testPortraitPolicyUsesDisplayResolutionForPhoneUprightCaptures]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testQualityModeFallsBackToHEVC1080p60OffTierAOrWithoutProRes]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testQualityModeFallsBackToHEVC1080p60OffTierAOrWithoutProRes]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testSessionScaffoldDefaultsToRecordableLandscapePolicy]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testSessionScaffoldDefaultsToRecordableLandscapePolicy]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testSwingModeUsesLocked1080p120HEVCPolicy]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testSwingModeUsesLocked1080p120HEVCPolicy]' passed (0.000 seconds).
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testTierAQualityModeUses4K60ProResWhenSupported]' started.
+Test Case '-[PickleballCaptureTests.CapturePolicyTests testTierAQualityModeUses4K60ProResWhenSupported]' passed (0.000 seconds).
+Test Suite 'CapturePolicyTests' passed at 2026-07-15 20:27:18.264.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'CaptureSidecarContractGoldenTests' started at 2026-07-15 20:27:18.264.
+Test Case '-[PickleballCoreTests.CaptureSidecarContractGoldenTests testCanonicalSidecarsMatchGoldenFixturesAndDecodeBack]' started.
+Test Case '-[PickleballCoreTests.CaptureSidecarContractGoldenTests testCanonicalSidecarsMatchGoldenFixturesAndDecodeBack]' passed (0.004 seconds).
+Test Suite 'CaptureSidecarContractGoldenTests' passed at 2026-07-15 20:27:18.268.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'CaptureSidecarTests' started at 2026-07-15 20:27:18.268.
+Test Case '-[PickleballCoreTests.CaptureSidecarTests testCaptureSidecarDecodesServerPayload]' started.
+Test Case '-[PickleballCoreTests.CaptureSidecarTests testCaptureSidecarDecodesServerPayload]' passed (0.000 seconds).
+Test Case '-[PickleballCoreTests.CaptureSidecarTests testCaptureSidecarEncodesSnakeCasePayload]' started.
+Test Case '-[PickleballCoreTests.CaptureSidecarTests testCaptureSidecarEncodesSnakeCasePayload]' passed (0.000 seconds).
+Test Case '-[PickleballCoreTests.CaptureSidecarTests testCaptureSidecarRoundTripsARKitPolicyAndProfilePayloads]' started.
+Test Case '-[PickleballCoreTests.CaptureSidecarTests testCaptureSidecarRoundTripsARKitPolicyAndProfilePayloads]' passed (0.000 seconds).
+Test Suite 'CaptureSidecarTests' passed at 2026-07-15 20:27:18.270.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'CaptureSidecarWriterTests' started at 2026-07-15 20:27:18.270.
+Test Case '-[PickleballCaptureTests.CaptureSidecarWriterTests testWriterLeavesUnknownSessionFlagsNilAndExplainsWhy]' started.
+Test Case '-[PickleballCaptureTests.CaptureSidecarWriterTests testWriterLeavesUnknownSessionFlagsNilAndExplainsWhy]' passed (0.001 seconds).
+Test Case '-[PickleballCaptureTests.CaptureSidecarWriterTests testWriterPersistsSidecarAtDescriptorPathWithRuntimeMetadata]' started.
+Test Case '-[PickleballCaptureTests.CaptureSidecarWriterTests testWriterPersistsSidecarAtDescriptorPathWithRuntimeMetadata]' passed (0.004 seconds).
+Test Suite 'CaptureSidecarWriterTests' passed at 2026-07-15 20:27:18.275.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.005 (0.005) seconds
+Test Suite 'CoreMLPersonDetectorTests' started at 2026-07-15 20:27:18.275.
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testConfigurationClampsDetectionIntervalToAtLeastOne]' started.
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testConfigurationClampsDetectionIntervalToAtLeastOne]' passed (0.001 seconds).
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testMultiArrayRowsReadYolo11ConfidenceShapeWithStrides]' started.
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testMultiArrayRowsReadYolo11ConfidenceShapeWithStrides]' passed (0.001 seconds).
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testMultiArrayRowsRejectsScalarOrClassMajorConfidenceShapes]' started.
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testMultiArrayRowsRejectsScalarOrClassMajorConfidenceShapes]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testYolo11NMSDecoderConvertsNormalizedCenterBoxesToSourcePixels]' started.
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testYolo11NMSDecoderConvertsNormalizedCenterBoxesToSourcePixels]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testYolo26EndToEndDecoderScalesInputPixelBoxesToSourcePixelsAndCapsPlayers]' started.
+Test Case '-[PickleballFastTierTests.CoreMLPersonDetectorTests testYolo26EndToEndDecoderScalesInputPixelBoxesToSourcePixelsAndCapsPlayers]' passed (0.000 seconds).
+Test Suite 'CoreMLPersonDetectorTests' passed at 2026-07-15 20:27:18.277.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'CourtDotMapTests' started at 2026-07-15 20:27:18.278.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testAtMostFourPlayersAreKeptEvenWithMoreDetections]' started.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testAtMostFourPlayersAreKeptEvenWithMoreDetections]' passed (0.001 seconds).
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testCadenceDecimatedFramesStillProduceStableTrackIDsThroughTheLinkerAndDotMap]' started.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testCadenceDecimatedFramesStillProduceStableTrackIDsThroughTheLinkerAndDotMap]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testFootPointIsBottomCenterOfBoundingBoxNormalizedWithNoRotation]' started.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testFootPointIsBottomCenterOfBoundingBoxNormalizedWithNoRotation]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testMalformedBoundingBoxIsSkippedRatherThanCrashing]' started.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testMalformedBoundingBoxIsSkippedRatherThanCrashing]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testNormalizedCoordinatesAreClampedIntoZeroToOneRange]' started.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testNormalizedCoordinatesAreClampedIntoZeroToOneRange]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testRotate180MirrorsBothAxes]' started.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testRotate180MirrorsBothAxes]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testRotate270IsInverseOfRotate90]' started.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testRotate270IsInverseOfRotate90]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testRotate90ClockwiseMatchesLandscapeRightConvention]' started.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testRotate90ClockwiseMatchesLandscapeRightConvention]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testZeroSourceDimensionsProduceNoPointsInsteadOfDividingByZero]' started.
+Test Case '-[PickleballFastTierTests.CourtDotMapTests testZeroSourceDimensionsProduceNoPointsInsteadOfDividingByZero]' passed (0.000 seconds).
+Test Suite 'CourtDotMapTests' passed at 2026-07-15 20:27:18.280.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'FastTierPreviewPayloadTests' started at 2026-07-15 20:27:18.280.
+Test Case '-[PickleballFastTierTests.FastTierPreviewPayloadTests testPreviewPayloadEncodesPoseBallAndRacketTrackMetadata]' started.
+Test Case '-[PickleballFastTierTests.FastTierPreviewPayloadTests testPreviewPayloadEncodesPoseBallAndRacketTrackMetadata]' passed (0.001 seconds).
+Test Case '-[PickleballFastTierTests.FastTierPreviewPayloadTests testPreviewPayloadFailsClosedWithoutPoseTrack]' started.
+Test Case '-[PickleballFastTierTests.FastTierPreviewPayloadTests testPreviewPayloadFailsClosedWithoutPoseTrack]' passed (0.000 seconds).
+Test Suite 'FastTierPreviewPayloadTests' passed at 2026-07-15 20:27:18.282.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'LiveBallIndicatorTests' started at 2026-07-15 20:27:18.282.
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testDefaultBuildFlagIsUntrained]' started.
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testDefaultBuildFlagIsUntrained]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testDefaultStaticStateMatchesEvaluateWithNilInputs]' started.
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testDefaultStaticStateMatchesEvaluateWithNilInputs]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testTrainedModelAtOrAboveThresholdReportsTrackingWithAPosition]' started.
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testTrainedModelAtOrAboveThresholdReportsTrackingWithAPosition]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testTrainedModelBelowThresholdReportsLowConfidenceWithoutAPosition]' started.
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testTrainedModelBelowThresholdReportsLowConfidenceWithoutAPosition]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testTrainedModelWithMissingPositionStillReportsLowConfidenceRatherThanCrashing]' started.
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testTrainedModelWithMissingPositionStillReportsLowConfidenceRatherThanCrashing]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testUntrainedModelAlwaysReturnsComingSoonWithNoPosition]' started.
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testUntrainedModelAlwaysReturnsComingSoonWithNoPosition]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testUntrainedModelIgnoresConfidenceEvenWhenHigh]' started.
+Test Case '-[PickleballFastTierTests.LiveBallIndicatorTests testUntrainedModelIgnoresConfidenceEvenWhenHigh]' passed (0.000 seconds).
+Test Suite 'LiveBallIndicatorTests' passed at 2026-07-15 20:27:18.283.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'LiveBallOverlayTests' started at 2026-07-15 20:27:18.283.
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testAspectFillLayoutBreaksTrailSegmentsAcrossTrackingGaps]' started.
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testAspectFillLayoutBreaksTrailSegmentsAcrossTrackingGaps]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testAspectFillLayoutMapsTrailAndContactMarkersIntoPreviewCoordinates]' started.
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testAspectFillLayoutMapsTrailAndContactMarkersIntoPreviewCoordinates]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testComingSoonAndLowConfidenceStatesDoNotCreateTrailOrContactMarkers]' started.
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testComingSoonAndLowConfidenceStatesDoNotCreateTrailOrContactMarkers]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testLowConfidenceGapBreaksContactInferenceAcrossSamples]' started.
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testLowConfidenceGapBreaksContactInferenceAcrossSamples]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testSharpTrajectoryKinkCreatesCandidateContactMarkerAtTheInflectionPoint]' started.
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testSharpTrajectoryKinkCreatesCandidateContactMarkerAtTheInflectionPoint]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testTrackingStatesCreateAFadingTrailFromRealBallPositions]' started.
+Test Case '-[PickleballFastTierTests.LiveBallOverlayTests testTrackingStatesCreateAFadingTrailFromRealBallPositions]' passed (0.000 seconds).
+Test Suite 'LiveBallOverlayTests' passed at 2026-07-15 20:27:18.285.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'LiveDetectionCadenceSchedulerTests' started at 2026-07-15 20:27:18.285.
+Test Case '-[PickleballFastTierTests.LiveDetectionCadenceSchedulerTests testBudgetedDefaultIsWithinTheMilestonesThirdToFifthFrameRange]' started.
+Test Case '-[PickleballFastTierTests.LiveDetectionCadenceSchedulerTests testBudgetedDefaultIsWithinTheMilestonesThirdToFifthFrameRange]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveDetectionCadenceSchedulerTests testCustomCadenceOfThreeRunsEveryThirdFrame]' started.
+Test Case '-[PickleballFastTierTests.LiveDetectionCadenceSchedulerTests testCustomCadenceOfThreeRunsEveryThirdFrame]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveDetectionCadenceSchedulerTests testDefaultRunsEveryFourthFrame]' started.
+Test Case '-[PickleballFastTierTests.LiveDetectionCadenceSchedulerTests testDefaultRunsEveryFourthFrame]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LiveDetectionCadenceSchedulerTests testNonPositiveIntervalClampsToOneSoEveryFrameRuns]' started.
+Test Case '-[PickleballFastTierTests.LiveDetectionCadenceSchedulerTests testNonPositiveIntervalClampsToOneSoEveryFrameRuns]' passed (0.000 seconds).
+Test Suite 'LiveDetectionCadenceSchedulerTests' passed at 2026-07-15 20:27:18.286.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'LiveGuidanceEvaluatorTests' started at 2026-07-15 20:27:18.286.
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testAllMeasurementsMissingRendersEveryCheckUnavailableAndGradeWarnNotGood]' started.
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testAllMeasurementsMissingRendersEveryCheckUnavailableAndGradeWarnNotGood]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testBadExposureAndLevelWarnWithoutPoisoningUnavailableChecks]' started.
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testBadExposureAndLevelWarnWithoutPoisoningUnavailableChecks]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testFrameRateAndResolutionShortfallsWarn]' started.
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testFrameRateAndResolutionShortfallsWarn]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testGoodSampleAcrossAllMeasuredSignalsGradesGood]' started.
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testGoodSampleAcrossAllMeasuredSignalsGradesGood]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testHumanReadableSetupTipFallsBackToRawReasonForUnknownCodes]' started.
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testHumanReadableSetupTipFallsBackToRawReasonForUnknownCodes]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testSetupTipsSurfaceKnownReasonsAsHumanReadableTextAndPassThroughUnknownReasons]' started.
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testSetupTipsSurfaceKnownReasonsAsHumanReadableTextAndPassThroughUnknownReasons]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testThreeOrMoreMeasuredWarningsGradePoor]' started.
+Test Case '-[PickleballGuidanceTests.LiveGuidanceEvaluatorTests testThreeOrMoreMeasuredWarningsGradePoor]' passed (0.000 seconds).
+Test Suite 'LiveGuidanceEvaluatorTests' passed at 2026-07-15 20:27:18.288.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.001 (0.002) seconds
+Test Suite 'LivePlayerFootRingTests' started at 2026-07-15 20:27:18.288.
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testAspectFillLayoutKeepsRingsAlignedWithPreviewLayerCropping]' started.
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testAspectFillLayoutKeepsRingsAlignedWithPreviewLayerCropping]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testBuildsFootRingsFromDetectionBoxFootprints]' started.
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testBuildsFootRingsFromDetectionBoxFootprints]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testBuildsStableColoredFootRingsFromCourtDotPoints]' started.
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testBuildsStableColoredFootRingsFromCourtDotPoints]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testDetectionFootRingsRejectInvalidSourceOrBoxes]' started.
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testDetectionFootRingsRejectInvalidSourceOrBoxes]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testRingOpacityFadesButRemainsVisibleAcrossSkippedCadenceFrames]' started.
+Test Case '-[PickleballFastTierTests.LivePlayerFootRingTests testRingOpacityFadesButRemainsVisibleAcrossSkippedCadenceFrames]' passed (0.000 seconds).
+Test Suite 'LivePlayerFootRingTests' passed at 2026-07-15 20:27:18.289.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'LiveTiltEstimatorTests' started at 2026-07-15 20:27:18.289.
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests test45DegreeTiltFromLevelMeasuresApproximately45Degrees]' started.
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests test45DegreeTiltFromLevelMeasuresApproximately45Degrees]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests testFullyUpsideDownGravityMeasures180Degrees]' started.
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests testFullyUpsideDownGravityMeasures180Degrees]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests testLevelLandscapeRightGravityYieldsNearZeroTilt]' started.
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests testLevelLandscapeRightGravityYieldsNearZeroTilt]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests testMalformedVectorLengthReturnsNil]' started.
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests testMalformedVectorLengthReturnsNil]' passed (0.000 seconds).
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests testZeroMagnitudeGravityReturnsNil]' started.
+Test Case '-[PickleballGuidanceTests.LiveTiltEstimatorTests testZeroMagnitudeGravityReturnsNil]' passed (0.000 seconds).
+Test Suite 'LiveTiltEstimatorTests' passed at 2026-07-15 20:27:18.291.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'ManualCourtTapsTests' started at 2026-07-15 20:27:18.291.
+Test Case '-[PickleballCalibrationTests.ManualCourtTapsTests testFourCornerTapsAreValidatedAndOrderedForServer]' started.
+Test Case '-[PickleballCalibrationTests.ManualCourtTapsTests testFourCornerTapsAreValidatedAndOrderedForServer]' passed (0.000 seconds).
+Test Case '-[PickleballCalibrationTests.ManualCourtTapsTests testManualTapsRejectDuplicateOutOfBoundsAndCollinearInputs]' started.
+Test Case '-[PickleballCalibrationTests.ManualCourtTapsTests testManualTapsRejectDuplicateOutOfBoundsAndCollinearInputs]' passed (0.000 seconds).
+Test Suite 'ManualCourtTapsTests' passed at 2026-07-15 20:27:18.292.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'OnDevicePersonTrackingTests' started at 2026-07-15 20:27:18.292.
+Test Case '-[PickleballFastTierTests.OnDevicePersonTrackingTests testBenchmarkArtifactPathsUseStableFilenames]' started.
+Test Case '-[PickleballFastTierTests.OnDevicePersonTrackingTests testBenchmarkArtifactPathsUseStableFilenames]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.OnDevicePersonTrackingTests testOnDevicePersonTimingComputesLatencyAndDropSummaries]' started.
+Test Case '-[PickleballFastTierTests.OnDevicePersonTrackingTests testOnDevicePersonTimingComputesLatencyAndDropSummaries]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.OnDevicePersonTrackingTests testOnDevicePersonTracksEncodeMobileBenchmarkSchema]' started.
+Test Case '-[PickleballFastTierTests.OnDevicePersonTrackingTests testOnDevicePersonTracksEncodeMobileBenchmarkSchema]' passed (0.000 seconds).
+Test Suite 'OnDevicePersonTrackingTests' passed at 2026-07-15 20:27:18.293.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'PersonTrackLinkerTests' started at 2026-07-15 20:27:18.293.
+Test Case '-[PickleballFastTierTests.PersonTrackLinkerTests testByteTrackStyleLowConfidenceObservationCanRescueExistingTrack]' started.
+Test Case '-[PickleballFastTierTests.PersonTrackLinkerTests testByteTrackStyleLowConfidenceObservationCanRescueExistingTrack]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.PersonTrackLinkerTests testLinkerExpiresOldTracksAndCapsActiveOutput]' started.
+Test Case '-[PickleballFastTierTests.PersonTrackLinkerTests testLinkerExpiresOldTracksAndCapsActiveOutput]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.PersonTrackLinkerTests testLinkerKeepsTrackIDsStableAcrossOverlappingBoxes]' started.
+Test Case '-[PickleballFastTierTests.PersonTrackLinkerTests testLinkerKeepsTrackIDsStableAcrossOverlappingBoxes]' passed (0.000 seconds).
+Test Suite 'PersonTrackLinkerTests' passed at 2026-07-15 20:27:18.294.
+	 Executed 3 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'PostStopPreviewSummaryTests' started at 2026-07-15 20:27:18.294.
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testElapsedBuildSecondsOverBudgetIsFlaggedFalse]' started.
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testElapsedBuildSecondsOverBudgetIsFlaggedFalse]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testMedianPlayerCountFromEvenNumberOfSamplesRoundsToNearestInt]' started.
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testMedianPlayerCountFromEvenNumberOfSamplesRoundsToNearestInt]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testMedianPlayerCountFromOddNumberOfSamples]' started.
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testMedianPlayerCountFromOddNumberOfSamples]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testNegativeDurationAndElapsedSecondsAreClampedToZero]' started.
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testNegativeDurationAndElapsedSecondsAreClampedToZero]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testSummaryWithNoSampledFramesReportsNilPlayerCountRatherThanZero]' started.
+Test Case '-[PickleballFastTierTests.PostStopPreviewSummaryTests testSummaryWithNoSampledFramesReportsNilPlayerCountRatherThanZero]' passed (0.000 seconds).
+Test Suite 'PostStopPreviewSummaryTests' passed at 2026-07-15 20:27:18.295.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'PresignedUploadClientTests' started at 2026-07-15 20:27:18.295.
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testCompleteClipAssemblesPartsSortedByPartNumberFromStubbedETagsRegardlessOfInputOrder]' started.
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testCompleteClipAssemblesPartsSortedByPartNumberFromStubbedETagsRegardlessOfInputOrder]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testCompleteClipSurfacesServerFailureDetail]' started.
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testCompleteClipSurfacesServerFailureDetail]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testCreateClipSendsAuthHeaderAndDecodesPresignedTarget]' started.
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testCreateClipSendsAuthHeaderAndDecodesPresignedTarget]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testUploadPartsPutsEachChunkInOrderWithCorrectBytesAndCollectsETags]' started.
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testUploadPartsPutsEachChunkInOrderWithCorrectBytesAndCollectsETags]' passed (0.004 seconds).
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testUploadPartsThrowsOnPartCountMismatchWithoutMakingAnyRequest]' started.
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testUploadPartsThrowsOnPartCountMismatchWithoutMakingAnyRequest]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testUploadPartsThrowsWhenSuccessfulResponseHasNoETagHeader]' started.
+Test Case '-[PickleballUploadTests.PresignedUploadClientTests testUploadPartsThrowsWhenSuccessfulResponseHasNoETagHeader]' passed (0.002 seconds).
+Test Suite 'PresignedUploadClientTests' passed at 2026-07-15 20:27:18.306.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.010 (0.011) seconds
+Test Suite 'ProfileCaptureFlowTests' started at 2026-07-15 20:27:18.306.
+Test Case '-[PickleballCaptureTests.ProfileCaptureFlowTests testH0ProfileFlowAdvancesThroughSetupStepsAndRecordsArtifacts]' started.
+Test Case '-[PickleballCaptureTests.ProfileCaptureFlowTests testH0ProfileFlowAdvancesThroughSetupStepsAndRecordsArtifacts]' passed (0.000 seconds).
+Test Suite 'ProfileCaptureFlowTests' passed at 2026-07-15 20:27:18.306.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'RealityReplayViewModelTests' started at 2026-07-15 20:27:18.306.
+Test Case '-[PickleballReplayTests.RealityReplayViewModelTests testBundledRealityFixtureResolvesUsdzAndKeepsSourceProvenance]' started.
+Test Case '-[PickleballReplayTests.RealityReplayViewModelTests testBundledRealityFixtureResolvesUsdzAndKeepsSourceProvenance]' passed (0.001 seconds).
+Test Case '-[PickleballReplayTests.RealityReplayViewModelTests testRealityReplayPlaybackUsesSharedTimelineState]' started.
+Test Case '-[PickleballReplayTests.RealityReplayViewModelTests testRealityReplayPlaybackUsesSharedTimelineState]' passed (0.001 seconds).
+Test Case '-[PickleballReplayTests.RealityReplayViewModelTests testRealityReplaySharesTheSceneKitWorldViewerTimeline]' started.
+Test Case '-[PickleballReplayTests.RealityReplayViewModelTests testRealityReplaySharesTheSceneKitWorldViewerTimeline]' passed (0.079 seconds).
+Test Case '-[PickleballReplayTests.RealityReplayViewModelTests testRealityReplayTimelineMapsWorldSecondsIntoUsdAnimationSeconds]' started.
+Test Case '-[PickleballReplayTests.RealityReplayViewModelTests testRealityReplayTimelineMapsWorldSecondsIntoUsdAnimationSeconds]' passed (0.001 seconds).
+Test Suite 'RealityReplayViewModelTests' passed at 2026-07-15 20:27:18.388.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.082 (0.082) seconds
+Test Suite 'ReplayAssetTests' started at 2026-07-15 20:27:18.389.
+Test Case '-[PickleballReplayTests.ReplayAssetTests testReplayAssetReferencesExposeUsdzAndGlbMetadata]' started.
+Test Case '-[PickleballReplayTests.ReplayAssetTests testReplayAssetReferencesExposeUsdzAndGlbMetadata]' passed (0.001 seconds).
+Test Case '-[PickleballReplayTests.ReplayAssetTests testReplayAssetValidationRequiresUsdzOrGlbAndPositiveDuration]' started.
+Test Case '-[PickleballReplayTests.ReplayAssetTests testReplayAssetValidationRequiresUsdzOrGlbAndPositiveDuration]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.ReplayAssetTests testReplayInputManifestLoadsStagedVideoAndGroundTruthPaths]' started.
+Test Case '-[PickleballReplayTests.ReplayAssetTests testReplayInputManifestLoadsStagedVideoAndGroundTruthPaths]' passed (0.005 seconds).
+Test Case '-[PickleballReplayTests.ReplayAssetTests testReplayPersonBenchmarkOutputPathsUseClipAndCandidateFolders]' started.
+Test Case '-[PickleballReplayTests.ReplayAssetTests testReplayPersonBenchmarkOutputPathsUseClipAndCandidateFolders]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.ReplayAssetTests testTimelineAndCapabilityDescriptorAreMetadataOnly]' started.
+Test Case '-[PickleballReplayTests.ReplayAssetTests testTimelineAndCapabilityDescriptorAreMetadataOnly]' passed (0.000 seconds).
+Test Suite 'ReplayAssetTests' passed at 2026-07-15 20:27:18.396.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Test Suite 'ReplayPersonBenchmarkRunnerTests' started at 2026-07-15 20:27:18.396.
+Test Case '-[PickleballReplayTests.ReplayPersonBenchmarkRunnerTests testDetectEveryTwoFramesCountsOnlyDetectorInvocationsAsProcessed]' started.
+sysctlbyname for kern.hv_vmm_present failed with status -1/Users/arnavchokshi/Desktop/pickleball/ios/Replay/Tests/PickleballReplayTests/ReplayPersonBenchmarkRunnerTests.swift:38: -[PickleballReplayTests.ReplayPersonBenchmarkRunnerTests testDetectEveryTwoFramesCountsOnlyDetectorInvocationsAsProcessed] : Test skipped - Host AVAssetReader cannot decode the bundled synthetic video fixture.
+Test Case '-[PickleballReplayTests.ReplayPersonBenchmarkRunnerTests testDetectEveryTwoFramesCountsOnlyDetectorInvocationsAsProcessed]' skipped (0.039 seconds).
+Test Suite 'ReplayPersonBenchmarkRunnerTests' passed at 2026-07-15 20:27:18.435.
+	 Executed 1 test, with 1 test skipped and 0 failures (0 unexpected) in 0.039 (0.039) seconds
+Test Suite 'ReplayScrubberLayoutTests' started at 2026-07-15 20:27:18.435.
+Test Case '-[PickleballReplayTests.ReplayScrubberLayoutTests testBottomPaddingKeepsScrubberAboveHomeIndicatorArea]' started.
+Test Case '-[PickleballReplayTests.ReplayScrubberLayoutTests testBottomPaddingKeepsScrubberAboveHomeIndicatorArea]' passed (0.000 seconds).
+Test Suite 'ReplayScrubberLayoutTests' passed at 2026-07-15 20:27:18.435.
+	 Executed 1 test, with 0 failures (0 unexpected) in 0.000 (0.000) seconds
+Test Suite 'SidecarPackagingTests' started at 2026-07-15 20:27:18.435.
+Test Case '-[PickleballCalibrationTests.SidecarPackagingTests testARKitSetupPassCanPackageServerCaptureSidecar]' started.
+Test Case '-[PickleballCalibrationTests.SidecarPackagingTests testARKitSetupPassCanPackageServerCaptureSidecar]' passed (0.000 seconds).
+Test Case '-[PickleballCalibrationTests.SidecarPackagingTests testManualFallbackPackagesOrderedTapCorrespondencesWithoutARKitPose]' started.
+Test Case '-[PickleballCalibrationTests.SidecarPackagingTests testManualFallbackPackagesOrderedTapCorrespondencesWithoutARKitPose]' passed (0.000 seconds).
+Test Suite 'SidecarPackagingTests' passed at 2026-07-15 20:27:18.436.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.000 (0.001) seconds
+Test Suite 'TrustBandTests' started at 2026-07-15 20:27:18.436.
+Test Case '-[PickleballReplayTests.TrustBandTests testBadgeDefaultsToVerifiedWhenNoTrustBandExists]' started.
+Test Case '-[PickleballReplayTests.TrustBandTests testBadgeDefaultsToVerifiedWhenNoTrustBandExists]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.TrustBandTests testBadgeReturnsTheBandsOwnBadgeWhenPresent]' started.
+Test Case '-[PickleballReplayTests.TrustBandTests testBadgeReturnsTheBandsOwnBadgeWhenPresent]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.TrustBandTests testChipTextFormatsStageAndBadgeWithSpaces]' started.
+Test Case '-[PickleballReplayTests.TrustBandTests testChipTextFormatsStageAndBadgeWithSpaces]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.TrustBandTests testChipTextForMissingTrustBandIsExplicitNotBlank]' started.
+Test Case '-[PickleballReplayTests.TrustBandTests testChipTextForMissingTrustBandIsExplicitNotBlank]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.TrustBandTests testTrustBandDecodesRealSnakeCaseJSON]' started.
+Test Case '-[PickleballReplayTests.TrustBandTests testTrustBandDecodesRealSnakeCaseJSON]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.TrustBandTests testTrustBandEvidencePathIsOptional]' started.
+Test Case '-[PickleballReplayTests.TrustBandTests testTrustBandEvidencePathIsOptional]' passed (0.000 seconds).
+Test Suite 'TrustBandTests' passed at 2026-07-15 20:27:18.437.
+	 Executed 6 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'UploadManifestTests' started at 2026-07-15 20:27:18.437.
+Test Case '-[PickleballUploadTests.UploadManifestTests testChunkPlanComputesStableOffsetsLengthsAndIdentifiers]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testChunkPlanComputesStableOffsetsLengthsAndIdentifiers]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.UploadManifestTests testManifestValidationRejectsUnsafeRelativePaths]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testManifestValidationRejectsUnsafeRelativePaths]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.UploadManifestTests testPartialJobPreservesMissingCapabilitiesTrustBandsAndUnknownProvenance]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testPartialJobPreservesMissingCapabilitiesTrustBandsAndUnknownProvenance]' passed (0.001 seconds).
+Test Case '-[PickleballUploadTests.UploadManifestTests testRenderGatewayJobDecodesProgressAndReplayManifestURL]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testRenderGatewayJobDecodesProgressAndReplayManifestURL]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.UploadManifestTests testRenderGatewayMultipartBodyIncludesVideoSidecarClipAndFrameCap]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testRenderGatewayMultipartBodyIncludesVideoSidecarClipAndFrameCap]' passed (0.003 seconds).
+Test Case '-[PickleballUploadTests.UploadManifestTests testSidecarFirstOrderingOmitsLidarPartsWhenNoDepthRefsExist]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testSidecarFirstOrderingOmitsLidarPartsWhenNoDepthRefsExist]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.UploadManifestTests testSidecarFirstOrderingUsesPoseAndDepthBeforeClip]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testSidecarFirstOrderingUsesPoseAndDepthBeforeClip]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.UploadManifestTests testUploadPlanRejectsUnsafeSidecarPoseFallback]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testUploadPlanRejectsUnsafeSidecarPoseFallback]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.UploadManifestTests testUploadValidationAllowsCameraRollImportWithoutGravityWhenReasonIsPresent]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testUploadValidationAllowsCameraRollImportWithoutGravityWhenReasonIsPresent]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.UploadManifestTests testURLProtocolGatewayResolvesReadyManifestAndSendsAuthorization]' started.
+Test Case '-[PickleballUploadTests.UploadManifestTests testURLProtocolGatewayResolvesReadyManifestAndSendsAuthorization]' passed (0.001 seconds).
+Test Suite 'UploadManifestTests' passed at 2026-07-15 20:27:18.444.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.006 (0.007) seconds
+Test Suite 'UploadQueueTests' started at 2026-07-15 20:27:18.444.
+Test Case '-[PickleballUploadTests.UploadQueueTests testAuthenticationGatePromptsThenReleasesOnlyThePendingUpload]' started.
+Test Case '-[PickleballUploadTests.UploadQueueTests testAuthenticationGatePromptsThenReleasesOnlyThePendingUpload]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.UploadQueueTests testBaseURLResolverUsesLaunchArgumentThenEnvironmentThenPlistThenDefault]' started.
+Test Case '-[PickleballUploadTests.UploadQueueTests testBaseURLResolverUsesLaunchArgumentThenEnvironmentThenPlistThenDefault]' passed (0.000 seconds).
+Test Case '-[PickleballUploadTests.UploadQueueTests testCompletedJobPersistsOwnCaptureClipJobManifestIdentity]' started.
+Test Case '-[PickleballUploadTests.UploadQueueTests testCompletedJobPersistsOwnCaptureClipJobManifestIdentity]' passed (0.017 seconds).
+Test Case '-[PickleballUploadTests.UploadQueueTests testFailureRetryPreservesClipIDAndCompletesMissingSidecarOnly]' started.
+Test Case '-[PickleballUploadTests.UploadQueueTests testFailureRetryPreservesClipIDAndCompletesMissingSidecarOnly]' passed (0.017 seconds).
+Test Case '-[PickleballUploadTests.UploadQueueTests testProductionClientCallPathRetriesMidPart5xxAndUsesOnDiskBytes]' started.
+Test Case '-[PickleballUploadTests.UploadQueueTests testProductionClientCallPathRetriesMidPart5xxAndUsesOnDiskBytes]' passed (0.014 seconds).
+Test Case '-[PickleballUploadTests.UploadQueueTests testQueuedUploadingUploadedWritesExactSidecarAndServerIdentity]' started.
+Test Case '-[PickleballUploadTests.UploadQueueTests testQueuedUploadingUploadedWritesExactSidecarAndServerIdentity]' passed (0.013 seconds).
+Test Case '-[PickleballUploadTests.UploadQueueTests testQueueProcessesTwoCapturesStrictlySerially]' started.
+Test Case '-[PickleballUploadTests.UploadQueueTests testQueueProcessesTwoCapturesStrictlySerially]' passed (0.023 seconds).
+Test Case '-[PickleballUploadTests.UploadQueueTests testRelaunchResumesQueuedStateWithANewQueueInstance]' started.
+Test Case '-[PickleballUploadTests.UploadQueueTests testRelaunchResumesQueuedStateWithANewQueueInstance]' passed (0.014 seconds).
+Test Case '-[PickleballUploadTests.UploadQueueTests testUploadedRowWithoutReadyManifestHasTypedNotReadyState]' started.
+Test Case '-[PickleballUploadTests.UploadQueueTests testUploadedRowWithoutReadyManifestHasTypedNotReadyState]' passed (0.000 seconds).
+Test Suite 'UploadQueueTests' passed at 2026-07-15 20:27:18.545.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.100 (0.101) seconds
+Test Suite 'VisionPersonBenchmarkTests' started at 2026-07-15 20:27:18.546.
+Test Case '-[PickleballFastTierTests.VisionPersonBenchmarkTests testNormalizedVisionRectConvertsToTopLeftPixelXYWH]' started.
+Test Case '-[PickleballFastTierTests.VisionPersonBenchmarkTests testNormalizedVisionRectConvertsToTopLeftPixelXYWH]' passed (0.000 seconds).
+Test Case '-[PickleballFastTierTests.VisionPersonBenchmarkTests testVisionProcessorAcceptsExplicitImageOrientation]' started.
+Test Case '-[PickleballFastTierTests.VisionPersonBenchmarkTests testVisionProcessorAcceptsExplicitImageOrientation]' passed (0.000 seconds).
+Test Suite 'VisionPersonBenchmarkTests' passed at 2026-07-15 20:27:18.546.
+	 Executed 2 tests, with 0 failures (0 unexpected) in 0.001 (0.001) seconds
+Test Suite 'WatchLinkControllerTests' started at 2026-07-15 20:27:18.546.
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testEndToEndLoopbackStartRecordingThenStatePushReachesWatch]' started.
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testEndToEndLoopbackStartRecordingThenStatePushReachesWatch]' passed (0.001 seconds).
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testEndToEndLoopbackWatchRequestStateReceivesCurrentPhoneState]' started.
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testEndToEndLoopbackWatchRequestStateReceivesCurrentPhoneState]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testIncomingRequestStateTriggersAStatePush]' started.
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testIncomingRequestStateTriggersAStatePush]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testIncomingStartRecordingFiresInjectedStartIntent]' started.
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testIncomingStartRecordingFiresInjectedStartIntent]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testIncomingStopRecordingFiresInjectedStopIntent]' started.
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testIncomingStopRecordingFiresInjectedStopIntent]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testMalformedIncomingMessageFiresNoIntentAndDoesNotCrash]' started.
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testMalformedIncomingMessageFiresNoIntentAndDoesNotCrash]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testWatchSideDecodesAPushedPhoneState]' started.
+Test Case '-[WatchBridgeTests.WatchLinkControllerTests testWatchSideDecodesAPushedPhoneState]' passed (0.000 seconds).
+Test Suite 'WatchLinkControllerTests' passed at 2026-07-15 20:27:18.548.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'WatchMessagesTests' started at 2026-07-15 20:27:18.548.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testAllWatchCommandCasesRoundTrip]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testAllWatchCommandCasesRoundTrip]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateDecodeReturnsNilForMissingRequiredField]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateDecodeReturnsNilForMissingRequiredField]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateDecodeReturnsNilForWrongFieldType]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateDecodeReturnsNilForWrongFieldType]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateDecodeReturnsNilWhenGivenAWatchCommandMessage]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateDecodeReturnsNilWhenGivenAWatchCommandMessage]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateRoundTripsWithAllFieldsPresent]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateRoundTripsWithAllFieldsPresent]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateRoundTripsWithNilClipName]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testPhoneRecordingStateRoundTripsWithNilClipName]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testRequestStateRoundTripsThroughDictMessage]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testRequestStateRoundTripsThroughDictMessage]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testStartRecordingRoundTripsThroughDictMessage]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testStartRecordingRoundTripsThroughDictMessage]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testStopRecordingRoundTripsThroughDictMessage]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testStopRecordingRoundTripsThroughDictMessage]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testWatchCommandDecodeReturnsNilForEmptyMessage]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testWatchCommandDecodeReturnsNilForEmptyMessage]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testWatchCommandDecodeReturnsNilForNonJSONValue]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testWatchCommandDecodeReturnsNilForNonJSONValue]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testWatchCommandDecodeReturnsNilForUnknownTypeDiscriminator]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testWatchCommandDecodeReturnsNilForUnknownTypeDiscriminator]' passed (0.000 seconds).
+Test Case '-[WatchBridgeTests.WatchMessagesTests testWatchCommandDecodeReturnsNilForWrongValueType]' started.
+Test Case '-[WatchBridgeTests.WatchMessagesTests testWatchCommandDecodeReturnsNilForWrongValueType]' passed (0.000 seconds).
+Test Suite 'WatchMessagesTests' passed at 2026-07-15 20:27:18.552.
+	 Executed 13 tests, with 0 failures (0 unexpected) in 0.002 (0.003) seconds
+Test Suite 'WorldBundleTests' started at 2026-07-15 20:27:18.552.
+Test Case '-[PickleballReplayTests.WorldBundleTests testBundledSampleDoesNotFabricateBundledMeshArtifacts]' started.
+Test Case '-[PickleballReplayTests.WorldBundleTests testBundledSampleDoesNotFabricateBundledMeshArtifacts]' passed (0.027 seconds).
+Test Case '-[PickleballReplayTests.WorldBundleTests testBundledSampleLoadsVerifiedWolverineGlueRun]' started.
+Test Case '-[PickleballReplayTests.WorldBundleTests testBundledSampleLoadsVerifiedWolverineGlueRun]' passed (0.026 seconds).
+Test Case '-[PickleballReplayTests.WorldBundleTests testBundledSamplePlayersHaveHonestRepresentationsAndTrustBands]' started.
+Test Case '-[PickleballReplayTests.WorldBundleTests testBundledSamplePlayersHaveHonestRepresentationsAndTrustBands]' passed (0.027 seconds).
+Test Case '-[PickleballReplayTests.WorldBundleTests testHTTPManifestResolvesRelativeWorldAndOptional404RemainsOwnCapture]' started.
+Test Case '-[PickleballReplayTests.WorldBundleTests testHTTPManifestResolvesRelativeWorldAndOptional404RemainsOwnCapture]' passed (0.002 seconds).
+Test Case '-[PickleballReplayTests.WorldBundleTests testManifestDecodesEveryWebViewerURLFieldIncludingBallArcRender]' started.
+Test Case '-[PickleballReplayTests.WorldBundleTests testManifestDecodesEveryWebViewerURLFieldIncludingBallArcRender]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldBundleTests testMissingManifestResourceThrowsRatherThanFabricatingAWorld]' started.
+Test Case '-[PickleballReplayTests.WorldBundleTests testMissingManifestResourceThrowsRatherThanFabricatingAWorld]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldBundleTests testTempFileManifestResolvesRelativeAssetsAndMissingOptionalDoesNotSubstitute]' started.
+Test Case '-[PickleballReplayTests.WorldBundleTests testTempFileManifestResolvesRelativeAssetsAndMissingOptionalDoesNotSubstitute]' passed (0.004 seconds).
+Test Suite 'WorldBundleTests' passed at 2026-07-15 20:27:18.639.
+	 Executed 7 tests, with 0 failures (0 unexpected) in 0.087 (0.087) seconds
+Test Suite 'WorldCameraPresetsTests' started at 2026-07-15 20:27:18.639.
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testBroadcastAndBehindBaselineSitBehindTheNearBaseline]' started.
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testBroadcastAndBehindBaselineSitBehindTheNearBaseline]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testCourtBoundsMatchRegulationDimensions]' started.
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testCourtBoundsMatchRegulationDimensions]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testEachPresetProducesADistinctCameraPose]' started.
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testEachPresetProducesADistinctCameraPose]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testPresetDisplayNamesAreHumanReadable]' started.
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testPresetDisplayNamesAreHumanReadable]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testTopDownPresetLooksStraightDownAtCourtCenter]' started.
+Test Case '-[PickleballReplayTests.WorldCameraPresetsTests testTopDownPresetLooksStraightDownAtCourtCenter]' passed (0.000 seconds).
+Test Suite 'WorldCameraPresetsTests' passed at 2026-07-15 20:27:18.641.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.002 (0.002) seconds
+Test Suite 'WorldSceneBuilderTests' started at 2026-07-15 20:27:18.641.
+Test Case '-[PickleballReplayTests.WorldSceneBuilderTests testApplyingAJointsTierSnapshotAddsSkeletonSpheresNotMesh]' started.
+Test Case '-[PickleballReplayTests.WorldSceneBuilderTests testApplyingAJointsTierSnapshotAddsSkeletonSpheresNotMesh]' passed (0.038 seconds).
+Test Case '-[PickleballReplayTests.WorldSceneBuilderTests testApplyReplacesDynamicNodesRatherThanAccumulating]' started.
+Test Case '-[PickleballReplayTests.WorldSceneBuilderTests testApplyReplacesDynamicNodesRatherThanAccumulating]' passed (0.043 seconds).
+Test Case '-[PickleballReplayTests.WorldSceneBuilderTests testDimLowConfidenceProducesADifferentPlayerNodeThanFullOpacity]' started.
+Test Case '-[PickleballReplayTests.WorldSceneBuilderTests testDimLowConfidenceProducesADifferentPlayerNodeThanFullOpacity]' passed (0.043 seconds).
+Test Case '-[PickleballReplayTests.WorldSceneBuilderTests testStaticCourtGeometryIsBuiltOnce]' started.
+Test Case '-[PickleballReplayTests.WorldSceneBuilderTests testStaticCourtGeometryIsBuiltOnce]' passed (0.029 seconds).
+Test Suite 'WorldSceneBuilderTests' passed at 2026-07-15 20:27:18.794.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.153 (0.153) seconds
+Test Suite 'WorldSkeletonBonesTests' started at 2026-07-15 20:27:18.794.
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testChainOfPointsProducesNMinusOneEdgesAndStaysConnected]' started.
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testChainOfPointsProducesNMinusOneEdgesAndStaysConnected]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testEmptyAndSingleJointProduceNoEdges]' started.
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testEmptyAndSingleJointProduceNoEdges]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testPicksNearestNeighborOverFartherOne]' started.
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testPicksNearestNeighborOverFartherOne]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testRealBundledJointCloudsProduceAValidSkeleton]' started.
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testRealBundledJointCloudsProduceAValidSkeleton]' passed (0.031 seconds).
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testStarShapedJointsStayFullyConnectedWithNoCycles]' started.
+Test Case '-[PickleballReplayTests.WorldSkeletonBonesTests testStarShapedJointsStayFullyConnectedWithNoCycles]' passed (0.000 seconds).
+Test Suite 'WorldSkeletonBonesTests' passed at 2026-07-15 20:27:18.827.
+	 Executed 5 tests, with 0 failures (0 unexpected) in 0.033 (0.033) seconds
+Test Suite 'WorldTierSelectionTests' started at 2026-07-15 20:27:18.827.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testBallFrameForTimeFindsNearestSyntheticVisibleFrame]' started.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testBallFrameForTimeFindsNearestSyntheticVisibleFrame]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testBallRenderModeDistinguishesCalibratedApproxAndOffCourt]' started.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testBallRenderModeDistinguishesCalibratedApproxAndOffCourt]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testBundledBallHasNoRenderable3DFrame]' started.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testBundledBallHasNoRenderable3DFrame]' passed (0.028 seconds).
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testBundledPlayersNeverGetMeshWhenBodyMeshIsOmitted]' started.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testBundledPlayersNeverGetMeshWhenBodyMeshIsOmitted]' passed (0.328 seconds).
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testCompactVerifiedFixtureRendersJointsWithoutBundledMeshArtifacts]' started.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testCompactVerifiedFixtureRendersJointsWithoutBundledMeshArtifacts]' passed (0.028 seconds).
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testNoMeshTierIsFabricatedWhenBodyMeshIsAbsent]' started.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testNoMeshTierIsFabricatedWhenBodyMeshIsAbsent]' passed (0.029 seconds).
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testOutOfPlayerCoverageYieldsNone]' started.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testOutOfPlayerCoverageYieldsNone]' passed (0.029 seconds).
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testOutOfRangeTimeYieldsNoneRatherThanStaleFrame]' started.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testOutOfRangeTimeYieldsNoneRatherThanStaleFrame]' passed (0.027 seconds).
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testVisiblePlayerCountMatchesManualTierScan]' started.
+Test Case '-[PickleballReplayTests.WorldTierSelectionTests testVisiblePlayerCountMatchesManualTierScan]' passed (0.029 seconds).
+Test Suite 'WorldTierSelectionTests' passed at 2026-07-15 20:27:19.328.
+	 Executed 9 tests, with 0 failures (0 unexpected) in 0.499 (0.500) seconds
+Test Suite 'WorldTrustColorsTests' started at 2026-07-15 20:27:19.328.
+Test Case '-[PickleballReplayTests.WorldTrustColorsTests testCGColorAlphaChannelMatchesRequestedOpacity]' started.
+Test Case '-[PickleballReplayTests.WorldTrustColorsTests testCGColorAlphaChannelMatchesRequestedOpacity]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldTrustColorsTests testEveryBadgeMapsToADistinctColor]' started.
+Test Case '-[PickleballReplayTests.WorldTrustColorsTests testEveryBadgeMapsToADistinctColor]' passed (0.003 seconds).
+Test Case '-[PickleballReplayTests.WorldTrustColorsTests testLowConfidenceIsDimmedByDefaultToggle]' started.
+Test Case '-[PickleballReplayTests.WorldTrustColorsTests testLowConfidenceIsDimmedByDefaultToggle]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldTrustColorsTests testPreviewAndVerifiedAreNeverDimmedByTheLowConfidenceToggle]' started.
+Test Case '-[PickleballReplayTests.WorldTrustColorsTests testPreviewAndVerifiedAreNeverDimmedByTheLowConfidenceToggle]' passed (0.000 seconds).
+Test Suite 'WorldTrustColorsTests' passed at 2026-07-15 20:27:19.332.
+	 Executed 4 tests, with 0 failures (0 unexpected) in 0.004 (0.004) seconds
+Test Suite 'WorldViewerViewModelTests' started at 2026-07-15 20:27:19.332.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testCameraPresetChangeRepositionsTheCameraNode]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testCameraPresetChangeRepositionsTheCameraNode]' passed (0.037 seconds).
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testCameraPresetModelIncludesOwnerRequestedSimpleChoices]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testCameraPresetModelIncludesOwnerRequestedSimpleChoices]' passed (0.000 seconds).
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testCoachMarkUsesOnceFlagStore]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testCoachMarkUsesOnceFlagStore]' passed (0.071 seconds).
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testDimLowConfidenceToggleDoesNotChangeCurrentTimeOrTier]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testDimLowConfidenceToggleDoesNotChangeCurrentTimeOrTier]' passed (0.052 seconds).
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testFollowSelectionOnlyAcceptsVisiblePlayersAndCanClear]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testFollowSelectionOnlyAcceptsVisiblePlayersAndCanClear]' passed (0.036 seconds).
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testInitialStateStartsAtEarliestPlayerFrameAndBuildsAScene]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testInitialStateStartsAtEarliestPlayerFrameAndBuildsAScene]' passed (0.037 seconds).
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testSeekClampsToValidRangeAndUpdatesSnapshot]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testSeekClampsToValidRangeAndUpdatesSnapshot]' passed (0.050 seconds).
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testSeekingCompactVerifiedFixtureKeepsSkeletonTier]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testSeekingCompactVerifiedFixtureKeepsSkeletonTier]' passed (0.071 seconds).
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testSpeedChipCyclesThroughHalfNormalAndDoubleSpeed]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testSpeedChipCyclesThroughHalfNormalAndDoubleSpeed]' passed (0.036 seconds).
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testTogglePlaybackFlipsIsPlaying]' started.
+Test Case '-[PickleballReplayTests.WorldViewerViewModelTests testTogglePlaybackFlipsIsPlaying]' passed (0.036 seconds).
+Test Suite 'WorldViewerViewModelTests' passed at 2026-07-15 20:27:19.759.
+	 Executed 10 tests, with 0 failures (0 unexpected) in 0.425 (0.427) seconds
+Test Suite 'PickleballIOSPackageTests.xctest' passed at 2026-07-15 20:27:19.759.
+	 Executed 245 tests, with 1 test skipped and 0 failures (0 unexpected) in 1.668 (1.694) seconds
+Test Suite 'All tests' passed at 2026-07-15 20:27:19.759.
+	 Executed 245 tests, with 1 test skipped and 0 failures (0 unexpected) in 1.668 (1.698) seconds
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64e-apple-macos14.0
+✔ Test run with 0 tests in 0 suites passed after 0.001 seconds.

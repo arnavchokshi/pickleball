@@ -48,6 +48,7 @@ struct DinkVisionRuntimeConfiguration: Equatable {
         )
     }
 
+    @MainActor
     func makeCaptureViewModel() -> CaptureViewModel {
         guard captureState != .live else {
             return CaptureViewModel()
@@ -170,9 +171,9 @@ final class DinkVisionWalkerCameraController: CameraCaptureControlling, @uncheck
         return descriptor
     }
 
-    func startPreview() async {}
+    func startPreview() async throws {}
 
-    func stopPreview() async {}
+    func stopPreview() async throws {}
 
     func performARKitSetupPass(timeoutSeconds _: Double) async -> ARKitSetupPassSidecar {
         .unavailable(reason: "walker_fixture_no_arkit", gravity: [0, -1, 0], durationS: 0)

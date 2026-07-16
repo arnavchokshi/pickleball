@@ -859,7 +859,7 @@ private struct DinkVisionRecordScreen: View {
                     return
                 }
                 if model.status == .idle {
-                    await model.prepare()
+                    await model.prepare(isLandscapeViewport: proxy.size.width > proxy.size.height)
                 } else {
                     await model.refreshSetupPassIfNeeded()
                 }
@@ -938,7 +938,20 @@ private struct DinkVisionRecordScreen: View {
     }
 
     private func blockedReasonBanner(_ reason: String) -> some View {
-        Label(reason, systemImage: "exclamationmark.triangle.fill")
+        Button {
+            Task {
+                await model.prepare()
+            }
+        } label: {
+            Label {
+                VStack(spacing: 2) {
+                    Text(reason)
+                    Text("Retry")
+                        .underline()
+                }
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+            }
             .font(.system(size: 14, weight: .heavy, design: .rounded))
             .foregroundStyle(DinkVisionColor.ink)
             .multilineTextAlignment(.center)
@@ -946,7 +959,10 @@ private struct DinkVisionRecordScreen: View {
             .padding(.vertical, 10)
             .background(DinkVisionColor.cream, in: Capsule())
             .shadow(color: .black.opacity(0.20), radius: 10, y: 4)
-            .accessibilityIdentifier("DinkVisionRecordBlockedReason")
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(reason) Retry")
+        .accessibilityIdentifier("DinkVisionRecordBlockedReason")
     }
 
     private var recordingBadge: some View {

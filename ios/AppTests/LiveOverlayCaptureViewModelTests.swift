@@ -157,8 +157,8 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
         )
     }
 
-    func startPreview() async {}
-    func stopPreview() async {}
+    func startPreview() async throws {}
+    func stopPreview() async throws {}
 
     func startRecording() async throws -> CapturePackageDescriptor {
         try CapturePackageDescriptor(

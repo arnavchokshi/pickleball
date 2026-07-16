@@ -2,6 +2,7 @@
 @preconcurrency import AVFoundation
 import Darwin
 import Foundation
+import OSLog
 import PickleballCore
 import PickleballGuidance
 
@@ -21,15 +22,22 @@ public enum CameraCaptureControllerError: Error, Equatable, Sendable {
     case cannotAddVideoInput
     case cannotAddAudioInput
     case cannotAddMovieOutput
+    case movieOutputVideoConnectionUnavailable
     case unsupportedFrameRate(Int)
     case noConfiguredPackage
     case landscapeRequired
     case alreadyRecording
     case notRecording
+    case cameraResourceBusy(CameraResourceOwner)
+    case previewFailedToStart
     case fileSystem(String)
 }
 
 public final class CameraCaptureController: NSObject {
+    private static let recordPathLogger = Logger(
+        subsystem: "com.arnavchokshi.pickleball",
+        category: "RecordPath"
+    )
     public let session = AVCaptureSession()
     public private(set) var activeDescriptor: CapturePackageDescriptor?
     public private(set) var lastRecordingResult: CameraRecordingResult?
@@ -77,10 +85,22 @@ public final class CameraCaptureController: NSObject {
     }
 
     public static func requestPermissions() async -> CapturePermissionSnapshot {
-        async let cameraGranted = AVCaptureDevice.requestAccess(for: .video)
-        async let microphoneGranted = AVCaptureDevice.requestAccess(for: .audio)
-        _ = await (cameraGranted, microphoneGranted)
-        return permissionSnapshot()
+        recordPathLogger.info("Permission request entered: camera then microphone")
+        if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
+            let cameraGranted = await AVCaptureDevice.requestAccess(for: .video)
+            recordPathLogger.info("Camera permission request completed granted=\(cameraGranted, privacy: .public)")
+        } else {
+            recordPathLogger.info("Camera permission already determined")
+        }
+        if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
+            let microphoneGranted = await AVCaptureDevice.requestAccess(for: .audio)
+            recordPathLogger.info("Microphone permission request completed granted=\(microphoneGranted, privacy: .public)")
+        } else {
+            recordPathLogger.info("Microphone permission already determined")
+        }
+        let snapshot = permissionSnapshot()
+        recordPathLogger.info("Permission request terminal camera=\(String(describing: snapshot.camera), privacy: .public) microphone=\(String(describing: snapshot.microphone), privacy: .public)")
+        return snapshot
     }
 
     public func configure(
@@ -91,6 +111,7 @@ public final class CameraCaptureController: NSObject {
         sessionID: String = defaultSessionID(),
         packageRootURL: URL = defaultPackageRootURL()
     ) throws -> CapturePackageDescriptor {
+        Self.recordPathLogger.info("Configure entered mode=\(mode.rawValue, privacy: .public) orientation=\(String(describing: captureDeviceOrientation), privacy: .public)")
         let permissions = Self.permissionSnapshot()
         let captureOrientation = CaptureOrientationPolicy.captureOrientation(for: captureDeviceOrientation)
         let policy = CapturePolicy.recommended(
@@ -108,12 +129,15 @@ public final class CameraCaptureController: NSObject {
         let readiness = CaptureReadinessEvaluator.evaluate(permissions: permissions, descriptor: descriptor)
         guard readiness.isReady else {
             if readiness.blockers == [.landscapeRequired] {
+                Self.recordPathLogger.error("Configure blocked: landscape required")
                 throw CameraCaptureControllerError.landscapeRequired
             }
+            Self.recordPathLogger.error("Configure blocked: capture permission unavailable")
             throw CameraCaptureControllerError.permissionDenied(permissions)
         }
 
         guard let camera = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else {
+            Self.recordPathLogger.error("Configure blocked: back camera unavailable")
             throw CameraCaptureControllerError.cameraUnavailable
         }
         try configureAudioSession()
@@ -133,24 +157,28 @@ public final class CameraCaptureController: NSObject {
 
         let videoInput = try AVCaptureDeviceInput(device: camera)
         guard session.canAddInput(videoInput) else {
+            Self.recordPathLogger.error("Configure blocked: cannot add video input")
             throw CameraCaptureControllerError.cannotAddVideoInput
         }
         session.addInput(videoInput)
 
         guard let microphone = AVCaptureDevice.default(for: .audio) else {
+            Self.recordPathLogger.error("Configure blocked: microphone unavailable")
             throw CameraCaptureControllerError.cannotAddAudioInput
         }
         let audioInput = try AVCaptureDeviceInput(device: microphone)
         guard session.canAddInput(audioInput) else {
+            Self.recordPathLogger.error("Configure blocked: cannot add audio input")
             throw CameraCaptureControllerError.cannotAddAudioInput
         }
         session.addInput(audioInput)
 
         guard session.canAddOutput(movieOutput) else {
+            Self.recordPathLogger.error("Configure blocked: cannot add movie output")
             throw CameraCaptureControllerError.cannotAddMovieOutput
         }
         session.addOutput(movieOutput)
-        configureMovieOutput(policy: policy, videoRotationAngleDegrees: descriptor.videoRotationAngleDegrees)
+        try configureMovieOutput(policy: policy, videoRotationAngleDegrees: descriptor.videoRotationAngleDegrees)
         // Best-effort: never throws, never blocks recording if the session
         // declines the extra output or no detector model is installed yet.
         liveOverlayEngine.attach(to: session, rotationDegrees: descriptor.videoRotationAngleDegrees)
@@ -165,33 +193,60 @@ public final class CameraCaptureController: NSObject {
         activeDescriptor = descriptor
         activeClipURL = packageRootURL.appendingPathComponent(descriptor.clipRelativePath, isDirectory: false)
         activeSidecarURL = packageRootURL.appendingPathComponent(descriptor.sidecarRelativePath, isDirectory: false)
+        Self.recordPathLogger.info("Configure completed session=\(descriptor.sessionID, privacy: .public)")
         return descriptor
     }
 
-    public func startPreview() {
+    public func startPreview() throws {
+        Self.recordPathLogger.info("Preview start entered running=\(self.session.isRunning, privacy: .public)")
         if !movieOutput.isRecording {
             restoreContinuousFocusAndExposure()
         }
         guard !session.isRunning else {
+            Self.recordPathLogger.info("Preview start no-op: session already running")
             return
         }
-        guard activeAVCaptureToken == nil,
-              let token = try? cameraOwnership.beginAVCapture() else {
-            return
+        guard activeAVCaptureToken == nil else {
+            Self.recordPathLogger.error("Preview start blocked: stale AVCapture ownership token")
+            throw CameraCaptureControllerError.cameraResourceBusy(.avCapture)
+        }
+        let token: AVCaptureCameraOwnershipToken
+        do {
+            token = try cameraOwnership.beginAVCapture()
+        } catch let error as CameraResourceOwnershipError {
+            let owner: CameraResourceOwner
+            switch error {
+            case .cameraAlreadyOwned(let activeOwner):
+                owner = activeOwner
+            }
+            Self.recordPathLogger.error("Preview start blocked: camera owned by \(String(describing: owner), privacy: .public)")
+            throw CameraCaptureControllerError.cameraResourceBusy(owner)
+        } catch {
+            Self.recordPathLogger.error("Preview start blocked: unknown ownership failure \(String(describing: error), privacy: .public)")
+            throw error
         }
         motionSampler.start()
         session.startRunning()
+        guard session.isRunning else {
+            token.release()
+            motionSampler.stop()
+            Self.recordPathLogger.error("Preview start blocked: AVCaptureSession did not start")
+            throw CameraCaptureControllerError.previewFailedToStart
+        }
         activeAVCaptureToken = token
+        Self.recordPathLogger.info("Preview start completed")
     }
 
-    public func stopPreview() {
+    public func stopPreview() throws {
         guard session.isRunning else {
+            Self.recordPathLogger.info("Preview stop no-op: session already stopped")
             return
         }
         session.stopRunning()
         activeAVCaptureToken?.release()
         activeAVCaptureToken = nil
         motionSampler.stop()
+        Self.recordPathLogger.info("Preview stop completed")
     }
 
     public var latestGravity: [Double] {
@@ -251,22 +306,28 @@ public final class CameraCaptureController: NSObject {
     }
 
     public func startRecording() throws {
+        Self.recordPathLogger.info("Recording start entered")
         guard !movieOutput.isRecording else {
+            Self.recordPathLogger.error("Recording start blocked: already recording")
             throw CameraCaptureControllerError.alreadyRecording
         }
         guard let policy = activePolicy else {
+            Self.recordPathLogger.error("Recording start blocked: no configured policy")
             throw CameraCaptureControllerError.noConfiguredPackage
         }
         guard policy.orientation == .landscape else {
+            Self.recordPathLogger.error("Recording start blocked: landscape required")
             throw CameraCaptureControllerError.landscapeRequired
         }
         if lastRecordingResult != nil {
             try rotateRecordingPackage()
         }
         guard let clipURL = activeClipURL else {
+            Self.recordPathLogger.error("Recording start blocked: clip URL missing")
             throw CameraCaptureControllerError.noConfiguredPackage
         }
         guard let descriptor = activeDescriptor else {
+            Self.recordPathLogger.error("Recording start blocked: descriptor missing")
             throw CameraCaptureControllerError.noConfiguredPackage
         }
 
@@ -286,15 +347,18 @@ public final class CameraCaptureController: NSObject {
         lastRecordingResult = nil
         frameMotionRecorder.beginRecording()
         movieOutput.startRecording(to: clipURL, recordingDelegate: self)
+        Self.recordPathLogger.info("Recording start submitted session=\(descriptor.sessionID, privacy: .public)")
     }
 
     public func stopRecording() throws {
         guard movieOutput.isRecording else {
+            Self.recordPathLogger.error("Recording stop blocked: not recording")
             throw CameraCaptureControllerError.notRecording
         }
 
         movieOutput.stopRecording()
         restoreContinuousFocusAndExposure()
+        Self.recordPathLogger.info("Recording stop submitted")
     }
 
     public static func defaultPackageRootURL() -> URL {
@@ -447,11 +511,13 @@ public final class CameraCaptureController: NSObject {
 
     private func restoreContinuousFocusAndExposure() {
         guard let camera = activeDevice else {
+            Self.recordPathLogger.notice("Focus/exposure restore skipped: no active camera yet")
             return
         }
         do {
             try camera.lockForConfiguration()
         } catch {
+            Self.recordPathLogger.error("Focus/exposure restore failed to lock camera: \(String(describing: error), privacy: .public)")
             return
         }
         defer {
@@ -460,9 +526,10 @@ public final class CameraCaptureController: NSObject {
         applyContinuousPreviewFocusAndExposure(on: camera)
     }
 
-    private func configureMovieOutput(policy: CapturePolicy, videoRotationAngleDegrees: Int) {
+    private func configureMovieOutput(policy: CapturePolicy, videoRotationAngleDegrees: Int) throws {
         guard let connection = movieOutput.connection(with: .video) else {
-            return
+            Self.recordPathLogger.error("Configure blocked: movie output has no video connection")
+            throw CameraCaptureControllerError.movieOutputVideoConnectionUnavailable
         }
 
         let rotationAngle = CGFloat(videoRotationAngleDegrees)

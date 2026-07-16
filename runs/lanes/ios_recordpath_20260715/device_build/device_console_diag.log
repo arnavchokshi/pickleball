@@ -1,0 +1,18 @@
+00:43:54  Acquired tunnel connection to device.
+00:43:54  Enabling developer disk image services.
+00:43:55  Acquired usage assertion.
+Launched application with com.arnavchokshi.pickleball bundle identifier.
+Waiting for the application to terminate…
+2026-07-16 00:43:55.271680-0700 Pickleball[2632:252222] [Core] {"msg":"#Warning Error reading file", "file":"\/\/private\/var\/Managed Preferences\/mobile\/com.apple.CoreMotion.plist", "error":"Error Domain=NSCocoaErrorDomain Code=257 \"The file “com.apple.CoreMotion.plist” couldn’t be opened because you don’t have permission to view it.\" UserInfo={NSFilePath=\/\/private\/var\/Managed Preferences\/mobile\/com.apple.CoreMotion.plist, NSURL=file:\/\/\/\/private\/var\/Managed%20Preferences\/mobile\/com.apple.CoreMotion.plist, NSUnderlyingError=0x10b0eed60 {Error Domain=NSPOSIXErrorDomain Code=1 \"Operation not permitted\"}}"}
+2026-07-16 00:43:56.607515-0700 Pickleball[2632:252169] [RecordPath] First-appearance orientation refresh landscapeRight -> portrait
+2026-07-16 00:43:56.607939-0700 Pickleball[2632:252169] [RecordPath] State idle -> requestingAccess; reason=prepare
+2026-07-16 00:43:56.623817-0700 Pickleball[2632:252180] [RecordPath] Permission request entered: camera then microphone
+2026-07-16 00:43:56.626801-0700 Pickleball[2632:252180] [MC] Reading from public effective user settings.
+2026-07-16 00:43:56.629933-0700 Pickleball[2632:252180] [RecordPath] Camera permission already determined
+2026-07-16 00:43:56.631513-0700 Pickleball[2632:252180] [RecordPath] Microphone permission already determined
+2026-07-16 00:43:56.631710-0700 Pickleball[2632:252180] [RecordPath] Permission request terminal camera=authorized microphone=authorized
+2026-07-16 00:43:56.632916-0700 Pickleball[2632:252180] [RecordPath] Configure entered mode=standard60 orientation=portrait
+2026-07-16 00:43:56.633009-0700 Pickleball[2632:252180] [RecordPath] Configure blocked: landscape required
+2026-07-16 00:43:56.634311-0700 Pickleball[2632:252169] [RecordPath] State requestingAccess -> blocked("Rotate to landscape to record"); reason=preparation error
+2026-07-16 00:43:56.638771-0700 Pickleball[2632:252169] [RecordPath] Preparation attempt reached terminal state=blocked("Rotate to landscape to record")
+App terminated due to signal 15.

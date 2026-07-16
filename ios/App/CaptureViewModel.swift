@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 import SwiftUI
 import UIKit
 @preconcurrency import AVFoundation
@@ -10,6 +11,11 @@ import PickleballReplay
 
 @MainActor
 final class CaptureViewModel: ObservableObject {
+    private static let recordPathLogger = Logger(
+        subsystem: "com.arnavchokshi.pickleball",
+        category: "RecordPath"
+    )
+
     enum Status: Equatable {
         case idle
         case requestingAccess
@@ -56,21 +62,41 @@ final class CaptureViewModel: ObservableObject {
     private var ballOverlayTracker = LiveBallOverlayTracker()
     private var lastSetupPassCompletedAt: Date?
     private var lastSetupPassGravity: [Double]?
+    private var preparationTask: Task<Void, Never>?
+    private var preparationWatchdogTask: Task<Void, Never>?
+    private var activePreparationID: UUID?
+    private var recordActionTask: Task<Void, Never>?
+    private var recordActionWatchdogTask: Task<Void, Never>?
+    private var activeRecordActionID: UUID?
+    private let preparationTimeoutNanoseconds: UInt64
+    private let orientationResolver: (Bool) -> CaptureDeviceOrientation
 
     static let modes: [CaptureMode] = [.standard60, .swing120, .ballPhysics240, .quality4K60]
+    static let preparationTimeoutMessage = "Camera setup took too long. Tap Retry."
+    static let recordActionTimeoutMessage = "Recording action took too long. Tap Retry."
 
     init(
         controller: CameraCaptureControlling = QueuedCameraCaptureController(),
         requestPermissions: @escaping () async -> CapturePermissionSnapshot = {
             await CameraCaptureController.requestPermissions()
-        }
+        },
+        preparationTimeoutNanoseconds: UInt64 = 8_000_000_000,
+        orientationResolver: ((Bool) -> CaptureDeviceOrientation)? = nil
     ) {
         self.controller = controller
         self.requestPermissions = requestPermissions
+        self.preparationTimeoutNanoseconds = preparationTimeoutNanoseconds
+        self.orientationResolver = orientationResolver ?? { fallbackIsLandscape in
+            Self.deviceOrientation(fallbackIsLandscape: fallbackIsLandscape)
+        }
     }
 
     deinit {
         guidancePollingTask?.cancel()
+        preparationTask?.cancel()
+        preparationWatchdogTask?.cancel()
+        recordActionTask?.cancel()
+        recordActionWatchdogTask?.cancel()
     }
 
     var session: AVCaptureSession {
@@ -198,26 +224,86 @@ final class CaptureViewModel: ObservableObject {
         DinkVisionPolicyChipMapper.chips(for: capturePolicyEnforcement)
     }
 
-    func prepare() async {
-        status = .requestingAccess
-        permissions = await requestPermissions()
-        await configure()
-        await autoStartReplayBenchmarkIfRequested()
+    func prepare(isLandscapeViewport: Bool? = nil) async {
+        if let isLandscapeViewport {
+            let firstAppearanceOrientation = orientationResolver(isLandscapeViewport)
+            if firstAppearanceOrientation != captureDeviceOrientation {
+                Self.recordPathLogger.info("First-appearance orientation refresh \(String(describing: self.captureDeviceOrientation), privacy: .public) -> \(String(describing: firstAppearanceOrientation), privacy: .public)")
+                captureDeviceOrientation = firstAppearanceOrientation
+            } else {
+                Self.recordPathLogger.info("First-appearance orientation already current: \(String(describing: firstAppearanceOrientation), privacy: .public)")
+            }
+        }
+        await beginPreparation(requestAccess: true)
     }
 
     func handleRecordTap() async {
+        Self.recordPathLogger.info("Record tap entered state=\(String(describing: self.status), privacy: .public)")
         switch status {
         case .idle, .blocked:
             await prepare()
-        case .requestingAccess, .ready, .recording, .finished:
+        case .requestingAccess:
+            Self.recordPathLogger.info("Record tap coalescing with bounded preparation")
+            await prepare()
+        case .ready, .recording, .finished:
             break
         }
         await toggleRecording()
     }
 
     func configure() async {
+        await beginPreparation(requestAccess: false)
+    }
+
+    private func beginPreparation(requestAccess: Bool) async {
+        if let preparationTask {
+            Self.recordPathLogger.info("Preparation request coalesced with active attempt")
+            await preparationTask.value
+            return
+        }
+
+        let attemptID = UUID()
+        activePreparationID = attemptID
+        transition(to: .requestingAccess, phase: .idle, reason: requestAccess ? "prepare" : "reconfigure")
+
+        let task = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+            await self.runPreparation(attemptID: attemptID, requestAccess: requestAccess)
+        }
+        preparationTask = task
+        let timeoutNanoseconds = preparationTimeoutNanoseconds
+        preparationWatchdogTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+            do {
+                try await Task.sleep(nanoseconds: timeoutNanoseconds)
+            } catch {
+                return
+            }
+            self.expirePreparation(attemptID: attemptID)
+        }
+
+        await task.value
+        finishPreparationIfCurrent(attemptID: attemptID)
+    }
+
+    private func runPreparation(attemptID: UUID, requestAccess: Bool) async {
+        if requestAccess {
+            permissions = await requestPermissions()
+            guard isCurrentPreparation(attemptID, exit: "permission request completed after timeout or replacement") else {
+                return
+            }
+            if let permissionMessage = Self.permissionBlockedMessage(for: permissions) {
+                block(permissionMessage, phase: .permissionDenied(permissionMessage), reason: "permissions unavailable")
+                return
+            }
+        }
+
         do {
-            descriptor = try await controller.configure(
+            let configuredDescriptor = try await controller.configure(
                 mode: selectedMode,
                 deviceTier: .standard,
                 capabilities: .hevcOnly,
@@ -225,21 +311,28 @@ final class CaptureViewModel: ObservableObject {
                 sessionID: CameraCaptureController.defaultSessionID(),
                 packageRootURL: CameraCaptureController.defaultPackageRootURL()
             )
+            try Task.checkCancellation()
+            guard isCurrentPreparation(attemptID, exit: "configure completed after timeout or replacement") else {
+                return
+            }
+            descriptor = configuredDescriptor
             controller.onRecordingFinished = { [weak self] result in
                 switch result {
                 case .success(let recording):
                     Task { @MainActor [weak self] in
                         self?.lastFinishedCapture = recording
-                        self?.status = .finished(recording.descriptor.clipRelativePath)
-                        self?.recordFlowPhase = .done(sessionID: recording.descriptor.sessionID)
+                        self?.transition(
+                            to: .finished(recording.descriptor.clipRelativePath),
+                            phase: .done(sessionID: recording.descriptor.sessionID),
+                            reason: "recording finished"
+                        )
                         self?.recordingStartedAt = nil
                         await self?.buildPostStopSummary(for: recording)
                     }
                 case .failure(let error):
                     let message = String(describing: error)
                     Task { @MainActor [weak self] in
-                        self?.status = .blocked(message)
-                        self?.recordFlowPhase = .blocked(message)
+                        self?.block(message, phase: .blocked(message), reason: "recording callback failure")
                         self?.recordingStartedAt = nil
                     }
                 }
@@ -256,16 +349,36 @@ final class CaptureViewModel: ObservableObject {
                     }
                 }
             )
-            await refreshSetupPassIfNeeded(force: true)
-            await controller.startPreview()
+            try await performSetupPassIfNeeded(force: true, attemptID: attemptID)
+            try Task.checkCancellation()
+            guard isCurrentPreparation(attemptID, exit: "setup pass completed after timeout or replacement") else {
+                return
+            }
+            try await controller.startPreview()
+            try Task.checkCancellation()
+            guard isCurrentPreparation(attemptID, exit: "preview start completed after timeout or replacement") else {
+                return
+            }
             capturePolicyEnforcement = await controller.currentPolicyEnforcementReport()
-            status = .ready
-            recordFlowPhase = .ready
+            guard isCurrentPreparation(attemptID, exit: "policy read completed after timeout or replacement") else {
+                return
+            }
+            transition(to: .ready, phase: .ready, reason: "configure and preview completed")
             startLiveGuidancePollingIfNeeded()
+            await autoStartReplayBenchmarkIfRequested()
+        } catch is CancellationError {
+            guard activePreparationID == attemptID else {
+                Self.recordPathLogger.info("Cancelled preparation exited after watchdog already made state loud")
+                return
+            }
+            block("Camera setup was interrupted. Tap Retry.", phase: .blocked("Camera setup was interrupted. Tap Retry."), reason: "preparation cancelled")
         } catch {
+            guard activePreparationID == attemptID else {
+                Self.recordPathLogger.error("Late preparation error ignored after loud terminal state: \(String(describing: error), privacy: .public)")
+                return
+            }
             let message = Self.message(for: error)
-            status = .blocked(message)
-            recordFlowPhase = Self.recordFlowBlockedPhase(for: error, message: message)
+            block(message, phase: Self.recordFlowBlockedPhase(for: error, message: message), reason: "preparation error")
         }
     }
 
@@ -377,14 +490,65 @@ final class CaptureViewModel: ObservableObject {
         )
     }
 
+    private func expirePreparation(attemptID: UUID) {
+        guard activePreparationID == attemptID else {
+            Self.recordPathLogger.info("Preparation watchdog ignored: attempt already terminal")
+            return
+        }
+        Self.recordPathLogger.error("Preparation watchdog expired after \(Double(self.preparationTimeoutNanoseconds) / 1_000_000_000, privacy: .public) seconds")
+        activePreparationID = nil
+        let expiredTask = preparationTask
+        preparationTask = nil
+        preparationWatchdogTask = nil
+        block(
+            Self.preparationTimeoutMessage,
+            phase: .blocked(Self.preparationTimeoutMessage),
+            reason: "bounded preparation watchdog"
+        )
+        expiredTask?.cancel()
+    }
+
+    private func finishPreparationIfCurrent(attemptID: UUID) {
+        guard activePreparationID == attemptID else {
+            Self.recordPathLogger.info("Preparation completion observed after watchdog or replacement")
+            return
+        }
+        preparationWatchdogTask?.cancel()
+        preparationWatchdogTask = nil
+        preparationTask = nil
+        activePreparationID = nil
+        Self.recordPathLogger.info("Preparation attempt reached terminal state=\(String(describing: self.status), privacy: .public)")
+    }
+
+    private func isCurrentPreparation(_ attemptID: UUID, exit: String) -> Bool {
+        guard activePreparationID == attemptID, !Task.isCancelled else {
+            Self.recordPathLogger.error("Preparation guard exit: \(exit, privacy: .public); visible state=\(String(describing: self.status), privacy: .public)")
+            return false
+        }
+        return true
+    }
+
+    private func transition(to newStatus: Status, phase: DinkVisionRecordFlowPhase, reason: String) {
+        let previousStatus = status
+        status = newStatus
+        recordFlowPhase = phase
+        Self.recordPathLogger.info("State \(String(describing: previousStatus), privacy: .public) -> \(String(describing: newStatus), privacy: .public); reason=\(reason, privacy: .public)")
+    }
+
+    private func block(_ message: String, phase: DinkVisionRecordFlowPhase, reason: String) {
+        transition(to: .blocked(message), phase: phase, reason: reason)
+    }
+
     func updateOrientation(isLandscapeViewport: Bool) async {
-        let updatedOrientation = Self.deviceOrientation(fallbackIsLandscape: isLandscapeViewport)
+        let updatedOrientation = orientationResolver(isLandscapeViewport)
         guard updatedOrientation != captureDeviceOrientation else {
+            Self.recordPathLogger.info("Orientation update no-op: orientation already current")
             return
         }
 
         captureDeviceOrientation = updatedOrientation
         guard !isRecording else {
+            Self.recordPathLogger.info("Orientation changed during recording; current recording continues and reconfigure is deferred")
             return
         }
 
@@ -392,10 +556,26 @@ final class CaptureViewModel: ObservableObject {
     }
 
     func refreshSetupPassIfNeeded(force: Bool = false) async {
+        do {
+            try await performSetupPassIfNeeded(force: force, attemptID: nil)
+        } catch {
+            let message = Self.message(for: error)
+            block(message, phase: Self.recordFlowBlockedPhase(for: error, message: message), reason: "setup refresh failed")
+        }
+    }
+
+    private func performSetupPassIfNeeded(force: Bool, attemptID: UUID?) async throws {
         guard !isRecording else {
+            Self.recordPathLogger.info("Setup pass skipped: recording is active")
             return
         }
         let currentGravity = await controller.latestGravity()
+        if let attemptID {
+            try Task.checkCancellation()
+            guard isCurrentPreparation(attemptID, exit: "gravity read completed after timeout or replacement") else {
+                throw CancellationError()
+            }
+        }
         let shouldRefresh = force || ARKitSetupPassRefreshPolicy.shouldRefresh(
             now: Date(),
             lastCompletedAt: lastSetupPassCompletedAt,
@@ -403,6 +583,7 @@ final class CaptureViewModel: ObservableObject {
             currentGravity: currentGravity
         )
         guard shouldRefresh else {
+            Self.recordPathLogger.info("Setup pass skipped: fresh alignment remains valid")
             return
         }
 
@@ -414,51 +595,175 @@ final class CaptureViewModel: ObservableObject {
             shouldRestartPreviewAfterSetup = false
         }
         setupPassStatus = .aligning
+        Self.recordPathLogger.info("ARKit setup pass started before AVCapture preview")
         let setupPass = await controller.performARKitSetupPass(timeoutSeconds: 4.0)
+        if let attemptID {
+            try Task.checkCancellation()
+            guard isCurrentPreparation(attemptID, exit: "ARKit setup pass completed after timeout or replacement") else {
+                throw CancellationError()
+            }
+        }
         lastSetupPassCompletedAt = Date()
         lastSetupPassGravity = setupPass.gravity ?? currentGravity
         switch setupPass.status {
         case .available:
             setupPassStatus = .aligned
+            Self.recordPathLogger.info("ARKit setup pass available")
         case .unavailable:
-            setupPassStatus = .unavailable(setupPass.unavailableReason ?? "arkit_setup_pass_unavailable")
+            let unavailableReason = setupPass.unavailableReason ?? "arkit_setup_pass_unavailable"
+            setupPassStatus = .unavailable(unavailableReason)
+            Self.recordPathLogger.notice("ARKit setup pass unavailable but advisory: \(unavailableReason, privacy: .public)")
         }
         if shouldRestartPreviewAfterSetup {
-            await controller.startPreview()
+            try await controller.startPreview()
         }
     }
 
     func toggleRecording() async {
+        if let recordActionTask {
+            Self.recordPathLogger.info("Recording toggle coalesced with active bounded action")
+            await recordActionTask.value
+            return
+        }
+
+        let actionID = UUID()
+        activeRecordActionID = actionID
+        let actionTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+            await self.runRecordingToggle(actionID: actionID)
+        }
+        recordActionTask = actionTask
+        let timeoutNanoseconds = preparationTimeoutNanoseconds
+        recordActionWatchdogTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+            do {
+                try await Task.sleep(nanoseconds: timeoutNanoseconds)
+            } catch {
+                return
+            }
+            self.expireRecordAction(actionID: actionID)
+        }
+
+        await actionTask.value
+        finishRecordActionIfCurrent(actionID: actionID)
+    }
+
+    private func runRecordingToggle(actionID: UUID) async {
+        Self.recordPathLogger.info("Recording toggle entered state=\(String(describing: self.status), privacy: .public)")
         do {
             if isRecording {
                 recordFlowPhase = .saving
+                Self.recordPathLogger.info("State remains recording while stop is submitted; saving UI is visible")
                 try await controller.stopRecording()
+                try Task.checkCancellation()
+                guard isCurrentRecordAction(actionID, exit: "recording stop completed after timeout or replacement") else {
+                    return
+                }
                 return
             }
 
             guard canStartRecording else {
                 if case .blocked = status {
+                    Self.recordPathLogger.info("Recording toggle retained existing loud blocked reason")
                     return
                 }
-                status = .blocked("Camera is not ready")
-                recordFlowPhase = .blocked("Camera is not ready")
+                block("Camera is not ready. Tap Retry.", phase: .blocked("Camera is not ready. Tap Retry."), reason: "record start readiness guard")
                 return
             }
 
+            transition(to: .requestingAccess, phase: .ready, reason: "bounded recording start")
             recentPlayerCountSamples = []
             resetBallOverlay()
             postStopSummary = nil
             controller.setProfileCapturePayload(profileFlow.payload)
-            descriptor = try await controller.startRecording()
+            let recordingDescriptor = try await controller.startRecording()
+            try Task.checkCancellation()
+            guard isCurrentRecordAction(actionID, exit: "recording start completed after timeout or replacement") else {
+                await stopLateRecordingAfterTimeout()
+                return
+            }
+            descriptor = recordingDescriptor
             capturePolicyEnforcement = await controller.currentPolicyEnforcementReport()
+            try Task.checkCancellation()
+            guard isCurrentRecordAction(actionID, exit: "recording policy read completed after timeout or replacement") else {
+                await stopLateRecordingAfterTimeout()
+                return
+            }
             let startedAt = Date()
             recordingStartedAt = startedAt
-            status = .recording
-            recordFlowPhase = .recording(startedAt: startedAt)
+            transition(to: .recording, phase: .recording(startedAt: startedAt), reason: "controller accepted recording start")
+        } catch is CancellationError {
+            guard activeRecordActionID == actionID else {
+                Self.recordPathLogger.info("Cancelled recording action exited after watchdog already made state loud")
+                return
+            }
+            block("Recording action was interrupted. Tap Retry.", phase: .blocked("Recording action was interrupted. Tap Retry."), reason: "recording action cancelled")
         } catch {
+            guard activeRecordActionID == actionID else {
+                Self.recordPathLogger.error("Late recording action error ignored after loud terminal state: \(String(describing: error), privacy: .public)")
+                return
+            }
             let message = Self.message(for: error)
-            status = .blocked(message)
-            recordFlowPhase = Self.recordFlowBlockedPhase(for: error, message: message)
+            block(message, phase: Self.recordFlowBlockedPhase(for: error, message: message), reason: "recording toggle error")
+        }
+    }
+
+    private func expireRecordAction(actionID: UUID) {
+        guard activeRecordActionID == actionID else {
+            Self.recordPathLogger.info("Recording-action watchdog ignored: action already terminal")
+            return
+        }
+        Self.recordPathLogger.error("Recording-action watchdog expired after \(Double(self.preparationTimeoutNanoseconds) / 1_000_000_000, privacy: .public) seconds")
+        activeRecordActionID = nil
+        let expiredTask = recordActionTask
+        recordActionTask = nil
+        recordActionWatchdogTask = nil
+        block(
+            Self.recordActionTimeoutMessage,
+            phase: .blocked(Self.recordActionTimeoutMessage),
+            reason: "bounded recording-action watchdog"
+        )
+        expiredTask?.cancel()
+        Task { [controller] in
+            do {
+                try await controller.stopRecording()
+                Self.recordPathLogger.notice("Watchdog cleanup submitted a stop for any late recording")
+            } catch {
+                Self.recordPathLogger.info("Watchdog cleanup found no stoppable recording: \(String(describing: error), privacy: .public)")
+            }
+        }
+    }
+
+    private func finishRecordActionIfCurrent(actionID: UUID) {
+        guard activeRecordActionID == actionID else {
+            Self.recordPathLogger.info("Recording-action completion observed after watchdog or replacement")
+            return
+        }
+        recordActionWatchdogTask?.cancel()
+        recordActionWatchdogTask = nil
+        recordActionTask = nil
+        activeRecordActionID = nil
+        Self.recordPathLogger.info("Recording action reached terminal state=\(String(describing: self.status), privacy: .public)")
+    }
+
+    private func isCurrentRecordAction(_ actionID: UUID, exit: String) -> Bool {
+        guard activeRecordActionID == actionID, !Task.isCancelled else {
+            Self.recordPathLogger.error("Recording-action guard exit: \(exit, privacy: .public); visible state=\(String(describing: self.status), privacy: .public)")
+            return false
+        }
+        return true
+    }
+
+    private func stopLateRecordingAfterTimeout() async {
+        do {
+            try await controller.stopRecording()
+            Self.recordPathLogger.notice("Late recording start was stopped after watchdog")
+        } catch {
+            Self.recordPathLogger.error("Late recording cleanup failed: \(String(describing: error), privacy: .public)")
         }
     }
 
@@ -567,19 +872,52 @@ final class CaptureViewModel: ObservableObject {
     nonisolated private static func message(for error: Error) -> String {
         switch error {
         case CameraCaptureControllerError.cameraUnavailable:
-            return "Camera unavailable"
-        case CameraCaptureControllerError.permissionDenied:
-            return "Camera or microphone access needed"
+            return "Back camera is unavailable. Close other camera apps, then tap Retry."
+        case CameraCaptureControllerError.permissionDenied(let snapshot):
+            return permissionBlockedMessage(for: snapshot) ?? "Enable Camera and Microphone in Settings, then tap Retry."
+        case CameraCaptureControllerError.cannotAddVideoInput:
+            return "Camera input could not start. Close other camera apps, then tap Retry."
+        case CameraCaptureControllerError.cannotAddAudioInput:
+            return "Microphone input could not start. Enable Microphone in Settings, then tap Retry."
+        case CameraCaptureControllerError.cannotAddMovieOutput:
+            return "Recording output could not start. Tap Retry."
+        case CameraCaptureControllerError.movieOutputVideoConnectionUnavailable:
+            return "Camera video output is unavailable. Tap Retry."
         case CameraCaptureControllerError.unsupportedFrameRate(let fps):
-            return "\(fps) fps unavailable on this camera"
+            return "\(fps) fps is unavailable on this camera. Choose another mode, then tap Retry."
+        case CameraCaptureControllerError.noConfiguredPackage:
+            return "Camera setup is incomplete. Tap Retry."
         case CameraCaptureControllerError.landscapeRequired:
             return "Rotate to landscape to record"
         case CameraCaptureControllerError.alreadyRecording:
-            return "Already recording"
+            return "Recording is already active. Tap Stop before retrying."
         case CameraCaptureControllerError.notRecording:
-            return "Not recording"
+            return "No recording is active. Tap Retry."
+        case CameraCaptureControllerError.cameraResourceBusy(.arKitSetup):
+            return "Camera is still busy finishing alignment. Tap Retry."
+        case CameraCaptureControllerError.cameraResourceBusy(.avCapture):
+            return "Camera preview is busy. Tap Retry."
+        case CameraCaptureControllerError.previewFailedToStart:
+            return "Camera preview did not start. Close other camera apps, then tap Retry."
+        case CameraCaptureControllerError.fileSystem:
+            return "Recording storage is unavailable. Free space, then tap Retry."
         default:
             return String(describing: error)
+        }
+    }
+
+    nonisolated private static func permissionBlockedMessage(for snapshot: CapturePermissionSnapshot) -> String? {
+        let cameraUnavailable = snapshot.camera != .authorized
+        let microphoneUnavailable = snapshot.microphone != .authorized
+        switch (cameraUnavailable, microphoneUnavailable) {
+        case (false, false):
+            return nil
+        case (true, false):
+            return "Enable Camera in Settings, then tap Retry."
+        case (false, true):
+            return "Enable Microphone in Settings, then tap Retry."
+        case (true, true):
+            return "Enable Camera and Microphone in Settings, then tap Retry."
         }
     }
 

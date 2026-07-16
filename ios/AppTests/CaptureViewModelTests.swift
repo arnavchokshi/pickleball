@@ -221,8 +221,8 @@ final class CaptureViewModelTests: XCTestCase {
         await model.prepare()
         await model.toggleRecording()
 
-        XCTAssertEqual(model.status, .blocked("Camera or microphone access needed"))
-        XCTAssertEqual(model.recordFlowPhase, .permissionDenied("Camera or microphone access needed"))
+        XCTAssertEqual(model.status, .blocked("Enable Camera in Settings, then tap Retry."))
+        XCTAssertEqual(model.recordFlowPhase, .permissionDenied("Enable Camera in Settings, then tap Retry."))
         XCTAssertFalse(model.isRecording)
         XCTAssertEqual(controller.startRecordingCallCount, 0)
     }
@@ -260,6 +260,145 @@ final class CaptureViewModelTests: XCTestCase {
         XCTAssertEqual(controller.configureCalls.count, 2)
     }
 
+    @MainActor
+    func testC1ConfigureWatchdogCannotLeaveRecordButtonDisabledForever() async throws {
+        let controller = FakeCameraCaptureController()
+        controller.configureDelayNanoseconds = 5_000_000_000
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            },
+            preparationTimeoutNanoseconds: 25_000_000
+        )
+
+        await model.prepare()
+
+        XCTAssertEqual(model.status, .blocked(CaptureViewModel.preparationTimeoutMessage))
+        XCTAssertEqual(model.blockedReason, CaptureViewModel.preparationTimeoutMessage)
+        XCTAssertTrue(model.isRecordButtonEnabled)
+    }
+
+    @MainActor
+    func testC2ARKitSetupStallTimesOutToLoudBlockedState() async throws {
+        let controller = FakeCameraCaptureController()
+        controller.setupPassDelayNanoseconds = 5_000_000_000
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            },
+            preparationTimeoutNanoseconds: 25_000_000
+        )
+
+        await model.prepare()
+
+        XCTAssertEqual(model.status, .blocked(CaptureViewModel.preparationTimeoutMessage))
+        XCTAssertTrue(model.isRecordButtonEnabled)
+        XCTAssertEqual(controller.events, ["configure", "setupPass"])
+    }
+
+    @MainActor
+    func testC3PreviewOwnershipFailureSurfacesBlockedReasonAndRetry() async throws {
+        let controller = FakeCameraCaptureController()
+        controller.startPreviewError = CameraCaptureControllerError.cameraResourceBusy(.arKitSetup)
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            }
+        )
+
+        await model.prepare()
+
+        XCTAssertEqual(model.status, .blocked("Camera is still busy finishing alignment. Tap Retry."))
+        XCTAssertEqual(model.blockedReason, "Camera is still busy finishing alignment. Tap Retry.")
+        XCTAssertTrue(model.isRecordButtonEnabled)
+    }
+
+    @MainActor
+    func testC4ConcurrentPrepareCallsCoalesceIntoOnePreparation() async throws {
+        let controller = FakeCameraCaptureController()
+        controller.configureDelayNanoseconds = 50_000_000
+        var permissionRequestCount = 0
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                permissionRequestCount += 1
+                return CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            },
+            preparationTimeoutNanoseconds: 1_000_000_000
+        )
+
+        async let first: Void = model.prepare()
+        async let second: Void = model.prepare()
+        _ = await (first, second)
+
+        XCTAssertEqual(permissionRequestCount, 1)
+        XCTAssertEqual(controller.configureCalls.count, 1)
+        XCTAssertEqual(controller.events, ["configure", "setupPass", "startPreview"])
+        XCTAssertEqual(model.status, .ready)
+    }
+
+    @MainActor
+    func testC5DeniedTCCPermissionsAreActionableAndRetryable() async throws {
+        let controller = FakeCameraCaptureController()
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .denied, microphone: .authorized)
+            }
+        )
+
+        await model.prepare()
+
+        XCTAssertEqual(model.status, .blocked("Enable Camera in Settings, then tap Retry."))
+        XCTAssertEqual(model.recordFlowPhase, .permissionDenied("Enable Camera in Settings, then tap Retry."))
+        XCTAssertTrue(model.isRecordButtonEnabled)
+        XCTAssertEqual(controller.configureCalls.count, 0)
+    }
+
+    @MainActor
+    func testC6FirstAppearanceOrientationRefreshPrecedesConfiguration() async throws {
+        let controller = FakeCameraCaptureController()
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            },
+            orientationResolver: { isLandscapeViewport in
+                isLandscapeViewport ? .landscapeRight : .portrait
+            }
+        )
+
+        await model.prepare(isLandscapeViewport: false)
+
+        XCTAssertEqual(model.captureDeviceOrientation, .portrait)
+        XCTAssertEqual(controller.configureCalls, [
+            FakeCameraCaptureController.ConfigureCall(mode: .standard60, orientation: .portrait),
+        ])
+    }
+
+    @MainActor
+    func testRecordingStartWatchdogCannotBecomeAnotherSilentTap() async throws {
+        let controller = FakeCameraCaptureController()
+        controller.startRecordingDelayNanoseconds = 5_000_000_000
+        let model = CaptureViewModel(
+            controller: controller,
+            requestPermissions: {
+                CapturePermissionSnapshot(camera: .authorized, microphone: .authorized)
+            },
+            preparationTimeoutNanoseconds: 25_000_000
+        )
+        await model.prepare()
+
+        await model.toggleRecording()
+
+        XCTAssertEqual(model.status, .blocked(CaptureViewModel.recordActionTimeoutMessage))
+        XCTAssertEqual(model.blockedReason, CaptureViewModel.recordActionTimeoutMessage)
+        XCTAssertTrue(model.isRecordButtonEnabled)
+    }
+
     fileprivate static func captureDescriptor(sessionID: String) throws -> CapturePackageDescriptor {
         try CapturePackageDescriptor(
             sessionID: sessionID,
@@ -287,6 +426,10 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     var configureError: Error?
     var startRecordingDescriptor: CapturePackageDescriptor?
     var startRecordingError: Error?
+    var startPreviewError: Error?
+    var configureDelayNanoseconds: UInt64 = 0
+    var setupPassDelayNanoseconds: UInt64 = 0
+    var startRecordingDelayNanoseconds: UInt64 = 0
     var policyEnforcementReport: CapturePolicyEnforcementReport?
     var setupPass: ARKitSetupPassSidecar = .unavailable(reason: "test_setup_pass_unavailable", gravity: [0, -1, 0])
     var gravity: [Double] = [0, -1, 0]
@@ -307,6 +450,9 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     ) async throws -> CapturePackageDescriptor {
         events.append("configure")
         configureCalls.append(ConfigureCall(mode: mode, orientation: captureDeviceOrientation))
+        if configureDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: configureDelayNanoseconds)
+        }
         if let configureError {
             throw configureError
         }
@@ -316,18 +462,24 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
         return try CaptureViewModelTests.captureDescriptor(sessionID: "fake-configured")
     }
 
-    func startPreview() async {
+    func startPreview() async throws {
         events.append("startPreview")
         startPreviewCallCount += 1
+        if let startPreviewError {
+            throw startPreviewError
+        }
     }
 
-    func stopPreview() async {
+    func stopPreview() async throws {
         events.append("stopPreview")
         stopPreviewCallCount += 1
     }
 
     func performARKitSetupPass(timeoutSeconds _: Double) async -> ARKitSetupPassSidecar {
         events.append("setupPass")
+        if setupPassDelayNanoseconds > 0 {
+            try? await Task.sleep(nanoseconds: setupPassDelayNanoseconds)
+        }
         return setupPass
     }
 
@@ -338,6 +490,9 @@ private final class FakeCameraCaptureController: CameraCaptureControlling, @unch
     func startRecording() async throws -> CapturePackageDescriptor {
         events.append("startRecording")
         startRecordingCallCount += 1
+        if startRecordingDelayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: startRecordingDelayNanoseconds)
+        }
         if let startRecordingError {
             throw startRecordingError
         }
