@@ -10,8 +10,27 @@ labeling packages (storage-allowlisted, intentionally untracked).
 
 | lane | kind | session/task id | resume command | owned files | vm | expected done | dispatched |
 |---|---|---|---|---|---|---|---|
-| pbv11_headtohead_20260713 RE-RUN | Sonnet GPU ops lane: MOVE 1 baseline head-to-head RE-RUN (prior attempt died mid-run on Fable spend limit 07-13, VM deleted 07-14, no scorecard ever produced) | Track A manager session 2026-07-15 | re-dispatch from runs/lanes/pbv11_headtohead_20260713/spec.md + rerun addendum (spec_rerun_20260715.md); pin ac0b14ab0 | runs/lanes/pbv11_headtohead_20260713/rerun_20260715/** only (no repo source edits) | pickleball-h100-pbv11r (provisioning) | same session: scorecard JSON+md, owner event-review pack, teardown+cost, dated report | 2026-07-15 |
+| (none in flight) | | | | | | | |
+
+_(2026-07-15/16 Track A manager CLOSE, pbv11_headtohead RE-RUN: **partial — 3D head-to-head NO-RESULT
+again**, this time with the blocker precisely located: `ball_arc` segment-association stall at
+full-game scale (py-spy x3, segment 7; see runs/lanes/pbv11_headtohead_20260713/rerun_20260715/
+pyspy_stall_evidence.md). VM pickleball-h100-pbv11r torn down 02:50:53Z, list+disks confirmed, wall
+3.93h ≈ $9-15. Salvage: full-697s 2D ball chain artifacts pulled w/ two-sided md5 + a 2D-coverage
+scorecard (ours 78.4% vs pb 75.6% in-window presence — detection-vs-emission caveat applies;
+scorecard_2d_salvage.json). Owner event pack NO-RESULT (events stage never reached; refusing to
+stage a degraded pack that would burn the owner's review time on unfused raw candidates).
+Corrections appended (HANDOFF addendum + fleet ledger): 07-13 attempt likely died of the SAME stall,
+not primarily the spend limit. Follow-up fix lane SPEC-ONLY staged (ballarc_scale_guard_20260715 —
+DO NOT DISPATCH before coordinator sequences vs Track C coordwire/tbwire fences). Also for the next
+full-3D attempt: this video needs a trusted CAL seed (auto-preview graded POOR, metric world
+fail-closed) and compare_vs_pbvision crashes on the full 11-min export (PB physics pillar) — both
+are prerequisites, both in the follow-up spec. Full record:
+runs/lanes/pbv11_headtohead_20260713/rerun_20260715/MANAGER_REPORT.md.)_
 | ball_anchor_boost_20260712 | Codex xhigh BL-E (last live sprint lane): audio/kinematic/blur/court-proximity anchor-evidence fusion scored vs frozen reviewed event timing (attacks the convergent ball-lift bottleneck; pb.vision reference-only) | sprint bg c7d8cfb2 | codex exec resume (session id in runs/lanes/ball_anchor_boost_20260712/log2.txt) | ball anchor/event evidence modules + tests + runs/lanes/ball_anchor_boost_20260712/** | — | overnight 07-13; verdict + BEST-STACK DELTA in lane REPORT | 2026-07-12 ~18:0x |
+| ~~tbwire_20260715~~ CLOSED | RULED ADOPT (scoped pass, wired) + COMMITTED bd99c6d11 (2026-07-15, Track C): typed timebase contract wired through ingest/frames/events decode seams, canonical-beside-legacy (Wolverine 300/300 typed vs legacy 299 explicit, legacy values byte-identical); manager re-verified focused 216 EXIT 0, sandbox-bind claims 57 EXIT 0 locally; PENDING: physical 30s/5min (owner), intrinsics/rolling-shutter slices, independent labels | — | — | committed set in bd99c6d11 | — | done (survived external 1h task-cap kill via detached resume) | 2026-07-15 |
+| ~~coordwire_20260715~~ CLOSED | RULED ADOPT (scoped pass, wired) + COMMITTED aab8c3098 (2026-07-15, Track C): typed coordinate API adopted in placement/ball_court_filter/ball_physics3d/ball_inout_uncertainty/virtual_world, six SHA-pinned Wolverine digests byte-identical, distorted-synthetic + fail-closed proofs; manager re-verified 22+165+57 tests EXIT 0; its tbwire-regression isolation confirmed and fixed in c4dfb2d8b | — | — | committed set in aab8c3098 | — | done (survived 1h task-cap kill via detached resume) | 2026-07-15 |
+| ~~statusdocs_20260715~~ CLOSED | RULED ADOPT + COMMITTED 9bf8eef75 (2026-07-15, Track C): stale stage-order pin fixed (RUNBOOK block + expected_order incl. coaching_facts, honest Status Interpretation split); manager re-verified truthful 14/14 exit 0 + server/render 150 passed exit 0 | — | — | RUNBOOK.md + tests/racketsport/test_truthful_capabilities.py | — | done | 2026-07-15 |
 
 _(2026-07-13 ~00:4x, Fable bg a11f030d DOC/ORG session: [1] adopted stranded coords_remainder2
 schemas hunk — HEAD referenced coordinate_contract (metric15 emission + 2 committed tests) without
@@ -126,3 +145,5 @@ pickleball-h100-pbv11 (head-to-head died mid-run on Fable spend limit, no scorec
 confirmed; fleet EMPTY. OPEN THREADS for next session: (1) RE-RUN 41-rally head-to-head (Sonnet GPU,
 pin 541f89d9a, video local); (2) owner 5-min spot-check -> event-head training; (3) NS-01 core wiring.
 All work committed+pushed.)_
+
+_(2026-07-15, coordwire_20260715 CLOSE: NS-01.4/P0-D typed coordinate adoption is wired with a scoped pass across placement, ball target-court/in-out, ball arc camera projection, in/out uncertainty, and virtual-world ball lifting; canonical-beside-legacy Wolverine digests stayed byte-identical and distorted-synthetic/wrong-space coverage passed (22/22 coordinate parity, 274/274 broadened focused, both EXIT 0). Mandatory wide suite completed 3670 passed / 12 failed / 24 skipped, literal EXIT 1: 8 failures are managed-sandbox socket-bind denials and 4 ball_physics_fill failures isolate to concurrent tbwire's eager empty-frame-times fallback change (4/4 pass when the pre-tbwire fallback is restored in-memory), not coordwire math. P0-D's stage-adopted distorted-synthetic + real-iPhone slice is wired (scoped pass); NS-01.4 corrected-beats-raw on independent labels remains PENDING under NS-02. VERIFIED=0; BEST-STACK DELTA (c) none; no process_video.py hunk required or applied.)_

@@ -6,16 +6,39 @@ teardown. A session MUST reconcile this against `gcloud compute instances list
 Full per-wave history (waves 4-7, NS-014, demo, court, 2026-07-12 sprint) is preserved verbatim in
 `runs/manager/archive/gpu_fleet_history_20260707_20260712.md`.
 
-## Current fleet state (2026-07-15, Track A manager session)
+## Current fleet state (2026-07-16T02:51Z, Track A manager session close)
 
-RECONCILED LIVE 2026-07-15: `gcloud compute instances list` succeeded (hello@, project
-gifted-electron-498923-h1). Only `pickleball-a100-fleet1` TERMINATED under fable-fleet=pickleball
-(matches prior EMPTY claim — now freshly confirmed); non-fleet `body4d-waker-ctrl` e2-micro RUNNING
-in usc1-a, untouched. Fleet RUNNING count 0/5 → provision gate PASS for the pbv11 re-run.
+EMPTY — zero fleet VMs running or stopped except the historical `pickleball-a100-fleet1`
+(TERMINATED, asia-southeast1-a, disk intact, snapshot source). LIST-CONFIRMED 2026-07-16T02:50:53Z
+after `pickleball-h100-pbv11r` DELETE; disks list confirms 0 lane-created disks remain (only
+body4d-waker-ctrl 30GB non-fleet + pickleball-a100-fleet1 200GB historical). Non-fleet
+`body4d-waker-ctrl` e2-micro RUNNING in usc1-a, untouched.
 
 | vm_name | zone | gpu | model | status | lane | $/hr | created_at | notes |
 |---|---|---|---|---|---|---|---|---|
-| pickleball-h100-pbv11r | us-central1-a (attempt 3; ase1-b/-c stockout) | H100-80GB | a3-highgpu-1g SPOT | RUNNING (rail armed) | pbv11_headtohead_20260713 RE-RUN | ≤$5 | 2026-07-15T22:53Z (wall_cap_start 22:56:20Z) | 2026-07-16T02:50Z manager takeover after Mac sleep killed the Sonnet lane: pipeline alive (PID 3999, ball_arc BVP solve, GPU 0%/CPU-bound), calibration auto-preview grade POOR (ball_world/virtual_world_metric fail-closed; tracks.json absent). Lane's promised in-VM self-stop was NEVER armed — manager armed `sudo shutdown -P 03:56` (UTC) as the hard cost rail, verified in systemd. Partial artifacts protectively pulled to runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/. Cap ruling: NO full-run extension (post-events stages near-worthless w/o tracks + metric fail-close); ≤45-min one-time rail push ONLY if arc done + events mid-flight at 03:45Z check. DELETE + list-confirm + disks 0 + cost at end no matter what — manager-owned. |
+| (none running) | | | | | | | | |
+
+## 2026-07-15/16 pbv11_headtohead RE-RUN — CLOSED (partial; VM deleted + confirmed)
+
+- pickleball-h100-pbv11r (H100 a3 SPOT, usc1-a on attempt 3/6 after ase1-b/-c stockouts): RUNNING
+  22:53Z (wall_cap_start 22:56:20Z) → manager SIGINT + DELETE 2026-07-16T02:50:53Z, list-confirmed,
+  disks 0. Wall 3.93h, spot band $2.2-3.7/hr → est **$9-15** (not invoice-backed). Under the $20 guard.
+- Run identity all verified two-sided: pin ac0b14ab0, bundle 6e567499e8…, video 272a2132…, OSNet
+  2809d322… (snapshot gap: torchreid also had to be pip-installed — add BOTH to next snapshot re-bake).
+- OUTCOME: full-stack run STALLED in `ball_arc` (segment 7 candidate-association RK4, 3h06m
+  in-stage, three concurring stack captures) — the 41-rally 3D head-to-head is again NO-RESULT.
+  **DATED CORRECTION to the 2026-07-14 rows above/archive: the 07-13 attempt's death, attributed to
+  the Fable spend limit, most likely hit this SAME ball_arc stall first (it "reached BVP solver
+  phase" and never emerged). The blocker is a code scaling defect, not budget/auth.** Fix lane
+  spec'd (NOT dispatched): runs/lanes/ballarc_scale_guard_20260715/spec.md.
+- Salvage (two-sided md5, 26 files): full-game 2D ball chain (ball_track/candidates/bounces/size),
+  calibration (auto-preview POOR — metric world fail-closed), logs + stall evidence + 2D scorecard
+  under runs/lanes/pbv11_headtohead_20260713/rerun_20260715/.
+- OPS LESSONS (booked): (1) a lane's promised in-VM self-stop MUST be verified armed by the manager
+  at dispatch — it was not armed; Mac slept; manager had to arm `sudo shutdown -P` mid-run as the
+  rail. (2) Mac-side watchers die on laptop sleep — the VM-side rail is the only real cost bound.
+  (3) SIGINT does NOT write PIPELINE_SUMMARY.json (KeyboardInterrupt escapes the runner) — per-stage
+  timing had to come from artifact mtimes.
 
 ## Standing policy (owner-set)
 

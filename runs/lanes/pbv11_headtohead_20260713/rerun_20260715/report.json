@@ -1,0 +1,67 @@
+{
+  "artifact_type": "pbv11_headtohead_rerun_manager_report",
+  "schema_version": 1,
+  "date_close_utc": "2026-07-16T02:51:00Z",
+  "objective_result": "partial",
+  "objective_detail": "Full-3D 41-rally head-to-head scorecard NOT produced (2nd consecutive attempt); blocker precisely located as a ball_arc segment-association scaling stall. Salvage 2D scorecard + full-game 2D ball artifacts delivered. Owner event-review pack NO-RESULT (events stage never reached; degraded pack refused).",
+  "run_identity": {
+    "pin_sha": "ac0b14ab0d3a5c00418671f84a725affc54a8213",
+    "bundle_sha256": "6e567499e88d537ef23fc6d1bfb6da7d96dd14323acf9c3fd72748fe74d7b674",
+    "video_sha256": "272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383",
+    "osnet_sha256": "2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154",
+    "best_stack_rev": 12,
+    "clip_id": "pbvision_11min_20260713",
+    "vm_out_dir": "runs/process_video_pbv11r_rerun_20260715 (VM-side, deleted with VM; pulled copy in vm_pull_partial/)"
+  },
+  "provision": {
+    "vm": "pickleball-h100-pbv11r",
+    "zone": "us-central1-a",
+    "attempts": "3/6 (asia-southeast1-b, asia-southeast1-c stockout)",
+    "running_at": "2026-07-15T22:53:00Z",
+    "wall_cap_start": "2026-07-15T22:56:20Z",
+    "deleted_at": "2026-07-16T02:50:53Z"
+  },
+  "per_stage_timing_from_artifact_mtimes": {
+    "ingest_calibration_input_quality": "~1 min (23:06-23:07Z); calibration auto-preview grade poor, metric world fail-closed",
+    "tracking": "no tracks.json (court-filter fail-close); effectively skipped",
+    "ball_wasb_chain": "~37 min (23:07-23:44Z), full 20922 frames",
+    "ball_arc": "3h06m unfinished STALL (23:44-02:50Z SIGINT), segment 7 candidate association",
+    "events_through_manifest": "never reached",
+    "note": "SIGINT wrote no PIPELINE_SUMMARY.json (KeyboardInterrupt escapes the runner)"
+  },
+  "scorecard_summary": {
+    "basis": "2D salvage only; NO 3D produced this run; mission baseline pb 183/252 per-rally-3D NOT comparable",
+    "ours_2d_in_window_presence": 0.7835,
+    "ours_offset_band": [0.7801, 0.7862],
+    "pb_2d_in_window_emission": 0.7564,
+    "pb_forensics_anchor_reproduced": "75.6% to the digit",
+    "caveat": "ours=raw detection visible; pb=deliberately trimmed emission",
+    "scorecard_json_path": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/scorecard_2d_salvage.json"
+  },
+  "owner_pack": {
+    "status": "no-result",
+    "reason": "events stage never ran; a pack from raw unfused bounce candidates would waste the owner's gated review and poison the reviewed-union set"
+  },
+  "teardown_proof": {
+    "delete": "Deleted [.../instances/pickleball-h100-pbv11r] 2026-07-16T02:50:53Z",
+    "instances_list": "only body4d-waker-ctrl (non-fleet, RUNNING) + pickleball-a100-fleet1 (historical, TERMINATED)",
+    "disks_list": "0 lane-created disks (body4d-waker-ctrl 30GB + pickleball-a100-fleet1 200GB pre-existing only)"
+  },
+  "cost": {
+    "wall_hours": 3.93,
+    "rate_range_usd_hr": [2.2, 3.7],
+    "estimate_usd": [9, 15],
+    "invoice_backed": false
+  },
+  "full_suite": "not-required (ops lane, zero source edits). compare_vs_pbvision self-test not runnable: pre-existing parents[3] fixture-path bug from dir move; harness itself crashes on full 11-min export (PB physics pillar) — both booked in follow-up spec. Salvage scorer determinism proven by double-run identical md5.",
+  "best_stack_delta": "(c) none - diagnostic eval lane on best_stack rev 12; no manifest changes; VERIFIED=0 stands",
+  "honest_issues": [
+    "ball_arc_solver stalls at full-game scale (segment 7, candidate-association RK4) - fix spec'd, not dispatched: runs/lanes/ballarc_scale_guard_20260715/spec.md",
+    "2026-07-13 attempt's death reattributed: likely the same stall, not primarily the Fable spend limit (dated corrections appended to HANDOFF_20260714.md and gpu_fleet.md)",
+    "calibration ran --allow-auto-court-corners-preview (no trusted seed exists for this video): grade poor, ball_world/virtual_world_metric fail-closed, tracks.json absent - trusted CAL seed is a prerequisite for any full-3D scorecard on this video",
+    "compare_vs_pbvision.py crashes on the full 11-min pb export (scipy least_squares x0-out-of-bounds in PB physics pillar); frozen original preserved, v2 fix belongs to the follow-up lane",
+    "boot snapshot gaps: OSNet ckpt + torchreid==0.2.5 hand-installed; add to next re-bake",
+    "dispatched lane never armed its in-VM self-stop; Mac sleep killed Mac-side watchers; manager armed sudo shutdown -P mid-run - verify the rail at dispatch next time",
+    "SIGINT does not produce PIPELINE_SUMMARY.json"
+  ]
+}
