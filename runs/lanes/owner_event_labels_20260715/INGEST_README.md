@@ -19,3 +19,15 @@ The ingest is fail-closed: contact decisions require normalized x/y plus source-
 none/unclear must carry no contact fields, label IDs and presentation rows must join this
 manifest exactly, and unanswered rows are listed in `dataset_manifest.json`. These labels
 remain owner-reviewed bootstrap-era evidence under `VERIFIED=0`; ingest is not a promotion.
+
+## Ingest operator notes (2026-07-16)
+
+- Partial exports are expected (mid-session "Save progress" button on the owner-live page):
+  ingest EXACTLY ONE results file — the newest/most-complete export (supersede by answer
+  count, tie-break mtime). Partials ingest cleanly; unanswered rows are listed in
+  dataset_manifest.json (verified: 4/300 partial, EXIT 0, unanswered=296).
+- Spot-check dt outliers on EARLY presentation rows (pre-hotfix dt-suspect: click-toggled
+  playback could corrupt dt before the page fix landed).
+- Multi-event windows: owner labels the event nearest clip center (paddle priority
+  near-center) — valid typed contacts; per-stratum precision stats carry the
+  validated-by-nearby-different-event caveat.

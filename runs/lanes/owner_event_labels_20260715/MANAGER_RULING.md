@@ -156,3 +156,26 @@ extended per directive: no controls attribute, phase-1 autoplay-loop wiring, pha
 onloadedmetadata, click-pause before capture (plus commit-pause at the dt read). 15/15 EXIT 0;
 scaffold 3/3 EXIT 0. Lane pack copy synced from generator output (lane-dir evidence, not the
 frozen staged file).
+
+## Ingest addenda (2026-07-16, coordinator rulings)
+
+1. OWNER PROTOCOL RULING (multi-event windows): when a paddle hit and a bounce both fall in
+   one clip window, the owner labels the event NEAREST THE CLIP CENTER, paddle priority when
+   both are near-center. Such rows are VALID typed contacts at their clicked+nudged frame
+   (dt captures the offset). Caveat for per-stratum candidate-precision stats: an audio-onset
+   candidate may be "validated" by a nearby different event — interpret stratum precision
+   with that caveat; do not read it as raw audio-onset timing precision. No owner redos needed.
+2. PARTIAL EXPORTS: coordinator added a mid-session "Save progress" button to the OWNER-LIVE
+   staged page (staged-only divergence from the generator, recorded exactly: #saveNow button
+   beside #back; export refactored into exportAnswers(); $("save") and $("saveNow") both bind
+   to it; payload and filename unchanged). Ingest behavior VERIFIED for partials: a 4/300
+   synthetic export ingested EXIT 0 with unanswered=296 listed in dataset_manifest.json —
+   partial files are handled gracefully by construction. Operator rule: ingest the NEWEST /
+   most-complete export only (files supersede by answer count, tie-break mtime); the ingest
+   consumes exactly one --results file. FOLLOW-UP BOOKED (not done, staged page frozen):
+   adopt the saveNow/exportAnswers wiring into the generator + byte-parity re-proof at the
+   next generator touch.
+3. DT-SUSPECT REMINDER (standing): rows labeled on the ORIGINAL page before the coordinator
+   hotfix are dt-suspect (click-toggled playback). The ingest-time dt-outlier spot-check
+   (|dt| near window edges, early presentation rows) covers this. No redos for multi-event
+   prioritization.
