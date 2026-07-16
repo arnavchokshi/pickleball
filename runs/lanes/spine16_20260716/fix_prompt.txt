@@ -1,0 +1,11 @@
+MICRO-FIX FROM THE MANAGER (your lane's deliverables are being ruled; this is the one
+out-of-fence casualty of your new contract, now assigned to you):
+tests/racketsport/test_best_stack_resolution.py::test_events_before_frames_makes_cold_mesh_plan_contact_dense
+fails with _HardStageFailure because its fake materializer omits the now-mandatory
+validation key your frame-schedule completeness contract requires. Update ONLY that test's
+fake to satisfy the new contract the way the real materializer does (validation.equal=true
+with the correct fields) — do not weaken the contract. Verify with literal exit codes (no
+pipes): (1) MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_best_stack_resolution.py -q
+must be all-pass EXIT 0; (2) rerun your test_spine_stage_contract.py + test_process_video.py
+EXIT 0. Append a fix section to runs/lanes/spine16_20260716/report.json (key
+"fix_20260716": literal exit codes + one paragraph) and write FIX_NOTE.md. Touch nothing else.

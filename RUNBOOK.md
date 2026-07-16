@@ -125,7 +125,9 @@ writes `PIPELINE_SUMMARY.json` even on partial runs. Pre-flight argument/path
 failures can exit before any run directory or `PIPELINE_SUMMARY.json` exists.
 The default serial path has 20 stage outcomes. Optional `rally_gating` makes
 21, and optional viewer verification also makes 21; enabling both makes 22. The
-order is:
+order below is projected from `AUTHORITATIVE_STAGE_GRAPH` in
+`scripts/racketsport/process_video.py`; overlap mode uses the same graph and
+only moves `frames` ahead of the four overlapped BALL/event stages:
 
 1. **ingest** - validate video and build/consume capture sidecar.
 2. **calibration** - create or consume `court_calibration.json`, court zones, net
@@ -376,12 +378,11 @@ Promotion still depends on the gates in `NORTH_STAR_ROADMAP.md`.
 
 ## Legacy Contract CLI
 
-`threed/racketsport/pipeline_cli.py` still exists for public contract/schema
-plumbing and fixture-copy tests. It is not the current full offline pipeline.
-Invoke it as `.venv/bin/python -m threed.racketsport.pipeline_cli`; running the
-file path directly can crash on relative imports.
-If you use `--allow-fixture-fallback`, you are copying old sample artifacts, not
-running models.
+The duplicate `threed/racketsport/pipeline_cli.py` runner was removed. The sole
+runtime entrypoint is `scripts/racketsport/process_video.py`. Its former public
+artifact tier/schema metadata and `--public-contracts` readiness validation now
+live as data-only contracts in `threed/racketsport/pipeline_contracts.py`,
+invoked through `scripts/racketsport/validate_pipeline_artifacts.py`.
 
 ## Focused Verification
 

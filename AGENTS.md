@@ -5,7 +5,7 @@
 - Preserve unrelated dirty worktree changes. Do not revert files you did not intentionally change.
 - Start with `NORTH_STAR_ROADMAP.md`, then this file and the relevant `RUNBOOK.md` section.
 - Treat `VERIFIED=0` as binding until a documented gate passes. Scoped passes, smoke tests, internal-val runs, browser loads, and copied fixtures are not promotions.
-- The main pipeline entrypoint is `scripts/racketsport/process_video.py`. The old `threed/racketsport/pipeline_cli.py` contract CLI is legacy plumbing unless a task explicitly targets it.
+- The sole pipeline entrypoint is `scripts/racketsport/process_video.py`; public artifact readiness metadata lives in `threed/racketsport/pipeline_contracts.py`.
 - `NORTH_STAR_ROADMAP.md` is the only product/current-truth/future-plan authority. Do not create another checklist, master plan, wave roadmap, capability matrix, or blueprint.
 - Put dated status, experiments, and handoffs under `runs/`. Volatile coordination belongs in `runs/manager/inflight_lanes.md` and `runs/manager/gpu_fleet.md`, never a root append log.
 - Baseline first, score every candidate with the same frozen gate, and keep raw observations immutable. Visual plausibility and optimizer residuals are not accuracy proof.

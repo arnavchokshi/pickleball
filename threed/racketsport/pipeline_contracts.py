@@ -5,6 +5,8 @@ from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 from typing import Any, Literal
 
+from pydantic import ValidationError
+
 from .schemas import validate_artifact_file
 
 
@@ -13,6 +15,7 @@ ARTIFACT_TYPE = "racketsport_pipeline_artifact_readiness"
 COURT_REVIEW_RETIRED_CLIPS = {"burlington_gold_0300_low_steep_corner"}
 ReadinessStatus = Literal["ready", "not_ready"]
 StageStatus = Literal["ready", "not_ready", "blocked"]
+PublicTier = Literal["on_device", "server_offline", "borderline"]
 
 
 class PipelineContractError(ValueError):
@@ -25,6 +28,70 @@ class PipelineStageContract:
     phase: str
     required_artifacts: tuple[str, ...]
     depends_on: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
+class PublicPipelineArtifactContract:
+    """Data-only public artifact metadata retained after legacy CLI removal."""
+
+    stage: str
+    artifact: str
+    schema: str
+    tier: PublicTier
+    model: str
+    output_timing: str
+    aliases: tuple[str, ...] = ()
+
+
+PUBLIC_PIPELINE_ARTIFACT_CONTRACTS: tuple[PublicPipelineArtifactContract, ...] = (
+    PublicPipelineArtifactContract(
+        "capture_sidecar", "capture_sidecar.json", "capture_sidecar", "on_device",
+        "AVFoundation capture + ARKit intrinsics/pose/floor-plane metadata", "live", ("capture", "sidecar"),
+    ),
+    PublicPipelineArtifactContract(
+        "court_calibration", "court_calibration.json", "court_calibration", "on_device",
+        "ARKit seed + existing OpenCV/manual-tap calibration runner", "live cached", ("calibration", "court"),
+    ),
+    PublicPipelineArtifactContract(
+        "tracks", "tracks.json", "tracks", "on_device",
+        "CoreML YOLO26n/s + lightweight ByteTrack/BoT-SORT + court filter; server spine can invoke YOLO26m BoT-SORT-ReID",
+        "live, with optional async refinement", ("tracking", "person_tracking"),
+    ),
+    PublicPipelineArtifactContract(
+        "ball_track", "ball_track.json", "ball_track", "on_device",
+        "distilled/quantized CoreML heatmap tracker for live path; TrackNetV3/WASB/PB-MAT are offline candidates",
+        "live preview, async authority later", ("ball",),
+    ),
+    PublicPipelineArtifactContract(
+        "contact_windows", "contact_windows.json", "contact_windows", "on_device",
+        "on-device mic onset + wrist velocity + ball inflection fusion", "live cue windows",
+        ("contacts", "contact", "ball_events"),
+    ),
+    PublicPipelineArtifactContract(
+        "player_ground", "player_ground.json", "player_ground", "server_offline",
+        "existing player_grounding/foot-lock primitives after pose/body output", "async", ("ground", "feet"),
+    ),
+    PublicPipelineArtifactContract(
+        "racket_pose", "racket_pose.json", "racket_pose", "server_offline",
+        "explicit four-corner PnP-IPPE runner now; future SAM2/GigaPose/FoundPose/FoundationPose stack",
+        "async", ("racket", "rkt"),
+    ),
+    PublicPipelineArtifactContract(
+        "metrics", "racket_sport_metrics.json", "racket_sport_metrics", "server_offline",
+        "biomechanical metrics and confidence calibration primitives", "async", ("racket_sport_metrics",),
+    ),
+    PublicPipelineArtifactContract(
+        "replay", "replay_scene.json", "replay_scene", "server_offline",
+        "existing CPU review GLB export; production animated GLB/USDZ still gated", "async", ("replay_scene",),
+    ),
+)
+PUBLIC_PIPELINE_STAGE_ORDER = [contract.stage for contract in PUBLIC_PIPELINE_ARTIFACT_CONTRACTS]
+_PUBLIC_CONTRACTS_BY_STAGE = {contract.stage: contract for contract in PUBLIC_PIPELINE_ARTIFACT_CONTRACTS}
+_PUBLIC_ALIASES = {
+    alias: contract.stage
+    for contract in PUBLIC_PIPELINE_ARTIFACT_CONTRACTS
+    for alias in contract.aliases
+}
 
 
 PIPELINE_STAGE_CONTRACTS: tuple[PipelineStageContract, ...] = (
@@ -221,6 +288,75 @@ def build_readiness_report(run_dir: str | Path, *, stage: str = "e2e") -> dict[s
         "semantic_blockers": semantic_blockers,
         "stages": stage_reports,
     }
+
+
+def build_public_contract_readiness(
+    run_dir: str | Path,
+    *,
+    stage: str = "replay",
+    tier: PublicTier | Literal["all"] = "all",
+) -> dict[str, Any]:
+    """Validate the retired CLI's public artifact surface without a runner."""
+
+    run_path = Path(run_dir)
+    normalized_stage = _normalize_public_stage(stage)
+    end = PUBLIC_PIPELINE_STAGE_ORDER.index(normalized_stage)
+    selected = list(PUBLIC_PIPELINE_STAGE_ORDER[: end + 1])
+    if tier != "all":
+        selected = [name for name in selected if _PUBLIC_CONTRACTS_BY_STAGE[name].tier == tier]
+
+    stage_reports: list[dict[str, Any]] = []
+    for name in selected:
+        contract = _PUBLIC_CONTRACTS_BY_STAGE[name]
+        path = run_path / contract.artifact
+        missing = [] if path.is_file() else [contract.artifact]
+        validation_errors: list[str] = []
+        if path.is_file():
+            try:
+                validate_artifact_file(contract.schema, path)
+            except (OSError, json.JSONDecodeError, ValidationError) as exc:
+                validation_errors.append(f"{contract.artifact}: {exc}")
+        status = "ready" if not missing and not validation_errors else "not_ready"
+        stage_reports.append(
+            {
+                "stage": contract.stage,
+                "artifact": contract.artifact,
+                "schema": contract.schema,
+                "tier": contract.tier,
+                "model": contract.model,
+                "output_timing": contract.output_timing,
+                "status": status,
+                "present_artifacts": [] if missing else [contract.artifact],
+                "missing_artifacts": missing,
+                "artifact_validation_errors": validation_errors,
+            }
+        )
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "pickleball_public_pipeline_contract_readiness",
+        "run_dir": str(run_path),
+        "requested_stage": normalized_stage,
+        "tier": tier,
+        "status": "ready" if all(item["status"] == "ready" for item in stage_reports) else "not_ready",
+        "stage_order": PUBLIC_PIPELINE_STAGE_ORDER,
+        "required_artifacts": [_PUBLIC_CONTRACTS_BY_STAGE[name].artifact for name in selected],
+        "missing_artifacts": [artifact for item in stage_reports for artifact in item["missing_artifacts"]],
+        "artifact_validation_errors": [
+            error for item in stage_reports for error in item["artifact_validation_errors"]
+        ],
+        "stages": stage_reports,
+    }
+
+
+def _normalize_public_stage(stage: str) -> str:
+    normalized = stage.strip()
+    if normalized in _PUBLIC_CONTRACTS_BY_STAGE:
+        return normalized
+    if normalized in _PUBLIC_ALIASES:
+        return _PUBLIC_ALIASES[normalized]
+    valid = ", ".join(PUBLIC_PIPELINE_STAGE_ORDER)
+    raise PipelineContractError(f"unknown public pipeline stage: {stage}; expected one of: {valid}")
 
 
 def _normalize_stage(stage: str) -> str:

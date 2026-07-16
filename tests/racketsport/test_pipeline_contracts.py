@@ -8,10 +8,13 @@ from pathlib import Path
 import pytest
 
 from tests.racketsport.json_schema_assertions import assert_matches_json_schema
+from tests.racketsport.test_orchestrator_spine import _sidecar_payload
 from threed.racketsport.pipeline_contracts import (
     PIPELINE_STAGE_ORDER,
+    PUBLIC_PIPELINE_STAGE_ORDER,
     _ARTIFACT_SCHEMA_BY_FILENAME,
     PipelineContractError,
+    build_public_contract_readiness,
     build_readiness_report,
     safe_relative_path,
 )
@@ -445,6 +448,41 @@ def _write_ready_court_line_evidence(run_dir: Path) -> None:
         + "\n",
         encoding="utf-8",
     )
+
+
+def test_public_contract_readiness_survives_legacy_cli_removal(tmp_path: Path) -> None:
+    run_dir = tmp_path / "public"
+    _touch_all(run_dir, ["court_calibration.json", "tracks.json"])
+    (run_dir / "capture_sidecar.json").write_text(json.dumps(_sidecar_payload()) + "\n", encoding="utf-8")
+
+    report = build_public_contract_readiness(run_dir, stage="tracks")
+
+    assert report["artifact_type"] == "pickleball_public_pipeline_contract_readiness"
+    assert report["status"] == "ready"
+    assert report["stage_order"] == PUBLIC_PIPELINE_STAGE_ORDER
+    assert [stage["stage"] for stage in report["stages"]] == [
+        "capture_sidecar",
+        "court_calibration",
+        "tracks",
+    ]
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/validate_pipeline_artifacts.py",
+            "--run-dir",
+            str(run_dir),
+            "--public-contracts",
+            "--stage",
+            "tracks",
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert completed.returncode == 0, completed.stderr + completed.stdout
+    assert json.loads(completed.stdout)["status"] == "ready"
 
 
 def test_readiness_report_marks_stage_ready_only_after_dependencies_exist(tmp_path: Path) -> None:

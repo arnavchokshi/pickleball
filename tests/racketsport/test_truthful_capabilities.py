@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from scripts.racketsport import audit_storage_policy
+from scripts.racketsport.process_video import AUTHORITATIVE_STAGE_GRAPH
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -453,31 +454,12 @@ def test_runbook_documents_current_process_video_entrypoint() -> None:
     assert "scripts/racketsport/process_video.py" in text
     assert "`./run_pipeline`" not in text
     assert "`threed/racketsport/pipeline_cli.py`" in text
-    assert "you are copying old sample artifacts, not running models" in compact_text
+    assert "was removed" in compact_text
+    assert "threed/racketsport/pipeline_contracts.py" in compact_text
 
     expected_order = [
-        "**ingest**",
-        "**calibration**",
-        "**input_quality**",
-        "**tracking**",
-        "**camera_motion**",
-        "**placement**",
-        "**rally_gating**",
-        "**ball**",
-        "**ball_arc**",
-        "**events**",
-        "**ball_fill**",
-        "**frames**",
-        "**body**",
-        "**placement_refine**",
-        "**grounding_refine**",
-        "**paddle_pose**",
-        "**world**",
-        "**confidence_gate**",
-        "**match_stats**",
-        "**coaching_facts**",
-        "**manifest**",
-        "**verify**",
+        f"**{node.name}**"
+        for node in sorted(AUTHORITATIVE_STAGE_GRAPH, key=lambda node: node.serial_order)
     ]
     last_index = -1
     for marker in expected_order:

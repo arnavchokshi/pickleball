@@ -83,11 +83,10 @@ entrypoint (NORTH_STAR_ROADMAP.md's product goal). It chains, in order:
                       web viewer against the freshly built manifest.
 
 Resilience: every stage checks for an already-valid artifact first and skips
-real work when one exists (--force to redo), a failed/unavailable stage
-degrades to a trust-banded gap instead of raising past its own boundary
-(hard failures are reserved for calibration, the one stage nothing else can
-substitute for), and PIPELINE_SUMMARY.json always gets written with
-per-stage wall-clock, status, and trust badges -- even on a partial run.
+real work when one exists (--force to redo). Typed expected optional absences
+degrade or block; programming/schema errors fail the stage loudly and stop the
+run. PIPELINE_SUMMARY.json is written with per-stage wall-clock, status, and
+trust badges even on partial or failed runs.
 """
 
 from __future__ import annotations
@@ -109,6 +108,8 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from statistics import median
 from typing import Any, Callable, Literal, Mapping, Sequence
+
+from pydantic import ValidationError
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -290,6 +291,83 @@ class StageOutcome:
             "trust_badge": self.trust_badge,
             "metrics": self.metrics,
         }
+
+
+class ExpectedOptionalAbsence(RuntimeError):
+    """Typed, expected evidence/runtime absence that may degrade or block."""
+
+    def __init__(
+        self,
+        stage_status: Literal["degraded", "blocked"],
+        reason_code: str,
+        note: str,
+    ) -> None:
+        if stage_status not in {"degraded", "blocked"}:
+            raise ValueError("ExpectedOptionalAbsence stage_status must be degraded or blocked")
+        if not reason_code.strip():
+            raise ValueError("ExpectedOptionalAbsence reason_code must be non-empty")
+        super().__init__(note)
+        self.stage_status = stage_status
+        self.reason_code = reason_code
+        self.note = note
+
+
+@dataclass(frozen=True)
+class PipelineStageDefinition:
+    """One node in the authoritative process_video execution graph."""
+
+    name: str
+    serial_order: int
+    overlap_order: int
+    enabled_by: Literal["rally_gating", "verify_viewer"] | None = None
+
+
+# NS-01.6: this is the only ordered stage-graph definition. Serial and overlap
+# execution plans are projections of these nodes; neither runner maintains its
+# own stage list. Overlap changes only the frames/BALL scheduling window that
+# already existed before this consolidation.
+AUTHORITATIVE_STAGE_GRAPH: tuple[PipelineStageDefinition, ...] = (
+    PipelineStageDefinition("ingest", 0, 0),
+    PipelineStageDefinition("calibration", 10, 10),
+    PipelineStageDefinition("input_quality", 20, 20),
+    PipelineStageDefinition("tracking", 30, 30),
+    PipelineStageDefinition("camera_motion", 40, 40),
+    PipelineStageDefinition("placement", 50, 50),
+    PipelineStageDefinition("rally_gating", 60, 60, "rally_gating"),
+    PipelineStageDefinition("ball", 70, 80),
+    PipelineStageDefinition("ball_arc", 80, 90),
+    PipelineStageDefinition("events", 90, 100),
+    PipelineStageDefinition("ball_fill", 100, 110),
+    PipelineStageDefinition("frames", 110, 70),
+    PipelineStageDefinition("body", 120, 120),
+    PipelineStageDefinition("placement_refine", 130, 130),
+    PipelineStageDefinition("grounding_refine", 140, 140),
+    PipelineStageDefinition("paddle_pose", 150, 150),
+    PipelineStageDefinition("world", 160, 160),
+    PipelineStageDefinition("confidence_gate", 170, 170),
+    PipelineStageDefinition("match_stats", 180, 180),
+    PipelineStageDefinition("coaching_facts", 190, 190),
+    PipelineStageDefinition("manifest", 200, 200),
+    PipelineStageDefinition("verify", 210, 210, "verify_viewer"),
+)
+
+
+def authoritative_stage_names(
+    *,
+    rally_gating: bool,
+    verify_viewer: bool,
+    body_schedule: Literal["serial", "overlap"] = "serial",
+) -> tuple[str, ...]:
+    """Project the canonical graph into the selected runtime schedule."""
+
+    enabled = {"rally_gating": rally_gating, "verify_viewer": verify_viewer}
+    order_field = "overlap_order" if body_schedule == "overlap" else "serial_order"
+    nodes = [
+        node
+        for node in AUTHORITATIVE_STAGE_GRAPH
+        if node.enabled_by is None or enabled[node.enabled_by]
+    ]
+    return tuple(node.name for node in sorted(nodes, key=lambda node: getattr(node, order_field)))
 
 
 @dataclass(frozen=True)
@@ -897,41 +975,15 @@ class ProcessVideoPipeline:
         summary = self._write_summary(wall_seconds=time.monotonic() - started)
         return summary
 
-    def _build_prefix_stage_fns(self) -> list[tuple[str, Callable[[], StageOutcome]]]:
-        stage_fns: list[tuple[str, Callable[[], StageOutcome]]] = [
-            ("ingest", self._stage_ingest),
-            ("calibration", self._stage_calibration),
-            ("input_quality", self._stage_input_quality),
-            ("tracking", self._stage_tracking),
-            ("camera_motion", self._stage_camera_motion),
-            ("placement", self._stage_placement),
-        ]
-        if self.options.rally_gating:
-            stage_fns.append(("rally_gating", self._stage_rally_gating))
-        return stage_fns
+    def _authoritative_stage_names(self, *, body_schedule: Literal["serial", "overlap"] | None = None) -> tuple[str, ...]:
+        return authoritative_stage_names(
+            rally_gating=self.options.rally_gating,
+            verify_viewer=self.options.verify_viewer,
+            body_schedule=body_schedule or self.options.body_schedule,
+        )
 
-    def _middle_stage_fns(self) -> list[tuple[str, Callable[[], StageOutcome]]]:
-        return [
-            ("ball", self._stage_ball),
-            ("ball_arc", self._stage_ball_arc),
-            ("events", self._stage_events),
-            ("ball_fill", self._stage_ball_fill),
-        ]
-
-    def _build_suffix_stage_fns(self) -> list[tuple[str, Callable[[], StageOutcome]]]:
-        stage_fns: list[tuple[str, Callable[[], StageOutcome]]] = [
-            ("placement_refine", self._stage_placement_refine),
-            ("grounding_refine", self._stage_grounding_refine),
-            ("paddle_pose", self._stage_paddle_pose),
-            ("world", self._stage_world),
-            ("confidence_gate", self._stage_confidence_gate),
-            ("match_stats", self._stage_match_stats),
-            ("coaching_facts", self._stage_coaching_facts),
-            ("manifest", self._stage_manifest),
-        ]
-        if self.options.verify_viewer:
-            stage_fns.append(("verify", self._stage_verify))
-        return stage_fns
+    def _stage_fns(self, names: Sequence[str]) -> list[tuple[str, Callable[[], StageOutcome]]]:
+        return [(name, getattr(self, f"_stage_{name}")) for name in names]
 
     def _run_stage_list(self, stage_fns: list[tuple[str, Callable[[], StageOutcome]]]) -> bool:
         """Run stage functions in order, appending outcomes. Returns True iff
@@ -950,14 +1002,7 @@ class ProcessVideoPipeline:
         """--body-schedule=serial (the default): derive ball/events first so
         cold-run frame scheduling can use contact-dense ball_aware windows."""
 
-        stage_fns = (
-            self._build_prefix_stage_fns()
-            + self._middle_stage_fns()
-            + [("frames", self._stage_frames)]
-            + [("body", self._stage_body)]
-            + self._build_suffix_stage_fns()
-        )
-        self._run_stage_list(stage_fns)
+        self._run_stage_list(self._stage_fns(self._authoritative_stage_names(body_schedule="serial")))
 
     def _run_overlap(self) -> None:
         """--body-schedule=overlap: once frames/tracks/calibration BODY
@@ -966,7 +1011,14 @@ class ProcessVideoPipeline:
         the main thread while BODY is in flight, joining before any
         BODY-dependent stage (placement_refine/grounding_refine/world)."""
 
-        if self._run_stage_list(self._build_prefix_stage_fns() + [("frames", self._stage_frames)]):
+        names = self._authoritative_stage_names(body_schedule="overlap")
+        frames_index = names.index("frames")
+        body_index = names.index("body")
+        prefix_names = names[: frames_index + 1]
+        overlapped_names = names[frames_index + 1 : body_index]
+        suffix_names = names[body_index + 1 :]
+
+        if self._run_stage_list(self._stage_fns(prefix_names)):
             return
 
         # The pre-thread BODY shortcut must use the same trusted stage identity
@@ -988,10 +1040,10 @@ class ProcessVideoPipeline:
         if reuse_outcome is not None:
             # Reuse semantics unchanged: valid BODY artifacts already exist,
             # so this run takes the plain serial path -- no thread spun up.
-            if self._run_stage_list(self._middle_stage_fns()):
+            if self._run_stage_list(self._stage_fns(overlapped_names)):
                 return
             self.stage_outcomes.append(reuse_outcome)
-            self._run_stage_list(self._build_suffix_stage_fns())
+            self._run_stage_list(self._stage_fns(suffix_names))
             body_final = next((o for o in self.stage_outcomes if o.stage == "body"), None)
             self._parallel_body_block = {
                 "enabled": False,
@@ -1005,9 +1057,9 @@ class ProcessVideoPipeline:
             }
             return
 
-        if self._run_overlap_body(self._middle_stage_fns()):
+        if self._run_overlap_body(self._stage_fns(overlapped_names)):
             return
-        self._run_stage_list(self._build_suffix_stage_fns())
+        self._run_stage_list(self._stage_fns(suffix_names))
 
     def _body_dispatch_input_paths(self) -> dict[str, Path]:
         """The exact BODY dispatch inputs the overlap input-mutation guard
@@ -1170,15 +1222,34 @@ class ProcessVideoPipeline:
                         "with source hash, artifact hash, author, and timestamp"
                     ],
                 )
-        except _HardStageFailure as exc:
-            return StageOutcome(stage=name, status="failed", wall_seconds=time.monotonic() - started, notes=[str(exc)])
-        except Exception as exc:  # noqa: BLE001 - a stage bug must not crash the whole run
-            trace = traceback.format_exc(limit=6)
+        except ExpectedOptionalAbsence as exc:
             return StageOutcome(
                 stage=name,
-                status="degraded",
+                status=exc.stage_status,
                 wall_seconds=time.monotonic() - started,
-                notes=[f"unexpected {type(exc).__name__}: {exc}", trace],
+                notes=[exc.note],
+                metrics={
+                    "expected_optional_absence": {
+                        "reason_code": exc.reason_code,
+                        "stage_status": exc.stage_status,
+                    }
+                },
+            )
+        except _HardStageFailure as exc:
+            return StageOutcome(stage=name, status="failed", wall_seconds=time.monotonic() - started, notes=[str(exc)])
+        except Exception as exc:  # noqa: BLE001 - programming/schema errors are a loud failed stage
+            trace = traceback.format_exc()
+            error_artifact = self._write_stage_error_artifact(name=name, exc=exc, trace=trace)
+            return StageOutcome(
+                stage=name,
+                status="failed",
+                wall_seconds=time.monotonic() - started,
+                notes=[
+                    f"unexpected {type(exc).__name__}: {exc}",
+                    f"full traceback persisted to {error_artifact}",
+                ],
+                artifacts=[error_artifact],
+                metrics={"reason_code": "unexpected_stage_exception"},
             )
         finally:
             self._active_reuse_decisions.pop(name, None)
@@ -1192,12 +1263,36 @@ class ProcessVideoPipeline:
                     metadata=self._identity_metadata(outcome),
                 ):
                     pass
-            except Exception as exc:  # noqa: BLE001 - preserve stage output but reject reuse until identity publishes
+            except Exception as exc:  # noqa: BLE001 - identity publication is part of the stage contract
+                trace = traceback.format_exc()
+                error_artifact = self._write_stage_error_artifact(name=name, exc=exc, trace=trace)
+                outcome.status = "failed"
                 outcome.notes.append(
                     f"content-addressed stage manifest publication failed ({type(exc).__name__}: {exc}); "
-                    "this stage is not eligible for automatic reuse"
+                    f"full traceback persisted to {error_artifact}"
                 )
+                outcome.artifacts.append(error_artifact)
+                outcome.metrics["reason_code"] = "stage_identity_publication_failed"
         return outcome
+
+    def _write_stage_error_artifact(self, *, name: str, exc: Exception, trace: str) -> str:
+        relative = Path("stage_errors") / f"{name}.json"
+        path = self.clip_dir / relative
+        try:
+            _write_json(
+                path,
+                {
+                    "schema_version": 1,
+                    "artifact_type": "racketsport_process_video_stage_error",
+                    "stage": name,
+                    "exception_type": type(exc).__name__,
+                    "message": str(exc),
+                    "traceback": trace,
+                },
+            )
+        except Exception as write_exc:  # noqa: BLE001 - retain the original failure if diagnostics cannot publish
+            return f"{relative} (write failed: {type(write_exc).__name__}: {write_exc})"
+        return relative.as_posix()
 
     def _identity_artifact_root_existed(self, value: str, existing_roots: set[str]) -> bool:
         path = Path(str(value).rstrip("/"))
@@ -1653,13 +1748,20 @@ class ProcessVideoPipeline:
                 reuse_existing_stage_artifacts=True,
                 require_content_identity_for_reuse=True,
             )
-        except Exception as exc:  # noqa: BLE001
-            return StageOutcome(
-                stage="tracking",
-                status="degraded",
-                wall_seconds=0.0,
-                notes=[f"live BoT-SORT tracking unavailable ({type(exc).__name__}: {exc}); no tracks produced"],
-            )
+        except (OSError, ModuleNotFoundError) as exc:
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                "tracking_runtime_unavailable",
+                f"live BoT-SORT tracking unavailable ({type(exc).__name__}: {exc}); no tracks produced",
+            ) from exc
+        except RuntimeError as exc:
+            if "ultralytics is required" not in str(exc):
+                raise
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                "tracking_runtime_dependency_unavailable",
+                f"live BoT-SORT tracking unavailable ({type(exc).__name__}: {exc}); no tracks produced",
+            ) from exc
         if not _spine_stage_succeeded(result, stage="tracking"):
             return StageOutcome(
                 stage="tracking",
@@ -1964,36 +2066,11 @@ class ProcessVideoPipeline:
                         sampled_frame_count=0,
                     )
                 )
-                return StageOutcome(
-                    stage="camera_motion",
-                    status="degraded",
-                    wall_seconds=0.0,
-                    notes=[str(exc) + "; placement will proceed without camera compensation"],
-                    trust_badge="preview",
-                    metrics={
-                        "camera_motion_auto": self._camera_motion_auto,
-                        "camera_motion_unavailable": {"reason": exc.reason},
-                    },
-                )
-            except Exception as exc:  # noqa: BLE001
-                self._set_camera_motion_auto(
-                    self._camera_motion_auto_decision(
-                        score=None,
-                        threshold=threshold,
-                        enabled=False,
-                        forced="auto",
-                        probe_wall_seconds=0.0,
-                        sampled_frame_count=0,
-                    )
-                )
-                return StageOutcome(
-                    stage="camera_motion",
-                    status="degraded",
-                    wall_seconds=0.0,
-                    notes=[f"camera_motion AUTO probe failed ({type(exc).__name__}: {exc}); placement will proceed without camera compensation"],
-                    trust_badge="preview",
-                    metrics={"camera_motion_auto": self._camera_motion_auto},
-                )
+                raise ExpectedOptionalAbsence(
+                    "degraded",
+                    f"camera_motion_unavailable_{exc.reason}",
+                    str(exc) + "; placement will proceed without camera compensation",
+                ) from exc
             camera_motion_auto = self._camera_motion_auto_decision(
                 score=float(probe.get("motion_score", 0.0) or 0.0),
                 threshold=float(probe.get("threshold", threshold) or threshold),
@@ -2027,15 +2104,12 @@ class ProcessVideoPipeline:
         if target.is_file() and not opts.force and self._identity_allows_reuse("camera_motion"):
             try:
                 validate_camera_motion_payload(_read_json(target))
-            except Exception as exc:  # noqa: BLE001
-                return StageOutcome(
-                    stage="camera_motion",
-                    status="degraded",
-                    wall_seconds=0.0,
-                    notes=[f"existing camera_motion.json failed validation ({type(exc).__name__}: {exc}); placement will proceed without rewriting it"],
-                    trust_badge="preview",
-                    metrics={"camera_motion_auto": self._camera_motion_auto},
-                )
+            except (OSError, json.JSONDecodeError, ValueError) as exc:
+                raise ExpectedOptionalAbsence(
+                    "degraded",
+                    "camera_motion_invalid_cache",
+                    f"existing camera_motion.json failed validation ({type(exc).__name__}: {exc}); placement will proceed without rewriting it",
+                ) from exc
             return StageOutcome(
                 stage="camera_motion",
                 status="reused",
@@ -2054,26 +2128,11 @@ class ProcessVideoPipeline:
             payload = estimate_camera_motion(source_video, calibration_path, **estimate_kwargs)
             write_camera_motion_json(payload, target)
         except CameraMotionUnavailable as exc:
-            return StageOutcome(
-                stage="camera_motion",
-                status="degraded",
-                wall_seconds=time.monotonic() - started,
-                notes=[str(exc) + "; placement will proceed without camera compensation"],
-                trust_badge="preview",
-                metrics={
-                    "camera_motion_auto": self._camera_motion_auto,
-                    "camera_motion_unavailable": {"reason": exc.reason},
-                },
-            )
-        except Exception as exc:  # noqa: BLE001
-            return StageOutcome(
-                stage="camera_motion",
-                status="degraded",
-                wall_seconds=time.monotonic() - started,
-                notes=[f"camera_motion failed ({type(exc).__name__}: {exc}); placement will proceed without camera compensation"],
-                trust_badge="preview",
-                metrics={"camera_motion_auto": self._camera_motion_auto},
-            )
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                f"camera_motion_unavailable_{exc.reason}",
+                str(exc) + "; placement will proceed without camera compensation",
+            ) from exc
         summary = payload.get("summary", {}) if isinstance(payload, Mapping) else {}
         frame_count = int(summary.get("n_frames", 0) or 0)
         wall_seconds = time.monotonic() - started
@@ -2127,26 +2186,18 @@ class ProcessVideoPipeline:
             sam3d_path = None
         stance_phases_path = self._placement_stance_phases_path() if refine_from_sam3d else None
         placement_path = self.clip_dir / "placement.json"
-        try:
-            result = rewrite_tracks_with_placement(
-                tracks_path=tracks_path,
-                calibration_path=calibration_path,
-                placement_path=placement_path,
-                native2d_keypoints_path=native2d_path,
-                sam3d_keypoints_path=sam3d_path,
-                stance_phases_path=stance_phases_path,
-                foot_contact_phases_out_path=self.clip_dir / "foot_contact_phases.json",
-                camera_motion_path=camera_motion_path,
-                refine_from_sam3d=refine_from_sam3d,
-                config=PlacementConfig(undistort=self.options.placement_undistort),
-            )
-        except Exception as exc:  # noqa: BLE001
-            return StageOutcome(
-                stage=stage_name,
-                status="degraded",
-                wall_seconds=0.0,
-                notes=[f"{stage_name} failed ({type(exc).__name__}: {exc}); kept current tracks.json"],
-            )
+        result = rewrite_tracks_with_placement(
+            tracks_path=tracks_path,
+            calibration_path=calibration_path,
+            placement_path=placement_path,
+            native2d_keypoints_path=native2d_path,
+            sam3d_keypoints_path=sam3d_path,
+            stance_phases_path=stance_phases_path,
+            foot_contact_phases_out_path=self.clip_dir / "foot_contact_phases.json",
+            camera_motion_path=camera_motion_path,
+            refine_from_sam3d=refine_from_sam3d,
+            config=PlacementConfig(undistort=self.options.placement_undistort),
+        )
 
         source_notes = [f"{name}={count}" for name, count in sorted(result.source_counts.items()) if count]
         placement_summary = getattr(result, "summary", {}) if isinstance(getattr(result, "summary", {}), dict) else {}
@@ -2221,7 +2272,7 @@ class ProcessVideoPipeline:
         manifest_path = self.options.manifest_path
         try:
             payload = _read_json(manifest_path)
-        except Exception:  # noqa: BLE001 - let the real runner report manifest errors
+        except (OSError, json.JSONDecodeError):  # let the real runner report unreadable manifest files
             return manifest_path, []
         models = payload.get("models")
         if not isinstance(models, list):
@@ -2441,7 +2492,19 @@ class ProcessVideoPipeline:
                 required_frame_indexes=required_frame_indexes,
             )
             cap_exclusion = _frame_cap_exclusion_record(tracks, schedule)
-            write_frame_schedule(self.clip_dir / "process_video_frame_schedule.json", schedule)
+            schedule_path = self.clip_dir / "process_video_frame_schedule.json"
+            write_frame_schedule(schedule_path, schedule)
+            written_schedule = _read_json(schedule_path)
+            _assert_frame_schedule_covers_required(
+                written_schedule,
+                required_frame_indexes=required_frame_indexes,
+                frame_compute_plan_present=frame_plan_path.is_file(),
+            )
+            if not frame_plan_path.is_file():
+                schedule_notes.append(
+                    "frame_compute_plan.json absent: no event-selected deep-mesh requirements were available; "
+                    "the bounded tracked-frame schedule remains explicit"
+                )
 
             existing = sorted(out_dir.glob("frame_*.jpg")) if out_dir.is_dir() else []
             cache_note: str | None = None
@@ -2478,20 +2541,31 @@ class ProcessVideoPipeline:
                 required_frame_indexes=required_frame_indexes,
                 schedule=schedule,
             )
+            validation = result.get("validation")
+            if not isinstance(validation, Mapping) or validation.get("equal") is not True:
+                raise BodyFrameMaterializationError(
+                    "frames materializer did not return validation.equal=true for the written schedule"
+                )
             if cache_note is not None:
                 result["notes"] = [cache_note, *result["notes"]]
         except (BodyFrameScheduleError, BodyFrameMaterializationError) as exc:
             raise _HardStageFailure(f"BODY frames-stage schedule validation failed ({type(exc).__name__}): {exc}") from exc
-        except Exception as exc:  # noqa: BLE001 - frame extraction must never crash the pipeline
-            return StageOutcome(
-                stage="frames",
-                status="degraded",
-                wall_seconds=0.0,
-                notes=[
-                    f"body_frames/ extraction unavailable ({type(exc).__name__}: {exc}); BODY will degrade "
-                    "to court/skeleton-only for this run (SAM-3D needs per-frame JPEGs to run the real model)"
-                ],
-            )
+        except (FileNotFoundError, OSError) as exc:
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                "body_frame_extraction_runtime_unavailable",
+                f"body_frames/ extraction unavailable ({type(exc).__name__}: {exc}); BODY will degrade "
+                "to court/skeleton-only for this run (SAM-3D needs per-frame JPEGs to run the real model)",
+            ) from exc
+        except RuntimeError as exc:
+            if "ffmpeg" not in str(exc).lower():
+                raise
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                "body_frame_extraction_ffmpeg_unavailable",
+                f"body_frames/ extraction unavailable ({type(exc).__name__}: {exc}); BODY will degrade "
+                "to court/skeleton-only for this run (SAM-3D needs per-frame JPEGs to run the real model)",
+            ) from exc
 
         total_mb = result["total_bytes"] / (1024 * 1024)
         notes = [
@@ -2516,7 +2590,7 @@ class ProcessVideoPipeline:
                 "base_skeleton_stride": result["schedule"].get("base_skeleton_stride"),
                 "effective_stride": result["schedule"].get("effective_stride"),
                 "required_body_frame_count": len(required_frame_indexes or set()),
-                "schedule_materialized_equal": result.get("validation", {"equal": True})["equal"],
+                "schedule_materialized_equal": result["validation"]["equal"],
                 "scheduled_vs_total_frame_count": {
                     "scheduled": len(result["schedule"].get("frame_indexes", [])),
                     "total": result["schedule"].get("total_tracked_frame_count"),
@@ -2825,8 +2899,12 @@ class ProcessVideoPipeline:
                 emit_candidates=opts.emit_ball_candidates,
                 candidate_top_k=5,
             )
-        except Exception:  # noqa: BLE001
-            return False
+        except (OSError, RuntimeError) as exc:
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                "ball_model_runtime_unavailable",
+                f"WASB ball inference unavailable ({type(exc).__name__}: {exc}); no ball_track.json produced",
+            ) from exc
         return target.is_file() and _valid_artifact("ball_track", target)
 
     def _resolved_ball_candidate_paths(self) -> list[Path]:
@@ -2850,7 +2928,7 @@ class ProcessVideoPipeline:
                 command="process_video.py ball stage (2D bounce detection)",
             )
             notes.append("detected 2D bounces from image-velocity inflections (threed.racketsport.ball_bounce_2d)")
-        except Exception as exc:  # noqa: BLE001
+        except (ImportError, OSError) as exc:
             notes.append(f"2D bounce detection skipped ({type(exc).__name__}: {exc})")
             return notes
 
@@ -2870,7 +2948,7 @@ class ProcessVideoPipeline:
                 "applied geometry-corrected manual-court in/out with honest gray zones "
                 "(threed.racketsport.ball_manual_court_inout / ball_inout_uncertainty)"
             )
-        except Exception as exc:  # noqa: BLE001
+        except (ImportError, OSError) as exc:
             notes.append(f"manual-court in/out skipped ({type(exc).__name__}: {exc})")
         return notes
 
@@ -3395,7 +3473,7 @@ class ProcessVideoPipeline:
             if blockers:
                 return payload, f"audio unavailable with explicit reason {blockers[0]}; contact windows use visual cues only"
             return payload, f"extracted pop-tuned audio_onsets_v2.json ({len(payload.get('onsets', []))} onsets; raw/corrected timing preserved; detector remains review-only, not a learned classifier)"
-        except Exception as exc:  # noqa: BLE001
+        except (OSError, RuntimeError) as exc:
             return {
                 "status": "blocked",
                 "blockers": ["audio_extraction_error"],
@@ -3853,8 +3931,21 @@ class ProcessVideoPipeline:
                 reuse_existing_stage_artifacts=True,
                 require_content_identity_for_reuse=True,
             )
-        except Exception as exc:  # noqa: BLE001
-            return StageOutcome(stage="body", status="degraded", wall_seconds=0.0, notes=[f"local BODY stage unavailable ({type(exc).__name__}: {exc}); degraded to skeleton-only"])
+        except (OSError, ModuleNotFoundError) as exc:
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                "local_body_runtime_unavailable",
+                f"local BODY stage unavailable ({type(exc).__name__}: {exc}); degraded to skeleton-only",
+            ) from exc
+        except RuntimeError as exc:
+            runtime_markers = ("checkpoint", "torch", "mps", "cuda", "sam-3d", "sam3d", "subprocess")
+            if not any(marker in str(exc).lower() for marker in runtime_markers):
+                raise
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                "local_body_model_runtime_unavailable",
+                f"local BODY stage unavailable ({type(exc).__name__}: {exc}); degraded to skeleton-only",
+            ) from exc
         if not _spine_stage_succeeded(result, stage="body"):
             return StageOutcome(stage="body", status="degraded", wall_seconds=0.0, notes=[f"local BODY stage failed: {_spine_failure_detail(result)}; degraded to skeleton-only"])
 
@@ -3922,7 +4013,7 @@ class ProcessVideoPipeline:
             _, _, fps = _video_probe(self.options.video)
             sidecar = _remote_seed_capture_sidecar_from_calibration(_read_json(calibration_path), fps=fps)
             _write_json(sidecar_path, sidecar)
-        except Exception as exc:  # noqa: BLE001 - dispatch proceeds; remote failure note stays honest
+        except (OSError, ValueError) as exc:  # declared calibration can lack the optional remote corner seed fields
             return (
                 f"remote calibration seed derivation failed ({type(exc).__name__}: {exc}); the remote "
                 "dependency walk will fail at its calibration stage unless a capture_sidecar.json exists"
@@ -3963,16 +4054,17 @@ class ProcessVideoPipeline:
                 max_players=opts.max_players,
             )
         except RemoteBodyDispatchError as exc:
-            return StageOutcome(
-                stage="body",
-                status="degraded",
-                wall_seconds=0.0,
-                notes=[
-                    seed_note,
-                    f"remote BODY dispatch to {opts.remote_config.host} did not complete: {exc}",
-                    "remote SAM-3D BODY did not complete; no fallback pose skeleton was generated",
-                ],
-            )
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                "remote_body_dispatch_unavailable",
+                "; ".join(
+                    [
+                        seed_note,
+                        f"remote BODY dispatch to {opts.remote_config.host} did not complete: {exc}",
+                        "remote SAM-3D BODY did not complete; no fallback pose skeleton was generated",
+                    ]
+                ),
+            ) from exc
 
         smpl_synced = (self.clip_dir / "smpl_motion.json").is_file()
         skeleton_synced = _is_real_sam3d_skeleton(self.clip_dir / "skeleton3d.json")
@@ -4193,7 +4285,7 @@ class ProcessVideoPipeline:
         if out.is_file() and not self.options.force and self._identity_allows_reuse("paddle_pose"):
             try:
                 payload = _read_optional_json(out)
-            except Exception:
+            except OSError:
                 payload = None
             if _is_valid_paddle_pose_payload(payload):
                 self._record_paddle_pose_trust_band(payload)
@@ -4256,7 +4348,7 @@ class ProcessVideoPipeline:
                 use_detector_boxes=use_detector_boxes,
                 use_detector_box_handedness=use_detector_boxes,
             )
-        except Exception as exc:  # noqa: BLE001 - stage is fail-closed by contract.
+        except OSError as exc:
             out.unlink(missing_ok=True)
             return StageOutcome(
                 stage="paddle_pose",
@@ -5087,6 +5179,30 @@ def _frame_cap_exclusion_record(tracks: Any, schedule: Mapping[str, Any]) -> dic
         "excluded_count": len(excluded),
         "excluded_frame_indexes": excluded,
     }
+
+
+def _assert_frame_schedule_covers_required(
+    schedule: Mapping[str, Any],
+    *,
+    required_frame_indexes: set[int] | None,
+    frame_compute_plan_present: bool,
+) -> None:
+    """Fail loudly if the persisted schedule drops current plan requirements."""
+
+    raw_indexes = schedule.get("frame_indexes")
+    if not isinstance(raw_indexes, list):
+        raise BodyFrameScheduleError("written frame schedule is missing the required frame_indexes array")
+    try:
+        scheduled = {int(frame_idx) for frame_idx in raw_indexes}
+    except (TypeError, ValueError) as exc:
+        raise BodyFrameScheduleError("written frame schedule contains a non-integer frame index") from exc
+    required = set(required_frame_indexes or set())
+    missing = sorted(required - scheduled)
+    if missing:
+        source = "current frame_compute_plan.json" if frame_compute_plan_present else "BODY execution request"
+        raise BodyFrameScheduleError(
+            f"written process_video_frame_schedule.json does not cover {source}: missing_frames={missing}"
+        )
 
 
 def _minimum_bundle_missing_capabilities(
@@ -6289,7 +6405,7 @@ def _valid_artifact(schema: str, path: Path) -> bool:
         return False
     try:
         validate_artifact_file(schema, path)
-    except Exception:  # noqa: BLE001
+    except (OSError, json.JSONDecodeError, ValidationError):
         return False
     return True
 

@@ -1804,28 +1804,13 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
     summary = pipeline.run()
 
     stage_names = [s["stage"] for s in summary["stages"]]
-    assert stage_names == [
-        "ingest",
-        "calibration",
-        "input_quality",
-        "tracking",
-        "camera_motion",
-        "placement",
-        "ball",
-        "ball_arc",
-        "events",
-        "ball_fill",
-        "frames",
-        "body",
-        "placement_refine",
-        "grounding_refine",
-        "paddle_pose",
-        "world",
-        "confidence_gate",
-        "match_stats",
-        "coaching_facts",
-        "manifest",
-    ]
+    assert stage_names == list(
+        process_video.authoritative_stage_names(
+            rally_gating=False,
+            verify_viewer=False,
+            body_schedule="serial",
+        )
+    )
     assert summary["status"] in {"complete", "partial"}
     # tracking/frames/body all blocked/degraded because no_gpu=True and no reuse artifacts given.
     by_stage = {s["stage"]: s for s in summary["stages"]}
@@ -2412,15 +2397,16 @@ def test_default_stage_order_runs_camera_motion_before_placement(tmp_path: Path)
     options = _base_options(tmp_path, video=video, court_corners=None)
     pipeline = process_video.ProcessVideoPipeline(options)
 
-    assert [name for name, _fn in pipeline._build_prefix_stage_fns()] == [
+    names = pipeline._authoritative_stage_names(body_schedule="serial")
+    assert names[:6] == (
         "ingest",
         "calibration",
         "input_quality",
         "tracking",
         "camera_motion",
         "placement",
-    ]
-    assert [name for name, _fn in pipeline._middle_stage_fns()] == ["ball", "ball_arc", "events", "ball_fill"]
+    )
+    assert names[6:10] == ("ball", "ball_arc", "events", "ball_fill")
 
 
 def test_camera_motion_auto_default_skips_static_probe_without_writing_artifact(
@@ -3335,7 +3321,7 @@ def test_tracking_stage_degrades_when_live_tracking_unavailable(tmp_path: Path, 
 
     monkeypatch.setattr(process_video.orchestrator, "run_pipeline", _raise)
 
-    outcome = pipeline._stage_tracking()
+    outcome = pipeline._run_stage_safely("tracking", pipeline._stage_tracking)
     assert outcome.status == "degraded"
     assert "ultralytics" in " ".join(outcome.notes)
 
@@ -3865,12 +3851,13 @@ def test_frames_stage_passes_max_frames_and_frame_compute_plan_path(tmp_path: Pa
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / "frame_000000.jpg").write_bytes(b"jpg")
         return {
-            "schedule": {"capped": False, "source": "tracks_union"},
+            "schedule": kwargs["schedule"],
             "notes": ["fake schedule note"],
             "extraction": {"extracted_frame_count": 1},
             "out_dir": str(out_dir),
             "frame_count": 1,
             "total_bytes": 3,
+            "validation": {"equal": True},
         }
 
     monkeypatch.setattr(process_video, "materialize_process_video_frames", _fake_materialize)
@@ -3965,7 +3952,7 @@ def test_frames_stage_degrades_when_video_unreadable(tmp_path: Path) -> None:
     (options.clip_dir / "source.mp4").write_bytes(b"this is not a real video file")
     _write_json(options.clip_dir / "tracks.json", _tracks_payload())
 
-    outcome = pipeline._stage_frames()
+    outcome = pipeline._run_stage_safely("frames", pipeline._stage_frames)
 
     assert outcome.status == "degraded"
     assert "body_frames/ extraction unavailable" in " ".join(outcome.notes)
@@ -4244,7 +4231,7 @@ def test_tracking_stage_runs_raw_pool_authority_over_exported_pool(
     assert any("raw-pool global association" in note and "device=mps" in note for note in outcome.notes)
 
 
-def test_pipeline_never_raises_on_unexpected_stage_exception(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_pipeline_fails_and_stops_on_unexpected_stage_exception(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
     corners_path = tmp_path / "court_corners.json"
@@ -4267,11 +4254,16 @@ def test_pipeline_never_raises_on_unexpected_stage_exception(tmp_path: Path, mon
     summary = pipeline.run()
 
     by_stage = {s["stage"]: s for s in summary["stages"]}
-    assert by_stage["ball"]["status"] == "degraded"
+    assert by_stage["ball"]["status"] == "failed"
     assert "boom" in " ".join(by_stage["ball"]["notes"])
-    # the pipeline kept going past the crashing stage instead of aborting.
-    assert "events" in by_stage
-    assert "world" in by_stage
+    assert by_stage["ball"]["metrics"]["reason_code"] == "unexpected_stage_exception"
+    error_path = options.clip_dir / by_stage["ball"]["artifacts"][0]
+    error = json.loads(error_path.read_text(encoding="utf-8"))
+    assert error["exception_type"] == "ZeroDivisionError"
+    assert "ZeroDivisionError: boom" in error["traceback"]
+    assert "events" not in by_stage
+    assert "world" not in by_stage
+    assert summary["status"] == "failed"
 
 
 # ---------------------------------------------------------------------------
@@ -4986,7 +4978,7 @@ def test_body_stage_no_gpu_degrades_to_skeleton_only(tmp_path: Path) -> None:
     _clip_dir_with_tracks_and_sam3d_skeleton(options)
     pipeline = process_video.ProcessVideoPipeline(options)
 
-    outcome = pipeline._stage_body()
+    outcome = pipeline._run_stage_safely("body", pipeline._stage_body)
     assert outcome.status == "degraded"
     assert "SAM-3D BODY skipped" in " ".join(outcome.notes)
     assert not (options.clip_dir / "smpl_motion.json").is_file()
@@ -5097,7 +5089,7 @@ def test_body_stage_remote_dispatch_failure_degrades_gracefully(tmp_path: Path, 
     monkeypatch.setattr(process_video, "dispatch_body_stage", _fake_dispatch)
     pipeline = process_video.ProcessVideoPipeline(options)
 
-    outcome = pipeline._stage_body()
+    outcome = pipeline._run_stage_safely("body", pipeline._stage_body)
     assert outcome.status == "degraded"
     assert "lock busy" in " ".join(outcome.notes)
     assert "no fallback pose skeleton" in " ".join(outcome.notes)
@@ -5885,10 +5877,9 @@ def test_overlap_takes_serial_path_with_no_thread_when_body_artifacts_valid_for_
     monkeypatch.setattr(process_video, "dispatch_body_stage", _fail_if_dispatched)
 
     seeding_pipeline = _pipeline_with_attested_legacy_prefix(options)
+    pre_body_names = seeding_pipeline._authoritative_stage_names(body_schedule="serial")
     assert not seeding_pipeline._run_stage_list(
-        seeding_pipeline._build_prefix_stage_fns()
-        + seeding_pipeline._middle_stage_fns()
-        + [("frames", seeding_pipeline._stage_frames)]
+        seeding_pipeline._stage_fns(pre_body_names[: pre_body_names.index("body")])
     )
     _attest_existing_stage_artifact(seeding_pipeline, "body", options.clip_dir / "skeleton3d.json")
 

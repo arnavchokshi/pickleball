@@ -10,8 +10,11 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from threed.racketsport.pipeline_contracts import PipelineContractError, build_readiness_report
-from threed.racketsport.pipeline_cli import build_public_contract_readiness
+from threed.racketsport.pipeline_contracts import (
+    PipelineContractError,
+    build_public_contract_readiness,
+    build_readiness_report,
+)
 
 
 def main() -> int:
@@ -22,7 +25,7 @@ def main() -> int:
     parser.add_argument(
         "--public-contracts",
         action="store_true",
-        help="Validate the public run_pipeline artifact contracts instead of the legacy internal readiness contracts.",
+        help="Validate the retained public artifact metadata instead of the internal readiness contracts.",
     )
     args = parser.parse_args()
 

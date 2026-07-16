@@ -125,6 +125,10 @@ def build_frame_schedule(
                 "(already a subset of the tracked-frame set in the common case; explicit here for a resumed run "
                 "whose events stage already wrote frame_compute_plan.json before this stage ran)"
             )
+    elif plan_path is not None:
+        notes.append(
+            f"{plan_path} absent: no event-selected deep_mesh_windows were available; using the bounded tracked-frame schedule"
+        )
 
     union_set = base_indexes | mesh_indexes
     required_indexes = (
@@ -186,7 +190,13 @@ def write_frame_schedule(path: str | Path, schedule: Mapping[str, Any]) -> None:
 
 
 def body_execution_frame_indexes(body_execution: Mapping[str, Any]) -> set[int]:
-    return {int(frame["frame_idx"]) for frame in body_execution.get("scheduled_frames", [])}
+    frames = body_execution.get("scheduled_frames")
+    if not isinstance(frames, list):
+        raise BodyFrameScheduleError("BODY execution payload is missing the required scheduled_frames array")
+    try:
+        return {int(frame["frame_idx"]) for frame in frames}
+    except (KeyError, TypeError, ValueError) as exc:
+        raise BodyFrameScheduleError("BODY execution scheduled_frames contains an invalid frame_idx") from exc
 
 
 def validate_materialized_frame_set(
@@ -194,7 +204,7 @@ def validate_materialized_frame_set(
     out_dir: str | Path,
     schedule: Mapping[str, Any],
 ) -> dict[str, Any]:
-    expected = {int(frame_idx) for frame_idx in schedule.get("frame_indexes", [])}
+    expected = _validated_schedule_frame_indexes(schedule)
     actual = _materialized_frame_indexes(Path(out_dir))
     missing = sorted(expected - actual)
     unexpected = sorted(actual - expected)
@@ -263,7 +273,7 @@ def materialize_process_video_frames(
     schedule_path = out.parent / SCHEDULE_FILENAME
     write_frame_schedule(schedule_path, schedule)
 
-    expected_indexes = {int(frame_idx) for frame_idx in schedule.get("frame_indexes", [])}
+    expected_indexes = _validated_schedule_frame_indexes(schedule)
     _remove_unexpected_materialized_frames(out, expected_indexes=expected_indexes)
 
     try:
@@ -319,21 +329,47 @@ def _stride_sample(indexes: list[int], stride: int) -> set[int]:
 def _mesh_window_frame_indexes(plan_path: Path, *, tracked: set[int]) -> set[int]:
     try:
         plan = json.loads(plan_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return set()
+    except (OSError, json.JSONDecodeError) as exc:
+        raise BodyFrameScheduleError(f"invalid frame_compute_plan.json at {plan_path}: {exc}") from exc
     if not isinstance(plan, dict):
-        return set()
+        raise BodyFrameScheduleError(f"frame_compute_plan.json at {plan_path} must contain an object")
+    windows = plan.get("deep_mesh_windows")
+    if not isinstance(windows, list):
+        raise BodyFrameScheduleError(
+            f"frame_compute_plan.json at {plan_path} is missing the required deep_mesh_windows array"
+        )
     indexes: set[int] = set()
-    for window in plan.get("deep_mesh_windows", []) or []:
+    for window_index, window in enumerate(windows):
         try:
             start = int(window["frame_start"])
             end = int(window["frame_end"])
-        except (KeyError, TypeError, ValueError):
-            continue
+        except (KeyError, TypeError, ValueError) as exc:
+            raise BodyFrameScheduleError(
+                f"frame_compute_plan.json deep_mesh_windows[{window_index}] has invalid frame bounds"
+            ) from exc
+        if start < 0 or end < start:
+            raise BodyFrameScheduleError(
+                f"frame_compute_plan.json deep_mesh_windows[{window_index}] must satisfy 0 <= frame_start <= frame_end"
+            )
         for frame_idx in range(start, end + 1):
             if frame_idx in tracked:
                 indexes.add(frame_idx)
     return indexes
+
+
+def _validated_schedule_frame_indexes(schedule: Mapping[str, Any]) -> set[int]:
+    raw_indexes = schedule.get("frame_indexes")
+    if not isinstance(raw_indexes, list):
+        raise BodyFrameMaterializationError("BODY frame schedule is missing the required frame_indexes array")
+    try:
+        indexes = [int(frame_idx) for frame_idx in raw_indexes]
+    except (TypeError, ValueError) as exc:
+        raise BodyFrameMaterializationError("BODY frame schedule contains a non-integer frame index") from exc
+    if len(indexes) != len(set(indexes)) or indexes != sorted(indexes) or any(frame_idx < 0 for frame_idx in indexes):
+        raise BodyFrameMaterializationError(
+            "BODY frame schedule frame_indexes must be unique, ascending, non-negative integers"
+        )
+    return set(indexes)
 
 
 def _uniform_sample(indexes: list[int], cap: int) -> list[int]:

@@ -333,11 +333,19 @@ def test_events_before_frames_makes_cold_mesh_plan_contact_dense(
     def _fake_materialize(**kwargs: Any) -> dict[str, Any]:
         plan = json.loads(Path(kwargs["frame_compute_plan_path"]).read_text(encoding="utf-8"))
         assert plan["mesh_coverage_policy"]["contact_selected_frame_count"] > 0
+        frame_indexes = sorted(int(frame_idx) for frame_idx in kwargs["schedule"]["frame_indexes"])
         return {
             "frame_count": 1,
             "total_bytes": 1024,
             "notes": ["fake extraction"],
             "schedule": {"capped": False, "source": "frame_compute_plan.json"},
+            "validation": {
+                "expected_frame_indexes": frame_indexes,
+                "materialized_frame_indexes": frame_indexes,
+                "missing_frames": [],
+                "unexpected_frames": [],
+                "equal": True,
+            },
         }
 
     monkeypatch.setattr(process_video, "materialize_process_video_frames", _fake_materialize)
