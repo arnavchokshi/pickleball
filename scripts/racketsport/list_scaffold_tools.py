@@ -291,6 +291,8 @@ def _category(stem: str) -> str:
         return "label"
     if "shot" in normalized or "tenniset" in normalized:
         return "shot"
+    if normalized == "build_event_head_anchor_candidates":
+        return "contact"
     if "contact" in normalized or "audio" in normalized or "wrist" in normalized or "rally" in normalized:
         return "contact"
     if (
