@@ -113,3 +113,24 @@ manager at coordinator wind-down after the deliverable was shipped, ruled, and c
 (d0ce58bdd). The ruling rests entirely on the manager verification battery above. Codex
 session id 019f68df-5f28-7703-ad6e-bea1cf89e4a0 (logs: log.txt, log2.txt in this lane dir)
 is recorded for forensic resume if ever needed.
+
+## Bounded reopen addendum (2026-07-16): dt-integrity fix
+
+Owner-found DATA-CORRUPTING bug: the rendered <video> carried the native `controls`
+attribute, so a phase-2 click toggled playback and Confirm computed dt from a moving
+currentTime. Coordinator hot-fixed the STAGED page (controls removed; pause() at top of the
+click handler); owner continued on the fixed page. Manager audit found ONE further live
+vector with the same shape: the "Watch again" button sits in the phase-2 row (and browsers'
+video context menu offers Play without controls), so click-ball -> rewatch -> Confirm still
+read a moving currentTime. Durable fix in build_event_review_session.py (3 edits): controls
+removed; pause() on click-capture; pause() inside commit() at the dt READ SITE (covers every
+play-entry path). Regression asserts added to the blind-page test (no controls attr on video;
+both pause sites present). Verified: 15/15 tests EXIT 0; regenerated HTML from the real
+manifest differs from the coordinator's staged hotfix by EXACTLY the commit-pause line;
+localStorage key `event_labels_20260715_answers_v2` identical (owner's in-progress answers
+survive; the earlier ruling note calling the key `_results` was wrong — that regex had
+matched the export filename); staged Desktop page + lane pack page overwritten with canonical
+generator output and re-verified (300 ITEMS, blind, both pause sites, no controls).
+Clips untouched. Corrupted-dt exposure window: rows labeled on the original page BEFORE the
+coordinator hotfix are suspect for dt only where the owner had used click-toggled playback —
+flag for the ingest reviewer to spot-check dt outliers (|dt| near window edges) from early rows.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 from collections import Counter, defaultdict
@@ -110,6 +111,15 @@ def test_blind_page_contains_only_allowed_item_fields_and_keyboard_controls(sess
     assert "2/ITEMS[i].source_fps" in html
     assert "results_schema_version:2" in html
     assert "label_id:item.label_id" in html
+    # dt-integrity regressions (owner-found corruption, 2026-07-16): native controls
+    # let a phase-2 click toggle playback so dt was read from a moving currentTime;
+    # the rewatch button (and browser video context menu) could do the same at Confirm.
+    assert re.search(r"<video[^>]*\bcontrols\b", html) is None
+    assert '<video id="player" playsinline></video>' in html
+    # click-capture pauses playback before recording coordinates
+    assert 'player.addEventListener("click",e=>{if(!pending)return;player.pause();' in html
+    # commit pauses at the dt read site, covering every play-entry path (rewatch, context menu)
+    assert "if(!click)return;player.pause();rec.x=click.x" in html
 
 
 def test_build_event_review_session_direct_cli_render(tmp_path: Path) -> None:
