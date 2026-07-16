@@ -1,0 +1,29 @@
+{
+  "baseline_run": {
+    "directory": "wolverine_unbounded",
+    "guard_budget_s": 1000000000.0,
+    "run_wall_s": 80.7561080410087,
+    "segment_call_count": 43,
+    "segment_wall_max_s": 14.37785870800144,
+    "segment_wall_median_s": 0.7235615829995368,
+    "segment_budget_exceeded_count": 0
+  },
+  "guarded_run": {
+    "directory": "wolverine_guard30",
+    "guard_budget_s": 30.0,
+    "run_wall_s": 78.66199854199658,
+    "segment_call_count": 43,
+    "segment_wall_max_s": 13.275395958014997,
+    "segment_wall_median_s": 0.6738882079953328,
+    "segment_budget_exceeded_count": 0
+  },
+  "cmp_exit_code": 0,
+  "byte_identical_artifacts": {
+    "ball_arc_render.json": "aa596d50dae2d306b4c21c670353c4058e6896542d0e8e781cedc10500008a67",
+    "ball_bounce_candidates.json": "37b6b25aa010276da5cf16f426f7bb51b812dc2fb5f3cd779b5e7787e107e7e7",
+    "ball_flight_sanity.json": "ceb4f3ed19997964fa257b2a7e942d4357b9a38966ee5418624a0b2bb80ca9ba",
+    "ball_track_arc_solved.json": "ee91dde09c36dc208252d7c7917b9de801160d01cb0a4827cff008f4c6623713",
+    "events_selected.json": "98c358a05ea6e24705a49364a703556da4ceacea790134fef32a290b94b4c2ca"
+  },
+  "manifest_note": "ball_chain_manifest.json differs only in its five absolute output-directory path strings; the referenced artifact SHA-256 values are identical."
+}

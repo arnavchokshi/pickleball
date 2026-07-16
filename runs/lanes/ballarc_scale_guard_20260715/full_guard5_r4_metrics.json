@@ -1,0 +1,78 @@
+{
+  "input": {
+    "clip_id": "pbvision_11min_20260713",
+    "duration_s": 697.0,
+    "frame_count": 20922,
+    "visible_primary_frame_count": 12789,
+    "candidate_nonempty_frame_count": 12837,
+    "candidate_count": 35345,
+    "auto_bounce_candidate_count": 20,
+    "provenance": "salvaged pb.vision comparison input; R&D reference only; not ground truth; not training data"
+  },
+  "run": {
+    "directory": "full_guard5_r4",
+    "cpu_only": true,
+    "guard_budget_s": 5.0,
+    "exit_code": 0,
+    "stderr_bytes": 0,
+    "wall_s": 1493.095998667006,
+    "wall_min": 24.884933311116765,
+    "target_max_s": 1800.0
+  },
+  "instrumented_fit_calls": {
+    "count": 98,
+    "timeout_count": 87,
+    "wall_s": {
+      "min": 0.7575512080220506,
+      "median": 5.000787395998486,
+      "p90": 5.001687962692813,
+      "p95": 5.002669708816393,
+      "max": 5.008878958004061,
+      "sum": 470.60616387502523
+    }
+  },
+  "instrumented_weak_calls": {
+    "start_count": 225,
+    "end_count": 225,
+    "timeout_count": 169,
+    "wall_s": {
+      "min": 0.34646658299607225,
+      "median": 5.000132332992507,
+      "p90": 5.000551533215912,
+      "p95": 5.001522166602081,
+      "max": 5.059115540992934,
+      "sum": 1010.6446733641787
+    }
+  },
+  "final_candidate_pass": {
+    "segment_count": 19,
+    "timeout_count": 18,
+    "max_candidate_count": 8381,
+    "max_candidate_frame_count": 2198,
+    "max_full_gap_rk4_substeps": 25120.00007999999,
+    "segment_7": {
+      "frame_start": 7951,
+      "frame_end": 11091,
+      "duration_s": 104.66666699999996,
+      "primary_observation_count": 2191,
+      "candidate_frame_count": 2198,
+      "candidate_count": 8381,
+      "full_gap_rk4_substeps": 25120.00007999999,
+      "status": "blocked:segment_budget_exceeded"
+    }
+  },
+  "artifact_audit": {
+    "status": "degraded",
+    "segment_count": 188,
+    "fit_segment_count": 1,
+    "segment_budget_exceeded_count": 187,
+    "missing_segment_count": 187,
+    "missing_segment_reasons": {
+      "segment_budget_exceeded": 187
+    },
+    "invalid_typed_timeout_count": 0,
+    "manifest_solver_status": "degraded",
+    "manifest_segment_budget_exceeded_count": 187,
+    "physics3d_reference_status": "not_run_due_to_segment_budget_exceeded"
+  }
+}

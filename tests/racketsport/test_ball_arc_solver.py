@@ -4,6 +4,7 @@ import json
 import math
 import subprocess
 import sys
+import time
 from dataclasses import replace
 from pathlib import Path
 from types import SimpleNamespace
@@ -1043,6 +1044,106 @@ def test_fit_flight_segment_blocks_invalid_bounds_from_below_floor_anchor() -> N
 
     assert result.status == "blocked:invalid_segment_bounds"
     assert result.physical_sanity["violations"] == ["invalid_segment_bounds"]
+
+
+def test_pathological_candidate_pool_respects_segment_wall_clock_budget(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # Dependency import is process setup, not segment work. Warm it explicitly
+    # so the assertion measures the bounded numerical region.
+    from scipy.optimize import least_squares as _least_squares
+
+    assert _least_squares is not None
+    calibration = _projection_calibration()
+    physics = PhysicsParameters()
+    duration_s = 5.16
+    start = _anchor("budget-start", "bounce", 0.0, (0.1, -2.0, BALL_RADIUS_M))
+    end = _anchor("budget-end", "bounce", duration_s, (0.2, 3.0, BALL_RADIUS_M))
+    observations = [
+        BallObservation(
+            frame=frame,
+            t=frame * duration_s / 119.0,
+            xy=(540.0 + frame * 0.25, 330.0 - frame * 0.05),
+            confidence=0.9,
+            visible=True,
+        )
+        for frame in range(120)
+    ]
+    candidate_sets = {
+        obs.frame: [
+            BallObservation(
+                frame=obs.frame,
+                t=obs.t,
+                xy=(obs.xy[0] + rank * 2.0, obs.xy[1] - rank * 1.5),
+                confidence=0.9,
+                visible=True,
+                observation_source=f"realistic_pool:candidate_{rank}",
+            )
+            for rank in range(12)
+        ]
+        for obs in observations
+    }
+    monkeypatch.setattr(ball_arc_solver_module, "SEGMENT_WALL_CLOCK_BUDGET_S", 0.01)
+
+    started = time.monotonic()
+    result = fit_flight_segment(
+        segment_id=7,
+        start_anchor=start,
+        end_anchor=end,
+        observations=observations,
+        candidate_sets_by_frame=candidate_sets,
+        calibration=calibration,
+        physics=physics,
+        config=BallArcSolverConfig(candidate_selection_max_iterations=5),
+    )
+    elapsed_s = time.monotonic() - started
+
+    assert elapsed_s < 0.10
+    assert result.status == "blocked:segment_budget_exceeded"
+    assert result.degradation is not None
+    assert result.degradation["outcome_type"] == "segment_budget_exceeded"
+    assert result.degradation["reason"] == "segment_budget_exceeded"
+    assert result.degradation["evidence_provenance"] == "missing"
+    assert result.degradation["authority"] == "degraded"
+    assert result.degradation["candidate_frame_count"] == 120
+    assert result.degradation["candidate_count"] == 1440
+    assert result.to_json()["degradation"]["reason"] == "segment_budget_exceeded"
+
+
+def test_pathological_weak_segment_uses_same_loud_timeout(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from scipy.optimize import least_squares as _least_squares
+
+    assert _least_squares is not None
+    calibration = _projection_calibration()
+    anchor = _anchor("weak-budget-start", "bounce", 0.0, (0.1, -2.0, BALL_RADIUS_M))
+    observations = [
+        BallObservation(
+            frame=frame,
+            t=frame * 5.16 / 119.0,
+            xy=(500.0 + frame * 0.5, 350.0 - frame * 0.1),
+            confidence=0.9,
+            visible=True,
+        )
+        for frame in range(1, 120)
+    ]
+    monkeypatch.setattr(ball_arc_solver_module, "SEGMENT_WALL_CLOCK_BUDGET_S", 0.01)
+
+    result = fit_weak_flight_segment(
+        segment_id=8,
+        anchor=anchor,
+        observations=observations,
+        calibration=calibration,
+        physics=PhysicsParameters(),
+        config=BallArcSolverConfig(),
+    )
+
+    assert result.status == "blocked:segment_budget_exceeded"
+    assert result.degradation is not None
+    assert result.degradation["reason"] == "segment_budget_exceeded"
+    assert result.degradation["evidence_provenance"] == "missing"
+    assert result.degradation["authority"] == "degraded"
 
 
 def test_weak_single_anchor_fit_recovers_depth_from_apparent_size() -> None:

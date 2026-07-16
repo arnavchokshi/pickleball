@@ -1,0 +1,338 @@
+FFFFFFFF                                                                 [100%]
+=================================== FAILURES ===================================
+_________ test_court_keypoint_post_save_rejects_missing_or_wrong_token _________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-283/test_court_keypoint_post_save_0')
+
+    def test_court_keypoint_post_save_rejects_missing_or_wrong_token(tmp_path: Path) -> None:
+        _write_review_task(tmp_path)
+>       server, thread = _start_court_keypoint_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_review_server.py:383: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_keypoint_review_server.py:19: in _start_court_keypoint_server
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x109205a90>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+_____________ test_court_keypoint_post_save_accepts_correct_token ______________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-283/test_court_keypoint_post_save_1')
+
+    def test_court_keypoint_post_save_accepts_correct_token(tmp_path: Path) -> None:
+        _write_review_task(tmp_path)
+>       server, thread = _start_court_keypoint_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_review_server.py:423: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_keypoint_review_server.py:19: in _start_court_keypoint_server
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x1092b4a50>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+______ test_court_keypoint_served_page_embeds_save_token_not_placeholder _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-283/test_court_keypoint_served_pag0')
+
+    def test_court_keypoint_served_page_embeds_save_token_not_placeholder(tmp_path: Path) -> None:
+        _write_review_task(tmp_path)
+>       server, thread = _start_court_keypoint_server(tmp_path, token="page-embedded-token")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_review_server.py:453: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_keypoint_review_server.py:19: in _start_court_keypoint_server
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x1092b5090>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+__________ test_review_input_post_save_rejects_missing_or_wrong_token __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-283/test_review_input_post_save_re0')
+
+    def test_review_input_post_save_rejects_missing_or_wrong_token(tmp_path: Path) -> None:
+>       server, thread = _start_review_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_review_input_server.py:892: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_review_input_server.py:16: in _start_review_server
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x1091d08a0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+______________ test_review_input_post_save_accepts_correct_token _______________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-283/test_review_input_post_save_ac0')
+
+    def test_review_input_post_save_accepts_correct_token(tmp_path: Path) -> None:
+>       server, thread = _start_review_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_review_input_server.py:923: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_review_input_server.py:16: in _start_review_server
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x1091d3e10>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+_______ test_review_input_served_pages_embed_save_token_not_placeholder ________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-283/test_review_input_served_pages0')
+
+    def test_review_input_served_pages_embed_save_token_not_placeholder(tmp_path: Path) -> None:
+>       server, thread = _start_review_server(tmp_path, token="page-embedded-token")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_review_input_server.py:944: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_review_input_server.py:16: in _start_review_server
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x109308a70>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+__________________ test_serve_and_client_round_trip_succeeds ___________________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-283/test_serve_and_client_round_tr0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1093109d0>
+
+    def test_serve_and_client_round_trip_succeeds(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+        instance = _make_worker(tmp_path, monkeypatch)
+        instance.bootstrap()
+    
+        def _fake_inference(**kwargs: Any) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+            Path(kwargs["out_path"]).write_text(json.dumps({"frames": []}), encoding="utf-8")
+            return [], {"mode": "fake"}
+    
+        monkeypatch.setattr(worker, "_run_batch_inference_and_write", _fake_inference)
+    
+        thread, results = _serve_in_background(instance)
+        try:
+            job_requests = _write_requests(tmp_path, "job1.json", _payload())
+            out_path = tmp_path / "job1_out.json"
+            exit_code = worker.submit_job_via_client(
+                socket_path=instance.socket_path,
+                requests_path=job_requests,
+                out_path=out_path,
+                chunk_dir=None,
+                chunk_format="pickle",
+                no_monolithic_output=True,
+                bucket_size=None,
+            )
+>           assert exit_code == 0
+E           assert 1 == 0
+
+tests/racketsport/test_sam3dbody_persistent_worker.py:310: AssertionError
+----------------------------- Captured stderr call -----------------------------
+sam3dbody persistent worker unreachable at '/tmp/s3dbw_638ed8538d.sock': FileNotFoundError: [Errno 2] No such file or directory
+____________ test_worker_idle_timeout_self_exits_and_removes_socket ____________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-283/test_worker_idle_timeout_self_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1091d3e10>
+
+    def test_worker_idle_timeout_self_exits_and_removes_socket(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+        instance = _make_worker(tmp_path, monkeypatch, idle_timeout_s=0.2, accept_poll_s=0.05)
+        instance.bootstrap()
+    
+>       exit_summary = instance.serve_forever()
+                       ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_sam3dbody_persistent_worker.py:521: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <scripts.racketsport.sam3dbody_persistent_worker.Sam3DBodyPersistentWorker object at 0x1079d3890>
+
+    def serve_forever(self) -> dict[str, Any]:
+        socket_path = self.socket_path
+        try:
+            os.unlink(socket_path)
+        except FileNotFoundError:
+            pass
+        server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+>       server.bind(socket_path)
+E       PermissionError: [Errno 1] Operation not permitted
+
+scripts/racketsport/sam3dbody_persistent_worker.py:491: PermissionError
+=============================== warnings summary ===============================
+tests/racketsport/test_sam3dbody_persistent_worker.py::test_serve_and_client_round_trip_succeeds
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/_pytest/threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-1 (_run)
+  
+  Traceback (most recent call last):
+    File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1082, in _bootstrap_inner
+      self._context.run(self.run)
+      ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+    File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1024, in run
+      self._target(*self._args, **self._kwargs)
+      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "/private/tmp/ballarc-head-K6kMU2/tests/racketsport/test_sam3dbody_persistent_worker.py", line 276, in _run
+      results.append(instance.serve_forever())
+                     ~~~~~~~~~~~~~~~~~~~~~~^^
+    File "/private/tmp/ballarc-head-K6kMU2/scripts/racketsport/sam3dbody_persistent_worker.py", line 491, in serve_forever
+      server.bind(socket_path)
+      ~~~~~~~~~~~^^^^^^^^^^^^^
+  PermissionError: [Errno 1] Operation not permitted
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_rejects_missing_or_wrong_token
+FAILED tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_accepts_correct_token
+FAILED tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_served_page_embeds_save_token_not_placeholder
+FAILED tests/racketsport/test_review_input_server.py::test_review_input_post_save_rejects_missing_or_wrong_token
+FAILED tests/racketsport/test_review_input_server.py::test_review_input_post_save_accepts_correct_token
+FAILED tests/racketsport/test_review_input_server.py::test_review_input_served_pages_embed_save_token_not_placeholder
+FAILED tests/racketsport/test_sam3dbody_persistent_worker.py::test_serve_and_client_round_trip_succeeds
+FAILED tests/racketsport/test_sam3dbody_persistent_worker.py::test_worker_idle_timeout_self_exits_and_removes_socket
+8 failed, 1 warning in 5.62s

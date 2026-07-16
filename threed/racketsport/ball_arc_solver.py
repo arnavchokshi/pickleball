@@ -8,12 +8,14 @@ must not feed BALL detector metrics, gates, training, or promotion.
 
 from __future__ import annotations
 
+from contextvars import ContextVar
 from dataclasses import dataclass, replace
 import json
 import math
 from pathlib import Path
 from statistics import median
-from typing import Any, Mapping, Sequence
+import time
+from typing import Any, Callable, Mapping, Sequence
 
 from .ball_physics3d import _project_world_array, reconstruct_bounce_arcs_from_image_track
 from .court_templates import get_court_template
@@ -32,6 +34,18 @@ SPIN_SCALAR_REGULARIZATION_LAMBDA = 0.05
 SPIN_SCALAR_MIN_INLIERS = 8
 FIT_VALIDITY_MIN_OBSERVATIONS_FOR_INLIER_GATE = 6
 FIT_VALIDITY_MIN_INLIER_FRACTION = 0.15
+# Safety invariant, not a model/default-selection knob.  A single segment may
+# abstain after this wall time; the remaining segments must still be emitted.
+SEGMENT_WALL_CLOCK_BUDGET_S = 5.0
+SEGMENT_BUDGET_EXCEEDED = "segment_budget_exceeded"
+_ACTIVE_SEGMENT_DEADLINE: ContextVar[float | None] = ContextVar(
+    "ball_arc_segment_deadline",
+    default=None,
+)
+
+
+class _SegmentBudgetExceeded(RuntimeError):
+    """Internal control flow for a typed, fail-closed segment abstention."""
 
 
 @dataclass(frozen=True)
@@ -318,6 +332,7 @@ class FlightSegmentFit:
     selected_observations_by_frame: Mapping[int, BallObservation] | None = None
     candidate_association: Mapping[str, Any] | None = None
     diagnostics: Mapping[str, Any] | None = None
+    degradation: Mapping[str, Any] | None = None
 
     @property
     def inlier_count(self) -> int:
@@ -375,6 +390,8 @@ class FlightSegmentFit:
             }
         if self.diagnostics:
             payload["diagnostics"] = dict(self.diagnostics)
+        if self.degradation:
+            payload["degradation"] = dict(self.degradation)
         return payload
 
 
@@ -473,29 +490,86 @@ def fit_flight_segment(
     cfg = config or BallArcSolverConfig()
     phys = physics or PhysicsParameters()
     if candidate_sets_by_frame:
-        return _fit_flight_segment_with_candidate_association(
+        return _run_with_segment_budget(
+            segment_id=segment_id,
+            start=start_anchor,
+            end=end_anchor,
+            observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
+            config=cfg,
+            fit=lambda: _fit_flight_segment_with_candidate_association(
+                segment_id=segment_id,
+                start_anchor=start_anchor,
+                end_anchor=end_anchor,
+                observations=observations,
+                candidate_sets_by_frame=candidate_sets_by_frame,
+                calibration=calibration,
+                physics=phys,
+                config=cfg,
+                net_plane=net_plane,
+                max_nfev=max_nfev,
+            ),
+        )
+    return _run_with_segment_budget(
+        segment_id=segment_id,
+        start=start_anchor,
+        end=end_anchor,
+        observations=observations,
+        candidate_sets_by_frame=None,
+        config=cfg,
+        fit=lambda: _fit_flight_segment_once(
             segment_id=segment_id,
             start_anchor=start_anchor,
             end_anchor=end_anchor,
             observations=observations,
-            candidate_sets_by_frame=candidate_sets_by_frame,
             calibration=calibration,
             physics=phys,
             config=cfg,
             net_plane=net_plane,
             max_nfev=max_nfev,
-        )
-    return _fit_flight_segment_once(
-        segment_id=segment_id,
-        start_anchor=start_anchor,
-        end_anchor=end_anchor,
-        observations=observations,
-        calibration=calibration,
-        physics=phys,
-        config=cfg,
-        net_plane=net_plane,
-        max_nfev=max_nfev,
+        ),
     )
+
+
+def _run_with_segment_budget(
+    *,
+    segment_id: int,
+    start: AnchorEvent,
+    end: AnchorEvent,
+    observations: Sequence[BallObservation],
+    candidate_sets_by_frame: Mapping[int, Sequence[BallObservation]] | None,
+    config: BallArcSolverConfig,
+    fit: Callable[[], FlightSegmentFit],
+) -> FlightSegmentFit:
+    """Run one segment under the production wall-clock safety invariant."""
+
+    # Nested fit helpers share the outer segment deadline.
+    if _ACTIVE_SEGMENT_DEADLINE.get() is not None:
+        return fit()
+    started = time.monotonic()
+    span_candidates = _candidate_sets_in_span(
+        candidate_sets_by_frame or {},
+        start_t=start.t,
+        end_t=end.t,
+        max_per_frame=config.max_candidates_per_frame,
+    )
+    token = _ACTIVE_SEGMENT_DEADLINE.set(started + SEGMENT_WALL_CLOCK_BUDGET_S)
+    try:
+        _check_segment_budget()
+        return fit()
+    except _SegmentBudgetExceeded:
+        return _budget_exceeded_segment(
+            segment_id,
+            start,
+            end,
+            budget_s=SEGMENT_WALL_CLOCK_BUDGET_S,
+            elapsed_s=time.monotonic() - started,
+            observation_count=len(observations),
+            candidate_frame_count=len(span_candidates),
+            candidate_count=sum(len(items) for items in span_candidates.values()),
+        )
+    finally:
+        _ACTIVE_SEGMENT_DEADLINE.reset(token)
 
 
 def _fit_flight_segment_once(
@@ -1908,6 +1982,51 @@ def fit_weak_flight_segment(
     net_plane: Mapping[str, Any] | None = None,
     max_nfev: int | None = None,
 ) -> FlightSegmentFit:
+    """Fit one weak segment under the same production wall-clock guard."""
+
+    cfg = config or BallArcSolverConfig()
+    phys = physics or PhysicsParameters()
+    visible = tuple(obs for obs in observations if obs.visible and obs.t >= anchor.t - 1e-9)
+    last = visible[-1] if visible else None
+    end = replace(
+        anchor,
+        anchor_id=f"weak_budget_endpoint_{segment_id:03d}",
+        kind="weak_ray_endpoint",
+        t=anchor.t if last is None else last.t,
+        frame=anchor.frame if last is None else last.frame,
+        immovable=False,
+    )
+    return _run_with_segment_budget(
+        segment_id=segment_id,
+        start=anchor,
+        end=end,
+        observations=visible,
+        candidate_sets_by_frame=None,
+        config=cfg,
+        fit=lambda: _fit_weak_flight_segment_unbounded(
+            segment_id=segment_id,
+            anchor=anchor,
+            observations=visible,
+            calibration=calibration,
+            physics=phys,
+            config=cfg,
+            net_plane=net_plane,
+            max_nfev=max_nfev,
+        ),
+    )
+
+
+def _fit_weak_flight_segment_unbounded(
+    *,
+    segment_id: int,
+    anchor: AnchorEvent,
+    observations: Sequence[BallObservation],
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters | None = None,
+    config: BallArcSolverConfig | None = None,
+    net_plane: Mapping[str, Any] | None = None,
+    max_nfev: int | None = None,
+) -> FlightSegmentFit:
     """Fit a render-only single-anchor segment for otherwise hidden 2D sightings."""
 
     cfg = config or BallArcSolverConfig()
@@ -2252,6 +2371,11 @@ def solve_ball_arc_track(
     )
     confident_segments = _apply_fit_validity_gates(confident_segments, physics=phys, config=cfg, net_plane=net_plane)
     all_segments = [*confident_segments, *weak_segments]
+    budget_exceeded_segments = [
+        segment
+        for segment in all_segments
+        if segment.status == f"blocked:{SEGMENT_BUDGET_EXCEEDED}"
+    ]
     frame_payloads, coverage = _solved_frames(
         frames,
         fps=fps,
@@ -2296,17 +2420,35 @@ def solve_ball_arc_track(
     ):
         status = "degenerate_zero_segments"
         kill_reasons.append("zero accepted segments with at least one rally anchor")
-    try:
-        physics3d_summary = reconstruct_bounce_arcs_from_image_track(
-            ball_track,
-            calibration,
-            max_reprojection_rmse_px=12.0,
-            max_fit_samples=13,
-        ).summary()
-    except Exception as exc:
-        physics3d_summary = {"status": "not_run", "notes": [str(exc)]}
+    if budget_exceeded_segments:
+        status = "degraded"
+    if budget_exceeded_segments:
+        # The legacy reference scans and optimizes every plausible bounce window.
+        # It is diagnostic-only, and continuing it after the production arc has
+        # already abstained can itself take game-scale time.  Keep that missing
+        # validation loud while preserving the existing path when no guard trips.
+        physics3d_summary = {
+            "status": "not_run_due_to_segment_budget_exceeded",
+            "evidence_provenance": "missing",
+            "authority": "degraded",
+            "reason": SEGMENT_BUDGET_EXCEEDED,
+            "notes": [
+                "Diagnostic ball_physics3d reference was not run because one or more "
+                "production arc segments exceeded their wall-clock budget."
+            ],
+        }
+    else:
+        try:
+            physics3d_summary = reconstruct_bounce_arcs_from_image_track(
+                ball_track,
+                calibration,
+                max_reprojection_rmse_px=12.0,
+                max_fit_samples=13,
+            ).summary()
+        except Exception as exc:
+            physics3d_summary = {"status": "not_run", "notes": [str(exc)]}
 
-    return {
+    artifact = {
         "schema_version": SCHEMA_VERSION,
         "artifact_type": ARTIFACT_TYPE,
         "lane": LANE,
@@ -2371,6 +2513,25 @@ def solve_ball_arc_track(
             "ball_physics3d_reference": physics3d_summary,
         },
     }
+    if budget_exceeded_segments:
+        segment_ids = [segment.segment_id for segment in budget_exceeded_segments]
+        artifact["degraded_reasons"] = [
+            {
+                "reason": SEGMENT_BUDGET_EXCEEDED,
+                "evidence_provenance": "missing",
+                "segment_ids": segment_ids,
+            }
+        ]
+        artifact["summary"].update(
+            {
+                "degraded_segment_count": len(segment_ids),
+                "missing_segment_count": len(segment_ids),
+                "segment_budget_exceeded_count": len(segment_ids),
+                "segment_budget_exceeded_ids": segment_ids,
+                "missing_segment_reasons": {SEGMENT_BUDGET_EXCEEDED: len(segment_ids)},
+            }
+        )
+    return artifact
 
 
 def pixel_ray_world(
@@ -2492,18 +2653,26 @@ def _fit_anchor_pair(
             max_nfev=max_nfev,
             candidate_sets_by_frame=candidate_sets_by_frame,
         )
-    return _fit_flight_segment_once(
+    return _run_with_segment_budget(
         segment_id=segment_id,
-        start_anchor=start,
-        end_anchor=end,
+        start=start,
+        end=end,
         observations=segment_observations,
-        calibration=calibration,
-        physics=physics,
+        candidate_sets_by_frame=None,
         config=config,
-        net_plane=net_plane,
-        max_nfev=max_nfev,
-        refine_endpoints=refine_endpoints,
-        candidate_endpoint_frozen=not refine_endpoints,
+        fit=lambda: _fit_flight_segment_once(
+            segment_id=segment_id,
+            start_anchor=start,
+            end_anchor=end,
+            observations=segment_observations,
+            calibration=calibration,
+            physics=physics,
+            config=config,
+            net_plane=net_plane,
+            max_nfev=max_nfev,
+            refine_endpoints=refine_endpoints,
+            candidate_endpoint_frozen=not refine_endpoints,
+        ),
     )
 
 
@@ -3333,6 +3502,11 @@ def _build_weak_segments(
             net_plane=net_plane,
             max_nfev=config.weak_segment_max_nfev,
         )
+        if weak.status == f"blocked:{SEGMENT_BUDGET_EXCEEDED}":
+            # Timeout is a typed missing segment, not an implausible-fit skip.
+            weak_segments.append(weak)
+            next_segment_id += 1
+            continue
         if not _segment_plausible_for_weak_render(weak, config, physics, net_plane):
             rejected.append(
                 {
@@ -5439,6 +5613,7 @@ def _integrate_positions(
     config: BallArcSolverConfig,
     spin_scalar: float = 0.0,
 ) -> list[tuple[float, float, float]]:
+    _check_segment_budget()
     spin = _clip_spin_scalar(spin_scalar)
     use_magnus = abs(spin) > 1e-12
     if physics.drag_k_per_m <= 0.0 and not use_magnus:
@@ -5454,6 +5629,7 @@ def _integrate_positions(
             reverse_state = (*p0, *v0)
             reverse_t = t0
             while reverse_t > target_t + 1e-12:
+                _check_segment_budget()
                 step = -min(config.integrator_max_step_s, reverse_t - target_t)
                 reverse_state = (
                     _rk4_step_magnus(reverse_state, step, physics, spin_axis, spin)
@@ -5464,6 +5640,7 @@ def _integrate_positions(
             positions[index] = (reverse_state[0], reverse_state[1], reverse_state[2])
             continue
         while current_t < target_t - 1e-12:
+            _check_segment_budget()
             step = min(config.integrator_max_step_s, target_t - current_t)
             state = (
                 _rk4_step_magnus(state, step, physics, spin_axis, spin)
@@ -5473,6 +5650,12 @@ def _integrate_positions(
             current_t += step
         positions[index] = (state[0], state[1], state[2])
     return [position if position is not None else p0 for position in positions]
+
+
+def _check_segment_budget() -> None:
+    deadline = _ACTIVE_SEGMENT_DEADLINE.get()
+    if deadline is not None and time.monotonic() >= deadline:
+        raise _SegmentBudgetExceeded(SEGMENT_BUDGET_EXCEEDED)
 
 
 def _rk4_step(
@@ -5791,6 +5974,37 @@ def _blocked_segment(segment_id: int, start: AnchorEvent, end: AnchorEvent, reas
         net_clearance_ok=None,
         physical_sanity={"violation": True, "violations": [reason]},
         size_residuals_m={"enabled": False, "count": 0, "median": None, "mean": None, "p90": None, "p95": None, "max": None},
+    )
+
+
+def _budget_exceeded_segment(
+    segment_id: int,
+    start: AnchorEvent,
+    end: AnchorEvent,
+    *,
+    budget_s: float,
+    elapsed_s: float,
+    observation_count: int,
+    candidate_frame_count: int,
+    candidate_count: int,
+) -> FlightSegmentFit:
+    """Return a loud missing-evidence outcome for a timed-out segment."""
+
+    segment = _blocked_segment(segment_id, start, end, SEGMENT_BUDGET_EXCEEDED)
+    return replace(
+        segment,
+        degradation={
+            "outcome_type": SEGMENT_BUDGET_EXCEEDED,
+            "reason": SEGMENT_BUDGET_EXCEEDED,
+            "evidence_provenance": "missing",
+            "authority": "degraded",
+            "budget_s": _round(budget_s, 6),
+            "elapsed_s": _round(elapsed_s, 6),
+            "observation_count": int(observation_count),
+            "candidate_frame_count": int(candidate_frame_count),
+            "candidate_count": int(candidate_count),
+            "duration_s": _round(end.t - start.t, 9),
+        },
     )
 
 

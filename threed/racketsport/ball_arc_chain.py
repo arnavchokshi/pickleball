@@ -446,6 +446,29 @@ def run_default_ball_arc_chain(
                 "joint_anchor_pinning_separately_killable": True,
             }
         )
+    segment_budget_exceeded_count = int(summary.get("segment_budget_exceeded_count") or 0)
+    segment_budget_exceeded_ids: list[int] = []
+    if segment_budget_exceeded_count:
+        segment_budget_exceeded_ids = [
+            int(segment_id)
+            for segment_id in summary.get("segment_budget_exceeded_ids", [])
+        ]
+        manifest["summary"].update(
+            {
+                "degraded_segment_count": segment_budget_exceeded_count,
+                "missing_segment_count": segment_budget_exceeded_count,
+                "segment_budget_exceeded_count": segment_budget_exceeded_count,
+                "segment_budget_exceeded_ids": segment_budget_exceeded_ids,
+                "missing_segment_reasons": {"segment_budget_exceeded": segment_budget_exceeded_count},
+            }
+        )
+        manifest["degraded_reasons"] = [
+            {
+                "reason": "segment_budget_exceeded",
+                "evidence_provenance": "missing",
+                "segment_ids": segment_budget_exceeded_ids,
+            }
+        ]
     manifest["net_plane_provenance"] = net_plane_provenance
     if chain_config_degraded is not None:
         manifest["chain_config_degraded"] = chain_config_degraded
@@ -480,6 +503,16 @@ def run_default_ball_arc_chain(
         )
         result_summary["tt3d_candidate_fallback_segment_count"] = _fallback_segment_count(run.artifact)
         result_summary["tt3d_chosen_anchor_count"] = int(joint_anchor_payload["summary"]["chosen_anchor_count"])
+    if segment_budget_exceeded_count:
+        result_summary.update(
+            {
+                "degraded_segment_count": segment_budget_exceeded_count,
+                "missing_segment_count": segment_budget_exceeded_count,
+                "segment_budget_exceeded_count": segment_budget_exceeded_count,
+                "segment_budget_exceeded_ids": segment_budget_exceeded_ids,
+                "missing_segment_reasons": {"segment_budget_exceeded": segment_budget_exceeded_count},
+            }
+        )
     if chain_config_degraded is not None:
         result_summary["chain_config_degraded"] = chain_config_degraded
     output_paths = {

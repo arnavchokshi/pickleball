@@ -6,6 +6,14 @@ teardown. A session MUST reconcile this against `gcloud compute instances list
 Full per-wave history (waves 4-7, NS-014, demo, court, 2026-07-12 sprint) is preserved verbatim in
 `runs/manager/archive/gpu_fleet_history_20260707_20260712.md`.
 
+## 2026-07-16 morning note (Track A manager)
+
+gcloud auth DEAD again (reauth required; owner restoring). No fresh list possible until then. Last
+live confirmation stands: EMPTY at 2026-07-16T02:50:53Z teardown (below). NOTHING was provisioned
+since — overnight GPU spend $0 (conditional MOVE-1 #3 GO correctly NOT exercised: arc abstention
+187/188 + CAL ingestion allowlist both said NO-GO). Exposure nil. Re-confirm with one list call
+after owner reauth.
+
 ## Current fleet state (2026-07-16T02:51Z, Track A manager session close)
 
 EMPTY — zero fleet VMs running or stopped except the historical `pickleball-a100-fleet1`
