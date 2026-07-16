@@ -120,6 +120,14 @@ def test_blind_page_contains_only_allowed_item_fields_and_keyboard_controls(sess
     assert 'player.addEventListener("click",e=>{if(!pending)return;player.pause();' in html
     # commit pauses at the dt read site, covering every play-entry path (rewatch, context menu)
     assert "if(!click)return;player.pause();rec.x=click.x" in html
+    # phase 1 must autoplay a loop from t=0 (no native controls exist to start playback)
+    assert "It loops — watch with sound." in html
+    assert 'player.loop=true;player.currentTime=0;player.play().catch(()=>{})}' in html
+    # onloadedmetadata must respect phase: no pending decision -> loop+play; pending -> centerPaused
+    assert (
+        "player.onloadedmetadata=()=>{if(!pending){player.loop=true;player.currentTime=0;"
+        "player.play().catch(()=>{})}else{centerPaused()}}" in html
+    )
 
 
 def test_build_event_review_session_direct_cli_render(tmp_path: Path) -> None:

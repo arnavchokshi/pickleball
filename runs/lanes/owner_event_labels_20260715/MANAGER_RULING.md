@@ -134,3 +134,25 @@ generator output and re-verified (300 ITEMS, blind, both pause sites, no control
 Clips untouched. Corrupted-dt exposure window: rows labeled on the original page BEFORE the
 coordinator hotfix are suspect for dt only where the owner had used click-toggled playback —
 flag for the ingest reviewer to spot-check dt outliers (|dt| near window edges) from early rows.
+
+## HARD-STOP addendum (2026-07-16): staged-page clobber + playability fix
+
+MANAGER ERROR acknowledged: the previous reopen regenerated the STAGED page while the owner
+was mid-session and while the coordinator was actively hot-fixing it — clobbering that fix
+and shipping an unplayable phase 1 (controls removed while the design still relied on the
+native play button; onloadedmetadata re-paused at center on every load). Owner was blocked
+live. The staged file ~/Desktop/event_labels_20260715/START_HERE.html is OWNER-LIVE and
+FROZEN to this track — no further writes without the coordinator's explicit hand-back.
+Standing lesson: content parity is not interaction parity; never write an owner-live staging
+file another manager is editing.
+
+Coordinator defined the required behavior and hand-fixed the staged page (keeping all three
+dt-integrity fixes). Generator brought to exact parity — two line changes: phase1() autoplays
+a loop from t=0 with the "It loops — watch with sound" hint (no centerPaused), and
+render().onloadedmetadata is phase-respecting (!pending -> loop+play from 0; pending ->
+centerPaused). PROOF: freshly generated HTML from the real session manifest is BYTE-IDENTICAL
+to the frozen staged page (cmp clean, /tmp only — staged folder untouched). Regression tests
+extended per directive: no controls attribute, phase-1 autoplay-loop wiring, phase-respecting
+onloadedmetadata, click-pause before capture (plus commit-pause at the dt read). 15/15 EXIT 0;
+scaffold 3/3 EXIT 0. Lane pack copy synced from generator output (lane-dir evidence, not the
+frozen staged file).
