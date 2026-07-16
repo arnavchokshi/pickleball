@@ -67,6 +67,19 @@ class AlignmentMissingReason(str, Enum):
     NO_BRACKETING_SAMPLES = "no_bracketing_samples"
 
 
+class SensorClockMappingStatus(str, Enum):
+    MAPPED = "mapped"
+    MISSING = "missing"
+
+
+class SensorClockMappingMissingReason(str, Enum):
+    SIDECAR_UNAVAILABLE = "sidecar_unavailable"
+    SIDECAR_DECLARES_UNAVAILABLE = "sidecar_declares_unavailable"
+    NO_DUAL_CLOCK_PAIRS = "no_dual_clock_pairs"
+    INSUFFICIENT_DUAL_CLOCK_PAIRS = "insufficient_dual_clock_pairs"
+    DEGENERATE_SOURCE_CLOCK = "degenerate_source_clock"
+
+
 class RollingShutterDirection(str, Enum):
     TOP_TO_BOTTOM = "top_to_bottom"
     BOTTOM_TO_TOP = "bottom_to_top"
@@ -340,6 +353,151 @@ class SensorClockMapping:
         return self.reference_source_time_s + (
             target_time_s - self.reference_source_time_s - self.offset_s
         ) / self.scale
+
+
+@dataclass(frozen=True, slots=True)
+class SensorClockMappingOutcome:
+    """Typed result of adapting capture-sidecar clocks into the core contract."""
+
+    status: SensorClockMappingStatus
+    mapping: SensorClockMapping | None
+    missing_reason: SensorClockMappingMissingReason | None
+    dual_clock_pair_count: int
+    max_abs_residual_s: float | None
+    sidecar_unavailable_reasons: tuple[tuple[str, str], ...] = ()
+
+    def __post_init__(self) -> None:
+        status = _enum(SensorClockMappingStatus, self.status, "sensor clock mapping status")
+        reason = None if self.missing_reason is None else _enum(
+            SensorClockMappingMissingReason,
+            self.missing_reason,
+            "sensor clock mapping missing reason",
+        )
+        if isinstance(self.dual_clock_pair_count, bool) or not isinstance(self.dual_clock_pair_count, int):
+            raise TimebaseValidationError("dual_clock_pair_count must be an integer")
+        if self.dual_clock_pair_count < 0:
+            raise TimebaseValidationError("dual_clock_pair_count must be non-negative")
+        if status is SensorClockMappingStatus.MAPPED:
+            if self.mapping is None or reason is not None or self.max_abs_residual_s is None:
+                raise TimebaseValidationError("mapped clock outcome requires mapping/residual and no missing reason")
+        elif self.mapping is not None or reason is None or self.max_abs_residual_s is not None:
+            raise TimebaseValidationError("missing clock outcome requires only an explicit missing reason")
+        unavailable = tuple(
+            (
+                _non_empty(name, "unavailable sensor name"),
+                _non_empty(value, "unavailable sensor reason"),
+            )
+            for name, value in self.sidecar_unavailable_reasons
+        )
+        object.__setattr__(self, "status", status)
+        object.__setattr__(self, "missing_reason", reason)
+        object.__setattr__(self, "sidecar_unavailable_reasons", unavailable)
+        if self.max_abs_residual_s is not None:
+            object.__setattr__(
+                self,
+                "max_abs_residual_s",
+                _non_negative(self.max_abs_residual_s, "max_abs_residual_s"),
+            )
+
+    def to_dict(self) -> dict[str, Any]:
+        return _json_value(asdict(self))
+
+
+def build_sensor_clock_mapping_from_sidecar(
+    sidecar: Mapping[str, Any] | None,
+    *,
+    mapping_id: str = "arkit_monotonic_to_video_media_v1",
+) -> SensorClockMappingOutcome:
+    """Fit ARKit monotonic time to encoded video PTS without inventing samples."""
+
+    if sidecar is None:
+        return SensorClockMappingOutcome(
+            SensorClockMappingStatus.MISSING,
+            None,
+            SensorClockMappingMissingReason.SIDECAR_UNAVAILABLE,
+            0,
+            None,
+        )
+    if not isinstance(sidecar, Mapping):
+        raise TimebaseValidationError("capture sidecar must be an object")
+
+    raw_unavailable = sidecar.get("unavailable_sensor_reasons", {})
+    if raw_unavailable is None:
+        raw_unavailable = {}
+    if not isinstance(raw_unavailable, Mapping):
+        raise TimebaseValidationError("unavailable_sensor_reasons must be an object")
+    unavailable = tuple(sorted((str(name), str(reason)) for name, reason in raw_unavailable.items()))
+
+    raw_samples = sidecar.get("arkit_frame_samples", [])
+    if not isinstance(raw_samples, Sequence) or isinstance(raw_samples, (str, bytes)):
+        raise TimebaseValidationError("arkit_frame_samples must be an array")
+    pairs: list[tuple[float, float]] = []
+    for sample in raw_samples:
+        if not isinstance(sample, Mapping):
+            raise TimebaseValidationError("arkit_frame_samples entries must be objects")
+        source = sample.get("arkit_timestamp_s")
+        target = sample.get("video_pts_s")
+        if source is None or target is None:
+            continue
+        pairs.append((_finite(source, "arkit_timestamp_s"), _finite(target, "video_pts_s")))
+
+    if len(pairs) < 2:
+        if unavailable or any(
+            isinstance(sample, Mapping) and sample.get("unavailable_reason")
+            for sample in raw_samples
+        ):
+            reason = SensorClockMappingMissingReason.SIDECAR_DECLARES_UNAVAILABLE
+        elif not pairs:
+            reason = SensorClockMappingMissingReason.NO_DUAL_CLOCK_PAIRS
+        else:
+            reason = SensorClockMappingMissingReason.INSUFFICIENT_DUAL_CLOCK_PAIRS
+        return SensorClockMappingOutcome(
+            SensorClockMappingStatus.MISSING,
+            None,
+            reason,
+            len(pairs),
+            None,
+            unavailable,
+        )
+
+    reference = pairs[0][0]
+    mean_source = sum(source for source, _target in pairs) / len(pairs)
+    mean_target = sum(target for _source, target in pairs) / len(pairs)
+    source_variance = sum((source - mean_source) ** 2 for source, _target in pairs)
+    if source_variance <= 0.0:
+        return SensorClockMappingOutcome(
+            SensorClockMappingStatus.MISSING,
+            None,
+            SensorClockMappingMissingReason.DEGENERATE_SOURCE_CLOCK,
+            len(pairs),
+            None,
+            unavailable,
+        )
+    scale = sum(
+        (source - mean_source) * (target - mean_target)
+        for source, target in pairs
+    ) / source_variance
+    intercept = mean_target - scale * mean_source
+    offset = intercept + scale * reference - reference
+    residuals = [target - (intercept + scale * source) for source, target in pairs]
+    max_abs_residual = max(abs(residual) for residual in residuals)
+    mapping = SensorClockMapping(
+        mapping_id=mapping_id,
+        source_clock=ClockDomain.MONOTONIC,
+        target_clock=ClockDomain.MEDIA,
+        reference_source_time_s=reference,
+        offset_s=offset,
+        drift_ppm=(scale - 1.0) * 1_000_000.0,
+        declared_tolerance_s=max(1e-9, max_abs_residual),
+    )
+    return SensorClockMappingOutcome(
+        SensorClockMappingStatus.MAPPED,
+        mapping,
+        None,
+        len(pairs),
+        max_abs_residual,
+        unavailable,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -764,9 +922,13 @@ __all__ = [
     "RollingShutterRowTime",
     "SensorAlignment",
     "SensorClockMapping",
+    "SensorClockMappingMissingReason",
+    "SensorClockMappingOutcome",
+    "SensorClockMappingStatus",
     "TimeBasis",
     "TimebaseContract",
     "TimebaseValidationError",
     "align_interpolated_sensor_sample",
     "align_nearest_sensor_sample",
+    "build_sensor_clock_mapping_from_sidecar",
 ]

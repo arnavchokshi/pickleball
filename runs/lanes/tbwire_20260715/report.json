@@ -1,0 +1,125 @@
+{
+  "objective_result": "PARTIAL",
+  "acceptance": [
+    {
+      "metric": "Defect 1 - exact raw PTS, derived correction provenance, monotonicity, and count accounting",
+      "baseline": "io_decode discarded integer ticks/timescale, rebased through float, returned an empty PTS run on non-monotonic input, and did not explain the resulting truncation.",
+      "after": "Wired (scoped pass): canonical timebase_contract.json preserves ffprobe integer ticks/timescale and exact decimal strings/conversion method, records legacy values as corrected_pts with CorrectionProvenance, marks unusable PTS explicitly, and accounts for every source frame. Wolverine: 300 canonical frames versus 300 ffprobe/stream frames; raw PTS strictly monotonic; legacy remains 299 frames with an explicit compatibility explanation and unchanged frame-value SHA-256 44e416b50db01bb6bbc38d583d8134ee4235421c3e13b1bb7f1d2d76ba8fcbb5.",
+      "target": "Preserve raw encoded PTS as integer ticks plus timescale (or exact decimal strings with conversion provenance), keep legacy pts_s byte-identical as a derived field, validate monotonicity, and account for every source frame with explicit absence reasons.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Defect 2 - remove silent index/fps fallback at a missing frame-table entry",
+      "baseline": "time_for_frame silently returned frame_index/fps when a supplied table omitted the requested frame.",
+      "after": "Wired (scoped pass): a supplied table or contract that omits/declares the frame unavailable raises loudly. CFR is available only when no table is supplied and the caller explicitly passes fps; return_provenance then declares time_basis=constant_fps_assumed, provenance=explicit_fps_argument, fallback_used=true.",
+      "target": "Missing entries fail loudly or return a recordable, explicitly opted-in CFR declaration.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Defect 3 - typed sidecar SensorClockMapping outcome",
+      "baseline": "arkit_timestamp_s/video_pts_s pairs and sidecar unavailable reasons were not adapted into the typed timebase contract.",
+      "after": "Wired (scoped pass): >=2 dual-clock pairs fit offset plus drift and record maximum absolute residual/tolerance; fewer pairs produce a typed missing outcome. Golden fixtures: full_sensors=insufficient_dual_clock_pairs (1 pair), missing_sensors=sidecar_declares_unavailable, camera_roll_import=sidecar_declares_unavailable. A 3-pair synthetic fit proves mapped offset/drift/residual behavior.",
+      "target": "Build SensorClockMapping from >=2 valid dual-clock pairs; otherwise preserve an explicit typed missing reason for each golden sidecar.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Defect 4 - preserve non-destructive audio timing and link ordering provenance",
+      "baseline": "AcousticPropagationModel ordering provenance existed, but the normal events path did not reference the decode timebase artifact.",
+      "after": "Wired (scoped pass): events includes timebase_contract in dependency identity and audio onset timing references the same schema-validated contract by capture_id/path/SHA-256 while preserving raw_time_s, corrected_time_s, ordering, and existing no-contract bytes.",
+      "target": "Do not regress raw plus corrected audio behavior; ordering provenance references the same timebase artifact.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Synthetic VFR jitter, non-monotonic PTS, gap, and round-trip",
+      "baseline": "One non-monotonic timestamp caused the old helper to discard the whole ffprobe PTS run and fall back coarsely to CFR.",
+      "after": "6/6 synthetic source frames are represented; frame 3 is typed dropped/pts_unavailable, frame 4 is typed missing/pts_unavailable, retained raw PTS are strictly monotonic, and TimebaseContract JSON round-trips byte-stably.",
+      "target": "No silent truncation; monotonic retained raw sequence or typed per-frame absence; canonical byte-stable round-trip.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Real Wolverine source.mp4 parity proof",
+      "baseline": "Pre-change legacy frame-value SHA-256 44e416b50db01bb6bbc38d583d8134ee4235421c3e13b1bb7f1d2d76ba8fcbb5; legacy ffprobe table contained 299 entries despite 300 encoded frames.",
+      "after": "ffprobe_pts authority with 300/300 exact raw PTS frames at timescale 15360, strictly monotonic; contract schema-valid and byte-stable; first 299 corrected values equal the unchanged legacy frame table and the pinned legacy frame-value SHA remains identical.",
+      "target": "ffprobe_pts provenance, monotonic exact raw PTS, count consistency, and byte-identical legacy derived pts_s values without using protected labels.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "P0-H exit gate",
+      "baseline": "Typed core was pure/unwired and physical capture proof was absent.",
+      "after": "The decode/ingest/consumer contract is wired (scoped pass) on synthetic, golden-sidecar, and Wolverine fixture/real-clip slices. Physical 30-second and 5-minute device captures were not available to this lane and remain owner-gated PENDING.",
+      "target": "Wired contract; physical 30-second and 5-minute captures have no silent truncation, monotonic encoded PTS, and an aligned sample or explicit missing/drop reason per frame.",
+      "verdict": "FAIL"
+    },
+    {
+      "metric": "NS-01.4 full coordinate/time convention gate",
+      "baseline": "Timebase and coordinate cores were landed but not stage-adopted.",
+      "after": "PTS/VFR decode authority, sensor-clock mapping outcome, A/V ordering reference, and non-destructive acoustic provenance are wired (scoped pass). Native-intrinsics scaling and physical rolling-shutter/device evidence are outside this lane fence and remain PENDING; no independent accuracy claim is made.",
+      "target": "PTS/VFR, native-intrinsics scaling, A/V mux, acoustic propagation, sensor clocks and rolling shutter, with stop rule: Do not mix coordinate spaces, align latest samples, or correct audio destructively; preserve raw values.",
+      "verdict": "FAIL"
+    },
+    {
+      "metric": "Final focused verification",
+      "baseline": "Initial post-edit focused run had 217 passes and one test-only digest assertion failure because the assertion included absolute clip_path.",
+      "after": "209 passed, 0 failed in 27.82s; literal pytest exit code 0. Earlier broader focused audio/timebase/process run: 219 passed, 0 failed; literal exit code 0.",
+      "target": "All timebase_contract, io_decode, and process_video focused tests pass with the pytest command exit code captured directly.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Mandatory full tests/racketsport blast-radius suite",
+      "baseline": "Manager HEAD baseline: 3662 passed, 24 skipped, 1 cross-contamination failure later fixed separately.",
+      "after": "3670 passed, 12 failed, 24 skipped, 8 warnings in 2761.85s; literal pytest exit code 1. Failure attribution: 8 sandbox bind failures reproduce at HEAD; 4 BALL failures are concurrent dirty-tree cross-lane regressions that pass 4/4 at HEAD but fail 4/4 in the current tree. No failure is in an owned timebase/audio/process test.",
+      "target": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q is green, or every failure is proven pre-existing at HEAD.",
+      "verdict": "FAIL"
+    },
+    {
+      "metric": "BEST-STACK DELTA",
+      "baseline": "No model/config selection change requested.",
+      "after": "(c) no stack delta. This is correctness/provenance wiring only; configs/racketsport/best_stack.json, model choices, thresholds, and policy selection were not edited.",
+      "target": "No best-stack change without a named promotion gate and provenance/license proof.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Artifacts",
+      "baseline": null,
+      "after": "runs/lanes/tbwire_20260715/{report.json,SUMMARY.md,verification_evidence.json,wolverine_timebase_contract.json,wolverine_timebase_decode_evidence.json,wolverine_legacy_frame_times.json,focused_final.log,focused_final.exitcode,full_suite.log,full_suite.exitcode,ball_failure_rerun.log,head_failure_repro.log,server_failure_rerun.log,head_server_failure_repro.log,persistent_worker_solo.log,head_persistent_worker_solo.log}.",
+      "target": "All lane logs and evidence live under runs/lanes/tbwire_20260715/.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Dated manager inflight note",
+      "baseline": null,
+      "after": "2026-07-15 tbwire_20260715: NS-01.4/P0-H typed decode timebase is wired (scoped pass) through ingest, the frame-time normalization seam, and events/audio provenance; canonical exact ffprobe ticks account for 300/300 Wolverine frames while legacy frame_times values remain unchanged, synthetic VFR gaps/non-monotonic PTS are explicit, and sidecar clock mapping has typed fit/missing outcomes. Final focused suite: 209 passed, exit 0. Mandatory full suite: 3670 passed/12 failed/24 skipped, exit 1; 8 failures are sandbox TCP/AF_UNIX bind restrictions reproduced at HEAD and 4 are concurrent BALL dirty-tree regressions that pass at HEAD, with no owned-test failures. Physical 30s/5min capture proof and broader native-intrinsics/rolling-shutter clauses remain owner-gated PENDING; VERIFIED=0, no stack delta, no commit.",
+      "target": "One dated paste-ready paragraph for runs/manager/inflight_lanes.md.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "threed/racketsport/timebase.py:70 and :406 - added typed SensorClockMappingOutcome plus >=2-pair affine sidecar clock builder; frozen TimebaseContract serialization semantics remain unchanged.",
+    "threed/racketsport/io_decode.py:106, :387, :563, and :647 - added exact ffprobe tick/decimal adapters, canonical-beside-legacy contract/evidence writer, explicit count/availability accounting, and loud-or-declared frame-time resolution.",
+    "threed/racketsport/audio_onsets.py:462 - added optional contract reference adapter without changing no-input raw/corrected onset bytes.",
+    "scripts/racketsport/process_video.py:1242, :2664, and :3388 - ingest writes/lists typed artifacts, frame normalization reads corrected typed time and records time_basis, and events/audio ordering references the same contract.",
+    "tests/racketsport/test_timebase_contract.py:236, tests/racketsport/test_io_decode.py:173, and tests/racketsport/test_process_video.py:4601 - added golden sidecar, synthetic VFR, real Wolverine parity, CFR/decimal fallback, stage-adoption, and audio-link coverage.",
+    "runs/lanes/tbwire_20260715/ - generated schema-valid real-clip contract/evidence, direct pytest exit-code files, failure-attribution logs, readable summary, and this structured report.",
+    "BEST-STACK DELTA: (c) no stack delta; no model, checkpoint, threshold, config, or policy-selection file changed."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q > runs/lanes/tbwire_20260715/full_suite.log 2>&1; code=$?; printf '%s\\n' \"$code\" > runs/lanes/tbwire_20260715/full_suite.exitcode",
+    "passed": 3670,
+    "failed": 12,
+    "skipped": 24,
+    "failures_all_preexisting": false,
+    "failure_notes": "Literal exit code 1. (a environment/pre-existing, reproduced at HEAD with exit 1): test_court_keypoint_review_server.py::{test_court_keypoint_post_save_rejects_missing_or_wrong_token,test_court_keypoint_post_save_accepts_correct_token,test_court_keypoint_served_page_embeds_save_token_not_placeholder} and test_review_input_server.py::{test_review_input_post_save_rejects_missing_or_wrong_token,test_review_input_post_save_accepts_correct_token,test_review_input_served_pages_embed_save_token_not_placeholder} all fail TCP bind with PermissionError EPERM; test_sam3dbody_persistent_worker.py::{test_serve_and_client_round_trip_succeeds,test_worker_idle_timeout_self_exits_and_removes_socket} fail AF_UNIX bind with PermissionError EPERM. Solo current persistent-worker rerun: 15 passed/2 failed, exit 1; solo HEAD: same, exit 1, so not contention flakes. (a shared-tree cross-contamination, not this lane, but not pre-existing at HEAD): test_ball_physics_fill.py::{test_fill_preserves_confident_world_samples_and_marks_interpolated_frames,test_2d_only_lift_requires_small_reprojection_error,test_fill_does_not_extrapolate_beyond_configured_frame_limit,test_generated_samples_clamp_small_negative_z_to_court_plane}; current rerun 4 failed, exit 1, HEAD archive rerun 4 passed, exit 0. These failures arise with concurrent forbidden BALL edits present in the shared worktree, so failures_all_preexisting is false. (b contention flakes): none. (c caused by tbwire edits): none; final owned focused suite is 209 passed, exit 0."
+  },
+  "honest_issues": [
+    "VERIFIED=0 remains binding. This is wired (scoped pass) evidence only, not promotion or accuracy proof.",
+    "The mandatory full suite is non-green: 3670 passed, 12 failed, 24 skipped, literal exit 1. Eight failures are sandbox bind restrictions reproduced at HEAD; four are concurrent BALL cross-contamination that is green at HEAD but still failing in the shared current tree.",
+    "The P0-H physical 30-second and 5-minute device-capture clause is owner-gated and PENDING; this lane did not close it.",
+    "The broader NS-01.4 native-intrinsics scaling and rolling-shutter/device slices were outside this lane's file fence and remain PENDING.",
+    "full_sensors.json contains only one valid dual-clock pair, so its correct typed result is insufficient_dual_clock_pairs; the >=2-pair mapped path is proven synthetically, not by that golden fixture.",
+    "Byte-stable compatibility intentionally leaves legacy frame_times.json at 299 Wolverine entries (including its historical zero-PTS extraction semantics); canonical timebase_contract.json independently accounts for all 300 encoded frames and records the legacy difference explicitly.",
+    "No Outdoor/Indoor labels or Wolverine/Burlington labels were read. Only the permitted Wolverine source.mp4 was ffprobed/decoded for timing evidence.",
+    "Unrelated dirty files and concurrent coordinate/placement/BALL changes were preserved. No branch, commit, push, stage, revert, or best-stack edit was performed."
+  ],
+  "next": "Manager should paste the dated inflight note from the acceptance rows, let the owning BALL lane repair its four current-tree regressions, and rerun the exact full suite in a settled environment that permits TCP/AF_UNIX bind tests. Then the owner can run the physical 30-second/5-minute capture slice; until those gates pass, keep P0-H/NS-01.4 physical evidence PENDING and VERIFIED=0.",
+  "session_id": null
+}

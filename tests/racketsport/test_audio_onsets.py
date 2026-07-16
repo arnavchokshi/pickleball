@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from threed.racketsport.audio_onsets import (
+    attach_timebase_contract_provenance,
     build_audio_onsets_from_samples,
     build_audio_onsets_from_video,
     build_audio_onsets_from_wav,
@@ -182,3 +183,15 @@ def test_audio_timing_uses_explicit_identity_when_distance_is_unavailable() -> N
     assert payload["timing"]["propagation_corrected_onset_count"] == 0
     assert all(item["raw_time_s"] == item["corrected_time_s"] == item["time_s"] for item in payload["onsets"])
     assert all(item["timing_provenance"]["applied"] is False for item in payload["onsets"])
+
+
+def test_timebase_adapter_is_byte_identical_when_no_contract_is_supplied() -> None:
+    payload = {
+        "timing": {"ordering_policy": "ascending_corrected_time_s_then_raw_order"},
+        "onsets": [{"raw_time_s": 1.0, "corrected_time_s": 1.0, "time_s": 1.0}],
+    }
+    before = json.dumps(payload, sort_keys=True, separators=(",", ":"))
+
+    output = attach_timebase_contract_provenance(payload)
+
+    assert json.dumps(output, sort_keys=True, separators=(",", ":")) == before

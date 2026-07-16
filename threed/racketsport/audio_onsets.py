@@ -6,6 +6,7 @@ classifier outputs and are not gate-verified contact events.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import struct
@@ -15,7 +16,7 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from .timebase import AcousticPropagationModel, ClockDomain
+from .timebase import AcousticPropagationModel, ClockDomain, TimebaseContract
 
 
 ARTIFACT_TYPE = "racketsport_audio_onsets"
@@ -456,6 +457,34 @@ def finalize_audio_onset_timing(
         "corrected_order_differs_from_raw_order_count": changed_order_count,
     }
     return prepared, timing
+
+
+def attach_timebase_contract_provenance(
+    payload: Mapping[str, Any],
+    *,
+    timebase_contract_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Link onset ordering to decode timing without changing any onset values."""
+
+    output = dict(payload)
+    if timebase_contract_path is None:
+        return output
+    path = Path(timebase_contract_path)
+    encoded = path.read_bytes()
+    contract = TimebaseContract.from_json_bytes(encoded)
+    timing = dict(output.get("timing") or {})
+    timing["timebase_contract"] = {
+        "artifact_type": contract.artifact_type,
+        "capture_id": contract.capture_id,
+        "path": str(path),
+        "sha256": hashlib.sha256(encoded).hexdigest(),
+        "audio_clock": ClockDomain.AUDIO.value,
+        "target_clock": ClockDomain.MEDIA.value,
+        "ordering_time_basis": "corrected_time_s",
+        "raw_timing_preserved": True,
+    }
+    output["timing"] = timing
+    return output
 
 
 def _attach_nearest_frames(onsets: list[dict[str, Any]], *, frame_rate: float | None) -> list[dict[str, Any]]:

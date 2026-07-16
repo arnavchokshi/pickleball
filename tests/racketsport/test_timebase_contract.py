@@ -34,11 +34,13 @@ from threed.racketsport.timebase import (
     TimebaseValidationError,
     align_interpolated_sensor_sample,
     align_nearest_sensor_sample,
+    build_sensor_clock_mapping_from_sidecar,
 )
 
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = ROOT / "docs" / "racketsport" / "timebase_schema.json"
+CAPTURE_SIDECAR_FIXTURES = ROOT / "tests" / "racketsport" / "fixtures" / "capture_sidecar"
 
 
 def _correction() -> CorrectionProvenance:
@@ -221,6 +223,51 @@ def test_round_trip_json_is_schema_validated_and_byte_stable() -> None:
     assert restored == contract
     assert restored.to_json_bytes() == encoded
     assert encoded.endswith(b"\n")
+
+
+@pytest.mark.parametrize(
+    ("fixture_name", "expected_reason", "expected_pair_count"),
+    [
+        ("full_sensors.json", "insufficient_dual_clock_pairs", 1),
+        ("missing_sensors.json", "sidecar_declares_unavailable", 0),
+        ("camera_roll_import.json", "sidecar_declares_unavailable", 0),
+    ],
+)
+def test_capture_sidecar_golden_fixtures_declare_clock_mapping_absence(
+    fixture_name: str,
+    expected_reason: str,
+    expected_pair_count: int,
+) -> None:
+    payload = json.loads((CAPTURE_SIDECAR_FIXTURES / fixture_name).read_text(encoding="utf-8"))
+
+    outcome = build_sensor_clock_mapping_from_sidecar(payload)
+
+    assert outcome.status.value == "missing"
+    assert outcome.mapping is None
+    assert outcome.missing_reason is not None
+    assert outcome.missing_reason.value == expected_reason
+    assert outcome.dual_clock_pair_count == expected_pair_count
+
+
+def test_capture_sidecar_dual_clock_pairs_fit_offset_drift_and_residual() -> None:
+    outcome = build_sensor_clock_mapping_from_sidecar(
+        {
+            "arkit_frame_samples": [
+                {"arkit_timestamp_s": 10.0, "video_pts_s": 0.001},
+                {"arkit_timestamp_s": 11.0, "video_pts_s": 1.001010},
+                {"arkit_timestamp_s": 12.0, "video_pts_s": 2.001020},
+            ],
+            "unavailable_sensor_reasons": {},
+        }
+    )
+
+    assert outcome.status.value == "mapped"
+    assert outcome.mapping is not None
+    assert outcome.mapping.source_clock is ClockDomain.MONOTONIC
+    assert outcome.mapping.target_clock is ClockDomain.MEDIA
+    assert outcome.mapping.drift_ppm == pytest.approx(10.0, abs=1e-6)
+    assert outcome.mapping.to_target(10.0) == pytest.approx(0.001, abs=1e-12)
+    assert outcome.max_abs_residual_s == pytest.approx(0.0, abs=1e-12)
 
 
 def test_schema_rejects_destructive_or_implicit_cfr_shapes() -> None:

@@ -148,7 +148,9 @@ from threed.racketsport.frame_rating import (  # noqa: E402
     build_frame_compute_plan,
     write_frame_compute_plan,
 )
-from threed.racketsport.io_decode import time_for_frame, write_frame_time_table  # noqa: E402
+from threed.racketsport.io_decode import time_for_frame, write_timebase_artifacts  # noqa: E402
+from threed.racketsport.timebase import TimebaseContract  # noqa: E402
+from threed.racketsport.audio_onsets import attach_timebase_contract_provenance  # noqa: E402
 from threed.racketsport.camera_motion import (  # noqa: E402
     CAMERA_MOTION_AUTO_THRESHOLD,
     CAMERA_MOTION_PROBE_MAX_CORNERS,
@@ -422,7 +424,7 @@ RUN_IDENTITY_CONFIG_KEYS: dict[str, tuple[str, ...]] = {
 }
 
 RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
-    "ingest": ("frame_times.json",),
+    "ingest": ("frame_times.json", "timebase_contract.json", "timebase_decode_evidence.json"),
     "calibration": (
         "capture_sidecar.json",
         "court_keypoints.json",
@@ -780,6 +782,7 @@ class ProcessVideoPipeline:
                 "skeleton3d": self.clip_dir / "skeleton3d.json",
                 "audio": self.clip_dir / "audio_onsets_v2.json",
                 "calibration": self.clip_dir / "court_calibration.json",
+                "timebase_contract": self.clip_dir / "timebase_contract.json",
             }
         elif name == "world":
             candidates = self._contact_dependency_paths(refined=True)
@@ -1236,14 +1239,32 @@ class ProcessVideoPipeline:
 
         width, height, fps = _video_probe(video)
         frame_times_path = self.clip_dir / "frame_times.json"
-        frame_times = write_frame_time_table(target, frame_times_path)
+        timebase_contract_path = self.clip_dir / "timebase_contract.json"
+        timebase_evidence_path = self.clip_dir / "timebase_decode_evidence.json"
+        timebase_build = write_timebase_artifacts(
+            target,
+            frame_times_path,
+            timebase_contract_path,
+            timebase_evidence_path,
+            capture_id=self.options.clip,
+            capture_sidecar=self.options.capture_sidecar,
+        )
+        frame_times = timebase_build.legacy_frame_times
         notes = [
             f"ingested {video} as {target.name} ({width}x{height} @ {fps:.3f}fps)",
             "wrote frame_times.json from ffprobe PTS"
             if frame_times.get("provenance") == "ffprobe_pts"
             else "wrote frame_times.json with constant_fps_assumed fallback",
+            (
+                "wrote schema-valid timebase_contract.json with exact ffprobe PTS and explicit frame availability"
+                if timebase_build.contract is not None
+                else "did not emit a raw-PTS contract; timebase_decode_evidence.json declares constant_fps_assumed"
+            ),
         ]
-        return StageOutcome(stage="ingest", status="ran", wall_seconds=0.0, notes=notes, artifacts=[target.name, "frame_times.json"])
+        artifacts = [target.name, "frame_times.json", "timebase_decode_evidence.json"]
+        if timebase_build.contract is not None:
+            artifacts.append("timebase_contract.json")
+        return StageOutcome(stage="ingest", status="ran", wall_seconds=0.0, notes=notes, artifacts=artifacts)
 
     # ------------------------------------------------------------------
     # stage 2: calibration
@@ -2640,6 +2661,22 @@ class ProcessVideoPipeline:
         timing = _video_timing_probe(self.options.video)
         frame_times_path = self.clip_dir / "frame_times.json"
         frame_times_payload = _read_optional_json(frame_times_path) if frame_times_path.is_file() else None
+        timebase_contract_path = self.clip_dir / "timebase_contract.json"
+        timebase_contract = (
+            TimebaseContract.from_json_bytes(timebase_contract_path.read_bytes())
+            if timebase_contract_path.is_file()
+            else None
+        )
+
+        def resolve_frame_time(index: int):
+            return time_for_frame(
+                index,
+                frame_times=frame_times_payload,
+                fps=timing.fps,
+                timebase_contract=timebase_contract,
+                return_provenance=True,
+            )
+
         source_frame_count = len(frames)
         if source_frame_count != timing.frame_count:
             raise _HardStageFailure(
@@ -2653,7 +2690,7 @@ class ProcessVideoPipeline:
         expected_dt = 1.0 / timing.fps
         if frame_times_payload is not None:
             expected_samples = [
-                {"t": time_for_frame(index, frame_times=frame_times_payload, fps=timing.fps)}
+                {"t": resolve_frame_time(index).time_s}
                 for index in range(source_frame_count)
             ]
             expected_dt = _median_frame_dt(expected_samples) or expected_dt
@@ -2681,7 +2718,7 @@ class ProcessVideoPipeline:
 
         for index, frame in enumerate(frames):
             if isinstance(frame, dict):
-                frame["t"] = round(time_for_frame(index, frame_times=frame_times_payload, fps=timing.fps), 6)
+                frame["t"] = round(resolve_frame_time(index).time_s, 6)
         payload["fps"] = float(timing.fps)
         _write_json(ball_track_path, payload)
         if not _valid_artifact("ball_track", ball_track_path):
@@ -2716,11 +2753,19 @@ class ProcessVideoPipeline:
             "source_median_dt": source_dt,
             "expected_dt": expected_dt,
             "frame_times_path": str(frame_times_path) if frame_times_payload is not None else None,
+            "timebase_contract_path": str(timebase_contract_path) if timebase_contract is not None else None,
+            "time_basis": resolve_frame_time(0).time_basis if source_frame_count else None,
             "source_last_t": _last_frame_time(frames),
             "normalized_last_t": _last_frame_time(normalized_frames if isinstance(normalized_frames, list) else []),
             "coverage_before": before_coverage,
             "coverage_after": after_coverage,
-            "normalization": "t=frame_times[index]" if frame_times_payload is not None else "t=index/video_fps",
+            "normalization": (
+                "t=timebase_contract.corrected_pts"
+                if timebase_contract is not None
+                else "t=frame_times[index]"
+                if frame_times_payload is not None
+                else "t=index/video_fps"
+            ),
             "not_ball_gate_evidence": True,
         }
         _write_json(ball_track_path.with_name("ball_track_timing_provenance.json"), provenance)
@@ -3340,6 +3385,11 @@ class ProcessVideoPipeline:
                 clip=self.options.clip,
                 frame_rate=fps,
             )
+            timebase_contract_path = self.clip_dir / "timebase_contract.json"
+            payload = attach_timebase_contract_provenance(
+                payload,
+                timebase_contract_path=(timebase_contract_path if timebase_contract_path.is_file() else None),
+            )
             write_audio_onsets_v2(target, payload)
             blockers = payload.get("blockers") if isinstance(payload.get("blockers"), list) else []
             if blockers:
@@ -3359,6 +3409,7 @@ class ProcessVideoPipeline:
             "skeleton3d": self.clip_dir / "skeleton3d.json",
             "audio": self.clip_dir / "audio_onsets_v2.json",
             "calibration": self.clip_dir / "court_calibration.json",
+            "timebase_contract": self.clip_dir / "timebase_contract.json",
         }
         if refined:
             paths.update(

@@ -5,11 +5,28 @@ import math
 import subprocess
 import time
 from dataclasses import dataclass
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from .capture_quality import score_capture_quality
 from .schemas import CaptureQuality
+from .timebase import (
+    ClockDomain,
+    CorrectedPTS,
+    CorrectionProvenance,
+    FrameAbsenceReason,
+    FrameAvailability,
+    FrameAvailabilityStatus,
+    FrameTime,
+    RawEncodedPTS,
+    SensorClockMappingOutcome,
+    SensorClockMappingStatus,
+    TimeBasis,
+    TimebaseContract,
+    TimebaseValidationError,
+    build_sensor_clock_mapping_from_sidecar,
+)
 
 
 @dataclass(frozen=True)
@@ -85,6 +102,21 @@ class DecodeBenchmark:
         }
 
 
+@dataclass(frozen=True)
+class FrameTimeResolution:
+    time_s: float
+    time_basis: str
+    provenance: str
+    fallback_used: bool
+
+
+@dataclass(frozen=True)
+class TimebaseArtifactBuild:
+    legacy_frame_times: dict[str, Any]
+    contract: TimebaseContract | None
+    evidence: dict[str, Any]
+
+
 def _parse_rational(value: str | None) -> float | None:
     if not value or value == "0/0":
         return None
@@ -127,7 +159,10 @@ def _run_ffprobe_frames(path: Path) -> dict[str, Any]:
         "-print_format",
         "json",
         "-show_entries",
-        "frame=best_effort_timestamp_time,pts_time,pkt_pts_time,pkt_duration_time",
+        (
+            "frame=best_effort_timestamp,best_effort_timestamp_time,pts,pts_time,"
+            "pkt_pts,pkt_pts_time,duration,duration_time,pkt_duration_time"
+        ),
         str(path),
     ]
     try:
@@ -196,21 +231,13 @@ def _stream_frame_count(video_stream: Mapping[str, Any], duration_s: float, fps:
     return 0
 
 
-def build_frame_time_table(path: str | Path) -> dict[str, Any]:
-    """Build a per-frame presentation timestamp table for a clip.
+def _legacy_frame_time_table(
+    clip_path: Path,
+    stream_payload: Mapping[str, Any],
+    frame_payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    """The pre-contract frame_times.json behavior, intentionally byte-stable."""
 
-    The preferred path is ffprobe's per-frame PTS/best-effort timestamp output.
-    When timestamps are unavailable, the table is still emitted from the
-    stream's r_frame_rate with ``provenance=constant_fps_assumed`` so downstream
-    consumers can treat that timing as lower trust instead of silently assuming
-    CFR.
-    """
-
-    clip_path = Path(path)
-    if not clip_path.exists():
-        raise FileNotFoundError(clip_path)
-
-    stream_payload = _run_ffprobe(clip_path)
     video_stream = _video_stream(stream_payload, clip_path)
     fps = _parse_rational(video_stream.get("avg_frame_rate")) or _parse_rational(
         video_stream.get("r_frame_rate")
@@ -220,7 +247,7 @@ def build_frame_time_table(path: str | Path) -> dict[str, Any]:
         raise ValueError(f"could not determine frame rate for {clip_path}")
     duration_s = float(video_stream.get("duration") or stream_payload.get("format", {}).get("duration") or 0.0)
 
-    pts_values = _frame_pts_from_ffprobe_frames(_run_ffprobe_frames(clip_path))
+    pts_values = _frame_pts_from_ffprobe_frames(frame_payload)
     source_start_pts_s: float | None = None
     if pts_values:
         provenance = "ffprobe_pts"
@@ -252,12 +279,312 @@ def build_frame_time_table(path: str | Path) -> dict[str, Any]:
     }
 
 
+def _time_base_ticks(video_stream: Mapping[str, Any]) -> tuple[int, int]:
+    value = video_stream.get("time_base")
+    if not isinstance(value, str) or "/" not in value:
+        raise TimebaseValidationError("ffprobe video stream did not declare an exact time_base")
+    numerator_text, denominator_text = value.split("/", 1)
+    try:
+        numerator = int(numerator_text)
+        denominator = int(denominator_text)
+    except ValueError as exc:
+        raise TimebaseValidationError(f"invalid ffprobe time_base {value!r}") from exc
+    if numerator <= 0 or denominator <= 0:
+        raise TimebaseValidationError(f"invalid ffprobe time_base {value!r}")
+    return numerator, denominator
+
+
+def _exact_decimal_ticks(value: str) -> tuple[int, int]:
+    try:
+        decimal = Decimal(value)
+    except (InvalidOperation, ValueError) as exc:
+        raise TimebaseValidationError(f"invalid ffprobe decimal timestamp {value!r}") from exc
+    if not decimal.is_finite():
+        raise TimebaseValidationError(f"non-finite ffprobe decimal timestamp {value!r}")
+    sign, digits, exponent = decimal.as_tuple()
+    coefficient = int("".join(str(digit) for digit in digits) or "0")
+    if sign:
+        coefficient = -coefficient
+    if exponent >= 0:
+        return coefficient * (10**exponent), 1
+    return coefficient, 10 ** (-exponent)
+
+
+def _exact_frame_observation(
+    frame: Mapping[str, Any],
+    *,
+    frame_index: int,
+    time_base: tuple[int, int] | None,
+) -> tuple[RawEncodedPTS | None, dict[str, Any]]:
+    integer_fields = (
+        ("best_effort_timestamp", "best_effort_timestamp_time"),
+        ("pts", "pts_time"),
+        ("pkt_pts", "pkt_pts_time"),
+    )
+    decimal_string: str | None = None
+    for integer_field, decimal_field in integer_fields:
+        raw_integer = frame.get(integer_field)
+        raw_decimal = frame.get(decimal_field)
+        if raw_decimal not in (None, "N/A"):
+            decimal_string = str(raw_decimal)
+        if raw_integer in (None, "N/A") or time_base is None:
+            continue
+        try:
+            integer_timestamp = int(raw_integer)
+        except (TypeError, ValueError):
+            continue
+        numerator, denominator = time_base
+        duration_raw = frame.get("duration")
+        duration_ticks = None
+        if duration_raw not in (None, "N/A"):
+            try:
+                parsed_duration = int(duration_raw) * numerator
+            except (TypeError, ValueError):
+                parsed_duration = 0
+            duration_ticks = parsed_duration if parsed_duration > 0 else None
+        raw = RawEncodedPTS(
+            frame_index=frame_index,
+            pts_ticks=integer_timestamp * numerator,
+            timescale=denominator,
+            duration_ticks=duration_ticks,
+        )
+        return raw, {
+            "frame_index": frame_index,
+            "timestamp_field": integer_field,
+            "source_timestamp_decimal": decimal_string,
+            "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+            "pts_ticks": raw.pts_ticks,
+            "timescale": raw.timescale,
+            "duration_ticks": raw.duration_ticks,
+        }
+
+    for _integer_field, decimal_field in integer_fields:
+        raw_decimal = frame.get(decimal_field)
+        if raw_decimal in (None, "N/A"):
+            continue
+        ticks, timescale = _exact_decimal_ticks(str(raw_decimal))
+        raw = RawEncodedPTS(frame_index, ticks, timescale)
+        return raw, {
+            "frame_index": frame_index,
+            "timestamp_field": decimal_field,
+            "source_timestamp_decimal": str(raw_decimal),
+            "conversion_method": "exact_decimal_string_to_integer_ticks",
+            "pts_ticks": ticks,
+            "timescale": timescale,
+            "duration_ticks": None,
+        }
+    return None, {
+        "frame_index": frame_index,
+        "timestamp_field": None,
+        "source_timestamp_decimal": None,
+        "conversion_method": "unavailable",
+        "pts_ticks": None,
+        "timescale": None,
+        "duration_ticks": None,
+    }
+
+
+def build_timebase_artifacts(
+    path: str | Path,
+    *,
+    capture_id: str,
+    capture_sidecar: Mapping[str, Any] | str | Path | None = None,
+) -> TimebaseArtifactBuild:
+    """Build canonical raw-PTS evidence beside the byte-stable legacy table."""
+
+    clip_path = Path(path)
+    if not clip_path.exists():
+        raise FileNotFoundError(clip_path)
+    stream_payload = _run_ffprobe(clip_path)
+    frame_payload = _run_ffprobe_frames(clip_path)
+    video_stream = _video_stream(stream_payload, clip_path)
+    legacy = _legacy_frame_time_table(clip_path, stream_payload, frame_payload)
+    raw_frames = frame_payload.get("frames")
+    if not isinstance(raw_frames, Sequence) or isinstance(raw_frames, (str, bytes)):
+        raw_frames = []
+    try:
+        time_base = _time_base_ticks(video_stream)
+    except TimebaseValidationError:
+        time_base = None
+
+    observations: list[tuple[RawEncodedPTS | None, dict[str, Any]]] = []
+    for frame_index, raw_frame in enumerate(raw_frames):
+        if not isinstance(raw_frame, Mapping):
+            observations.append((None, {
+                "frame_index": frame_index,
+                "timestamp_field": None,
+                "source_timestamp_decimal": None,
+                "conversion_method": "invalid_ffprobe_frame_record",
+                "pts_ticks": None,
+                "timescale": None,
+                "duration_ticks": None,
+            }))
+            continue
+        observations.append(_exact_frame_observation(raw_frame, frame_index=frame_index, time_base=time_base))
+
+    stream_frame_count = _stream_frame_count(video_stream, float(legacy["duration_s"]), float(legacy["fps"]))
+    accounted_frame_count = max(stream_frame_count, len(observations))
+    if isinstance(capture_sidecar, (str, Path)):
+        sidecar_payload: Mapping[str, Any] | None = json.loads(Path(capture_sidecar).read_text(encoding="utf-8"))
+    else:
+        sidecar_payload = capture_sidecar
+    sensor_outcome: SensorClockMappingOutcome = build_sensor_clock_mapping_from_sidecar(sidecar_payload)
+
+    has_exact_pts = any(raw is not None for raw, _meta in observations)
+    contract: TimebaseContract | None = None
+    unavailable_indices: list[int] = []
+    non_monotonic_indices: list[int] = []
+    if has_exact_pts:
+        contract_frames: list[FrameTime] = []
+        previous_raw: RawEncodedPTS | None = None
+        legacy_pts = [float(item["pts_s"]) for item in legacy["frames"]]
+        first_accepted_seconds: float | None = None
+        for frame_index in range(accounted_frame_count):
+            raw = observations[frame_index][0] if frame_index < len(observations) else None
+            if raw is None:
+                unavailable_indices.append(frame_index)
+                contract_frames.append(FrameTime(
+                    frame_index,
+                    FrameAvailability(FrameAvailabilityStatus.MISSING, FrameAbsenceReason.PTS_UNAVAILABLE),
+                    None,
+                ))
+                continue
+            if previous_raw is not None and raw.pts_ticks * previous_raw.timescale <= previous_raw.pts_ticks * raw.timescale:
+                non_monotonic_indices.append(frame_index)
+                contract_frames.append(FrameTime(
+                    frame_index,
+                    FrameAvailability(FrameAvailabilityStatus.DROPPED, FrameAbsenceReason.PTS_UNAVAILABLE),
+                    None,
+                ))
+                continue
+            previous_raw = raw
+            if first_accepted_seconds is None:
+                first_accepted_seconds = raw.seconds
+            if legacy["provenance"] == "ffprobe_pts" and frame_index < len(legacy_pts):
+                corrected_time_s = legacy_pts[frame_index]
+                method = "legacy_rebase_to_first_table_pts_round9"
+            else:
+                corrected_time_s = round(raw.seconds - first_accepted_seconds, 9)
+                method = "rebase_to_first_frame_round9"
+            correction = CorrectionProvenance(
+                method=method,
+                source_clock=ClockDomain.MEDIA,
+                target_clock=ClockDomain.MEDIA,
+                model_id="ffprobe_pts_rebase_round9_v1",
+                offset_s=corrected_time_s - raw.seconds,
+                drift_ppm=0.0,
+                uncertainty_s=0.5e-9,
+            )
+            contract_frames.append(FrameTime(
+                frame_index,
+                FrameAvailability(FrameAvailabilityStatus.PRESENT),
+                raw,
+                CorrectedPTS(corrected_time_s, correction),
+            ))
+        mappings = (
+            (sensor_outcome.mapping,)
+            if sensor_outcome.status is SensorClockMappingStatus.MAPPED and sensor_outcome.mapping is not None
+            else ()
+        )
+        contract = TimebaseContract(
+            capture_id=capture_id,
+            frames=tuple(contract_frames),
+            audio_times=(),
+            acoustic_models=(),
+            sensor_clock_mappings=mappings,
+            rolling_shutter_model=None,
+        )
+
+    evidence = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_timebase_decode_evidence",
+        "capture_id": capture_id,
+        "clip_path": str(clip_path),
+        "timing_declaration": (
+            "ffprobe_pts_with_explicit_availability" if contract is not None else "constant_fps_assumed"
+        ),
+        "raw_pts_authority": contract is not None,
+        "timebase_contract_emitted": contract is not None,
+        "raw_pts_observations": [meta for _raw, meta in observations],
+        "count_consistency": {
+            "stream_frame_count": stream_frame_count,
+            "ffprobe_reported_frame_count": len(observations),
+            "canonical_accounted_frame_count": accounted_frame_count,
+            "legacy_frame_count": int(legacy["frame_count"]),
+            "unavailable_frame_indices": unavailable_indices,
+            "non_monotonic_frame_indices": non_monotonic_indices,
+            "all_source_frames_accounted": accounted_frame_count >= max(stream_frame_count, len(observations)),
+            "legacy_difference_explanation": (
+                None
+                if int(legacy["frame_count"]) == accounted_frame_count
+                else "legacy extraction semantics retained byte-for-byte; canonical frames independently account for ffprobe/stream records"
+            ),
+        },
+        "legacy_compatibility": {
+            "artifact": "frame_times.json",
+            "values_unchanged": True,
+            "derived_method": (
+                "legacy_rebase_to_first_table_pts_round9"
+                if legacy["provenance"] == "ffprobe_pts"
+                else "constant_fps_assumed"
+            ),
+        },
+        "sensor_clock_mapping_outcome": sensor_outcome.to_dict(),
+    }
+    return TimebaseArtifactBuild(legacy, contract, evidence)
+
+
+def build_frame_time_table(path: str | Path) -> dict[str, Any]:
+    """Build a per-frame presentation timestamp table for a clip.
+
+    The preferred path is ffprobe's per-frame PTS/best-effort timestamp output.
+    When timestamps are unavailable, the table is still emitted from the
+    stream's r_frame_rate with ``provenance=constant_fps_assumed`` so downstream
+    consumers can treat that timing as lower trust instead of silently assuming
+    CFR.
+    """
+
+    clip_path = Path(path)
+    if not clip_path.exists():
+        raise FileNotFoundError(clip_path)
+
+    stream_payload = _run_ffprobe(clip_path)
+    return _legacy_frame_time_table(clip_path, stream_payload, _run_ffprobe_frames(clip_path))
+
+
 def write_frame_time_table(path: str | Path, out_path: str | Path) -> dict[str, Any]:
     table = build_frame_time_table(path)
     out = Path(out_path)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(table, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return table
+
+
+def write_timebase_artifacts(
+    path: str | Path,
+    frame_times_out_path: str | Path,
+    contract_out_path: str | Path,
+    evidence_out_path: str | Path,
+    *,
+    capture_id: str,
+    capture_sidecar: Mapping[str, Any] | str | Path | None = None,
+) -> TimebaseArtifactBuild:
+    build = build_timebase_artifacts(path, capture_id=capture_id, capture_sidecar=capture_sidecar)
+    frame_times_out = Path(frame_times_out_path)
+    frame_times_out.parent.mkdir(parents=True, exist_ok=True)
+    frame_times_out.write_text(
+        json.dumps(build.legacy_frame_times, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    evidence_out = Path(evidence_out_path)
+    evidence_out.parent.mkdir(parents=True, exist_ok=True)
+    evidence_out.write_text(json.dumps(build.evidence, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    contract_out = Path(contract_out_path)
+    if build.contract is None:
+        contract_out.unlink(missing_ok=True)
+    else:
+        contract_out.write_bytes(build.contract.to_json_bytes())
+    return build
 
 
 def load_frame_time_table(path: str | Path) -> dict[str, Any]:
@@ -317,13 +644,60 @@ def frame_time_lookup(frame_times: Any) -> dict[int, float]:
     raise ValueError("unsupported frame time table shape")
 
 
-def time_for_frame(frame_index: int, *, frame_times: Any = None, fps: float | None = None) -> float:
+def time_for_frame(
+    frame_index: int,
+    *,
+    frame_times: Any = None,
+    fps: float | None = None,
+    timebase_contract: TimebaseContract | Mapping[str, Any] | str | Path | None = None,
+    return_provenance: bool = False,
+) -> float | FrameTimeResolution:
+    frame_index = int(frame_index)
+    if timebase_contract is not None:
+        if isinstance(timebase_contract, TimebaseContract):
+            contract = timebase_contract
+        elif isinstance(timebase_contract, (str, Path)):
+            contract = TimebaseContract.from_json_bytes(Path(timebase_contract).read_bytes())
+        elif isinstance(timebase_contract, Mapping):
+            contract = TimebaseContract.from_dict(timebase_contract)
+        else:
+            raise ValueError("unsupported timebase contract shape")
+        frame = (
+            contract.frames[frame_index]
+            if 0 <= frame_index < len(contract.frames)
+            and contract.frames[frame_index].frame_index == frame_index
+            else next((item for item in contract.frames if item.frame_index == frame_index), None)
+        )
+        if frame is None:
+            raise ValueError(f"timebase contract does not account for frame {frame_index}")
+        if frame.availability.status is not FrameAvailabilityStatus.PRESENT:
+            reason = frame.availability.reason.value if frame.availability.reason is not None else "unknown"
+            raise ValueError(f"timebase contract declares frame {frame_index} unavailable: {reason}")
+        if frame.corrected_pts is None:
+            raise ValueError(f"timebase contract has no derived corrected PTS for frame {frame_index}")
+        result = FrameTimeResolution(
+            time_s=frame.time_s(TimeBasis.CORRECTED_PTS),
+            time_basis=TimeBasis.CORRECTED_PTS.value,
+            provenance=frame.corrected_pts.provenance.method,
+            fallback_used=False,
+        )
+        return result if return_provenance else result.time_s
+
     lookup = frame_time_lookup(frame_times)
-    if int(frame_index) in lookup:
-        return lookup[int(frame_index)]
+    if frame_index in lookup:
+        result = FrameTimeResolution(lookup[frame_index], "legacy_pts_s", "frame_times_table", False)
+        return result if return_provenance else result.time_s
+    if frame_times is not None:
+        raise ValueError(f"frame_times table does not contain frame {frame_index}; refusing silent CFR fallback")
     if fps is None or fps <= 0:
         raise ValueError("fps is required when frame_times does not contain frame")
-    return int(frame_index) / float(fps)
+    result = FrameTimeResolution(
+        frame_index / float(fps),
+        "constant_fps_assumed",
+        "explicit_fps_argument",
+        True,
+    )
+    return result if return_provenance else result.time_s
 
 
 def nearest_frame_for_time(time_s: float, *, frame_times: Any = None, fps: float | None = None) -> int:

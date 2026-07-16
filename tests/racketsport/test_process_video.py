@@ -7,6 +7,7 @@ import sys
 import threading
 import time
 from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import pytest
@@ -14,6 +15,16 @@ import pytest
 from scripts.racketsport import process_video
 from scripts.racketsport.remote_body_dispatch import RemoteBodyDispatchError, RemoteBodyDispatchResult
 from tests.racketsport.calibration_fixtures import minimal_calibration_image_pts, minimal_calibration_world_pts
+from threed.racketsport.timebase import (
+    ClockDomain,
+    CorrectedPTS,
+    CorrectionProvenance,
+    FrameAvailability,
+    FrameAvailabilityStatus,
+    FrameTime,
+    RawEncodedPTS,
+    TimebaseContract,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -393,24 +404,39 @@ def test_ingest_stage_writes_frame_times_artifact(
     _make_video(video, frame_count=3, fps=30.0)
     options = _base_options(tmp_path, video=video, court_corners=None)
     pipeline = process_video.ProcessVideoPipeline(options)
-    calls: list[tuple[Path, Path]] = []
+    calls: list[tuple[Path, Path, Path, Path]] = []
 
-    def _fake_write_frame_time_table(path: Path, out_path: Path) -> dict[str, Any]:
-        calls.append((path, out_path))
+    def _fake_write_timebase_artifacts(
+        path: Path,
+        out_path: Path,
+        contract_path: Path,
+        evidence_path: Path,
+        **_kwargs: Any,
+    ) -> Any:
+        calls.append((path, out_path, contract_path, evidence_path))
         payload = {
             "artifact_type": "racketsport_frame_times",
             "provenance": "ffprobe_pts",
             "frames": [{"frame_idx": 0, "pts_s": 0.0}],
         }
         _write_json(out_path, payload)
-        return payload
+        _write_json(evidence_path, {"artifact_type": "racketsport_timebase_decode_evidence"})
+        _write_json(contract_path, {"artifact_type": "racketsport_timebase_contract"})
+        return SimpleNamespace(legacy_frame_times=payload, contract=object())
 
-    monkeypatch.setattr(process_video, "write_frame_time_table", _fake_write_frame_time_table)
+    monkeypatch.setattr(process_video, "write_timebase_artifacts", _fake_write_timebase_artifacts)
 
     outcome = pipeline._stage_ingest()
 
-    assert calls == [(options.clip_dir / "source.mp4", options.clip_dir / "frame_times.json")]
+    assert calls == [(
+        options.clip_dir / "source.mp4",
+        options.clip_dir / "frame_times.json",
+        options.clip_dir / "timebase_contract.json",
+        options.clip_dir / "timebase_decode_evidence.json",
+    )]
     assert "frame_times.json" in outcome.artifacts
+    assert "timebase_contract.json" in outcome.artifacts
+    assert "timebase_decode_evidence.json" in outcome.artifacts
     assert (options.clip_dir / "frame_times.json").is_file()
     assert "wrote frame_times.json from ffprobe PTS" in outcome.notes
 
@@ -4570,6 +4596,103 @@ def test_ball_stage_normalizes_reused_ball_track_to_frame_times_table(tmp_path: 
     provenance = json.loads((options.clip_dir / "ball_track_timing_provenance.json").read_text(encoding="utf-8"))
     assert provenance["normalization"] == "t=frame_times[index]"
     assert provenance["frame_times_path"] == str(options.clip_dir / "frame_times.json")
+
+
+def test_ball_stage_normalization_reads_typed_corrected_pts_and_records_basis(tmp_path: Path) -> None:
+    video = tmp_path / "typed_vfr_clip.mp4"
+    _make_video(video, frame_count=3, fps=30.0)
+    reuse_ball = tmp_path / "constant_fps_ball_track.json"
+    _write_json(reuse_ball, _ball_track_payload(frame_count=3, fps=30.0))
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.skip_ball = False
+    options.ball_track_reuse = reuse_ball
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    corrected_times = [0.0, 0.1, 0.3]
+    _write_json(
+        options.clip_dir / "frame_times.json",
+        {
+            "artifact_type": "racketsport_frame_times",
+            "provenance": "ffprobe_pts",
+            "frames": [
+                {"frame": index, "pts_s": value}
+                for index, value in enumerate(corrected_times)
+            ],
+        },
+    )
+    provenance = CorrectionProvenance(
+        method="rebase_to_first_frame_round9",
+        source_clock=ClockDomain.MEDIA,
+        target_clock=ClockDomain.MEDIA,
+        model_id="test-vfr",
+        offset_s=0.0,
+        drift_ppm=0.0,
+        uncertainty_s=0.0,
+    )
+    contract = TimebaseContract(
+        capture_id="test_clip",
+        frames=tuple(
+            FrameTime(
+                index,
+                FrameAvailability(FrameAvailabilityStatus.PRESENT),
+                RawEncodedPTS(index, ticks, 1000),
+                CorrectedPTS(corrected_times[index], provenance),
+            )
+            for index, ticks in enumerate([0, 100, 300])
+        ),
+        audio_times=(),
+        acoustic_models=(),
+        sensor_clock_mappings=(),
+        rolling_shutter_model=None,
+    )
+    (options.clip_dir / "timebase_contract.json").write_bytes(contract.to_json_bytes())
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._stage_ball()
+
+    assert outcome.status == "reused"
+    normalized = json.loads((options.clip_dir / "ball_track.json").read_text(encoding="utf-8"))
+    assert [frame["t"] for frame in normalized["frames"]] == corrected_times
+    timing = json.loads((options.clip_dir / "ball_track_timing_provenance.json").read_text(encoding="utf-8"))
+    assert timing["normalization"] == "t=timebase_contract.corrected_pts"
+    assert timing["time_basis"] == "corrected_pts"
+    assert timing["timebase_contract_path"] == str(options.clip_dir / "timebase_contract.json")
+
+
+def test_audio_onset_stage_links_ordering_to_same_timebase_contract(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    video.write_bytes(b"fake-video")
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    contract = TimebaseContract(
+        capture_id="test_clip",
+        frames=(),
+        audio_times=(),
+        acoustic_models=(),
+        sensor_clock_mappings=(),
+        rolling_shutter_model=None,
+    )
+    (options.clip_dir / "timebase_contract.json").write_bytes(contract.to_json_bytes())
+    monkeypatch.setattr(
+        "threed.racketsport.audio_onsets_v2.build_audio_onsets_v2_from_video",
+        lambda *_args, **_kwargs: {
+            "status": "review_only",
+            "blockers": [],
+            "onsets": [{"raw_time_s": 1.0, "corrected_time_s": 1.0, "time_s": 1.0}],
+            "timing": {"ordering_policy": "ascending_corrected_time_s_then_raw_order"},
+        },
+    )
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    payload, _note = pipeline._attempt_audio_onsets(30.0)
+
+    reference = payload["timing"]["timebase_contract"]
+    assert reference["capture_id"] == "test_clip"
+    assert reference["ordering_time_basis"] == "corrected_time_s"
+    assert reference["raw_timing_preserved"] is True
+    assert reference["path"] == str(options.clip_dir / "timebase_contract.json")
 
 
 def test_ball_stage_rescales_exact_wolverine_fps_mismatch_fixture(tmp_path: Path) -> None:

@@ -1,0 +1,22 @@
+RESUME NOTE FROM THE MANAGER (your process was killed by an external 1-hour task cap at
+~16:53, NOT because of anything you did; your worktree changes and lane artifacts are intact).
+
+Pick up exactly where you were:
+1. You had finished the wide suite (full_suite.exitcode=1: 12 failed, 3670 passed, 24 skipped)
+   and were triaging the 12 failures. Manager baseline on HEAD for comparison: 3662 passed /
+   24 skipped / 1 failed, where the single failure was a mid-run cross-contamination of
+   test_truthful_capabilities (already fixed and committed separately — it should PASS on the
+   current tree now). NOTE: your wide suite ran while ANOTHER lane was hammering the same
+   machine; the test_sam3dbody_persistent_worker socket/round-trip failures are plausibly
+   CPU-contention flakes — re-run those files individually now (machine is quieter) and
+   attribute each of the 12 failures: (a) pre-existing/environment, (b) contention flake
+   (passes on solo re-run), or (c) caused by your edits (fix it).
+2. Then finish any remaining spec items and write your MANDATORY STRUCTURED REPORT as a JSON
+   file at runs/lanes/tbwire_20260715/report.json conforming to
+   docs/racketsport/lane_report.schema.json (write the file yourself with an editor/shell —
+   do not rely on the harness flag). Include: objective_result per numbered defect,
+   full_suite exact counts + literal exit codes, per-failure attribution from step 1,
+   HONEST ISSUES, artifacts, BEST-STACK DELTA, and the dated inflight note paragraph.
+3. Re-verify the focused timebase/io_decode/process_video tests one final time with literal
+   exit codes (no pipes) and include them in the report.
+All original spec rules still bind (no commits, fences, honesty, VERIFIED=0).

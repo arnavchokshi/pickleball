@@ -1,0 +1,101 @@
+{
+  "artifact_type": "tbwire_20260715_verification_evidence",
+  "focused_final": {
+    "exit_code": 0,
+    "failed": 0,
+    "passed": 209
+  },
+  "full_suite": {
+    "exit_code": 1,
+    "failed": 12,
+    "passed": 3670,
+    "skipped": 24
+  },
+  "golden_sidecar_clock_outcomes": {
+    "camera_roll_import.json": {
+      "dual_clock_pair_count": 0,
+      "mapping": null,
+      "max_abs_residual_s": null,
+      "missing_reason": "sidecar_declares_unavailable",
+      "sidecar_unavailable_reasons": [
+        [
+          "arkit_camera_pose",
+          "camera_roll_import_has_no_live_arkit_tracking"
+        ],
+        [
+          "camera_intrinsics",
+          "camera_roll_import_has_no_live_calibration_intrinsics"
+        ],
+        [
+          "core_motion_gravity",
+          "camera_roll_import_has_no_live_core_motion"
+        ],
+        [
+          "court_plane",
+          "camera_roll_import_has_no_live_court_lock"
+        ],
+        [
+          "locked_camera_settings",
+          "camera_roll_import_has_no_live_exposure_focus_or_white_balance"
+        ]
+      ],
+      "status": "missing"
+    },
+    "full_sensors.json": {
+      "dual_clock_pair_count": 1,
+      "mapping": null,
+      "max_abs_residual_s": null,
+      "missing_reason": "insufficient_dual_clock_pairs",
+      "sidecar_unavailable_reasons": [],
+      "status": "missing"
+    },
+    "missing_sensors.json": {
+      "dual_clock_pair_count": 0,
+      "mapping": null,
+      "max_abs_residual_s": null,
+      "missing_reason": "sidecar_declares_unavailable",
+      "sidecar_unavailable_reasons": [
+        [
+          "arkit_camera_pose",
+          "arkit_not_supported"
+        ],
+        [
+          "court_plane",
+          "arkit_not_supported"
+        ],
+        [
+          "hdr_enabled",
+          "hdr_state_not_recorded"
+        ],
+        [
+          "lidar_depth",
+          "device_has_no_lidar"
+        ]
+      ],
+      "status": "missing"
+    }
+  },
+  "protected_labels_used": false,
+  "real_clip": {
+    "canonical_frame_count": 300,
+    "contract_roundtrip_byte_stable": true,
+    "contract_schema_valid": true,
+    "count_consistency": {
+      "all_source_frames_accounted": true,
+      "canonical_accounted_frame_count": 300,
+      "ffprobe_reported_frame_count": 300,
+      "legacy_difference_explanation": "legacy extraction semantics retained byte-for-byte; canonical frames independently account for ffprobe/stream records",
+      "legacy_frame_count": 299,
+      "non_monotonic_frame_indices": [],
+      "stream_frame_count": 300,
+      "unavailable_frame_indices": []
+    },
+    "legacy_frame_count": 299,
+    "legacy_frame_values_sha256": "44e416b50db01bb6bbc38d583d8134ee4235421c3e13b1bb7f1d2d76ba8fcbb5",
+    "legacy_provenance": "ffprobe_pts",
+    "path": "/Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4",
+    "raw_pts_monotonic": true
+  },
+  "schema_version": 1,
+  "verified_status": "scoped_pass_only"
+}
