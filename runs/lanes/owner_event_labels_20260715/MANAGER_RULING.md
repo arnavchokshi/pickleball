@@ -105,3 +105,11 @@ Owner exports `event_labels_20260715_results.json` -> run the exact command in
 bootstrap-era evidence under VERIFIED=0; ingest is not a promotion. Training-lane design
 (event head) consumes them AFTER source-disjoint split policy is confirmed; uniform_random
 rows double as the unbiased audit stratum and may be reserved for eval by a future ruling.
+
+## Close-out addendum (2026-07-15, wind-down)
+
+Lane report.json never landed: the resumed codex process was terminated cleanly by the
+manager at coordinator wind-down after the deliverable was shipped, ruled, and committed
+(d0ce58bdd). The ruling rests entirely on the manager verification battery above. Codex
+session id 019f68df-5f28-7703-ad6e-bea1cf89e4a0 (logs: log.txt, log2.txt in this lane dir)
+is recorded for forensic resume if ever needed.
