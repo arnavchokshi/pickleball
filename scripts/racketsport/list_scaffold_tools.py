@@ -281,6 +281,7 @@ def _category(stem: str) -> str:
         or "teacher" in normalized
         or "review_frames" in normalized
         or "review_input" in normalized
+        or "event_review" in normalized
     ):
         return "label"
     if "shot" in normalized or "tenniset" in normalized:

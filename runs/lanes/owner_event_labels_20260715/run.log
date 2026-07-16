@@ -1,0 +1,10 @@
+2026-07-15 owner_event_labels_20260715 execution summary
+- Observed main HEAD before implementation: 4e8ecc722ef95d202933cda77f136ece2a9a501b (dispatch pin was d74897203bd7ff92ff03bff437eebc0041f0f5fe).
+- Live universe: 40 rally clips, six sources; 20260712 rally count 0.
+- Anchor sanity: 50/50 protected-seed audio anchors reproduced within one source frame; max absolute error 0.041708667s.
+- Determinism preflight: same-seed manifests byte-identical.
+- Focused suite: 15 passed in 24.76s after correcting ffmpeg input-cut ordering.
+- Final sample: 300 rows (120 audio_onset, 75 track_discontinuity, 105 uniform_random), shortfalls 0.
+- Exclusions avoided: E1 audio 190, E1 track 350; out-of-bounds audio 119, track 190; audio-track collisions 1; uniform-spacing redraws 3.
+- Render: 300/300 rendered and decoded; duration range 2.366667..2.460375s; audio 300/300; failures 0; substitutions 0; pack bytes 170909927.
+- VERIFIED=0 remains binding. BEST-STACK DELTA: (c) NO stack delta; data-channel tooling only.
