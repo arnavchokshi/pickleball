@@ -687,7 +687,7 @@ def time_for_frame(
     if frame_index in lookup:
         result = FrameTimeResolution(lookup[frame_index], "legacy_pts_s", "frame_times_table", False)
         return result if return_provenance else result.time_s
-    if frame_times is not None:
+    if lookup:
         raise ValueError(f"frame_times table does not contain frame {frame_index}; refusing silent CFR fallback")
     if fps is None or fps <= 0:
         raise ValueError("fps is required when frame_times does not contain frame")

@@ -1,0 +1,39 @@
+REGRESSION FIX REQUEST FROM THE MANAGER (your lane was adopted and committed as bd99c6d11;
+this is a follow-up fix inside your fence, same rules: no commits, honest report).
+
+The concurrent coordwire lane isolated a real regression caused by your time_for_frame
+semantic change (their controlled experiment: runs/lanes/coordwire_20260715/
+ball_fill_timebase_attribution.log; manager re-verified by reading the code):
+
+- threed/racketsport/ball_physics_fill.py:297 calls
+  time_for_frame(frame_index, frame_times=frame_time_map, fps=payload_fps) EAGERLY as a
+  dict .get() default. frame_time_map is often an EMPTY mapping ({}). Historical behavior:
+  empty lookup fell through to the fps CFR fallback. Your new guard raises ValueError for
+  ANY non-None frame_times missing the frame, so the enclosing except skips frames that
+  should be filled. Result: tests/racketsport/test_ball_physics_fill.py has 4 failures
+  (test_fill_preserves_confident_world_samples_and_marks_interpolated_frames,
+  test_2d_only_lift_requires_small_reprojection_error,
+  test_fill_does_not_extrapolate_beyond_configured_frame_limit,
+  test_generated_samples_clamp_small_negative_z_to_court_plane).
+
+REQUIRED FIX (minimal, honest):
+In threed/racketsport/io_decode.py time_for_frame: raise the loud "refusing silent CFR
+fallback" error ONLY when the supplied table is NON-EMPTY and omits the requested frame
+(a partial table is the true silent-truncation hazard). An EMPTY resolved lookup carries
+zero timing information and must behave exactly like frame_times=None: fall through to the
+explicit-fps CFR fallback with the same recorded provenance (constant_fps_assumed /
+explicit_fps_argument, fallback_used=true). Do NOT touch ball_physics_fill.py (not your
+fence; its eager-default style is a separate matter for its owner).
+
+MANDATORY VERIFICATION (literal exit codes captured on the pytest command, no pipes):
+1. MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_ball_physics_fill.py -q
+   -> must be 11 passed, exit 0.
+2. MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_io_decode.py
+   tests/racketsport/test_timebase_contract.py tests/racketsport/test_process_video.py
+   tests/racketsport/test_audio_onsets.py -q -> all pass, exit 0.
+3. Add one regression test in tests/racketsport/test_io_decode.py: empty-mapping +
+   explicit fps returns the CFR fallback with fallback provenance; non-empty mapping
+   missing the frame still raises.
+Then APPEND a short fix section to runs/lanes/tbwire_20260715/report.json (a new
+"fix_20260715" key with the literal exit codes and one-paragraph description) and write
+runs/lanes/tbwire_20260715/FIX_NOTE.md with the same. Do not modify anything else.

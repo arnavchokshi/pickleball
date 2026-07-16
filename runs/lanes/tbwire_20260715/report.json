@@ -121,5 +121,22 @@
     "Unrelated dirty files and concurrent coordinate/placement/BALL changes were preserved. No branch, commit, push, stage, revert, or best-stack edit was performed."
   ],
   "next": "Manager should paste the dated inflight note from the acceptance rows, let the owning BALL lane repair its four current-tree regressions, and rerun the exact full suite in a settled environment that permits TCP/AF_UNIX bind tests. Then the owner can run the physical 30-second/5-minute capture slice; until those gates pass, keep P0-H/NS-01.4 physical evidence PENDING and VERIFIED=0.",
-  "session_id": null
+  "session_id": null,
+  "fix_20260715": {
+    "description": "2026-07-15 regression fix: time_for_frame now refuses silent CFR fallback only when the resolved legacy frame-time lookup is non-empty and omits the requested frame. An empty mapping carries no timing information and again follows the explicit-fps path, returning time_basis=constant_fps_assumed, provenance=explicit_fps_argument, and fallback_used=true; a non-empty partial mapping still raises. This corrects the four ball_physics_fill failures caused by the adopted tbwire semantic change without editing ball_physics_fill.py. VERIFIED=0 remains binding; this is a scoped regression pass with (c) no stack delta.",
+    "ball_physics_fill_verification": {
+      "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_ball_physics_fill.py -q",
+      "result": "11 passed in 0.28s",
+      "pytest_exit_code": 0,
+      "log": "runs/lanes/tbwire_20260715/fix_ball_physics_fill.log",
+      "exitcode_artifact": "runs/lanes/tbwire_20260715/fix_ball_physics_fill.exitcode"
+    },
+    "focused_verification": {
+      "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_io_decode.py tests/racketsport/test_timebase_contract.py tests/racketsport/test_process_video.py tests/racketsport/test_audio_onsets.py -q",
+      "result": "217 passed in 21.56s",
+      "pytest_exit_code": 0,
+      "log": "runs/lanes/tbwire_20260715/fix_focused.log",
+      "exitcode_artifact": "runs/lanes/tbwire_20260715/fix_focused.exitcode"
+    }
+  }
 }

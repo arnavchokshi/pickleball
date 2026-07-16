@@ -265,6 +265,15 @@ def test_time_for_frame_refuses_missing_table_entry_and_declares_explicit_cfr():
     assert resolved.fallback_used is True
 
 
+def test_time_for_frame_empty_mapping_uses_explicit_cfr_with_provenance():
+    resolved = time_for_frame(1, frame_times={}, fps=30.0, return_provenance=True)
+
+    assert resolved.time_s == pytest.approx(1 / 30.0)
+    assert resolved.time_basis == "constant_fps_assumed"
+    assert resolved.provenance == "explicit_fps_argument"
+    assert resolved.fallback_used is True
+
+
 def test_cfr_fallback_never_emits_contract_claiming_raw_pts_authority(
     tmp_path,
     monkeypatch: pytest.MonkeyPatch,
