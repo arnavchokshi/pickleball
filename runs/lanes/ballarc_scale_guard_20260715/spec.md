@@ -1,14 +1,26 @@
-# LANE ballarc_scale_guard_20260715 — SPEC ONLY, DO NOT DISPATCH (coordinator sequencing required)
+# LANE ballarc_scale_guard_20260715 — DISPATCHED 2026-07-16 (coordinator GO; Codex lane, gpt-5.6-sol high)
 
-STATUS: DRAFT staged 2026-07-15 by the Track A manager per coordinator order. This lane is NOT
-dispatched. Sequencing must be ruled by the coordinating manager first because Track C lanes
-(coordwire/tbwire, 2026-07-15) are live on coordinate/timebase/ball-physics surfaces and Track C
-owns `scripts/racketsport/process_video.py`.
+STATUS: DISPATCHED per coordinator sequencing ruling 2026-07-16 (Track C's remaining work is a
+doc-only window-close; inflight re-checked at dispatch — no code collision with this fence).
+
+## HARD RULES
+- No branches, no commits (manager rules on the report and commits). Stay inside the FILE FENCE
+  below. pb.vision-derived artifacts are R&D reference ONLY (never GT, never training data).
+- Honest reporting; `VERIFIED=0` binding; this is a correctness/scaling fix, not a promotion.
+- Run the WIDE suite (`MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q`) before
+  claiming PASS. KNOWN PRE-EXISTING failures you may treat as pre-existing ONLY by verifying they
+  fail identically on stash/HEAD: 4 ball_physics_fill failures (concurrent tbwire eager
+  empty-frame-times fallback) + up to 8 sandbox socket-bind denials (2026-07-15 coordwire close
+  evidence in runs/manager/inflight_lanes.md). Any NEW failure = your defect.
+- Anti-passive-wait: long local solves must be nohup'd/polled with bounded foreground loops; ending
+  your turn to wait = lane death.
 
 ## Objective
 Fix the production-scale stall in the default ball 3D arc chain that has now killed the MOVE-1
 41-rally head-to-head twice (2026-07-13 and 2026-07-15), and make full-game-scale ball_arc runs
-bounded by construction.
+bounded BY CONSTRUCTION: a bounded per-segment wall-clock guard whose timeout is a LOUD TYPED
+outcome — a timed-out segment must surface as an explicit degraded/missing reason per the trust
+contract (Section 1.4 provenance rules), NEVER a silent skip or a silently-absent segment.
 
 Evidence to read first:
 - runs/lanes/pbv11_headtohead_20260713/rerun_20260715/pyspy_stall_evidence.md (three concurring
@@ -29,20 +41,31 @@ Evidence to read first:
    per-segment wall-clock guard with typed `segment_budget_exceeded` degradation (arc stays
    missing/partial for that segment, never a silent hang), (b) step-size/adaptive integration or
    vectorized (numpy) integration for `predict`, (c) pool pre-filtering before association.
-3. A separate small fix ticket, NOT in this lane's fence: the frozen
-   runs/research_pbv_reveng_20260712/compare_vs_pbvision.py crashes on the full 11-min pb export
-   (PB physics pillar, scipy least_squares x0-out-of-bounds). The frozen original must remain
-   byte-identical; a v2 copy with the bounded x0 clamp belongs in the fixing lane's own dir with
-   a regression test against the single-rally scorecards (byte-identical rerun proof).
-4. Focused tests: per-segment budget respected on a synthetic pathological pool; no behavior
-   change on the Wolverine internal-val clips (same arc outputs byte-identical when no budget
-   trips); wide suite per standing rules.
+3. REGRESSION TEST BUILT FROM THE PULLED REAL ARTIFACTS (mandatory): a checked-in test that
+   drives the solver on a trimmed-but-real slice of the salvaged 20,922-frame inputs reproducing
+   the segment-7 pathology class, asserting (a) the guard trips within budget, (b) the outcome is
+   the loud typed timeout (explicit degraded/missing reason present in the artifact), (c) never a
+   silent skip. Trim only as much as needed for CI-speed; document the trim rule.
+4. Focused tests: per-segment budget respected on a synthetic pathological pool; byte-identical
+   arc outputs on the Wolverine internal-val clip when no budget trips; wide suite per HARD RULES.
+   (The compare_vs_pbvision harness crash is explicitly NOT in this lane — separate lane
+   pbv_harness_v2_20260715 owns it.)
 
-## Acceptance
-- Full 20,922-frame ball_arc completes (or degrades typed-partial) in <= 30 min CPU on the Mac or
-  <= 10 min on one H100, with unchanged outputs on clips where no budget trips.
-- Stall reproduction + root cause documented with measured per-segment times.
-- No promotion claim: this is a correctness/scaling fix; VERIFIED=0 stands.
+## Acceptance (coordinator-ruled shape)
+- THE DELIVERABLE: the 697s demo video's full ball_arc (from the salvaged real inputs at
+  runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/pbvision_11min_20260713/)
+  completes CPU-side on this Mac within a sane bound (target <= 30 min) OR fails loudly per-segment
+  with typed timeout outcomes — proven by actually running it end-to-end locally, NO GPU.
+- Segment-7 diagnosis: WHY the association pool explodes (measured pool sizes + per-segment wall
+  distribution), documented in the lane REPORT with numbers.
+- Unchanged outputs where no budget trips (byte-identical Wolverine proof).
+- No promotion claim: correctness/scaling fix; VERIFIED=0 stands.
+
+## Mandatory structured report (report.json via the lane schema)
+objective_result PASS/FAIL vs the acceptance above; full_suite counts with pre-existing-failure
+proof; measured per-segment timings before/after; honest_issues; artifacts under this lane dir.
+BEST-STACK DELTA: expected (c) none; if the guard adds a config knob, add a PENDING best_stack
+entry whose default preserves current behavior and say so explicitly.
 
 ## File fence (STRICT)
 - Owns: `threed/racketsport/ball_arc_solver.py`, `threed/racketsport/ball_arc_chain.py`, its own

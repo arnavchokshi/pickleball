@@ -1,0 +1,53 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>pbv11 demo video — 4-corner court seed (2 min)</title>
+<style>
+ body{font-family:-apple-system,sans-serif;margin:16px;max-width:1320px}
+ #wrap{position:relative;display:inline-block}
+ #img{max-width:100%;display:block}
+ .dot{position:absolute;width:14px;height:14px;margin:-7px 0 0 -7px;border-radius:50%;
+      border:2px solid #fff;background:#e33;box-shadow:0 0 4px #000}
+ .dot span{position:absolute;top:-20px;left:12px;color:#fff;background:#333;padding:1px 5px;
+      border-radius:4px;font-size:12px;white-space:nowrap}
+ #out{width:100%;height:210px;font-family:monospace;font-size:12px;margin-top:10px}
+ b.next{color:#c00}
+</style>
+<h2>Click the 4 outer court corners in this order:
+ <b class="next" id="next">1. far_left</b></h2>
+<p>Order: <b>far_left → far_right → near_left → near_right</b> (outer doubles-court corners, where
+baseline meets sideline). "Near" = the baseline closest to the camera (bottom-left of frame),
+"far" = the baseline beyond the net (right side). Zoom your browser (⌘+) for precision —
+coordinates are auto-converted to true image pixels. Wrong click? Press <b>R</b> to restart.
+When done, copy the JSON below back to engineering (or File→Save this page's textarea content as
+<code>owner_court_corners.json</code> in this folder).</p>
+<div id="wrap"><img id="img" src="candidate_t10s_frame300.jpg"></div>
+<textarea id="out" readonly placeholder="JSON appears here after 4 clicks"></textarea>
+<script>
+const names=["far_left","far_right","near_left","near_right"];
+let pts=[];
+const img=document.getElementById("img"),wrap=document.getElementById("wrap"),
+      out=document.getElementById("out"),next=document.getElementById("next");
+img.addEventListener("click",e=>{
+  if(pts.length>=4)return;
+  const r=img.getBoundingClientRect();
+  const x=Math.round((e.clientX-r.left)*img.naturalWidth/r.width);
+  const y=Math.round((e.clientY-r.top)*img.naturalHeight/r.height);
+  pts.push([x,y]);
+  const d=document.createElement("div");d.className="dot";
+  d.style.left=((e.clientX-r.left))+"px";d.style.top=((e.clientY-r.top))+"px";
+  d.innerHTML="<span>"+names[pts.length-1]+" ("+x+","+y+")</span>";
+  wrap.appendChild(d);
+  next.textContent=pts.length<4?((pts.length+1)+". "+names[pts.length]):"done — copy the JSON";
+  if(pts.length===4){
+    const cc={};names.forEach((n,i)=>cc[n]=pts[i]);
+    out.value=JSON.stringify({
+      court_corners:cc,
+      frame:"candidate_t10s_frame300.jpg (t=10s, frame 300 of source_video.mp4 sha 272a2132...)",
+      image_size:[img.naturalWidth,img.naturalHeight],
+      source:"human_review",review_id:"pbv11_owner_4corner_seed_20260715",
+      status:"corrected_unverified"},null,2);
+  }
+});
+document.addEventListener("keydown",e=>{if(e.key.toLowerCase()==="r"){pts=[];out.value="";
+  document.querySelectorAll(".dot").forEach(d=>d.remove());next.textContent="1. far_left";}});
+</script>
