@@ -22,6 +22,20 @@ also refreshed to 07-16 truth. HARD RULE standing: NO third MOVE-1 GPU attempt
 without the coordinator's explicit go; prerequisites = ballarc guard adopted + harness v2 green +
 trusted CAL seed.)_
 
+_(2026-07-16 ~01:3x Track A manager, overnight window (coordinator conditional GPU GO active): CRITICAL
+PREFLIGHT FINDING — the banked 4-corner seed alone does NOT unblock metric stages: capture grade stays
+poor (fps<55 floor is structural for ALL 30fps content incl. Wolverine) and the pre-tracking correction
+gate hard-blocks tracking when calibration is unverified-class AND line evidence isn't ready; with the
+owner seed ALL required court lines now accept (2.65px mean) but top_net is refused by design under
+4-corner-estimated intrinsics → auto_calibration_ready:false. Honest unlock = explicit SOLVED
+calibration (Wolverine input class). DISPATCHED pbv11_calsolve_20260716 (Codex sol-high, fence: lane
+dir + owner_cal_seed/ additions only; pb camera block FORBIDDEN as input; kill-rule if honest solve
+can't open the gate). ALSO: guard lane interim shows full-697s guarded run = 187/188 segments loud
+abstention at current budget — MOVE-1 #3 dispatch decision will additionally require the lane's
+diagnosis to show a budget config with REAL fit coverage inside the wall cap, else no-GPU + writeup
+per the conditional GO's failure branch. Preflight evidence:
+runs/lanes/pbv11_headtohead_20260713/rerun_20260715/calseed_preflight/.)_
+
 _(2026-07-16 Track A manager: OWNER CAL SEED BANKED — owner completed the 4-corner tap; manager
 validated (bounds/ordering/convexity PASS + homography overlay lands every court-model line on the
 painted lines, proof owner_seed_overlay_check.jpg) and banked verbatim + runner-shaped seed at
