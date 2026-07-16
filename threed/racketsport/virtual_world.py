@@ -9,7 +9,13 @@ from typing import Any, Callable, Literal, Mapping, Sequence
 
 from pydantic import ValidationError
 
-from .court_calibration import project_image_points_to_world
+from .coordinates import (
+    CoordinateSpace,
+    homography_pixel_space,
+    require_same_raster_space,
+    resolve_homography_pixel_convention,
+    unproject_image_points_to_world,
+)
 from .court_templates import get_court_template
 from .eval_guard import assert_not_training_on_eval_clip
 from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
@@ -1542,6 +1548,7 @@ def _ball_world_xyz(
     *,
     calibration: CourtCalibration,
     ball_world_policy: BallWorldPolicy = DEFAULT_BALL_WORLD_POLICY,
+    image_space: CoordinateSpace | None = None,
 ) -> list[float] | None:
     raw_world = _get(frame, "world_xyz")
     if raw_world is not None:
@@ -1550,8 +1557,19 @@ def _ball_world_xyz(
         return None
     if not bool(_get(frame, "visible")):
         return None
+    calibration_payload = calibration.model_dump(mode="python", exclude_none=True)
+    convention = resolve_homography_pixel_convention(calibration_payload, default="raw_pixels")
+    calibration_space = homography_pixel_space(convention)
+    declared_image_space = image_space or calibration_space
+    require_same_raster_space(declared_image_space, calibration_space)
     try:
-        world_xy = project_image_points_to_world(calibration.homography, [_get(frame, "xy")])[0]
+        world_xy = unproject_image_points_to_world(
+            calibration.homography,
+            [_get(frame, "xy")],
+            input_space=declared_image_space,
+            homography_space=calibration_space,
+            output_space=CoordinateSpace.WORLD_XY_HOMOGRAPHY_M,
+        )[0]
     except ValueError:
         return None
     if not _world_xy_in_court(calibration, world_xy, margin_m=0.35):

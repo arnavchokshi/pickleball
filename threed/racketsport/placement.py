@@ -15,6 +15,15 @@ from typing import Any
 
 import numpy as np
 
+from .coordinates import (
+    CoordinateSpace,
+    HomographyPixelConvention,
+    homography_pixel_space as _typed_homography_pixel_space,
+    resolve_homography_pixel_convention,
+    unproject_image_points_with_inverse,
+)
+from .court_calibration import undistort_pixels_with_camera_matrix_typed
+
 
 UTC = timezone.utc
 COURT_HALF_WIDTH_M = 3.048
@@ -250,6 +259,7 @@ def rewrite_tracks_with_placement(
     camera_matrix = _camera_matrix(intrinsics)
     dist = [float(value) for value in intrinsics.get("dist", []) or []]
     homography_pixel_convention = _homography_pixel_convention(calibration_payload)
+    homography_pixel_space = _typed_homography_pixel_space(homography_pixel_convention)
     undistort_applied = bool(
         config.undistort and homography_pixel_convention == "undistorted_pixels" and _dist_nonzero(dist)
     )
@@ -322,6 +332,7 @@ def rewrite_tracks_with_placement(
                 camera_matrix=camera_matrix,
                 dist=dist,
                 undistort_applied=undistort_applied,
+                homography_pixel_space=homography_pixel_space,
                 pixel_transform=camera_motion.matrix if camera_motion is not None else None,
                 config=config,
             )
@@ -354,6 +365,7 @@ def rewrite_tracks_with_placement(
                     camera_matrix=camera_matrix,
                     dist=dist,
                     undistort_applied=undistort_applied,
+                    homography_pixel_space=homography_pixel_space,
                     pixel_transform=camera_motion.matrix if camera_motion is not None else None,
                     config=config,
                 )
@@ -746,9 +758,8 @@ def rewrite_tracks_with_placement(
     )
 
 
-def _homography_pixel_convention(calibration_payload: Mapping[str, Any]) -> str:
-    declared = str(calibration_payload.get("homography_pixel_convention") or "raw_pixels")
-    return "undistorted_pixels" if declared == "undistorted_pixels" else "raw_pixels"
+def _homography_pixel_convention(calibration_payload: Mapping[str, Any]) -> HomographyPixelConvention:
+    return resolve_homography_pixel_convention(calibration_payload, default="raw_pixels")
 
 
 def _build_track_bbox_index(tracks_payload: Mapping[str, Any]) -> dict[int, dict[int, list[float]]]:
@@ -1581,19 +1592,32 @@ def homography_world_covariance(
     *,
     sigma_px: float,
     sigma_floor_m: float = 0.0,
+    pixel_space: CoordinateSpace = CoordinateSpace.PIXELS_RAW_NATIVE,
+    homography_space: CoordinateSpace | None = None,
 ) -> np.ndarray:
     if sigma_px <= 0.0 or not math.isfinite(float(sigma_px)):
         raise ValueError("sigma_px must be a positive finite value")
     homography = np.asarray(homography, dtype=float)
     pixel = np.asarray(_xy(pixel_xy, name="pixel_xy"), dtype=float)
     h_inv = np.linalg.inv(homography)
+    declared_homography_space = homography_space or pixel_space
     eps = 1.0
     j_cols = []
     for axis in range(2):
         delta = np.zeros(2, dtype=float)
         delta[axis] = eps
-        plus = _unproject_pixel(h_inv, pixel + delta)
-        minus = _unproject_pixel(h_inv, pixel - delta)
+        plus = _unproject_pixel(
+            h_inv,
+            pixel + delta,
+            input_space=pixel_space,
+            homography_space=declared_homography_space,
+        )
+        minus = _unproject_pixel(
+            h_inv,
+            pixel - delta,
+            input_space=pixel_space,
+            homography_space=declared_homography_space,
+        )
         j_cols.append((plus - minus) / (2.0 * eps))
     jacobian = np.column_stack(j_cols)
     covariance = jacobian @ (np.eye(2, dtype=float) * float(sigma_px) ** 2) @ jacobian.T
@@ -1700,16 +1724,17 @@ def undistort_pixel(
     pixel_xy: Sequence[float],
     camera_matrix: Sequence[Sequence[float]],
     dist: Sequence[float],
+    *,
+    input_space: CoordinateSpace = CoordinateSpace.PIXELS_RAW_NATIVE,
+    output_space: CoordinateSpace = CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
 ) -> list[float]:
-    if not _dist_nonzero(dist):
-        return _xy(pixel_xy, name="pixel_xy")
-    import cv2  # type: ignore[import-not-found]
-
-    k = np.asarray(camera_matrix, dtype=np.float64)
-    d = np.asarray(list(dist), dtype=np.float64)
-    points = np.asarray([[list(_xy(pixel_xy, name="pixel_xy"))]], dtype=np.float64)
-    undistorted = cv2.undistortPoints(points, k, d, P=k)[0, 0]
-    return [float(undistorted[0]), float(undistorted[1])]
+    return undistort_pixels_with_camera_matrix_typed(
+        [_xy(pixel_xy, name="pixel_xy")],
+        camera_matrix,
+        dist,
+        input_space=input_space,
+        output_space=output_space,
+    )[0]
 
 
 def bbox_pixel_sigma(
@@ -1744,6 +1769,7 @@ def _signals_for_frame(
     camera_matrix: np.ndarray,
     dist: Sequence[float],
     undistort_applied: bool,
+    homography_pixel_space: CoordinateSpace,
     pixel_transform: np.ndarray | None,
     config: PlacementConfig,
 ) -> list[dict[str, Any]]:
@@ -1762,6 +1788,7 @@ def _signals_for_frame(
             camera_matrix=camera_matrix,
             dist=dist,
             undistort_applied=undistort_applied,
+            homography_pixel_space=homography_pixel_space,
             config=config,
         )
     )
@@ -1797,6 +1824,7 @@ def _signals_for_frame(
             camera_matrix=camera_matrix,
             dist=dist,
             undistort_applied=undistort_applied,
+            homography_pixel_space=homography_pixel_space,
             config=config,
         )
         signal["sidecar_player_id"] = observation.sidecar_player_id
@@ -1816,6 +1844,7 @@ def _phase_foot_signal_for_frame(
     camera_matrix: np.ndarray,
     dist: Sequence[float],
     undistort_applied: bool,
+    homography_pixel_space: CoordinateSpace,
     pixel_transform: np.ndarray | None,
     config: PlacementConfig,
 ) -> dict[str, Any] | None:
@@ -1841,6 +1870,7 @@ def _phase_foot_signal_for_frame(
             camera_matrix=camera_matrix,
             dist=dist,
             undistort_applied=undistort_applied,
+            homography_pixel_space=homography_pixel_space,
             config=config,
         )
         if not signal.get("used") or signal.get("xy") is None:
@@ -1865,16 +1895,34 @@ def _signal_from_pixel(
     camera_matrix: np.ndarray,
     dist: Sequence[float],
     undistort_applied: bool,
+    homography_pixel_space: CoordinateSpace,
     config: PlacementConfig,
 ) -> dict[str, Any]:
     del side, confidence
-    pixel = undistort_pixel(pixel_xy, camera_matrix, dist) if undistort_applied else _xy(pixel_xy, name="pixel_xy")
-    xy = _unproject_pixel(np.linalg.inv(homography), np.asarray(pixel, dtype=float))
+    pixel = (
+        undistort_pixel(
+            pixel_xy,
+            camera_matrix,
+            dist,
+            input_space=CoordinateSpace.PIXELS_RAW_NATIVE,
+            output_space=CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        )
+        if undistort_applied
+        else _xy(pixel_xy, name="pixel_xy")
+    )
+    xy = _unproject_pixel(
+        np.linalg.inv(homography),
+        np.asarray(pixel, dtype=float),
+        input_space=homography_pixel_space,
+        homography_space=homography_pixel_space,
+    )
     covariance = homography_world_covariance(
         homography,
         pixel,
         sigma_px=sigma_px,
         sigma_floor_m=config.measurement_sigma_floor_m,
+        pixel_space=homography_pixel_space,
+        homography_space=homography_pixel_space,
     )
     sigma_m = [float(math.sqrt(max(covariance[0, 0], 0.0))), float(math.sqrt(max(covariance[1, 1], 0.0)))]
     used = _inside_court_bounds(xy, margin_m=config.court_margin_m)
@@ -2573,11 +2621,20 @@ def _camera_matrix(intrinsics: Mapping[str, Any]) -> np.ndarray:
     )
 
 
-def _unproject_pixel(h_inv: np.ndarray, pixel: np.ndarray) -> np.ndarray:
-    projected = h_inv @ np.array([float(pixel[0]), float(pixel[1]), 1.0], dtype=float)
-    if abs(float(projected[2])) < 1e-12:
-        raise ValueError("homography projection reached zero scale")
-    return projected[:2] / projected[2]
+def _unproject_pixel(
+    h_inv: np.ndarray,
+    pixel: np.ndarray,
+    *,
+    input_space: CoordinateSpace,
+    homography_space: CoordinateSpace,
+) -> np.ndarray:
+    return unproject_image_points_with_inverse(
+        h_inv,
+        pixel,
+        input_space=input_space,
+        homography_space=homography_space,
+        output_space=CoordinateSpace.WORLD_XY_HOMOGRAPHY_M,
+    )
 
 
 def _constant_velocity_transition(dt: float) -> np.ndarray:

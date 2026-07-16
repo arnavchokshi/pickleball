@@ -8,7 +8,16 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from .ball_overlay import load_ball_track
-from .court_calibration import calibration_image_size, project_image_points_to_world, project_planar_points
+from .coordinates import (
+    CoordinateSpace,
+    homography_pixel_space,
+    project_world_xy_points,
+    require_same_raster_space,
+    resolve_homography_pixel_convention,
+    scale_raster_points,
+    unproject_image_points_to_world,
+)
+from .court_calibration import calibration_image_size
 from .court_templates import get_court_template
 from .schemas import BallTrack, CourtCalibration
 
@@ -37,7 +46,14 @@ def build_target_court_polygon(
     """Project the calibrated target court into the requested image space."""
 
     template = get_court_template(calibration.sport)
-    polygon = project_planar_points(calibration.homography, template.corners_m)
+    calibration_space = _calibration_homography_space(calibration)
+    polygon = project_world_xy_points(
+        calibration.homography,
+        template.corners_m,
+        input_space=CoordinateSpace.WORLD_XY_HOMOGRAPHY_M,
+        output_space=calibration_space,
+        homography_space=calibration_space,
+    )
     if target_size is None:
         return polygon
 
@@ -45,9 +61,13 @@ def build_target_court_polygon(
     target_width, target_height = target_size
     if target_width <= 0 or target_height <= 0:
         raise ValueError("target_size values must be > 0")
-    scale_x = float(target_width) / source_width
-    scale_y = float(target_height) / source_height
-    return [[float(x) * scale_x, float(y) * scale_y] for x, y in polygon]
+    return scale_raster_points(
+        polygon,
+        source_size=(source_width, source_height),
+        target_size=(float(target_width), float(target_height)),
+        input_space=calibration_space,
+        output_space=CoordinateSpace.PIXELS_PREVIEW_SCALED,
+    )
 
 
 def point_in_polygon_with_margin(
@@ -69,6 +89,20 @@ def point_in_polygon_with_margin(
     return _distance_to_polygon(pt, poly) <= float(margin_px)
 
 
+def point_in_polygon_with_margin_typed(
+    point: Iterable[float],
+    polygon: Iterable[Iterable[float]],
+    *,
+    margin_px: float,
+    point_space: CoordinateSpace,
+    polygon_space: CoordinateSpace,
+) -> bool:
+    """Declare the raster convention used by both pixel-domain operands."""
+
+    require_same_raster_space(point_space, polygon_space)
+    return point_in_polygon_with_margin(point, polygon, margin_px=margin_px)
+
+
 def filter_ball_track_to_target_court(
     *,
     ball_track_path: str | Path,
@@ -81,6 +115,9 @@ def filter_ball_track_to_target_court(
 
     track = load_ball_track(ball_track_path)
     target_court_polygon = build_target_court_polygon(calibration, target_size=target_size)
+    target_space = (
+        CoordinateSpace.PIXELS_PREVIEW_SCALED if target_size is not None else _calibration_homography_space(calibration)
+    )
     payload = track.model_dump(mode="json")
     visible_before = 0
     visible_after = 0
@@ -90,7 +127,13 @@ def filter_ball_track_to_target_court(
         if not bool(frame["visible"]):
             continue
         visible_before += 1
-        if point_in_polygon_with_margin(frame["xy"], target_court_polygon, margin_px=margin_px):
+        if point_in_polygon_with_margin_typed(
+            frame["xy"],
+            target_court_polygon,
+            margin_px=margin_px,
+            point_space=target_space,
+            polygon_space=target_space,
+        ):
             visible_after += 1
             continue
         frame["visible"] = False
@@ -214,15 +257,33 @@ def _target_image_xy_to_world_xy(
     target_size: tuple[int, int] | None,
 ) -> list[float]:
     x, y = float(xy[0]), float(xy[1])
+    calibration_space = _calibration_homography_space(calibration)
     if target_size is not None:
         calibration_width, calibration_height = _calibration_image_size(calibration)
         target_width, target_height = target_size
         if target_width <= 0 or target_height <= 0:
             raise ValueError("target_size values must be > 0")
-        x *= calibration_width / float(target_width)
-        y *= calibration_height / float(target_height)
-    world = project_image_points_to_world(calibration.homography, [[x, y]])[0]
+        x, y = scale_raster_points(
+            [[x, y]],
+            source_size=(float(target_width), float(target_height)),
+            target_size=(calibration_width, calibration_height),
+            input_space=CoordinateSpace.PIXELS_PREVIEW_SCALED,
+            output_space=calibration_space,
+        )[0]
+    world = unproject_image_points_to_world(
+        calibration.homography,
+        [[x, y]],
+        input_space=calibration_space,
+        homography_space=calibration_space,
+        output_space=CoordinateSpace.WORLD_XY_HOMOGRAPHY_M,
+    )[0]
     return [float(world[0]), float(world[1])]
+
+
+def _calibration_homography_space(calibration: CourtCalibration) -> CoordinateSpace:
+    payload = calibration.model_dump(mode="python", exclude_none=True)
+    convention = resolve_homography_pixel_convention(payload, default="raw_pixels")
+    return homography_pixel_space(convention)
 
 
 def _world_xy_in_court_with_margin(

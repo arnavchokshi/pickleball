@@ -1,0 +1,24 @@
+RESUME NOTE FROM THE MANAGER (your process was killed by an external 1-hour task cap at
+~16:53, NOT because of anything you did; your worktree changes and lane artifacts are intact).
+
+Pick up exactly where you were (you were mid-adoption in ball_court_filter.py; coordinates.py
+and court_calibration.py already carry your edits). Continue the spec:
+1. Finish the remaining seams (ball_court_filter, ball_physics3d, ball_inout_uncertainty,
+   virtual_world) with the same canonical-beside-legacy, parity-first discipline.
+2. Complete the mandatory tests: per-seam parity on the SHA-pinned Wolverine real fixture,
+   distorted-synthetic (nonzero distortion) parity, and fail-closed wrong-space tests.
+3. Run the full wide suite (MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q)
+   redirected to a file with the literal exit code captured on the pytest command (no pipes).
+   Manager baseline on HEAD: 3662 passed / 24 skipped / 1 failed where the single failure was
+   a since-fixed cross-contamination of test_truthful_capabilities (should PASS now). Another
+   lane's timebase edits (threed/racketsport/{io_decode,timebase,audio_onsets}.py +
+   scripts/racketsport/process_video.py) are ALSO in the worktree — do not touch or revert
+   them; attribute any failure in those areas to the concurrent lane and report it, do not fix.
+4. Write your MANDATORY STRUCTURED REPORT as a JSON file at
+   runs/lanes/coordwire_20260715/report.json conforming to
+   docs/racketsport/lane_report.schema.json (write the file yourself — do not rely on the
+   harness flag). Include per-seam PASS/FAIL, full_suite counts + literal exit codes, HONEST
+   ISSUES, artifacts, BEST-STACK DELTA, deferred process_video.py hunks (if any) inline, and
+   the dated inflight note paragraph.
+All original spec rules still bind (no commits, fences, honesty, VERIFIED=0; independent-labels
+clause stays PENDING).

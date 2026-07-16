@@ -1,0 +1,118 @@
+{
+  "objective_result": "PARTIAL",
+  "acceptance": [
+    {
+      "metric": "Placement seam adoption",
+      "baseline": "placement.py directly selected a permissive homography convention, called cv2.undistortPoints, and multiplied H^-1 by raw pixel vectors without typed space checks.",
+      "after": "PASS — wired (scoped pass): the live placement path resolves HomographyPixelConvention fail-closed, declares raw versus undistorted-native pixels, and calls typed undistortion and typed H^-1 adapters. Frozen Wolverine 705-frame placement digest remains 6b066685ad739b455ce968074769f384318dae68aa310d426c4f7195a13e3389.",
+      "target": "Stage calls the typed API; legacy defaults remain compatible; conflicting or wrong spaces fail loudly; numerical parity tolerance 0.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Ball target-court and metric in/out seam adoption",
+      "baseline": "ball_court_filter.py called raw planar project/unproject helpers and performed undeclared native/preview scaling.",
+      "after": "PASS — wired (scoped pass): court polygon projection, native/preview scaling, polygon membership, and target-pixel unprojection all carry explicit typed raster/world spaces. Wolverine polygon digest 528d09ba26c4637c8122390b4b5435aaffec7b13f0f14c1ee6cd0493f8e4f43e and 243-point world digest 95dbe43a485aeec2cd32af9103a5a125e32ccf85b682631a8d8c452725f59102 are unchanged.",
+      "target": "Typed project/unproject path is the stage path; scaled/native space mismatch fails loudly; numerical parity tolerance 0.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Ball arc camera-model seam adoption",
+      "baseline": "ball_physics3d.py directly unprojected observations and performed raw NumPy world-to-camera pinhole projection in the optimizer residual.",
+      "after": "PASS — wired (scoped pass): the live observation unprojection and optimizer projection call canonical typed adapters with world_court_netcenter_z_up_m input, pixels_undistorted_native output, and an explicit raster reference. Wolverine 300-point projected digest remains 26d2ac5e3f64889685e51df0e81952f67cbf4c422c445e425ada570528e5f71c.",
+      "target": "Typed camera-model path is called by the stage; distorted-synthetic legacy parity and wrong-reference rejection pass; tolerance 0.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Ball in/out uncertainty seam adoption",
+      "baseline": "ball_inout_uncertainty.py called solvePnP/projectPoints without a typed object/image/output contract.",
+      "after": "PASS — wired (scoped pass): unchanged OpenCV calls are guarded by explicit court-world object, raw-native image-reference, and undistorted-native projection declarations; missing declarations retain historical defaults and a wrong object space fails loudly. Wolverine pose digest remains b00a262abe2e3d564b84e0c47fd03d7e7036c238734e76896a69941a31b1416e.",
+      "target": "The cv2 numerical path stays unchanged while the seam contract is typed and fail-closed.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Virtual-world seam adoption",
+      "baseline": "virtual_world.py imported and called the legacy raw image-to-world helper for review-only 2D ball lifting.",
+      "after": "PASS — wired (scoped pass): the live review-only ball lift imports the strict canonical adapter, resolves the calibration homography space, and rejects an explicitly wrong image space before numerical error handling. Wolverine 300-frame ball-world digest remains f0b1cd353832d73f7fd11d8e047b92cb33727a03185e95178e5a119bf33f7ab3.",
+      "target": "Typed adapter is the stage path; wrong-space input fails loudly; numerical parity tolerance 0.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "P0-D exit gate",
+      "baseline": "North Star defect: typed transform/coordinate contract landed but stages did not consume it.",
+      "after": "Wired (scoped pass) for the five owned real consumers, with nonzero-distortion synthetic parity/fail-closed tests and SHA-pinned Wolverine real-iPhone parity.",
+      "target": "Stage-adopted transform API passes distorted synthetic and real iPhone tests.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "NS-01.4 independent-label accuracy clause",
+      "baseline": "No independent coordinate-error label set exists; NS-02 remains owner-gated.",
+      "after": "PENDING — no independent labels were fabricated or substituted, and protected Outdoor/Indoor labels were not read.",
+      "target": "Distorted synthetic and real iPhone tests; corrected event/geometry error beats raw path on independent labels.",
+      "verdict": "FAIL"
+    },
+    {
+      "metric": "NS-01.4 stop rule",
+      "baseline": "Raw stage seams had implicit coordinate conventions.",
+      "after": "PASS — explicit coordinate declarations are enforced, raw observations remain unchanged, missing declarations decode to historical defaults, conflicting declarations fail closed, and no audio/time alignment or destructive correction was introduced.",
+      "target": "Do not mix coordinate spaces, align latest samples, or correct audio destructively; preserve raw values.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Focused and parity verification",
+      "baseline": "13 existing coordinate/parity tests passed before edits; six Wolverine output digests were pinned from HEAD.",
+      "after": "22 coordinate/distorted-synthetic/real-fixture tests passed with literal EXIT 0; broadened historical-coordinate plus touched-stage suite passed 274 with literal EXIT 0; Python 3.10 compile literal EXIT 0; pre/post Wolverine digest diff literal EXIT 0.",
+      "target": "Existing coordinate tests plus per-seam real-fixture, nonzero-distortion, and fail-closed tests pass.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Mandatory repository-wide suite",
+      "baseline": "Manager baseline: 3662 passed, 24 skipped, 1 since-fixed truthful-capabilities failure.",
+      "after": "3670 passed, 12 failed, 24 skipped in 2839.02s; literal pytest EXIT 1. No failure is in an owned coordinate/stage test.",
+      "target": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q completes green, or every failure is proven unrelated/pre-existing.",
+      "verdict": "FAIL"
+    },
+    {
+      "metric": "BEST-STACK DELTA",
+      "baseline": "configs/racketsport/best_stack.json SHA-256 ce15ed21eaa8d54f06809e923179bbeefa68c87b3a4f79157c8cdb3b67022a25.",
+      "after": "(c) no stack delta; file-scoped git diff exit 0 and the SHA-256 is unchanged because this lane changes only typed routing/declarations and parity tests, not models, thresholds, policies, checkpoints, or licenses.",
+      "target": "(c) no stack delta.",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "threed/racketsport/coordinates.py:75 adds strict legacy/typed homography convention resolution; :144 adds typed NumPy H^-1 parity; :173/:195 add strict unproject/project adapters; :216 adds declared native/preview scaling; :248 adds the typed ball-solver pinhole seam; :279 adds OpenCV camera-space validation.",
+    "threed/racketsport/court_calibration.py:57 adds typed OpenCV undistortion beside the legacy helper; :155 adds typed planar projection beside legacy math.",
+    "threed/racketsport/placement.py:761 resolves HomographyPixelConvention through the canonical API; :1723 routes undistortion; :1887 routes live pixel-to-court signals; :2624 routes H^-1 through the typed adapter.",
+    "threed/racketsport/ball_court_filter.py:41 routes court projection; :92 declares point/polygon spaces; :253 routes scaled target pixels through strict typed unprojection.",
+    "threed/racketsport/ball_physics3d.py:302 carries the calibration raster reference into the camera model; :401 routes the live optimizer projection through the typed API; :414 resolves the homography space.",
+    "threed/racketsport/ball_inout_uncertainty.py:124 declares and validates the unchanged solvePnP/projectPoints seam.",
+    "threed/racketsport/virtual_world.py:1546 routes the live review-only ball lift through strict typed unprojection.",
+    "tests/racketsport/test_coords_stage_adoption.py:49 adds legacy-default/conflict coverage; :71/:123/:152/:180/:218 add per-seam nonzero-distortion parity and wrong-space rejection.",
+    "tests/racketsport/test_coords_parity_real_fixture.py:139/:175/:206 add SHA-pinned Wolverine placement, ball-filter/arc, in/out, and virtual-world zero-tolerance digest proofs.",
+    "runs/lanes/coordwire_20260715/baseline_real_fixture_digests.log:1 and after_real_fixture_digests.log:1 preserve the pre/post digest runs; real_fixture_digest_diff.log is empty with literal diff EXIT 0.",
+    "runs/lanes/coordwire_20260715/final_coordinate_parity_pytest.log:1, final_focused_pytest.log:1, full_pytest_resume.log:1, and ball_fill_timebase_attribution.log:1 preserve literal exit codes and failure attribution.",
+    "runs/manager/inflight_lanes.md:133 adds the required dated close note."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q",
+    "passed": 3670,
+    "failed": 12,
+    "skipped": 24,
+    "failures_all_preexisting": true,
+    "failure_notes": "Literal pytest EXIT 1. Eight environment failures are managed-sandbox socket bind denials: three test_court_keypoint_review_server nodes, three test_review_input_server nodes, and two test_sam3dbody_persistent_worker nodes; the manager's unsandboxed 57-node rerun passed. Four test_ball_physics_fill nodes are caused by concurrent tbwire commit bd99c6d11: fill_ball_track_physics eagerly evaluates time_for_frame with an empty frame-time mapping, and tbwire changed that case from historical CFR fallback to ValueError; all four pass (literal EXIT 0) when the pre-tbwire fallback is restored in-memory. coordwire does not own or edit io_decode/timebase/ball_physics_fill, and no owned coordinate test failed. The earlier full_pytest.log attempt was externally killed at 93% and is interruption evidence only, not counted."
+  },
+  "honest_issues": [
+    "VERIFIED=0 remains binding. This is typed wiring and numerical parity evidence only, not a capability promotion or an accuracy improvement claim.",
+    "The NS-01.4 independent-label clause is PENDING: no independent coordinate-error label set exists until NS-02 owner-gated capture/labels, so corrected event/geometry error beating the raw path is unmeasured.",
+    "The mandatory wide suite is not green; objective_result is PARTIAL even though every owned focused/parity test passed.",
+    "Four wide failures expose a concurrent tbwire regression at an eager empty-frame-times call in ball_physics_fill. The manager instructed this lane not to touch concurrent timebase files, so it is attributed and left for that owner.",
+    "Eight wide failures are socket-bind PermissionError failures imposed by the managed sandbox, not coordinate-path failures.",
+    "The frozen Wolverine calibration has zero distortion and supplies real-iPhone byte parity; separate synthetic cameras with nonzero distortion coefficients supply the required distortion plumbing/parity coverage.",
+    "The manager's cited residual _project_world_point near ball_physics3d line 805 is absent at current HEAD (the module is shorter); the current live residual seam is _project_world_array and is adopted/tested.",
+    "Protected Outdoor/Indoor labels were never read. The SHA-pinned Wolverine fixture was read-only.",
+    "DEFERRED process_video.py hunks: none. No runner hunk is required for these module-internal live consumer routes, and no process_video.py change was applied by coordwire.",
+    "BEST-STACK DELTA: (c) no stack delta; best_stack.json is unchanged."
+  ],
+  "next": "The tbwire owner should fix or explicitly adapt ball_physics_fill's eager empty-frame-times fallback and rerun its four failing nodes. NS-02 must later supply independent labels before the corrected-beats-raw NS-01.4 clause can pass; no coordinate tuning or promotion is justified from this parity lane.",
+  "session_id": null
+}

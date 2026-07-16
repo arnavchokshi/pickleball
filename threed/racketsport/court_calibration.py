@@ -54,6 +54,39 @@ def undistort_pixels_for_intrinsics(
     return [[float(point[0]), float(point[1])] for point in undistorted], True
 
 
+def undistort_pixels_with_camera_matrix_typed(
+    pixels: Sequence[Sequence[float]],
+    camera_matrix: Sequence[Sequence[float]],
+    distortion: Sequence[float],
+    *,
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+) -> list[list[float]]:
+    """Typed adapter preserving the placement stage's OpenCV call exactly."""
+
+    input_space = CoordinateSpace(input_space)
+    output_space = CoordinateSpace(output_space)
+    if input_space != CoordinateSpace.PIXELS_RAW_NATIVE:
+        raise ValueError(f"undistortion input must be raw native pixels, got {input_space}")
+    if output_space != CoordinateSpace.PIXELS_UNDISTORTED_NATIVE:
+        raise ValueError(f"undistortion output must be undistorted native pixels, got {output_space}")
+    points = [[float(point[0]), float(point[1])] for point in pixels]
+    if not _dist_nonzero(distortion):
+        return points
+
+    try:
+        import cv2  # type: ignore[import-not-found]
+        import numpy as np  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise RuntimeError("undistorting pixels requires opencv-python and numpy") from exc
+
+    k = np.asarray(camera_matrix, dtype=np.float64)
+    d = np.asarray(list(distortion), dtype=np.float64)
+    point_array = np.asarray(points, dtype=np.float64).reshape(-1, 1, 2)
+    undistorted = cv2.undistortPoints(point_array, k, d, P=k).reshape(-1, 2)
+    return [[float(point[0]), float(point[1])] for point in undistorted]
+
+
 def load_capture_sidecar(path: str | Path) -> CaptureSidecar:
     with Path(path).open("r", encoding="utf-8") as handle:
         return CaptureSidecar.model_validate(json.load(handle))
@@ -117,6 +150,31 @@ def project_planar_points(
             raise ValueError("homogeneous projection has zero scale")
         projected.append([u_num / scale, v_num / scale])
     return projected
+
+
+def project_planar_points_typed(
+    homography: Iterable[Iterable[float]],
+    world_pts: Iterable[Iterable[float]],
+    *,
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+    homography_space: CoordinateSpace,
+) -> list[list[float]]:
+    """Typed declaration around the unchanged planar homography projection."""
+
+    input_space = CoordinateSpace(input_space)
+    output_space = CoordinateSpace(output_space)
+    homography_space = CoordinateSpace(homography_space)
+    if input_space != CoordinateSpace.WORLD_XY_HOMOGRAPHY_M:
+        raise ValueError(f"homography input must be world_xy_homography_m, got {input_space}")
+    if output_space != homography_space:
+        raise ValueError(f"homography output/reference mismatch: {output_space} != {homography_space}")
+    if output_space not in {
+        CoordinateSpace.PIXELS_RAW_NATIVE,
+        CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+    }:
+        raise ValueError(f"homography output must be a native raster space, got {output_space}")
+    return project_planar_points(homography, world_pts)
 
 
 def project_image_points_to_world(

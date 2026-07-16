@@ -55,6 +55,7 @@ import math
 from dataclasses import dataclass
 from typing import Any, Sequence
 
+from .coordinates import CoordinateSpace, validate_opencv_camera_seam
 from .court_calibration import (
     CALIBRATION_REPROJECTION_MEDIAN_GATE_PX,
     CALIBRATION_REPROJECTION_P95_GATE_PX,
@@ -123,6 +124,10 @@ class CameraPose:
 def solve_manual_corner_camera_pose(
     image_pts: Sequence[Sequence[float]],
     world_pts: Sequence[Sequence[float]],
+    *,
+    object_space: CoordinateSpace = CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M,
+    image_reference_space: CoordinateSpace = CoordinateSpace.PIXELS_RAW_NATIVE,
+    projected_space: CoordinateSpace = CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
 ) -> CameraPose:
     """Solve a full 6-DOF camera pose from the same 4 corners used for the homography.
 
@@ -139,6 +144,11 @@ def solve_manual_corner_camera_pose(
 
     if len(image_pts) != len(world_pts) or len(image_pts) < 4:
         raise ValueError("solve_manual_corner_camera_pose requires at least 4 paired points")
+    validate_opencv_camera_seam(
+        object_space=object_space,
+        image_reference_space=image_reference_space,
+        projected_space=projected_space,
+    )
 
     image_arr = np.asarray([[float(p[0]), float(p[1])] for p in image_pts], dtype=np.float64)
     world_arr = np.asarray([[float(p[0]), float(p[1]), float(p[2])] for p in world_pts], dtype=np.float64)

@@ -7,7 +7,13 @@ from math import sqrt
 from typing import Any, Iterable, Mapping, Sequence
 
 from .court_auto_evidence import calibration_for_image_size
-from .court_calibration import project_image_points_to_world
+from .coordinates import (
+    CoordinateSpace,
+    homography_pixel_space,
+    project_world_array_pinhole,
+    resolve_homography_pixel_convention,
+    unproject_image_points_to_world,
+)
 from .schemas import CourtCalibration
 
 
@@ -298,6 +304,7 @@ def _camera_projection_arrays(calibration: CourtCalibration, *, np_module: Any) 
         "intrinsics": calibration.intrinsics,
         "rotation": np_module.asarray(calibration.extrinsics.R, dtype=float),
         "translation": np_module.asarray(calibration.extrinsics.t, dtype=float),
+        "reference_space": _calibration_homography_space(calibration),
     }
 
 
@@ -313,8 +320,15 @@ def _fit_bounce_window(
     times = np_module.asarray([float(observation["t"]) for observation in observations], dtype=float)
     image = np_module.asarray([observation["xy"] for observation in observations], dtype=float)
     bounce_time = float(times[bounce_offset])
+    homography_space = _calibration_homography_space(calibration)
     try:
-        ground_xy = project_image_points_to_world(calibration.homography, [observation["xy"] for observation in observations])
+        ground_xy = unproject_image_points_to_world(
+            calibration.homography,
+            [observation["xy"] for observation in observations],
+            input_space=homography_space,
+            homography_space=homography_space,
+            output_space=CoordinateSpace.WORLD_XY_HOMOGRAPHY_M,
+        )
     except ValueError:
         return None
     ground = np_module.asarray(ground_xy, dtype=float)
@@ -385,13 +399,22 @@ def _piecewise_bounce_points(params: Any, times: Any, *, bounce_time: float, np_
 
 
 def _project_world_array(world: Any, *, camera: Mapping[str, Any], np_module: Any) -> Any:
-    intrinsics = camera["intrinsics"]
-    camera_points = (camera["rotation"] @ world.T).T + camera["translation"]
-    depth = camera_points[:, 2]
-    depth = np_module.where(np_module.abs(depth) < 1e-9, 1e-9, depth)
-    u = float(intrinsics.fx) * camera_points[:, 0] / depth + float(intrinsics.cx)
-    v = float(intrinsics.fy) * camera_points[:, 1] / depth + float(intrinsics.cy)
-    return np_module.column_stack([u, v])
+    return project_world_array_pinhole(
+        world,
+        rotation=camera["rotation"],
+        translation=camera["translation"],
+        intrinsics=camera["intrinsics"],
+        input_space=CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M,
+        output_space=CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        reference_space=CoordinateSpace(camera["reference_space"]),
+        np_module=np_module,
+    )
+
+
+def _calibration_homography_space(calibration: CourtCalibration) -> CoordinateSpace:
+    payload = calibration.model_dump(mode="python", exclude_none=True)
+    convention = resolve_homography_pixel_convention(payload, default="raw_pixels")
+    return homography_pixel_space(convention)
 
 
 def _fit_rank(fit: Mapping[str, Any]) -> tuple[float, float]:

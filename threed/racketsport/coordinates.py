@@ -63,6 +63,234 @@ CANONICAL_COURT_WORLD_FRAME: Final = "court_netcenter_z_up_m"
 
 LengthUnit = Literal["m", "meter", "meters", "cm", "centimeter", "centimeters"]
 
+_RASTER_SPACES: Final[frozenset[CoordinateSpace]] = frozenset(
+    {
+        CoordinateSpace.PIXELS_RAW_NATIVE,
+        CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        CoordinateSpace.PIXELS_PREVIEW_SCALED,
+    }
+)
+
+
+def homography_pixel_space(convention: HomographyPixelConvention | str) -> CoordinateSpace:
+    """Map the frozen homography convention vocabulary to a raster space."""
+
+    normalized = str(convention)
+    if normalized == "raw_pixels":
+        return CoordinateSpace.PIXELS_RAW_NATIVE
+    if normalized == "undistorted_pixels":
+        return CoordinateSpace.PIXELS_UNDISTORTED_NATIVE
+    raise ValueError(f"unsupported homography_pixel_convention: {convention}")
+
+
+def resolve_homography_pixel_convention(
+    payload: Mapping[str, Any],
+    *,
+    default: HomographyPixelConvention = "raw_pixels",
+) -> HomographyPixelConvention:
+    """Resolve legacy/top-level and typed nested homography declarations.
+
+    Missing declarations retain the historical raw-pixel default.  Any
+    explicit disagreement fails closed instead of silently selecting one
+    coordinate convention.
+    """
+
+    declarations: list[str] = []
+    top_level = payload.get("homography_pixel_convention")
+    if top_level is not None:
+        declarations.append(str(top_level))
+
+    contract = payload.get("coordinate_contract")
+    if contract is not None:
+        if not isinstance(contract, Mapping):
+            raise ValueError("coordinate_contract must be an object")
+        nested = contract.get("homography_pixel_convention")
+        if nested is not None:
+            declarations.append(str(nested))
+        output_space = contract.get("homography_output_space")
+        if output_space is not None:
+            output = CoordinateSpace(str(output_space))
+            if output == CoordinateSpace.PIXELS_RAW_NATIVE:
+                declarations.append("raw_pixels")
+            elif output == CoordinateSpace.PIXELS_UNDISTORTED_NATIVE:
+                declarations.append("undistorted_pixels")
+            else:
+                raise ValueError(f"unsupported homography_output_space: {output_space}")
+
+    if not declarations:
+        declarations.append(str(default))
+    for declaration in declarations:
+        homography_pixel_space(declaration)
+    if any(declaration != declarations[0] for declaration in declarations[1:]):
+        raise ValueError("conflicting homography pixel declarations")
+    return declarations[0]  # type: ignore[return-value]
+
+
+def require_same_raster_space(
+    input_space: CoordinateSpace,
+    reference_space: CoordinateSpace,
+) -> CoordinateSpace:
+    """Fail closed unless two explicitly declared raster spaces match."""
+
+    input_space = CoordinateSpace(input_space)
+    reference_space = CoordinateSpace(reference_space)
+    if input_space not in _RASTER_SPACES or reference_space not in _RASTER_SPACES:
+        raise ValueError("input and reference spaces must both be raster spaces")
+    if input_space != reference_space:
+        raise ValueError(f"coordinate-space mismatch: {input_space} != {reference_space}")
+    return input_space
+
+
+def unproject_image_points_with_inverse(
+    inverse_homography: Any,
+    image_points: Any,
+    *,
+    input_space: CoordinateSpace,
+    homography_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+) -> np.ndarray:
+    """Typed NumPy homography inverse preserving the placement arithmetic."""
+
+    require_same_raster_space(input_space, homography_space)
+    if CoordinateSpace(output_space) != CoordinateSpace.WORLD_XY_HOMOGRAPHY_M:
+        raise ValueError(f"homography output must be world_xy_homography_m, got {output_space}")
+    inverse = np.asarray(inverse_homography, dtype=float)
+    if inverse.shape != (3, 3) or not np.all(np.isfinite(inverse)):
+        raise ValueError("inverse_homography must be a finite 3x3 matrix")
+    points = np.asarray(image_points, dtype=float)
+    if points.ndim == 0 or points.shape[-1:] != (2,) or not np.all(np.isfinite(points)):
+        raise ValueError("image_points must have shape (..., 2) with finite values")
+    flat = points.reshape(-1, 2)
+    output: list[np.ndarray] = []
+    for pixel in flat:
+        projected = inverse @ np.array([float(pixel[0]), float(pixel[1]), 1.0], dtype=float)
+        if abs(float(projected[2])) < 1e-12:
+            raise ValueError("homography projection reached zero scale")
+        output.append(projected[:2] / projected[2])
+    return np.asarray(output, dtype=float).reshape(points.shape)
+
+
+def unproject_image_points_to_world(
+    homography: Any,
+    image_points: Any,
+    *,
+    input_space: CoordinateSpace,
+    homography_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+) -> list[list[float]]:
+    """Canonical strict adapter around the legacy homography unprojection."""
+
+    require_same_raster_space(input_space, homography_space)
+    from .court_calibration import project_image_points_to_world_typed as _unproject
+
+    return _unproject(
+        homography,
+        image_points,
+        input_space=input_space,
+        homography_space=homography_space,
+        output_space=output_space,
+    )
+
+
+def project_world_xy_points(
+    homography: Any,
+    world_points: Any,
+    *,
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+    homography_space: CoordinateSpace,
+) -> list[list[float]]:
+    """Canonical typed adapter for world-plane to image homographies."""
+
+    from .court_calibration import project_planar_points_typed as _project
+
+    return _project(
+        homography,
+        world_points,
+        input_space=input_space,
+        output_space=output_space,
+        homography_space=homography_space,
+    )
+
+
+def scale_raster_points(
+    points: Any,
+    *,
+    source_size: tuple[float, float],
+    target_size: tuple[float, float],
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+) -> list[list[float]]:
+    """Scale raster points with an explicit native/preview direction."""
+
+    input_space = CoordinateSpace(input_space)
+    output_space = CoordinateSpace(output_space)
+    allowed = {
+        (CoordinateSpace.PIXELS_RAW_NATIVE, CoordinateSpace.PIXELS_PREVIEW_SCALED),
+        (CoordinateSpace.PIXELS_UNDISTORTED_NATIVE, CoordinateSpace.PIXELS_PREVIEW_SCALED),
+        (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_RAW_NATIVE),
+        (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_UNDISTORTED_NATIVE),
+    }
+    if (input_space, output_space) not in allowed:
+        raise ValueError(f"unsupported raster scaling: {input_space} -> {output_space}")
+    source_width, source_height = (float(source_size[0]), float(source_size[1]))
+    target_width, target_height = (float(target_size[0]), float(target_size[1]))
+    if min(source_width, source_height, target_width, target_height) <= 0.0:
+        raise ValueError("source_size and target_size values must be > 0")
+    scale_x = target_width / source_width
+    scale_y = target_height / source_height
+    return [
+        [float(point[0]) * scale_x, float(point[1]) * scale_y]
+        for point in points
+    ]
+
+
+def project_world_array_pinhole(
+    world_points: Any,
+    *,
+    rotation: Any,
+    translation: Any,
+    intrinsics: Any,
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+    reference_space: CoordinateSpace,
+    np_module: Any = np,
+) -> Any:
+    """Typed camera-model seam preserving the ball solver's NumPy math."""
+
+    if CoordinateSpace(input_space) != CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M:
+        raise ValueError(f"pinhole input must be court world metres, got {input_space}")
+    if CoordinateSpace(output_space) != CoordinateSpace.PIXELS_UNDISTORTED_NATIVE:
+        raise ValueError(f"pinhole output must be undistorted native pixels, got {output_space}")
+    reference_space = CoordinateSpace(reference_space)
+    if reference_space not in _RASTER_SPACES:
+        raise ValueError(f"projection reference must be a raster space, got {reference_space}")
+    world = np_module.asarray(world_points, dtype=float)
+    camera_points = (np_module.asarray(rotation, dtype=float) @ world.T).T + np_module.asarray(
+        translation, dtype=float
+    )
+    depth = camera_points[:, 2]
+    depth = np_module.where(np_module.abs(depth) < 1e-9, 1e-9, depth)
+    u = float(intrinsics.fx) * camera_points[:, 0] / depth + float(intrinsics.cx)
+    v = float(intrinsics.fy) * camera_points[:, 1] / depth + float(intrinsics.cy)
+    return np_module.column_stack([u, v])
+
+
+def validate_opencv_camera_seam(
+    *,
+    object_space: CoordinateSpace,
+    image_reference_space: CoordinateSpace,
+    projected_space: CoordinateSpace,
+) -> None:
+    """Validate the declared spaces around unchanged solvePnP/projectPoints calls."""
+
+    if CoordinateSpace(object_space) != CoordinateSpace.WORLD_COURT_NETCENTER_Z_UP_M:
+        raise ValueError(f"solvePnP object space must be court world metres, got {object_space}")
+    if CoordinateSpace(image_reference_space) not in _RASTER_SPACES:
+        raise ValueError(f"solvePnP image reference must be a raster space, got {image_reference_space}")
+    if CoordinateSpace(projected_space) != CoordinateSpace.PIXELS_UNDISTORTED_NATIVE:
+        raise ValueError(f"projectPoints output must be undistorted native pixels, got {projected_space}")
+
 
 def resolve_world_coordinate_space(
     payload: Mapping[str, Any],
@@ -270,9 +498,18 @@ __all__ = [
     "apply_translation_once",
     "camera_matrix_from_intrinsics",
     "camera_to_world_points",
+    "homography_pixel_space",
     "invert_extrinsics",
+    "project_world_array_pinhole",
     "project_world_points",
+    "project_world_xy_points",
+    "require_same_raster_space",
+    "resolve_homography_pixel_convention",
     "resolve_world_coordinate_space",
+    "scale_raster_points",
     "translation_to_metres",
+    "unproject_image_points_to_world",
+    "unproject_image_points_with_inverse",
+    "validate_opencv_camera_seam",
     "world_to_camera_points",
 ]
