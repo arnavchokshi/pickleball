@@ -85,6 +85,16 @@ class RollingShutterDirection(str, Enum):
     BOTTOM_TO_TOP = "bottom_to_top"
 
 
+class RollingShutterModelStatus(str, Enum):
+    AVAILABLE = "available"
+    MISSING = "missing"
+
+
+class RollingShutterMissingReason(str, Enum):
+    SIDECAR_UNAVAILABLE = "sidecar_unavailable"
+    SIDECAR_FIELD_ABSENT = "sidecar_field_absent"
+
+
 def _finite(value: float, field: str) -> float:
     parsed = float(value)
     if not math.isfinite(parsed):
@@ -556,6 +566,80 @@ class RollingShutterModel:
 
 
 @dataclass(frozen=True, slots=True)
+class RollingShutterModelOutcome:
+    """Typed sidecar-adaptation result with explicit absence semantics."""
+
+    status: RollingShutterModelStatus
+    model: RollingShutterModel | None
+    missing_reason: RollingShutterMissingReason | None
+
+    def __post_init__(self) -> None:
+        status = _enum(RollingShutterModelStatus, self.status, "rolling shutter status")
+        reason = None if self.missing_reason is None else _enum(
+            RollingShutterMissingReason,
+            self.missing_reason,
+            "rolling shutter missing reason",
+        )
+        if status is RollingShutterModelStatus.AVAILABLE:
+            if self.model is None or reason is not None:
+                raise TimebaseValidationError("available rolling shutter outcome requires a model and no reason")
+        elif self.model is not None or reason is None:
+            raise TimebaseValidationError("missing rolling shutter outcome requires only an explicit reason")
+        object.__setattr__(self, "status", status)
+        object.__setattr__(self, "missing_reason", reason)
+
+    def to_dict(self) -> dict[str, Any]:
+        return _json_value(asdict(self))
+
+
+def build_rolling_shutter_model_from_sidecar(
+    sidecar: Mapping[str, Any] | None,
+    *,
+    model_id: str = "capture_sidecar_rolling_shutter_v1",
+) -> RollingShutterModelOutcome:
+    """Adapt an optional strict sidecar declaration into the timebase model.
+
+    The nested declaration accepts exactly ``frame_readout_s`` and
+    ``direction``.  Malformed or unknown keys are schema errors and fail
+    loudly; only a missing sidecar/field produces a typed missing outcome.
+    """
+
+    if sidecar is None:
+        return RollingShutterModelOutcome(
+            RollingShutterModelStatus.MISSING,
+            None,
+            RollingShutterMissingReason.SIDECAR_UNAVAILABLE,
+        )
+    if not isinstance(sidecar, Mapping):
+        raise TimebaseValidationError("capture sidecar must be an object")
+    declaration = sidecar.get("rolling_shutter")
+    if declaration is None:
+        return RollingShutterModelOutcome(
+            RollingShutterModelStatus.MISSING,
+            None,
+            RollingShutterMissingReason.SIDECAR_FIELD_ABSENT,
+        )
+    if not isinstance(declaration, Mapping):
+        raise TimebaseValidationError("rolling_shutter must be an object")
+    expected = {"frame_readout_s", "direction"}
+    extra = set(declaration) - expected
+    missing = expected - set(declaration)
+    if extra or missing:
+        raise TimebaseValidationError(
+            f"invalid rolling_shutter keys; missing={sorted(missing)}, extra={sorted(extra)}"
+        )
+    raw_readout = declaration["frame_readout_s"]
+    if isinstance(raw_readout, bool):
+        raise TimebaseValidationError("frame_readout_s must be a positive finite number")
+    model = RollingShutterModel(
+        model_id=model_id,
+        frame_readout_s=_positive(raw_readout, "frame_readout_s"),
+        direction=declaration["direction"],
+    )
+    return RollingShutterModelOutcome(RollingShutterModelStatus.AVAILABLE, model, None)
+
+
+@dataclass(frozen=True, slots=True)
 class NumericSensorSample:
     sample_id: str
     clock: ClockDomain
@@ -918,7 +1002,10 @@ __all__ = [
     "NumericSensorSample",
     "RawEncodedPTS",
     "RollingShutterDirection",
+    "RollingShutterMissingReason",
     "RollingShutterModel",
+    "RollingShutterModelOutcome",
+    "RollingShutterModelStatus",
     "RollingShutterRowTime",
     "SensorAlignment",
     "SensorClockMapping",
@@ -931,4 +1018,5 @@ __all__ = [
     "align_interpolated_sensor_sample",
     "align_nearest_sensor_sample",
     "build_sensor_clock_mapping_from_sidecar",
+    "build_rolling_shutter_model_from_sidecar",
 ]

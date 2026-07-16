@@ -20,11 +20,13 @@ from .timebase import (
     FrameAvailabilityStatus,
     FrameTime,
     RawEncodedPTS,
+    RollingShutterModelOutcome,
     SensorClockMappingOutcome,
     SensorClockMappingStatus,
     TimeBasis,
     TimebaseContract,
     TimebaseValidationError,
+    build_rolling_shutter_model_from_sidecar,
     build_sensor_clock_mapping_from_sidecar,
 )
 
@@ -429,6 +431,9 @@ def build_timebase_artifacts(
     else:
         sidecar_payload = capture_sidecar
     sensor_outcome: SensorClockMappingOutcome = build_sensor_clock_mapping_from_sidecar(sidecar_payload)
+    rolling_shutter_outcome: RollingShutterModelOutcome = build_rolling_shutter_model_from_sidecar(
+        sidecar_payload
+    )
 
     has_exact_pts = any(raw is not None for raw, _meta in observations)
     contract: TimebaseContract | None = None
@@ -492,7 +497,7 @@ def build_timebase_artifacts(
             audio_times=(),
             acoustic_models=(),
             sensor_clock_mappings=mappings,
-            rolling_shutter_model=None,
+            rolling_shutter_model=rolling_shutter_outcome.model,
         )
 
     evidence = {
@@ -530,6 +535,7 @@ def build_timebase_artifacts(
             ),
         },
         "sensor_clock_mapping_outcome": sensor_outcome.to_dict(),
+        "rolling_shutter_model_outcome": rolling_shutter_outcome.to_dict(),
     }
     return TimebaseArtifactBuild(legacy, contract, evidence)
 

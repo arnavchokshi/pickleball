@@ -37,13 +37,14 @@
       "items": {"$ref": "#/$defs/sensor_clock_mapping"}
     },
     "rolling_shutter_model": {
+      "description": "Null only when the decode evidence records an explicit rolling-shutter missing reason; a populated model is a declared device readout, not physical validation.",
       "type": ["object", "null"],
       "additionalProperties": false,
       "required": ["model_id", "frame_readout_s", "direction", "frame_time_reference"],
       "properties": {
         "model_id": {"type": "string", "minLength": 1},
-        "frame_readout_s": {"type": "number", "minimum": 0},
-        "direction": {"enum": ["top_to_bottom", "bottom_to_top"]},
+        "frame_readout_s": {"type": "number", "minimum": 0, "description": "Total first-row to last-row sensor readout in seconds."},
+        "direction": {"enum": ["top_to_bottom", "bottom_to_top"], "description": "Native sensor-row readout direction."},
         "frame_time_reference": {"const": "first_read_row"}
       }
     }

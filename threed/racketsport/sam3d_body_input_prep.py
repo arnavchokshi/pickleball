@@ -12,6 +12,11 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
+from .coordinates import (
+    PINHOLE_ONLY_DISTORTION_POLICY,
+    CoordinateSpace,
+    scale_intrinsics,
+)
 from .court_calibration import calibration_image_size
 from .schemas import CourtCalibration
 
@@ -87,12 +92,17 @@ def static_camera_intrinsics_k(
         calibration,
         fallback_target=(width, height),
     )
-    scale_x = width / calibration_width if calibration_width > 0.0 else 1.0
-    scale_y = height / calibration_height if calibration_height > 0.0 else 1.0
-    intrinsics = calibration.intrinsics
+    intrinsics = scale_intrinsics(
+        calibration.intrinsics,
+        source_size=(calibration_width, calibration_height),
+        target_size=(width, height),
+        input_space=CoordinateSpace.PIXELS_RAW_NATIVE,
+        output_space=CoordinateSpace.PIXELS_PREVIEW_SCALED,
+        distortion_policy=PINHOLE_ONLY_DISTORTION_POLICY,
+    )
     return [
-        [_clean_float(float(intrinsics.fx) * scale_x), 0.0, _clean_float(float(intrinsics.cx) * scale_x)],
-        [0.0, _clean_float(float(intrinsics.fy) * scale_y), _clean_float(float(intrinsics.cy) * scale_y)],
+        [_clean_float(float(intrinsics.fx)), 0.0, _clean_float(float(intrinsics.cx))],
+        [0.0, _clean_float(float(intrinsics.fy)), _clean_float(float(intrinsics.cy))],
         [0.0, 0.0, 1.0],
     ]
 

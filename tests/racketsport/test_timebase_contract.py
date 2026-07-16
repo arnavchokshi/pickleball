@@ -28,6 +28,7 @@ from threed.racketsport.timebase import (
     RawEncodedPTS,
     RollingShutterDirection,
     RollingShutterModel,
+    RollingShutterModelStatus,
     SensorClockMapping,
     TimeBasis,
     TimebaseContract,
@@ -35,6 +36,7 @@ from threed.racketsport.timebase import (
     align_interpolated_sensor_sample,
     align_nearest_sensor_sample,
     build_sensor_clock_mapping_from_sidecar,
+    build_rolling_shutter_model_from_sidecar,
 )
 
 
@@ -336,6 +338,24 @@ def test_rolling_shutter_row_time_respects_direction_and_declared_readout() -> N
     assert top_down.row_time(1.0, row_index=4, frame_height=5).row_time_s == pytest.approx(1.008)
     assert bottom_up.row_time(1.0, row_index=0, frame_height=5).row_time_s == pytest.approx(1.008)
     assert bottom_up.row_time(1.0, row_index=4, frame_height=5).row_time_s == 1.0
+
+
+def test_rolling_shutter_sidecar_adapter_has_typed_present_and_absent_outcomes() -> None:
+    present = build_rolling_shutter_model_from_sidecar(
+        {"rolling_shutter": {"frame_readout_s": 0.004, "direction": "top_to_bottom"}}
+    )
+    absent = build_rolling_shutter_model_from_sidecar({})
+    unavailable = build_rolling_shutter_model_from_sidecar(None)
+
+    assert present.status is RollingShutterModelStatus.AVAILABLE
+    assert present.model == RollingShutterModel(
+        "capture_sidecar_rolling_shutter_v1",
+        0.004,
+        RollingShutterDirection.TOP_TO_BOTTOM,
+    )
+    assert present.missing_reason is None
+    assert absent.to_dict()["missing_reason"] == "sidecar_field_absent"
+    assert unavailable.to_dict()["missing_reason"] == "sidecar_unavailable"
 
 
 def test_nearest_alignment_demands_tolerance_and_returns_provenance() -> None:

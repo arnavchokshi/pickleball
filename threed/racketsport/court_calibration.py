@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 from .capture_quality import score_capture_quality
-from .coordinates import CoordinateSpace
+from .coordinates import (
+    PINHOLE_ONLY_DISTORTION_POLICY,
+    CoordinateSpace,
+    crop_intrinsics,
+    scale_intrinsics,
+)
 from .court_templates import Sport, get_court_template
 from .schemas import (
     CameraIntrinsics,
@@ -23,6 +28,50 @@ from .schemas import (
 
 CALIBRATION_REPROJECTION_MEDIAN_GATE_PX = 8.0
 CALIBRATION_REPROJECTION_P95_GATE_PX = 15.0
+
+
+class CalibrationOrientationError(ValueError):
+    """Sidecar raster orientation cannot be reconciled without inventing a pose transform."""
+
+
+def calibration_intrinsics_from_sidecar(sidecar: CaptureSidecar) -> CameraIntrinsics:
+    """Resolve native/cropped intrinsics into the encoded calibration raster.
+
+    ``reference_crop=None`` explicitly preserves the historical contract: K is
+    already expressed in ``sidecar.resolution``.  A declared native crop is
+    offset and then scaled into that resolution.  Rotated sidecars fail loudly
+    at this seam because rotating K alone cannot prove the matching ARKit pose,
+    taps, and decoded-raster orientation.
+    """
+
+    if sidecar.intrinsics is None:
+        raise ValueError("capture sidecar intrinsics are required for calibration")
+    rotation = sidecar.video_rotation_angle_degrees
+    if rotation not in {None, 0}:
+        raise CalibrationOrientationError(
+            "capture sidecar video_rotation_angle_degrees implies a rotated calibration raster; "
+            "refusing to use native intrinsics until the decoded-raster and camera-pose rotation are declared"
+        )
+    crop = sidecar.reference_crop
+    if crop is None:
+        return sidecar.intrinsics
+    crop_rect = (crop.x_px, crop.y_px, crop.width_px, crop.height_px)
+    cropped = crop_intrinsics(
+        sidecar.intrinsics,
+        source_size=(crop.x_px + crop.width_px, crop.y_px + crop.height_px),
+        crop_rect=crop_rect,
+        input_space=CoordinateSpace.PIXELS_RAW_NATIVE,
+        output_space=CoordinateSpace.PIXELS_REFERENCE_CROP,
+        distortion_policy=PINHOLE_ONLY_DISTORTION_POLICY,
+    )
+    return scale_intrinsics(
+        cropped,
+        source_size=(crop.width_px, crop.height_px),
+        target_size=sidecar.resolution,
+        input_space=CoordinateSpace.PIXELS_REFERENCE_CROP,
+        output_space=CoordinateSpace.PIXELS_PREVIEW_SCALED,
+        distortion_policy=PINHOLE_ONLY_DISTORTION_POLICY,
+    )
 
 
 def camera_matrix_from_intrinsics(intrinsics: CameraIntrinsics) -> list[list[float]]:
@@ -559,10 +608,11 @@ def metric_calibration_from_sidecar_and_keypoints(
 
     sidecar = load_capture_sidecar(sidecar_path)
     keypoints = load_court_keypoints(keypoints_path)
+    calibration_intrinsics = calibration_intrinsics_from_sidecar(sidecar)
     if (
         sidecar.arkit_camera_pose is None
         or sidecar.court_plane is None
-        or sidecar.intrinsics.source.lower() != "arkit"
+        or calibration_intrinsics.source.lower() != "arkit"
     ):
         raise ValueError("trusted ARKit floor plane is required for metric court calibration")
 
@@ -577,7 +627,7 @@ def metric_calibration_from_sidecar_and_keypoints(
     from .court_positioning_artifacts import build_metric_court_calibration_artifact
 
     geometry = CameraFloorGeometry(
-        intrinsics=sidecar.intrinsics.model_dump(mode="json"),
+        intrinsics=calibration_intrinsics.model_dump(mode="json"),
         camera_origin_world=sidecar.arkit_camera_pose.t,
         R_world_camera=sidecar.arkit_camera_pose.R,
         floor_plane_point=sidecar.court_plane.point,
@@ -594,7 +644,7 @@ def metric_calibration_from_sidecar_and_keypoints(
     }
     undistorted_points, undistort_applied = undistort_pixels_for_intrinsics(
         [image_keypoints[name]["uv"] for name in PICKLEBALL_COURT_KEYPOINT_NAMES],
-        sidecar.intrinsics,
+        calibration_intrinsics,
     )
     floor_projection_keypoints = {
         name: {**image_keypoints[name], "uv": undistorted_points[idx]}
@@ -643,10 +693,11 @@ def metric_calibration_from_sidecar_and_keypoints(
         sidecar,
         world_pts=[world_keypoints[name] for name in placement.solved_keypoints],
         image_pts=image_pts,
+        intrinsics=calibration_intrinsics,
     )
     payload = build_metric_court_calibration_artifact(
         placement=placement,
-        intrinsics=sidecar.intrinsics.model_dump(mode="json"),
+        intrinsics=calibration_intrinsics.model_dump(mode="json"),
         homography=homography,
         image_keypoints=image_keypoints,
         extrinsics=extrinsics.model_dump(mode="json"),
@@ -678,15 +729,21 @@ def _build_calibration(
     image_pts: list[list[float]],
     world_pts: list[list[float]],
 ) -> CourtCalibration:
+    calibration_intrinsics = calibration_intrinsics_from_sidecar(sidecar)
     homography = homography_from_planar_points(world_pts, image_pts)
     projected_pts = project_planar_points(homography, world_pts)
     error = reprojection_error(image_pts, projected_pts)
-    extrinsics = _solve_or_seed_extrinsics(sidecar, world_pts=world_pts, image_pts=image_pts)
+    extrinsics = _solve_or_seed_extrinsics(
+        sidecar,
+        world_pts=world_pts,
+        image_pts=image_pts,
+        intrinsics=calibration_intrinsics,
+    )
     return CourtCalibration(
         schema_version=1,
         sport=sport,
         homography=homography,
-        intrinsics=sidecar.intrinsics,
+        intrinsics=calibration_intrinsics,
         image_size=tuple(sidecar.resolution),
         extrinsics=extrinsics,
         reprojection_error_px=error,
@@ -737,9 +794,11 @@ def _solve_or_seed_extrinsics(
     *,
     world_pts: list[list[float]],
     image_pts: list[list[float]],
+    intrinsics: CameraIntrinsics | None = None,
 ) -> CourtExtrinsics:
+    resolved_intrinsics = intrinsics or calibration_intrinsics_from_sidecar(sidecar)
     try:
-        return solve_camera_pose(world_pts, image_pts, sidecar.intrinsics)
+        return solve_camera_pose(world_pts, image_pts, resolved_intrinsics)
     except (RuntimeError, ValueError):
         return CourtExtrinsics(
             R=sidecar.arkit_camera_pose.R if sidecar.arkit_camera_pose is not None else [[1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, 0.0, 1.0]],

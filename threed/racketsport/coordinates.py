@@ -11,6 +11,9 @@ already adopted the vocabulary.
 ``pixels_undistorted_native``
     The same native raster origin, axes, dimensions, and pixel units after
     applying the declared camera distortion model and native intrinsics.
+``pixels_reference_crop``
+    Coordinates relative to the top-left of an explicitly declared crop in
+    native pixels, before resizing into a processed preview raster.
 ``pixels_preview_scaled``
     Coordinates in a resized, cropped, and/or orientation-corrected preview.
     The origin is the preview's top-left, +x right, +y down, in preview pixels;
@@ -33,9 +36,12 @@ already adopted the vocabulary.
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Final, Literal, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Final, Literal, Mapping, Sequence
 
 import numpy as np
+
+if TYPE_CHECKING:
+    from .schemas import CameraIntrinsics
 
 
 class CoordinateSpace(str, Enum):
@@ -45,6 +51,7 @@ class CoordinateSpace(str, Enum):
 
     PIXELS_RAW_NATIVE = "pixels_raw_native"
     PIXELS_UNDISTORTED_NATIVE = "pixels_undistorted_native"
+    PIXELS_REFERENCE_CROP = "pixels_reference_crop"
     PIXELS_PREVIEW_SCALED = "pixels_preview_scaled"
     CAMERA_M = "camera_m"
     BODY_CAMERA_ROOT_RELATIVE_M = "body_camera_root_relative_m"
@@ -67,6 +74,7 @@ _RASTER_SPACES: Final[frozenset[CoordinateSpace]] = frozenset(
     {
         CoordinateSpace.PIXELS_RAW_NATIVE,
         CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        CoordinateSpace.PIXELS_REFERENCE_CROP,
         CoordinateSpace.PIXELS_PREVIEW_SCALED,
     }
 )
@@ -230,6 +238,8 @@ def scale_raster_points(
         (CoordinateSpace.PIXELS_UNDISTORTED_NATIVE, CoordinateSpace.PIXELS_PREVIEW_SCALED),
         (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_RAW_NATIVE),
         (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_UNDISTORTED_NATIVE),
+        (CoordinateSpace.PIXELS_REFERENCE_CROP, CoordinateSpace.PIXELS_PREVIEW_SCALED),
+        (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_REFERENCE_CROP),
     }
     if (input_space, output_space) not in allowed:
         raise ValueError(f"unsupported raster scaling: {input_space} -> {output_space}")
@@ -243,6 +253,209 @@ def scale_raster_points(
         [float(point[0]) * scale_x, float(point[1]) * scale_y]
         for point in points
     ]
+
+
+DistortionTransformPolicy = Literal["preserve_coefficients_pinhole_only"]
+PINHOLE_ONLY_DISTORTION_POLICY: Final[DistortionTransformPolicy] = "preserve_coefficients_pinhole_only"
+
+
+def _declared_intrinsics_transform(
+    intrinsics: CameraIntrinsics,
+    *,
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+    allowed: set[tuple[CoordinateSpace, CoordinateSpace]],
+    distortion_policy: DistortionTransformPolicy | str,
+) -> tuple[CameraIntrinsics, CoordinateSpace, CoordinateSpace]:
+    """Validate the shared fail-closed declarations for K-only transforms.
+
+    These operations transform only the pinhole matrix.  Distortion
+    coefficients are deliberately preserved byte-for-byte; this is not a
+    distortion-model rotation/crop and callers must explicitly acknowledge the
+    pinhole-only policy.
+    """
+
+    from .schemas import CameraIntrinsics
+
+    if not isinstance(intrinsics, CameraIntrinsics):
+        raise ValueError("intrinsics must be CameraIntrinsics")
+    input_space = CoordinateSpace(input_space)
+    output_space = CoordinateSpace(output_space)
+    if input_space not in _RASTER_SPACES or output_space not in _RASTER_SPACES:
+        raise ValueError("intrinsics input and output spaces must be raster spaces")
+    if (input_space, output_space) not in allowed:
+        raise ValueError(f"unsupported intrinsics transform: {input_space} -> {output_space}")
+    if distortion_policy != PINHOLE_ONLY_DISTORTION_POLICY:
+        raise ValueError(
+            "distortion_policy must explicitly declare 'preserve_coefficients_pinhole_only'"
+        )
+    return intrinsics, input_space, output_space
+
+
+def _positive_raster_size(size: Sequence[float], *, name: str) -> tuple[float, float]:
+    if isinstance(size, (str, bytes)) or len(size) != 2:
+        raise ValueError(f"{name} must be a (width, height) pair")
+    width, height = float(size[0]), float(size[1])
+    if not np.isfinite(width) or not np.isfinite(height) or width <= 0.0 or height <= 0.0:
+        raise ValueError(f"{name} values must be finite and > 0")
+    return width, height
+
+
+def scale_intrinsics(
+    intrinsics: CameraIntrinsics,
+    *,
+    source_size: Sequence[float],
+    target_size: Sequence[float],
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+    distortion_policy: DistortionTransformPolicy | str,
+) -> CameraIntrinsics:
+    """Scale native/reference K into a processed raster.
+
+    The accepted directions are exactly the directions declared by
+    :func:`scale_raster_points`.  ``dist`` is preserved only under the required
+    pinhole-only policy; no claim is made that tangential/radial coefficients
+    have been transformed for a changed sensor orientation.
+    """
+
+    allowed = {
+        (CoordinateSpace.PIXELS_RAW_NATIVE, CoordinateSpace.PIXELS_PREVIEW_SCALED),
+        (CoordinateSpace.PIXELS_UNDISTORTED_NATIVE, CoordinateSpace.PIXELS_PREVIEW_SCALED),
+        (CoordinateSpace.PIXELS_REFERENCE_CROP, CoordinateSpace.PIXELS_PREVIEW_SCALED),
+        (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_RAW_NATIVE),
+        (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_UNDISTORTED_NATIVE),
+        (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_REFERENCE_CROP),
+    }
+    intrinsics, _input, _output = _declared_intrinsics_transform(
+        intrinsics,
+        input_space=input_space,
+        output_space=output_space,
+        allowed=allowed,
+        distortion_policy=distortion_policy,
+    )
+    source_width, source_height = _positive_raster_size(source_size, name="source_size")
+    target_width, target_height = _positive_raster_size(target_size, name="target_size")
+    scale_x = target_width / source_width
+    scale_y = target_height / source_height
+    return intrinsics.model_copy(
+        update={
+            "fx": float(intrinsics.fx) * scale_x,
+            "fy": float(intrinsics.fy) * scale_y,
+            "cx": float(intrinsics.cx) * scale_x,
+            "cy": float(intrinsics.cy) * scale_y,
+        }
+    )
+
+
+def crop_intrinsics(
+    intrinsics: CameraIntrinsics,
+    *,
+    source_size: Sequence[float],
+    crop_rect: Sequence[float],
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+    distortion_policy: DistortionTransformPolicy | str,
+) -> CameraIntrinsics:
+    """Offset K into a declared native-pixel reference crop.
+
+    ``crop_rect`` is ``(x_px, y_px, width_px, height_px)`` and must lie inside
+    ``source_size``.  Distortion coefficients pass through only under the
+    explicit pinhole-only policy.
+    """
+
+    allowed = {
+        (CoordinateSpace.PIXELS_RAW_NATIVE, CoordinateSpace.PIXELS_REFERENCE_CROP),
+        (CoordinateSpace.PIXELS_UNDISTORTED_NATIVE, CoordinateSpace.PIXELS_REFERENCE_CROP),
+    }
+    intrinsics, _input, _output = _declared_intrinsics_transform(
+        intrinsics,
+        input_space=input_space,
+        output_space=output_space,
+        allowed=allowed,
+        distortion_policy=distortion_policy,
+    )
+    source_width, source_height = _positive_raster_size(source_size, name="source_size")
+    if isinstance(crop_rect, (str, bytes)) or len(crop_rect) != 4:
+        raise ValueError("crop_rect must be (x_px, y_px, width_px, height_px)")
+    x_px, y_px, width_px, height_px = (float(value) for value in crop_rect)
+    if not all(np.isfinite(value) for value in (x_px, y_px, width_px, height_px)):
+        raise ValueError("crop_rect values must be finite")
+    if x_px < 0.0 or y_px < 0.0 or width_px <= 0.0 or height_px <= 0.0:
+        raise ValueError("crop_rect origin must be nonnegative and dimensions must be > 0")
+    if x_px + width_px > source_width or y_px + height_px > source_height:
+        raise ValueError("crop_rect must lie inside source_size")
+    return intrinsics.model_copy(
+        update={
+            "cx": float(intrinsics.cx) - x_px,
+            "cy": float(intrinsics.cy) - y_px,
+        }
+    )
+
+
+def rotate_intrinsics(
+    intrinsics: CameraIntrinsics,
+    *,
+    source_size: Sequence[float],
+    angle_degrees: Literal[0, 90, 180, 270] | int,
+    input_space: CoordinateSpace,
+    output_space: CoordinateSpace,
+    distortion_policy: DistortionTransformPolicy | str,
+) -> CameraIntrinsics:
+    """Rotate K clockwise using raster width/height and pixel-centre semantics.
+
+    For 90/270 degrees, the output raster size is ``(height, width)``.  The
+    formulas use inclusive pixel bounds (``width - 1``, ``height - 1``).
+    This remains a K-only/pinhole transform: distortion coefficients are
+    intentionally unchanged under the explicit policy.
+    """
+
+    angle = int(angle_degrees)
+    if angle not in {0, 90, 180, 270} or isinstance(angle_degrees, bool):
+        raise ValueError("angle_degrees must be one of 0, 90, 180, 270")
+    input_space = CoordinateSpace(input_space)
+    output_space = CoordinateSpace(output_space)
+    allowed = (
+        {(space, space) for space in _RASTER_SPACES}
+        if angle == 0
+        else {
+            (CoordinateSpace.PIXELS_RAW_NATIVE, CoordinateSpace.PIXELS_PREVIEW_SCALED),
+            (CoordinateSpace.PIXELS_UNDISTORTED_NATIVE, CoordinateSpace.PIXELS_PREVIEW_SCALED),
+            (CoordinateSpace.PIXELS_REFERENCE_CROP, CoordinateSpace.PIXELS_PREVIEW_SCALED),
+            (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_RAW_NATIVE),
+            (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_UNDISTORTED_NATIVE),
+            (CoordinateSpace.PIXELS_PREVIEW_SCALED, CoordinateSpace.PIXELS_REFERENCE_CROP),
+        }
+    )
+    intrinsics, _input, _output = _declared_intrinsics_transform(
+        intrinsics,
+        input_space=input_space,
+        output_space=output_space,
+        allowed=allowed,
+        distortion_policy=distortion_policy,
+    )
+    width, height = _positive_raster_size(source_size, name="source_size")
+    if angle == 0:
+        return intrinsics.model_copy(deep=True)
+    if angle == 90:
+        updates = {
+            "fx": float(intrinsics.fy),
+            "fy": float(intrinsics.fx),
+            "cx": height - 1.0 - float(intrinsics.cy),
+            "cy": float(intrinsics.cx),
+        }
+    elif angle == 180:
+        updates = {
+            "cx": width - 1.0 - float(intrinsics.cx),
+            "cy": height - 1.0 - float(intrinsics.cy),
+        }
+    else:
+        updates = {
+            "fx": float(intrinsics.fy),
+            "fy": float(intrinsics.fx),
+            "cx": float(intrinsics.cy),
+            "cy": width - 1.0 - float(intrinsics.cx),
+        }
+    return intrinsics.model_copy(update=updates)
 
 
 def project_world_array_pinhole(
@@ -495,9 +708,12 @@ __all__ = [
     "HomographyPixelConvention",
     "LEGACY_COURT_WORLD_FRAME",
     "LengthUnit",
+    "DistortionTransformPolicy",
+    "PINHOLE_ONLY_DISTORTION_POLICY",
     "apply_translation_once",
     "camera_matrix_from_intrinsics",
     "camera_to_world_points",
+    "crop_intrinsics",
     "homography_pixel_space",
     "invert_extrinsics",
     "project_world_array_pinhole",
@@ -507,7 +723,9 @@ __all__ = [
     "resolve_homography_pixel_convention",
     "resolve_world_coordinate_space",
     "scale_raster_points",
+    "scale_intrinsics",
     "translation_to_metres",
+    "rotate_intrinsics",
     "unproject_image_points_to_world",
     "unproject_image_points_with_inverse",
     "validate_opencv_camera_seam",

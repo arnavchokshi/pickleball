@@ -18,6 +18,7 @@ def test_coordinate_vocabulary_and_homography_conventions_are_stable() -> None:
     assert {space.value for space in coordinates.CoordinateSpace} >= {
         "pixels_raw_native",
         "pixels_undistorted_native",
+        "pixels_reference_crop",
         "pixels_preview_scaled",
         "camera_m",
         "body_camera_root_relative_m",
@@ -98,6 +99,120 @@ def test_blessed_camera_matrix_builder_delegates_to_court_calibration() -> None:
         [0.0, 900.0, 360.0],
         [0.0, 0.0, 1.0],
     ]
+
+
+def test_scale_intrinsics_round_trip_preserves_nonzero_distortion_under_declared_policy() -> None:
+    original = CameraIntrinsics(
+        fx=1187.5,
+        fy=1179.25,
+        cx=951.0,
+        cy=537.5,
+        dist=[0.17, -0.08, 0.002, -0.001],
+        source="distorted_synthetic",
+    )
+    scaled = coordinates.scale_intrinsics(
+        original,
+        source_size=(1920.0, 1080.0),
+        target_size=(960.0, 540.0),
+        input_space=coordinates.CoordinateSpace.PIXELS_RAW_NATIVE,
+        output_space=coordinates.CoordinateSpace.PIXELS_PREVIEW_SCALED,
+        distortion_policy=coordinates.PINHOLE_ONLY_DISTORTION_POLICY,
+    )
+    restored = coordinates.scale_intrinsics(
+        scaled,
+        source_size=(960.0, 540.0),
+        target_size=(1920.0, 1080.0),
+        input_space=coordinates.CoordinateSpace.PIXELS_PREVIEW_SCALED,
+        output_space=coordinates.CoordinateSpace.PIXELS_RAW_NATIVE,
+        distortion_policy=coordinates.PINHOLE_ONLY_DISTORTION_POLICY,
+    )
+
+    assert restored == original
+    assert scaled.dist == original.dist
+    assert scaled.dist is original.dist
+
+
+def test_crop_intrinsics_offsets_principal_point_and_rejects_out_of_bounds_crop() -> None:
+    original = CameraIntrinsics(
+        fx=1200.0,
+        fy=1210.0,
+        cx=1000.0,
+        cy=600.0,
+        dist=[0.1, -0.02],
+        source="native_sensor",
+    )
+    cropped = coordinates.crop_intrinsics(
+        original,
+        source_size=(2200.0, 1400.0),
+        crop_rect=(100.0, 200.0, 1920.0, 1080.0),
+        input_space=coordinates.CoordinateSpace.PIXELS_RAW_NATIVE,
+        output_space=coordinates.CoordinateSpace.PIXELS_REFERENCE_CROP,
+        distortion_policy=coordinates.PINHOLE_ONLY_DISTORTION_POLICY,
+    )
+
+    assert (cropped.fx, cropped.fy, cropped.cx, cropped.cy) == (1200.0, 1210.0, 900.0, 400.0)
+    assert cropped.dist is original.dist
+    with pytest.raises(ValueError, match="inside source_size"):
+        coordinates.crop_intrinsics(
+            original,
+            source_size=(1920.0, 1080.0),
+            crop_rect=(100.0, 0.0, 1920.0, 1080.0),
+            input_space=coordinates.CoordinateSpace.PIXELS_RAW_NATIVE,
+            output_space=coordinates.CoordinateSpace.PIXELS_REFERENCE_CROP,
+            distortion_policy=coordinates.PINHOLE_ONLY_DISTORTION_POLICY,
+        )
+
+
+def test_rotate_intrinsics_cardinal_round_trip_uses_width_height_pixel_centres() -> None:
+    original = CameraIntrinsics(
+        fx=1000.0,
+        fy=900.0,
+        cx=700.0,
+        cy=400.0,
+        dist=[0.12, -0.03, 0.004, -0.002],
+        source="rotated_synthetic",
+    )
+    clockwise = coordinates.rotate_intrinsics(
+        original,
+        source_size=(1920.0, 1080.0),
+        angle_degrees=90,
+        input_space=coordinates.CoordinateSpace.PIXELS_RAW_NATIVE,
+        output_space=coordinates.CoordinateSpace.PIXELS_PREVIEW_SCALED,
+        distortion_policy=coordinates.PINHOLE_ONLY_DISTORTION_POLICY,
+    )
+    assert (clockwise.fx, clockwise.fy, clockwise.cx, clockwise.cy) == (900.0, 1000.0, 679.0, 700.0)
+    restored = coordinates.rotate_intrinsics(
+        clockwise,
+        source_size=(1080.0, 1920.0),
+        angle_degrees=270,
+        input_space=coordinates.CoordinateSpace.PIXELS_PREVIEW_SCALED,
+        output_space=coordinates.CoordinateSpace.PIXELS_RAW_NATIVE,
+        distortion_policy=coordinates.PINHOLE_ONLY_DISTORTION_POLICY,
+    )
+    assert restored == original
+    assert clockwise.dist is original.dist
+
+
+def test_intrinsics_transforms_fail_closed_on_space_or_policy_conflicts() -> None:
+    intrinsics = CameraIntrinsics(fx=1000.0, fy=1000.0, cx=960.0, cy=540.0, dist=[], source="test")
+    with pytest.raises(ValueError, match="unsupported intrinsics transform"):
+        coordinates.scale_intrinsics(
+            intrinsics,
+            source_size=(1920.0, 1080.0),
+            target_size=(960.0, 540.0),
+            input_space=coordinates.CoordinateSpace.PIXELS_RAW_NATIVE,
+            output_space=coordinates.CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+            distortion_policy=coordinates.PINHOLE_ONLY_DISTORTION_POLICY,
+        )
+    with pytest.raises(ValueError, match="distortion_policy"):
+        coordinates.scale_intrinsics(
+            intrinsics,
+            source_size=(1920.0, 1080.0),
+            target_size=(960.0, 540.0),
+            input_space=coordinates.CoordinateSpace.PIXELS_RAW_NATIVE,
+            output_space=coordinates.CoordinateSpace.PIXELS_PREVIEW_SCALED,
+            distortion_policy="silently_guess",  # type: ignore[arg-type]
+        )
 
 
 def test_world_declarations_decode_legacy_and_canonical_fields() -> None:

@@ -194,6 +194,31 @@ class ProfileCapturePayload(BaseModel):
     steps: list[ProfileCaptureStepRecord]
 
 
+class ReferenceCrop(BaseModel):
+    """Crop rectangle in the native-intrinsics pixel raster.
+
+    Absence means that the sidecar intrinsics already reference the encoded
+    ``resolution`` raster.  The explicit ``_px`` suffix prevents normalized or
+    processed-raster rectangles from being accepted by implication.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    x_px: FiniteFloat = Field(ge=0.0)
+    y_px: FiniteFloat = Field(ge=0.0)
+    width_px: FiniteFloat = Field(gt=0.0)
+    height_px: FiniteFloat = Field(gt=0.0)
+
+
+class CaptureRollingShutter(BaseModel):
+    """Optional device-declared sensor readout; absence means unavailable."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    frame_readout_s: FiniteFloat = Field(gt=0.0)
+    direction: Literal["top_to_bottom", "bottom_to_top"]
+
+
 class CaptureSidecar(StrictArtifact):
     provenance: Literal["live_recording", "camera_roll_import"] | None = None
     device_tier: Literal["A_lidar", "B_standard", "fallback"]
@@ -210,6 +235,8 @@ class CaptureSidecar(StrictArtifact):
     camera_lens: str | None = None
     locked: LockedCapture | None = None
     intrinsics: CameraIntrinsics | None = None
+    reference_crop: ReferenceCrop | None = None
+    rolling_shutter: CaptureRollingShutter | None = None
     arkit_camera_pose: RigidPose | None = None
     court_plane: Plane | None = None
     setup_pass: ARKitSetupPassSidecar | None = None

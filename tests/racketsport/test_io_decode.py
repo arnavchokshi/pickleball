@@ -24,7 +24,12 @@ from threed.racketsport.io_decode import (
     write_frame_time_table,
     time_for_frame,
 )
-from threed.racketsport.timebase import FrameAvailabilityStatus, TimebaseContract
+from threed.racketsport.timebase import (
+    FrameAvailabilityStatus,
+    RollingShutterDirection,
+    TimebaseContract,
+    TimebaseValidationError,
+)
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -216,6 +221,69 @@ def test_synthetic_vfr_contract_accounts_for_non_monotonic_pts_and_gap(
     assert build.evidence["count_consistency"]["unavailable_frame_indices"] == [4]
     encoded = build.contract.to_json_bytes()
     assert TimebaseContract.from_json_bytes(encoded).to_json_bytes() == encoded
+
+
+def test_timebase_populates_declared_rolling_shutter_and_evidence(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    clip = tmp_path / "rolling.mp4"
+    clip.write_bytes(b"fixture")
+    stream_payload = {
+        "streams": [{
+            "codec_type": "video",
+            "avg_frame_rate": "30/1",
+            "r_frame_rate": "30/1",
+            "time_base": "1/1000",
+            "duration": "0.033",
+            "nb_frames": "1",
+        }],
+        "format": {"duration": "0.033"},
+    }
+    frame_payload = {
+        "frames": [{"best_effort_timestamp": 0, "best_effort_timestamp_time": "0.000", "duration": 33}]
+    }
+    monkeypatch.setattr("threed.racketsport.io_decode._run_ffprobe", lambda _path: stream_payload)
+    monkeypatch.setattr("threed.racketsport.io_decode._run_ffprobe_frames", lambda _path: frame_payload)
+
+    build = build_timebase_artifacts(
+        clip,
+        capture_id="rolling-present",
+        capture_sidecar={
+            "rolling_shutter": {
+                "frame_readout_s": 0.008,
+                "direction": "bottom_to_top",
+            }
+        },
+    )
+
+    assert build.contract is not None
+    assert build.contract.rolling_shutter_model is not None
+    assert build.contract.rolling_shutter_model.frame_readout_s == 0.008
+    assert build.contract.rolling_shutter_model.direction is RollingShutterDirection.BOTTOM_TO_TOP
+    assert build.evidence["rolling_shutter_model_outcome"] == {
+        "status": "available",
+        "model": {
+            "model_id": "capture_sidecar_rolling_shutter_v1",
+            "frame_readout_s": 0.008,
+            "direction": "bottom_to_top",
+            "frame_time_reference": "first_read_row",
+        },
+        "missing_reason": None,
+    }
+
+    absent = build_timebase_artifacts(clip, capture_id="rolling-absent", capture_sidecar={})
+    assert absent.contract is not None
+    assert absent.contract.rolling_shutter_model is None
+    assert absent.evidence["rolling_shutter_model_outcome"] == {
+        "status": "missing",
+        "model": None,
+        "missing_reason": "sidecar_field_absent",
+    }
+
+    with pytest.raises(TimebaseValidationError, match="invalid rolling_shutter keys"):
+        build_timebase_artifacts(
+            clip,
+            capture_id="rolling-invalid",
+            capture_sidecar={"rolling_shutter": {"frame_readout_s": 0.008}},
+        )
 
 
 def test_wolverine_real_clip_exact_pts_count_and_legacy_byte_parity():

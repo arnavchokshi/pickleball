@@ -9,8 +9,10 @@ import pytest
 from threed.racketsport.court_calibration import (
     CALIBRATION_REPROJECTION_MEDIAN_GATE_PX,
     CALIBRATION_REPROJECTION_P95_GATE_PX,
+    CalibrationOrientationError,
     build_manual_tap_calibration_artifact,
     calibration_from_manual_taps,
+    calibration_intrinsics_from_sidecar,
     calibration_from_manual_tap_frames,
     camera_matrix_from_intrinsics,
     evaluate_manual_tap_plausibility,
@@ -108,6 +110,44 @@ def test_camera_matrix_uses_sidecar_intrinsics():
         [0.0, 1010.0, 540.0],
         [0.0, 0.0, 1.0],
     ]
+
+
+def test_calibration_intrinsics_preserve_rotation_zero_and_absent_parity():
+    payload = _capture_sidecar_payload()
+    absent = CaptureSidecar.model_validate(payload)
+    payload["video_rotation_angle_degrees"] = 0
+    zero = CaptureSidecar.model_validate(payload)
+
+    assert calibration_intrinsics_from_sidecar(absent) is absent.intrinsics
+    assert calibration_intrinsics_from_sidecar(zero) is zero.intrinsics
+
+
+@pytest.mark.parametrize("rotation", [90, 270])
+def test_calibration_fails_loudly_for_rotation_implying_landscape_sidecar(rotation: int):
+    payload = _capture_sidecar_payload()
+    payload["video_rotation_angle_degrees"] = rotation
+    sidecar = CaptureSidecar.model_validate(payload)
+
+    with pytest.raises(CalibrationOrientationError, match="refusing to use native intrinsics"):
+        calibration_intrinsics_from_sidecar(sidecar)
+
+
+def test_calibration_intrinsics_apply_native_crop_then_processed_raster_scale():
+    payload = _capture_sidecar_payload()
+    payload["resolution"] = [960, 540]
+    payload["reference_crop"] = {
+        "x_px": 100.0,
+        "y_px": 50.0,
+        "width_px": 1920.0,
+        "height_px": 1080.0,
+    }
+    sidecar = CaptureSidecar.model_validate(payload)
+
+    transformed = calibration_intrinsics_from_sidecar(sidecar)
+
+    assert (transformed.fx, transformed.fy) == (500.0, 505.0)
+    assert (transformed.cx, transformed.cy) == (430.0, 245.0)
+    assert transformed.dist == sidecar.intrinsics.dist
 
 
 def test_manual_tap_correspondences_map_to_template_corners():

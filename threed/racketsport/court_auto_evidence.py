@@ -7,6 +7,11 @@ import math
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
+from .coordinates import (
+    PINHOLE_ONLY_DISTORTION_POLICY,
+    CoordinateSpace,
+    scale_intrinsics,
+)
 from .court_calibration import calibration_image_size, project_planar_points
 from .court_line_evidence import (
     Segment2,
@@ -235,13 +240,13 @@ def calibration_for_image_size(calibration: CourtCalibration, *, width: int, hei
         [float(value) * scale_y for value in calibration.homography[1]],
         [float(value) for value in calibration.homography[2]],
     ]
-    intrinsics = calibration.intrinsics.model_copy(
-        update={
-            "fx": float(calibration.intrinsics.fx) * scale_x,
-            "fy": float(calibration.intrinsics.fy) * scale_y,
-            "cx": float(calibration.intrinsics.cx) * scale_x,
-            "cy": float(calibration.intrinsics.cy) * scale_y,
-        }
+    intrinsics = scale_intrinsics(
+        calibration.intrinsics,
+        source_size=(base_width, base_height),
+        target_size=(float(width), float(height)),
+        input_space=CoordinateSpace.PIXELS_RAW_NATIVE,
+        output_space=CoordinateSpace.PIXELS_PREVIEW_SCALED,
+        distortion_policy=PINHOLE_ONLY_DISTORTION_POLICY,
     )
     reprojection_scale = (abs(scale_x) + abs(scale_y)) / 2.0
     reprojection_error = calibration.reprojection_error_px.model_copy(
