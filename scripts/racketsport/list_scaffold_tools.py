@@ -36,6 +36,8 @@ RELATED_TEST_OVERRIDES = {
     "benchmark_decode": "test_decode_benchmark_summary.py",
     "benchmark_sam3dbody": "test_benchmark_sam3dbody.py",
     "build_contact_windows_from_review_inputs": "test_contact_window_review.py",
+    "build_event_head_dataset": "test_event_head_dataset.py",
+    "build_event_head_anchor_candidates": "test_event_head_anchor_candidates.py",
     "build_eval0_index": "test_eval0_index.py",
     "build_paddle_true_corner_review": "test_racket_candidate_generation.py",
     "build_report_artifacts": "test_report_artifacts.py",
@@ -50,6 +52,7 @@ RELATED_TEST_OVERRIDES = {
     "extract_label_frames": "test_label_workdir.py",
     "filter_ball_local_search": "test_ball_local_search.py",
     "finetune_pose": "test_finetune_pose_scaffold.py",
+    "finetune_event_head": "test_event_head_finetune.py",
     "ingest_testclips": "test_io_decode.py",
     "init_label_workdir": "test_label_workdir.py",
     "manifest_report": "test_manifest_report.py",
@@ -67,6 +70,7 @@ RELATED_TEST_OVERRIDES = {
     "summarize_decode_benchmarks": "test_decode_benchmark_summary.py",
     "track": "test_track_cli.py",
     "train_court_keypoint_heatmap": "test_pretraining_dataset_prep.py",
+    "train_event_head": "test_event_head_training.py",
     "train_tenniset_shot_baseline": "test_tenniset_shot_baseline.py",
     "validate_ball_audio_dataset": "test_ball_audio_dataset.py",
     "validate_corrections": "test_corrections.py",
@@ -75,6 +79,7 @@ RELATED_TEST_OVERRIDES = {
     "validate_racket_dataset": "test_racket_dataset.py",
     "validate_shot_dataset": "test_shot_dataset.py",
     "validate_testclips": "test_testclips.py",
+    "eval_event_head": "test_event_head_eval.py",
 }
 
 SCHEMA_OVERRIDES = {

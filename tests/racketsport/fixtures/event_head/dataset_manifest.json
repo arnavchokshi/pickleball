@@ -1,0 +1,6 @@
+{
+  "schema_version": 2,
+  "artifact_type": "owner_reviewed_event_dataset_manifest",
+  "synthetic_fixture": true,
+  "source_groups": ["synthetic_group"]
+}

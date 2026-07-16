@@ -12,6 +12,7 @@ Local-only additions inside them are marked "pickleball addition, not upstream" 
 | third_party/TrackNetV4 | cb7eea7988474771ceac7e880bbffc35bfa87bca | https://github.com/TrackNetV4/TrackNetV4.git | blocked-no-usable-weights (motion-fusion ckpt undeserializable upstream) | none |
 | third_party/WASB-SBDT | 923462cacdeb3353b84ddebdedb3f4b7a8553b0f | https://github.com/nttcom/WASB-SBDT.git | WASB inference (default ball stage) | none |
 | third_party/blurball | 2f0f5496f7ba4b5b1a36790749935121b2ce972d | https://github.com/cogsys-tuebingen/blurball.git | WASB-family TRAINING fork (train_blur) + blur sidecar lineage | demo.gif (5.9MB) |
+| third_party/spot | edec4201471beed631bed374bd0b95fcdc8a2f4f | https://github.com/jhong93/spot.git | E2E-Spot reference for event spotting - eval protocol + architecture reference; labels BSD-3 | none |
 
 Ball model weights live under models/checkpoints/ (gitignored; sha256s in runs/manager/heldout_eval_ledger.md
 row 22 and runs/lanes/ball_t6_gpu2_train_20260704/eval_results/).

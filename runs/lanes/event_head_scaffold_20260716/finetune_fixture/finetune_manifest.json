@@ -1,0 +1,34 @@
+{
+  "artifact_type": "event_head_finetune_manifest",
+  "checkpoint": "runs/lanes/event_head_scaffold_20260716/finetune_fixture/event_head_finetuned.pt",
+  "config": {
+    "classes": [
+      "background",
+      "HIT",
+      "BOUNCE"
+    ],
+    "image_size": 32,
+    "steps": 2,
+    "window_frames": 3
+  },
+  "decision_counts": {
+    "none": 1,
+    "paddle": 1
+  },
+  "hard_negative_count": 1,
+  "license_posture": "RD_ONLY",
+  "losses": [
+    0.4706847369670868,
+    0.4596785306930542
+  ],
+  "other_excluded_from_typed": 0,
+  "provenance": {
+    "git_head": "05b3ed38c8c03e2e6626b0b2dc833834931219d5",
+    "manifest_sha256": "d751c08f5bb167daac1bf841fc33432b6b3c78636c2c3fb4631d35f8888311c7",
+    "pretrain_sha256": "3080532e26916cf27486df36d24c0dc167ff1f7602087e74eee325254d74f351",
+    "reviewed_sha256": "63f0427ef0d044ab9a7485802b22de41f0f5e14f7afaf1f325ab17944561a670"
+  },
+  "reviewed_schema_version": 2,
+  "schema_version": 1,
+  "verified": false
+}

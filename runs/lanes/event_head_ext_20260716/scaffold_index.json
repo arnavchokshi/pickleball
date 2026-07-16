@@ -1,0 +1,3017 @@
+{
+  "artifact_type": "racketsport_scaffold_tool_index",
+  "execution": {
+    "claims_build_or_eval_status": false,
+    "cpu_only": true,
+    "downloads": false,
+    "mutates_repo": false,
+    "runs_scaffold_commands": false,
+    "uses_gpu": false
+  },
+  "schema_root": "docs/racketsport",
+  "schema_version": 3,
+  "scope": {
+    "excluded_globs": [],
+    "indexed_globs": [
+      "scripts/racketsport/*.py",
+      "scripts/racketsport/*.sh",
+      "scripts/*.py",
+      "scripts/*.sh"
+    ],
+    "repo_wide_hygiene_report": false
+  },
+  "scripts_root": "scripts/racketsport",
+  "summary": {
+    "category_counts": {
+      "ball": 45,
+      "body": 47,
+      "calibration": 25,
+      "contact": 11,
+      "dataset": 26,
+      "decode": 5,
+      "env": 8,
+      "eval": 29,
+      "label": 34,
+      "model": 5,
+      "physics": 10,
+      "pipeline": 1,
+      "racket": 11,
+      "replay": 9,
+      "report": 23,
+      "serving": 1,
+      "shot": 4,
+      "tracking": 1,
+      "unknown": 1
+    },
+    "missing_direct_cli_reference_tests": 0,
+    "missing_matching_json_schema_files": 281,
+    "missing_related_tests": 0,
+    "tool_count": 296,
+    "with_direct_cli_reference_tests": 296,
+    "with_matching_json_schema_files": 15,
+    "with_related_tests": 296
+  },
+  "tests_root": "tests/racketsport",
+  "tools": [
+    {
+      "category": "label",
+      "command_path": "scripts/autolabel.py",
+      "direct_cli_reference_test": "tests/racketsport/test_autolabel_bootstrap.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_autolabel_bootstrap.py",
+      "stem": "autolabel",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "model",
+      "command_path": "scripts/download_checkpoints.sh",
+      "direct_cli_reference_test": "tests/racketsport/test_shell_scripts.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shell_scripts.py",
+      "stem": "download_checkpoints",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/gpu-eval-run.sh",
+      "direct_cli_reference_test": "tests/racketsport/test_process_video.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_process_video.py",
+      "stem": "gpu-eval-run",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "env",
+      "command_path": "scripts/gpu-train-lock.sh",
+      "direct_cli_reference_test": "tests/racketsport/test_shell_scripts.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shell_scripts.py",
+      "stem": "gpu-train-lock",
+      "task_prefix": null,
+      "workstream": "ENV"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/aggregate_roboflow_corpus.py",
+      "direct_cli_reference_test": "tests/racketsport/test_roboflow_corpus.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_roboflow_corpus.py",
+      "stem": "aggregate_roboflow_corpus",
+      "task_prefix": "P1-0",
+      "workstream": "DATA"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/apply_ball_physics_fill.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cli_help.py",
+      "stem": "apply_ball_physics_fill",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/apply_ball_player_proximity_prior.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_player_proximity_prior.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_player_proximity_prior.py",
+      "stem": "apply_ball_player_proximity_prior",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/apply_body_world_label_review_corrections.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_world_label_review_corrections.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_world_label_review_corrections.py",
+      "stem": "apply_body_world_label_review_corrections",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/apply_confidence_gate.py",
+      "direct_cli_reference_test": "tests/racketsport/test_confidence_gate_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_confidence_gate_cli.py",
+      "stem": "apply_confidence_gate",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/apply_foot_pin.py",
+      "direct_cli_reference_test": "tests/racketsport/test_apply_foot_pin_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_apply_foot_pin_cli.py",
+      "stem": "apply_foot_pin",
+      "task_prefix": null,
+      "workstream": "E2E"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/apply_manual_court_inout.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_manual_court_inout.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_manual_court_inout.py",
+      "stem": "apply_manual_court_inout",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/apply_placement.py",
+      "direct_cli_reference_test": "tests/racketsport/test_placement.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_placement.py",
+      "stem": "apply_placement",
+      "task_prefix": null,
+      "workstream": "E2E"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/apply_review_inputs_to_contact_review.py",
+      "direct_cli_reference_test": "tests/racketsport/test_contact_window_review.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_contact_window_review.py",
+      "stem": "apply_review_inputs_to_contact_review",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/apply_sam3d_wrist_bone_lock.py",
+      "direct_cli_reference_test": "tests/racketsport/test_apply_sam3d_wrist_bone_lock_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_apply_sam3d_wrist_bone_lock_cli.py",
+      "stem": "apply_sam3d_wrist_bone_lock",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "decode",
+      "command_path": "scripts/racketsport/attribute_body_decode_residual.py",
+      "direct_cli_reference_test": "tests/racketsport/test_attribute_body_decode_residual.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_attribute_body_decode_residual.py",
+      "stem": "attribute_body_decode_residual",
+      "task_prefix": null,
+      "workstream": null
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/audit_coaching_facts.py",
+      "direct_cli_reference_test": "tests/racketsport/test_audit_coaching_facts_cli.py",
+      "matching_schema": "docs/racketsport/coaching_facts_schema.json",
+      "related_test": "tests/racketsport/test_coaching_facts.py",
+      "stem": "audit_coaching_facts",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/audit_dead_code.py",
+      "direct_cli_reference_test": "tests/racketsport/test_dead_code_audit.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_dead_code_audit.py",
+      "stem": "audit_dead_code",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/audit_label_drafts.py",
+      "direct_cli_reference_test": "tests/racketsport/test_label_draft_audit.py",
+      "matching_schema": "docs/racketsport/label_draft_audit_schema.json",
+      "related_test": "tests/racketsport/test_label_draft_audit.py",
+      "stem": "audit_label_drafts",
+      "task_prefix": "DATA-1",
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/audit_pose_temporal_jitter.py",
+      "direct_cli_reference_test": "tests/racketsport/test_audit_pose_temporal_jitter_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_audit_pose_temporal_jitter_cli.py",
+      "stem": "audit_pose_temporal_jitter",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/audit_storage_policy.py",
+      "direct_cli_reference_test": "tests/racketsport/test_truthful_capabilities.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_truthful_capabilities.py",
+      "stem": "audit_storage_policy",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/ball_loso_validation.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_loso_validation.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_loso_validation.py",
+      "stem": "ball_loso_validation",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/benchmark_ball_player_proximity_prior_internal.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_player_proximity_prior.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_player_proximity_prior.py",
+      "stem": "benchmark_ball_player_proximity_prior_internal",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/benchmark_ball_trackers.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_benchmark.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_benchmark.py",
+      "stem": "benchmark_ball_trackers",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/benchmark_ball_tracks_against_cvat.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_cvat_benchmark.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_cvat_benchmark.py",
+      "stem": "benchmark_ball_tracks_against_cvat",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "decode",
+      "command_path": "scripts/racketsport/benchmark_decode.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_decode_benchmark_summary.py",
+      "stem": "benchmark_decode",
+      "task_prefix": "EVAL-0",
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/benchmark_person_trackers.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_person_tracking_benchmark.py",
+      "stem": "benchmark_person_trackers",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/benchmark_sam3dbody.py",
+      "direct_cli_reference_test": "tests/racketsport/test_benchmark_sam3dbody.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_benchmark_sam3dbody.py",
+      "stem": "benchmark_sam3dbody",
+      "task_prefix": "EVAL-0",
+      "workstream": "EVAL"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/build_audio_onsets.py",
+      "direct_cli_reference_test": "tests/racketsport/test_audio_onsets.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_audio_onsets.py",
+      "stem": "build_audio_onsets",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/build_audio_onsets_v2.py",
+      "direct_cli_reference_test": "tests/racketsport/test_audio_onsets_v2.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_audio_onsets_v2.py",
+      "stem": "build_audio_onsets_v2",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/build_ball_2d_post_summary.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_2d_post_summary.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_2d_post_summary.py",
+      "stem": "build_ball_2d_post_summary",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/build_ball_blur_sidecar.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_blur_sidecar.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_blur_sidecar.py",
+      "stem": "build_ball_blur_sidecar",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/build_ball_eval_reset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_build_ball_eval_reset.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_build_ball_eval_reset.py",
+      "stem": "build_ball_eval_reset",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/build_ball_failure_taxonomy.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_failure_taxonomy.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_failure_taxonomy.py",
+      "stem": "build_ball_failure_taxonomy",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/build_ball_inflections.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_inflections.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_inflections.py",
+      "stem": "build_ball_inflections",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/build_ball_tracknet_cvat_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_tracknet_cvat_dataset.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_tracknet_cvat_dataset.py",
+      "stem": "build_ball_tracknet_cvat_dataset",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/build_ball_wasb_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_wasb_dataset.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_wasb_dataset.py",
+      "stem": "build_ball_wasb_dataset",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_body_compute_execution.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_compute.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_compute.py",
+      "stem": "build_body_compute_execution",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_body_full_clip_gate.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_full_clip_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_full_clip_gate.py",
+      "stem": "build_body_full_clip_gate",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_body_gate_report.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_gate_report.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_gate_report.py",
+      "stem": "build_body_gate_report",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_body_joint_quality.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_joint_quality.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_joint_quality.py",
+      "stem": "build_body_joint_quality",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_body_mesh_export.py",
+      "direct_cli_reference_test": "tests/racketsport/test_mesh_export.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_mesh_export.py",
+      "stem": "build_body_mesh_export",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_body_mesh_index.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_mesh_index.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_mesh_index.py",
+      "stem": "build_body_mesh_index",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_body_mesh_readiness.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_mesh_readiness.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_mesh_readiness.py",
+      "stem": "build_body_mesh_readiness",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_body_world_label_packet.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_world_label_packet.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_world_label_packet.py",
+      "stem": "build_body_world_label_packet",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_body_world_label_review_bundle.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_world_label_review_bundle.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_world_label_review_bundle.py",
+      "stem": "build_body_world_label_review_bundle",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_body_world_label_review_corrections_template.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_world_label_review_corrections.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_world_label_review_corrections.py",
+      "stem": "build_body_world_label_review_corrections_template",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_body_world_label_review_overlay.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_world_label_review_overlay.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_world_label_review_overlay.py",
+      "stem": "build_body_world_label_review_overlay",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/build_calibration_from_review.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_corner_review_calibration.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_corner_review_calibration.py",
+      "stem": "build_calibration_from_review",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/build_contact_window_candidates.py",
+      "direct_cli_reference_test": "tests/racketsport/test_contact_window_candidates.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_contact_window_candidates.py",
+      "stem": "build_contact_window_candidates",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/build_contact_windows_from_cues.py",
+      "direct_cli_reference_test": "tests/racketsport/test_event_fusion.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_event_fusion.py",
+      "stem": "build_contact_windows_from_cues",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_contact_windows_from_review_inputs.py",
+      "direct_cli_reference_test": "tests/racketsport/test_contact_window_review.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_contact_window_review.py",
+      "stem": "build_contact_windows_from_review_inputs",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/build_corrections_queue.py",
+      "direct_cli_reference_test": "tests/racketsport/test_corrections.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_corrections.py",
+      "stem": "build_corrections_queue",
+      "task_prefix": "RPT-1",
+      "workstream": "RPT"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/build_court_keypoint_labelspace_diagnostic.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_keypoint_labelspace_diagnostic.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_keypoint_labelspace_diagnostic.py",
+      "stem": "build_court_keypoint_labelspace_diagnostic",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/build_court_line_evidence.py",
+      "direct_cli_reference_test": "tests/racketsport/test_review_action_manifest.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_line_evidence.py",
+      "stem": "build_court_line_evidence",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/build_court_line_evidence_from_review_inputs.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_line_evidence_review_inputs.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_line_evidence_review_inputs.py",
+      "stem": "build_court_line_evidence_from_review_inputs",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/build_court_proposals.py",
+      "direct_cli_reference_test": "tests/racketsport/test_build_court_proposals_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_proposals.py",
+      "stem": "build_court_proposals",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_cvat_gate_inputs.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cvat_gate_inputs.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cvat_gate_inputs.py",
+      "stem": "build_cvat_gate_inputs",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_cvat_player_review_proxy.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cvat_player_review_proxy.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cvat_player_review_proxy.py",
+      "stem": "build_cvat_player_review_proxy",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_cvat_reviewed_ball_bounce_inout.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_cvat_bounce_labels.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_cvat_bounce_labels.py",
+      "stem": "build_cvat_reviewed_ball_bounce_inout",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/build_eval0_index.py",
+      "direct_cli_reference_test": "tests/racketsport/test_eval0_index.py",
+      "matching_schema": "docs/racketsport/eval0_index_schema.json",
+      "related_test": "tests/racketsport/test_eval0_index.py",
+      "stem": "build_eval0_index",
+      "task_prefix": "EVAL-0",
+      "workstream": "EVAL"
+    },
+    {
+      "category": "unknown",
+      "command_path": "scripts/racketsport/build_event_head_anchor_candidates.py",
+      "direct_cli_reference_test": "tests/racketsport/test_event_head_anchor_candidates.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_event_head_anchor_candidates.py",
+      "stem": "build_event_head_anchor_candidates",
+      "task_prefix": null,
+      "workstream": null
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/build_event_head_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_event_head_dataset.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_event_head_dataset.py",
+      "stem": "build_event_head_dataset",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_event_review_session.py",
+      "direct_cli_reference_test": "tests/racketsport/test_event_review_session.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_event_review_session.py",
+      "stem": "build_event_review_session",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_external_gt_aspset510_body_inputs.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_external_gt_aspset510_body_inputs.py",
+      "stem": "build_external_gt_aspset510_body_inputs",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/build_external_gt_aspset510_labels.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_build_external_gt_aspset510_labels.py",
+      "stem": "build_external_gt_aspset510_labels",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_frame_compute_plan.py",
+      "direct_cli_reference_test": "tests/racketsport/test_frame_rating.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_frame_rating.py",
+      "stem": "build_frame_compute_plan",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/build_paddle_pose_fused.py",
+      "direct_cli_reference_test": "tests/racketsport/test_paddle_pose_fused.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_paddle_pose_fused.py",
+      "stem": "build_paddle_pose_fused",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/build_paddle_proxy.py",
+      "direct_cli_reference_test": "tests/racketsport/test_paddle_proxy.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_paddle_proxy.py",
+      "stem": "build_paddle_proxy",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/build_paddle_true_corner_review.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_racket_candidate_generation.py",
+      "stem": "build_paddle_true_corner_review",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/build_person_reid_crop_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_person_reid_dataset.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_person_reid_dataset.py",
+      "stem": "build_person_reid_crop_dataset",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/build_physics_refinement_from_world.py",
+      "direct_cli_reference_test": "tests/racketsport/test_physics_world_refinement.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_physics_world_refinement.py",
+      "stem": "build_physics_refinement_from_world",
+      "task_prefix": null,
+      "workstream": "E2E"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/build_racket_candidates.py",
+      "direct_cli_reference_test": "tests/racketsport/test_racket_candidate_generation.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_racket_candidate_generation.py",
+      "stem": "build_racket_candidates",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/build_racket_model_runtime_readiness.py",
+      "direct_cli_reference_test": "tests/racketsport/test_racket_model_runtime_readiness.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_racket_model_runtime_readiness.py",
+      "stem": "build_racket_model_runtime_readiness",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/build_racket_physics_estimates.py",
+      "direct_cli_reference_test": "tests/racketsport/test_racket_physics_estimate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_racket_physics_estimate.py",
+      "stem": "build_racket_physics_estimates",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/build_racket_pose_preview.py",
+      "direct_cli_reference_test": "tests/racketsport/test_racket_pose_preview.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_racket_pose_preview.py",
+      "stem": "build_racket_pose_preview",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/build_racket_pose_readiness.py",
+      "direct_cli_reference_test": "tests/racketsport/test_racket_pose_readiness.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_racket_pose_readiness.py",
+      "stem": "build_racket_pose_readiness",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/build_racket_promotion_audit.py",
+      "direct_cli_reference_test": "tests/racketsport/test_racket_promotion_audit.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_racket_promotion_audit.py",
+      "stem": "build_racket_promotion_audit",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/build_rally_metrics.py",
+      "direct_cli_reference_test": "tests/racketsport/test_build_rally_metrics_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_rally_metrics.py",
+      "stem": "build_rally_metrics",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/build_rally_spans.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cli_help.py",
+      "stem": "build_rally_spans",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/build_real_court_corpus.py",
+      "direct_cli_reference_test": "tests/racketsport/test_build_real_court_corpus.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_build_real_court_corpus.py",
+      "stem": "build_real_court_corpus",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/build_refined_placement.py",
+      "direct_cli_reference_test": "tests/racketsport/test_placement_refine_clis.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_placement_refine_clis.py",
+      "stem": "build_refined_placement",
+      "task_prefix": "NS-04.3",
+      "workstream": "BODY"
+    },
+    {
+      "category": "replay",
+      "command_path": "scripts/racketsport/build_replay_animated_glb.py",
+      "direct_cli_reference_test": "tests/racketsport/test_replay_glb_bake.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_replay_glb_bake.py",
+      "stem": "build_replay_animated_glb",
+      "task_prefix": null,
+      "workstream": "RPL"
+    },
+    {
+      "category": "replay",
+      "command_path": "scripts/racketsport/build_replay_animated_usdz.py",
+      "direct_cli_reference_test": "tests/racketsport/test_replay_usdz_bake.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_replay_usdz_bake.py",
+      "stem": "build_replay_animated_usdz",
+      "task_prefix": null,
+      "workstream": "RPL"
+    },
+    {
+      "category": "replay",
+      "command_path": "scripts/racketsport/build_replay_readiness_report.py",
+      "direct_cli_reference_test": "tests/racketsport/test_replay_readiness.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_replay_readiness.py",
+      "stem": "build_replay_readiness_report",
+      "task_prefix": null,
+      "workstream": "RPL"
+    },
+    {
+      "category": "replay",
+      "command_path": "scripts/racketsport/build_replay_review_export.py",
+      "direct_cli_reference_test": "tests/racketsport/test_replay_export.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_replay_export.py",
+      "stem": "build_replay_review_export",
+      "task_prefix": null,
+      "workstream": "RPL"
+    },
+    {
+      "category": "replay",
+      "command_path": "scripts/racketsport/build_replay_viewer_manifest.py",
+      "direct_cli_reference_test": "tests/racketsport/test_replay_viewer_manifest.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_replay_viewer_manifest.py",
+      "stem": "build_replay_viewer_manifest",
+      "task_prefix": null,
+      "workstream": "RPL"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/build_report_artifacts.py",
+      "direct_cli_reference_test": "tests/racketsport/test_report_artifacts.py",
+      "matching_schema": "docs/racketsport/report_artifacts_schema.json",
+      "related_test": "tests/racketsport/test_report_artifacts.py",
+      "stem": "build_report_artifacts",
+      "task_prefix": "RPT-1",
+      "workstream": "RPT"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/build_review_action_manifest.py",
+      "direct_cli_reference_test": "tests/racketsport/test_review_action_manifest.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_review_action_manifest.py",
+      "stem": "build_review_action_manifest",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/build_review_packet.py",
+      "direct_cli_reference_test": "tests/racketsport/test_review_packet.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_review_packet.py",
+      "stem": "build_review_packet",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/build_reviewed_ball_bounce_inout.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_bounce_inout_review.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_bounce_inout_review.py",
+      "stem": "build_reviewed_ball_bounce_inout",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "replay",
+      "command_path": "scripts/racketsport/build_rkt_shot_replay_lane_audit.py",
+      "direct_cli_reference_test": "tests/racketsport/test_rkt_shot_replay_lane_audit.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_rkt_shot_replay_lane_audit.py",
+      "stem": "build_rkt_shot_replay_lane_audit",
+      "task_prefix": null,
+      "workstream": "RPL"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_sat_hmr_body_fallback.py",
+      "direct_cli_reference_test": "tests/racketsport/test_sat_hmr_body_fallback.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_sat_hmr_body_fallback.py",
+      "stem": "build_sat_hmr_body_fallback",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "replay",
+      "command_path": "scripts/racketsport/build_scrubber_v0_world.py",
+      "direct_cli_reference_test": "tests/racketsport/test_build_scrubber_v0_world.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_build_scrubber_v0_world.py",
+      "stem": "build_scrubber_v0_world",
+      "task_prefix": null,
+      "workstream": "RPL"
+    },
+    {
+      "category": "serving",
+      "command_path": "scripts/racketsport/build_serving_manifest.py",
+      "direct_cli_reference_test": "tests/racketsport/test_serving_manifest.py",
+      "matching_schema": "docs/racketsport/serving_manifest_schema.json",
+      "related_test": "tests/racketsport/test_serving_manifest.py",
+      "stem": "build_serving_manifest",
+      "task_prefix": "RPT-1",
+      "workstream": "RPT"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/build_shot_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_shot_dataset_builder.py",
+      "matching_schema": "docs/racketsport/shot_dataset_schema.json",
+      "related_test": "tests/racketsport/test_shot_dataset.py",
+      "stem": "build_shot_dataset",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/build_skeleton_from_2d.py",
+      "direct_cli_reference_test": "tests/racketsport/test_skeleton_lift_2d_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_skeleton_lift_2d_cli.py",
+      "stem": "build_skeleton_from_2d",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/build_source_reid_diagnostics.py",
+      "direct_cli_reference_test": "tests/racketsport/test_person_reid_diagnostics.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_person_reid_diagnostics.py",
+      "stem": "build_source_reid_diagnostics",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/build_tiled_raw_pool.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_build_tiled_raw_pool.py",
+      "stem": "build_tiled_raw_pool",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/build_variant_comparison.py",
+      "direct_cli_reference_test": "tests/racketsport/test_variant_comparison.py",
+      "matching_schema": "docs/racketsport/eval0_index_schema.json",
+      "related_test": "tests/racketsport/test_variant_comparison.py",
+      "stem": "build_variant_comparison",
+      "task_prefix": "EVAL-0",
+      "workstream": "EVAL"
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/build_virtual_world.py",
+      "direct_cli_reference_test": "tests/racketsport/test_virtual_world.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_virtual_world.py",
+      "stem": "build_virtual_world",
+      "task_prefix": null,
+      "workstream": "E2E"
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/build_virtual_world_review.py",
+      "direct_cli_reference_test": "tests/racketsport/test_review_action_manifest.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_virtual_world_review.py",
+      "stem": "build_virtual_world_review",
+      "task_prefix": null,
+      "workstream": "E2E"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/build_wrist_velocity_peaks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_review_action_manifest.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_wrist_velocity_peaks.py",
+      "stem": "build_wrist_velocity_peaks",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/calibrate.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_calibration.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_calibration.py",
+      "stem": "calibrate",
+      "task_prefix": "CAL-2",
+      "workstream": "CAL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/calibrate_charuco_device.py",
+      "direct_cli_reference_test": "tests/racketsport/test_calibrate_charuco_device.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_calibrate_charuco_device.py",
+      "stem": "calibrate_charuco_device",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/calibrate_confidence_bands.py",
+      "direct_cli_reference_test": "tests/racketsport/test_confidence_gate_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_confidence_gate_cli.py",
+      "stem": "calibrate_confidence_bands",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/calibrate_harvest_courts.py",
+      "direct_cli_reference_test": "tests/racketsport/test_calibrate_harvest_courts.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_calibrate_harvest_courts.py",
+      "stem": "calibrate_harvest_courts",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/check_cvat_video_annotations.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cvat_annotation_sanity.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cvat_annotation_sanity.py",
+      "stem": "check_cvat_video_annotations",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/check_eval_regression.py",
+      "direct_cli_reference_test": "tests/racketsport/test_eval_regression.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_eval_regression.py",
+      "stem": "check_eval_regression",
+      "task_prefix": "EVAL-1",
+      "workstream": "EVAL"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/chunk_body_mesh_assets.py",
+      "direct_cli_reference_test": "tests/racketsport/test_chunk_body_mesh_assets.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_chunk_body_mesh_assets.py",
+      "stem": "chunk_body_mesh_assets",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/classify_ball_line_calls.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_line_calls.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_line_calls.py",
+      "stem": "classify_ball_line_calls",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "shot",
+      "command_path": "scripts/racketsport/classify_shots.py",
+      "direct_cli_reference_test": "tests/racketsport/test_classify_shots_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_classify_shots_cli.py",
+      "stem": "classify_shots",
+      "task_prefix": null,
+      "workstream": "SHOT"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/compare_court_proposals_to_reviewed_keypoints.py",
+      "direct_cli_reference_test": "tests/racketsport/test_compare_court_proposals_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_compare_court_proposals_cli.py",
+      "stem": "compare_court_proposals_to_reviewed_keypoints",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/compute_match_stats.py",
+      "direct_cli_reference_test": "tests/racketsport/test_match_stats.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_match_stats.py",
+      "stem": "compute_match_stats",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/convert_player_labels_to_detections.py",
+      "direct_cli_reference_test": "tests/racketsport/test_detection_bridge.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_detection_bridge.py",
+      "stem": "convert_player_labels_to_detections",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/convert_vn_trajectories.py",
+      "direct_cli_reference_test": "tests/racketsport/test_convert_vn_trajectories.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_convert_vn_trajectories.py",
+      "stem": "convert_vn_trajectories",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/corpus_dashboard.py",
+      "direct_cli_reference_test": "tests/racketsport/test_corpus_dashboard.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_corpus_dashboard.py",
+      "stem": "corpus_dashboard",
+      "task_prefix": "P0-4",
+      "workstream": "DATA"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/court_calibration_impact_harness.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_cal_impact.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_cal_impact.py",
+      "stem": "court_calibration_impact_harness",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/court_keypoint_review_server.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_keypoint_review_server.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_keypoint_review_server.py",
+      "stem": "court_keypoint_review_server",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/court_precision_harness.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_precision_harness_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_precision_harness_cli.py",
+      "stem": "court_precision_harness",
+      "task_prefix": "CAL-2",
+      "workstream": "CAL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/diagnose_pickleball_line_family.py",
+      "direct_cli_reference_test": "tests/racketsport/test_pickleball_line_family.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_pickleball_line_family.py",
+      "stem": "diagnose_pickleball_line_family",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "env",
+      "command_path": "scripts/racketsport/doctor.py",
+      "direct_cli_reference_test": "tests/racketsport/test_doctor.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_doctor.py",
+      "stem": "doctor",
+      "task_prefix": "ENV-2",
+      "workstream": "ENV"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/estimate_camera_motion.py",
+      "direct_cli_reference_test": "tests/racketsport/test_camera_motion.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_camera_motion.py",
+      "stem": "estimate_camera_motion",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/eval_event_head.py",
+      "direct_cli_reference_test": "tests/racketsport/test_event_head_eval.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_event_head_eval.py",
+      "stem": "eval_event_head",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/evaluate_contact_timing_from_review_inputs.py",
+      "direct_cli_reference_test": "tests/racketsport/test_contact_timing_review_eval.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_contact_timing_review_eval.py",
+      "stem": "evaluate_contact_timing_from_review_inputs",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/evaluate_court_detector_v2.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_detector_v2_eval.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_detector_v2_eval.py",
+      "stem": "evaluate_court_detector_v2",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/evaluate_court_finding_technologies.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_finding_technology_benchmark.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_finding_technology_benchmark.py",
+      "stem": "evaluate_court_finding_technologies",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/evaluate_court_keypoint_no_tap.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_keypoint_no_tap_eval.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_keypoint_no_tap_eval.py",
+      "stem": "evaluate_court_keypoint_no_tap",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/evaluate_court_keypoint_owner_gate.py",
+      "direct_cli_reference_test": "tests/racketsport/test_evaluate_court_keypoint_owner_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_evaluate_court_keypoint_owner_gate.py",
+      "stem": "evaluate_court_keypoint_owner_gate",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/evaluate_court_model_v2.py",
+      "direct_cli_reference_test": "tests/racketsport/test_evaluate_court_model_v2.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_evaluate_court_model_v2.py",
+      "stem": "evaluate_court_model_v2",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/evaluate_court_proposals.py",
+      "direct_cli_reference_test": "tests/racketsport/test_evaluate_court_proposals_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_evaluate_court_proposals_cli.py",
+      "stem": "evaluate_court_proposals",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/evaluate_overlapping_court_calibration.py",
+      "direct_cli_reference_test": "tests/racketsport/test_overlapping_court_calibration_eval.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_overlapping_court_calibration_eval.py",
+      "stem": "evaluate_overlapping_court_calibration",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/export_ball_bounce_inout_review.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_bounce_inout_review.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_bounce_inout_review.py",
+      "stem": "export_ball_bounce_inout_review",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/export_ball_click_review.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_click_review.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_click_review.py",
+      "stem": "export_ball_click_review",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/export_cvat_detection_yolo_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cvat_detection_dataset.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cvat_detection_dataset.py",
+      "stem": "export_cvat_detection_yolo_dataset",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/export_cvat_tasks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_label_review_flow.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_label_review_flow.py",
+      "stem": "export_cvat_tasks",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/export_person_reid_embeddings.py",
+      "direct_cli_reference_test": "tests/racketsport/test_person_reid_diagnostics.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_person_reid_diagnostics.py",
+      "stem": "export_person_reid_embeddings",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/export_person_yolo_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_export_person_yolo_dataset_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_export_person_yolo_dataset_cli.py",
+      "stem": "export_person_yolo_dataset",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/export_review_frames.py",
+      "direct_cli_reference_test": "tests/racketsport/test_label_review_flow.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_label_review_flow.py",
+      "stem": "export_review_frames",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/export_review_inputs_to_corrections.py",
+      "direct_cli_reference_test": "tests/racketsport/test_corrections.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_corrections.py",
+      "stem": "export_review_inputs_to_corrections",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/export_sst_disagreements.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_stage2_sst.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_stage2_sst.py",
+      "stem": "export_sst_disagreements",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "model",
+      "command_path": "scripts/racketsport/export_yolo_coreml.py",
+      "direct_cli_reference_test": "tests/racketsport/test_yolo_coreml_export.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_yolo_coreml_export.py",
+      "stem": "export_yolo_coreml",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/extract_label_frames.py",
+      "direct_cli_reference_test": "tests/racketsport/test_io_decode.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_label_workdir.py",
+      "stem": "extract_label_frames",
+      "task_prefix": "DATA-1",
+      "workstream": "DATA"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/filter_ball_identity_from_clicks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_identity_filter.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_identity_filter.py",
+      "stem": "filter_ball_identity_from_clicks",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/filter_ball_local_search.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_local_search.py",
+      "stem": "filter_ball_local_search",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/filter_ball_ransac_arc.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_ransac_arc_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_ransac_arc_gate.py",
+      "stem": "filter_ball_ransac_arc",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/filter_ball_temporal.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_temporal_filter.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_temporal_filter.py",
+      "stem": "filter_ball_temporal",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/filter_ball_track_to_court.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_court_filter.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_court_filter.py",
+      "stem": "filter_ball_track_to_court",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/filter_ball_world_speed.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_world_speed_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_world_speed_gate.py",
+      "stem": "filter_ball_world_speed",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/finalize_body_world_labels.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_gate_report.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_gate_report.py",
+      "stem": "finalize_body_world_labels",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "model",
+      "command_path": "scripts/racketsport/finetune_event_head.py",
+      "direct_cli_reference_test": "tests/racketsport/test_event_head_finetune.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_event_head_finetune.py",
+      "stem": "finetune_event_head",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/finetune_pose.py",
+      "direct_cli_reference_test": "tests/racketsport/test_finetune_pose_scaffold.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_finetune_pose_scaffold.py",
+      "stem": "finetune_pose",
+      "task_prefix": "BODY-4",
+      "workstream": "BODY"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/fuse_ball_tracks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_model_fusion.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_model_fusion.py",
+      "stem": "fuse_ball_tracks",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "decode",
+      "command_path": "scripts/racketsport/gate_check_body_decode.py",
+      "direct_cli_reference_test": "tests/racketsport/test_gate_check_body_decode.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_gate_check_body_decode.py",
+      "stem": "gate_check_body_decode",
+      "task_prefix": null,
+      "workstream": null
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/generate_flight_corpus.py",
+      "direct_cli_reference_test": "tests/racketsport/test_flight_simulator.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_generate_flight_corpus.py",
+      "stem": "generate_flight_corpus",
+      "task_prefix": "P0-7",
+      "workstream": "BALL"
+    },
+    {
+      "category": "shot",
+      "command_path": "scripts/racketsport/generate_shot_classifications.py",
+      "direct_cli_reference_test": "tests/racketsport/test_shot_transfer_baseline.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shot_transfer_baseline.py",
+      "stem": "generate_shot_classifications",
+      "task_prefix": null,
+      "workstream": "SHOT"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/generate_synthetic_court_keypoints.py",
+      "direct_cli_reference_test": "tests/racketsport/test_generate_synthetic_court_keypoints.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_generate_synthetic_court_keypoints.py",
+      "stem": "generate_synthetic_court_keypoints",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/global_associate_person_tracks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_player_global_association.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_player_global_association.py",
+      "stem": "global_associate_person_tracks",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "env",
+      "command_path": "scripts/racketsport/gpu_cold_start.sh",
+      "direct_cli_reference_test": "tests/racketsport/test_shell_scripts.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shell_scripts.py",
+      "stem": "gpu_cold_start",
+      "task_prefix": null,
+      "workstream": "ENV"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/import_cvat_labels.py",
+      "direct_cli_reference_test": "tests/racketsport/test_label_review_flow.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_label_review_flow.py",
+      "stem": "import_cvat_labels",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/import_cvat_video_annotations.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cvat_video_import.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cvat_video_import.py",
+      "stem": "import_cvat_video_annotations",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/import_person_mot.py",
+      "direct_cli_reference_test": "tests/racketsport/test_person_mot_import.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_person_mot_import.py",
+      "stem": "import_person_mot",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/import_w6_labelpack_tasks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_import_w6_labelpack_tasks.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_import_w6_labelpack_tasks.py",
+      "stem": "import_w6_labelpack_tasks",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/ingest_event_review_results.py",
+      "direct_cli_reference_test": "tests/racketsport/test_event_review_ingest.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_event_review_ingest.py",
+      "stem": "ingest_event_review_results",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/ingest_online_harvest.py",
+      "direct_cli_reference_test": "tests/racketsport/test_online_harvest_ingest.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_online_harvest_ingest.py",
+      "stem": "ingest_online_harvest",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/ingest_owner_ball_labels.py",
+      "direct_cli_reference_test": "tests/racketsport/test_owner_ball_label_ingest.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_owner_ball_label_ingest.py",
+      "stem": "ingest_owner_ball_labels",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/ingest_owner_capture.py",
+      "direct_cli_reference_test": "tests/racketsport/test_owner_capture_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_owner_capture_cli.py",
+      "stem": "ingest_owner_capture",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/ingest_testclips.py",
+      "direct_cli_reference_test": "tests/racketsport/test_io_decode.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_io_decode.py",
+      "stem": "ingest_testclips",
+      "task_prefix": "DATA-1",
+      "workstream": "DATA"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/init_label_workdir.py",
+      "direct_cli_reference_test": "tests/racketsport/test_label_workdir.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_label_workdir.py",
+      "stem": "init_label_workdir",
+      "task_prefix": "DATA-1",
+      "workstream": "DATA"
+    },
+    {
+      "category": "env",
+      "command_path": "scripts/racketsport/install_fast_sam_env.sh",
+      "direct_cli_reference_test": "tests/racketsport/test_shell_scripts.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shell_scripts.py",
+      "stem": "install_fast_sam_env",
+      "task_prefix": null,
+      "workstream": "ENV"
+    },
+    {
+      "category": "env",
+      "command_path": "scripts/racketsport/install_mujoco_mjx_env.sh",
+      "direct_cli_reference_test": "tests/racketsport/test_shell_scripts.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shell_scripts.py",
+      "stem": "install_mujoco_mjx_env",
+      "task_prefix": null,
+      "workstream": "ENV"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/list_scaffold_tools.py",
+      "direct_cli_reference_test": "tests/racketsport/test_attribute_body_decode_residual.py",
+      "matching_schema": "docs/racketsport/scaffold_tool_index_schema.json",
+      "related_test": "tests/racketsport/test_attribute_body_decode_residual.py",
+      "stem": "list_scaffold_tools",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/manifest_report.py",
+      "direct_cli_reference_test": "tests/racketsport/test_manifest_report.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_manifest_report.py",
+      "stem": "manifest_report",
+      "task_prefix": "RPT-1",
+      "workstream": "RPT"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/materialize_body_frames.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_frame_materialization.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_frame_materialization.py",
+      "stem": "materialize_body_frames",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/materialize_seed_manifest.py",
+      "direct_cli_reference_test": "tests/racketsport/test_seed_manifest_materializer.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_seed_manifest_materializer.py",
+      "stem": "materialize_seed_manifest",
+      "task_prefix": "DATA-1",
+      "workstream": "DATA"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/measure_ball_trail_kinks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_measure_ball_trail_kinks.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_measure_ball_trail_kinks.py",
+      "stem": "measure_ball_trail_kinks",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/measure_visual_quality.py",
+      "direct_cli_reference_test": "tests/racketsport/test_visual_quality.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_visual_quality.py",
+      "stem": "measure_visual_quality",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/merge_body_world_label_review_decisions.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_world_label_review_corrections.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_world_label_review_corrections.py",
+      "stem": "merge_body_world_label_review_decisions",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/migrate_synthetic_court_keypoint_status.py",
+      "direct_cli_reference_test": "tests/racketsport/test_migrate_synthetic_court_keypoint_status.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_migrate_synthetic_court_keypoint_status.py",
+      "stem": "migrate_synthetic_court_keypoint_status",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/mine_ball_detector_errors.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_detector_error_mining.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_detector_error_mining.py",
+      "stem": "mine_ball_detector_errors",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/monitor_process_resources.py",
+      "direct_cli_reference_test": "tests/racketsport/test_monitor_process_resources.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_monitor_process_resources.py",
+      "stem": "monitor_process_resources",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/normalize_player_scale.py",
+      "direct_cli_reference_test": "tests/racketsport/test_normalize_player_scale_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_normalize_player_scale_cli.py",
+      "stem": "normalize_player_scale",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/opencap_body_gt_compare.py",
+      "direct_cli_reference_test": "tests/racketsport/test_opencap_body_gt_compare.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_opencap_body_gt_compare.py",
+      "stem": "opencap_body_gt_compare",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/player_court_membership.py",
+      "direct_cli_reference_test": "tests/racketsport/test_player_court_membership.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_player_court_membership.py",
+      "stem": "player_court_membership",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/pool_parity_diagnostics.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cli_help.py",
+      "stem": "pool_parity_diagnostics",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/prelabel_owner_capture.py",
+      "direct_cli_reference_test": "tests/racketsport/test_owner_capture_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_prelabel_owner_capture.py",
+      "stem": "prelabel_owner_capture",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/prepare_tracknetv3_finetune_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_pretraining_dataset_prep.py",
+      "stem": "prepare_tracknetv3_finetune_dataset",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "pipeline",
+      "command_path": "scripts/racketsport/process_video.py",
+      "direct_cli_reference_test": "tests/racketsport/test_monitor_process_resources.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_process_video.py",
+      "stem": "process_video",
+      "task_prefix": null,
+      "workstream": "E2E"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/profile_ball_model_runtime.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_model_runtime_profile.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_model_runtime_profile.py",
+      "stem": "profile_ball_model_runtime",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/profile_stage_runtime.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cli_help.py",
+      "stem": "profile_stage_runtime",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/project_court_pseudo_labels.py",
+      "direct_cli_reference_test": "tests/racketsport/test_project_court_pseudo_labels.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_project_court_pseudo_labels.py",
+      "stem": "project_court_pseudo_labels",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/promote_contact_windows.py",
+      "direct_cli_reference_test": "tests/racketsport/test_contact_window_review.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_contact_window_review.py",
+      "stem": "promote_contact_windows",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/propose_ball_bounce_candidates.py",
+      "direct_cli_reference_test": "tests/racketsport/test_propose_ball_bounce_candidates.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_propose_ball_bounce_candidates.py",
+      "stem": "propose_ball_bounce_candidates",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/rebuild_ball_trail_from_arc_solved.py",
+      "direct_cli_reference_test": "tests/racketsport/test_rebuild_ball_trail_from_arc_solved.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_rebuild_ball_trail_from_arc_solved.py",
+      "stem": "rebuild_ball_trail_from_arc_solved",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/refine_body_grounding.py",
+      "direct_cli_reference_test": "tests/racketsport/test_refine_body_grounding_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_refine_body_grounding_cli.py",
+      "stem": "refine_body_grounding",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/register_testclip.py",
+      "direct_cli_reference_test": "tests/racketsport/test_testclips.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_testclips.py",
+      "stem": "register_testclip",
+      "task_prefix": "DATA-1",
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/register_testclips_manifest.py",
+      "direct_cli_reference_test": "tests/racketsport/test_testclips.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_testclips.py",
+      "stem": "register_testclips_manifest",
+      "task_prefix": "DATA-1",
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/remote_body_dispatch.py",
+      "direct_cli_reference_test": "tests/racketsport/test_remote_body_dispatch.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_remote_body_dispatch.py",
+      "stem": "remote_body_dispatch",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/render_ball_track_overlay.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_overlay.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_overlay.py",
+      "stem": "render_ball_track_overlay",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/render_calibration_overlay.py",
+      "direct_cli_reference_test": "tests/racketsport/test_calibration_overlay.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_calibration_overlay.py",
+      "stem": "render_calibration_overlay",
+      "task_prefix": "CAL-2",
+      "workstream": "CAL"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/render_contact_window_review.py",
+      "direct_cli_reference_test": "tests/racketsport/test_contact_window_review.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_contact_window_review.py",
+      "stem": "render_contact_window_review",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/render_court_detector_v2_multiframe_overlays.py",
+      "direct_cli_reference_test": "tests/racketsport/test_render_court_detector_v2_multiframe_overlays.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_render_court_detector_v2_multiframe_overlays.py",
+      "stem": "render_court_detector_v2_multiframe_overlays",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/render_label_overlays.py",
+      "direct_cli_reference_test": "tests/racketsport/test_label_overlay.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_label_overlay.py",
+      "stem": "render_label_overlays",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/render_overlapping_court_outlier_review_packet.py",
+      "direct_cli_reference_test": "tests/racketsport/test_overlapping_court_calibration_eval.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_overlapping_court_calibration_eval.py",
+      "stem": "render_overlapping_court_outlier_review_packet",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/render_overlapping_court_top_residual_refit_review_packet.py",
+      "direct_cli_reference_test": "tests/racketsport/test_overlapping_court_calibration_eval.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_overlapping_court_calibration_eval.py",
+      "stem": "render_overlapping_court_top_residual_refit_review_packet",
+      "task_prefix": null,
+      "workstream": "RPT"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/render_player_track_overlay.py",
+      "direct_cli_reference_test": "tests/racketsport/test_player_track_overlay.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_player_track_overlay.py",
+      "stem": "render_player_track_overlay",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/render_racket_candidate_overlay.py",
+      "direct_cli_reference_test": "tests/racketsport/test_racket_candidate_overlay.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_racket_candidate_overlay.py",
+      "stem": "render_racket_candidate_overlay",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/render_shot_label_overlay.py",
+      "direct_cli_reference_test": "tests/racketsport/test_shot_label_overlay.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shot_label_overlay.py",
+      "stem": "render_shot_label_overlay",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/render_skeleton_overlay.py",
+      "direct_cli_reference_test": "tests/racketsport/test_skeleton_video_overlay.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_skeleton_video_overlay.py",
+      "stem": "render_skeleton_overlay",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/repair_person_tracks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_player_id_repair.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_player_id_repair.py",
+      "stem": "repair_person_tracks",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/repair_skeleton_upright.py",
+      "direct_cli_reference_test": "tests/racketsport/test_repair_skeleton_upright_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_repair_skeleton_upright_cli.py",
+      "stem": "repair_skeleton_upright",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/report_person_identity_failures.py",
+      "direct_cli_reference_test": "tests/racketsport/test_report_person_identity_failures.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_report_person_identity_failures.py",
+      "stem": "report_person_identity_failures",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/report_testclip_coverage.py",
+      "direct_cli_reference_test": "tests/racketsport/test_testclip_coverage_report.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_testclip_coverage_report.py",
+      "stem": "report_testclip_coverage",
+      "task_prefix": "DATA-1",
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/rescore_body_ext3_grounding_consistent.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cli_help.py",
+      "stem": "rescore_body_ext3_grounding_consistent",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/review_input_server.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_review_input_server.py",
+      "stem": "review_input_server",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/rkt_prep_build_training_configs.py",
+      "direct_cli_reference_test": "tests/racketsport/test_rkt_prep.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_rkt_prep.py",
+      "stem": "rkt_prep_build_training_configs",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/rkt_prep_eval_paddle_boxes.py",
+      "direct_cli_reference_test": "tests/racketsport/test_rkt_prep.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_rkt_prep.py",
+      "stem": "rkt_prep_eval_paddle_boxes",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/run_ball_bounce_2d.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_bounce_2d.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_bounce_2d.py",
+      "stem": "run_ball_bounce_2d",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/run_ball_chain.py",
+      "direct_cli_reference_test": "tests/racketsport/test_run_ball_chain.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_run_ball_chain.py",
+      "stem": "run_ball_chain",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/run_ball_fp_player_proximity.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_fp_player_proximity.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_fp_player_proximity.py",
+      "stem": "run_ball_fp_player_proximity",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/run_ball_tracking_eval_suite.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_tracking_eval_suite.py",
+      "stem": "run_ball_tracking_eval_suite",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/run_body_video_smoke.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_video_smoke.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_video_smoke.py",
+      "stem": "run_body_video_smoke",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/run_body_world_label_review_decision_pipeline.py",
+      "direct_cli_reference_test": "tests/racketsport/test_body_world_label_review_corrections.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_body_world_label_review_corrections.py",
+      "stem": "run_body_world_label_review_decision_pipeline",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/run_court_detector_v2.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_detector_v2_eval.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_detector_v2_eval.py",
+      "stem": "run_court_detector_v2",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/run_court_line_keypoints.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_line_keypoint_runner.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_line_keypoint_runner.py",
+      "stem": "run_court_line_keypoints",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/run_court_temporal_lock.py",
+      "direct_cli_reference_test": "tests/racketsport/test_run_court_temporal_lock_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_run_court_temporal_lock_cli.py",
+      "stem": "run_court_temporal_lock",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/run_external_gt_aspset510_body_inference.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cli_help.py",
+      "stem": "run_external_gt_aspset510_body_inference",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/run_fast_sam_benchmark.sh",
+      "direct_cli_reference_test": "tests/racketsport/test_shell_scripts.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shell_scripts.py",
+      "stem": "run_fast_sam_benchmark",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/run_mobile_person_accuracy_sweep.py",
+      "direct_cli_reference_test": "tests/racketsport/test_mobile_person_accuracy_sweep.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_mobile_person_accuracy_sweep.py",
+      "stem": "run_mobile_person_accuracy_sweep",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "replay",
+      "command_path": "scripts/racketsport/run_mobile_person_yolo_replay.py",
+      "direct_cli_reference_test": "tests/racketsport/test_mobile_person_yolo_replay.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_mobile_person_yolo_replay.py",
+      "stem": "run_mobile_person_yolo_replay",
+      "task_prefix": null,
+      "workstream": "RPL"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/run_offline_person_authority.py",
+      "direct_cli_reference_test": "tests/racketsport/test_offline_person_authority.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_offline_person_authority.py",
+      "stem": "run_offline_person_authority",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/run_pbmat_ball.py",
+      "direct_cli_reference_test": "tests/racketsport/test_pbmat_adapter.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_pbmat_adapter.py",
+      "stem": "run_pbmat_ball",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/run_person_detector_oracle.py",
+      "direct_cli_reference_test": "tests/racketsport/test_person_detector_oracle_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_person_detector_oracle_cli.py",
+      "stem": "run_person_detector_oracle",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/run_physics_footlock.py",
+      "direct_cli_reference_test": "tests/racketsport/test_run_physics_footlock.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_run_physics_footlock.py",
+      "stem": "run_physics_footlock",
+      "task_prefix": null,
+      "workstream": "E2E"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/run_prototype_autolabel.py",
+      "direct_cli_reference_test": "tests/racketsport/test_autolabel_bootstrap.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_autolabel_bootstrap.py",
+      "stem": "run_prototype_autolabel",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "racket",
+      "command_path": "scripts/racketsport/run_racket_detector_mask_gate.py",
+      "direct_cli_reference_test": "tests/racketsport/test_racket_detector_mask_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_racket_detector_mask_gate.py",
+      "stem": "run_racket_detector_mask_gate",
+      "task_prefix": null,
+      "workstream": "RKT"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/run_raw_pool_person_authority.py",
+      "direct_cli_reference_test": "tests/racketsport/test_raw_pool_person_authority.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_raw_pool_person_authority.py",
+      "stem": "run_raw_pool_person_authority",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/run_sam3dbody_batch.py",
+      "direct_cli_reference_test": "tests/racketsport/test_hmr_deep_primitives.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_run_sam3dbody_batch.py",
+      "stem": "run_sam3dbody_batch",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/run_sam3dbody_frame.py",
+      "direct_cli_reference_test": "tests/racketsport/test_hmr_deep_primitives.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_hmr_deep_primitives.py",
+      "stem": "run_sam3dbody_frame",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/run_sam3dbody_probe.py",
+      "direct_cli_reference_test": "tests/racketsport/test_sam3dbody_probe.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_sam3dbody_probe.py",
+      "stem": "run_sam3dbody_probe",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/run_totnet_ball.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_totnet_runner_runtime.py",
+      "stem": "run_totnet_ball",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/run_tracknet_ball.py",
+      "direct_cli_reference_test": "tests/racketsport/test_tracknet_adapter.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_tracknet_adapter.py",
+      "stem": "run_tracknet_ball",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/run_tracknetv4_ball.py",
+      "direct_cli_reference_test": "tests/racketsport/test_tracknetv4_adapter.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_tracknetv4_adapter.py",
+      "stem": "run_tracknetv4_ball",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/run_wasb_ball.py",
+      "direct_cli_reference_test": "tests/racketsport/test_prelabel_owner_capture.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_prelabel_owner_capture.py",
+      "stem": "run_wasb_ball",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "label",
+      "command_path": "scripts/racketsport/run_yolo26_teacher.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_yolo26_teacher_filters.py",
+      "stem": "run_yolo26_teacher",
+      "task_prefix": null,
+      "workstream": "DATA"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/sam3dbody_persistent_worker.py",
+      "direct_cli_reference_test": "tests/racketsport/test_sam3dbody_persistent_worker.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_sam3dbody_persistent_worker.py",
+      "stem": "sam3dbody_persistent_worker",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/score_body_mhr_latent_smoothing.py",
+      "direct_cli_reference_test": "tests/racketsport/test_score_body_mhr_latent_smoothing.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_score_body_mhr_latent_smoothing.py",
+      "stem": "score_body_mhr_latent_smoothing",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/score_external_gt_aspset510_body_results.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_score_external_gt_aspset510_body_results.py",
+      "stem": "score_external_gt_aspset510_body_results",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/score_mobile_person_tracks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_mobile_person_eval.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_mobile_person_eval.py",
+      "stem": "score_mobile_person_tracks",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/score_person_track_sources.py",
+      "direct_cli_reference_test": "tests/racketsport/test_person_track_gt_scoring.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_person_track_gt_scoring.py",
+      "stem": "score_person_track_sources",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/score_skeleton_alignment.py",
+      "direct_cli_reference_test": "tests/racketsport/test_skeleton_lift_2d_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_skeleton_lift_2d_cli.py",
+      "stem": "score_skeleton_alignment",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/select_source_person_tracks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_player_source_selection.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_player_source_selection.py",
+      "stem": "select_source_person_tracks",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "env",
+      "command_path": "scripts/racketsport/setup_env.sh",
+      "direct_cli_reference_test": "tests/racketsport/test_shell_scripts.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shell_scripts.py",
+      "stem": "setup_env",
+      "task_prefix": null,
+      "workstream": "ENV"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/simple_ball_bounce_review.py",
+      "direct_cli_reference_test": "tests/racketsport/test_simple_ball_bounce_review_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_simple_ball_bounce_review_cli.py",
+      "stem": "simple_ball_bounce_review",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "env",
+      "command_path": "scripts/racketsport/smoke_models.py",
+      "direct_cli_reference_test": "tests/racketsport/test_smoke_models.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_smoke_models.py",
+      "stem": "smoke_models",
+      "task_prefix": "ENV-2",
+      "workstream": "ENV"
+    },
+    {
+      "category": "env",
+      "command_path": "scripts/racketsport/smoke_mujoco_mjx.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cli_help.py",
+      "stem": "smoke_mujoco_mjx",
+      "task_prefix": "ENV-1",
+      "workstream": "ENV"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/smooth_ball_kalman_rts.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_kalman_rts_smoother.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_kalman_rts_smoother.py",
+      "stem": "smooth_ball_kalman_rts",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/smooth_body_mhr_latent.py",
+      "direct_cli_reference_test": "tests/racketsport/test_smooth_body_mhr_latent.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_smooth_body_mhr_latent.py",
+      "stem": "smooth_body_mhr_latent",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/solve_ball_arcs.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_arc_solver.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_arc_solver.py",
+      "stem": "solve_ball_arcs",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/solve_net_anchor_court.py",
+      "direct_cli_reference_test": "tests/racketsport/test_net_anchor_court.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_net_anchor_court.py",
+      "stem": "solve_net_anchor_court",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/strict_placement_rollup.py",
+      "direct_cli_reference_test": "tests/racketsport/test_strict_placement_rollup.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_strict_placement_rollup.py",
+      "stem": "strict_placement_rollup",
+      "task_prefix": null,
+      "workstream": "E2E"
+    },
+    {
+      "category": "decode",
+      "command_path": "scripts/racketsport/summarize_decode_benchmarks.py",
+      "direct_cli_reference_test": "tests/racketsport/test_decode_benchmark_summary.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_decode_benchmark_summary.py",
+      "stem": "summarize_decode_benchmarks",
+      "task_prefix": "EVAL-0",
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/summarize_eval_runs.py",
+      "direct_cli_reference_test": "tests/racketsport/test_eval_summary.py",
+      "matching_schema": "docs/racketsport/eval_summary_schema.json",
+      "related_test": "tests/racketsport/test_eval_summary.py",
+      "stem": "summarize_eval_runs",
+      "task_prefix": "EVAL-1",
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/sweep_ball_prediction_thresholds.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_threshold_sweep.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_threshold_sweep.py",
+      "stem": "sweep_ball_prediction_thresholds",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/sweep_ball_track_thresholds_against_cvat.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_threshold_sweep.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_threshold_sweep.py",
+      "stem": "sweep_ball_track_thresholds_against_cvat",
+      "task_prefix": null,
+      "workstream": "EVAL"
+    },
+    {
+      "category": "decode",
+      "command_path": "scripts/racketsport/synthetic_body_decode_gate.py",
+      "direct_cli_reference_test": "tests/racketsport/test_synthetic_body_decode_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_synthetic_body_decode_gate.py",
+      "stem": "synthetic_body_decode_gate",
+      "task_prefix": null,
+      "workstream": null
+    },
+    {
+      "category": "tracking",
+      "command_path": "scripts/racketsport/track.py",
+      "direct_cli_reference_test": "tests/racketsport/test_track_cli.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_track_cli.py",
+      "stem": "track",
+      "task_prefix": "TRK-1",
+      "workstream": "TRK"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/train_ball_pretrain.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_pretrain_harness.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_pretrain_harness.py",
+      "stem": "train_ball_pretrain",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/train_ball_stage2.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_stage2_training.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_stage2_training.py",
+      "stem": "train_ball_stage2",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/train_court_detector_v2_multitask.py",
+      "direct_cli_reference_test": "tests/racketsport/test_court_detector_v2_model.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_court_detector_v2_model.py",
+      "stem": "train_court_detector_v2_multitask",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/train_court_keypoint_heatmap.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_pretraining_dataset_prep.py",
+      "stem": "train_court_keypoint_heatmap",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "model",
+      "command_path": "scripts/racketsport/train_court_model_v2.py",
+      "direct_cli_reference_test": "tests/racketsport/test_train_court_model_v2.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_train_court_model_v2.py",
+      "stem": "train_court_model_v2",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "model",
+      "command_path": "scripts/racketsport/train_event_head.py",
+      "direct_cli_reference_test": "tests/racketsport/test_event_head_training.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_event_head_training.py",
+      "stem": "train_event_head",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "body",
+      "command_path": "scripts/racketsport/train_person_osnet_reid.py",
+      "direct_cli_reference_test": "tests/racketsport/test_person_reid_dataset.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_train_person_osnet_reid.py",
+      "stem": "train_person_osnet_reid",
+      "task_prefix": null,
+      "workstream": "BODY"
+    },
+    {
+      "category": "shot",
+      "command_path": "scripts/racketsport/train_shots.py",
+      "direct_cli_reference_test": "tests/racketsport/test_shot_trainable_baseline.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_shot_trainable_baseline.py",
+      "stem": "train_shots",
+      "task_prefix": null,
+      "workstream": "SHOT"
+    },
+    {
+      "category": "shot",
+      "command_path": "scripts/racketsport/train_tenniset_shot_baseline.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_tenniset_shot_baseline.py",
+      "stem": "train_tenniset_shot_baseline",
+      "task_prefix": null,
+      "workstream": "SHOT"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/validate_ball_2d_post.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_2d_post_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_2d_post_gate.py",
+      "stem": "validate_ball_2d_post",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/validate_ball_3d_events.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_3d_events_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_3d_events_gate.py",
+      "stem": "validate_ball_3d_events",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/validate_ball_audio_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_audio_dataset.py",
+      "matching_schema": "docs/racketsport/ball_audio_dataset_schema.json",
+      "related_test": "tests/racketsport/test_ball_audio_dataset.py",
+      "stem": "validate_ball_audio_dataset",
+      "task_prefix": "DATA-3",
+      "workstream": "DATA"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/validate_ball_bounce.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_bounce_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_bounce_gate.py",
+      "stem": "validate_ball_bounce",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/validate_ball_capture.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_capture_protocol.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_capture_protocol.py",
+      "stem": "validate_ball_capture",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/validate_ball_court_calibration.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_court_calibration_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_court_calibration_gate.py",
+      "stem": "validate_ball_court_calibration",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/validate_ball_detector.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_detector_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_detector_gate.py",
+      "stem": "validate_ball_detector",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/validate_ball_inout.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_inout_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_inout_gate.py",
+      "stem": "validate_ball_inout",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/validate_ball_on_device.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_on_device_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_on_device_gate.py",
+      "stem": "validate_ball_on_device",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "ball",
+      "command_path": "scripts/racketsport/validate_ball_validation.py",
+      "direct_cli_reference_test": "tests/racketsport/test_ball_validation_gate.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_ball_validation_gate.py",
+      "stem": "validate_ball_validation",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/validate_corrections.py",
+      "direct_cli_reference_test": "tests/racketsport/test_corrections.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_corrections.py",
+      "stem": "validate_corrections",
+      "task_prefix": "RPT-1",
+      "workstream": "RPT"
+    },
+    {
+      "category": "calibration",
+      "command_path": "scripts/racketsport/validate_metric_calibration_15pt.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_cli_help.py",
+      "stem": "validate_metric_calibration_15pt",
+      "task_prefix": null,
+      "workstream": "CAL"
+    },
+    {
+      "category": "eval",
+      "command_path": "scripts/racketsport/validate_pipeline_artifacts.py",
+      "direct_cli_reference_test": "tests/racketsport/test_pipeline_contracts.py",
+      "matching_schema": "docs/racketsport/pipeline_contracts_schema.json",
+      "related_test": "tests/racketsport/test_pipeline_contracts.py",
+      "stem": "validate_pipeline_artifacts",
+      "task_prefix": "EVAL-4",
+      "workstream": "EVAL"
+    },
+    {
+      "category": "physics",
+      "command_path": "scripts/racketsport/validate_placement_slide.py",
+      "direct_cli_reference_test": "tests/racketsport/test_placement_refine_clis.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_placement_refine_clis.py",
+      "stem": "validate_placement_slide",
+      "task_prefix": "NS-03.BODY",
+      "workstream": "BODY"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/validate_pose_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_pose_dataset.py",
+      "matching_schema": "docs/racketsport/pose_dataset_schema.json",
+      "related_test": "tests/racketsport/test_pose_dataset.py",
+      "stem": "validate_pose_dataset",
+      "task_prefix": "DATA-2",
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/validate_racket_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_racket_dataset.py",
+      "matching_schema": "docs/racketsport/racket_dataset_schema.json",
+      "related_test": "tests/racketsport/test_racket_dataset.py",
+      "stem": "validate_racket_dataset",
+      "task_prefix": "DATA-4",
+      "workstream": "DATA"
+    },
+    {
+      "category": "contact",
+      "command_path": "scripts/racketsport/validate_rally_gating.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_rally_gating.py",
+      "stem": "validate_rally_gating",
+      "task_prefix": null,
+      "workstream": "BALL"
+    },
+    {
+      "category": "report",
+      "command_path": "scripts/racketsport/validate_reference_ranges.py",
+      "direct_cli_reference_test": "tests/racketsport/test_reference_ranges.py",
+      "matching_schema": "docs/racketsport/reference_ranges_schema.json",
+      "related_test": "tests/racketsport/test_reference_ranges.py",
+      "stem": "validate_reference_ranges",
+      "task_prefix": "P6-3",
+      "workstream": "COACH"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/validate_shot_dataset.py",
+      "direct_cli_reference_test": "tests/racketsport/test_shot_dataset.py",
+      "matching_schema": "docs/racketsport/shot_dataset_schema.json",
+      "related_test": "tests/racketsport/test_shot_dataset.py",
+      "stem": "validate_shot_dataset",
+      "task_prefix": "DATA-5",
+      "workstream": "DATA"
+    },
+    {
+      "category": "dataset",
+      "command_path": "scripts/racketsport/validate_testclips.py",
+      "direct_cli_reference_test": "tests/racketsport/test_testclips.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_testclips.py",
+      "stem": "validate_testclips",
+      "task_prefix": "DATA-1",
+      "workstream": "DATA"
+    },
+    {
+      "category": "replay",
+      "command_path": "scripts/racketsport/verify_process_video_viewer.py",
+      "direct_cli_reference_test": "tests/racketsport/test_cli_help.py",
+      "matching_schema": null,
+      "related_test": "tests/racketsport/test_verify_process_video_viewer.py",
+      "stem": "verify_process_video_viewer",
+      "task_prefix": null,
+      "workstream": "RPL"
+    }
+  ]
+}

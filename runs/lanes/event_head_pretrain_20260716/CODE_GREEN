@@ -1,0 +1,12 @@
+# CODE_GREEN — event_head_ext_20260716 RULED ADOPT (scoped pass) by G2 manager 2026-07-16T09:49:54-0700
+# Evidence: focused 7/7 EXIT 0 (unpiped), scaffold index EXIT 0 (unpiped), manager anchor-CLI smoke EXIT 0 schema-valid, full_cpu_proof artifacts present.
+# md5 pins of shipped code at ruling time:
+e68fb6e95cf9fe929a5ea4fd73acb305 scripts/racketsport/train_event_head.py
+4eb47fdfda64e50015ad4fa9bd70cb64 scripts/racketsport/build_event_head_anchor_candidates.py
+dd0c06759b98614de984acf3ff0a0aaa scripts/racketsport/build_event_head_dataset.py
+5cbb845e767a835bd30957cdd53b41cb scripts/racketsport/eval_event_head.py
+620730b5195463f8bbee7d7154185926 scripts/racketsport/finetune_event_head.py
+567216ed946a23f99a61c4dc87a45a37 threed/racketsport/event_head/__init__.py
+48565af2c9acedfa3c6bed1c8eca2f97 threed/racketsport/event_head/datasets.py
+447894ab41c5131f125b16b28df084a4 threed/racketsport/event_head/matcher.py
+bf413deb21c3f534d3728e49dd77c752 threed/racketsport/event_head/model.py

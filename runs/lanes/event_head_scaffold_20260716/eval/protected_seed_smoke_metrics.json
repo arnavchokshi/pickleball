@@ -1,0 +1,338 @@
+{
+  "artifact_type": "event_head_eval_metrics",
+  "checkpoint": "runs/lanes/event_head_scaffold_20260716/train/smoke_event_head.pt",
+  "eval_only": true,
+  "mode": "protected_owner_seed",
+  "negative_false_positive_rate": 0.0,
+  "negative_false_positives": 0,
+  "negative_rows": 21,
+  "never_training": true,
+  "other_rows_reported_separately": 1,
+  "review_only": true,
+  "row_summaries": [
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "73VurrTKCZ8_rally_0002__a__000020",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "73VurrTKCZ8_rally_0002__a__000021",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0002__a__000029",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0002__a__000036",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "73VurrTKCZ8_rally_0005__a__000003",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0008__a__000002",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0008__a__000007",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "73VurrTKCZ8_rally_0008__a__000009",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "73VurrTKCZ8_rally_0008__a__000018",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "73VurrTKCZ8_rally_0008__a__000019",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0008__a__000038",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "Ezz6HDNHlnk_rally_0002__a__000010",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "Ezz6HDNHlnk_rally_0002__a__000013",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "Ezz6HDNHlnk_rally_0002__a__000040",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "Ezz6HDNHlnk_rally_0004__a__000067",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "Ezz6HDNHlnk_rally_0006__a__000051",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "Ezz6HDNHlnk_rally_0006__a__000057",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "Ezz6HDNHlnk_rally_0007__a__000031",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000007",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000014",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000016",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000039",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000094",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000272",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000277",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000316",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000325",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000359",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "_L0HVmAlCQI_rally_0001__a__000014",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "_L0HVmAlCQI_rally_0003__a__000002",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "_L0HVmAlCQI_rally_0007__a__000015",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "_L0HVmAlCQI_rally_0007__a__000021",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "_L0HVmAlCQI_rally_0011__a__000021",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "_L0HVmAlCQI_rally_0011__a__000039",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "_L0HVmAlCQI_rally_0019__a__000005",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "wBu8bC4OfUY_rally_0002__a__000017",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000010",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000011",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000045",
+      "prediction_count": 0
+    },
+    {
+      "decision": "other",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000057",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000070",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000118",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000151",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000168",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000219",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000224",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000269",
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000272",
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000292",
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000293",
+      "prediction_count": 0
+    }
+  ],
+  "schema_version": 1,
+  "seed_rows": 50,
+  "threshold": 0.5,
+  "tolerance_sweep": [
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.0,
+          "fn": 11,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        },
+        "HIT": {
+          "f1": 0.0,
+          "fn": 17,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        }
+      },
+      "tolerance_frames": 1
+    },
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.0,
+          "fn": 11,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        },
+        "HIT": {
+          "f1": 0.0,
+          "fn": 17,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        }
+      },
+      "tolerance_frames": 2
+    }
+  ],
+  "typed_rows": 28,
+  "verified": false
+}

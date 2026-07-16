@@ -1,0 +1,56 @@
+{
+  "artifact_type": "event_head_contact_anchor_candidates",
+  "schema_version": 1,
+  "source_video": {
+    "path": "tests/racketsport/fixtures/event_head/tiny.avi",
+    "sha256": "48e23a47d253be4e529b041c6303212200d6f3dd87c4e0d0db3af63cf64eb6f1"
+  },
+  "video_provenance": "synthetic_fixture",
+  "never_training": true,
+  "review_only": true,
+  "verified": false,
+  "model": {
+    "checkpoint_path": "runs/lanes/event_head_ext_20260716/full_cpu_proof/best_event_head.pt",
+    "checkpoint_sha256": "1cfc274ab676d5e048a55ed495785dda29b4e8e8901ec26b13c73c5b368b3863",
+    "license_posture": "RD_ONLY",
+    "pretrain_data": "runs/lanes/event_head_scaffold_20260716/dataset/manifest_a.json"
+  },
+  "config": {
+    "threshold": 0.5,
+    "nms_radius_frames": 2,
+    "stride": 2,
+    "image_size": 16,
+    "window_frames": 1,
+    "fps": 10.0,
+    "pts_convention": "normalized_to_first_video_pts"
+  },
+  "events": [
+    {
+      "frame_idx": 2,
+      "pts_s": 0.2,
+      "class": "HIT",
+      "score": 0.9947157502174377
+    },
+    {
+      "frame_idx": 6,
+      "pts_s": 0.6,
+      "class": "HIT",
+      "score": 0.9947319030761719
+    },
+    {
+      "frame_idx": 9,
+      "pts_s": 0.9,
+      "class": "HIT",
+      "score": 0.9947096109390259
+    }
+  ],
+  "counts": {
+    "HIT": 3,
+    "BOUNCE": 0
+  },
+  "honest_limits": [
+    "Unpromoted event-head output; candidates require review and are never training labels.",
+    "PTS uses decode-order frame_idx/fps normalized to the first video PTS, matching protected-seed evaluation.",
+    "Overlapping-window class scores are max-merged before typed radius suppression."
+  ]
+}
