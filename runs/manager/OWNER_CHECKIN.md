@@ -13,6 +13,13 @@ timebase through the real decode seam + typed coordinates through placement/ball
 TRK fix + pb.vision decode context: `runs/HANDOFF_20260714.md`. VERIFIED=0 unchanged.
 
 ## Do these (easiest first)
+0. **NEW 2026-07-16, 2 min in a browser:** open
+   `runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/tap_corners.html`, click the
+   4 court corners in the prompted order, send back (or save) the JSON it shows. This gives the
+   pb.vision demo video a trusted court seed — both head-to-head attempts ran with an auto-preview
+   seed that graded POOR and fail-closed ALL metric 3D output. Your 4 taps are a hard prerequisite
+   for the third (and first scoreable) MOVE-1 attempt. Full context:
+   `owner_cal_seed/OWNER_CAL_SEED_ASK.md`.
 1. **Court labels, ~1h, highest value:** Docker Desktop -> CVAT up, then
    `.venv/bin/python cvat_upload/court_diversity_20260712/import_court_diversity_tasks.py`,
    label 4 shards x 25 frames per `cvat_upload/court_diversity_20260712/OWNER_GUIDE.md`.
@@ -43,9 +50,13 @@ TRK fix + pb.vision decode context: `runs/HANDOFF_20260714.md`. VERIFIED=0 uncha
 | Paddle | rectangle IoU 0.22-0.33, preview only | paddle stage 0.39s/clip | no pose/contact GT; ask 6 unlocks (paddlewire_p31_20260709) |
 | E2E speed | — | current spine 523s cold / 487s warm (Jul-12 H100); historical best 379.5s (rev-11) not current-reproducible | ~122s of wall = intended refined-arc solve; top NS-06 lever = reuse-aware solve (world_perf_20260712) |
 
-## Running right now
-BL-E ball anchor-evidence fusion (overnight, verdict pending — early signal: honest kill) ·
-docreview_20260713 (read-only doc audit). Fleet EMPTY, $0/hr.
+## Running right now (2026-07-16)
+ballarc_scale_guard (Codex, resumed): per-segment wall-clock guard for the ball 3D arc solver —
+the scaling stall that killed BOTH 41-rally head-to-head attempts is precisely located and being
+fixed; harness v2 for full-11-min pb scoring already RULED ADOPT. Track D (iOS record path) and
+Track E (your label-supply channel) run in parallel. Fleet EMPTY, $0/hr (list-confirmed 07-16).
 
-## Money (07-12 window)
-trkA 1.655h ~$2-3.5 + bodyC 1.37h ~$0.8-5.8, both deleted+list-confirmed. Total ~$3-9.
+## Money
+07-12 window: trkA 1.655h ~$2-3.5 + bodyC 1.37h ~$0.8-5.8. 07-15 window: pbv11r head-to-head
+re-run 3.93h ~$9-15 (H100 spot, deleted+list+disks-confirmed; run stalled in ball_arc — that code
+defect is what's being fixed now, no more GPU spend until it's closed). All deleted+confirmed.
