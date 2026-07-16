@@ -1,0 +1,105 @@
+{
+ "checks": [
+  {
+   "name": "REG T1 video pane top < 700",
+   "ok": true,
+   "detail": "{'videoTop': 225.75, 'nativeControls': False, 'hasStrip': True, 'markers': 168, 'playBtn': True}"
+  },
+  {
+   "name": "REG T3 timeline intact (no native controls, strip+markers, play btn)",
+   "ok": true,
+   "detail": "{'videoTop': 225.75, 'nativeControls': False, 'hasStrip': True, 'markers': 168, 'playBtn': True}"
+  },
+  {
+   "name": "REG T5 trust vocab present",
+   "ok": true,
+   "detail": "vocab scan"
+  },
+  {
+   "name": "T2 court-play >= 37.5 (baseline bar)",
+   "ok": true,
+   "detail": "court_avg=70.4 trials=[46.2, 48.5, 116.5]"
+  },
+  {
+   "name": "T2 follow-play >= 80% of court-play",
+   "ok": false,
+   "detail": "follow_avg=52.4 vs court_avg=70.4 ratio=0.74 trials=[22.8, 18.5, 116]"
+  },
+  {
+   "name": "T2 follow-paused non-regression (>=60)",
+   "ok": true,
+   "detail": "follow_paused=118.5 (round1 badge read ~97)"
+  },
+  {
+   "name": "REG degraded: preview vocabulary intact",
+   "ok": true,
+   "detail": "scan"
+  },
+  {
+   "name": "REG degraded: missing stays missing",
+   "ok": true,
+   "detail": "scan"
+  },
+  {
+   "name": "T2c honesty dock present on degraded bundle",
+   "ok": true,
+   "detail": "{'found': True, 'n': 6, 'overlaps': [], 'dockRight': 1573, 'paneRight': 1586}"
+  },
+  {
+   "name": "T2c zero badge/chip overlaps",
+   "ok": true,
+   "detail": "{'found': True, 'n': 6, 'overlaps': [], 'dockRight': 1573, 'paneRight': 1586}"
+  },
+  {
+   "name": "T2c dock stays inside pane",
+   "ok": true,
+   "detail": "{'found': True, 'n': 6, 'overlaps': [], 'dockRight': 1573, 'paneRight': 1586}"
+  },
+  {
+   "name": "T2c expanded chip: still zero overlaps",
+   "ok": true,
+   "detail": "{'overlaps': []}"
+  },
+  {
+   "name": "T10 viewer OPENS on VM manifest (video readyState>=1)",
+   "ok": true,
+   "detail": "readyState>=1=True canvas=True"
+  },
+  {
+   "name": "T10 loud recovery notice visible",
+   "ok": true,
+   "detail": "['REPLAY REVIEW\\n\\nwolverine_mixed_0200_mid_steep_corner\\nPlayers\\n4\\nCoverage gaps now\\n0/4\\nContacts in clip\\n0\\nBall now\\nnot visible\\nWarnings\\n2 notices: mesh rendered from mesh index; embedded world is skeleton-only, 2D-only ball frames outside solved arc coverage\\n3D FPS\\n85.7\\nEntity trust \u00b7"
+  },
+  {
+   "name": "T10 no raw JSON token error",
+   "ok": true,
+   "detail": "scan"
+  },
+  {
+   "name": "zero page errors",
+   "ok": true,
+   "detail": "[]"
+  }
+ ],
+ "errors": [],
+ "fps": {
+  "trials": [
+   {
+    "court_play": 46.25,
+    "follow_play": 22.75
+   },
+   {
+    "court_play": 48.5,
+    "follow_play": 18.5
+   },
+   {
+    "court_play": 116.5,
+    "follow_play": 116
+   }
+  ],
+  "court_avg": 70.41666666666667,
+  "follow_avg": 52.416666666666664,
+  "follow_paused": 118.5
+ },
+ "vm_named_error_fallback": false
+}

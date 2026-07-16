@@ -1,0 +1,88 @@
+{
+ "checks": [
+  {
+   "name": "T1 video pane top < 700",
+   "ok": true,
+   "detail": "{'videoTop': 225.75, 'uploadY': None, 'uploadVisible': False, 'page': 1127}"
+  },
+  {
+   "name": "T1 upload below video or collapsed",
+   "ok": true,
+   "detail": "{'videoTop': 225.75, 'uploadY': None, 'uploadVisible': False, 'page': 1127}"
+  },
+  {
+   "name": "T2 court-play >= 37.5 (baseline)",
+   "ok": true,
+   "detail": "court_avg=47.7 trials=[47.2, 50.2, 45.5]"
+  },
+  {
+   "name": "T2 follow within 20% of court",
+   "ok": false,
+   "detail": "follow_avg=17.9 vs court_avg=47.7"
+  },
+  {
+   "name": "T3 native video controls removed",
+   "ok": true,
+   "detail": "{'nativeControls': False, 'hasStrip': True, 'markers': 168, 'playBtn': True}"
+  },
+  {
+   "name": "T3 explicit play/pause present",
+   "ok": true,
+   "detail": "{'nativeControls': False, 'hasStrip': True, 'markers': 168, 'playBtn': True}"
+  },
+  {
+   "name": "T3 timeline strip + markers present",
+   "ok": true,
+   "detail": "{'nativeControls': False, 'hasStrip': True, 'markers': 168, 'playBtn': True}"
+  },
+  {
+   "name": "T5 trust vocab present",
+   "ok": true,
+   "detail": "vocab scan"
+  },
+  {
+   "name": "degraded: preview/absence vocabulary intact",
+   "ok": true,
+   "detail": "scan"
+  },
+  {
+   "name": "degraded: missing stays missing (ball)",
+   "ok": true,
+   "detail": "scan"
+  },
+  {
+   "name": "T10 VM manifest loads assets (stretch)",
+   "ok": false,
+   "detail": "readyState>=1=False"
+  },
+  {
+   "name": "T10 loud manifest-relative notice (stretch)",
+   "ok": false,
+   "detail": "scan"
+  },
+  {
+   "name": "zero page errors",
+   "ok": true,
+   "detail": "[]"
+  }
+ ],
+ "errors": [],
+ "fps": {
+  "trials": [
+   {
+    "court_play": 47.25,
+    "follow_play": 20.5
+   },
+   {
+    "court_play": 50.25,
+    "follow_play": 20.5
+   },
+   {
+    "court_play": 45.5,
+    "follow_play": 12.75
+   }
+  ],
+  "court_avg": 47.666666666666664,
+  "follow_avg": 17.916666666666668
+ }
+}

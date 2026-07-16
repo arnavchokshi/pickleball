@@ -5,7 +5,7 @@ export type Vec3 = [number, number, number];
 export type Matrix3 = [Vec3, Vec3, Vec3];
 export type MeshFace = [number, number, number];
 
-export type TrustBadge = "verified" | "preview" | "low_confidence";
+export type TrustBadge = "verified" | "preview" | "low_confidence" | "too_close_to_call";
 export type CoachingFactTrust = "ok" | "estimated" | "unverified_cue";
 
 export type TrustBand = {
@@ -534,6 +534,19 @@ export type TimeSampleResolution<T> = {
   insideCoverage: boolean;
 };
 
+const sortedTimeFramesCache = new WeakMap<object, readonly { t: number }[]>();
+
+/** Prepare an immutable frame array once, then reuse it for every scrub lookup. */
+export function preparedTimeFramesForLookup<T extends { t: number }>(frames: readonly T[]): readonly T[] {
+  const cached = sortedTimeFramesCache.get(frames as object);
+  if (cached) return cached as readonly T[];
+  const sorted = frames.every((frame, index) => index === 0 || frames[index - 1].t <= frame.t)
+    ? frames
+    : [...frames].sort((left, right) => left.t - right.t);
+  sortedTimeFramesCache.set(frames as object, sorted);
+  return sorted;
+}
+
 /** Canonical nearest-PTS resolver. Callers declare their entity-specific hold tolerance. */
 export function resolveTimeSample<T extends { t: number }>(
   frames: readonly T[],
@@ -541,11 +554,18 @@ export function resolveTimeSample<T extends { t: number }>(
   holdToleranceSeconds: number,
 ): TimeSampleResolution<T> {
   if (!frames.length) return { sample: undefined, staleAgeSeconds: null, insideCoverage: false };
-  const sorted = [...frames].sort((left, right) => left.t - right.t);
+  const sorted = preparedTimeFramesForLookup(frames);
   const insideCoverage = sorted[0].t <= timeSeconds && timeSeconds <= sorted[sorted.length - 1].t;
-  const nearest = sorted.reduce((best, frame) =>
-    Math.abs(frame.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? frame : best,
-  );
+  let low = 0;
+  let high = sorted.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (sorted[middle].t < timeSeconds) low = middle + 1;
+    else high = middle;
+  }
+  const after = sorted[Math.min(low, sorted.length - 1)];
+  const before = sorted[Math.max(0, low - 1)];
+  const nearest = Math.abs(before.t - timeSeconds) <= Math.abs(after.t - timeSeconds) ? before : after;
   const staleAgeSeconds = Math.abs(nearest.t - timeSeconds);
   return {
     sample: staleAgeSeconds <= Math.max(0, holdToleranceSeconds) ? nearest : undefined,
@@ -582,6 +602,19 @@ export type VirtualWorldBallFrame = {
     not_for_detection_metrics?: boolean;
   } | null;
 };
+
+const visibleBallFramesCache = new WeakMap<object, readonly VirtualWorldBallFrame[]>();
+const worldBallFramesCache = new WeakMap<object, readonly VirtualWorldBallFrame[]>();
+const frameRangeToleranceCache = new WeakMap<object, number>();
+
+function cachedVisibleBallFrames(frames: readonly VirtualWorldBallFrame[], requireWorld: boolean): readonly VirtualWorldBallFrame[] {
+  const cache = requireWorld ? worldBallFramesCache : visibleBallFramesCache;
+  const cached = cache.get(frames as object);
+  if (cached) return cached;
+  const filtered = frames.filter((frame) => frame.visible !== false && (!requireWorld || Boolean(frame.world_xyz)));
+  cache.set(frames as object, filtered);
+  return filtered;
+}
 
 export type BallTrailPoint = {
   point: Vec3;
@@ -1017,11 +1050,12 @@ export async function fetchBodyMeshChunk(
   index: BodyMeshIndex,
   window: BodyMeshIndexWindow,
   faces: BodyMeshFaces,
+  fetchImpl: (url: string) => Promise<Response> = (url) => fetch(url),
 ): Promise<BodyMesh> {
   const resolvedUrl = resolveBodyMeshAssetUrl(indexUrl, window.url);
   const cached = bodyMeshChunkFetchCache.get(resolvedUrl);
   if (cached) return cached;
-  const request = fetch(resolvedUrl)
+  const request = fetchImpl(resolvedUrl)
     .then(async (response) => {
       if (!response.ok) throw new Error(`failed to fetch body mesh chunk ${resolvedUrl}: ${response.status}`);
       const encoded = await response.arrayBuffer();
@@ -1216,11 +1250,13 @@ export function playerPresenceForTime(player: VirtualWorldPlayer, timeSeconds: n
   const allNullPose = Boolean(
     frame && frame.joints_world.length === 0 && frame.floor_world_xyz == null && frame.track_world_xy == null,
   );
-  const lastKnownFloor = player.frames
-    .filter((candidate) => candidate.t <= timeSeconds)
-    .sort((left, right) => right.t - left.t)
-    .map((candidate) => candidate.floor_world_xyz ?? (candidate.track_world_xy ? ([candidate.track_world_xy[0], candidate.track_world_xy[1], 0] as Vec3) : null))
-    .find((point): point is Vec3 => point !== null) ?? null;
+  const orderedFrames = preparedTimeFramesForLookup(player.frames);
+  let index = upperBoundFrameIndex(orderedFrames, timeSeconds);
+  let lastKnownFloor: Vec3 | null = null;
+  while (index >= 0 && lastKnownFloor === null) {
+    const candidate = orderedFrames[index--];
+    lastKnownFloor = candidate.floor_world_xyz ?? (candidate.track_world_xy ? [candidate.track_world_xy[0], candidate.track_world_xy[1], 0] : null);
+  }
   return {
     frame,
     missingEvidence: !frame || allNullPose,
@@ -1231,17 +1267,15 @@ export function playerPresenceForTime(player: VirtualWorldPlayer, timeSeconds: n
 }
 
 export function ballFrameForTime(world: VirtualWorld, timeSeconds: number): VirtualWorld["ball"]["frames"][number] | undefined {
-  const frames = world.ball.frames.filter((frame) => frame.visible !== false && frame.world_xyz);
+  const frames = cachedVisibleBallFrames(world.ball.frames, true);
   return resolveTimeSample(frames, timeSeconds, ENTITY_HOLD_TOLERANCES_SECONDS.ball).sample;
 }
 
 export function videoBallOverlayForTime(world: VirtualWorld, timeSeconds: number): VideoBallOverlay | null {
-  const frames = world.ball.frames.filter((frame) => frame.visible !== false);
+  const frames = cachedVisibleBallFrames(world.ball.frames, false);
   if (!frames.length) return null;
   if (!isWithinFrameRange(frames, timeSeconds)) return null;
-  const frame = frames.reduce((best, candidate) =>
-    Math.abs(candidate.t - timeSeconds) < Math.abs(best.t - timeSeconds) ? candidate : best,
-  );
+  const frame = resolveTimeSample(frames, timeSeconds, Number.POSITIVE_INFINITY).sample!;
   const confidenceClass = frame.conf >= 0.8 ? "high" : frame.conf >= 0.5 ? "medium" : "low";
   const interpolated = frame.xy_interpolated === true;
   return {
@@ -1284,13 +1318,32 @@ export function ballRenderInfoForTime(
   return { frame, mode: "court_plane_projection", render3d: true };
 }
 
-function isWithinFrameRange(frames: Array<{ t: number }>, timeSeconds: number): boolean {
-  const times = frames.map((frame) => frame.t).sort((a, b) => a - b);
-  const first = times[0];
-  const last = times[times.length - 1];
-  const positiveGaps = times.slice(1).map((time, index) => time - times[index]).filter((gap) => gap > 0);
-  const tolerance = positiveGaps.length ? Math.min(...positiveGaps) * 1.5 : 1 / 30;
+function isWithinFrameRange(frames: readonly { t: number }[], timeSeconds: number): boolean {
+  const ordered = preparedTimeFramesForLookup(frames);
+  const first = ordered[0].t;
+  const last = ordered[ordered.length - 1].t;
+  let tolerance = frameRangeToleranceCache.get(frames as object);
+  if (tolerance === undefined) {
+    let minGap = Number.POSITIVE_INFINITY;
+    for (let index = 1; index < ordered.length; index += 1) {
+      const gap = ordered[index].t - ordered[index - 1].t;
+      if (gap > 0 && gap < minGap) minGap = gap;
+    }
+    tolerance = Number.isFinite(minGap) ? minGap * 1.5 : 1 / 30;
+    frameRangeToleranceCache.set(frames as object, tolerance);
+  }
   return first - tolerance <= timeSeconds && timeSeconds <= last + tolerance;
+}
+
+function upperBoundFrameIndex<T extends { t: number }>(frames: readonly T[], timeSeconds: number): number {
+  let low = 0;
+  let high = frames.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (frames[middle].t <= timeSeconds) low = middle + 1;
+    else high = middle;
+  }
+  return low - 1;
 }
 
 function isWorldPointInsideCourt(world: VirtualWorld, point: Vec3, marginM: number): boolean {
@@ -1580,6 +1633,7 @@ const TRUST_BADGE_COLORS: Record<TrustBadge, string> = {
   verified: "#6cb2ff",
   preview: "#ffb454",
   low_confidence: "#8a8f98",
+  too_close_to_call: "#d6a8ff",
 };
 
 /**
@@ -2742,6 +2796,7 @@ const TRUST_BADGE_RANK: Record<TrustBadge, number> = {
   verified: 0,
   preview: 1,
   low_confidence: 2,
+  too_close_to_call: 3,
 };
 
 function meshFrameTrustBadgeForPair(from: BodyMeshFrame, to: BodyMeshFrame): TrustBadge | undefined {
@@ -3065,7 +3120,7 @@ function readTrustBand(input: unknown, path: string): TrustBand | null {
     stage: readString(input.stage, `${path}.stage`),
     gate_id: readString(input.gate_id, `${path}.gate_id`),
     gate_status: readString(input.gate_status, `${path}.gate_status`),
-    badge: readEnum(input.badge, `${path}.badge`, ["verified", "preview", "low_confidence"] as const),
+    badge: readEnum(input.badge, `${path}.badge`, ["verified", "preview", "low_confidence", "too_close_to_call"] as const),
     reason: readString(input.reason, `${path}.reason`),
     evidence_path:
       input.evidence_path === null || input.evidence_path === undefined
@@ -3455,7 +3510,7 @@ function readEnum<T extends string>(value: unknown, path: string, allowed: reado
 
 function readOptionalTrustBadge(value: unknown, path: string): TrustBadge | undefined {
   if (value === undefined || value === null) return undefined;
-  return readEnum(value, path, ["verified", "preview", "low_confidence"] as const);
+  return readEnum(value, path, ["verified", "preview", "low_confidence", "too_close_to_call"] as const);
 }
 
 function readBoolean(value: unknown, path: string): boolean {

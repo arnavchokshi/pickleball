@@ -8,6 +8,7 @@ export type SignInScreenProps = AuthApiOptions & {
    * repo's test setup): lets a static-markup test render the register-mode
    * form without simulating a click on the mode-toggle button. */
   initialMode?: Mode;
+  devManifestHint?: boolean;
 };
 
 export type Mode = "login" | "register";
@@ -38,7 +39,7 @@ export async function performSignIn(mode: Mode, credentials: SignInCredentials, 
   await login({ email: credentials.email, password: credentials.password }, options);
 }
 
-export function SignInScreen({ onAuthed, fetchImpl, baseUrl, initialMode = "login" }: SignInScreenProps) {
+export function SignInScreen({ onAuthed, fetchImpl, baseUrl, initialMode = "login", devManifestHint = false }: SignInScreenProps) {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -71,6 +72,11 @@ export function SignInScreen({ onAuthed, fetchImpl, baseUrl, initialMode = "logi
     <section className="signin-screen" aria-label="Sign in">
       <form className="signin-form" onSubmit={handleSubmit}>
         <h1>{mode === "login" ? "Sign in" : "Create account"}</h1>
+        {devManifestHint ? (
+          <aside className="dev-manifest-hint" role="note">
+            manifest param detected; to open without auth run the dev server with <code>VITE_REPLAY_VERIFY_DEV_BYPASS=1</code>
+          </aside>
+        ) : null}
         <label htmlFor="signin-email">
           <span>Email</span>
           <input

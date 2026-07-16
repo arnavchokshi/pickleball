@@ -31,3 +31,24 @@ export function replayVerifyDevBypassFromRuntime(): boolean {
     prod: import.meta.env.PROD,
   });
 }
+
+export function shouldShowManifestDevHint(input: ReplayVerifyDevBypassInput & { hasManifestParam: boolean }): boolean {
+  return Boolean(
+    input.hasManifestParam &&
+    isLoopbackHostname(input.hostname) &&
+    input.prod === false &&
+    (input.mode ?? "").trim().toLowerCase() !== "production" &&
+    (input.flag ?? "").trim() !== "1",
+  );
+}
+
+export function manifestDevHintFromRuntime(search: string): boolean {
+  if (typeof window === "undefined") return false;
+  return shouldShowManifestDevHint({
+    hasManifestParam: new URLSearchParams(search).has("manifest"),
+    flag: import.meta.env.VITE_REPLAY_VERIFY_DEV_BYPASS,
+    hostname: window.location.hostname,
+    mode: import.meta.env.MODE,
+    prod: import.meta.env.PROD,
+  });
+}

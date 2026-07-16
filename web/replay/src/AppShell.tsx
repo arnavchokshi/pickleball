@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from "react";
 
 import App, { manifestUrlFromSearch } from "./App";
 import { getAccessToken, logout as apiLogout, setAccessToken, type AuthApiOptions } from "./authApi";
-import { replayVerifyDevBypassFromRuntime } from "./devAuthBypass";
+import { manifestDevHintFromRuntime, replayVerifyDevBypassFromRuntime } from "./devAuthBypass";
 import { LibraryScreen } from "./LibraryScreen";
 import { SignInScreen } from "./SignInScreen";
 
@@ -69,7 +69,7 @@ export function AppShell({ fetchImpl, baseUrl }: AppShellProps) {
   const screen = resolveScreen(hasToken, search, replayVerifyDevBypassFromRuntime());
 
   if (screen === "signin") {
-    return <SignInScreen onAuthed={handleAuthed} fetchImpl={fetchImpl} baseUrl={baseUrl} />;
+    return <SignInScreen devManifestHint={manifestDevHintFromRuntime(search)} onAuthed={handleAuthed} fetchImpl={fetchImpl} baseUrl={baseUrl} />;
   }
   if (screen === "viewer") {
     // The 3D replay viewer -- untouched, additive-only per the lane fence.

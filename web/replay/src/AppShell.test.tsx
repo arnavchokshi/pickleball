@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -8,6 +8,8 @@ import { setAccessToken } from "./authApi";
 beforeEach(() => {
   setAccessToken(null);
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("resolveScreen", () => {
   it("routes to signin when there is no access token, regardless of search params", () => {
@@ -50,6 +52,14 @@ describe("AppShell markup", () => {
 
     expect(markup).toContain("Sign in");
     expect(markup).not.toContain("Library");
+  });
+
+  it("passes the loopback manifest deep-link hint into the sign-in screen", () => {
+    vi.stubGlobal("window", { location: { search: "?manifest=/@fs/tmp/replay.json", hostname: "127.0.0.1" } });
+    const markup = renderToStaticMarkup(<AppShell />);
+
+    expect(markup).toContain("manifest param detected");
+    expect(markup).toContain("VITE_REPLAY_VERIFY_DEV_BYPASS=1");
   });
 
   it("renders LibraryScreen when an access token is present and there is no viewer param", () => {

@@ -1,0 +1,1396 @@
+{
+ "url": "http://127.0.0.1:5173/?manifest=/@fs/Users/arnavchokshi/Desktop/pickleball/runs/lanes/webux3_audit_20260716/manifest_fresh_wolv_local.json",
+ "console": [
+  "[debug] [vite] connecting...",
+  "[debug] [vite] connected.",
+  "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+  "[warning] [.WebGL-0x114001b3800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+  "[warning] [.WebGL-0x114001b3800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+  "[warning] [.WebGL-0x114001b3800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+  "[warning] [.WebGL-0x114001b3800]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+ ],
+ "page_errors": [],
+ "requests_failed": [
+  "http://127.0.0.1:5173/@fs//Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4 :: net::ERR_ABORTED",
+  "http://127.0.0.1:5173/@fs//Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4 :: net::ERR_ABORTED"
+ ],
+ "load_wall_s": 9.41,
+ "controls": [
+  {
+   "tag": "input",
+   "type": "file",
+   "text": "",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 27,
+    "y": 325,
+    "w": 1082,
+    "h": 40
+   }
+  },
+  {
+   "tag": "button",
+   "type": "submit",
+   "text": "Predict Court",
+   "title": null,
+   "disabled": true,
+   "visible": true,
+   "rect": {
+    "x": 1119,
+    "y": 326,
+    "w": 454,
+    "h": 39
+   }
+  },
+  {
+   "tag": "a",
+   "type": null,
+   "text": "Burlington\nball_f1_three_clip_runs\nJul 5 2:09 PM",
+   "title": "burlington_gold_0300_low_steep_corner",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 332,
+    "y": 500,
+    "w": 410,
+    "h": 50
+   }
+  },
+  {
+   "tag": "a",
+   "type": null,
+   "text": "Wolverine\nvisual1_wolverine\nJul 5 3:14 PM",
+   "title": "wolverine_mixed_0200_mid_steep_corner",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 749,
+    "y": 500,
+    "w": 410,
+    "h": 50
+   }
+  },
+  {
+   "tag": "a",
+   "type": null,
+   "text": "Outdoor\nball_f1_three_clip_runs\nJul 5 2:09 PM",
+   "title": "outdoor_webcam_iynbd_1500_long_high_baseline",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1167,
+    "y": 500,
+    "w": 410,
+    "h": 50
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Reset",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 78,
+    "y": 590,
+    "w": 51,
+    "h": 24
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Ball",
+   "title": "3D ball dot",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 139,
+    "y": 597,
+    "w": 44,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Ball trail",
+   "title": "Recent 3D ball path",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 189,
+    "y": 597,
+    "w": 72,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Paddles",
+   "title": "Estimated paddle proxy faces",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 271,
+    "y": 597,
+    "w": 69,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Skeletons",
+   "title": "Player joint skeletons",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 346,
+    "y": 597,
+    "w": 82,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Solid meshes",
+   "title": "BODY solid mesh frames",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 434,
+    "y": 597,
+    "w": 102,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Player trails",
+   "title": "Recent player floor paths",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 542,
+    "y": 597,
+    "w": 95,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Ghost positioning",
+   "title": "Reference player positions when supplied",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 642,
+    "y": 597,
+    "w": 131,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Floor/contact",
+   "title": "Player floor and contact discs",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 784,
+    "y": 597,
+    "w": 104,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Events",
+   "title": "Contact and bounce markers",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 893,
+    "y": 597,
+    "w": 62,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Contact surfaces",
+   "title": "Contact-plane geometry when supplied",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 961,
+    "y": 597,
+    "w": 122,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Target zones",
+   "title": "Coaching target regions when supplied",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1089,
+    "y": 597,
+    "w": 99,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "2x FPS (interpolated)",
+   "title": "30fps display: original",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1198,
+    "y": 597,
+    "w": 152,
+    "h": 28
+   }
+  },
+  {
+   "tag": "summary",
+   "type": null,
+   "text": "DEBUG",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1429,
+    "y": 578,
+    "w": 71,
+    "h": 35
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "",
+   "title": "Review-only paddle direction arrows",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1429,
+    "y": 618,
+    "w": 71,
+    "h": 44
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "",
+   "title": "Optional whole-body hand joint dots",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1429,
+    "y": 668,
+    "w": 71,
+    "h": 44
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "",
+   "title": "Show skeleton frames flagged low-confidence by the plausibility gate",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1429,
+    "y": 718,
+    "w": 94,
+    "h": 44
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "",
+   "title": "Mesh vertex debug points",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1429,
+    "y": 768,
+    "w": 71,
+    "h": 44
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Ball focus",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 23,
+    "y": 652,
+    "w": 80,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Clear",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 109,
+    "y": 652,
+    "w": 52,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Player 19",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 23,
+    "y": 685,
+    "w": 80,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Player 20",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 109,
+    "y": 685,
+    "w": 80,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Player 21",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 195,
+    "y": 685,
+    "w": 80,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Player 22",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 280,
+    "y": 685,
+    "w": 80,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Shots",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 14,
+    "y": 732,
+    "w": 112,
+    "h": 42
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "3D",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 141,
+    "y": 737,
+    "w": 42,
+    "h": 32
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Court map",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 189,
+    "y": 737,
+    "w": 89,
+    "h": 32
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Prev Event",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 27,
+    "y": 1303,
+    "w": 86,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Next Event",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 119,
+    "y": 1303,
+    "w": 88,
+    "h": 28
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 0.37s",
+   "title": "ball inflection @ 0.37s (model estimated; low confidence, confidence 0.76)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 52,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 0.77s",
+   "title": "ball inflection @ 0.77s (model estimated; low confidence, confidence 0.87)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 85,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 0.83s",
+   "title": "ball inflection @ 0.83s (model estimated; low confidence, confidence 0.88)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 90,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 0.90s",
+   "title": "ball inflection @ 0.90s (model estimated; low confidence, confidence 0.88)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 95,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 0.97s",
+   "title": "ball inflection @ 0.97s (model estimated; low confidence, confidence 0.86)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 101,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 1.03s",
+   "title": "ball inflection @ 1.03s (model estimated; low confidence, confidence 0.77)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 106,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 1.20s",
+   "title": "ball inflection @ 1.20s (model estimated; low confidence, confidence 0.52)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 120,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 1.30s",
+   "title": "ball inflection @ 1.30s (model estimated; low confidence, confidence 0.77)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 128,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 1.37s",
+   "title": "ball inflection @ 1.37s (model estimated; low confidence, confidence 0.82)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 133,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 1.43s",
+   "title": "ball inflection @ 1.43s (model estimated; low confidence, confidence 0.77)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 139,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 1.60s",
+   "title": "ball inflection @ 1.60s (model estimated; low confidence, confidence 0.51)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 152,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 1.83s",
+   "title": "ball inflection @ 1.83s (model estimated; low confidence, confidence 0.79)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 171,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 1.93s",
+   "title": "ball inflection @ 1.93s (model estimated; low confidence, confidence 0.62)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 179,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 2.13s",
+   "title": "ball inflection @ 2.13s (model estimated; low confidence, confidence 0.71)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 195,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 2.23s",
+   "title": "ball inflection @ 2.23s (model estimated; low confidence, confidence 0.75)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 203,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 2.37s",
+   "title": "ball inflection @ 2.37s (model estimated; low confidence, confidence 0.72)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 214,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 2.43s",
+   "title": "ball inflection @ 2.43s (model estimated; low confidence, confidence 0.75)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 220,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 2.50s",
+   "title": "ball inflection @ 2.50s (model estimated; low confidence, confidence 0.72)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 225,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 2.57s",
+   "title": "ball inflection @ 2.57s (model estimated; low confidence, confidence 0.72)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 230,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 2.87s",
+   "title": "ball inflection @ 2.87s (model estimated; low confidence, confidence 0.82)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 255,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 3.00s",
+   "title": "ball inflection @ 3.00s (model estimated; low confidence, confidence 0.82)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 266,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 3.07s",
+   "title": "ball inflection @ 3.07s (model estimated; low confidence, confidence 0.75)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 271,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 3.17s",
+   "title": "ball inflection @ 3.17s (model estimated; low confidence, confidence 0.75)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 279,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 3.27s",
+   "title": "ball inflection @ 3.27s (model estimated; low confidence, confidence 0.66)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 287,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 3.33s",
+   "title": "ball inflection @ 3.33s (model estimated; low confidence, confidence 0.60)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 292,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 3.40s",
+   "title": "ball inflection @ 3.40s (model estimated; low confidence, confidence 0.60)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 298,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 4.00s",
+   "title": "ball inflection @ 4.00s (model estimated; low confidence, confidence 0.56)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 347,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 4.23s",
+   "title": "ball inflection @ 4.23s (model estimated; low confidence, confidence 0.52)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 365,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 4.33s",
+   "title": "ball inflection @ 4.33s (model estimated; low confidence, confidence 0.56)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 373,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 4.43s",
+   "title": "ball inflection @ 4.43s (model estimated; low confidence, confidence 0.72)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 382,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 4.63s",
+   "title": "ball inflection @ 4.63s (model estimated; low confidence, confidence 0.81)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 398,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 5.20s",
+   "title": "ball inflection @ 5.20s (model estimated; low confidence, confidence 0.88)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 444,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 5.27s",
+   "title": "ball inflection @ 5.27s (model estimated; low confidence, confidence 0.83)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 449,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 5.33s",
+   "title": "ball inflection @ 5.33s (model estimated; low confidence, confidence 0.92)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 454,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 5.63s",
+   "title": "ball inflection @ 5.63s (model estimated; low confidence, confidence 0.92)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 479,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 5.73s",
+   "title": "ball inflection @ 5.73s (model estimated; low confidence, confidence 0.54)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 487,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 6.60s",
+   "title": "ball inflection @ 6.60s (model estimated; low confidence, confidence 0.80)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 557,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 6.67s",
+   "title": "ball inflection @ 6.67s (model estimated; low confidence, confidence 0.80)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 563,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 7.50s",
+   "title": "ball inflection @ 7.50s (model estimated; low confidence, confidence 0.77)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 630,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 7.57s",
+   "title": "ball inflection @ 7.57s (model estimated; low confidence, confidence 0.67)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 635,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 7.77s",
+   "title": "ball inflection @ 7.77s (model estimated; low confidence, confidence 0.77)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 652,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 7.87s",
+   "title": "ball inflection @ 7.87s (model estimated; low confidence, confidence 0.69)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 660,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 7.93s",
+   "title": "ball inflection @ 7.93s (model estimated; low confidence, confidence 0.62)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 665,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 8.20s",
+   "title": "ball inflection @ 8.20s (model estimated; low confidence, confidence 0.84)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 687,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 8.33s",
+   "title": "ball inflection @ 8.33s (model estimated; low confidence, confidence 0.84)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 697,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 8.43s",
+   "title": "ball inflection @ 8.43s (model estimated; low confidence, confidence 0.82)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 706,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 8.53s",
+   "title": "ball inflection @ 8.53s (model estimated; low confidence, confidence 0.76)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 714,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 8.60s",
+   "title": "ball inflection @ 8.60s (model estimated; low confidence, confidence 0.68)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 719,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 8.70s",
+   "title": "ball inflection @ 8.70s (model estimated; low confidence, confidence 0.80)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 727,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 9.07s",
+   "title": "ball inflection @ 9.07s (model estimated; low confidence, confidence 0.88)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 757,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 9.13s",
+   "title": "ball inflection @ 9.13s (model estimated; low confidence, confidence 0.84)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 762,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 9.30s",
+   "title": "ball inflection @ 9.30s (model estimated; low confidence, confidence 0.88)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 776,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 9.37s",
+   "title": "ball inflection @ 9.37s (model estimated; low confidence, confidence 0.88)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 781,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 9.60s",
+   "title": "ball inflection @ 9.60s (model estimated; low confidence, confidence 0.89)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 800,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 9.67s",
+   "title": "ball inflection @ 9.67s (model estimated; low confidence, confidence 0.86)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 806,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "ball inflection @ 9.83s",
+   "title": "ball inflection @ 9.83s (model estimated; low confidence, confidence 0.90)",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 819,
+    "y": 1351,
+    "w": 9,
+    "h": 9
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Court",
+   "title": "Court",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1215,
+    "y": 797,
+    "w": 54,
+    "h": 30
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Follow player",
+   "title": "Follow player",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1275,
+    "y": 797,
+    "w": 101,
+    "h": 30
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Free orbit",
+   "title": "Free orbit",
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1382,
+    "y": 797,
+    "w": 79,
+    "h": 30
+   }
+  },
+  {
+   "tag": "select",
+   "type": null,
+   "text": "P19\nP20\nP21\nP22",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1516,
+    "y": 801,
+    "w": 51,
+    "h": 22
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Move\nDRAG",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1387,
+    "y": 843,
+    "w": 58,
+    "h": 42
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Orbit\nDRAG",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1451,
+    "y": 843,
+    "w": 58,
+    "h": 42
+   }
+  },
+  {
+   "tag": "button",
+   "type": "button",
+   "text": "Reset",
+   "title": null,
+   "disabled": false,
+   "visible": true,
+   "rect": {
+    "x": 1515,
+    "y": 843,
+    "w": 58,
+    "h": 42
+   }
+  }
+ ],
+ "body_text_head": "REPLAY REVIEW\n\nwolverine_mixed_0200_mid_steep_corner\nPlayers\n4\nCoverage gaps\n0/4\nContacts\n0\nBall\nnot visible\nWarnings\n2 notices: mesh rendered from mesh index; embedded world is skeleton-only, 2D-only ball frames outside solved arc coverage\n3D FPS\n5.2\nPlayer 19 (joints)\nBODY: PREVIEW\nPlayer 20 (joints)\nBODY: PREVIEW\nPlayer 21 (joints)\nBODY: PREVIEW\nPlayer 22 (joints)\nBODY: PREVIEW\nBall\nBALL: LOW CONFIDENCE\nPaddle 19 (preview)\nRKT: LOW CONFIDENCE\nPaddle 20 (preview)\nRKT: LOW CONFIDENCE\nPaddle 21 (preview)\nRKT: LOW CONFIDENCE\nPaddle 22 (preview)\nRKT: LOW CONFIDENCE\nVIDEO\nPredict Court\nPIPELINE PROGRESS\n0%\nWaiting for upload\nNo upload queued\nLATEST VIDEO RUNS\nMost recent local manifests\nBurlington\nball_f1_three_clip_runs\nJul 5 2:09 PM\nWolverine\nvisual1_wolverine\nJul 5 3:14 PM\nOutdoor\nball_f1_three_clip_runs\nJul 5 2:09 PM\nLAYERS\nReset\nBALL\nBall\nBall trail\nPLAYERS\nPaddles\nSkeletons\nSolid meshes\nPlayer trails\nGhost positioning\nEVENTS\nFloor/contact\nEvents\nContact surfaces\nTarget zones\nPLAYBACK\n2x FPS (interpolated)\noriginal\nDEBUG\nISOLATE\nBall focus\nClear\nPlayer 19\nPlayer 20\nPlayer 21\nPlayer 22\nShots\n3D\nCourt map\nball\n7.13s\n0 boxes\n3D contact: p20, p21, p22\nball: video high\nlabels: none\nPrev Event\nNext Event\nMeasured\nModel estimated\nPhysics predicted\nRally 1\nball inflection @ 0.37s\nball inflection @ 0.77s\nball inflection @ 0.83s\nball inflection @ 0.90s\nball inflection @ 0.97s\nball inflection @ 1.03s\nball inflection @ 1.20s\nball inflection @ 1.30s\nball inflection @ 1.37s\nball inflection @ 1.43s\nball inflection @ 1.60s\nball inflection @ 1.83s\nball inflection @ 1.93s\nball inflection @ 2.13s\nball inflection @ 2.23s\nball inflection @ 2.37s\nball inflection @ 2.43s\nball inflection @ 2.50s\nball inflection @ 2.57s\nball inflection @ 2.87s\nball inflection @ 3.00s\nball inflection @ 3.07s\nball inflection @ 3.17s\nball inflection @ 3.27s\nball inflection @ 3.33s\nball inflection @ 3.40s\nball inflection @ 4.00s\nball inflection @ 4.23s\nball inflection @ 4.33s\nball inflection @ 4.43s\nball inflection @ 4.63s\nball inflection @ 5.20s\nball inflection @ 5.27s\nball inflection @ 5.33s\nball inflection @ 5.63s\nball inflection @ 5.73s\nball inflection @ 6.60s\nball inflection @ 6.67s\nball inflection @ 7.50s\nball inflection @ 7.57s\nball inflection @ 7.77s\nball inflection @ 7.87s\nball inflection @ 7.93s\nball inflection @ 8.20s\nball inflection @ 8.33s\nball inflection @ 8.43s\nball inflection @ 8.53s\nball inflection @ 8.60s\nball inflection @ 8.70s\nball inflection @ 9.07s\nball inflection @ 9.13s\nball inflection @ 9.30s\nball inflection @ 9.37s\nball inflection @ 9.60s\nball inflection @ 9.67s\nball inflection @ 9.83s\nCourt\nFollow player\nFree orbit\nFollow\nP19\nP20\nP21\nP22\nball: not visible\nBall trail: no data at this time\nCourt\n3\nmesh: computed 30fps + interpolated x2 (102 safe pairs)\nMove\nDRAG\nOrbit\nDRAG\nReset",
+ "canvases": [
+  {
+   "w": 1080,
+   "h": 898,
+   "cw": 720,
+   "ch": 599
+  }
+ ],
+ "videos": [
+  {
+   "dur": 10,
+   "ready": 4,
+   "w": 1920,
+   "h": 1080,
+   "paused": true
+  }
+ ]
+}

@@ -8,6 +8,11 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { activeReplayPointForTime, parseReplayScene, resolveReplaySceneAssetUrl, type ReplayScene } from "./replayScene";
 import { CourtMapPanel } from "./CourtMapPanel";
 import {
+  fetchJsonWithManifestRelativeRecovery,
+  fetchWithManifestRelativeRecovery,
+  manifestRelativeRecoveryUrl,
+} from "./assetRecovery";
+import {
   parseBallArcRender,
   replayViewFromSearch,
   sampleBallArcRenderAtTime,
@@ -26,6 +31,7 @@ import {
   type BounceCandidate,
 } from "./components/modules/ballTrail";
 import { UploadPanel } from "./UploadPanel";
+import { createPlaybackClock, createThrottledTimePublisher, type PlaybackClock } from "./playbackClock";
 import {
   buildShotTrailGroups,
   filterShots,
@@ -42,6 +48,7 @@ import {
 } from "./shotTrails";
 import {
   activeBallContactPlayerIds,
+  ballFrameForTime,
   ballCoverageKpiReadout,
   ballTrailSegmentsForTime,
   ballRenderInfoForTime,
@@ -355,7 +362,7 @@ export function bodyMeshMaterialForTrustBadge(badge: TrustBadge | undefined): Bo
   if (badge === undefined || badge === "preview") {
     return { fillColor: "#ffb454", emissiveColor: "#5a3500", opacityScale: 0.62, label: "estimated" };
   }
-  if (badge === "low_confidence") {
+  if (badge === "low_confidence" || badge === "too_close_to_call") {
     return { fillColor: "#8a8f98", emissiveColor: "#15171b", opacityScale: 0.42, label: "estimated" };
   }
   return { fillColor: "#b4f2bf", emissiveColor: "#102d18", opacityScale: 1, label: "solid" };
@@ -403,7 +410,10 @@ export function geometryForSolidBodyMeshFrame(
 ): BufferGeometry {
   const key = solidBodyMeshGeometryKey(playerId, frame);
   const cached = cache.geometries.get(key);
-  if (cached) return cached;
+  if (cached) {
+    if (frame.mesh_interpolated) updateIndexedMeshPositions(cached, frame.mesh_vertices_world, cache);
+    return cached;
+  }
   const geometry = geometryFromIndexedMesh(frame.mesh_vertices_world, frame.mesh_faces);
   cache.normalComputeCount += 1;
   cache.geometries.set(key, geometry);
@@ -412,9 +422,28 @@ export function geometryForSolidBodyMeshFrame(
 
 function solidBodyMeshGeometryKey(playerId: number, frame: ActiveBodyMeshFrame["frame"]): string {
   if (frame.mesh_interpolated && frame.interpolation) {
-    return `${playerId}:interp:${frame.interpolation.from_frame_idx}:${frame.interpolation.to_frame_idx}:${frame.interpolation.alpha}`;
+    return `${playerId}:interp:${frame.interpolation.from_frame_idx}:${frame.interpolation.to_frame_idx}`;
   }
   return `${playerId}:${frame.frame_idx}`;
+}
+
+function updateIndexedMeshPositions(
+  geometry: BufferGeometry,
+  points: Vec3[],
+  cache: SolidBodyMeshGeometryCache,
+): void {
+  const position = geometry.getAttribute("position") as BufferAttribute | undefined;
+  if (!position || position.count !== points.length) return;
+  const values = position.array as Float32Array;
+  let offset = 0;
+  for (const point of points) {
+    values[offset++] = point[0];
+    values[offset++] = point[1];
+    values[offset++] = point[2];
+  }
+  position.needsUpdate = true;
+  geometry.computeVertexNormals();
+  cache.normalComputeCount += 1;
 }
 
 export function contactPlayerIdsForViewer(
@@ -461,6 +490,45 @@ export function entityLayerEmptyStates(layers: ViewState["layers"], counts: Enti
   if (layers.targetZones && counts.targetZoneCount === 0) messages.push(counts.targetZoneDeclared ? "Target zones: referenced, renderer not ready" : "Target zones: artifact not supplied");
   if (layers.ghostPositioning && counts.ghostPositionCount === 0) messages.push(counts.ghostPositionDeclared ? "Ghost positioning: referenced, renderer not ready" : "Ghost positioning: artifact not supplied");
   return messages;
+}
+
+export type DegradedReason = { stage: string; status: string; reasons: string[] };
+
+export function degradedReasonsFromNotes(notes: readonly string[]): DegradedReason[] {
+  const prefix = "degraded_reasons_json=";
+  const parsed: DegradedReason[] = [];
+  for (const note of notes) {
+    if (!note.startsWith(prefix)) continue;
+    try {
+      const value = JSON.parse(note.slice(prefix.length));
+      if (!Array.isArray(value)) continue;
+      for (const entry of value) {
+        if (!entry || typeof entry !== "object") continue;
+        const candidate = entry as Record<string, unknown>;
+        if (typeof candidate.stage !== "string" || typeof candidate.status !== "string" || !Array.isArray(candidate.reasons)) continue;
+        parsed.push({
+          stage: candidate.stage,
+          status: candidate.status,
+          reasons: candidate.reasons.filter((reason): reason is string => typeof reason === "string"),
+        });
+      }
+    } catch {
+      // Keep malformed producer notes visible in the general notice list; do not invent structure.
+    }
+  }
+  return parsed;
+}
+
+export function timelineAbsenceText(markers: readonly TimelineMarker[], degraded: readonly DegradedReason[]): string | null {
+  if (markers.length) return null;
+  const ballReason = degraded.find((entry) => ["ball_fill", "ball", "events"].includes(entry.stage));
+  const suffix = ballReason?.reasons[0] ? `: ${ballReason.stage} ${ballReason.status} — ${ballReason.reasons[0]}` : "";
+  return `No contact/bounce/inflection/shot markers${suffix}`;
+}
+
+export function shotsEmptyText(degraded: readonly DegradedReason[]): string {
+  const relevant = degraded.find((entry) => ["shots", "events", "ball_fill", "coaching_facts"].includes(entry.stage));
+  return `No classified shots in this bundle${relevant?.reasons[0] ? ` — ${relevant.stage} ${relevant.status}: ${relevant.reasons[0]}` : ""}`;
 }
 
 const CAMERA_PRESET_LABELS: Record<CameraPreset, string> = {
@@ -612,8 +680,13 @@ export default function App() {
   const [replayScene, setReplayScene] = useState<ReplayScene | null>(null);
   const [currentTime, setCurrentTime] = useState(initialTime);
   const [videoDuration, setVideoDuration] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [videoSourceUrl, setVideoSourceUrl] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [capabilityErrors, setCapabilityErrors] = useState<Record<string, string>>({});
+  const [recoveredAssetCount, setRecoveredAssetCount] = useState(0);
   const [cameraPreset, setCameraPreset] = useState<CameraPreset>(initialCameraPreference.preset);
   const [cameraFollowPlayerId, setCameraFollowPlayerId] = useState<number | null>(initialCameraPreference.playerId);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
@@ -628,16 +701,41 @@ export default function App() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const bodyMeshChunkCacheRef = useRef<Map<number, BodyMesh>>(new Map());
   const bodyMeshChunkInflightRef = useRef<Map<number, Promise<BodyMesh>>>(new Map());
-  const currentTimeRef = useRef(0);
+  const currentTimeRef = useRef(initialTime);
+  const playbackClockRef = useRef<PlaybackClock>(createPlaybackClock(initialTime));
+  const uiTimePublisherRef = useRef<ReturnType<typeof createThrottledTimePublisher> | null>(null);
   const playbackDirectionRef = useRef<1 | -1>(1);
   const preferredInitialTimeRef = useRef(initialTime);
   const cameraDragSeqRef = useRef(0);
   const initialSeekAppliedRef = useRef(false);
+  const recoveredAssetUrlsRef = useRef(new Set<string>());
+  const attemptedVideoRecoveryRef = useRef(new Set<string>());
+  const pendingVideoRecoveryRef = useRef<string | null>(null);
+
+  if (uiTimePublisherRef.current === null) {
+    uiTimePublisherRef.current = createThrottledTimePublisher(setCurrentTime, 200);
+  }
+  const recoveryManifestUrl = manifestUrlFromSearch(window.location.search) ?? "";
+  const recordRecoveredAsset = (originalUrl: string) => {
+    if (recoveredAssetUrlsRef.current.has(originalUrl)) return;
+    recoveredAssetUrlsRef.current.add(originalUrl);
+    setRecoveredAssetCount(recoveredAssetUrlsRef.current.size);
+  };
+  const fetchReplayResponse = (url: string) =>
+    fetchWithManifestRelativeRecovery(url, recoveryManifestUrl, (input) => fetch(input), recordRecoveredAsset);
+  const fetchReplayJson = async (url: string): Promise<unknown> => {
+    return fetchJsonWithManifestRelativeRecovery(url, recoveryManifestUrl, (input) => fetch(input), recordRecoveredAsset);
+  };
 
   useEffect(() => {
     const manifestUrl = manifestUrlFromSearch(window.location.search);
     if (manifestUrl === null) {
+      recoveredAssetUrlsRef.current.clear();
+      setRecoveredAssetCount(0);
       setManifest(null);
+      setVideoSourceUrl(null);
+      attemptedVideoRecoveryRef.current.clear();
+      pendingVideoRecoveryRef.current = null;
       setBodyMesh(null);
       setBodyMeshLoadStatus(INITIAL_BODY_MESH_STATUS);
       setBallInflections(null);
@@ -665,10 +763,10 @@ export default function App() {
     async function load() {
       try {
         const manifestPayload = resolveViewerManifestUrls(
-          parseViewerManifest(await fetchJson(resolvedManifestUrl)),
+          parseViewerManifest(await fetchReplayJson(resolvedManifestUrl)),
           resolvedManifestUrl,
         );
-        const worldPayload = parseVirtualWorld(await fetchJson(manifestPayload.virtual_world_url));
+        const worldPayload = parseVirtualWorld(await fetchReplayJson(manifestPayload.virtual_world_url));
         const optionalErrors: Record<string, string> = {};
         const recordOptionalError = (capability: string, error: unknown) => {
           optionalErrors[capability] = error instanceof Error ? error.message : String(error);
@@ -676,28 +774,28 @@ export default function App() {
         const reviewStartTime = hasExplicitInitialTime ? initialTime : defaultReviewStartTime(worldPayload);
         const firstOverlay = manifestPayload.label_overlays.find((overlay) => overlay.kind === "player_boxes");
         const labelPayload = firstOverlay
-          ? await loadOptionalArtifact("player labels", () => fetchJson(firstOverlay.url), recordOptionalError)
+          ? await loadOptionalArtifact("player labels", () => fetchReplayJson(firstOverlay.url), recordOptionalError)
           : null;
         const physicsPayload = manifestPayload.physics_refinement_url
-          ? await loadOptionalArtifact("physics", async () => parsePhysicsRefinement(await fetchJson(manifestPayload.physics_refinement_url!)), recordOptionalError)
+          ? await loadOptionalArtifact("physics", async () => parsePhysicsRefinement(await fetchReplayJson(manifestPayload.physics_refinement_url!)), recordOptionalError)
           : null;
         const contactPayload = manifestPayload.contact_windows_url
-          ? await loadOptionalArtifact("contacts", async () => parseContactWindows(await fetchJson(manifestPayload.contact_windows_url!)), recordOptionalError)
+          ? await loadOptionalArtifact("contacts", async () => parseContactWindows(await fetchReplayJson(manifestPayload.contact_windows_url!)), recordOptionalError)
           : null;
         const ballInflectionsPayload = manifestPayload.ball_inflections_url
-          ? await loadOptionalArtifact("ball inflections", async () => parseBallInflections(await fetchJson(manifestPayload.ball_inflections_url!)), recordOptionalError)
+          ? await loadOptionalArtifact("ball inflections", async () => parseBallInflections(await fetchReplayJson(manifestPayload.ball_inflections_url!)), recordOptionalError)
           : null;
         const ballArcEventsSelectedPayload = manifestPayload.events_selected_url
-          ? await loadOptionalArtifact("selected events", async () => parseBallArcEventsSelected(await fetchJson(manifestPayload.events_selected_url!)), recordOptionalError)
+          ? await loadOptionalArtifact("selected events", async () => parseBallArcEventsSelected(await fetchReplayJson(manifestPayload.events_selected_url!)), recordOptionalError)
           : null;
         const reviewedBouncesPayload = manifestPayload.reviewed_bounces_url
-          ? await loadOptionalArtifact("reviewed bounces", async () => parseReviewedBounces(await fetchJson(manifestPayload.reviewed_bounces_url!)), recordOptionalError)
+          ? await loadOptionalArtifact("reviewed bounces", async () => parseReviewedBounces(await fetchReplayJson(manifestPayload.reviewed_bounces_url!)), recordOptionalError)
           : null;
         const rallySpansPayload = manifestPayload.rally_spans_url
-          ? await loadOptionalArtifact("rally spans", async () => parseRallySpans(await fetchJson(manifestPayload.rally_spans_url!)), recordOptionalError)
+          ? await loadOptionalArtifact("rally spans", async () => parseRallySpans(await fetchReplayJson(manifestPayload.rally_spans_url!)), recordOptionalError)
           : null;
         const replayScenePayload = manifestPayload.replay_scene_url
-          ? await loadOptionalArtifact("replay scene", async () => parseReplayScene(await fetchJson(manifestPayload.replay_scene_url!)), recordOptionalError)
+          ? await loadOptionalArtifact("replay scene", async () => parseReplayScene(await fetchReplayJson(manifestPayload.replay_scene_url!)), recordOptionalError)
           : null;
         let bodyMeshIndexPayload: BodyMeshIndex | null = null;
         let bodyMeshFacesPayload: BodyMeshFaces | null = null;
@@ -705,7 +803,7 @@ export default function App() {
           const indexUrl = manifestPayload.body_mesh_index_url;
           let indexJson: unknown;
           try {
-            indexJson = await fetchJson(indexUrl);
+            indexJson = await fetchReplayJson(indexUrl);
             bodyMeshIndexPayload = parseBodyMeshIndex(indexJson);
           } catch (error) {
             warnBodyMeshFailure({ stage: "index", url: indexUrl, error });
@@ -715,7 +813,7 @@ export default function App() {
           if (bodyMeshIndexPayload) {
             const facesUrl = resolveBodyMeshAssetUrl(indexUrl, bodyMeshIndexPayload.faces_url);
             try {
-              bodyMeshFacesPayload = parseBodyMeshFaces(await fetchJson(facesUrl));
+              bodyMeshFacesPayload = parseBodyMeshFaces(await fetchReplayJson(facesUrl));
             } catch (error) {
               warnBodyMeshFailure({ stage: "faces", url: facesUrl, error });
               if (!cancelled) setBodyMeshLoadStatus(meshFailureStatus("faces", facesUrl, error));
@@ -725,30 +823,36 @@ export default function App() {
         }
         const coachingFactsUrl = coachingFactsUrlFromSearch(window.location.search, manifestPayload);
         const coachingFactsPayload = coachingFactsUrl
-          ? await loadOptionalArtifact("coaching facts", async () => parseCoachingCardFacts(await fetchJson(coachingFactsUrl)), recordOptionalError)
+          ? await loadOptionalArtifact("coaching facts", async () => parseCoachingCardFacts(await fetchReplayJson(coachingFactsUrl)), recordOptionalError)
           : null;
         const shotsPayload = manifestPayload.shots_url
-          ? await loadOptionalArtifact("shots", async () => parseShots(await fetchJson(manifestPayload.shots_url!)), recordOptionalError)
+          ? await loadOptionalArtifact("shots", async () => parseShots(await fetchReplayJson(manifestPayload.shots_url!)), recordOptionalError)
           : null;
         const ballArcPayload = manifestPayload.ball_arc_solved_url
           ? await loadOptionalArtifact("ball arc solve", async () => {
-              const json = await fetchJson(manifestPayload.ball_arc_solved_url!);
+              const json = await fetchReplayJson(manifestPayload.ball_arc_solved_url!);
               return { solved: parseBallArcSolved(json), trail: parseBallTrailArtifact(json) };
             }, recordOptionalError)
           : null;
         const ballArcSolvedPayload = ballArcPayload?.solved ?? null;
         const ballTrailArtifactPayload = ballArcPayload?.trail ?? null;
         const ballArcRenderPayload = manifestPayload.ball_arc_render_url
-          ? await loadOptionalArtifact("ball arc render", async () => parseBallArcRender(await fetchJson(manifestPayload.ball_arc_render_url!)), recordOptionalError)
+          ? await loadOptionalArtifact("ball arc render", async () => parseBallArcRender(await fetchReplayJson(manifestPayload.ball_arc_render_url!)), recordOptionalError)
           : null;
         const autoBounceCandidatesUrl = manifestPayload.auto_bounce_candidates_url ?? manifestPayload.ball_bounce_candidates_url ?? null;
         const autoBounceCandidatesPayload = autoBounceCandidatesUrl
-          ? (await loadOptionalArtifact("bounce candidates", async () => parseAutoBounceCandidates(await fetchJson(autoBounceCandidatesUrl)), recordOptionalError)) ?? []
+          ? (await loadOptionalArtifact("bounce candidates", async () => parseAutoBounceCandidates(await fetchReplayJson(autoBounceCandidatesUrl)), recordOptionalError)) ?? []
           : [];
         if (cancelled) return;
+        attemptedVideoRecoveryRef.current.clear();
+        pendingVideoRecoveryRef.current = null;
+        setVideoSourceUrl(manifestPayload.video_url);
         setManifest(manifestPayload);
         setWorld(worldPayload);
         preferredInitialTimeRef.current = reviewStartTime;
+        currentTimeRef.current = reviewStartTime;
+        playbackClockRef.current.setTime(reviewStartTime);
+        uiTimePublisherRef.current?.reset();
         setCurrentTime(reviewStartTime);
         setLabelOverlay(parseLabelOverlayPayload(labelPayload));
         setPhysics(physicsPayload);
@@ -796,7 +900,7 @@ export default function App() {
     let cancelled = false;
     async function loadBodyMesh() {
       try {
-        const payload = parseBodyMesh(await fetchJson(resolvedBodyMeshUrl));
+        const payload = parseBodyMesh(await fetchReplayJson(resolvedBodyMeshUrl));
         if (!cancelled) {
           setBodyMesh(payload);
           setBodyMeshLoadStatus(meshLoadStatus("loaded", { stage: "legacy", url: resolvedBodyMeshUrl }));
@@ -851,7 +955,7 @@ export default function App() {
     let cancelled = false;
     const inflight =
       bodyMeshChunkInflightRef.current.get(cacheKey) ??
-      fetchBodyMeshChunk(indexUrl, bodyMeshIndex, activeWindow, bodyMeshFaces);
+      fetchBodyMeshChunk(indexUrl, bodyMeshIndex, activeWindow, bodyMeshFaces, fetchReplayResponse);
     bodyMeshChunkInflightRef.current.set(cacheKey, inflight);
     setBodyMeshLoadStatus(meshLoadStatus("loading", { stage: "chunk", url: chunkUrl, windowId: cacheKey }));
     inflight
@@ -892,7 +996,7 @@ export default function App() {
     if (!adjacent) return;
     const key = adjacent.source_window_index;
     if (bodyMeshChunkCacheRef.current.has(key) || bodyMeshChunkInflightRef.current.has(key)) return;
-    const inflight = fetchBodyMeshChunk(indexUrl, bodyMeshIndex, adjacent, bodyMeshFaces);
+    const inflight = fetchBodyMeshChunk(indexUrl, bodyMeshIndex, adjacent, bodyMeshFaces, fetchReplayResponse);
     bodyMeshChunkInflightRef.current.set(key, inflight);
     void inflight.then((chunk) => {
       bodyMeshChunkInflightRef.current.delete(key);
@@ -930,10 +1034,6 @@ export default function App() {
   }, [bodyMesh, displayFpsEnabled, world]);
 
   useEffect(() => {
-    currentTimeRef.current = currentTime;
-  }, [currentTime]);
-
-  useEffect(() => {
     const nextSearch = viewStateToSearch(window.location.search, viewState);
     if (nextSearch !== window.location.search) {
       window.history.replaceState(null, "", `${window.location.pathname}${nextSearch}${window.location.hash}`);
@@ -957,23 +1057,21 @@ export default function App() {
 
   useEffect(() => {
     let animationFrame = 0;
-    let lastSampleMs = 0;
-    const minIntervalMs = 1000 / Math.min(60, Math.max(24, world.fps || 30));
     const tick = (now: number) => {
       const video = videoRef.current;
-      if (video && !video.paused && now - lastSampleMs >= minIntervalMs) {
-        lastSampleMs = now;
+      if (video && !video.paused) {
         const canonicalTime = resolveCanonicalPlaybackTime(video.currentTime, video.duration, currentTimeRef.current);
         if (Math.abs(canonicalTime - currentTimeRef.current) > 0.004) {
           currentTimeRef.current = canonicalTime;
-          setCurrentTime(canonicalTime);
+          playbackClockRef.current.setTime(canonicalTime);
+          uiTimePublisherRef.current?.publish(canonicalTime, now);
         }
       }
       animationFrame = window.requestAnimationFrame(tick);
     };
     animationFrame = window.requestAnimationFrame(tick);
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [manifest?.video_url, world.fps]);
+  }, [manifest?.video_url]);
 
   const displayFpsStats = displayFpsData?.stats ?? displayFpsReplayData(world, bodyMesh, false).stats;
   const displayFpsControlReadout = displayFpsEnabled && displayFpsProcessing ? `${displayFpsStats.displayFps}fps display: processing` : displayFpsReadout(displayFpsStats);
@@ -1087,6 +1185,11 @@ export default function App() {
   const contactReadout = contactReadoutText(activeContactPlayerIds, activeBodyMeshes);
   const ballReadout = ballRenderText(ballRenderInfo.mode, videoBallOverlay);
   const warningsReadout = useMemo(() => worldWarningsReadout(world), [world]);
+  const degradedReasons = useMemo(() => degradedReasonsFromNotes(manifest?.notes ?? []), [manifest?.notes]);
+  const manifestNotices = useMemo(
+    () => (manifest?.notes ?? []).filter((note) => !note.startsWith("degraded_reasons_json=")),
+    [manifest?.notes],
+  );
   const ballCoverage = useMemo(
     () => ballHudStateForTime(resolvedBallSamples, currentTime).label.replace("ball: ", ""),
     [currentTime, resolvedBallSamples],
@@ -1103,7 +1206,17 @@ export default function App() {
     },
     [rallySpans, timelineMarkers, timelineDuration],
   );
+  const timelineEmptyReason = useMemo(
+    () => timelineAbsenceText(timelineMarkers, degradedReasons),
+    [degradedReasons, timelineMarkers],
+  );
   const playerIds = useMemo(() => world.players.map((player) => player.id), [world.players]);
+  const requestedFollowPlayerId = cameraFollowPlayerId ?? viewState.selectedPlayerId ?? playerIds[0] ?? null;
+  const followTargetMissing = cameraPreset === "follow_player" && requestedFollowPlayerId !== null &&
+    Boolean(world.players.find((player) => player.id === requestedFollowPlayerId && playerPresenceForTime(player, currentTime).missingEvidence));
+  const suggestedFollowPlayerId = followTargetMissing
+    ? world.players.find((player) => !playerPresenceForTime(player, currentTime).missingEvidence)?.id ?? null
+    : null;
   const shotTrailsMode = cameraPreset === "shot_trails";
   const filteredShots = useMemo(
     () => filterShots(shots?.shots ?? [], shotTrailFilters),
@@ -1128,6 +1241,7 @@ export default function App() {
     const canonicalTime = resolveCanonicalPlaybackTime(seconds, duration, currentTimeRef.current);
     if (video) video.currentTime = canonicalTime;
     currentTimeRef.current = canonicalTime;
+    playbackClockRef.current.setTime(canonicalTime);
     setCurrentTime(canonicalTime);
   };
 
@@ -1140,6 +1254,7 @@ export default function App() {
     const canonicalTime = resolveCanonicalPlaybackTime(video.currentTime, video.duration, currentTimeRef.current);
     if (Math.abs(canonicalTime - currentTimeRef.current) > 0.004) {
       currentTimeRef.current = canonicalTime;
+      playbackClockRef.current.setTime(canonicalTime);
       setCurrentTime(canonicalTime);
     }
   };
@@ -1155,6 +1270,57 @@ export default function App() {
       initialSeekAppliedRef.current = true;
     }
     syncVideoTime(video);
+  };
+
+  const handleVideoLoadError = () => {
+    const originalUrl = manifest?.video_url;
+    if (!originalUrl) return;
+    const recoveryUrl = manifestRelativeRecoveryUrl(originalUrl, recoveryManifestUrl);
+    if (recoveryUrl && !attemptedVideoRecoveryRef.current.has(originalUrl)) {
+      attemptedVideoRecoveryRef.current.add(originalUrl);
+      pendingVideoRecoveryRef.current = originalUrl;
+      setVideoSourceUrl(recoveryUrl);
+      return;
+    }
+    pendingVideoRecoveryRef.current = null;
+    setCapabilityErrors((current) => ({
+      ...current,
+      video: `asset unreachable: ${originalUrl} — the video could not be loaded; this manifest appears to have been written on another machine`,
+    }));
+  };
+
+  const handleVideoLoadedMetadata = (video: HTMLVideoElement) => {
+    const recoveredOriginal = pendingVideoRecoveryRef.current;
+    if (recoveredOriginal) {
+      recordRecoveredAsset(recoveredOriginal);
+      pendingVideoRecoveryRef.current = null;
+    }
+    syncLoadedVideoTime(video);
+  };
+
+  const togglePlayback = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) void video.play();
+    else video.pause();
+  };
+
+  const toggleMute = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.muted = !video.muted;
+    setIsMuted(video.muted);
+  };
+
+  const selectPlaybackRate = (rate: number) => {
+    const video = videoRef.current;
+    if (video) video.playbackRate = rate;
+    setPlaybackRate(rate);
+  };
+
+  const enterFullscreen = () => {
+    const frame = videoRef.current?.closest(".video-frame") as HTMLElement | null;
+    void frame?.requestFullscreen?.();
   };
 
   const toggleLayer = (layer: ViewLayerKey) => {
@@ -1244,24 +1410,26 @@ export default function App() {
         </div>
         {replayLoaded ? (
           <div className="status-grid">
-            <Metric label="Players" value={stats.players} />
-            <Metric label="Coverage gaps" value={`${playerPresenceGaps.length}/${world.players.length}`} />
-            <Metric label="Contacts" value={contactEventCount(contactWindows)} />
-            <Metric label="Ball" value={ballCoverage} />
-            <Metric label="Warnings" value={warningsReadout} />
-            <Metric label="3D FPS" value={fps > 0 ? fps.toFixed(1) : "--"} />
+            <Metric label="Players" value={stats.players} title="Players represented anywhere in this bundle." />
+            <Metric label="Coverage gaps now" value={`${playerPresenceGaps.length}/${world.players.length}`} title="Players without defensible detection evidence at the current playback time." />
+            <Metric label="Contacts in clip" value={contactEventCount(contactWindows)} title="Contact windows supplied for the whole bundle; this is not current-frame 3D contact." />
+            <Metric label="Ball now" value={ballCoverage} title="Current-frame ball visibility. Clip-level ball trust remains in the entity trust badge." />
+            <WarningsMetric
+              summary={warningsReadout}
+              warnings={world.summary.warnings}
+              notices={manifestNotices}
+              degraded={degradedReasons}
+            />
+            <Metric label="3D FPS" value={fps > 0 ? fps.toFixed(1) : "--"} title="Rolling rendered-frame rate sampled from the 3D pane." />
           </div>
         ) : null}
       </header>
 
       {replayLoaded ? (
-        <div className="entity-trust-strip" aria-label="Entity trust badges">
-          <PlayerTrustBandPanels players={world.players} />
-          <TrustBandPanel label="Ball" trustBand={world.ball.trust_band} />
-          {world.paddles.map((paddle) => (
-            <TrustBandPanel key={`paddle-${paddle.player_id}`} label={`Paddle ${paddle.player_id} (preview)`} trustBand={paddle.trust_band} />
-          ))}
-        </div>
+        <details className="aggregate-trust-summary">
+          <summary>Entity trust · {world.players.length + world.paddles.length + 1} badges in replay pane</summary>
+          <p>Authority is clip-level; provenance is shown beside each visible entity.</p>
+        </details>
       ) : null}
 
       {loadError ? <p className="load-error">{loadError}</p> : null}
@@ -1272,28 +1440,14 @@ export default function App() {
           ))}
         </div>
       ) : null}
-
-      <UploadPanel />
-
-      <RecentRunSwitcher currentManifestUrl={currentManifestUrl} replayViewMode={replayViewMode} />
+      {recoveredAssetCount > 0 ? (
+        <div className="asset-recovery-notice" role="status">
+          {recoveredAssetCount} asset{recoveredAssetCount === 1 ? "" : "s"} resolved manifest-relative — original absolute paths unreachable (VM-written manifest)
+        </div>
+      ) : null}
 
       {replayLoaded ? (
         <section className="review-control-strip" aria-label="Replay review controls">
-          <ViewLayerPanel
-            viewState={viewState}
-            playerIds={playerIds}
-            displayFps={{
-              enabled: displayFpsEnabled,
-              processing: displayFpsProcessing,
-              readout: displayFpsControlReadout,
-              onToggle: () => setDisplayFpsEnabled((enabled) => !enabled),
-            }}
-            onToggleLayer={toggleLayer}
-            onBallFocus={focusBall}
-            onPlayerFocus={focusPlayer}
-            onClearFocus={resetFocus}
-            onResetView={resetView}
-          />
           <button
             type="button"
             className={showShotsPanel ? "shots-toggle active" : "shots-toggle"}
@@ -1326,6 +1480,9 @@ export default function App() {
 
       {replayLoaded && showShotsPanel ? (
         <section id="shots-panel" className="shots-panel" aria-label="Shots panel">
+          {(shots?.shots.length ?? 0) === 0 ? (
+            <p className="shots-empty-state">{shotsEmptyText(degradedReasons)}</p>
+          ) : (
           <div className="shot-workspace">
             <ShotTrailsControls
               filters={shotTrailFilters}
@@ -1343,6 +1500,7 @@ export default function App() {
               onWrong={writeCorrection}
             />
           </div>
+          )}
         </section>
       ) : null}
 
@@ -1353,20 +1511,41 @@ export default function App() {
             {manifest ? (
               <video
                 ref={videoRef}
-                src={manifest.video_url}
-                controls
+                src={videoSourceUrl ?? manifest.video_url}
                 playsInline
-                onLoadedMetadata={(event) => syncLoadedVideoTime(event.currentTarget)}
+                onLoadedMetadata={(event) => handleVideoLoadedMetadata(event.currentTarget)}
+                onError={handleVideoLoadError}
                 onSeeked={(event) => syncVideoTime(event.currentTarget)}
                 onSeeking={(event) => syncVideoTime(event.currentTarget)}
                 onTimeUpdate={(event) => syncVideoTime(event.currentTarget)}
-                onPause={(event) => syncVideoTime(event.currentTarget)}
-                onPlay={(event) => syncVideoTime(event.currentTarget)}
-                onRateChange={(event) => syncVideoTime(event.currentTarget)}
+                onPause={(event) => { setIsPlaying(false); syncVideoTime(event.currentTarget); }}
+                onPlay={(event) => { setIsPlaying(true); syncVideoTime(event.currentTarget); }}
+                onVolumeChange={(event) => setIsMuted(event.currentTarget.muted)}
+                onRateChange={(event) => { setPlaybackRate(event.currentTarget.playbackRate); syncVideoTime(event.currentTarget); }}
               />
             ) : (
               <div className="empty-video">Load a replay manifest with ?manifest=...</div>
             )}
+            <div className="video-playback-controls" role="group" aria-label="Video playback">
+              <button type="button" onClick={togglePlayback} aria-label={isPlaying ? "Pause replay" : "Play replay"}>
+                {isPlaying ? "Pause" : "Play"}
+              </button>
+              <button type="button" onClick={toggleMute} aria-label={isMuted ? "Unmute replay" : "Mute replay"}>
+                {isMuted ? "Unmute" : "Mute"}
+              </button>
+              {[0.5, 1, 2].map((rate) => (
+                <button
+                  key={rate}
+                  type="button"
+                  aria-label={`Set playback speed to ${rate}x`}
+                  aria-pressed={playbackRate === rate}
+                  onClick={() => selectPlaybackRate(rate)}
+                >
+                  {rate}×
+                </button>
+              ))}
+              <button type="button" onClick={enterFullscreen} aria-label="Enter replay fullscreen">Full screen</button>
+            </div>
             <svg className="box-overlay" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
               {activeLabels.map((item, index) => {
                 const box = item.bbox_xyxy ?? xywhToXyxy(item.bbox);
@@ -1393,7 +1572,7 @@ export default function App() {
             <span>{currentTime.toFixed(2)}s</span>
             <span>{activeLabels.length} boxes</span>
             <span>{contactReadout}</span>
-            <span>{ballReadout}</span>
+            <span title="Current-frame ball render mode; clip-level provenance and authority are in the Ball trust badge.">{ballReadout}</span>
             <span>{labelTrustText(playerBoxOverlay)}</span>
           </div>
           <TimelineStrip
@@ -1401,6 +1580,8 @@ export default function App() {
             currentTime={currentTime}
             markers={timelineMarkers}
             chapters={timelineChapters}
+            playbackClock={playbackClockRef.current}
+            absenceReason={timelineEmptyReason}
             onSeek={seekTo}
             onPreviousEvent={() => jumpToEvent("previous")}
             onNextEvent={() => jumpToEvent("next")}
@@ -1436,10 +1617,20 @@ export default function App() {
                   selectCameraPreset("follow_player");
                 }}
               >
-                {playerIds.map((playerId) => <option key={playerId} value={playerId}>P{playerId}</option>)}
+                {playerIds.map((playerId) => <option key={playerId} value={playerId}>Player {playerId}</option>)}
               </select>
             </label>
           </div>
+          {followTargetMissing ? (
+            <div className="follow-fallback-notice" role="status">
+              <span>Player {requestedFollowPlayerId}: no detection · framing court</span>
+              {suggestedFollowPlayerId !== null ? (
+                <button type="button" onClick={() => { setCameraFollowPlayerId(suggestedFollowPlayerId); selectCameraPreset("follow_player"); }}>
+                  Follow Player {suggestedFollowPlayerId}
+                </button>
+              ) : null}
+            </div>
+          ) : null}
           <Canvas
             dpr={[1.5, 2]}
             gl={{ powerPreference: "high-performance", antialias: true }}
@@ -1456,7 +1647,7 @@ export default function App() {
               activePaddles={activePaddles}
               selectedPlayerId={viewState.selectedPlayerId}
               followPlayerId={cameraFollowPlayerId ?? viewState.selectedPlayerId ?? playerIds[0] ?? null}
-              currentTime={currentTime}
+              playbackClock={playbackClockRef.current}
               prefersReducedMotion={prefersReducedMotion}
               resetToken={cameraResetToken}
               dragCommand={cameraDragCommand}
@@ -1464,17 +1655,18 @@ export default function App() {
             <CourtSurface world={renderWorld} />
             <CourtLines world={renderWorld} />
             <NetAssembly world={renderWorld} />
-            {shotTrailsMode ? (
+            <SceneTimeSampler playbackClock={playbackClockRef.current}>
+            {(sceneTime) => shotTrailsMode ? (
               <ShotTrailsLayer groups={shotTrailGroups} selectedShotId={selectedShotId} onSelectShot={selectShot} />
             ) : (
               <>
-                {shouldRenderReplayScenePointClouds(viewState, replayScene, currentTime) ? (
-                  <ReplayGlbLayer replayScene={replayScene} replaySceneUrl={manifest?.replay_scene_url ?? null} currentTime={currentTime} />
+                {shouldRenderReplayScenePointClouds(viewState, replayScene, sceneTime) ? (
+                  <ReplayGlbLayer replayScene={replayScene} replaySceneUrl={manifest?.replay_scene_url ?? null} currentTime={sceneTime} />
                 ) : null}
-                {sceneLayers.playerTrails.visible ? <PlayerMotionTrails world={renderWorld} currentTime={currentTime} viewState={viewState} /> : null}
+                {sceneLayers.playerTrails.visible ? <PlayerMotionTrails world={renderWorld} currentTime={sceneTime} viewState={viewState} /> : null}
                 <Players
                   world={renderWorld}
-                  currentTime={currentTime}
+                  currentTime={sceneTime}
                   activeContactPlayerIds={viewerContactPlayerIds}
                   showSkeletons={sceneLayers.playerSkeletons.visible}
                   showImplausibleSkeletons={viewState.layers.implausibleSkeletons}
@@ -1496,7 +1688,7 @@ export default function App() {
                   <SolidBodyMeshes
                     meshes={activeBodyMeshes}
                     world={renderWorld}
-                    currentTime={currentTime}
+                    currentTime={sceneTime}
                     geometryCache={solidGeometryCache}
                     viewState={viewState}
                     onSelectPlayer={focusPlayer}
@@ -1506,7 +1698,7 @@ export default function App() {
                   <ImpactMarkers
                     world={world}
                     arcSolved={ballTrailArtifact}
-                    currentTime={currentTime}
+                    currentTime={sceneTime}
                     contactWindows={contactWindows}
                     bounceCandidates={autoBounceCandidates}
                   />
@@ -1514,7 +1706,7 @@ export default function App() {
                 {sceneLayers.ballTrail.visible || sceneLayers.ballDot.visible ? (
                   <BallTrailLayer
                     samples={resolvedBallSamples}
-                    currentTime={currentTime}
+                    currentTime={sceneTime}
                     showTrail={sceneLayers.ballTrail.visible}
                     showBall={sceneLayers.ballDot.visible}
                     focusStyle={entityFocusStyle(viewState, { kind: "ball" })}
@@ -1522,6 +1714,7 @@ export default function App() {
                 ) : null}
               </>
             )}
+            </SceneTimeSampler>
           </Canvas>
           <div style={{ position: "absolute", left: 12, bottom: 12, zIndex: 2, pointerEvents: "none" }}>
             <BallHonestyHud
@@ -1537,11 +1730,6 @@ export default function App() {
             </div>
           ) : null}
           {eventMarkerEmpty ? <div className="event-empty-reason">Events: no marker evidence at this time</div> : null}
-          {entityEmptyStates.length ? (
-            <div className="layer-empty-strip" aria-label="Unavailable entity layers">
-              {entityEmptyStates.map((message) => <span key={message}>{message}</span>)}
-            </div>
-          ) : null}
           {sceneLayers.debugPointClouds.visible ? <MeshDebugReadout snapshot={meshDebugSnapshot} /> : null}
           <div className="world-mini-readout">
             <span>{CAMERA_PRESET_LABELS[cameraPreset]}</span>
@@ -1553,20 +1741,96 @@ export default function App() {
           <CameraDragPads onDrag={applyCameraDrag} onReset={() => selectCameraPreset(cameraPreset)} />
           </>
           )}
+          <div className="world-honesty-dock">
+            <div className="in-pane-entity-trust-strip" aria-label="Entity trust badges">
+              {world.players.map((player) => (
+                <TrustBandPanel key={player.id} label={`Player ${player.id}`} provenance="model_estimated" trustBand={player.trust_band} />
+              ))}
+              <TrustBandPanel
+                label="Ball"
+                provenance={ballEvidenceProvenance(ballRenderInfo)}
+                trustBand={world.ball.trust_band}
+              />
+              {world.paddles.map((paddle) => (
+                <TrustBandPanel key={`paddle-${paddle.player_id}`} label={`Paddle ${paddle.player_id}`} provenance="model_estimated" trustBand={paddle.trust_band} />
+              ))}
+            </div>
+            {entityEmptyStates.length ? (
+              <details className="layer-empty-strip" aria-label="Unavailable entity layers">
+                <summary>{entityEmptyStates.length} layer{entityEmptyStates.length === 1 ? "" : "s"} unavailable <span aria-hidden="true">▸</span></summary>
+                <div>{entityEmptyStates.map((message) => <span key={message}>{message}</span>)}</div>
+              </details>
+            ) : null}
+          </div>
         </div>
       </section>
       ) : null}
+
+      {replayLoaded ? (
+        <section className="layer-control-dock" aria-label="Replay layers and isolate controls">
+          <ViewLayerPanel
+            viewState={viewState}
+            playerIds={playerIds}
+            displayFps={{
+              enabled: displayFpsEnabled,
+              processing: displayFpsProcessing,
+              readout: displayFpsControlReadout,
+              onToggle: () => setDisplayFpsEnabled((enabled) => !enabled),
+            }}
+            onToggleLayer={toggleLayer}
+            onBallFocus={focusBall}
+            onPlayerFocus={focusPlayer}
+            onClearFocus={resetFocus}
+            onResetView={resetView}
+          />
+        </section>
+      ) : null}
+
+      <ReplayAuxiliarySections
+        replayLoaded={replayLoaded}
+        currentManifestUrl={currentManifestUrl}
+        replayViewMode={replayViewMode}
+      />
 
     </main>
   );
 }
 
-function Metric({ label, value }: { label: string; value: number | string }) {
+function Metric({ label, value, title }: { label: string; value: number | string; title: string }) {
   return (
-    <div>
+    <div title={title}>
       <dt>{label}</dt>
       <dd>{value}</dd>
     </div>
+  );
+}
+
+function WarningsMetric({
+  summary,
+  warnings,
+  notices,
+  degraded,
+}: {
+  summary: string;
+  warnings: string[];
+  notices: string[];
+  degraded: DegradedReason[];
+}) {
+  return (
+    <details className="warnings-metric" title="All world warnings, manifest notices, and structured degraded reasons.">
+      <summary><span>Warnings</span><strong>{summary}</strong></summary>
+      <div className="warnings-popover">
+        {warnings.map((warning) => <p key={`warning-${warning}`}>{warning}</p>)}
+        {notices.map((notice) => <p key={`notice-${notice}`}>{notice}</p>)}
+        {degraded.map((entry) => (
+          <section key={`${entry.stage}-${entry.status}`}>
+            <strong>{entry.stage} · {entry.status}</strong>
+            {entry.reasons.map((reason) => <p key={reason}>{reason}</p>)}
+          </section>
+        ))}
+        {!warnings.length && !notices.length && !degraded.length ? <p>No notices supplied.</p> : null}
+      </div>
+    </details>
   );
 }
 
@@ -1623,6 +1887,29 @@ export function RecentRunSwitcher({
         })}
       </div>
     </nav>
+  );
+}
+
+export function ReplayAuxiliarySections({
+  replayLoaded,
+  currentManifestUrl,
+  replayViewMode,
+}: {
+  replayLoaded: boolean;
+  currentManifestUrl: string | null;
+  replayViewMode: ReplayViewMode;
+}) {
+  return (
+    <section className="replay-auxiliary" aria-label="Replay intake and run switching">
+      <details open={!replayLoaded}>
+        <summary>Upload and process another video</summary>
+        <UploadPanel />
+      </details>
+      <details open={!replayLoaded}>
+        <summary>Latest video runs</summary>
+        <RecentRunSwitcher currentManifestUrl={currentManifestUrl} replayViewMode={replayViewMode} />
+      </details>
+    </section>
   );
 }
 
@@ -1972,11 +2259,32 @@ function FpsProbe({ onSample }: { onSample: (fps: number) => void }) {
   return null;
 }
 
+/** Localizes high-frequency scene renders to the R3F subtree, not the whole App. */
+function SceneTimeSampler({
+  playbackClock,
+  children,
+}: {
+  playbackClock: PlaybackClock;
+  children: (timeSeconds: number) => React.ReactNode;
+}) {
+  const [sceneTime, setSceneTime] = useState(() => playbackClock.getTime());
+  const sceneTimeRef = useRef(sceneTime);
+  useFrame(() => {
+    const nextTime = playbackClock.getTime();
+    if (Math.abs(nextTime - sceneTimeRef.current) <= 0.004) return;
+    sceneTimeRef.current = nextTime;
+    setSceneTime(nextTime);
+  });
+  return <>{children(sceneTime)}</>;
+}
+
 export function TimelineStrip({
   durationSeconds,
   currentTime,
   markers,
   chapters,
+  playbackClock,
+  absenceReason,
   onSeek,
   onPreviousEvent,
   onNextEvent,
@@ -1985,6 +2293,8 @@ export function TimelineStrip({
   currentTime: number;
   markers: TimelineMarker[];
   chapters: TimelineChapter[];
+  playbackClock?: PlaybackClock;
+  absenceReason?: string | null;
   onSeek: (seconds: number) => void;
   onPreviousEvent: () => void;
   onNextEvent: () => void;
@@ -2031,6 +2341,7 @@ export function TimelineStrip({
           onSeek(Math.min(duration, Math.max(0, fraction * duration)));
         }}
       >
+        {absenceReason ? <p className="timeline-absence">{absenceReason}</p> : null}
         {chapters.map((chapter) => {
           const left = Math.min(100, Math.max(0, (chapter.t0 / duration) * 100));
           const right = Math.min(100, Math.max(left, (chapter.t1 / duration) * 100));
@@ -2051,27 +2362,70 @@ export function TimelineStrip({
             type="button"
             className={`timeline-marker ${marker.kind} ${marker.provenance} ${marker.badge} ${marker.humanReviewed ? "human-reviewed" : ""}`}
             style={{ left: `${Math.min(100, Math.max(0, (marker.t / duration) * 100))}%` }}
-            title={`${marker.label} (${marker.provenance.replace("_", " ")}; ${marker.humanReviewed ? "human reviewed, " : ""}${marker.badge.replace("_", " ")}, confidence ${marker.confidence.toFixed(2)})`}
+            title={`${marker.kind} · ${marker.t.toFixed(2)}s · ${marker.provenance} · authority ${marker.badge}${marker.humanReviewed ? " · human reviewed" : ""}`}
             aria-label={`Jump to ${marker.label}`}
             onClick={(event) => {
               event.stopPropagation();
               onSeek(marker.t);
             }}
           >
-            <span className="timeline-marker-label">{marker.label}</span>
+            <span className="timeline-marker-glyph" aria-hidden="true">{timelineMarkerGlyph(marker.kind)}</span>
+            <span className="timeline-marker-label">{marker.kind} · {marker.t.toFixed(2)}s · {marker.provenance} · authority {marker.badge}</span>
           </button>
         ))}
-        <div className="timeline-playhead" style={{ left: `${playheadPercent}%` }} />
+        <TimelinePlayhead playbackClock={playbackClock} duration={duration} initialPercent={playheadPercent} />
       </div>
     </div>
   );
 }
 
-function TrustBandPanel({ label, trustBand }: { label: string; trustBand?: TrustBand | null }) {
+function TimelinePlayhead({
+  playbackClock,
+  duration,
+  initialPercent,
+}: {
+  playbackClock?: PlaybackClock;
+  duration: number;
+  initialPercent: number;
+}) {
+  const playheadRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!playbackClock) return;
+    const update = (timeSeconds: number) => {
+      if (playheadRef.current) {
+        const percent = Math.min(100, Math.max(0, (timeSeconds / duration) * 100));
+        playheadRef.current.style.left = `${percent}%`;
+      }
+    };
+    update(playbackClock.getTime());
+    return playbackClock.subscribe(update);
+  }, [duration, playbackClock]);
+  return <div ref={playheadRef} className="timeline-playhead" style={{ left: `${initialPercent}%` }} />;
+}
+
+function timelineMarkerGlyph(kind: string): string {
+  if (kind.includes("contact")) return "×";
+  if (kind.includes("bounce")) return "○";
+  if (kind.includes("inflection")) return "△";
+  if (kind === "shot") return "◆";
+  if (kind.includes("rally")) return "▮";
+  return "•";
+}
+
+function TrustBandPanel({
+  label,
+  provenance = "missing",
+  trustBand,
+}: {
+  label: string;
+  provenance?: "measured" | "model_estimated" | "physics_predicted" | "missing";
+  trustBand?: TrustBand | null;
+}) {
   return (
     <div className="trust-band-card compact" title={trustBand?.reason ?? "No trust-band provenance on this artifact."}>
       <div className="trust-band-header">
         <span>{label}</span>
+        <span className={`trust-provenance ${provenance}`}>{provenance}</span>
         <span className={`trust-badge-chip ${trustBand?.badge ?? "none"}`}>{trustBandChipText(trustBand)}</span>
       </div>
     </div>
@@ -2155,7 +2509,7 @@ function OrbitRig({
   activePaddles,
   selectedPlayerId,
   followPlayerId,
-  currentTime,
+  playbackClock,
   prefersReducedMotion,
   resetToken,
   dragCommand,
@@ -2165,7 +2519,7 @@ function OrbitRig({
   activePaddles: ActivePaddleFrame[];
   selectedPlayerId: number | null;
   followPlayerId: number | null;
-  currentTime: number;
+  playbackClock: PlaybackClock;
   prefersReducedMotion: boolean;
   resetToken: number;
   dragCommand: CameraDragCommand | null;
@@ -2180,11 +2534,26 @@ function OrbitRig({
     toPosition: ThreeVector3;
     toTarget: ThreeVector3;
   } | null>(null);
+  const followPoseBufferRef = useRef<FollowCameraPoseBuffer | null>(null);
+  const followPositionRef = useRef<ThreeVector3 | null>(null);
+  const followTargetRef = useRef<ThreeVector3 | null>(null);
+  if (followPoseBufferRef.current === null) followPoseBufferRef.current = createFollowCameraPoseBuffer();
+  if (followPositionRef.current === null) followPositionRef.current = new ThreeVector3();
+  if (followTargetRef.current === null) followTargetRef.current = new ThreeVector3();
+  const posePaddles = preset === "paddle_review" ? activePaddles : EMPTY_ACTIVE_PADDLES;
   const pose = useMemo(
-    () => cameraPresetPose(world, preset, activePaddles, followPlayerId ?? selectedPlayerId, currentTime),
-    [activePaddles, currentTime, followPlayerId, selectedPlayerId, world, preset],
+    () => cameraPresetPose(world, preset, posePaddles, followPlayerId ?? selectedPlayerId, playbackClock.getTime()),
+    [followPlayerId, playbackClock, posePaddles, preset, resetToken, selectedPlayerId, world],
   );
   const poseKey = `${preset}:${pose.position.join(",")}:${pose.target.join(",")}:${resetToken}`;
+  useEffect(() => {
+    const buffer = followPoseBufferRef.current!;
+    buffer.queryTick = null;
+    if (preset !== "follow_player") return;
+    updateFollowCameraPoseBuffer(buffer, world, followPlayerId ?? selectedPlayerId, playbackClock.getTime());
+    followPositionRef.current!.set(...buffer.position);
+    followTargetRef.current!.set(...buffer.target);
+  }, [followPlayerId, playbackClock, preset, resetToken, selectedPlayerId, world]);
   useEffect(() => {
     const controls = new MapControls(camera, gl.domElement);
     camera.up.set(0, 0, 1);
@@ -2239,9 +2608,16 @@ function OrbitRig({
     }
     controls.update();
   }, [camera, dragCommand]);
-  useFrame(() => {
+  useFrame((_state, deltaSeconds) => {
     const controls = controlsRef.current;
     if (!controls) return;
+    if (preset === "follow_player") {
+      const buffer = followPoseBufferRef.current!;
+      if (updateFollowCameraPoseBuffer(buffer, world, followPlayerId ?? selectedPlayerId, playbackClock.getTime())) {
+        followPositionRef.current!.set(...buffer.position);
+        followTargetRef.current!.set(...buffer.target);
+      }
+    }
     const transition = transitionRef.current;
     if (transition) {
       const rawProgress = Math.min(1, Math.max(0, (performance.now() - transition.startedAtMs) / transition.durationMs));
@@ -2249,6 +2625,10 @@ function OrbitRig({
       camera.position.lerpVectors(transition.fromPosition, transition.toPosition, progress);
       controls.target.lerpVectors(transition.fromTarget, transition.toTarget, progress);
       if (rawProgress >= 1) transitionRef.current = null;
+    } else if (preset === "follow_player") {
+      const progress = prefersReducedMotion ? 1 : 1 - Math.exp(-Math.max(0, deltaSeconds) * 9);
+      camera.position.lerp(followPositionRef.current!, progress);
+      controls.target.lerp(followTargetRef.current!, progress);
     }
     controls.update();
   });
@@ -3134,15 +3514,26 @@ function annotationSourceReadout(sources: ViewerManifest["annotation_sources"]):
 }
 
 function ballRenderText(mode: ReturnType<typeof ballRenderInfoForTime>["mode"], videoOverlay: VideoBallOverlay | null): string {
-  if (mode === "calibrated_3d") return "ball: calibrated 3D";
-  if (mode === "court_plane_projection") return "ball: court-plane approx";
-  if (mode === "off_court_projection") return "ball: off-court hidden";
-  if (mode === "2d_only_no_3d_solve") return "ball: 2D-only, no 3D solve";
+  if (mode === "calibrated_3d") return "render: calibrated 3D";
+  if (mode === "court_plane_projection") return "render: court-plane approx";
+  if (mode === "off_court_projection") return "render: off-court hidden";
+  if (mode === "2d_only_no_3d_solve") return "render: 2D-only, no 3D solve";
   if (videoOverlay) {
     const suffix = videoOverlay.interpolated ? " interpolated" : "";
-    return `ball: video ${videoOverlay.confidenceClass}${suffix}`;
+    return `render: video ${videoOverlay.confidenceClass}${suffix}`;
   }
-  return "ball: missing";
+  return "render: missing";
+}
+
+function ballEvidenceProvenance(
+  info: ReturnType<typeof ballRenderInfoForTime>,
+): "measured" | "model_estimated" | "physics_predicted" | "missing" {
+  const frame = info.frame;
+  if (!frame) return "missing";
+  const band = (frame.confidence_provenance?.display_band ?? frame.confidence_provenance?.band ?? "").toLowerCase();
+  if (band.includes("measured")) return "measured";
+  if (band.includes("predicted") || band.includes("physics") || frame.approx || frame.xy_interpolated) return "physics_predicted";
+  return "model_estimated";
 }
 
 function shotTrailFilterOptions(shots: ShotRecord[]): ShotTrailFilterOptions {
@@ -3359,6 +3750,8 @@ export function courtBounds(world: VirtualWorld) {
   return {
     centerX: (minX + maxX) / 2,
     centerY: (minY + maxY) / 2,
+    minX,
+    maxX,
     minY,
     maxY,
     width: Math.max(1, width),
@@ -3379,18 +3772,22 @@ export function cameraPresetPose(
 ): { position: Vec3; target: Vec3 } {
   const bounds = courtBounds(world);
   const groundTarget: Vec3 = [bounds.centerX, bounds.centerY, 0.35];
-  if (preset === "court") return topDownCameraPose(bounds, false);
+  if (preset === "court") return fittedCourtCameraPose(world, currentTime, false);
   if (preset === "follow_player") {
     const selectedPlayer = selectedPlayerId === null ? undefined : world.players.find((player) => player.id === selectedPlayerId);
     const floor = selectedPlayer ? floorWorldForFrame(frameForTime(selectedPlayer, currentTime)) : null;
     if (floor) {
       const target: Vec3 = [floor[0], floor[1], Math.max(0.8, floor[2] + 1.05)];
+      const ball = ballFrameForCamera(world, currentTime);
+      const contextTarget: Vec3 = ball
+        ? [(target[0] * 3 + ball[0]) / 4, (target[1] * 3 + ball[1]) / 4, Math.max(0.8, (target[2] * 3 + ball[2]) / 4)]
+        : target;
       return {
-        position: [target[0] + 2.4, target[1] - 3.2, target[2] + 2.1],
-        target,
+        position: [contextTarget[0] + 3.1, contextTarget[1] - 4.2, contextTarget[2] + 2.8],
+        target: contextTarget,
       };
     }
-    return topDownCameraPose(bounds, false);
+    return fittedCourtCameraPose(world, currentTime, false);
   }
   if (preset === "free_orbit") {
     return {
@@ -3418,11 +3815,121 @@ export function cameraPresetPose(
   };
 }
 
+const EMPTY_ACTIVE_PADDLES: ActivePaddleFrame[] = [];
+
+export type FollowCameraPoseBuffer = {
+  position: Vec3;
+  target: Vec3;
+  queryTick: number | null;
+  frameTime: number | null;
+  playerId: number | null;
+  world: VirtualWorld | null;
+  hasDetection: boolean | null;
+};
+
+export function createFollowCameraPoseBuffer(): FollowCameraPoseBuffer {
+  return {
+    position: [0, 0, 0],
+    target: [0, 0, 0],
+    queryTick: null,
+    frameTime: null,
+    playerId: null,
+    world: null,
+    hasDetection: null,
+  };
+}
+
+/**
+ * Updates a reusable Follow-camera pose only when playback crosses a source-frame
+ * boundary. The hot steady-state path allocates nothing and skips both player and
+ * ball lookups when multiple render frames land in the same source frame.
+ */
+export function updateFollowCameraPoseBuffer(
+  buffer: FollowCameraPoseBuffer,
+  world: VirtualWorld,
+  playerId: number | null,
+  currentTime: number,
+): boolean {
+  const queryTick = Math.floor(Math.max(0, currentTime) * Math.max(1, world.fps) + 1e-6);
+  const sameTarget = buffer.world === world && buffer.playerId === playerId;
+  if (sameTarget && buffer.queryTick === queryTick) return false;
+
+  const selectedPlayer = playerId === null ? undefined : world.players.find((player) => player.id === playerId);
+  const frame = selectedPlayer ? frameForTime(selectedPlayer, currentTime) : undefined;
+  const floor = floorWorldForFrame(frame);
+  buffer.queryTick = queryTick;
+
+  if (!floor) {
+    if (sameTarget && buffer.hasDetection === false) return false;
+    const fallback = fittedCourtCameraPose(world, currentTime, false);
+    writeVec3(buffer.position, fallback.position);
+    writeVec3(buffer.target, fallback.target);
+    buffer.frameTime = null;
+    buffer.world = world;
+    buffer.playerId = playerId;
+    buffer.hasDetection = false;
+    return true;
+  }
+  if (sameTarget && buffer.hasDetection === true && buffer.frameTime === frame?.t) return false;
+
+  const targetX = floor[0];
+  const targetY = floor[1];
+  const targetZ = Math.max(0.8, floor[2] + 1.05);
+  const ball = ballFrameForTime(world, currentTime)?.world_xyz;
+  const contextX = ball ? (targetX * 3 + ball[0]) / 4 : targetX;
+  const contextY = ball ? (targetY * 3 + ball[1]) / 4 : targetY;
+  const contextZ = ball ? Math.max(0.8, (targetZ * 3 + ball[2]) / 4) : targetZ;
+  buffer.position[0] = contextX + 3.1;
+  buffer.position[1] = contextY - 4.2;
+  buffer.position[2] = contextZ + 2.8;
+  buffer.target[0] = contextX;
+  buffer.target[1] = contextY;
+  buffer.target[2] = contextZ;
+  buffer.frameTime = frame?.t ?? null;
+  buffer.world = world;
+  buffer.playerId = playerId;
+  buffer.hasDetection = true;
+  return true;
+}
+
+function writeVec3(target: Vec3, source: Vec3): void {
+  target[0] = source[0];
+  target[1] = source[1];
+  target[2] = source[2];
+}
+
 function topDownCameraPose(bounds: ReturnType<typeof courtBounds>, wide: boolean): { position: Vec3; target: Vec3 } {
   return {
     position: [bounds.centerX, bounds.centerY, Math.max(wide ? 14 : 10, bounds.length * (wide ? 1.35 : 1.1))],
     target: [bounds.centerX, bounds.centerY, 0],
   };
+}
+
+function ballFrameForCamera(world: VirtualWorld, currentTime: number): Vec3 | null {
+  return ballRenderInfoForTime(world, currentTime).frame?.world_xyz ?? null;
+}
+
+export function fittedCourtCameraPose(world: VirtualWorld, currentTime: number, wide = false): { position: Vec3; target: Vec3 } {
+  const court = courtBounds(world);
+  const entityPoints = world.players.flatMap((player) => {
+    const frame = frameForTime(player, currentTime);
+    const floor = floorWorldForFrame(frame);
+    return floor ? [floor] : [];
+  });
+  const ball = ballFrameForCamera(world, currentTime);
+  if (ball) entityPoints.push(ball);
+  const xs = [court.minX, court.maxX, ...entityPoints.map((point) => point[0])];
+  const ys = [court.minY, court.maxY, ...entityPoints.map((point) => point[1])];
+  const minX = Math.min(...xs);
+  const maxX = Math.max(...xs);
+  const minY = Math.min(...ys);
+  const maxY = Math.max(...ys);
+  const spanX = Math.max(1, maxX - minX) * (wide ? 1.28 : 1.16);
+  const spanY = Math.max(1, maxY - minY) * (wide ? 1.28 : 1.16);
+  const centerX = (minX + maxX) / 2;
+  const centerY = (minY + maxY) / 2;
+  const height = Math.max(8.5, spanY / (2 * Math.tan((50 * Math.PI) / 360)), spanX * 0.86);
+  return { position: [centerX, centerY, height], target: [centerX, centerY, 0] };
 }
 
 function paddleReviewCameraPose(activePaddles: ActivePaddleFrame[], selectedPlayerId: number | null): { position: Vec3; target: Vec3 } | null {
@@ -3812,12 +4319,6 @@ function sampleMeshPoints(points: Vec3[], maxPoints: number): Vec3[] {
 export function vertexDebugPointsForFrame(frame: VirtualWorldFrame | undefined, enabled: boolean, maxPoints: number): Vec3[] {
   if (!enabled) return [];
   return sampleMeshPoints(frame?.mesh_vertices_world ?? [], maxPoints);
-}
-
-async function fetchJson(url: string) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`failed to fetch ${url}: ${response.status}`);
-  return response.json() as Promise<unknown>;
 }
 
 export async function loadOptionalArtifact<T>(

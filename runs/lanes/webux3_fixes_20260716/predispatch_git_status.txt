@@ -1,0 +1,27 @@
+ M configs/ssh/a100_known_hosts
+ M ios/App/AppRootView.swift
+ M ios/App/CaptureViewModel.swift
+ M ios/AppTests/CaptureViewModelTests.swift
+ M runs/lanes/ios_recordpath_20260715/DEVICE_EVIDENCE.md
+ M scripts/racketsport/list_scaffold_tools.py
+ M tests/racketsport/test_ball_arc_solver.py
+ M third_party/VENDOR_PINS.md
+ M threed/racketsport/ball_arc_chain.py
+ M threed/racketsport/ball_arc_solver.py
+?? brand-exploration/
+?? cvat_upload/court_diversity_20260712/
+?? cvat_upload/w7_audit_stratum_20260709/
+?? data/event_bootstrap_20260713/
+?? data/event_public_20260713/
+?? data/pbvision_11min_20260713/
+?? ios/Capture/Sources/PickleballCapture/RecordControlInteractionPolicy.swift
+?? ios/Capture/Tests/PickleballCaptureTests/RecordControlInteractionPolicyTests.swift
+?? scripts/racketsport/build_event_head_dataset.py
+?? scripts/racketsport/eval_event_head.py
+?? scripts/racketsport/finetune_event_head.py
+?? scripts/racketsport/train_event_head.py
+?? tests/racketsport/fixtures/ball_arc_segment7_real_slice.json.zlib.b85
+?? tests/racketsport/test_ball_arc_scale_guard.py
+?? third_party/spot/
+?? threed/racketsport/event_head/
+?? web/replay/public/

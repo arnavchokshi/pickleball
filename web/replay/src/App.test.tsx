@@ -17,6 +17,7 @@ import {
   defaultReviewStartTime,
   contactReadoutText,
   courtBounds,
+  createFollowCameraPoseBuffer,
   geometryForSolidBodyMeshFrame,
   handJointPointsForFrame,
   hasExplicitReviewStartTime,
@@ -24,11 +25,17 @@ import {
   loadCameraPreference,
   persistCameraPreference,
   entityLayerEmptyStates,
+  degradedReasonsFromNotes,
+  fittedCourtCameraPose,
   loadOptionalArtifact,
   paddleRenderGeometryForFrame,
   shouldRenderReplayScenePointClouds,
   TimelineStrip,
+  ReplayAuxiliarySections,
+  shotsEmptyText,
+  timelineAbsenceText,
   updateFpsSample,
+  updateFollowCameraPoseBuffer,
   vertexDebugPointsForFrame,
 } from "./App";
 import { parseBodyMesh, solidBodyMeshFramesForTime } from "./viewerData";
@@ -61,6 +68,15 @@ describe("camera preference and motion contract", () => {
     expect(cameraTransitionDurationMs(false)).toBeGreaterThan(0);
     expect(cameraTransitionDurationMs(true)).toBe(0);
   });
+
+  it("keeps canonical playback time out of Follow camera React effect inputs", () => {
+    const source = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+    const orbitRig = source.slice(source.indexOf("function OrbitRig("), source.indexOf("function applyCameraPan("));
+
+    expect(orbitRig).not.toContain("currentTime");
+    expect(orbitRig).toContain("playbackClock.getTime()");
+    expect(orbitRig).toContain("updateFollowCameraPoseBuffer");
+  });
 });
 
 describe("RecentRunSwitcher", () => {
@@ -87,6 +103,51 @@ describe("RecentRunSwitcher", () => {
     expect(html).toContain("runs%2Fvisual1_wolverine_20260705T220517Z");
     expect(html).toContain("runs%2Flanes%2Fball_f1_three_clip_runs_20260705%2Fburlington_gold_0300_low_steep_corner");
     expect(html).toContain("runs%2Flanes%2Fball_f1_three_clip_runs_20260705%2Foutdoor_webcam_iynbd_1500_long_high_baseline");
+  });
+});
+
+describe("loaded replay hierarchy", () => {
+  it("keeps intake sections collapsed and after the replay workspace", () => {
+    const html = renderToStaticMarkup(
+      <ReplayAuxiliarySections replayLoaded currentManifestUrl={null} replayViewMode="world" />,
+    );
+    const source = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+    const workspaceIndex = source.indexOf('<section className="review-layout">');
+    const layerControlsIndex = source.indexOf('<section className="layer-control-dock"');
+    const auxiliaryIndex = source.indexOf("<ReplayAuxiliarySections");
+
+    expect(html).toContain("Upload and process another video");
+    expect(html).toContain("Latest video runs");
+    expect(html).not.toContain("<details open=\"\"");
+    expect(workspaceIndex).toBeGreaterThan(0);
+    expect(layerControlsIndex).toBeGreaterThan(workspaceIndex);
+    expect(auxiliaryIndex).toBeGreaterThan(layerControlsIndex);
+  });
+
+  it("expands intake sections when no manifest is loaded", () => {
+    const html = renderToStaticMarkup(
+      <ReplayAuxiliarySections replayLoaded={false} currentManifestUrl={null} replayViewMode="world" />,
+    );
+    expect(html.match(/<details open="">/g)).toHaveLength(2);
+  });
+});
+
+describe("structured degraded reasons", () => {
+  const reasons = degradedReasonsFromNotes([
+    'degraded_reasons_json=[{"reasons":["requires ball_track.json"],"stage":"ball_fill","status":"blocked"}]',
+  ]);
+
+  it("explains an empty shared timeline using the producer reason verbatim", () => {
+    expect(timelineAbsenceText([], reasons)).toBe(
+      "No contact/bounce/inflection/shot markers: ball_fill blocked — requires ball_track.json",
+    );
+    expect(timelineAbsenceText([{ t: 1 } as TimelineMarker], reasons)).toBeNull();
+  });
+
+  it("keeps the zero-shot state to one honest producer-backed line", () => {
+    expect(shotsEmptyText(reasons)).toBe(
+      "No classified shots in this bundle — ball_fill blocked: requires ball_track.json",
+    );
   });
 });
 
@@ -176,11 +237,25 @@ describe("viewer truth wiring", () => {
     expect(source).toContain('aria-label="Entity trust badges"');
     expect(source).toContain("Events: no marker evidence at this time");
     expect(source).toContain("showNormals={viewState.layers.paddleNormals}");
-    expect(source).toContain('onPause={(event) => syncVideoTime(event.currentTarget)}');
-    expect(source).toContain('onRateChange={(event) => syncVideoTime(event.currentTarget)}');
+    expect(source).toContain('onPause={(event) => { setIsPlaying(false); syncVideoTime(event.currentTarget); }}');
+    expect(source).toContain('onRateChange={(event) => { setPlaybackRate(event.currentTarget.playbackRate); syncVideoTime(event.currentTarget); }}');
     expect(source).toContain('className="trust-band-card compact"');
     expect(source).not.toContain("function Ball(");
     expect(source).not.toContain("function BallGhostMarkerRing(");
+  });
+
+  it("uses one explicit playback surface and keeps trust and absence inside the pane", () => {
+    const source = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+
+    expect(source).not.toMatch(/<video[\s\S]{0,180}\bcontrols\b/);
+    expect(source).toContain('aria-label={isPlaying ? "Pause replay" : "Play replay"}');
+    expect(source).toContain('aria-label={`Set playback speed to ${rate}x`}');
+    expect(source).toContain('className="in-pane-entity-trust-strip"');
+    expect(source).toContain('className="layer-empty-strip"');
+    expect(source).toContain("layer{entityEmptyStates.length === 1");
+    expect(source).toContain("Player {playerId}</option>");
+    expect(source).toContain("degraded.map((entry)");
+    expect(source).toContain("resolved manifest-relative — original absolute paths unreachable (VM-written manifest)");
   });
 
   it("styles marker provenance separately from authority and reuses the existing render loop for camera easing", () => {
@@ -188,7 +263,8 @@ describe("viewer truth wiring", () => {
     const styles = readFileSync(resolve(process.cwd(), "src/styles.css"), "utf8");
     expect(source).toContain("marker.provenance");
     expect(source).toContain("camera.position.lerpVectors");
-    expect(source.match(/useFrame\(/g)?.length).toBe(2);
+    expect(source.match(/useFrame\(/g)?.length).toBe(3);
+    expect(source).toContain("Localizes high-frequency scene renders to the R3F subtree");
     expect(styles).toContain(".timeline-marker.measured");
     expect(styles).toContain(".timeline-marker.model_estimated");
     expect(styles).toContain(".timeline-marker.physics_predicted");
@@ -236,7 +312,10 @@ describe("TimelineStrip", () => {
     const track = React.Children.toArray(strip.props.children)[1] as React.ReactElement<any>;
 
     expect(chapters).toHaveLength(1);
-    expect(renderToStaticMarkup(strip)).toContain("Rally 1");
+    const html = renderToStaticMarkup(strip);
+    expect(html).toContain("Rally 1");
+    expect(html).toContain("timeline-marker-glyph");
+    expect(html).toContain("ball_inflection · 0.37s · model_estimated · authority low_confidence");
     track.props.onClick({
       clientX: 510,
       currentTarget: { getBoundingClientRect: () => ({ left: 10, width: 1000 }) },
@@ -495,6 +574,30 @@ describe("solid mesh geometry cache", () => {
     expect(first).toBe(second);
     expect(cache.geometryCount).toBe(1);
     expect(cache.normalComputeCount).toBe(1);
+  });
+
+  it("reuses one BufferAttribute while interpolated mesh vertices advance", () => {
+    const bodyMesh = parseBodyMesh(meshPayload) as BodyMesh;
+    const cache = createSolidBodyMeshGeometryCache(null);
+    const base = bodyMesh.players[0].frames[0];
+    const firstFrame = {
+      ...base,
+      mesh_interpolated: true,
+      interpolation: { from_frame_idx: 42, to_frame_idx: 43, alpha: 0.25, max_gap_s: 0.1 },
+    };
+    const secondFrame = {
+      ...firstFrame,
+      mesh_vertices_world: base.mesh_vertices_world.map(([x, y, z]) => [x + 0.5, y, z] as [number, number, number]),
+      interpolation: { ...firstFrame.interpolation, alpha: 0.75 },
+    };
+    const geometry = geometryForSolidBodyMeshFrame(cache, 4, firstFrame);
+    const position = geometry.getAttribute("position");
+    const reused = geometryForSolidBodyMeshFrame(cache, 4, secondFrame);
+
+    expect(reused).toBe(geometry);
+    expect(reused.getAttribute("position")).toBe(position);
+    expect(position.getX(0)).toBeCloseTo(0.5);
+    expect(cache.geometryCount).toBe(1);
   });
 
   it("does not rewrite cached mesh geometry while playback reuses a held aligned frame", () => {
@@ -1003,6 +1106,79 @@ describe("courtBounds and cameraPresetPose", () => {
     expect(followed.target[1]).toBeCloseTo(4.4);
     expect(court).not.toEqual(followed);
     expect(orbit.position).not.toEqual(followed.position);
+  });
+
+  it("reuses the Follow pose buffer and skips steady-state work within one source frame", () => {
+    const player: VirtualWorldPlayer = {
+      id: 7,
+      representation: "track_only",
+      frames: [{
+        t: 0,
+        track_world_xy: [1.2, 4.4],
+        floor_world_xyz: [1.2, 4.4, 0],
+        joints_world: [],
+        joint_conf: [],
+        mesh_vertices_world: [],
+        joint_count: 0,
+        mesh_vertex_count: 0,
+      }],
+    };
+    const followWorld = makeWorld([player]);
+    const buffer = createFollowCameraPoseBuffer();
+    const position = buffer.position;
+    const target = buffer.target;
+
+    expect(updateFollowCameraPoseBuffer(buffer, followWorld, 7, 0)).toBe(true);
+    expect(updateFollowCameraPoseBuffer(buffer, followWorld, 7, 0.01)).toBe(false);
+    expect(buffer.position).toBe(position);
+    expect(buffer.target).toBe(target);
+    expect(buffer.target[0]).toBeCloseTo(1.2);
+    expect(buffer.target[1]).toBeCloseTo(4.4);
+  });
+
+  it("updates Follow framing when switching players whose active frames have the same timestamp", () => {
+    const player = (id: number, x: number): VirtualWorldPlayer => ({
+      id,
+      representation: "track_only",
+      frames: [{
+        t: 0,
+        track_world_xy: [x, 4.4],
+        floor_world_xyz: [x, 4.4, 0],
+        joints_world: [],
+        joint_conf: [],
+        mesh_vertices_world: [],
+        joint_count: 0,
+        mesh_vertex_count: 0,
+      }],
+    });
+    const followWorld = makeWorld([player(7, 1.2), player(8, -1.4)]);
+    const buffer = createFollowCameraPoseBuffer();
+
+    expect(updateFollowCameraPoseBuffer(buffer, followWorld, 7, 0)).toBe(true);
+    expect(updateFollowCameraPoseBuffer(buffer, followWorld, 8, 0)).toBe(true);
+    expect(buffer.target[0]).toBeCloseTo(-1.4);
+  });
+
+  it("fits court framing to active entities outside the playable rectangle", () => {
+    const player: VirtualWorldPlayer = {
+      id: 8,
+      representation: "track_only",
+      frames: [{
+        t: 0,
+        track_world_xy: [0, -9],
+        floor_world_xyz: [0, -9, 0],
+        joints_world: [],
+        joint_conf: [],
+        mesh_vertices_world: [],
+        joint_count: 0,
+        mesh_vertex_count: 0,
+      }],
+    };
+    const entityFit = fittedCourtCameraPose(makeWorld([player]), 0);
+    const courtOnly = fittedCourtCameraPose(world, 0);
+
+    expect(entityFit.target[1]).toBeLessThan(courtOnly.target[1]);
+    expect(entityFit.position[2]).toBeGreaterThan(courtOnly.position[2]);
   });
 
   it("frames the selected player's active paddle with a close review camera", () => {

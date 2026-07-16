@@ -21,6 +21,15 @@ Open a local manifest:
 http://127.0.0.1:5173/?manifest=/@fs/absolute/path/to/replay_viewer_manifest.json
 ```
 
+For a loopback-only local verification session without an auth token, enable
+the explicit development bypass before starting Vite:
+
+```bash
+VITE_REPLAY_VERIFY_DEV_BYPASS=1 npm run dev -- --host 127.0.0.1
+```
+
+The bypass is rejected on non-loopback hosts and in production builds.
+
 If the manifest references files outside the repo root, start Vite with a
 matching `server.fs.allow` policy or pass `--vite-allow-root` to the manifest
 builder/verifier that created the bundle.

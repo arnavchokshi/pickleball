@@ -43,6 +43,7 @@ import {
   parseRallySpans,
   parseViewerManifest,
   parseVirtualWorld,
+  preparedTimeFramesForLookup,
   paddleOpacityForStaleAge,
   playerPresenceForTime,
   playerTrailPointsForTime,
@@ -68,6 +69,16 @@ import {
 } from "./viewerData";
 
 describe("canonical entity time resolution", () => {
+  it("memoizes one sorted frame index and resolves nearest PTS with binary lookup", () => {
+    const frames = [{ t: 2, id: "late" }, { t: 0, id: "early" }, { t: 1, id: "middle" }];
+    const prepared = preparedTimeFramesForLookup(frames);
+
+    expect(prepared.map((frame) => frame.id)).toEqual(["early", "middle", "late"]);
+    expect(preparedTimeFramesForLookup(frames)).toBe(prepared);
+    expect(resolveTimeSample(frames, 1.49, 0.6).sample?.id).toBe("middle");
+    expect(resolveTimeSample(frames, 1.51, 0.6).sample?.id).toBe("late");
+  });
+
   it("refuses an internal nearest-sample hold beyond the declared tolerance", () => {
     const resolved = resolveTimeSample([{ t: 0 }, { t: 1 }], 0.5, 0.12);
     expect(resolved.insideCoverage).toBe(true);
@@ -2078,6 +2089,13 @@ describe("trust-band provenance", () => {
   it("rejects an unknown badge value", () => {
     const invalid = { ...world, court: { ...world.court, trust_band: { ...bodyTrustBand, badge: "trusted" } } };
     expect(() => parseVirtualWorld(invalid)).toThrow("badge");
+  });
+
+  it("preserves the trust-contract too_close_to_call abstention badge", () => {
+    const abstained = { ...bodyTrustBand, badge: "too_close_to_call" };
+    const parsed = parseVirtualWorld({ ...world, court: { ...world.court, trust_band: abstained } });
+    expect(parsed.court.trust_band?.badge).toBe("too_close_to_call");
+    expect(trustBadgeColor("too_close_to_call")).not.toBe(trustBadgeColor("verified"));
   });
 
   it("colors verified/preview/low_confidence badges distinctly and fails closed on missing", () => {

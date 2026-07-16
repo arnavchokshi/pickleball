@@ -10,7 +10,11 @@ const repoRootTmpAlias = repoRootRealpath.startsWith("/private/tmp/")
   : null;
 const devFsAllow = Array.from(new Set([repoRoot, repoRootRealpath, repoRootTmpAlias].filter(Boolean) as string[]));
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // Replay bundles are manifest-addressed, never production public assets.
+  // Keep local public/ aliases available to the dev server without copying
+  // large or VM-written symlink trees into production builds.
+  publicDir: command === "build" ? false : "public",
   server: {
     proxy: {
       "/api": {
@@ -24,4 +28,4 @@ export default defineConfig({
       allow: devFsAllow,
     },
   },
-});
+}));

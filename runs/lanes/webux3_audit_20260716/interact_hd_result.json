@@ -1,0 +1,151 @@
+{
+ "headless": false,
+ "steps": [
+  {
+   "name": "00_loaded",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "01_playing",
+   "note": "raf_fps=37.5",
+   "badge_fps": null
+  },
+  {
+   "name": "02_preset_Follow_player",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "02_preset_Free_orbit",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "02_preset_Court",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "03_toggle_Solid_meshes",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "03_toggle_Skeletons",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "03_toggle_Paddles",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "03_toggle_Ball_trail",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "03_toggle_Ghost_positioning",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "03_toggle_Contact_surfaces",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "03_toggle_Target_zones",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "03_toggle_Player_trails",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "04_next_event_x2",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "05_isolate_Player_20",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "05_isolate_Ball_focus",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "05_isolate_Clear",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "06_tab_Shots",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "06_tab_Court_map",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "06_tab_3D",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "07_playback_original",
+   "error": "Locator.click: Timeout 2500ms exceeded.\nCall log:\n  - waiting for get_by_role(\"button\", name=\"original\", exact=True)\n"
+  },
+  {
+   "name": "07_playback_2x",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "08_bottom_scrolled",
+   "note": "",
+   "badge_fps": null
+  },
+  {
+   "name": "09_follow_playing",
+   "note": "raf=11.2",
+   "badge_fps": null
+  }
+ ],
+ "console_errors": [],
+ "geometry": {
+  "video": {
+   "x": 15,
+   "y": 786,
+   "width": 834,
+   "height": 469.125,
+   "top": 786,
+   "right": 849,
+   "bottom": 1255.125,
+   "left": 15
+  },
+  "canvas": {
+   "x": 865,
+   "y": 786,
+   "width": 720,
+   "height": 599.625,
+   "top": 786,
+   "right": 1585,
+   "bottom": 1385.625,
+   "left": 865
+  },
+  "pageHeight": 1401
+ },
+ "fps_playing_raf": 37.5,
+ "fps_follow_playing_raf": 11.25,
+ "badge_after_follow_play": null
+}

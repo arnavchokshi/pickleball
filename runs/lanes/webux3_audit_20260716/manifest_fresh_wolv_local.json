@@ -1,0 +1,30 @@
+{
+ "annotation_sources": [],
+ "artifact_type": "racketsport_replay_viewer_manifest",
+ "auto_bounce_candidates_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner/ball_bounce_candidates.json",
+ "ball_arc_render_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner/ball_arc_render.json",
+ "ball_arc_solved_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json",
+ "ball_bounce_candidates_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner/ball_bounce_candidates.json",
+ "ball_flight_sanity_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner/ball_flight_sanity.json",
+ "ball_inflections_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner/ball_inflections.json",
+ "body_mesh_index_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner/body_mesh_index/body_mesh_index.json",
+ "body_mesh_url": null,
+ "clip": "wolverine_mixed_0200_mid_steep_corner",
+ "coaching_card_facts_url": null,
+ "contact_windows_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner/contact_windows.json",
+ "label_overlays": [],
+ "mesh_status": "windowed_index",
+ "notes": [
+  "Viewer evidence is review-only and does not promote BODY, PHYSICS, RKT, or E2E gates.",
+  "Vite /@fs URLs are intended for local review server use.",
+  "Vite allow root: /Users/arnavchokshi/Desktop/pickleball",
+  "trackH webux3_audit_20260716: path-translated from VM-absolute /@fs URLs to local repo paths for local browser review; asset files byte-identical originals, no content changes"
+ ],
+ "physics_refinement_url": null,
+ "rally_spans_url": null,
+ "replay_scene_url": null,
+ "reviewed_bounces_url": null,
+ "schema_version": 1,
+ "video_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4",
+ "virtual_world_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/demo_beststack_render_20260710/fresh_wolv/wolverine_mixed_0200_mid_steep_corner/confidence_gated_world.json"
+}

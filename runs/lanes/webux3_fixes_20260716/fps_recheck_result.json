@@ -1,0 +1,73 @@
+{
+ "probes": [
+  {
+   "trial": 0,
+   "preset": "Court",
+   "fps": 68.2,
+   "t0": 0.81,
+   "t1": 4.97,
+   "valid": true
+  },
+  {
+   "trial": 0,
+   "preset": "Follow player",
+   "fps": 33.5,
+   "t0": 6.69,
+   "t1": 0.67,
+   "valid": true
+  },
+  {
+   "trial": 1,
+   "preset": "Follow player",
+   "fps": 63,
+   "t0": 2.16,
+   "t1": 6.69,
+   "valid": true
+  },
+  {
+   "trial": 1,
+   "preset": "Court",
+   "fps": 60.8,
+   "t0": 8.39,
+   "t1": 2.68,
+   "valid": true
+  },
+  {
+   "trial": 2,
+   "preset": "Court",
+   "fps": 34.5,
+   "t0": 5.03,
+   "t1": 9.24,
+   "valid": true
+  },
+  {
+   "trial": 2,
+   "preset": "Follow player",
+   "fps": 63,
+   "t0": 1.58,
+   "t1": 5.6,
+   "valid": true
+  },
+  {
+   "trial": 3,
+   "preset": "Follow player",
+   "fps": 24.8,
+   "t0": 7.43,
+   "t1": 1.47,
+   "valid": true
+  },
+  {
+   "trial": 3,
+   "preset": "Court",
+   "fps": 64.2,
+   "t0": 3.27,
+   "t1": 7.49,
+   "valid": true
+  }
+ ],
+ "notes": "loop=true; state-guarded; alternating order; 4s rAF probes",
+ "court_avg": 56.9375,
+ "follow_avg": 46.0625,
+ "ratio": 0.8090010976948409,
+ "errors": []
+}

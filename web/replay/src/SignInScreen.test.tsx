@@ -21,6 +21,15 @@ describe("SignInScreen markup", () => {
     expect(markup).toContain("Create account");
     expect(markup).toContain("Invite code");
   });
+
+  it("renders the explicit loopback manifest bypass hint only when requested", () => {
+    const hinted = renderToStaticMarkup(<SignInScreen onAuthed={() => {}} devManifestHint />);
+    const normal = renderToStaticMarkup(<SignInScreen onAuthed={() => {}} />);
+
+    expect(hinted).toContain("manifest param detected");
+    expect(hinted).toContain("VITE_REPLAY_VERIFY_DEV_BYPASS=1");
+    expect(normal).not.toContain("manifest param detected");
+  });
 });
 
 describe("signInErrorText", () => {
