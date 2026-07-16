@@ -48,6 +48,17 @@ def test_repair_reconnects_motion_continuous_fragments_and_fills_safe_gap() -> N
     ]
     assert connected
     assert any(frame_idx == 5 and world_xy == (5.0, 0.0) for frame_idx, world_xy in connected[0])
+    assert summary.confidence_repairs == (
+        {
+            "player_id": 1,
+            "frame_index": 5,
+            "t": 0.5,
+            "conf": 0.35,
+            "conf_source": "interpolated_endpoint_min_capped_0_35",
+            "repaired": True,
+        },
+    )
+    assert all("conf_source" not in frame for player in tracks.model_dump()["players"] for frame in player["frames"])
 
 
 def test_repair_refuses_impossible_teleport_merge() -> None:

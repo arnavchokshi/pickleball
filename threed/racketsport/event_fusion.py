@@ -27,6 +27,8 @@ WRIST_ONLY_TRUST_BAND_NOTE = "wrist-cue-only, unverified"
 LOW_TRUST_BALL_INFLECTION_CONFIDENCE_THRESHOLD = 0.25
 LOW_TRUST_BALL_INFLECTION_NOTE = "low-trust ball-inflection cue, unverified"
 IMAGE_SPACE_BALL_INFLECTION_NOTE = "image-space ball-inflection cue, unverified"
+POP_LIKELIHOOD_LOG_BOUND = 0.20
+POP_WINDOW_SCALE_BOUND = 0.10
 
 
 @dataclass(frozen=True)
@@ -69,10 +71,17 @@ class AudioOnsetCandidate:
 
     time_s: float
     confidence: float
+    features: Mapping[str, Any] | None = None
 
     def __post_init__(self) -> None:
         _require_non_negative_time(self.time_s, "time_s")
         _require_confidence(self.confidence, "confidence")
+        if self.features is not None:
+            if not isinstance(self.features, Mapping):
+                raise ValueError("features must be a mapping when present")
+            # Copy, but do not normalize, clip, or otherwise rewrite the raw
+            # onset evidence. Fusion reads a bounded view of pop_band_ratio.
+            object.__setattr__(self, "features", dict(self.features))
 
 
 def fuse_contact_windows(
@@ -201,6 +210,15 @@ def fuse_contact_windows(
             if audio is not None:
                 source_confidences["audio"] = audio.confidence
             confidence = round(sum(source_confidences.values()) / len(source_confidences), 12)
+            event_pre_s = pre_s
+            event_post_s = post_s
+            if audio is not None:
+                confidence, event_pre_s, event_post_s = _apply_audio_pop_soft_evidence(
+                    confidence=confidence,
+                    pre_s=pre_s,
+                    post_s=post_s,
+                    audio=audio,
+                )
             frame = _event_frame(event_t, fps=fps, frame_times=frame_times)
 
             events.append(
@@ -210,8 +228,8 @@ def fuse_contact_windows(
                     player_id=wrist.player_id,
                     confidence=confidence,
                     sources=source_confidences,
-                    t0=max(0.0, event_t - pre_s),
-                    t1=event_t + post_s,
+                    t0=max(0.0, event_t - event_pre_s),
+                    t1=event_t + event_post_s,
                     importance=confidence,
                     trust_band_note=_ball_contact_trust_note(ball),
                 )
@@ -457,12 +475,50 @@ def _coerce_audio_onset(
             else _cue_time_s(candidate, fps=fps, frame_times=frame_times, name="audio_onset.time_s")
         )
         confidence = candidate.get("confidence", candidate.get("score", candidate.get("conf")))
+        features = candidate.get("features")
     else:
         time_s = getattr(candidate, "time_s", getattr(candidate, "t", None))
         confidence = getattr(candidate, "confidence", getattr(candidate, "score", getattr(candidate, "conf", None)))
+        features = getattr(candidate, "features", None)
     return AudioOnsetCandidate(
         time_s=_require_non_negative_time(time_s, "audio_onset.time_s"),
         confidence=_require_confidence(confidence, "audio_onset.confidence"),
+        features=features,
+    )
+
+
+def _apply_audio_pop_soft_evidence(
+    *,
+    confidence: float,
+    pre_s: float,
+    post_s: float,
+    audio: AudioOnsetCandidate,
+) -> tuple[float, float, float]:
+    """Apply bounded advisory pop evidence without making audio a gate.
+
+    The legacy visual-plus-onset confidence is treated as prior odds. A raw
+    ``pop_band_ratio`` is converted to a bounded likelihood ratio in
+    ``[exp(-0.2), exp(0.2)]``; it is not averaged with cue confidences. The
+    same centered evidence scales each window side by at most ten percent.
+    Missing features return the exact legacy values for byte parity.
+    """
+
+    if audio.features is None or "pop_band_ratio" not in audio.features:
+        return confidence, pre_s, post_s
+    raw_ratio = _require_finite(audio.features["pop_band_ratio"], "audio_onset.features.pop_band_ratio")
+    bounded_ratio = min(1.0, max(0.0, raw_ratio))
+    centered = 2.0 * bounded_ratio - 1.0
+    if confidence <= 0.0 or confidence >= 1.0:
+        adjusted_confidence = confidence
+    else:
+        prior_odds = confidence / (1.0 - confidence)
+        adjusted_odds = prior_odds * math.exp(POP_LIKELIHOOD_LOG_BOUND * centered)
+        adjusted_confidence = adjusted_odds / (1.0 + adjusted_odds)
+    window_scale = 1.0 - POP_WINDOW_SCALE_BOUND * centered
+    return (
+        round(adjusted_confidence, 12),
+        pre_s * window_scale,
+        post_s * window_scale,
     )
 
 

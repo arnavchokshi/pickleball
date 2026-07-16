@@ -79,7 +79,12 @@ def test_racket_stage_runner_writes_schema_valid_pose_from_explicit_four_corner_
 
     assert result.status == "ran"
     assert result.source_mode == "explicit_four_corner_candidates_pnp_ippe"
-    assert result.produced_artifacts == ("racket_pose.json", "racket_pose_readiness.json", "racket_promotion_audit.json")
+    assert result.produced_artifacts == (
+        "racket_pose.json",
+        "racket_pose_hypotheses.json",
+        "racket_pose_readiness.json",
+        "racket_promotion_audit.json",
+    )
     assert result.metrics["candidate_frame_count"] == 1
     assert result.metrics["accepted_frame_count"] == 1
     parsed = validate_artifact_file("racket_pose", run_dir / "racket_pose.json")
@@ -89,6 +94,15 @@ def test_racket_stage_runner_writes_schema_valid_pose_from_explicit_four_corner_
     assert parsed.players[0].frames[0].translation_unit == "cm"
     assert parsed.players[0].frames[0].reprojection_error_px is not None
     assert parsed.players[0].frames[0].reprojection_error_px < 0.75
+    hypotheses = json.loads((run_dir / "racket_pose_hypotheses.json").read_text(encoding="utf-8"))
+    hypothesis_frame = hypotheses["players"][0]["frames"][0]
+    assert hypothesis_frame["primary_pose"]["pose_se3"] == parsed.players[0].frames[0].pose_se3.model_dump()
+    assert hypothesis_frame["alt_pose"] is not None
+    assert hypothesis_frame["alt_pose"]["pose_se3"] != hypothesis_frame["primary_pose"]["pose_se3"]
+    assert hypothesis_frame["ambiguity_margin_px"] == pytest.approx(
+        hypothesis_frame["candidate_reprojection_errors_px"][1]
+        - hypothesis_frame["candidate_reprojection_errors_px"][0]
+    )
     readiness = validate_artifact_file("racket_pose_readiness", run_dir / "racket_pose_readiness.json")
     audit = validate_artifact_file("racket_promotion_audit", run_dir / "racket_promotion_audit.json")
     assert isinstance(readiness, RacketPoseReadiness)

@@ -747,6 +747,15 @@ def _apply_motionbert_body17(
             for body_pos, joint_idx in enumerate(body17_indexes):
                 joints[joint_idx] = _vector3(refined_joints[body_pos], name=f"motionbert_body17/{body_pos}")
             frame["joints_world"] = joints
+            confidence_provenance = (
+                dict(frame["confidence_provenance"])
+                if isinstance(frame.get("confidence_provenance"), Mapping)
+                else {}
+            )
+            confidence_provenance["motionbert_input_confidence_repairs"] = (
+                _motionbert_input_confidence_repairs(frame, joint_names)
+            )
+            frame["confidence_provenance"] = confidence_provenance
         metrics["motionbert_window_count"] += 1
         metrics["motionbert_frame_count"] += len(window)
     return copied_frames, metrics
@@ -835,6 +844,39 @@ def _coco_body17_to_h36m(
     h36m_conf[15] = float(conf_by_name.get("right_elbow", 0.0))
     h36m_conf[16] = float(conf_by_name.get("right_wrist", 0.0))
     return h36m, h36m_conf
+
+
+def _motionbert_input_confidence_repairs(
+    frame: Mapping[str, Any],
+    joint_names: Sequence[str],
+) -> list[dict[str, Any]]:
+    """Describe only synthesized H36M confidence values used by MotionBERT.
+
+    Directly copied joint confidences are intentionally absent. The three
+    virtual H36M joints below use the existing arithmetic means unchanged.
+    """
+
+    conf = frame.get("joint_conf", [])
+    conf_by_name = {
+        name: _joint_confidence(conf, idx)
+        for idx, name in enumerate(joint_names)
+    }
+    repairs = (
+        (0, "pelvis", ("left_hip", "right_hip")),
+        (7, "spine", ("left_hip", "right_hip", "left_shoulder", "right_shoulder")),
+        (8, "neck", ("left_shoulder", "right_shoulder")),
+    )
+    return [
+        {
+            "h36m_joint_index": index,
+            "joint": name,
+            "confidence": _average_conf(conf_by_name, *source_joints),
+            "conf_source": "interpolated_joint_mean",
+            "source_joints": list(source_joints),
+            "repaired": True,
+        }
+        for index, name, source_joints in repairs
+    ]
 
 
 def _merge_motionbert_h36m_prediction(

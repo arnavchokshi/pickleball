@@ -70,6 +70,7 @@ class PlanarPaddlePoseEstimate:
     candidate_reprojection_errors_px: tuple[float, ...]
     ambiguity_margin_px: float | None
     ambiguous: bool
+    alt_pose: SE3PoseConfidence | None = None
 
     def __post_init__(self) -> None:
         reprojection = _require_finite_float(self.reprojection_error_px, "reprojection_error_px")
@@ -276,12 +277,26 @@ def estimate_planar_paddle_pose_with_diagnostics(
         confidence=confidence,
         source="pnp_ippe",
     )
+    alt_pose = None
+    if len(scored) > 1:
+        alt_error_px, alt_rvec, alt_tvec = scored[1]
+        alt_rotation, _ = cv2.Rodrigues(alt_rvec)
+        alt_translation = np.asarray(alt_tvec, dtype=np.float64).reshape(3).tolist()
+        if alt_translation[2] <= 0.0:
+            raise ValueError("second IPPE paddle pose is degenerate: non-positive camera depth")
+        alt_pose = SE3PoseConfidence(
+            R=alt_rotation.tolist(),
+            t=alt_translation,
+            confidence=max(0.0, min(1.0, 1.0 / (1.0 + alt_error_px / 3.0))),
+            source="pnp_ippe_alt",
+        )
     return PlanarPaddlePoseEstimate(
         pose=pose,
         reprojection_error_px=reprojection_error_px,
         candidate_reprojection_errors_px=candidate_errors,
         ambiguity_margin_px=ambiguity_margin,
         ambiguous=ambiguity_margin is not None and ambiguity_margin <= threshold,
+        alt_pose=alt_pose,
     )
 
 

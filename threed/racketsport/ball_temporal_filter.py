@@ -70,7 +70,7 @@ def filter_ball_track_temporal_path(
         frame["approx"] = False
         rejected_off_path += 1
 
-    interpolated_count = _interpolate_chain_gaps(
+    confidence_repairs = _interpolate_chain_gaps(
         samples_by_index=samples_by_index,
         chain_indices=chain_indices,
         fps=float(track.fps),
@@ -90,7 +90,8 @@ def filter_ball_track_temporal_path(
         "visible_after": visible_after,
         "chain_visible_count": len(chain_indices),
         "rejected_off_path_count": rejected_off_path,
-        "interpolated_count": interpolated_count,
+        "interpolated_count": len(confidence_repairs),
+        "confidence_repairs": confidence_repairs,
         "max_speed_px_per_second": float(max_speed_px_per_second),
         "base_jump_px": float(base_jump_px),
         "max_link_gap_frames": int(max_link_gap_frames),
@@ -452,10 +453,10 @@ def _interpolate_chain_gaps(
     max_speed_px_per_second: float,
     base_jump_px: float,
     max_interpolate_gap_frames: int,
-) -> int:
+) -> list[dict[str, Any]]:
     if max_interpolate_gap_frames == 0 or len(chain_indices) < 2:
-        return 0
-    interpolated_count = 0
+        return []
+    confidence_repairs: list[dict[str, Any]] = []
     ordered = sorted(chain_indices)
     for left_index, right_index in zip(ordered, ordered[1:]):
         gap = right_index - left_index
@@ -485,8 +486,16 @@ def _interpolate_chain_gaps(
             frame["visible"] = True
             frame["approx"] = True
             frame.pop("world_xyz", None)
-            interpolated_count += 1
-    return interpolated_count
+            confidence_repairs.append(
+                {
+                    "frame_index": frame_index,
+                    "t": float(frame["t"]),
+                    "conf": float(frame["conf"]),
+                    "conf_source": "interpolated_endpoint_min_half",
+                    "repaired": True,
+                }
+            )
+    return confidence_repairs
 
 
 def _isolated_outlier_indices(

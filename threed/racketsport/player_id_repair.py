@@ -26,6 +26,7 @@ class RepairDetection:
     bbox: tuple[float, float, float, float]
     world_xy: tuple[float, float]
     conf: float
+    conf_source: str | None = None
 
 
 @dataclass(frozen=True)
@@ -75,6 +76,7 @@ class PlayerIdRepairSummary:
     teleport_count: int
     outside_court_count: int = 0
     non_person_count: int = 0
+    confidence_repairs: tuple[dict[str, Any], ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -218,7 +220,11 @@ def repair_detections_to_tracks(
     selected_fragment_ids = {fragment.fragment_id for cluster in selected for fragment in cluster.fragments}
     dropped_fragment_count = sum(1 for fragment in fragments if fragment.fragment_id not in selected_fragment_ids)
 
-    tracks, synthetic_count, skipped_overlap = _clusters_to_tracks(selected, fps=fps, config=cfg)
+    tracks, synthetic_count, skipped_overlap, confidence_repairs = _clusters_to_tracks(
+        selected,
+        fps=fps,
+        config=cfg,
+    )
     impossible_overlap_count = _count_same_frame_overlaps(tracks, cfg.gap_fill_iou_threshold)
     teleport_count = _count_teleports(tracks, fps=fps, max_speed_m_s=cfg.max_merge_speed_m_s)
     status = "ok"
@@ -240,6 +246,7 @@ def repair_detections_to_tracks(
         output_player_count=len(tracks.players),
         impossible_overlap_count=impossible_overlap_count,
         teleport_count=teleport_count,
+        confidence_repairs=confidence_repairs,
     )
 
 
@@ -421,7 +428,7 @@ def _clusters_to_tracks(
     *,
     fps: float,
     config: RepairConfig,
-) -> tuple[Tracks, int, int]:
+) -> tuple[Tracks, int, int, tuple[dict[str, Any], ...]]:
     raw_players = [_dedupe_cluster_detections(cluster) for cluster in clusters]
     raw_players = [items for items in raw_players if items]
     sorted_players = sorted(raw_players, key=_player_sort_key)
@@ -458,7 +465,25 @@ def _clusters_to_tracks(
         )
         for idx, detections in enumerate(filled_players)
     ]
-    return Tracks(schema_version=1, fps=fps, players=players, rally_spans=[]), synthetic_total, skipped_overlap_total
+    confidence_repairs = tuple(
+        {
+            "player_id": player_idx + 1,
+            "frame_index": detection.frame_idx,
+            "t": detection.frame_idx / fps,
+            "conf": max(0.0, min(1.0, detection.conf)),
+            "conf_source": detection.conf_source,
+            "repaired": True,
+        }
+        for player_idx, detections in enumerate(filled_players)
+        for detection in detections
+        if detection.conf_source is not None
+    )
+    return (
+        Tracks(schema_version=1, fps=fps, players=players, rally_spans=[]),
+        synthetic_total,
+        skipped_overlap_total,
+        confidence_repairs,
+    )
 
 
 def _dedupe_cluster_detections(cluster: _Cluster) -> list[RepairDetection]:
@@ -522,6 +547,7 @@ def _interpolate_detection(left: RepairDetection, right: RepairDetection, frame_
         bbox=bbox,  # type: ignore[arg-type]
         world_xy=world_xy,
         conf=max(conf, 0.0),
+        conf_source="interpolated_endpoint_min_capped_0_35",
     )
 
 

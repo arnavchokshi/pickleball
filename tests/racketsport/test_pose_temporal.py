@@ -274,6 +274,14 @@ def test_refine_lane_a_skeleton3d_applies_motionbert_body17_in_243_frame_windows
     assert output_frames[243]["joints_world"][nose_idx] == pytest.approx([2.68, 0.0, 1.7], abs=1e-4)
     assert output_frames[0]["joints_world"][foot_idx][0] == pytest.approx(10.0)
     assert output_frames[0]["joints_world"][hand_idx][0] == pytest.approx(20.0)
+    confidence_repairs = output_frames[0]["confidence_provenance"]["motionbert_input_confidence_repairs"]
+    assert [marker["h36m_joint_index"] for marker in confidence_repairs] == [0, 7, 8]
+    assert {marker["conf_source"] for marker in confidence_repairs} == {"interpolated_joint_mean"}
+    assert all(marker["repaired"] is True for marker in confidence_repairs)
+    assert output_frames[0]["joint_conf"] == frames[0]["joint_conf"]
+    assert not {1, 2, 3, 4, 5, 6, 9, 10, 11, 12, 13, 14, 15, 16} & {
+        marker["h36m_joint_index"] for marker in confidence_repairs
+    }
     temporal = refined["provenance"]["temporal_refine"]
     assert temporal["motionbert"] == "applied"
     assert temporal["motionbert_model_id"] == "motionbert_lift_smooth"

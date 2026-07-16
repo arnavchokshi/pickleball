@@ -155,6 +155,10 @@ def test_planar_paddle_pose_diagnostics_report_reprojection_and_ambiguity() -> N
     assert clean.pose.source == "pnp_ippe"
     assert clean.reprojection_error_px < 0.75
     assert clean.candidate_count >= 1
+    if clean.candidate_count >= 2:
+        assert clean.alt_pose is not None
+        assert clean.alt_pose.source == "pnp_ippe_alt"
+        assert clean.alt_pose.t != clean.pose.t
     assert clean.ambiguity_margin_px is None or clean.ambiguity_margin_px >= 0.0
     assert noisy.reprojection_error_px > clean.reprojection_error_px
     assert noisy.pose.confidence < clean.pose.confidence

@@ -60,6 +60,15 @@ def test_temporal_filter_keeps_longest_motion_chain_and_interpolates_short_gap(t
     assert summary["uses_human_clicks"] is False
     assert summary["rejected_off_path_count"] == 2
     assert summary["interpolated_count"] == 3
+    assert [marker["frame_index"] for marker in summary["confidence_repairs"]] == [2, 4, 6]
+    assert {marker["conf_source"] for marker in summary["confidence_repairs"]} == {
+        "interpolated_endpoint_min_half"
+    }
+    assert all(marker["repaired"] is True for marker in summary["confidence_repairs"])
+    assert all("conf_source" not in frame for frame in payload["frames"])
+    assert not {0, 1, 3, 5, 7} & {
+        marker["frame_index"] for marker in summary["confidence_repairs"]
+    }
 
 
 def test_temporal_filter_cli_writes_schema_valid_output(tmp_path: Path) -> None:

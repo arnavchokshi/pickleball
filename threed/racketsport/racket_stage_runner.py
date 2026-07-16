@@ -16,6 +16,7 @@ from .schemas import CourtCalibration, RacketCandidateFrame, RacketCandidates, R
 
 DEFAULT_RACKET_CANDIDATES_FILENAME = "racket_candidates.json"
 RACKET_STAGE_DIAGNOSTICS_FILENAME = "racket_stage_diagnostics.json"
+RACKET_POSE_HYPOTHESES_FILENAME = "racket_pose_hypotheses.json"
 
 
 @dataclass(frozen=True)
@@ -51,7 +52,7 @@ class RacketStageRunner:
         candidate_path: str | Path | None = None,
         max_reprojection_error_px: float = 6.0,
         ambiguity_margin_threshold_px: float = 1.0,
-        reject_ambiguous: bool = True,
+        reject_ambiguous: bool = False,
     ) -> None:
         if max_reprojection_error_px < 0.0:
             raise ValueError("max_reprojection_error_px must be non-negative")
@@ -76,12 +77,14 @@ class RacketStageRunner:
         dist_coeffs = calibration.intrinsics.dist
 
         players: list[dict[str, Any]] = []
+        hypothesis_players: list[dict[str, Any]] = []
         metrics = {
             "candidate_path": str(candidates_path),
             "candidate_frame_count": 0,
             "accepted_frame_count": 0,
             "rejected_high_reprojection_count": 0,
             "rejected_ambiguous_count": 0,
+            "carried_ambiguous_count": 0,
             "invalid_candidate_count": 0,
             "rejected_box_derived_source_count": 0,
             "max_reprojection_error_px": self.max_reprojection_error_px,
@@ -117,10 +120,11 @@ class RacketStageRunner:
             player_id = player_payload.id
             paddle_dims = validate_paddle_dimensions(player_payload.paddle_dims_in)
             frames = []
+            hypothesis_frames = []
             for frame_payload in player_payload.frames:
                 metrics["candidate_frame_count"] += 1
                 try:
-                    frame = self._pose_frame(
+                    frame, hypothesis_frame = self._pose_frame(
                         frame_payload,
                         camera_matrix=camera_matrix,
                         dist_coeffs=dist_coeffs,
@@ -135,8 +139,11 @@ class RacketStageRunner:
                 if self.reject_ambiguous and frame["ambiguous"]:
                     metrics["rejected_ambiguous_count"] += 1
                     continue
+                if frame["ambiguous"]:
+                    metrics["carried_ambiguous_count"] += 1
                 metrics["accepted_frame_count"] += 1
                 frames.append(frame)
+                hypothesis_frames.append(hypothesis_frame)
             if frames:
                 players.append(
                     {
@@ -144,6 +151,13 @@ class RacketStageRunner:
                         "paddle_dims_in": {"length": paddle_dims.length_in, "width": paddle_dims.width_in},
                         "frames": frames,
                         "contacts": [],
+                    }
+                )
+                hypothesis_players.append(
+                    {
+                        "id": player_id,
+                        "paddle_dims_in": {"length": paddle_dims.length_in, "width": paddle_dims.width_in},
+                        "frames": hypothesis_frames,
                     }
                 )
 
@@ -182,6 +196,17 @@ class RacketStageRunner:
             }
         )
         _write_json(context.run_dir / "racket_pose.json", racket_pose.model_dump(mode="json"))
+        _write_json(
+            context.run_dir / RACKET_POSE_HYPOTHESES_FILENAME,
+            {
+                "schema_version": 1,
+                "artifact_type": "racketsport_racket_pose_hypotheses",
+                "fps": fps,
+                "world_frame": "camera",
+                "translation_unit": "cm",
+                "players": hypothesis_players,
+            },
+        )
         readiness = build_racket_pose_readiness(
             clip=str(getattr(context, "clip", "")),
             racket_candidates=candidates,
@@ -199,10 +224,16 @@ class RacketStageRunner:
             status="ran",
             real_model=self.real_model,
             source_mode=self.source_mode,
-            produced_artifacts=("racket_pose.json", "racket_pose_readiness.json", "racket_promotion_audit.json"),
+            produced_artifacts=(
+                "racket_pose.json",
+                RACKET_POSE_HYPOTHESES_FILENAME,
+                "racket_pose_readiness.json",
+                "racket_promotion_audit.json",
+            ),
             notes=(
                 "consumed explicit four-corner paddle candidates and solved planar PnP/IPPE",
-                "fails closed when candidates are missing, ambiguous, invalid, or above reprojection threshold",
+                "retains both finite IPPE hypotheses; ambiguous candidates are carried by default rather than ranked away by reprojection alone",
+                "fails closed when candidates are missing, invalid, degenerate, or above reprojection threshold",
                 "prototype integration only; real PADDLE verification still requires detector/SAM2 candidates and ArUco/AprilTag GT",
             ),
             metrics=metrics,
@@ -232,7 +263,7 @@ class RacketStageRunner:
         camera_matrix: Sequence[Sequence[float]],
         dist_coeffs: Sequence[float],
         paddle_dims_in: Mapping[str, float],
-    ) -> dict[str, Any]:
+    ) -> tuple[dict[str, Any], dict[str, Any]]:
         estimate = estimate_planar_paddle_pose_with_diagnostics(
             frame_payload.corners_px,
             camera_matrix,
@@ -241,19 +272,46 @@ class RacketStageRunner:
             ambiguity_margin_threshold_px=self.ambiguity_margin_threshold_px,
         )
         pose = estimate.pose
-        return {
+        frame_confidence = max(0.0, min(1.0, frame_payload.conf * pose.confidence))
+        frame = {
             "t": frame_payload.t,
             "pose_se3": {
                 "R": [list(row) for row in pose.R],
                 "t": list(pose.t),
             },
-            "conf": max(0.0, min(1.0, frame_payload.conf * pose.confidence)),
+            "conf": frame_confidence,
             "world_frame": "camera",
             "translation_unit": "cm",
             "source": f"{frame_payload.source}:pnp_ippe",
             "reprojection_error_px": estimate.reprojection_error_px,
             "ambiguous": estimate.ambiguous,
         }
+        alt_pose = estimate.alt_pose
+        hypothesis_frame = {
+            "t": frame_payload.t,
+            "primary_pose": {
+                "pose_se3": {"R": [list(row) for row in pose.R], "t": list(pose.t)},
+                "confidence": pose.confidence,
+                "frame_conf": frame_confidence,
+                "reprojection_error_px": estimate.reprojection_error_px,
+                "source": pose.source,
+            },
+            "alt_pose": (
+                {
+                    "pose_se3": {"R": [list(row) for row in alt_pose.R], "t": list(alt_pose.t)},
+                    "confidence": alt_pose.confidence,
+                    "frame_conf": max(0.0, min(1.0, frame_payload.conf * alt_pose.confidence)),
+                    "reprojection_error_px": estimate.candidate_reprojection_errors_px[1],
+                    "source": alt_pose.source,
+                }
+                if alt_pose is not None
+                else None
+            ),
+            "candidate_reprojection_errors_px": list(estimate.candidate_reprojection_errors_px),
+            "ambiguity_margin_px": estimate.ambiguity_margin_px,
+            "ambiguous": estimate.ambiguous,
+        }
+        return frame, hypothesis_frame
 
 
 def _camera_matrix(calibration: CourtCalibration) -> list[list[float]]:
@@ -282,6 +340,7 @@ def _write_json(path: Path, payload: Any) -> None:
 __all__ = [
     "DEFAULT_RACKET_CANDIDATES_FILENAME",
     "RACKET_STAGE_DIAGNOSTICS_FILENAME",
+    "RACKET_POSE_HYPOTHESES_FILENAME",
     "RacketStageRun",
     "RacketStageRunner",
 ]
