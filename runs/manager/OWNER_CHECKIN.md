@@ -13,13 +13,11 @@ timebase through the real decode seam + typed coordinates through placement/ball
 TRK fix + pb.vision decode context: `runs/HANDOFF_20260714.md`. VERIFIED=0 unchanged.
 
 ## Do these (easiest first)
-0. **NEW 2026-07-16, 2 min in a browser:** open
-   `runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/tap_corners.html`, click the
-   4 court corners in the prompted order, send back (or save) the JSON it shows. This gives the
-   pb.vision demo video a trusted court seed — both head-to-head attempts ran with an auto-preview
-   seed that graded POOR and fail-closed ALL metric 3D output. Your 4 taps are a hard prerequisite
-   for the third (and first scoreable) MOVE-1 attempt. Full context:
-   `owner_cal_seed/OWNER_CAL_SEED_ASK.md`.
+0. ~~4-corner tap~~ **DONE 2026-07-16 — thank you.** Your taps passed all geometry checks (overlay
+   proof: `owner_cal_seed/owner_seed_overlay_check.jpg` — every model line lands on the paint) and
+   are banked with provenance at `owner_cal_seed/court_corners_seed.json` (`corrected_unverified`).
+   The demo video now has its trusted court seed; the third head-to-head attempt waits only on the
+   ball_arc guard-lane ruling + coordinator go.
 1. **Court labels, ~1h, highest value:** Docker Desktop -> CVAT up, then
    `.venv/bin/python cvat_upload/court_diversity_20260712/import_court_diversity_tasks.py`,
    label 4 shards x 25 frames per `cvat_upload/court_diversity_20260712/OWNER_GUIDE.md`.

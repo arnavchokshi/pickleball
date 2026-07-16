@@ -1,0 +1,1 @@
+{"court_corners": {"far_left": [918, 299], "far_right": [1216, 326], "near_left": [274, 371], "near_right": [673, 555]}, "frame": "candidate_t10s_frame300.jpg (t=10s, frame 300 of source_video.mp4 sha 272a2132...)", "image_size": [1280, 720], "source": "human_review", "review_id": "pbv11_owner_4corner_seed_20260715", "status": "corrected_unverified"}

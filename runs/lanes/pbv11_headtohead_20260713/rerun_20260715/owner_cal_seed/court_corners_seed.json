@@ -1,0 +1,48 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "court_corners": {
+          "far_left": [
+            918,
+            299
+          ],
+          "far_right": [
+            1216,
+            326
+          ],
+          "near_left": [
+            274,
+            371
+          ],
+          "near_right": [
+            673,
+            555
+          ]
+        },
+        "frame": "frame_000300 (t=10.0s of source_video.mp4)",
+        "image_size": [
+          1280,
+          720
+        ],
+        "review_id": "pbv11_owner_4corner_seed_20260715",
+        "source": "human_review",
+        "status": "corrected_unverified"
+      }
+    ],
+    "notes": [
+      "Owner 4-corner tap 2026-07-16 via tap_corners.html on candidate_t10s_frame300.jpg.",
+      "Provenance: pb.vision demo video sha 272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383 (R&D reference ONLY).",
+      "Manager validation 2026-07-16: in-bounds PASS, near-below-far PASS, convexity PASS; homography overlay (owner_seed_overlay_check.jpg) puts all court-model lines on painted lines.",
+      "corrected_unverified provenance: enables metric output for MOVE-1 attempt 3; NOT a CAL accuracy promotion. VERIFIED=0 binding."
+    ],
+    "target_file": "court_corners.json"
+  },
+  "clip": {
+    "name": "pbvision_11min_20260713",
+    "source_video": "data/pbvision_11min_20260713/source_video.mp4"
+  },
+  "not_ground_truth": true,
+  "schema_version": 1,
+  "status": "corrected_unverified"
+}
