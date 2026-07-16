@@ -1,12 +1,16 @@
-# Owner check-in — THE single always-current file (updated 2026-07-14, handoff for account switch)
+# Owner check-in — THE single always-current file (updated 2026-07-15)
 
-⭐ HEADLINE: TRK "people disappearing" FIXED in the default stack (margin-1.0+OSNet WIRED_DEFAULT rev
-12; worst-clip IDF1 0.64→0.85, preview-band). pb.vision fully decoded from your 11-min clip — their
-ball-3D edge is TRAINED contact/event detection, nothing exotic; your "public data exists" hypothesis
-was VINDICATED (~130k public hit/bounce events now on disk + 117 bootstrap pickleball labels). Ball
-event-head training is the concrete path, gated on your 5-min spot-check. The 41-rally head-to-head
-died on the Fable spend limit mid-run (no result — RE-RUN needed). Fleet EMPTY, orphan VM deleted.
-FULL DETAIL for the next session: `runs/HANDOFF_20260714.md`. VERIFIED=0 unchanged.
+⭐ HEADLINE: Your 50-row spot-check LANDED and RULED — the Tier-A auto-labels FAILED the gate
+decisively (29/50 true contacts vs >=47/50; every source fails broadly; 15/29 true windows mistimed
+|dt|>=0.2s). Training on the bootstrap labels stays BLOCKED and the audio-x-track auto-labeler is
+rejected as a label source at current thresholds. GOOD NEWS: (a) the public-data pretrain leg
+(~130k real-GT events: jhong93/ShuttleSet/OpenTT) is unaffected; (b) your 50 reviewed rows are the
+FIRST owner-verified pickleball event labels — reserved as protected eval seed, never training; (c)
+you labeled 50 rich rows in ~20 min via the clip-review page — scaling that flow is now the obvious
+label-supply lane. ALSO this window (Track C): the NS-01.4/01.5 cores are WIRED — typed
+timebase through the real decode seam + typed coordinates through placement/ball/world consumers
+(parity byte-identical), and status/packaging honesty audited engineering-closed (P0-E/P0-F).
+TRK fix + pb.vision decode context: `runs/HANDOFF_20260714.md`. VERIFIED=0 unchanged.
 
 ## Do these (easiest first)
 1. **Court labels, ~1h, highest value:** Docker Desktop -> CVAT up, then
