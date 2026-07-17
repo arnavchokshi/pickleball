@@ -84,6 +84,41 @@ baseline->fused metric table + honest demo partial). Slice 3 (runner stage
 175 wiring) remains a Track C-owned integration lane; request text is staged
 verbatim in DESIGN.md §7.
 
+## oneworld_impl_20260716 — RULED: ADOPT (scoped pass), COMMITTED a54b7c451 (wrap-up window)
+Lane-honest PARTIAL accepted; the fused world is REAL, reproducible, and watchable.
+
+Manager verification, personally executed, REAL unpiped exit codes:
+- build EXIT 0; INDEPENDENT MANAGER REBUILD BYTE-IDENTICAL to the lane's artifact
+  (sha256 2c58c4a8bc8461f669f2bd3890d51d9fa50ce4d1fb1663d6ff96e7cd43f4f721) — reproducibility
+  proven, not asserted; validate EXIT 0 (valid:true, 0 warnings); focused 18 passed EXIT 0;
+  test_scaffold_tool_index 3 passed REAL_EXIT=0 (A13 CLOSED); raw immutability 14/14.
+- Artifact inspected directly at frame 78: 4 players (placement_fused, conf .82-.92), 4 paddles
+  each with display_pose_world (status unresolved_legacy_wrist_proxy), ball arc_measured
+  [0.97,3.64,1.75] conf .94. 300 frames, 28 typed events. VERIFIED=0/preview_only/render_only/
+  not_for_detection_metrics/raw_inputs_mutated=false all present.
+
+THE FINDING THAT MATTERS (owner-facing): ZERO of 24 declared contacts confirmed — 22 unsupported
+(>1.2m from every wrist), 2 too_close_to_call, 0 hitter attributions. Frame 78: declared hitter's
+wrist 11.17m from the arc ball. The pass abstained instead of dragging the ball 11m to satisfy a
+declared event, and left the raw event immutable. This is the design's bounded-abstention rail
+doing exactly its job, and it converts a vague "the world looks wrong" into a precise, ranked
+upstream question: on this bundle, contact events + arc ball + player placement genuinely
+disagree. That is the honest state of the stack, now measurable per event.
+
+Metrics vs frozen baselines: M1 <=0.60m NOT met and NOT claimed (0 supported events — a median
+over zero is undefined and the lane correctly refused to invent one); M3 coverage_measured 0.39
+= baseline (no coverage lost, none fabricated); M5 non-regressing (player p90 61.2683 ->
+61.2658px); M2 honestly 0/0 (upstream anchors arrive exactly at z=r_b — synthetic nonzero tests
+prove the pass itself never snaps); M4 denominator 0 (no gen-2 hypotheses exist on any run).
+Priority ruling honored: A10/A11/A12 all PASS — watchability delivered over metric polish.
+
+Accepted debts (stated, not hidden): A9 wide suite time-boxed at ~34% with 15 unrelated
+dirty-tree failures attributed but NOT proven against clean HEAD — the one real gap in this
+ruling; concurrent-tree churn made a clean wide run impossible in the window. Gen-2 regen EXIT 1
+(tracking reuse refused without migration attestation) = a genuine finding routed to Track C.
+Lane again printed protected label paths in a git-status diagnostic (paths only, no content) —
+second occurrence of the same class; the exclusion rule is now a standing Track K spec line.
+
 ## DESIGN AMENDMENTS 1+2 (owner win condition, relayed 2026-07-16) — RULED: ADOPT into impl
 Owner: demo videos must show 4 placed players, each w/ semi-decent paddle orientation, and
 continuous well-placed 3D ball w/ visible paddle/floor/net events; "then I say what I see wrong
