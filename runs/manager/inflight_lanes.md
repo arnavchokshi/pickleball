@@ -178,6 +178,29 @@ this afternoon (GPU lane provisioning now; L4/A100 stockout ladder in progress).
 weak-prior evidence from tennis/TT pretrain — zero pickleball fine-tune; treat as split-only
 candidates, never gates.)_
 
+_(2026-07-17 ~05:4x Track G2 → **TRACK A: anchor QUALITY LABEL — read before weighting**. The real
+pretrained checkpoint exists (T4, 3956 steps, best_val_f1 0.3631 @±2f, md5
+654ec44d0752529ece8d1712ecc07347) and its demo-video anchors land at
+runs/lanes/event_head_pretrain_20260716/anchors/. HONEST POSTURE, measured not guessed: the head is
+**HIGH-PRECISION / LOW-RECALL on public tennis**, NOT noise and NOT strong. Manager's matched-window
+eval (16 clips, 42 GT events, thr 0.5, tol ±2f): HIT tp6/fp0 (recall ~22%), BOUNCE tp3/fp0 (recall
+~20%) — 9 predictions, ZERO false positives. IMPORTANT: the lane's earlier "0 TP" public-eval
+headline is RETRACTED as a measurement artifact — the committed eval CLI scores 15-frame windows
+against a 64-frame-context head (eval_event_head.py:68-69); the identical checkpoint on the identical
+clips scores 9 TP / 0 FP at matched 64f and 0 TP at 15f (evidence: eval/matched_window64_eval.json vs
+eval/control_window15_eval.json). WEIGHTING GUIDANCE: expect sparse-but-clean HITs on the demo video
+— but the domain gap is real and untested (tennis/TT broadcast → pickleball, zero fine-tune), so
+treat precision as a public-domain observation, not a demo-video guarantee. Per OWNER DIRECTIVE
+2026-07-16 (neighboring-court audio bleed), each candidate carries an EVIDENCE VECTOR — event_head
+score + audio onset proximity/strength (review-only pbvision onsets, ±0.15s window) + 2D ball-track
+kink (direction-change deg from the salvaged 697s chain) + wrist_swing_proximity marked
+unavailable-with-reason (no BODY artifacts exist for this video) — so you can weight per signal
+rather than on one scalar. The visual head is the SOLE emitter: no audio-only candidates are typed as
+contacts (that class is yours and already trips physics). Converter seam unchanged: your
+SoftSegmentBoundary pins anchor_class=="audio_onset_soft" (ball_arc_solver.py:311-329), so you need
+an allowed `event_head_soft` class or an adapter — Track G will not relabel these as audio_onset_soft
+(dishonest provenance).)_
+
 _(2026-07-16 ~11:0x TRACK G CLOSE-OUT — handed off to G2 manager by coordinator order. DONE +
 manager-verified w/ real exit codes: full event-head scaffold in working tree (uncommitted) —
 threed/racketsport/event_head/{datasets,model,matcher}.py, 4 registered CLIs, 12/12 lane tests
@@ -201,6 +224,22 @@ stage hunks selectively), fleet ledger row (no VM ever existed, $0 spent), prote
 a REAL pretrained checkpoint, pbvision anchors, owner fine-tune run (one-command entrypoint is
 built + fixture-proven; real reviewed_labels_v2.jsonl not yet ingested). Monitors: all disarmed.)_
 | ~~owner_event_labels_20260715~~ CLOSED | RULED ADOPT (scoped pass) + COMMITTED d0ce58bdd (2026-07-15, Track E): scaled owner event-labeling channel — sampler/renderer/ingest CLIs + 15 tests; 300-clip session STAGED at ~/Desktop/event_labels_20260715/START_HERE.html (120 audio-onset / 75 track-discontinuity / 105 uniform-random, all 6 harvest sources, seed 20260715, 50-row eval seed +/-0.75s + pbvision + protected eval hard-excluded, page blind to stratum); manager-verified: exclusion audit 0 violations, same-seed byte-identical, 300/300 clips ffprobed w/ audio, ITEMS join 0 mismatch, node --check 0, 15 tests EXIT 0, scaffold 3/3 EXIT 0, ingest dry-run vs real manifest EXIT 0; wide suite by composition: trackC waveclose 3684p/1f where the 1f = scaffold-index (this lane, FIXED+green) + import-isolation grep; lane report.json NEVER LANDED — resumed codex proc terminated by manager at wind-down (2026-07-15 coordinator directive); ruling rests entirely on the manager verification battery; codex session 019f68df-5f28-7703-ad6e-bea1cf89e4a0 recorded for forensic resume if ever needed. FLAG: storage audit exits 1 repo-wide, PRE-EXISTING stale allowlist (cvat_upload/w5 zips deleted 07-09) — needs owner-package bookkeeping fix. HARD-STOP 07-16: Track E mid-session staged-page regen clobbered the coordinator hotfix and broke phase-1 playability (owner blocked live; manager error acknowledged) — coordinator hand-fixed staged page (autoplay-loop phase 1, phase-respecting onloadedmetadata), STAGED FILE NOW FROZEN to Track E; generator brought to BYTE-IDENTICAL parity (b24299502), 4 regression asserts, 15/15 + scaffold 3/3 EXIT 0. REOPENED-BOUNDED 07-16 dt-integrity: native video controls let phase-2 clicks toggle playback (dt from moving currentTime); coordinator hot-fixed staged page, manager fixed generator durably + found/closed the remaining rewatch/context-menu vector (pause at commit dt-read), regression tests added (15/15 EXIT 0), staged+pack HTML regenerated w/ identical localStorage key (owner answers safe), committed fence-only. OWNER NEXT: open ~/Desktop/event_labels_20260715/START_HERE.html, label 300 clips (~75-120 min), export; ingest command in runs/lanes/owner_event_labels_20260715/INGEST_README.md | — | — | committed set in d0ce58bdd; pack on Desktop (untracked) | — | done | 2026-07-15 |
+
+_(2026-07-16 WRAP-UP — **TRACK K -> TRACK A (+ Track G): THE ANCHOR CLASS YOU ARE STARVING FOR,
+MEASURED.** Your arc failure is anchor sparsity (20/697s); pb.vision wins on anchor DENSITY from
+trained event heads. But they have no 3D players and we do — so a paddle contact at the hitter's
+hand is a MEASURED 3D ball anchor available with ZERO trained event heads. Manager probe on
+Wolverine (runs/lanes/oneworld_impl_20260716/anchor_window_probe.py, EXIT 0, chance-baselined):
+declared contacts' windowed closest ball-to-wrist approach median **1.167m vs 4.499m at chance**;
+**6/24 within 0.50m (paddle band) vs 0/24 at chance**; 15/24 vs 6/24 within 1.20m. The signal is
+REAL (~4x chance). It yields ZERO anchors today ONLY because co-location is evaluated at the
+DECLARED event frame and those frames are mistimed (offsets -15..+13 frames, several at the
+window edge; attribution 9/24 correct). UNLOCK (v2, specified DESIGN.md §8.5.2, not applied):
+bounded closest-approach search inside the event window w/ per-clip chance-margin gate +
+wrist-speed agreement -> proposed measured anchor + honest dt timing correction, raw events
+immutable. Track A: this is a candidate anchor source for your solver that needs no event head.
+Track G: your event head compounds it (better proposals -> more co-locations), and your contact
+anchors + this class are complementary, not competing. VERIFIED=0; diagnostic only.)_
 
 _(2026-07-16 WRAP-UP — **TRACK K -> TRACK H: THE FUSED WORLD EXISTS, RENDER IT.** Your
 oneworld_render row is UNGATED: schema + module + CLIs committed **a54b7c451**
@@ -378,3 +417,5 @@ pin 541f89d9a, video local); (2) owner 5-min spot-check -> event-head training; 
 All work committed+pushed.)_
 
 _(2026-07-15, coordwire_20260715 CLOSE: NS-01.4/P0-D typed coordinate adoption is wired with a scoped pass across placement, ball target-court/in-out, ball arc camera projection, in/out uncertainty, and virtual-world ball lifting; canonical-beside-legacy Wolverine digests stayed byte-identical and distorted-synthetic/wrong-space coverage passed (22/22 coordinate parity, 274/274 broadened focused, both EXIT 0). Mandatory wide suite completed 3670 passed / 12 failed / 24 skipped, literal EXIT 1: 8 failures are managed-sandbox socket-bind denials and 4 ball_physics_fill failures isolate to concurrent tbwire's eager empty-frame-times fallback change (4/4 pass when the pre-tbwire fallback is restored in-memory), not coordwire math. P0-D's stage-adopted distorted-synthetic + real-iPhone slice is wired (scoped pass); NS-01.4 corrected-beats-raw on independent labels remains PENDING under NS-02. VERIFIED=0; BEST-STACK DELTA (c) none; no process_video.py hunk required or applied.)_
+
+_(2026-07-16, placewire_20260716 lane close: Track I placement-trajectory refinement is wired as canonical stage order 145 immediately after `grounding_refine`, opt-in via `--placement-trajectory-refine` or the existing rev-13 best-stack enablement value (currently false); disabled runs typed-skip without writing or mutating payload artifacts, enabled runs emit only `placement_trajectory_refined.json` with preview/VERIFIED=0 provenance, covariance, robust weights, immutable-input hashes, and content-addressed reuse identity. Focused current-HEAD result: 197 passed / 2 failed EXIT 1, both storage-policy failures introduced by concurrent Track F commit d1b536b3f's unregistered 154,743,315-byte bundle; the same focused suite was 199/199 EXIT 0 before that mid-wide commit. Wide: 3920 passed / 35 failed / 24 skipped EXIT 1 in 2827.94s; all failures attributed outside placewire (1 stale rev-12 best-stack test pin vs landed rev 13, 25 pre-existing owner/CAL dirty-label/data-count failures, 8 managed-sandbox socket binds, 1 mid-run Track F bundle storage failure). `process_video.py --help`, scaffold index, dead-code audit, py_compile, and all 185 placewire/process/spine tests EXIT 0. BEST-STACK DELTA = "(b) consumes the existing rev-13 PENDING entry, no edit". Scoped wiring pass only; preview band, do_not_promote, VERIFIED=0.)_
