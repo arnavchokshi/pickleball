@@ -2407,7 +2407,8 @@ def test_default_stage_order_runs_camera_motion_before_placement(tmp_path: Path)
         "placement",
     )
     assert names[6:10] == ("ball", "ball_arc", "events", "ball_fill")
-    assert names[15:18] == ("events_refined", "ball_arc_refined", "world")
+    assert names[13:16] == ("grounding_refine", "placement_trajectory_refine", "paddle_pose")
+    assert names[16:19] == ("events_refined", "ball_arc_refined", "world")
 
 
 def test_camera_motion_auto_default_skips_static_probe_without_writing_artifact(
@@ -4938,6 +4939,30 @@ def test_cli_parses_grounding_refine_opt_out_into_options(tmp_path: Path) -> Non
 
     assert default_options.grounding_refine is True
     assert disabled_options.grounding_refine is False
+
+
+def test_cli_parses_placement_trajectory_refine_opt_in_over_default_off(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    parser = process_video.build_arg_parser()
+
+    default_options = process_video.build_options_from_args(
+        parser.parse_args(["--video", str(video), "--out", str(tmp_path / "run")])
+    )
+    enabled_options = process_video.build_options_from_args(
+        parser.parse_args(
+            [
+                "--video",
+                str(video),
+                "--placement-trajectory-refine",
+                "--out",
+                str(tmp_path / "run2"),
+            ]
+        )
+    )
+
+    assert process_video.PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE["enabled"] is False
+    assert default_options.placement_trajectory_refine is False
+    assert enabled_options.placement_trajectory_refine is True
 
 
 def test_cli_defaults_to_no_auto_ball_track_unless_explicitly_allowed(tmp_path: Path) -> None:

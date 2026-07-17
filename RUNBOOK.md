@@ -123,8 +123,8 @@ be called CAL promotion.
 After argument parsing and option construction succeed, `process_video.py`
 writes `PIPELINE_SUMMARY.json` even on partial runs. Pre-flight argument/path
 failures can exit before any run directory or `PIPELINE_SUMMARY.json` exists.
-The default serial path has 22 stage outcomes. Optional `rally_gating` makes
-23, and optional viewer verification also makes 23; enabling both makes 24. The
+The default serial path has 23 stage outcomes. Optional `rally_gating` makes
+24, and optional viewer verification also makes 24; enabling both makes 25. The
 order below is projected from `AUTHORITATIVE_STAGE_GRAPH` in
 `scripts/racketsport/process_video.py`; overlap mode uses the same graph and
 only moves `frames` ahead of the four overlapped BALL/event stages:
@@ -159,30 +159,38 @@ before fresh BALL/audio and does not yet trim all downstream decoding.
     rule; BODY foot pixels require a true second pass before a fresh BODY run.
 14. **grounding_refine** - render-honest BODY grounding
     refinement when inputs exist.
-15. **paddle_pose** - write a fail-closed, render-only estimated paddle artifact
+15. **placement_trajectory_refine** - default-OFF preview stage after grounding.
+    Enable it with `--placement-trajectory-refine` (or a future enabled
+    `body.placement_trajectory_refine` best-stack value) to write the separate
+    `placement_trajectory_refined.json` artifact from current TRK footpoints,
+    BODY placement, and planted-foot windows. Missing BODY/plant evidence is a
+    typed skip/degrade; malformed inputs fail loudly. Raw tracks, placement,
+    skeleton, phase, and grounding artifacts remain immutable. The output stays
+    preview-band, `do_not_promote`, and `VERIFIED=0`.
+16. **paddle_pose** - write a fail-closed, render-only estimated paddle artifact
     when BODY wrist/palm evidence exists.
-16. **events_refined** - build the separately versioned post-BODY
+17. **events_refined** - build the separately versioned post-BODY
     `contact_windows_refined_v1.json` from dependency-current BODY, paddle,
     ball, timebase, and audio evidence. Raw `contact_windows.json` remains
     immutable; content hashes gate reuse.
-17. **ball_arc_refined** - re-run the render-only arc chain from current
+18. **ball_arc_refined** - re-run the render-only arc chain from current
     refined contacts when its dependency hashes changed. Segment guard
     timeouts remain typed degraded outcomes and this stage records their real
     wall time.
-18. **world** - compose `virtual_world.json` and `trust_bands.json` from the
+19. **world** - compose `virtual_world.json` and `trust_bands.json` from the
     already-finished refined artifacts; refinement time is not folded into
     this stage.
-19. **confidence_gate** - write `confidence_gated_world.json` unless
+20. **confidence_gate** - write `confidence_gated_world.json` unless
     `--no-confidence-gate` is set.
-20. **match_stats** - default-on fail-open placement/court movement stats.
-21. **coaching_facts** - build deterministic rally metrics and coaching facts,
+21. **match_stats** - default-on fail-open placement/court movement stats.
+22. **coaching_facts** - build deterministic rally metrics and coaching facts,
     then run the zero-fabrication audit before the manifest. This stage fails
     closed: on audit failure the facts are excluded and the bundle stays
     `partial`.
-22. **manifest** - write `replay_viewer_manifest.json` and optional point scene,
+23. **manifest** - write `replay_viewer_manifest.json` and optional point scene,
     linking only finished current stats and audited coaching facts.
-Optional final stage: **verify** via `--verify-viewer`. It is stage 23 without
-rally gating and stage 24 with rally gating.
+Optional final stage: **verify** via `--verify-viewer`. It is stage 24 without
+rally gating and stage 25 with rally gating.
 
 `match_stats` and audited deterministic `coaching_facts` run before `manifest`.
 
@@ -225,6 +233,7 @@ not simulate that target by leaving stale artifacts in the clip directory.
 | `--body-local` | Run BODY in-process on a GPU host instead of remote dispatch. |
 | `--fetch-body-monoliths` | Opt into fetching/writing the large `smpl_motion.json` and `body_mesh.json` monoliths. Default runs fetch `body_mesh_index/` for replay review instead. |
 | `--no-grounding-refine` | Skip BODY grounding refinement. |
+| `--placement-trajectory-refine` | Opt into the preview-band placement trajectory artifact after grounding; the existing rev-13 best-stack value is default OFF. |
 | `--no-confidence-gate` | Point viewer at raw `virtual_world.json`. |
 | `--no-scene-points` | Skip point GLB scene generation. |
 | `--confidence-calibration-curves` | Confidence-curve artifact for trust-band calibration; omitted runs use the default only when present. |

@@ -60,26 +60,29 @@ entrypoint (NORTH_STAR_ROADMAP.md's product goal). It chains, in order:
                       when foot_contact_phases.json + calibration + tracks exist;
                       not accuracy/gate evidence, skipped untouched on zero
                       contact phases.
- 11. paddle_pose   -- render-only fused wrist+palm+grip paddle estimate
+ 11. placement_trajectory_refine -- opt-in, preview-band rigid court-frame
+                      placement trajectory refinement. Raw BODY/TRK/placement
+                      artifacts remain immutable.
+ 12. paddle_pose   -- render-only fused wrist+palm+grip paddle estimate
                       (`racket_pose_estimate.json`) when SAM-3D wrist/palm
                       evidence exists; fail-closed with a loud summary block
                       otherwise. This is estimated preview evidence only, never
                       an RKT promotion.
- 12. world         -- virtual_world.json + trust_bands.json (every entity
+ 13. world         -- virtual_world.json + trust_bands.json (every entity
                       badged from real upstream gate/artifact state via
                       threed.racketsport.trust_band, never invented). Before
                       world assembly it writes a separate post-BODY/paddle
                       contact_windows_refined_v1.json generation when possible;
                       raw contact_windows.json remains immutable.
- 13. confidence    -- confidence_gated_world.json via the Wave-B additive
+ 14. confidence    -- confidence_gated_world.json via the Wave-B additive
                       confidence gate (default on; --no-confidence-gate keeps
                       raw virtual_world.json as the viewer world).
- 14. match_stats   -- deterministic BODY+COURT-only facts consumer.
- 15. coaching_facts -- existing deterministic position-only rally/facts builder;
+ 15. match_stats   -- deterministic BODY+COURT-only facts consumer.
+ 16. coaching_facts -- existing deterministic position-only rally/facts builder;
                       no language generation.
- 16. manifest      -- replay_viewer_manifest.json, the same bundle shape
+ 17. manifest      -- replay_viewer_manifest.json, the same bundle shape
                       web/replay already loads.
- 17. verify        -- optional (--verify-viewer) headless load check of the
+ 18. verify        -- optional (--verify-viewer) headless load check of the
                       web viewer against the freshly built manifest.
 
 Resilience: every stage checks for an already-valid artifact first and skips
@@ -165,6 +168,13 @@ from threed.racketsport.camera_motion import (  # noqa: E402
 )
 from threed.racketsport.person_reid_diagnostics import resolve_reid_device  # noqa: E402
 from threed.racketsport.placement import PlacementConfig, rewrite_tracks_with_placement  # noqa: E402
+from threed.racketsport.placement_trajectory_refine import (  # noqa: E402
+    PLACEMENT_REFINED_SCHEMA_VERSION,
+    MalformedPlacementInputError,
+    PlacementTrajectoryConfig,
+    refine_placement_trajectory,
+    sha256_file as placement_sha256_file,
+)
 from threed.racketsport.run_identity import (  # noqa: E402
     RunIdentityStore,
     SourceIdentity,
@@ -243,6 +253,16 @@ DEFAULT_TARGET_MESH_FRAME_BUDGET = BEST_STACK_MANIFEST.value("mesh.target_frame_
 DEFAULT_MESH_BYTE_BUDGET_MIB = BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib")
 DEFAULT_BODY_SKELETON_STRIDE = int(BEST_STACK_MANIFEST.value("body.skeleton_stride"))
 DEFAULT_BODY_ARRAY_NATIVE = BEST_STACK_MANIFEST.bool_value("body.experimental_body_array_native")
+PLACEMENT_TRAJECTORY_REFINE_STACK_KEY = "body.placement_trajectory_refine"
+PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE = BEST_STACK_MANIFEST.value(PLACEMENT_TRAJECTORY_REFINE_STACK_KEY)
+if (
+    not isinstance(PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE, Mapping)
+    or not isinstance(PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE.get("enabled"), bool)
+):
+    raise ValueError(
+        f"best_stack entry {PLACEMENT_TRAJECTORY_REFINE_STACK_KEY!r} must declare boolean value.enabled"
+    )
+DEFAULT_PLACEMENT_TRAJECTORY_REFINE = bool(PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE["enabled"])
 DEFAULT_BALL_DETECTION_STRIDE = int(BEST_STACK_MANIFEST.value("ball.detection_stride"))
 DEFAULT_PADDLE_FUSED_ESTIMATOR = BEST_STACK_MANIFEST.value("paddle.fused_estimator")
 PADDLE_POSE_ARTIFACT_NAME = "racket_pose_estimate.json"
@@ -342,6 +362,7 @@ AUTHORITATIVE_STAGE_GRAPH: tuple[PipelineStageDefinition, ...] = (
     PipelineStageDefinition("body", 120, 120),
     PipelineStageDefinition("placement_refine", 130, 130),
     PipelineStageDefinition("grounding_refine", 140, 140),
+    PipelineStageDefinition("placement_trajectory_refine", 145, 145),
     PipelineStageDefinition("paddle_pose", 150, 150),
     PipelineStageDefinition("events_refined", 160, 160),
     PipelineStageDefinition("ball_arc_refined", 170, 170),
@@ -469,6 +490,7 @@ RUN_IDENTITY_DEPENDENCIES: dict[str, tuple[str, ...]] = {
     "body": ("calibration", "tracking", "camera_motion", "frames"),
     "placement_refine": ("placement", "body"),
     "grounding_refine": ("calibration", "tracking", "events", "body", "placement_refine"),
+    "placement_trajectory_refine": ("tracking", "placement", "body", "grounding_refine"),
     "paddle_pose": ("body",),
     "events_refined": ("events", "grounding_refine", "paddle_pose"),
     "ball_arc_refined": ("ball_arc", "events_refined"),
@@ -510,6 +532,7 @@ RUN_IDENTITY_CONFIG_KEYS: dict[str, tuple[str, ...]] = {
         "mesh.coverage_mode",
         "mesh.target_frame_budget",
     ),
+    "placement_trajectory_refine": (PLACEMENT_TRAJECTORY_REFINE_STACK_KEY,),
     "paddle_pose": ("paddle.fused_estimator",),
     "confidence_gate": ("confidence.calibration_curves",),
     "match_stats": ("stats.match_stats_v0",),
@@ -542,6 +565,7 @@ RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
     "frames": ("body_frames",),
     "body": ("body_full_clip_gate.json", "body_mesh_readiness.json", "body_compute_execution.json"),
     "grounding_refine": ("body_grounding_refinement.json",),
+    "placement_trajectory_refine": ("placement_trajectory_refined.json",),
     "paddle_pose": (PADDLE_POSE_ARTIFACT_NAME,),
     "events_refined": (
         "wrist_velocity_peaks_refined_v1.json",
@@ -633,6 +657,8 @@ class PipelineOptions:
     remote_config: RemoteConfig = field(default_factory=RemoteConfig)
 
     grounding_refine: bool = True
+    placement_trajectory_refine: bool = DEFAULT_PLACEMENT_TRAJECTORY_REFINE
+    placement_trajectory_refine_explicit: bool = False
     paddle_pose: bool = bool(DEFAULT_PADDLE_FUSED_ESTIMATOR.get("enabled", True))
 
     confidence_gate: bool = True
@@ -710,6 +736,7 @@ class ProcessVideoPipeline:
             "body_full_clip_gate.json",
             "body_grounding_quality.json",
             "body_grounding_refinement.json",
+            "placement_trajectory_refined.json",
             "skeleton3d_pre_grounding_refine.json",
             "smpl_motion_pre_grounding_refine.json",
             PADDLE_POSE_ARTIFACT_NAME,
@@ -843,6 +870,14 @@ class ProcessVideoPipeline:
                 "max_frames": opts.max_frames,
             },
             "grounding_refine": {"enabled": opts.grounding_refine},
+            "placement_trajectory_refine": {
+                "enabled": opts.placement_trajectory_refine,
+                "enablement_source": (
+                    "explicit_flag"
+                    if opts.placement_trajectory_refine_explicit
+                    else "best_stack"
+                ),
+            },
             "paddle_pose": {"enabled": opts.paddle_pose},
             "confidence_gate": {"enabled": opts.confidence_gate},
             "manifest": {"scene_points": opts.scene_points},
@@ -892,6 +927,14 @@ class ProcessVideoPipeline:
                 key: value
                 for key, value in self._contact_dependency_paths(refined=True).items()
                 if key != "wrist_velocity_peaks_refined"
+            }
+        elif name == "placement_trajectory_refine":
+            candidates = {
+                "tracks": self.clip_dir / "tracks.json",
+                "placement": self.clip_dir / "placement.json",
+                "skeleton3d": self.clip_dir / "skeleton3d.json",
+                "foot_contact_phases": self.clip_dir / "foot_contact_phases.json",
+                "grounding_refinement": self.clip_dir / "body_grounding_refinement.json",
             }
         elif name == "ball_arc_refined":
             candidates = self._refined_arc_dependency_paths()
@@ -4363,6 +4406,131 @@ class ProcessVideoPipeline:
         )
 
     # ------------------------------------------------------------------
+    # stage 8c: opt-in placement trajectory refinement
+    # ------------------------------------------------------------------
+
+    def _stage_placement_trajectory_refine(self) -> StageOutcome:
+        stage = "placement_trajectory_refine"
+        artifact_name = "placement_trajectory_refined.json"
+        if not self.options.placement_trajectory_refine:
+            return StageOutcome(
+                stage=stage,
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[
+                    "placement_trajectory_refine typed skip: disabled by the existing best_stack "
+                    f"{PLACEMENT_TRAJECTORY_REFINE_STACK_KEY} entry and no explicit "
+                    "--placement-trajectory-refine flag was supplied"
+                ],
+                metrics={
+                    "expected_optional_absence": {
+                        "reason_code": "placement_trajectory_refine_disabled",
+                        "stage_status": "skipped",
+                    },
+                    "preview_band": True,
+                    "VERIFIED": 0,
+                },
+            )
+
+        skeleton_path = self.clip_dir / "skeleton3d.json"
+        tracks_path = self.clip_dir / "tracks.json"
+        phases_path = self.clip_dir / "foot_contact_phases.json"
+        if not skeleton_path.is_file():
+            return _placement_trajectory_optional_skip(
+                "placement_trajectory_no_body",
+                "placement_trajectory_refine typed skip: no BODY skeleton3d.json is available",
+            )
+        if not phases_path.is_file():
+            return _placement_trajectory_optional_skip(
+                "placement_trajectory_no_plant_windows",
+                "placement_trajectory_refine typed skip: no foot_contact_phases.json plant-window artifact is available",
+            )
+        if not tracks_path.is_file():
+            return _placement_trajectory_optional_degrade(
+                "placement_trajectory_no_tracks",
+                "placement_trajectory_refine typed degrade: no tracks.json TRK footpoint evidence is available",
+            )
+
+        phases = _read_json(phases_path)
+        if not isinstance(phases, Mapping):
+            raise MalformedPlacementInputError("foot_contact_phases.json must be an object")
+        phase_rows = phases.get("phases")
+        if not isinstance(phase_rows, list):
+            raise MalformedPlacementInputError("foot_contact_phases.json phases must be a list")
+        if not phase_rows:
+            return _placement_trajectory_optional_skip(
+                "placement_trajectory_no_plant_windows",
+                "placement_trajectory_refine typed skip: foot_contact_phases.json contains zero plant windows",
+            )
+
+        immutable_inputs = {
+            "skeleton3d": skeleton_path,
+            "tracks": tracks_path,
+            "foot_contact_phases": phases_path,
+        }
+        for name, filename in (
+            ("placement", "placement.json"),
+            ("grounding_refinement", "body_grounding_refinement.json"),
+        ):
+            path = self.clip_dir / filename
+            if path.is_file():
+                immutable_inputs[name] = path
+        input_hashes = {
+            name: {"path": str(path.resolve()), "sha256": placement_sha256_file(path)}
+            for name, path in immutable_inputs.items()
+        }
+
+        refined = refine_placement_trajectory(
+            _read_json(skeleton_path),
+            tracks_payload=_read_json(tracks_path),
+            foot_contact_phases=phases,
+            config=PlacementTrajectoryConfig(),
+        )
+        refinement = refined["placement_trajectory_refinement"]
+        refinement["provenance"] = {
+            "inputs": input_hashes,
+            "code_version": f"trackI_placefuse_20260716_schema_v{PLACEMENT_REFINED_SCHEMA_VERSION}",
+            "config_identity": {
+                "best_stack_revision": BEST_STACK_MANIFEST.revision,
+                "entry_key": PLACEMENT_TRAJECTORY_REFINE_STACK_KEY,
+                "entry": copy.deepcopy(dict(BEST_STACK_MANIFEST.entry(PLACEMENT_TRAJECTORY_REFINE_STACK_KEY).raw)),
+                "enablement_source": (
+                    "explicit_flag"
+                    if self.options.placement_trajectory_refine_explicit
+                    else "best_stack"
+                ),
+            },
+            "coordinate_space": {
+                "world_frame": "court_Z0",
+                "typed": refined["coordinate_space"],
+            },
+            "distortion_state": "not_applicable_no_image_transform_in_refiner",
+            "preview_band": True,
+            "VERIFIED": 0,
+        }
+        _write_json(self.clip_dir / artifact_name, refined)
+
+        return StageOutcome(
+            stage=stage,
+            status="ran",
+            wall_seconds=0.0,
+            notes=[
+                "emitted separate preview-band placement_trajectory_refined.json after grounding_refine",
+                "raw tracks.json, placement.json, skeleton3d.json, foot_contact_phases.json, and grounding artifacts remain immutable",
+                "preview only; do_not_promote; VERIFIED=0",
+            ],
+            artifacts=[artifact_name],
+            trust_badge="preview",
+            metrics={
+                "preview_band": True,
+                "VERIFIED": 0,
+                "player_count": int(refinement["summary"]["player_count"]),
+                "frame_count": int(refinement["summary"]["frame_count"]),
+                "plant_anchored_frame_count": int(refinement["summary"]["plant_anchored_frame_count"]),
+            },
+        )
+
+    # ------------------------------------------------------------------
     # stage 9: paddle pose (racket_pose_estimate.json)
     # ------------------------------------------------------------------
 
@@ -5439,6 +5607,40 @@ def _foot_contact_phase_count(payload: Mapping[str, Any]) -> int:
         return max(0, int(count))
     except (TypeError, ValueError):
         return 0
+
+
+def _placement_trajectory_optional_skip(reason_code: str, note: str) -> StageOutcome:
+    return StageOutcome(
+        stage="placement_trajectory_refine",
+        status="skipped",
+        wall_seconds=0.0,
+        notes=[note, "preview only; do_not_promote; VERIFIED=0"],
+        metrics={
+            "expected_optional_absence": {
+                "reason_code": reason_code,
+                "stage_status": "skipped",
+            },
+            "preview_band": True,
+            "VERIFIED": 0,
+        },
+    )
+
+
+def _placement_trajectory_optional_degrade(reason_code: str, note: str) -> StageOutcome:
+    return StageOutcome(
+        stage="placement_trajectory_refine",
+        status="degraded",
+        wall_seconds=0.0,
+        notes=[note, "preview only; do_not_promote; VERIFIED=0"],
+        metrics={
+            "expected_optional_absence": {
+                "reason_code": reason_code,
+                "stage_status": "degraded",
+            },
+            "preview_band": True,
+            "VERIFIED": 0,
+        },
+    )
 
 
 def _populate_missing_transl_world_from_tracks(payload: dict[str, Any], tracks: Mapping[str, Any]) -> int:
@@ -7200,6 +7402,8 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
         association_court_margin = {}
     association_court_margin["enabled"] = bool(options.global_association)
     association_court_margin["margin_m"] = float(association_profile.court_margin_m)
+    placement_trajectory_refine = copy.deepcopy(PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE)
+    placement_trajectory_refine["enabled"] = bool(options.placement_trajectory_refine)
     return {
         "ball.wasb_checkpoint": _path_summary(options.wasb_checkpoint),
         "ball.wasb_repo": _path_summary(options.wasb_repo),
@@ -7218,6 +7422,7 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
         "ball.detection_stride": options.ball_detection_stride,
         "body.detector_fov": detector_fov,
         "body.schedule": options.body_schedule,
+        PLACEMENT_TRAJECTORY_REFINE_STACK_KEY: placement_trajectory_refine,
         "paddle.fused_estimator": paddle_fused,
         "input_quality.preflight": input_quality,
         "stats.match_stats_v0": match_stats,
@@ -7256,6 +7461,7 @@ def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any
         "ball.detection_stride": BEST_STACK_MANIFEST.value("ball.detection_stride"),
         "body.detector_fov": BEST_STACK_MANIFEST.value("body.detector_fov"),
         "body.schedule": BEST_STACK_MANIFEST.string_value("body.schedule"),
+        PLACEMENT_TRAJECTORY_REFINE_STACK_KEY: copy.deepcopy(PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE),
         "paddle.fused_estimator": copy.deepcopy(BEST_STACK_MANIFEST.value("paddle.fused_estimator")),
         "input_quality.preflight": copy.deepcopy(BEST_STACK_MANIFEST.value("input_quality.preflight")),
         "stats.match_stats_v0": copy.deepcopy(BEST_STACK_MANIFEST.value("stats.match_stats_v0")),
@@ -7541,6 +7747,9 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         body_schedule=args.body_schedule,
         remote_config=remote_config,
         grounding_refine=not args.no_grounding_refine,
+        placement_trajectory_refine=bool(args.placement_trajectory_refine)
+        or DEFAULT_PLACEMENT_TRAJECTORY_REFINE,
+        placement_trajectory_refine_explicit=bool(args.placement_trajectory_refine),
         paddle_pose=bool(DEFAULT_PADDLE_FUSED_ESTIMATOR.get("enabled", True)) and not args.no_paddle_pose,
         confidence_gate=not args.no_confidence_gate,
         confidence_calibration_curves=Path(args.confidence_calibration_curves).expanduser().resolve()
@@ -7855,6 +8064,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "Skip the default render-honest BODY grounding refinement between BODY/skeleton sync and "
             "world assembly."
+        ),
+    )
+    parser.add_argument(
+        "--placement-trajectory-refine",
+        action="store_true",
+        default=False,
+        help=(
+            "Opt into the preview-band plant-aware placement trajectory stage after grounding_refine. "
+            f"The no-flag default comes from best_stack {PLACEMENT_TRAJECTORY_REFINE_STACK_KEY}.value.enabled "
+            "(currently false); this explicit flag wins."
         ),
     )
     parser.add_argument(
