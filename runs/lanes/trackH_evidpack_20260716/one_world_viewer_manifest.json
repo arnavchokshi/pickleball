@@ -1,0 +1,29 @@
+{
+ "schema_version": 1,
+ "artifact_type": "racketsport_replay_viewer_manifest",
+ "clip": "wolverine_mixed_0200_mid_steep_corner",
+ "video_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4",
+ "virtual_world_url": "/@fs//Users/arnavchokshi/Desktop/pickleball/runs/lanes/trackH_evidpack_20260716/one_world_v1_viewer.json",
+ "body_mesh_url": null,
+ "body_mesh_index_url": null,
+ "ball_arc_render_url": null,
+ "ball_arc_solved_url": null,
+ "ball_bounce_candidates_url": null,
+ "auto_bounce_candidates_url": null,
+ "ball_flight_sanity_url": null,
+ "ball_inflections_url": null,
+ "contact_windows_url": null,
+ "physics_refinement_url": null,
+ "rally_spans_url": null,
+ "replay_scene_url": null,
+ "reviewed_bounces_url": null,
+ "coaching_card_facts_url": null,
+ "mesh_status": "absent",
+ "label_overlays": [],
+ "annotation_sources": [],
+ "notes": [
+  "FUSED WORLD (Track K one_world_v1) rendered by Track H. Preview band, render-only, VERIFIED=0.",
+  "Marker/arc sources deliberately NULL: one_world emits its own typed events; baseline arc/contact artifacts are NOT mixed in, so nothing shown here is from a different pipeline.",
+  "Paddles absent by design: fusion resolved 0 of 1102 paddle poses (legacy wrist proxy)."
+ ]
+}
