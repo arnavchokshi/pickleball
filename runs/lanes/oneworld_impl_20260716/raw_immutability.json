@@ -1,0 +1,92 @@
+{
+  "artifact_type": "one_world_v1_raw_input_immutability",
+  "consumed_input_count": 14,
+  "raw_inputs_mutated": false,
+  "rows": [
+    {
+      "after_sha256": "fb4e6f7f54d2c40e2c7b491e436261f747240945a6f0d154c4dd943e28edbacf",
+      "before_recorded_sha256": "fb4e6f7f54d2c40e2c7b491e436261f747240945a6f0d154c4dd943e28edbacf",
+      "identical": true,
+      "path": "court_calibration.json"
+    },
+    {
+      "after_sha256": "d708baa0d547214f7c16b8d57b90a2c3e3bc910f3d2078b10b165ace99a926ee",
+      "before_recorded_sha256": "d708baa0d547214f7c16b8d57b90a2c3e3bc910f3d2078b10b165ace99a926ee",
+      "identical": true,
+      "path": "trust_bands.json"
+    },
+    {
+      "after_sha256": "f9d2f46c293d81336b8c47a9ce1e0cf836a9c96cbb7ee05e6b7df8ac3c72a676",
+      "before_recorded_sha256": "f9d2f46c293d81336b8c47a9ce1e0cf836a9c96cbb7ee05e6b7df8ac3c72a676",
+      "identical": true,
+      "path": "tracks.json"
+    },
+    {
+      "after_sha256": "0dbbda6fad71ea2fd92db47f3c2af27ba3d6e5bda400d8276131960522d485ff",
+      "before_recorded_sha256": "0dbbda6fad71ea2fd92db47f3c2af27ba3d6e5bda400d8276131960522d485ff",
+      "identical": true,
+      "path": "ball_track.json"
+    },
+    {
+      "after_sha256": "66732b3340e10f518f344553467428f20825a2fefa9669480d36b9f628c83beb",
+      "before_recorded_sha256": "66732b3340e10f518f344553467428f20825a2fefa9669480d36b9f628c83beb",
+      "identical": true,
+      "path": "smpl_motion.json"
+    },
+    {
+      "after_sha256": "d1ecacef00c4025fe34b9eee9fb329f3b3af4ca6205f75be2b8be46892f75447",
+      "before_recorded_sha256": "d1ecacef00c4025fe34b9eee9fb329f3b3af4ca6205f75be2b8be46892f75447",
+      "identical": true,
+      "path": "placement.json"
+    },
+    {
+      "after_sha256": "3b23314e0f9f7f6353078aad9db2c358d09f20fa5258a62ec524310063e03d7a",
+      "before_recorded_sha256": "3b23314e0f9f7f6353078aad9db2c358d09f20fa5258a62ec524310063e03d7a",
+      "identical": true,
+      "path": "ball_track_arc_solved.json"
+    },
+    {
+      "after_sha256": "08a162924ac9bdd9f654a927fcf170e4fcb747060ea241a729bbb1f411bd4122",
+      "before_recorded_sha256": "08a162924ac9bdd9f654a927fcf170e4fcb747060ea241a729bbb1f411bd4122",
+      "identical": true,
+      "path": "contact_windows.json"
+    },
+    {
+      "after_sha256": "93d7f910fe097ecc9ae053ed560d918aad36de8ce18dbfd7d52f6b8fb6aa237f",
+      "before_recorded_sha256": "93d7f910fe097ecc9ae053ed560d918aad36de8ce18dbfd7d52f6b8fb6aa237f",
+      "identical": true,
+      "path": "audio_onsets_v2.json"
+    },
+    {
+      "after_sha256": "03f6dc37f5c06244f7b5f6de27a44b0e872d5d3bab195f9165ea9ae254f16d3f",
+      "before_recorded_sha256": "03f6dc37f5c06244f7b5f6de27a44b0e872d5d3bab195f9165ea9ae254f16d3f",
+      "identical": true,
+      "path": "racket_pose_estimate.json"
+    },
+    {
+      "after_sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+      "before_recorded_sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+      "identical": true,
+      "path": "court_zones.json"
+    },
+    {
+      "after_sha256": "5e242c4a3c35122734769eb5d6dc6700fdb403dd687efeefb037caf0b0bf3ef5",
+      "before_recorded_sha256": "5e242c4a3c35122734769eb5d6dc6700fdb403dd687efeefb037caf0b0bf3ef5",
+      "identical": true,
+      "path": "rally_spans.json"
+    },
+    {
+      "after_sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057",
+      "before_recorded_sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057",
+      "identical": true,
+      "path": "net_plane.json"
+    },
+    {
+      "after_sha256": "dd4899eaffebd03d17d36f92daf93904b5187c8c8d5c50b6f5746a0311567d6a",
+      "before_recorded_sha256": "dd4899eaffebd03d17d36f92daf93904b5187c8c8d5c50b6f5746a0311567d6a",
+      "identical": true,
+      "path": "virtual_world.json"
+    }
+  ],
+  "schema_version": 1
+}

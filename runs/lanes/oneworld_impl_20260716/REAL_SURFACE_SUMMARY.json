@@ -1,0 +1,48 @@
+{
+  "VERIFIED": 0,
+  "artifact_type": "one_world_v1_real_surface_summary",
+  "demo": {
+    "ball_estimate_tier_counts": {
+      "ray_court_projection": 10776
+    },
+    "bounce_count": 666,
+    "contact_count": 0,
+    "frame_count": 20922,
+    "paddle_state_count": 0,
+    "player_state_count": 0,
+    "true_absent_frame_count": 10146,
+    "trust_band": {
+      "badge": "preview",
+      "evidence_path": "owner_cal_seed/court_calibration_solved.json",
+      "gate_id": "court_calibration_pck5px_gate",
+      "gate_status": "corrected_unverified",
+      "reason": "Owner CAL seed chosen for demo preview; corrected/line-evidence single-view calibration is not independently verified and remains preview-only.",
+      "stage": "CAL"
+    }
+  },
+  "gen2_attempt": {
+    "exact_error": "refused reused stage-local artifacts without a trusted fingerprint; rebuild the stage or install an explicit immutable migration_attestation with source hash, artifact hash, author, and timestamp",
+    "exit_code": 1,
+    "status": "environmental_finding"
+  },
+  "schema_version": 1,
+  "wolverine": {
+    "ball_estimate_tier_counts": {
+      "arc_measured": 295,
+      "physics_predicted": 5
+    },
+    "coverage_measured": {
+      "complete_frame_count": 117,
+      "coverage_fraction": 0.39
+    },
+    "coverage_with_predicted": {
+      "complete_frame_count": 117,
+      "coverage_fraction": 0.39
+    },
+    "event_type_counts": {
+      "floor_bounce": 4,
+      "paddle_contact": 24
+    },
+    "paddle_display_state_count": 1102
+  }
+}

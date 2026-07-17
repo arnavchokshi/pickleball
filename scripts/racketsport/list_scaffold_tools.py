@@ -40,6 +40,7 @@ RELATED_TEST_OVERRIDES = {
     "build_event_head_anchor_candidates": "test_event_head_anchor_candidates.py",
     "build_eval0_index": "test_eval0_index.py",
     "build_refined_placement": "test_placement_refine_clis.py",
+    "build_one_world_v1": "test_one_world_clis.py",
     "build_paddle_true_corner_review": "test_racket_candidate_generation.py",
     "build_report_artifacts": "test_report_artifacts.py",
     "build_serving_manifest": "test_serving_manifest.py",
@@ -62,6 +63,7 @@ RELATED_TEST_OVERRIDES = {
     "prepare_tracknetv3_finetune_dataset": "test_pretraining_dataset_prep.py",
     "render_calibration_overlay": "test_calibration_overlay.py",
     "report_testclip_coverage": "test_testclip_coverage_report.py",
+    "report_one_world_metrics": "test_one_world_clis.py",
     "run_ball_tracking_eval_suite": "test_ball_tracking_eval_suite.py",
     "run_mobile_person_accuracy_sweep": "test_mobile_person_accuracy_sweep.py",
     "run_mobile_person_yolo_replay": "test_mobile_person_yolo_replay.py",
@@ -79,6 +81,7 @@ RELATED_TEST_OVERRIDES = {
     "validate_pose_dataset": "test_pose_dataset.py",
     "validate_racket_dataset": "test_racket_dataset.py",
     "validate_placement_slide": "test_placement_refine_clis.py",
+    "validate_one_world_v1": "test_one_world_clis.py",
     "validate_shot_dataset": "test_shot_dataset.py",
     "validate_testclips": "test_testclips.py",
     "eval_event_head": "test_event_head_eval.py",
@@ -87,12 +90,15 @@ RELATED_TEST_OVERRIDES = {
 SCHEMA_OVERRIDES = {
     "audit_label_drafts": "label_draft_audit_schema.json",
     "build_eval0_index": "eval0_index_schema.json",
+    "build_one_world_v1": "one_world_v1_schema.json",
     "build_report_artifacts": "report_artifacts_schema.json",
     "build_serving_manifest": "serving_manifest_schema.json",
     "build_variant_comparison": "eval0_index_schema.json",
     "list_scaffold_tools": "scaffold_tool_index_schema.json",
+    "report_one_world_metrics": "one_world_v1_metrics_schema.json",
     "summarize_eval_runs": "eval_summary_schema.json",
     "validate_ball_audio_dataset": "ball_audio_dataset_schema.json",
+    "validate_one_world_v1": "one_world_v1_validation_schema.json",
     "validate_pipeline_artifacts": "pipeline_contracts_schema.json",
     "validate_pose_dataset": "pose_dataset_schema.json",
     "validate_racket_dataset": "racket_dataset_schema.json",
@@ -106,6 +112,7 @@ TASK_HINTS = {
     "benchmark_sam3dbody": ("EVAL", "EVAL-0"),
     "build_corrections_queue": ("RPT", "RPT-1"),
     "build_eval0_index": ("EVAL", "EVAL-0"),
+    "build_one_world_v1": ("WORLD", "NS-04.6"),
     "build_refined_placement": ("BODY", "NS-04.3"),
     "build_report_artifacts": ("RPT", "RPT-1"),
     "build_serving_manifest": ("RPT", "RPT-1"),
@@ -126,6 +133,7 @@ TASK_HINTS = {
     "register_testclips_manifest": ("DATA", "DATA-1"),
     "render_calibration_overlay": ("CAL", "CAL-2"),
     "report_testclip_coverage": ("DATA", "DATA-1"),
+    "report_one_world_metrics": ("EVAL", "NS-04.5"),
     "smoke_models": ("ENV", "ENV-2"),
     "smoke_mujoco_mjx": ("ENV", "ENV-1"),
     "summarize_decode_benchmarks": ("EVAL", "EVAL-0"),
@@ -133,6 +141,7 @@ TASK_HINTS = {
     "track": ("TRK", "TRK-1"),
     "validate_ball_audio_dataset": ("DATA", "DATA-3"),
     "validate_corrections": ("RPT", "RPT-1"),
+    "validate_one_world_v1": ("WORLD", "NS-04.5"),
     "validate_pipeline_artifacts": ("EVAL", "EVAL-4"),
     "validate_placement_slide": ("BODY", "NS-03.BODY"),
     "validate_pose_dataset": ("DATA", "DATA-2"),
@@ -325,6 +334,7 @@ def _category(stem: str) -> str:
         return "body"
     if (
         "physics" in normalized
+        or "one_world" in normalized
         or "flight" in normalized
         or "foot" in normalized
         or "placement" in normalized

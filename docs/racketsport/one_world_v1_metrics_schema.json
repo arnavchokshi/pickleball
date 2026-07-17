@@ -1,0 +1,67 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "VERIFIED": {
+      "const": 0,
+      "title": "Verified",
+      "type": "integer"
+    },
+    "artifact_type": {
+      "const": "racketsport_one_world_v1_metrics",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "baseline_source": {
+      "title": "Baseline Source",
+      "type": "string"
+    },
+    "fused_source": {
+      "title": "Fused Source",
+      "type": "string"
+    },
+    "metrics": {
+      "additionalProperties": true,
+      "title": "Metrics",
+      "type": "object"
+    },
+    "not_for_detection_metrics": {
+      "const": true,
+      "title": "Not For Detection Metrics",
+      "type": "boolean"
+    },
+    "not_for_training": {
+      "const": true,
+      "title": "Not For Training",
+      "type": "boolean"
+    },
+    "preview_only": {
+      "const": true,
+      "title": "Preview Only",
+      "type": "boolean"
+    },
+    "render_only": {
+      "const": true,
+      "title": "Render Only",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "VERIFIED",
+    "preview_only",
+    "render_only",
+    "not_for_detection_metrics",
+    "not_for_training",
+    "baseline_source",
+    "fused_source",
+    "metrics"
+  ],
+  "title": "OneWorldMetrics",
+  "type": "object"
+}

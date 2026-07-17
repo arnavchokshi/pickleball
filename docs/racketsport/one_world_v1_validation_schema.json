@@ -1,0 +1,80 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "VERIFIED": {
+      "const": 0,
+      "title": "Verified",
+      "type": "integer"
+    },
+    "artifact_type": {
+      "const": "racketsport_one_world_v1_validation",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "checks": {
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "title": "Checks",
+      "type": "object"
+    },
+    "errors": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Errors",
+      "type": "array"
+    },
+    "not_for_detection_metrics": {
+      "const": true,
+      "title": "Not For Detection Metrics",
+      "type": "boolean"
+    },
+    "not_for_training": {
+      "const": true,
+      "title": "Not For Training",
+      "type": "boolean"
+    },
+    "preview_only": {
+      "const": true,
+      "title": "Preview Only",
+      "type": "boolean"
+    },
+    "render_only": {
+      "const": true,
+      "title": "Render Only",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "valid": {
+      "title": "Valid",
+      "type": "boolean"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "VERIFIED",
+    "preview_only",
+    "render_only",
+    "not_for_detection_metrics",
+    "not_for_training",
+    "valid",
+    "checks",
+    "errors",
+    "warnings"
+  ],
+  "title": "OneWorldValidation",
+  "type": "object"
+}

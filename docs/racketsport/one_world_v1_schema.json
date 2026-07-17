@@ -1,0 +1,1416 @@
+{
+  "$defs": {
+    "ConfidenceProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "band": {
+          "title": "Band",
+          "type": "string"
+        },
+        "display_band": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display Band"
+        },
+        "horizon_frames": {
+          "minimum": 0,
+          "title": "Horizon Frames",
+          "type": "integer"
+        },
+        "predicted_sigma_m": {
+          "anyOf": [
+            {
+              "ge": 0.0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Predicted Sigma M"
+        },
+        "predictor": {
+          "title": "Predictor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "band",
+        "predictor",
+        "horizon_frames"
+      ],
+      "title": "ConfidenceProvenance",
+      "type": "object"
+    },
+    "ContactEvidenceVector": {
+      "additionalProperties": false,
+      "properties": {
+        "audio_bounded_multiplier": {
+          "title": "Audio Bounded Multiplier",
+          "type": "number"
+        },
+        "ball_track_supported": {
+          "title": "Ball Track Supported",
+          "type": "boolean"
+        },
+        "hypotheses": {
+          "items": {
+            "$ref": "#/$defs/ContactHypothesisEvidence"
+          },
+          "title": "Hypotheses",
+          "type": "array"
+        },
+        "null_likelihood": {
+          "title": "Null Likelihood",
+          "type": "number"
+        },
+        "upstream_sources": {
+          "additionalProperties": true,
+          "title": "Upstream Sources",
+          "type": "object"
+        },
+        "visual_event_exists": {
+          "title": "Visual Event Exists",
+          "type": "boolean"
+        },
+        "wrist_candidates_supported": {
+          "title": "Wrist Candidates Supported",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "upstream_sources",
+        "visual_event_exists",
+        "ball_track_supported",
+        "wrist_candidates_supported",
+        "audio_bounded_multiplier",
+        "hypotheses",
+        "null_likelihood"
+      ],
+      "title": "ContactEvidenceVector",
+      "type": "object"
+    },
+    "ContactHypothesisEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "audio_bounded_multiplier": {
+          "title": "Audio Bounded Multiplier",
+          "type": "number"
+        },
+        "ball_term": {
+          "title": "Ball Term",
+          "type": "number"
+        },
+        "center_distance_m": {
+          "title": "Center Distance M",
+          "type": "number"
+        },
+        "combined_likelihood": {
+          "title": "Combined Likelihood",
+          "type": "number"
+        },
+        "declared_hitter_multiplier": {
+          "title": "Declared Hitter Multiplier",
+          "type": "number"
+        },
+        "discounts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Discounts",
+          "type": "array"
+        },
+        "event_confidence_term": {
+          "title": "Event Confidence Term",
+          "type": "number"
+        },
+        "marker_reliability": {
+          "title": "Marker Reliability",
+          "type": "number"
+        },
+        "player_id": {
+          "title": "Player Id",
+          "type": "integer"
+        },
+        "wrist_index": {
+          "title": "Wrist Index",
+          "type": "integer"
+        },
+        "wrist_term": {
+          "title": "Wrist Term",
+          "type": "number"
+        }
+      },
+      "required": [
+        "player_id",
+        "wrist_index",
+        "center_distance_m",
+        "ball_term",
+        "wrist_term",
+        "event_confidence_term",
+        "marker_reliability",
+        "declared_hitter_multiplier",
+        "audio_bounded_multiplier",
+        "combined_likelihood",
+        "discounts"
+      ],
+      "title": "ContactHypothesisEvidence",
+      "type": "object"
+    },
+    "OneWorldBallState": {
+      "additionalProperties": false,
+      "properties": {
+        "altitude_unknown": {
+          "title": "Altitude Unknown",
+          "type": "boolean"
+        },
+        "approx": {
+          "title": "Approx",
+          "type": "boolean"
+        },
+        "confidence": {
+          "title": "Confidence",
+          "type": "number"
+        },
+        "confidence_provenance": {
+          "$ref": "#/$defs/ConfidenceProvenance"
+        },
+        "covariance_m2": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Covariance M2",
+          "type": "array"
+        },
+        "estimate_tier": {
+          "enum": [
+            "arc_measured",
+            "physics_predicted",
+            "ray_court_projection"
+          ],
+          "title": "Estimate Tier",
+          "type": "string"
+        },
+        "not_for_detection_metrics": {
+          "const": true,
+          "title": "Not For Detection Metrics",
+          "type": "boolean"
+        },
+        "provenance": {
+          "$ref": "#/$defs/OneWorldRuleProvenance"
+        },
+        "ray_direction_world": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ray Direction World"
+        },
+        "ray_origin_world": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ray Origin World"
+        },
+        "render_only": {
+          "const": true,
+          "title": "Render Only",
+          "type": "boolean"
+        },
+        "source_generation": {
+          "title": "Source Generation",
+          "type": "string"
+        },
+        "trust_band": {
+          "$ref": "#/$defs/TrustBand"
+        },
+        "world_xyz": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "World Xyz",
+          "type": "array"
+        },
+        "xy_observed_px": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 2,
+              "minItems": 2,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Xy Observed Px"
+        }
+      },
+      "required": [
+        "world_xyz",
+        "covariance_m2",
+        "xy_observed_px",
+        "confidence",
+        "source_generation",
+        "estimate_tier",
+        "ray_origin_world",
+        "ray_direction_world",
+        "altitude_unknown",
+        "approx",
+        "render_only",
+        "not_for_detection_metrics",
+        "trust_band",
+        "confidence_provenance",
+        "provenance"
+      ],
+      "title": "OneWorldBallState",
+      "type": "object"
+    },
+    "OneWorldBounceRefinement": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "title": "Confidence",
+          "type": "number"
+        },
+        "event_index": {
+          "title": "Event Index",
+          "type": "integer"
+        },
+        "frame": {
+          "title": "Frame",
+          "type": "integer"
+        },
+        "out_of_court_bounds": {
+          "title": "Out Of Court Bounds",
+          "type": "boolean"
+        },
+        "provenance": {
+          "$ref": "#/$defs/OneWorldRuleProvenance"
+        },
+        "raw_ball_world": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Raw Ball World"
+        },
+        "refined_ball_world": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Refined Ball World"
+        },
+        "signed_plane_residual_after_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Signed Plane Residual After M"
+        },
+        "signed_plane_residual_before_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Signed Plane Residual Before M"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "t": {
+          "title": "T",
+          "type": "number"
+        },
+        "trust_band": {
+          "$ref": "#/$defs/TrustBand"
+        }
+      },
+      "required": [
+        "event_index",
+        "frame",
+        "t",
+        "status",
+        "raw_ball_world",
+        "refined_ball_world",
+        "signed_plane_residual_before_m",
+        "signed_plane_residual_after_m",
+        "out_of_court_bounds",
+        "confidence",
+        "trust_band",
+        "provenance"
+      ],
+      "title": "OneWorldBounceRefinement",
+      "type": "object"
+    },
+    "OneWorldContactRefinement": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "title": "Confidence",
+          "type": "number"
+        },
+        "contact_evidence_vector": {
+          "$ref": "#/$defs/ContactEvidenceVector"
+        },
+        "displacement_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Displacement M"
+        },
+        "event_index": {
+          "title": "Event Index",
+          "type": "integer"
+        },
+        "frame": {
+          "title": "Frame",
+          "type": "integer"
+        },
+        "hitter_band": {
+          "enum": [
+            "resolved",
+            "too_close_to_call",
+            "unsupported"
+          ],
+          "title": "Hitter Band",
+          "type": "string"
+        },
+        "hitter_confidence": {
+          "title": "Hitter Confidence",
+          "type": "number"
+        },
+        "hitter_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hitter Id"
+        },
+        "per_player_wrist_likelihoods": {
+          "additionalProperties": {
+            "items": {
+              "type": "number"
+            },
+            "type": "array"
+          },
+          "title": "Per Player Wrist Likelihoods",
+          "type": "object"
+        },
+        "provenance": {
+          "$ref": "#/$defs/OneWorldRuleProvenance"
+        },
+        "raw_ball_world": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Raw Ball World"
+        },
+        "raw_player_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Raw Player Id"
+        },
+        "raw_wrist_volume_residual_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Raw Wrist Volume Residual M"
+        },
+        "refined_ball_world": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Refined Ball World"
+        },
+        "refined_wrist_volume_residual_m": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Refined Wrist Volume Residual M"
+        },
+        "status": {
+          "title": "Status",
+          "type": "string"
+        },
+        "t": {
+          "title": "T",
+          "type": "number"
+        },
+        "trust_band": {
+          "$ref": "#/$defs/TrustBand"
+        }
+      },
+      "required": [
+        "event_index",
+        "frame",
+        "t",
+        "status",
+        "raw_player_id",
+        "hitter_id",
+        "hitter_confidence",
+        "hitter_band",
+        "per_player_wrist_likelihoods",
+        "contact_evidence_vector",
+        "raw_ball_world",
+        "refined_ball_world",
+        "raw_wrist_volume_residual_m",
+        "refined_wrist_volume_residual_m",
+        "displacement_m",
+        "confidence",
+        "trust_band",
+        "provenance"
+      ],
+      "title": "OneWorldContactRefinement",
+      "type": "object"
+    },
+    "OneWorldEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "title": "Confidence",
+          "type": "number"
+        },
+        "event_index": {
+          "title": "Event Index",
+          "type": "integer"
+        },
+        "evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ContactEvidenceVector"
+            },
+            {
+              "additionalProperties": true,
+              "type": "object"
+            }
+          ],
+          "title": "Evidence"
+        },
+        "frame": {
+          "title": "Frame",
+          "type": "integer"
+        },
+        "hitter_id": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Hitter Id"
+        },
+        "provenance": {
+          "$ref": "#/$defs/OneWorldRuleProvenance"
+        },
+        "t": {
+          "title": "T",
+          "type": "number"
+        },
+        "trust_band": {
+          "$ref": "#/$defs/TrustBand"
+        },
+        "type": {
+          "enum": [
+            "paddle_contact",
+            "floor_bounce",
+            "net_contact",
+            "net_cross"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "world_location_raw": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "World Location Raw"
+        },
+        "world_location_refined": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "maxItems": 3,
+              "minItems": 3,
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "World Location Refined"
+        }
+      },
+      "required": [
+        "event_index",
+        "type",
+        "t",
+        "frame",
+        "world_location_raw",
+        "world_location_refined",
+        "hitter_id",
+        "confidence",
+        "trust_band",
+        "evidence",
+        "provenance"
+      ],
+      "title": "OneWorldEvent",
+      "type": "object"
+    },
+    "OneWorldFrame": {
+      "additionalProperties": false,
+      "properties": {
+        "ball": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OneWorldBallState"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "frame_idx": {
+          "title": "Frame Idx",
+          "type": "integer"
+        },
+        "missing": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing",
+          "type": "array"
+        },
+        "paddles": {
+          "items": {
+            "$ref": "#/$defs/OneWorldPaddleState"
+          },
+          "title": "Paddles",
+          "type": "array"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/OneWorldPlayerState"
+          },
+          "title": "Players",
+          "type": "array"
+        },
+        "t": {
+          "title": "T",
+          "type": "number"
+        }
+      },
+      "required": [
+        "frame_idx",
+        "t",
+        "players",
+        "ball",
+        "paddles",
+        "missing"
+      ],
+      "title": "OneWorldFrame",
+      "type": "object"
+    },
+    "OneWorldInputRef": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "title": "Artifact",
+          "type": "string"
+        },
+        "consumed_fields": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Consumed Fields",
+          "type": "array"
+        },
+        "generation": {
+          "title": "Generation",
+          "type": "string"
+        },
+        "missing_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Missing Reason"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Schema Version"
+        },
+        "sha256": {
+          "title": "Sha256",
+          "type": "string"
+        },
+        "trust_band": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/TrustBand"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "artifact",
+        "path",
+        "sha256",
+        "generation",
+        "schema_version",
+        "consumed_fields",
+        "trust_band",
+        "missing_reason"
+      ],
+      "title": "OneWorldInputRef",
+      "type": "object"
+    },
+    "OneWorldPaddleState": {
+      "additionalProperties": false,
+      "properties": {
+        "ambiguity_margin_px": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ambiguity Margin Px"
+        },
+        "confidence": {
+          "title": "Confidence",
+          "type": "number"
+        },
+        "display_pose_world": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SE3"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "display_tier": {
+          "enum": [
+            "resolved",
+            "unresolved_best_evidence",
+            "unresolved_legacy_wrist_proxy"
+          ],
+          "title": "Display Tier",
+          "type": "string"
+        },
+        "player_id": {
+          "title": "Player Id",
+          "type": "integer"
+        },
+        "pose_world": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SE3"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "provenance": {
+          "$ref": "#/$defs/OneWorldRuleProvenance"
+        },
+        "retained_hypotheses": {
+          "items": {
+            "additionalProperties": true,
+            "type": "object"
+          },
+          "title": "Retained Hypotheses",
+          "type": "array"
+        },
+        "score_components": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Score Components",
+          "type": "object"
+        },
+        "score_margin": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Score Margin"
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "unresolved",
+            "unresolved_legacy_wrist_proxy"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "trust_band": {
+          "$ref": "#/$defs/TrustBand"
+        },
+        "winning_hypothesis": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Winning Hypothesis"
+        }
+      },
+      "required": [
+        "player_id",
+        "status",
+        "pose_world",
+        "display_pose_world",
+        "display_tier",
+        "winning_hypothesis",
+        "retained_hypotheses",
+        "score_components",
+        "score_margin",
+        "ambiguity_margin_px",
+        "confidence",
+        "trust_band",
+        "provenance"
+      ],
+      "title": "OneWorldPaddleState",
+      "type": "object"
+    },
+    "OneWorldPlayerState": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "title": "Confidence",
+          "type": "number"
+        },
+        "confidence_provenance": {
+          "$ref": "#/$defs/ConfidenceProvenance"
+        },
+        "covariance_m2": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Covariance M2",
+          "type": "array"
+        },
+        "joint_conf": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Joint Conf"
+        },
+        "joints_world": {
+          "anyOf": [
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "maxItems": 3,
+                "minItems": 3,
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Joints World"
+        },
+        "placement_tier": {
+          "enum": [
+            "trackI_refined",
+            "placement_fused",
+            "tracks_world_xy"
+          ],
+          "title": "Placement Tier",
+          "type": "string"
+        },
+        "player_id": {
+          "title": "Player Id",
+          "type": "integer"
+        },
+        "provenance": {
+          "$ref": "#/$defs/OneWorldRuleProvenance"
+        },
+        "root_world": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Root World",
+          "type": "array"
+        },
+        "trust_band": {
+          "$ref": "#/$defs/TrustBand"
+        }
+      },
+      "required": [
+        "player_id",
+        "root_world",
+        "covariance_m2",
+        "joints_world",
+        "joint_conf",
+        "placement_tier",
+        "confidence",
+        "trust_band",
+        "confidence_provenance",
+        "provenance"
+      ],
+      "title": "OneWorldPlayerState",
+      "type": "object"
+    },
+    "OneWorldRuleProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "correction_cap": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Correction Cap"
+        },
+        "degraded_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Degraded Reasons",
+          "type": "array"
+        },
+        "discounts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Discounts",
+          "type": "array"
+        },
+        "effective_weights": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Effective Weights",
+          "type": "object"
+        },
+        "input_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Input Refs",
+          "type": "array"
+        },
+        "nominal_weights": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Nominal Weights",
+          "type": "object"
+        },
+        "robust_kernel": {
+          "title": "Robust Kernel",
+          "type": "string"
+        },
+        "rule": {
+          "title": "Rule",
+          "type": "string"
+        }
+      },
+      "required": [
+        "rule",
+        "input_refs",
+        "nominal_weights",
+        "effective_weights",
+        "discounts",
+        "robust_kernel",
+        "correction_cap",
+        "degraded_reasons"
+      ],
+      "title": "OneWorldRuleProvenance",
+      "type": "object"
+    },
+    "OneWorldSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "ball_contact_distance_m": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Ball Contact Distance M",
+          "type": "object"
+        },
+        "bounce_plane_residual_m": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": "Bounce Plane Residual M",
+          "type": "object"
+        },
+        "missing_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Missing Counts",
+          "type": "object"
+        },
+        "paddle_resolution": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Paddle Resolution",
+          "type": "object"
+        },
+        "placement_tier_counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Placement Tier Counts",
+          "type": "object"
+        },
+        "regression_kills": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Regression Kills",
+          "type": "array"
+        },
+        "reprojection_consistency": {
+          "additionalProperties": true,
+          "title": "Reprojection Consistency",
+          "type": "object"
+        },
+        "warnings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        },
+        "world_coverage": {
+          "additionalProperties": true,
+          "title": "World Coverage",
+          "type": "object"
+        }
+      },
+      "required": [
+        "placement_tier_counts",
+        "missing_counts",
+        "ball_contact_distance_m",
+        "bounce_plane_residual_m",
+        "world_coverage",
+        "paddle_resolution",
+        "reprojection_consistency",
+        "regression_kills",
+        "warnings"
+      ],
+      "title": "OneWorldSummary",
+      "type": "object"
+    },
+    "SE3": {
+      "additionalProperties": false,
+      "properties": {
+        "R": {
+          "items": {
+            "items": {
+              "type": "number"
+            },
+            "maxItems": 3,
+            "minItems": 3,
+            "type": "array"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "R",
+          "type": "array"
+        },
+        "t": {
+          "items": {
+            "type": "number"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "T",
+          "type": "array"
+        }
+      },
+      "required": [
+        "R",
+        "t"
+      ],
+      "title": "SE3",
+      "type": "object"
+    },
+    "TrustBand": {
+      "additionalProperties": false,
+      "description": "Per-entity confidence/gate-provenance for scrubber trust badges.",
+      "properties": {
+        "badge": {
+          "enum": [
+            "verified",
+            "preview",
+            "low_confidence"
+          ],
+          "title": "Badge",
+          "type": "string"
+        },
+        "evidence_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Evidence Path"
+        },
+        "gate_id": {
+          "title": "Gate Id",
+          "type": "string"
+        },
+        "gate_status": {
+          "title": "Gate Status",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "stage": {
+          "title": "Stage",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stage",
+        "gate_id",
+        "gate_status",
+        "badge",
+        "reason"
+      ],
+      "title": "TrustBand",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "VERIFIED": {
+      "const": 0,
+      "title": "Verified",
+      "type": "integer"
+    },
+    "artifact_type": {
+      "const": "racketsport_one_world_v1",
+      "title": "Artifact Type",
+      "type": "string"
+    },
+    "bounces": {
+      "items": {
+        "$ref": "#/$defs/OneWorldBounceRefinement"
+      },
+      "title": "Bounces",
+      "type": "array"
+    },
+    "contacts": {
+      "items": {
+        "$ref": "#/$defs/OneWorldContactRefinement"
+      },
+      "title": "Contacts",
+      "type": "array"
+    },
+    "coordinate_space": {
+      "const": "world_court_netcenter_z_up_m",
+      "title": "Coordinate Space",
+      "type": "string"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/OneWorldEvent"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "fps": {
+      "title": "Fps",
+      "type": "number"
+    },
+    "frames": {
+      "items": {
+        "$ref": "#/$defs/OneWorldFrame"
+      },
+      "title": "Frames",
+      "type": "array"
+    },
+    "inputs": {
+      "items": {
+        "$ref": "#/$defs/OneWorldInputRef"
+      },
+      "title": "Inputs",
+      "type": "array"
+    },
+    "not_for_detection_metrics": {
+      "const": true,
+      "title": "Not For Detection Metrics",
+      "type": "boolean"
+    },
+    "not_for_training": {
+      "const": true,
+      "title": "Not For Training",
+      "type": "boolean"
+    },
+    "preview_only": {
+      "const": true,
+      "title": "Preview Only",
+      "type": "boolean"
+    },
+    "raw_inputs_mutated": {
+      "const": false,
+      "title": "Raw Inputs Mutated",
+      "type": "boolean"
+    },
+    "render_only": {
+      "const": true,
+      "title": "Render Only",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "summary": {
+      "$ref": "#/$defs/OneWorldSummary"
+    },
+    "trust_band": {
+      "$ref": "#/$defs/TrustBand"
+    },
+    "world_frame": {
+      "const": "court_Z0",
+      "title": "World Frame",
+      "type": "string"
+    }
+  },
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "world_frame",
+    "coordinate_space",
+    "fps",
+    "VERIFIED",
+    "preview_only",
+    "render_only",
+    "not_for_detection_metrics",
+    "not_for_training",
+    "raw_inputs_mutated",
+    "inputs",
+    "frames",
+    "contacts",
+    "bounces",
+    "events",
+    "summary",
+    "trust_band"
+  ],
+  "title": "OneWorldV1",
+  "type": "object"
+}

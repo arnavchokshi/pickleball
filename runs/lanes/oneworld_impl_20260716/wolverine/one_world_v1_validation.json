@@ -1,0 +1,22 @@
+{
+  "VERIFIED": 0,
+  "artifact_type": "racketsport_one_world_v1_validation",
+  "checks": {
+    "absence_semantics": true,
+    "band_inheritance": true,
+    "input_sha256s": true,
+    "no_snap_policy": true,
+    "preview_policy": true,
+    "raw_inputs_mutated": true,
+    "reprojection_kills": true,
+    "schema": true
+  },
+  "errors": [],
+  "not_for_detection_metrics": true,
+  "not_for_training": true,
+  "preview_only": true,
+  "render_only": true,
+  "schema_version": 1,
+  "valid": true,
+  "warnings": []
+}
