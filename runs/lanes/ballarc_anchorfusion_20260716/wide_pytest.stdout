@@ -1,0 +1,1253 @@
+........................................................................ [  1%]
+........................................................................ [  3%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+........................................................................ [  9%]
+........................................................................ [ 11%]
+........................................................F............... [ 13%]
+........................................................................ [ 15%]
+............s........................................................... [ 16%]
+........................................................................ [ 18%]
+........................................................................ [ 20%]
+........................................................................ [ 22%]
+........................................................................ [ 24%]
+........................................................................ [ 26%]
+........................................................................ [ 28%]
+............................................F........................... [ 30%]
+........................................................................ [ 32%]
+................................................F....................... [ 33%]
+......F..ss................FFFFFFFFFF.Fs..FFFFF......................... [ 35%]
+............................F......F...........FFF...................... [ 37%]
+.....................FF................................................. [ 39%]
+........................................................................ [ 41%]
+........................................................................ [ 43%]
+........................................................................ [ 45%]
+........................................................................ [ 47%]
+........................................................................ [ 49%]
+........................................................................ [ 50%]
+........................................................................ [ 52%]
+............ssssss...................................................... [ 54%]
+...............................F........................................ [ 56%]
+............................................F...F....................... [ 58%]
+........................................................................ [ 60%]
+........................................................................ [ 62%]
+........................................................................ [ 64%]
+........................................................................ [ 65%]
+........................................................................ [ 67%]
+........................................................................ [ 69%]
+........................................................................ [ 71%]
+........................................................................ [ 73%]
+.......................s................................................ [ 75%]
+........................................................................ [ 77%]
+........................................................................ [ 79%]
+......FFF............................................................... [ 81%]
+........................................................................ [ 82%]
+....F......F............................................................ [ 84%]
+...................................sss.sssss............................ [ 86%]
+........................................................................ [ 88%]
+........................................................................ [ 90%]
+........................................................................ [ 92%]
+........................................................................ [ 94%]
+.......sss.....................FF....................................... [ 96%]
+........................................................................ [ 98%]
+.................ss..................................................... [ 99%]
+...                                                                      [100%]
+=================================== FAILURES ===================================
+______________________ test_best_stack_manifest_integrity ______________________
+
+    def test_best_stack_manifest_integrity() -> None:
+        manifest = load_best_stack_manifest()
+    
+        assert manifest.schema_version == 1
+>       assert manifest.revision == 12
+E       AssertionError: assert 13 == 12
+E        +  where 13 = BestStackManifest(path=PosixPath('/Users/arnavchokshi/Desktop/pickleball/configs/racketsport/best_stack.json'), raw={'... 'notes': 'preview_band; do_not_promote; disabled until Track C wiring and independent court-frame GT. VERIFIED=0.'})}).revision
+
+tests/racketsport/test_best_stack_manifest.py:20: AssertionError
+_______ test_compare_img1605_partial_labels_rejects_current_bad_proposal _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_compare_img1605_partial_l0')
+
+    def test_compare_img1605_partial_labels_rejects_current_bad_proposal(tmp_path):
+        progress = json.loads(open(IMG1605_PROGRESS, encoding="utf-8").read())
+        clip_payload = progress["clips"][IMG1605_CLIP]
+        partial_path = tmp_path / "court_keypoints_partial.json"
+        partial_path.write_text(
+            json.dumps(
+                build_partial_court_keypoint_label_payload(
+                    clip=IMG1605_CLIP,
+                    reviewer=clip_payload["reviewer"],
+                    items=clip_payload["items"],
+                    source_resolution=[1080, 1920],
+                    label_coordinate_space=[1080, 1920],
+                    available_review_frame_count=3,
+                    sample_every_frames=None,
+                    frame_dir="eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames",
+                    reviewed_at_utc="2026-07-03T00:00:00+00:00",
+                )
+            ),
+            encoding="utf-8",
+        )
+    
+        summary = compare_proposal_to_reviewed_keypoints(
+            reviewed_keypoints_path=partial_path,
+            proposal_path=IMG1605_PROPOSAL,
+        )
+    
+>       assert summary["matched_keypoint_count"] == 14
+E       assert 15 == 14
+
+tests/racketsport/test_compare_court_proposals.py:132: AssertionError
+_ test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed_contract _
+
+    def test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed_contract() -> None:
+        repo = Path(__file__).resolve().parents[2]
+        fixture = (
+            repo
+            / "eval_clips/ball/burlington_gold_0300_low_steep_corner/labels/court_keypoints.json"
+        )
+>       assert hashlib.sha256(fixture.read_bytes()).hexdigest() == (
+            "537dbe0299a7069f258d373ada99758ff9238e6718d6bc6481365b614daa030f"
+        )
+E       AssertionError: assert 'b6649797e492...ba0a24eb42fbc' == '537dbe0299a7...65b614daa030f'
+E         
+E         - 537dbe0299a7069f258d373ada99758ff9238e6718d6bc6481365b614daa030f
+E         + b6649797e492c0be83267215cca544d5205aad8d3121a1c0b20ba0a24eb42fbc
+
+tests/racketsport/test_court_calibration_metric15.py:218: AssertionError
+_______ test_discovers_court_finding_samples_without_label_dirs_as_media _______
+
+    def test_discovers_court_finding_samples_without_label_dirs_as_media() -> None:
+        samples = discover_court_finding_samples("eval_clips/ball")
+    
+>       assert [sample.clip for sample in samples] == [
+            "burlington_gold_0300_low_steep_corner",
+            "indoor_doubles_fwuks_0500_long_mid_baseline",
+            "outdoor_webcam_iynbd_1500_long_high_baseline",
+            "owner_IMG_1605_8a193402780b",
+            "wolverine_mixed_0200_mid_steep_corner",
+        ]
+E       AssertionError: assert ['burlington_...steep_corner'] == ['burlington_...steep_corner']
+E         
+E         At index 4 diff: 'pbvision_11min_20260713' != 'wolverine_mixed_0200_mid_steep_corner'
+E         Left contains one more item: 'wolverine_mixed_0200_mid_steep_corner'
+E         Use -v to get more diff
+
+tests/racketsport/test_court_finding_technology_benchmark.py:24: AssertionError
+__ test_line_refined_regulation_scores_real_samples_without_claiming_verified __
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_line_refined_regulation_s0')
+
+    def test_line_refined_regulation_scores_real_samples_without_claiming_verified(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=["opencv_hough_lsd_regulation", "opencv_hough_lsd_regulation_line_refined"],
+            out_dir=tmp_path,
+        )
+    
+        refined = report["summary"]["by_technology"]["opencv_hough_lsd_regulation_line_refined"]
+    
+        assert report["verified"] is False
+        assert report["not_cal3_verified"] is True
+>       assert refined["scored_clip_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_court_finding_technology_benchmark.py:562: AssertionError
+______ test_hough_or_distance_mask_selector_scores_candidate_combination _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_hough_or_distance_mask_se0')
+
+    def test_hough_or_distance_mask_selector_scores_candidate_combination(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=[
+                "hough_keypoints",
+                "opencv_hough_lsd_regulation",
+                "opencv_hough_lsd_regulation_distance_mask",
+                "hough_or_regulation_distance_mask_selector",
+            ],
+            out_dir=tmp_path,
+        )
+    
+        selector = report["summary"]["by_technology"]["hough_or_regulation_distance_mask_selector"]
+    
+        assert report["verified"] is False
+        assert report["not_cal3_verified"] is True
+        assert selector["scored_clip_count"] == 5
+        assert selector["floor_visible_median_px_mean"] < report["summary"]["by_technology"]["hough_keypoints"]["floor_visible_median_px_mean"]
+        assert selector["floor_visible_median_px_mean"] < 305.0
+        assert selector["floor_visible_p95_px_mean"] < 540.0
+    
+        proposal = json.loads(
+            (
+                tmp_path
+                / "owner_IMG_1605_8a193402780b"
+                / "hough_or_regulation_distance_mask_selector"
+                / "court_proposal.json"
+>           ).read_text()
+              ^^^^^^^^^^^
+        )
+
+tests/racketsport/test_court_finding_technology_benchmark.py:631: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_hough_or_distance_mask_se0/owner_IMG_1605_8a193402780b/hough_or_regulation_distance_mask_selector/court_proposal.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_hough_or_distance_mask_se0/owner_IMG_1605_8a193402780b/hough_or_regulation_distance_mask_selector/court_proposal.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_ test_hough_or_refined_regulation_selector_uses_guarded_refinement_when_it_improves_median _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_hough_or_refined_regulati0')
+
+    def test_hough_or_refined_regulation_selector_uses_guarded_refinement_when_it_improves_median(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=[
+                "hough_or_regulation_line_selector",
+                "opencv_hough_lsd_regulation_line_refined",
+                "hough_or_refined_regulation_line_selector",
+            ],
+            out_dir=tmp_path,
+        )
+    
+        old_selector = report["summary"]["by_technology"]["hough_or_regulation_line_selector"]
+        refined_selector = report["summary"]["by_technology"]["hough_or_refined_regulation_line_selector"]
+    
+        assert refined_selector["scored_clip_count"] == 5
+        assert refined_selector["floor_visible_median_px_mean"] < old_selector["floor_visible_median_px_mean"]
+        assert refined_selector["floor_visible_median_px_mean"] < 292.0
+        assert refined_selector["floor_visible_p95_px_mean"] < 555.0
+    
+        choices = {}
+        for clip in [
+            "burlington_gold_0300_low_steep_corner",
+            "indoor_doubles_fwuks_0500_long_mid_baseline",
+            "outdoor_webcam_iynbd_1500_long_high_baseline",
+            "owner_IMG_1605_8a193402780b",
+            "wolverine_mixed_0200_mid_steep_corner",
+        ]:
+>           proposal = json.loads((tmp_path / clip / "hough_or_refined_regulation_line_selector" / "court_proposal.json").read_text())
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_finding_technology_benchmark.py:688: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_hough_or_refined_regulati0/owner_IMG_1605_8a193402780b/hough_or_refined_regulation_line_selector/court_proposal.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_hough_or_refined_regulati0/owner_IMG_1605_8a193402780b/hough_or_refined_regulation_line_selector/court_proposal.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+___ test_benchmark_report_scores_existing_adapters_without_claiming_verified ___
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_benchmark_report_scores_e0')
+
+    def test_benchmark_report_scores_existing_adapters_without_claiming_verified(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=["net_anchor", "hough_keypoints", "opencv_lsd"],
+            out_dir=tmp_path,
+        )
+    
+        assert report["artifact_type"] == "racketsport_court_finding_technology_benchmark"
+        assert report["verified"] is False
+        assert report["not_cal3_verified"] is True
+>       assert report["summary"]["sample_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_court_finding_technology_benchmark.py:710: AssertionError
+______ test_benchmark_report_runs_hsv_paint_hough_as_line_candidate_only _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_benchmark_report_runs_hsv0')
+
+    def test_benchmark_report_runs_hsv_paint_hough_as_line_candidate_only(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=["opencv_hsv_paint_hough"],
+            out_dir=tmp_path,
+        )
+    
+        assert report["verified"] is False
+        assert report["not_cal3_verified"] is True
+>       assert report["summary"]["sample_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_court_finding_technology_benchmark.py:729: AssertionError
+_____ test_benchmark_report_records_pretrained_shadow_removal_unavailable ______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_benchmark_report_records_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x160771f60>
+
+    def test_benchmark_report_records_pretrained_shadow_removal_unavailable(tmp_path, monkeypatch) -> None:
+        monkeypatch.delenv("PICKLEBALL_SHADOW_REMOVAL_TORCHSCRIPT", raising=False)
+    
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=["opencv_hough_pretrained_shadow_removed"],
+            out_dir=tmp_path,
+        )
+    
+        assert report["verified"] is False
+        assert report["not_cal3_verified"] is True
+        results = [
+            result
+            for result in report["results"]
+            if result["technology_id"] == "opencv_hough_pretrained_shadow_removed"
+        ]
+>       assert len(results) == 5
+E       AssertionError: assert 6 == 5
+E        +  where 6 = len([{'clip': 'burlington_gold_0300_low_steep_corner', 'label_kind': 'full_15pt', 'technology_id': 'opencv_hough_pretraine...el_kind': 'full_15pt', 'technology_id': 'opencv_hough_pretrained_shadow_removed', 'status': 'no_line_candidates', ...}])
+
+tests/racketsport/test_court_finding_technology_benchmark.py:752: AssertionError
+___ test_hough_lsd_regulation_selector_scores_and_improves_mean_floor_error ____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_hough_lsd_regulation_sele0')
+
+    def test_hough_lsd_regulation_selector_scores_and_improves_mean_floor_error(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=["hough_keypoints", "opencv_hough_lsd_regulation", "hough_or_regulation_line_selector"],
+            out_dir=tmp_path,
+        )
+    
+        baseline = report["summary"]["by_technology"]["hough_keypoints"]
+        regulation = report["summary"]["by_technology"]["opencv_hough_lsd_regulation"]
+        selector = report["summary"]["by_technology"]["hough_or_regulation_line_selector"]
+    
+>       assert regulation["scored_clip_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_court_finding_technology_benchmark.py:771: AssertionError
+______ test_temporal_hough_lsd_line_adapter_uses_available_frame_sequence ______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_temporal_hough_lsd_line_a0')
+
+    def test_temporal_hough_lsd_line_adapter_uses_available_frame_sequence(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=["opencv_hough_lsd_temporal"],
+            out_dir=tmp_path,
+        )
+    
+>       assert report["summary"]["sample_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_court_finding_technology_benchmark.py:799: AssertionError
+_________ test_temporal_persistent_line_adapter_reports_frame_support __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_temporal_persistent_line_0')
+
+    def test_temporal_persistent_line_adapter_reports_frame_support(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=["opencv_hough_lsd_temporal_persistent"],
+            out_dir=tmp_path,
+        )
+    
+>       assert report["summary"]["sample_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_court_finding_technology_benchmark.py:835: AssertionError
+_____ test_temporal_hough_lsd_regulation_scores_without_claiming_verified ______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_temporal_hough_lsd_regula0')
+
+    def test_temporal_hough_lsd_regulation_scores_without_claiming_verified(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=["opencv_hough_lsd_temporal_regulation"],
+            out_dir=tmp_path,
+        )
+    
+        temporal = report["summary"]["by_technology"]["opencv_hough_lsd_temporal_regulation"]
+    
+        assert report["verified"] is False
+        assert report["not_cal3_verified"] is True
+>       assert temporal["scored_clip_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_court_finding_technology_benchmark.py:885: AssertionError
+_____ test_temporal_persistent_regulation_scores_without_claiming_verified _____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_temporal_persistent_regul0')
+
+    def test_temporal_persistent_regulation_scores_without_claiming_verified(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=["opencv_hough_lsd_temporal_persistent_regulation"],
+            out_dir=tmp_path,
+        )
+    
+        persistent = report["summary"]["by_technology"]["opencv_hough_lsd_temporal_persistent_regulation"]
+    
+        assert report["verified"] is False
+        assert report["not_cal3_verified"] is True
+>       assert persistent["scored_clip_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_court_finding_technology_benchmark.py:940: AssertionError
+_ test_balanced_temporal_selector_reduces_tail_risk_without_losing_median_gain _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_balanced_temporal_selecto0')
+
+    def test_balanced_temporal_selector_reduces_tail_risk_without_losing_median_gain(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=[
+                "hough_or_regulation_line_selector",
+                "hough_regulation_temporal_line_selector",
+                "hough_regulation_temporal_balanced_selector",
+            ],
+            out_dir=tmp_path,
+        )
+    
+        old_selector = report["summary"]["by_technology"]["hough_or_regulation_line_selector"]
+        median_selector = report["summary"]["by_technology"]["hough_regulation_temporal_line_selector"]
+        balanced = report["summary"]["by_technology"]["hough_regulation_temporal_balanced_selector"]
+    
+        assert balanced["scored_clip_count"] == 5
+        assert balanced["floor_visible_median_px_mean"] <= old_selector["floor_visible_median_px_mean"]
+        assert balanced["floor_visible_p95_px_mean"] < median_selector["floor_visible_p95_px_mean"]
+        assert balanced["floor_visible_median_px_mean"] < 300.0
+        assert balanced["floor_visible_p95_px_mean"] < 560.0
+    
+        choices = {}
+        for clip in [
+            "burlington_gold_0300_low_steep_corner",
+            "indoor_doubles_fwuks_0500_long_mid_baseline",
+            "outdoor_webcam_iynbd_1500_long_high_baseline",
+            "owner_IMG_1605_8a193402780b",
+            "wolverine_mixed_0200_mid_steep_corner",
+        ]:
+>           proposal = json.loads((tmp_path / clip / "hough_regulation_temporal_balanced_selector" / "court_proposal.json").read_text())
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_finding_technology_benchmark.py:1071: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_balanced_temporal_selecto0/owner_IMG_1605_8a193402780b/hough_regulation_temporal_balanced_selector/court_proposal.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_balanced_temporal_selecto0/owner_IMG_1605_8a193402780b/hough_regulation_temporal_balanced_selector/court_proposal.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_ test_persistent_tail_selector_uses_temporal_persistence_when_it_reduces_risk _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_persistent_tail_selector_0')
+
+    def test_persistent_tail_selector_uses_temporal_persistence_when_it_reduces_risk(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=[
+                "hough_or_regulation_line_selector",
+                "hough_regulation_temporal_balanced_selector",
+                "hough_regulation_temporal_persistent_tail_selector",
+            ],
+            out_dir=tmp_path,
+        )
+    
+        old_selector = report["summary"]["by_technology"]["hough_or_regulation_line_selector"]
+        balanced = report["summary"]["by_technology"]["hough_regulation_temporal_balanced_selector"]
+        persistent_tail = report["summary"]["by_technology"]["hough_regulation_temporal_persistent_tail_selector"]
+    
+        assert persistent_tail["scored_clip_count"] == 5
+        assert persistent_tail["floor_visible_median_px_mean"] < 340.0
+        assert persistent_tail["floor_visible_p95_px_mean"] < old_selector["floor_visible_p95_px_mean"]
+        assert persistent_tail["floor_visible_p95_px_mean"] < balanced["floor_visible_p95_px_mean"]
+        assert persistent_tail["floor_visible_median_px_mean"] < 340.0
+        assert persistent_tail["floor_visible_p95_px_mean"] < 525.0
+    
+        choices = {}
+        for clip in [
+            "burlington_gold_0300_low_steep_corner",
+            "indoor_doubles_fwuks_0500_long_mid_baseline",
+            "outdoor_webcam_iynbd_1500_long_high_baseline",
+            "owner_IMG_1605_8a193402780b",
+            "wolverine_mixed_0200_mid_steep_corner",
+        ]:
+            proposal = json.loads(
+>               (tmp_path / clip / "hough_regulation_temporal_persistent_tail_selector" / "court_proposal.json").read_text()
+            )
+
+tests/racketsport/test_court_finding_technology_benchmark.py:1114: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_persistent_tail_selector_0/owner_IMG_1605_8a193402780b/hough_regulation_temporal_persistent_tail_selector/court_proposal.json')
+mode = 'r', buffering = -1, encoding = 'locale', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_persistent_tail_selector_0/owner_IMG_1605_8a193402780b/hough_regulation_temporal_persistent_tail_selector/court_proposal.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_______ test_reviewed_oracle_selector_reports_candidate_pool_upper_bound _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_reviewed_oracle_selector_0')
+
+    def test_reviewed_oracle_selector_reports_candidate_pool_upper_bound(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=[
+                "hough_keypoints",
+                "opencv_hough_lsd_regulation",
+                "reviewed_oracle_hough_or_regulation",
+            ],
+            out_dir=tmp_path,
+        )
+    
+        hough = report["summary"]["by_technology"]["hough_keypoints"]
+        regulation = report["summary"]["by_technology"]["opencv_hough_lsd_regulation"]
+        oracle = report["summary"]["by_technology"]["reviewed_oracle_hough_or_regulation"]
+    
+        assert oracle["scored_clip_count"] == 5
+        assert oracle["floor_visible_median_px_mean"] <= hough["floor_visible_median_px_mean"]
+        assert oracle["floor_visible_median_px_mean"] <= regulation["floor_visible_median_px_mean"]
+>       assert all(
+            "reviewed_label_oracle_not_deployable" in result.get("rejection_reasons", [])
+            for result in report["results"]
+            if result["technology_id"] == "reviewed_oracle_hough_or_regulation"
+        )
+E       assert False
+E        +  where False = all(<generator object test_reviewed_oracle_selector_reports_candidate_pool_upper_bound.<locals>.<genexpr> at 0x171fa6110>)
+
+tests/racketsport/test_court_finding_technology_benchmark.py:1145: AssertionError
+_______ test_temporal_reviewed_oracle_reports_candidate_pool_upper_bound _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_temporal_reviewed_oracle_0')
+
+    def test_temporal_reviewed_oracle_reports_candidate_pool_upper_bound(tmp_path) -> None:
+        report = build_court_finding_technology_report(
+            eval_root="eval_clips/ball",
+            technologies=[
+                "hough_keypoints",
+                "opencv_hough_lsd_regulation",
+                "opencv_hough_lsd_temporal_regulation",
+                "hough_regulation_temporal_line_selector",
+                "reviewed_oracle_hough_regulation_temporal",
+            ],
+            out_dir=tmp_path,
+        )
+    
+        selector = report["summary"]["by_technology"]["hough_regulation_temporal_line_selector"]
+        temporal_oracle = report["summary"]["by_technology"]["reviewed_oracle_hough_regulation_temporal"]
+    
+        assert temporal_oracle["scored_clip_count"] == 5
+        assert temporal_oracle["floor_visible_median_px_mean"] <= selector["floor_visible_median_px_mean"]
+>       assert all(
+            "reviewed_label_oracle_not_deployable" in result.get("rejection_reasons", [])
+            for result in report["results"]
+            if result["technology_id"] == "reviewed_oracle_hough_regulation_temporal"
+        )
+E       assert False
+E        +  where False = all(<generator object test_temporal_reviewed_oracle_reports_candidate_pool_upper_bound.<locals>.<genexpr> at 0x1099836a0>)
+
+tests/racketsport/test_court_finding_technology_benchmark.py:1170: AssertionError
+__________ test_evaluate_court_finding_technologies_cli_writes_report __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_evaluate_court_finding_te0')
+
+    def test_evaluate_court_finding_technologies_cli_writes_report(tmp_path) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/racketsport/evaluate_court_finding_technologies.py",
+                "--eval-root",
+                "eval_clips/ball",
+                "--out-dir",
+                str(tmp_path),
+                "--technology",
+                "opencv_lsd",
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    
+        assert result.returncode == 0, result.stderr
+        payload = json.loads((tmp_path / "court_finding_technology_benchmark.json").read_text())
+        assert payload["artifact_type"] == "racketsport_court_finding_technology_benchmark"
+        assert payload["verified"] is False
+        assert payload["not_cal3_verified"] is True
+>       assert payload["summary"]["sample_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_court_finding_technology_benchmark.py:1199: AssertionError
+___________ test_build_report_includes_img1605_partial_visible_gate ____________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_build_report_includes_img0')
+
+    def test_build_report_includes_img1605_partial_visible_gate(tmp_path: Path) -> None:
+        eval_root = Path("eval_clips/ball")
+        partial_path = eval_root / "owner_IMG_1605_8a193402780b" / "labels" / "court_keypoints_partial.json"
+        proposal_path = Path("runs/img1605_court_detector_hardened/court_corner_proposals.json")
+        if not partial_path.is_file() or not proposal_path.is_file():
+            pytest.skip("IMG_1605 partial labels and hardened proposal are unavailable")
+        checkpoint, metrics = _checkpoint_inputs(tmp_path)
+    
+        report = build_court_keypoint_no_tap_eval_report(
+            run_root=tmp_path / "empty_full_clip_root",
+            checkpoint=checkpoint,
+            metrics=metrics,
+            out=tmp_path / "img1605_partial_eval.json",
+            dry_run=False,
+            device="cpu",
+            accepted_clips=(),
+            eval_root=eval_root,
+            include_partial=["owner_IMG_1605_8a193402780b"],
+        )
+    
+        assert report.status == "ran_not_verified"
+        assert report.verified is False
+        assert report.not_cal3_verified is True
+        assert report.summary.partial_clip_count == 1
+        assert report.summary.partial_gate_blocked_clip_count == 1
+        partial_clip = report.clips[0]
+        assert partial_clip.clip == "owner_IMG_1605_8a193402780b"
+        assert partial_clip.partial_label_path == str(partial_path)
+        assert partial_clip.partial_visible_gate is not None
+        gate = partial_clip.partial_visible_gate
+>       assert gate.visible_keypoint_count == 14
+E       AssertionError: assert 15 == 14
+E        +  where 15 = PartialVisibleGate(partial_label_path='eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoints_partial.json...sible_floor_p95_gt_30', 'visible_corner_median_gt_20', 'self_verification_not_promotable', 'temporal_stability_gt_10']).visible_keypoint_count
+
+tests/racketsport/test_court_keypoint_no_tap_eval.py:284: AssertionError
+__________ test_img1605_progress_builds_partial_visible_label_payload __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_img1605_progress_builds_p0')
+
+    def test_img1605_progress_builds_partial_visible_label_payload(tmp_path: Path) -> None:
+        progress = json.loads(IMG1605_PROGRESS.read_text(encoding="utf-8"))
+        clip_payload = progress["clips"][IMG1605_CLIP]
+        item = clip_payload["items"][0]
+    
+        payload = build_partial_court_keypoint_label_payload(
+            clip=IMG1605_CLIP,
+            reviewer=clip_payload["reviewer"],
+            items=[item],
+            source_resolution=[1080, 1920],
+            label_coordinate_space=[1080, 1920],
+            available_review_frame_count=3,
+            sample_every_frames=None,
+            frame_dir="eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames",
+            reviewed_at_utc="2026-07-03T00:00:00+00:00",
+        )
+    
+        assert payload["artifact_type"] == PARTIAL_LABEL_ARTIFACT_TYPE
+        assert payload["clip"] == IMG1605_CLIP
+        assert payload["review"]["status"] == "reviewed_partial"
+        assert payload["review"]["not_full_metric15_calibration"] is True
+        assert payload["frames"]["source_resolution"] == [1080, 1920]
+        assert payload["frames"]["label_coordinate_space"] == [1080, 1920]
+    
+        exported_item = payload["annotation"]["items"][0]
+>       assert exported_item["frame"] == "frame_000151.jpg"
+E       AssertionError: assert 'frame_000060.jpg' == 'frame_000151.jpg'
+E         
+E         - frame_000151.jpg
+E         ?          ^^^
+E         + frame_000060.jpg
+E         ?          ^^^
+
+tests/racketsport/test_court_keypoint_partial_labels.py:44: AssertionError
+_________ test_court_keypoint_post_save_rejects_missing_or_wrong_token _________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_court_keypoint_post_save_0')
+
+    def test_court_keypoint_post_save_rejects_missing_or_wrong_token(tmp_path: Path) -> None:
+        _write_review_task(tmp_path)
+>       server, thread = _start_court_keypoint_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_review_server.py:383: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_keypoint_review_server.py:19: in _start_court_keypoint_server
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x17892ef90>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+_____________ test_court_keypoint_post_save_accepts_correct_token ______________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_court_keypoint_post_save_1')
+
+    def test_court_keypoint_post_save_accepts_correct_token(tmp_path: Path) -> None:
+        _write_review_task(tmp_path)
+>       server, thread = _start_court_keypoint_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_review_server.py:423: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_keypoint_review_server.py:19: in _start_court_keypoint_server
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x15946f4d0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+______ test_court_keypoint_served_page_embeds_save_token_not_placeholder _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_court_keypoint_served_pag0')
+
+    def test_court_keypoint_served_page_embeds_save_token_not_placeholder(tmp_path: Path) -> None:
+        _write_review_task(tmp_path)
+>       server, thread = _start_court_keypoint_server(tmp_path, token="page-embedded-token")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_review_server.py:453: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_keypoint_review_server.py:19: in _start_court_keypoint_server
+    server = court_keypoint_review_server.ThreadingHTTPServer(
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x15946cf50>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+_________ test_visible_floor_homography_infers_img1605_occluded_corner _________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_visible_floor_homography_0')
+
+    def test_visible_floor_homography_infers_img1605_occluded_corner(tmp_path):
+        partial = _img1605_partial_labels(tmp_path)
+    
+        fit = fit_visible_floor_homography(partial)
+    
+>       assert fit.used_keypoints == [
+            "near_baseline_center",
+            "near_right_corner",
+            "far_right_corner",
+            "far_baseline_center",
+            "far_left_corner",
+            "near_nvz_left",
+            "near_nvz_center",
+            "near_nvz_right",
+            "far_nvz_left",
+            "far_nvz_center",
+            "far_nvz_right",
+        ]
+E       AssertionError: assert ['near_left_c..._corner', ...] == ['near_baseli...vz_left', ...]
+E         
+E         At index 0 diff: 'near_left_corner' != 'near_baseline_center'
+E         Left contains one more item: 'far_nvz_right'
+E         Use -v to get more diff
+
+tests/racketsport/test_court_partial_geometry.py:47: AssertionError
+___________ test_visible_floor_homography_requires_four_floor_points ___________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_visible_floor_homography_1')
+
+    def test_visible_floor_homography_requires_four_floor_points(tmp_path):
+        partial = _img1605_partial_labels(tmp_path)
+        partial.frames[0].keypoints.clear()
+        partial.frames[0].visibility_by_keypoint.update(
+            {
+                "net_left_sideline": "visible",
+                "net_center": "visible",
+                "net_right_sideline": "visible",
+            }
+        )
+        partial.frames[0].keypoints.update(
+            {
+                "net_left_sideline": (509.0, 1106.0),
+                "net_center": (717.0, 1131.0),
+                "net_right_sideline": (1018.0, 1173.0),
+            }
+        )
+    
+>       with pytest.raises(ValueError, match="at least 4 visible floor keypoints"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       Failed: DID NOT RAISE ValueError
+
+tests/racketsport/test_court_partial_geometry.py:86: Failed
+________ test_scaffold_index_has_related_direct_schema_and_task_entries ________
+
+    def test_scaffold_index_has_related_direct_schema_and_task_entries() -> None:
+        result = _run("scripts/racketsport/list_scaffold_tools.py", "--root", ".")
+        assert result.returncode == 0, result.stderr
+        tools = {row["stem"]: row for row in json.loads(result.stdout)["tools"]}
+        expected = {
+            "build_one_world_v1": ("WORLD", "NS-04.6", "one_world_v1_schema.json"),
+            "report_one_world_metrics": ("EVAL", "NS-04.5", "one_world_v1_metrics_schema.json"),
+            "validate_one_world_v1": ("WORLD", "NS-04.5", "one_world_v1_validation_schema.json"),
+        }
+        for stem, (workstream, task, schema) in expected.items():
+            row = tools[stem]
+            assert row["related_test"].endswith("test_one_world_clis.py")
+            assert row["direct_cli_reference_test"].endswith("test_one_world_clis.py")
+>           assert row["matching_schema"].endswith(schema)
+E           AssertionError: assert False
+E            +  where False = <built-in method endswith of str object at 0x173db6730>('one_world_v1.schema.json')
+E            +    where <built-in method endswith of str object at 0x173db6730> = 'docs/racketsport/one_world_v1_schema.json'.endswith
+
+tests/racketsport/test_one_world_clis.py:58: AssertionError
+_ test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verified _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_lm_homography_report_scor0')
+
+    def test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verified(tmp_path) -> None:
+        report = build_lm_homography_reviewed_label_report(
+            eval_root="eval_clips/ball",
+            out_path=tmp_path / "overlap_calibration_eval.json",
+        )
+    
+        assert report["artifact_type"] == "racketsport_overlapping_court_calibration_eval"
+        assert report["verified"] is False
+        assert report["not_cal3_verified"] is True
+>       assert report["summary"]["sample_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_overlapping_court_calibration_eval.py:49: AssertionError
+________ test_evaluate_overlapping_court_calibration_cli_writes_report _________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_evaluate_overlapping_cour0')
+
+    def test_evaluate_overlapping_court_calibration_cli_writes_report(tmp_path) -> None:
+        out = tmp_path / "overlap_calibration_eval.json"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/racketsport/evaluate_overlapping_court_calibration.py",
+                "--eval-root",
+                "eval_clips/ball",
+                "--out",
+                str(out),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    
+        assert result.returncode == 0, result.stderr
+        payload = json.loads(out.read_text())
+        assert payload["artifact_type"] == "racketsport_overlapping_court_calibration_eval"
+>       assert payload["summary"]["full_15pt_clip_count"] == 5
+E       assert 6 == 5
+
+tests/racketsport/test_overlapping_court_calibration_eval.py:424: AssertionError
+__________ test_review_input_post_save_rejects_missing_or_wrong_token __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_review_input_post_save_re0')
+
+    def test_review_input_post_save_rejects_missing_or_wrong_token(tmp_path: Path) -> None:
+>       server, thread = _start_review_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_review_input_server.py:892: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_review_input_server.py:16: in _start_review_server
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x13707aea0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+______________ test_review_input_post_save_accepts_correct_token _______________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_review_input_post_save_ac0')
+
+    def test_review_input_post_save_accepts_correct_token(tmp_path: Path) -> None:
+>       server, thread = _start_review_server(tmp_path, token="correct-horse-battery-staple")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_review_input_server.py:923: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_review_input_server.py:16: in _start_review_server
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x160732060>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+_______ test_review_input_served_pages_embed_save_token_not_placeholder ________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_review_input_served_pages0')
+
+    def test_review_input_served_pages_embed_save_token_not_placeholder(tmp_path: Path) -> None:
+>       server, thread = _start_review_server(tmp_path, token="page-embedded-token")
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_review_input_server.py:944: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_review_input_server.py:16: in _start_review_server
+    server = review_input_server.ThreadingHTTPServer(("127.0.0.1", 0), review_input_server.ReviewHandler)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:457: in __init__
+    self.server_bind()
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/http/server.py:148: in server_bind
+    socketserver.TCPServer.server_bind(self)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <http.server.ThreadingHTTPServer object at 0x166f929f0>
+
+    def server_bind(self):
+        """Called by constructor to bind the socket.
+    
+        May be overridden.
+    
+        """
+        if self.allow_reuse_address and hasattr(socket, "SO_REUSEADDR"):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        # Since Linux 6.12.9, SO_REUSEPORT is not allowed
+        # on other address families than AF_INET/AF_INET6.
+        if (
+            self.allow_reuse_port and hasattr(socket, "SO_REUSEPORT")
+            and self.address_family in (socket.AF_INET, socket.AF_INET6)
+        ):
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+>       self.socket.bind(self.server_address)
+E       PermissionError: [Errno 1] Operation not permitted
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/socketserver.py:478: PermissionError
+__________________ test_serve_and_client_round_trip_succeeds ___________________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_serve_and_client_round_tr0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x123f969e0>
+
+    def test_serve_and_client_round_trip_succeeds(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+        instance = _make_worker(tmp_path, monkeypatch)
+        instance.bootstrap()
+    
+        def _fake_inference(**kwargs: Any) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+            Path(kwargs["out_path"]).write_text(json.dumps({"frames": []}), encoding="utf-8")
+            return [], {"mode": "fake"}
+    
+        monkeypatch.setattr(worker, "_run_batch_inference_and_write", _fake_inference)
+    
+        thread, results = _serve_in_background(instance)
+        try:
+            job_requests = _write_requests(tmp_path, "job1.json", _payload())
+            out_path = tmp_path / "job1_out.json"
+            exit_code = worker.submit_job_via_client(
+                socket_path=instance.socket_path,
+                requests_path=job_requests,
+                out_path=out_path,
+                chunk_dir=None,
+                chunk_format="pickle",
+                no_monolithic_output=True,
+                bucket_size=None,
+            )
+>           assert exit_code == 0
+E           assert 1 == 0
+
+tests/racketsport/test_sam3dbody_persistent_worker.py:310: AssertionError
+----------------------------- Captured stderr call -----------------------------
+sam3dbody persistent worker unreachable at '/tmp/s3dbw_2c54a3b9b2.sock': FileNotFoundError: [Errno 2] No such file or directory
+____________ test_worker_idle_timeout_self_exits_and_removes_socket ____________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-26/test_worker_idle_timeout_self_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1589cbd90>
+
+    def test_worker_idle_timeout_self_exits_and_removes_socket(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
+        instance = _make_worker(tmp_path, monkeypatch, idle_timeout_s=0.2, accept_poll_s=0.05)
+        instance.bootstrap()
+    
+>       exit_summary = instance.serve_forever()
+                       ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_sam3dbody_persistent_worker.py:521: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <scripts.racketsport.sam3dbody_persistent_worker.Sam3DBodyPersistentWorker object at 0x158a045a0>
+
+    def serve_forever(self) -> dict[str, Any]:
+        socket_path = self.socket_path
+        try:
+            os.unlink(socket_path)
+        except FileNotFoundError:
+            pass
+        server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+>       server.bind(socket_path)
+E       PermissionError: [Errno 1] Operation not permitted
+
+scripts/racketsport/sam3dbody_persistent_worker.py:491: PermissionError
+__________ test_storage_policy_keeps_large_tracked_artifacts_explicit __________
+
+>   ???
+E   AssertionError: assert {'cvat_upload..._a.json', ...} == {'cvat_upload...test.pt', ...}
+E     
+E     Extra items in the left set:
+E     'runs/lanes/event_head_scaffold_20260716/dataset/manifest_a.json'
+E     Use -v to get more diff
+
+tests/racketsport/test_truthful_capabilities.py:339: AssertionError
+________ test_storage_policy_audit_classifies_large_worktree_artifacts _________
+
+    
+    def test_storage_policy_audit_classifies_large_worktree_artifacts() -> None:
+        text = (ROOT / "README.md").read_text(encoding="utf-8")
+        _remove_generated_artifacts()
+        original_allowed_large_untracked = audit_storage_policy.ALLOWED_LARGE_UNTRACKED_SOURCE_FILES
+        try:
+            audit_storage_policy.ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = ALLOWED_LARGE_UNTRACKED_SOURCE_FILES
+            report = audit_storage_policy.build_storage_report(ROOT, check_generated_artifacts=False)
+        finally:
+            audit_storage_policy.ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = original_allowed_large_untracked
+    
+        assert report["unknown_large_tracked_files"] == []
+        assert report["unknown_large_untracked_source_files"] == []
+        assert report["check_generated_artifacts"] is False
+>       assert report["generated_artifacts"] == []
+E       AssertionError: assert {'cvat_upload..._a.json', ...} == {'cvat_upload...test.pt', ...}
+E         
+E         Extra items in the left set:
+E         'runs/lanes/event_head_scaffold_20260716/dataset/manifest_a.json'
+E         'runs/lanes/event_head_scaffold_20260716/dataset/manifest_b.json'
+E         Use -v to get more diff
+
+tests/racketsport/test_truthful_capabilities.py:359: AssertionError
+=============================== warnings summary ===============================
+tests/racketsport/test_body_mesh_index.py:304
+  /Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_body_mesh_index.py:304: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+.venv/lib/python3.14/site-packages/torchreid/reid/metrics/rank.py:11
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torchreid/reid/metrics/rank.py:11: UserWarning: Cython evaluation (very fast so highly recommended) is unavailable, now use python evaluation.
+    warnings.warn(
+
+tests/racketsport/test_body_runner_real_path.py::test_body_runner_leaves_missing_outputs_when_fast_sam_runtime_is_unavailable
+  /Users/arnavchokshi/Desktop/pickleball/threed/racketsport/orchestrator.py:2665: RuntimeWarning: FAST_SAM_PYTHON is unset; BODY is degrading from the batched FastSam3DBodySubprocessRuntime path to the in-process per-frame FastSam3DBodyRuntime path
+    result = runner.run(context)
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_trace.py:1000: DeprecationWarning: `torch.jit.trace` is not supported in Python 3.14+ and may break. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_trace.py:1139: DeprecationWarning: `torch.jit.trace_method` is not supported in Python 3.14+ and may break. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_serialization.py:170: DeprecationWarning: `torch.jit.load` is not supported in Python 3.14+ and may break. Please switch to `torch.export`.
+    warnings.warn(
+
+tests/racketsport/test_sam3dbody_persistent_worker.py::test_serve_and_client_round_trip_succeeds
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/_pytest/threadexception.py:58: PytestUnhandledThreadExceptionWarning: Exception in thread Thread-27 (_run)
+  
+  Traceback (most recent call last):
+    File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1082, in _bootstrap_inner
+      self._context.run(self.run)
+      ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+    File "/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/threading.py", line 1024, in run
+      self._target(*self._args, **self._kwargs)
+      ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    File "/Users/arnavchokshi/Desktop/pickleball/tests/racketsport/test_sam3dbody_persistent_worker.py", line 276, in _run
+      results.append(instance.serve_forever())
+                     ~~~~~~~~~~~~~~~~~~~~~~^^
+    File "/Users/arnavchokshi/Desktop/pickleball/scripts/racketsport/sam3dbody_persistent_worker.py", line 491, in serve_forever
+      server.bind(socket_path)
+      ~~~~~~~~~~~^^^^^^^^^^^^^
+  PermissionError: [Errno 1] Operation not permitted
+  
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+    warnings.warn(pytest.PytestUnhandledThreadExceptionWarning(msg))
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/racketsport/test_best_stack_manifest.py::test_best_stack_manifest_integrity
+FAILED tests/racketsport/test_compare_court_proposals.py::test_compare_img1605_partial_labels_rejects_current_bad_proposal
+FAILED tests/racketsport/test_court_calibration_metric15.py::test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed_contract
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_discovers_court_finding_samples_without_label_dirs_as_media
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_line_refined_regulation_scores_real_samples_without_claiming_verified
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_or_distance_mask_selector_scores_candidate_combination
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_or_refined_regulation_selector_uses_guarded_refinement_when_it_improves_median
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_benchmark_report_scores_existing_adapters_without_claiming_verified
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_benchmark_report_runs_hsv_paint_hough_as_line_candidate_only
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_benchmark_report_records_pretrained_shadow_removal_unavailable
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_lsd_regulation_selector_scores_and_improves_mean_floor_error
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_hough_lsd_line_adapter_uses_available_frame_sequence
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_persistent_line_adapter_reports_frame_support
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_hough_lsd_regulation_scores_without_claiming_verified
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_persistent_regulation_scores_without_claiming_verified
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_balanced_temporal_selector_reduces_tail_risk_without_losing_median_gain
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_persistent_tail_selector_uses_temporal_persistence_when_it_reduces_risk
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_reviewed_oracle_selector_reports_candidate_pool_upper_bound
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_reviewed_oracle_reports_candidate_pool_upper_bound
+FAILED tests/racketsport/test_court_finding_technology_benchmark.py::test_evaluate_court_finding_technologies_cli_writes_report
+FAILED tests/racketsport/test_court_keypoint_no_tap_eval.py::test_build_report_includes_img1605_partial_visible_gate
+FAILED tests/racketsport/test_court_keypoint_partial_labels.py::test_img1605_progress_builds_partial_visible_label_payload
+FAILED tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_rejects_missing_or_wrong_token
+FAILED tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_accepts_correct_token
+FAILED tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_served_page_embeds_save_token_not_placeholder
+FAILED tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_infers_img1605_occluded_corner
+FAILED tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_requires_four_floor_points
+FAILED tests/racketsport/test_one_world_clis.py::test_scaffold_index_has_related_direct_schema_and_task_entries
+FAILED tests/racketsport/test_overlapping_court_calibration_eval.py::test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verified
+FAILED tests/racketsport/test_overlapping_court_calibration_eval.py::test_evaluate_overlapping_court_calibration_cli_writes_report
+FAILED tests/racketsport/test_review_input_server.py::test_review_input_post_save_rejects_missing_or_wrong_token
+FAILED tests/racketsport/test_review_input_server.py::test_review_input_post_save_accepts_correct_token
+FAILED tests/racketsport/test_review_input_server.py::test_review_input_served_pages_embed_save_token_not_placeholder
+FAILED tests/racketsport/test_sam3dbody_persistent_worker.py::test_serve_and_client_round_trip_succeeds
+FAILED tests/racketsport/test_sam3dbody_persistent_worker.py::test_worker_idle_timeout_self_exits_and_removes_socket
+FAILED tests/racketsport/test_truthful_capabilities.py::test_storage_policy_keeps_large_tracked_artifacts_explicit
+FAILED tests/racketsport/test_truthful_capabilities.py::test_storage_policy_audit_classifies_large_worktree_artifacts
+37 failed, 3758 passed, 24 skipped, 8 warnings in 2736.57s (0:45:36)

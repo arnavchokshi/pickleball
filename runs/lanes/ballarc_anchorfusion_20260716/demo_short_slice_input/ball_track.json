@@ -1,0 +1,1509 @@
+{
+  "bounces": [],
+  "fps": 30.0,
+  "frames": [
+    {
+      "approx": false,
+      "conf": 0.94727159,
+      "t": 0.0,
+      "visible": true,
+      "xy": [
+        1014.548706,
+        262.492828
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.93953121,
+      "t": 0.033334,
+      "visible": true,
+      "xy": [
+        1005.321533,
+        267.21405
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.95225978,
+      "t": 0.066667,
+      "visible": true,
+      "xy": [
+        996.257324,
+        272.78772
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.90309411,
+      "t": 0.1,
+      "visible": true,
+      "xy": [
+        987.867737,
+        279.354218
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.85954487,
+      "t": 0.133334,
+      "visible": true,
+      "xy": [
+        978.81543,
+        286.796844
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.84696227,
+      "t": 0.166667,
+      "visible": true,
+      "xy": [
+        969.556763,
+        295.203186
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.35815513,
+      "t": 0.2,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.91161221,
+      "t": 0.233334,
+      "visible": true,
+      "xy": [
+        961.547791,
+        294.412262
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.89913273,
+      "t": 0.266667,
+      "visible": true,
+      "xy": [
+        962.27655,
+        284.894684
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.89681286,
+      "t": 0.3,
+      "visible": true,
+      "xy": [
+        963.091919,
+        281.053253
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8216778,
+      "t": 0.333334,
+      "visible": true,
+      "xy": [
+        962.219177,
+        279.768799
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.43438587,
+      "t": 0.366667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.47609785,
+      "t": 0.4,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.19850631,
+      "t": 0.433334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.26709396,
+      "t": 0.466667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.37182808,
+      "t": 0.5,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.52444851,
+      "t": 0.533334,
+      "visible": true,
+      "xy": [
+        957.499939,
+        283.727783
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.68968225,
+      "t": 0.566667,
+      "visible": true,
+      "xy": [
+        951.750427,
+        276.307587
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.73947871,
+      "t": 0.6,
+      "visible": true,
+      "xy": [
+        938.773499,
+        264.031342
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.88974947,
+      "t": 0.633334,
+      "visible": true,
+      "xy": [
+        930.733154,
+        253.768433
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.92583138,
+      "t": 0.666667,
+      "visible": true,
+      "xy": [
+        920.587158,
+        244.843277
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.91625601,
+      "t": 0.7,
+      "visible": true,
+      "xy": [
+        909.4104,
+        234.508072
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.9099282,
+      "t": 0.733334,
+      "visible": true,
+      "xy": [
+        895.900513,
+        224.552979
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.92338169,
+      "t": 0.766667,
+      "visible": true,
+      "xy": [
+        884.470825,
+        215.023407
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.90530825,
+      "t": 0.8,
+      "visible": true,
+      "xy": [
+        870.865601,
+        206.490875
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.90747261,
+      "t": 0.833334,
+      "visible": true,
+      "xy": [
+        855.86853,
+        196.651581
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.87487257,
+      "t": 0.866667,
+      "visible": true,
+      "xy": [
+        840.719849,
+        188.777695
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.84497988,
+      "t": 0.9,
+      "visible": true,
+      "xy": [
+        824.761963,
+        180.341949
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.89347994,
+      "t": 0.933334,
+      "visible": true,
+      "xy": [
+        808.71814,
+        172.881165
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.87669933,
+      "t": 0.966667,
+      "visible": true,
+      "xy": [
+        790.516602,
+        166.438614
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.87777776,
+      "t": 1.0,
+      "visible": true,
+      "xy": [
+        771.981323,
+        160.292114
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.87950057,
+      "t": 1.033334,
+      "visible": true,
+      "xy": [
+        752.040283,
+        154.99678
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.88300186,
+      "t": 1.066667,
+      "visible": true,
+      "xy": [
+        729.886414,
+        151.268066
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.85338145,
+      "t": 1.1,
+      "visible": true,
+      "xy": [
+        707.442505,
+        147.496521
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8616361,
+      "t": 1.133334,
+      "visible": true,
+      "xy": [
+        682.194153,
+        144.170517
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.86980897,
+      "t": 1.166667,
+      "visible": true,
+      "xy": [
+        656.390991,
+        143.494553
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8512091,
+      "t": 1.2,
+      "visible": true,
+      "xy": [
+        629.237732,
+        143.681595
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.7638607,
+      "t": 1.233334,
+      "visible": true,
+      "xy": [
+        600.28479,
+        143.015152
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.79466164,
+      "t": 1.266667,
+      "visible": true,
+      "xy": [
+        570.36554,
+        144.314545
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.74135256,
+      "t": 1.3,
+      "visible": true,
+      "xy": [
+        534.86792,
+        152.82988
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.7459265,
+      "t": 1.333334,
+      "visible": true,
+      "xy": [
+        501.215637,
+        157.711349
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.72895753,
+      "t": 1.366667,
+      "visible": true,
+      "xy": [
+        462.511627,
+        167.262421
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.73737186,
+      "t": 1.4,
+      "visible": true,
+      "xy": [
+        424.211395,
+        177.770218
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.74140698,
+      "t": 1.433334,
+      "visible": true,
+      "xy": [
+        383.230042,
+        189.860474
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.72023678,
+      "t": 1.466667,
+      "visible": true,
+      "xy": [
+        338.40686,
+        205.018082
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.74293327,
+      "t": 1.5,
+      "visible": true,
+      "xy": [
+        292.189423,
+        221.315323
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.74638528,
+      "t": 1.533334,
+      "visible": true,
+      "xy": [
+        239.246552,
+        244.979767
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.62837923,
+      "t": 1.566667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.8679322,
+      "t": 1.6,
+      "visible": true,
+      "xy": [
+        1257.134766,
+        202.247589
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.86690652,
+      "t": 1.633334,
+      "visible": true,
+      "xy": [
+        1245.106445,
+        197.36937
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.86732388,
+      "t": 1.666667,
+      "visible": true,
+      "xy": [
+        1232.37085,
+        193.033569
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.78578377,
+      "t": 1.7,
+      "visible": true,
+      "xy": [
+        1219.744141,
+        187.417328
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.31865934,
+      "t": 1.733334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.04582641,
+      "t": 1.766667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.26771092,
+      "t": 1.8,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.37901846,
+      "t": 1.833334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.39409056,
+      "t": 1.866667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.30297539,
+      "t": 1.9,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.71723425,
+      "t": 1.933334,
+      "visible": true,
+      "xy": [
+        1133.216797,
+        150.633682
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.85131311,
+      "t": 1.966667,
+      "visible": true,
+      "xy": [
+        1119.904419,
+        147.395035
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.85684842,
+      "t": 2.0,
+      "visible": true,
+      "xy": [
+        1108.610596,
+        143.749817
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.84495425,
+      "t": 2.033334,
+      "visible": true,
+      "xy": [
+        1094.959473,
+        140.15947
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.87554675,
+      "t": 2.066667,
+      "visible": true,
+      "xy": [
+        1082.871826,
+        137.017685
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.85627854,
+      "t": 2.1,
+      "visible": true,
+      "xy": [
+        1069.947266,
+        134.369843
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.91542834,
+      "t": 2.133334,
+      "visible": true,
+      "xy": [
+        1057.593018,
+        129.898743
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.83804089,
+      "t": 2.166667,
+      "visible": true,
+      "xy": [
+        1044.940918,
+        127.432144
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.74217039,
+      "t": 2.2,
+      "visible": true,
+      "xy": [
+        1031.165527,
+        124.601212
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.76957446,
+      "t": 2.233334,
+      "visible": true,
+      "xy": [
+        1017.078491,
+        121.295639
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.78113723,
+      "t": 2.266667,
+      "visible": true,
+      "xy": [
+        1004.894714,
+        118.403229
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.64688152,
+      "t": 2.3,
+      "visible": true,
+      "xy": [
+        1001.333557,
+        119.999992
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.57620847,
+      "t": 2.333334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.42607057,
+      "t": 2.366667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.53928095,
+      "t": 2.4,
+      "visible": true,
+      "xy": [
+        78.77504,
+        460.844055
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.47543395,
+      "t": 2.433334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.6364975,
+      "t": 2.466667,
+      "visible": true,
+      "xy": [
+        102.550903,
+        481.238281
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.61477011,
+      "t": 2.5,
+      "visible": true,
+      "xy": [
+        114.065674,
+        476.521362
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.58861816,
+      "t": 2.533334,
+      "visible": true,
+      "xy": [
+        118.695084,
+        464.999207
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.59647965,
+      "t": 2.566667,
+      "visible": true,
+      "xy": [
+        120.212891,
+        454.701508
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.64710683,
+      "t": 2.6,
+      "visible": true,
+      "xy": [
+        123.981155,
+        444.367065
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.71142596,
+      "t": 2.633334,
+      "visible": true,
+      "xy": [
+        131.360748,
+        436.391327
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.72597885,
+      "t": 2.666667,
+      "visible": true,
+      "xy": [
+        139.432144,
+        431.922546
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.69312131,
+      "t": 2.7,
+      "visible": true,
+      "xy": [
+        148.299591,
+        430.76178
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.69275683,
+      "t": 2.733334,
+      "visible": true,
+      "xy": [
+        151.216095,
+        431.835144
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.76614857,
+      "t": 2.766667,
+      "visible": true,
+      "xy": [
+        163.7211,
+        430.766113
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.62018991,
+      "t": 2.8,
+      "visible": true,
+      "xy": [
+        172.412811,
+        432.980713
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.87439418,
+      "t": 2.833334,
+      "visible": true,
+      "xy": [
+        171.09758,
+        440.049133
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.7679531,
+      "t": 2.866667,
+      "visible": true,
+      "xy": [
+        182.956375,
+        442.459961
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.68358833,
+      "t": 2.9,
+      "visible": true,
+      "xy": [
+        190.812241,
+        450.816528
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.81145895,
+      "t": 2.933334,
+      "visible": true,
+      "xy": [
+        196.928192,
+        458.36673
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.6702894,
+      "t": 2.966667,
+      "visible": true,
+      "xy": [
+        200.222961,
+        448.952606
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.72818232,
+      "t": 3.0,
+      "visible": true,
+      "xy": [
+        200.024887,
+        441.108856
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.63394392,
+      "t": 3.033334,
+      "visible": true,
+      "xy": [
+        205.129333,
+        435.188477
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.607903,
+      "t": 3.066667,
+      "visible": true,
+      "xy": [
+        209.108871,
+        433.13678
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.63063425,
+      "t": 3.1,
+      "visible": true,
+      "xy": [
+        213.084335,
+        430.780365
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.63823092,
+      "t": 3.133334,
+      "visible": true,
+      "xy": [
+        221.506042,
+        429.518005
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.60195571,
+      "t": 3.166667,
+      "visible": true,
+      "xy": [
+        268.481598,
+        293.558685
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.34397885,
+      "t": 3.2,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.43208104,
+      "t": 3.233334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.6697455,
+      "t": 3.266667,
+      "visible": true,
+      "xy": [
+        236.528442,
+        441.509644
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.70053893,
+      "t": 3.3,
+      "visible": true,
+      "xy": [
+        242.561096,
+        435.872009
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.72436845,
+      "t": 3.333334,
+      "visible": true,
+      "xy": [
+        242.100098,
+        430.078674
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.69311404,
+      "t": 3.366667,
+      "visible": true,
+      "xy": [
+        244.883789,
+        426.180267
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.72512633,
+      "t": 3.4,
+      "visible": true,
+      "xy": [
+        247.743439,
+        424.142334
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.65432113,
+      "t": 3.433334,
+      "visible": true,
+      "xy": [
+        249.679138,
+        422.139282
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.61671084,
+      "t": 3.466667,
+      "visible": true,
+      "xy": [
+        256.442505,
+        422.780823
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.45128196,
+      "t": 3.5,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.75665385,
+      "t": 3.533334,
+      "visible": true,
+      "xy": [
+        257.855042,
+        426.415253
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.76810294,
+      "t": 3.566667,
+      "visible": true,
+      "xy": [
+        263.201019,
+        432.572021
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.80550152,
+      "t": 3.6,
+      "visible": true,
+      "xy": [
+        264.442169,
+        426.310547
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.81357986,
+      "t": 3.633334,
+      "visible": true,
+      "xy": [
+        265.921448,
+        422.22934
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.70801479,
+      "t": 3.666667,
+      "visible": true,
+      "xy": [
+        268.749756,
+        418.828461
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.52595347,
+      "t": 3.7,
+      "visible": true,
+      "xy": [
+        272.5,
+        420.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.53431493,
+      "t": 3.733334,
+      "visible": true,
+      "xy": [
+        271.280823,
+        420.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.44990373,
+      "t": 3.766667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.61361992,
+      "t": 3.8,
+      "visible": true,
+      "xy": [
+        1016.354004,
+        300.619019
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.80664945,
+      "t": 3.833334,
+      "visible": true,
+      "xy": [
+        1018.230225,
+        298.853271
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.63094962,
+      "t": 3.866667,
+      "visible": true,
+      "xy": [
+        1018.75238,
+        300.298584
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.45124832,
+      "t": 3.9,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.42748883,
+      "t": 3.933334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.39728642,
+      "t": 3.966667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.41559058,
+      "t": 4.0,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.28033495,
+      "t": 4.033334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.33753809,
+      "t": 4.066667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.38093683,
+      "t": 4.1,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.30643806,
+      "t": 4.133334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.13297854,
+      "t": 4.166667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.12028301,
+      "t": 4.2,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.17297997,
+      "t": 4.233334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.22788893,
+      "t": 4.266667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.4169105,
+      "t": 4.3,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.35625333,
+      "t": 4.333334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.06154251,
+      "t": 4.366667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.08054081,
+      "t": 4.4,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.13636449,
+      "t": 4.433334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.07128733,
+      "t": 4.466667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.10322408,
+      "t": 4.5,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.09652243,
+      "t": 4.533334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.07547391,
+      "t": 4.566667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.17044067,
+      "t": 4.6,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.37879995,
+      "t": 4.633334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.32651809,
+      "t": 4.666667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.34306872,
+      "t": 4.7,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.16984038,
+      "t": 4.733334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.3300938,
+      "t": 4.766667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.2104781,
+      "t": 4.8,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.1743633,
+      "t": 4.833334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.08413525,
+      "t": 4.866667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.17265519,
+      "t": 4.9,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.06725638,
+      "t": 4.933334,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "approx": false,
+      "conf": 0.06162357,
+      "t": 4.966667,
+      "visible": false,
+      "xy": [
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "input_preprocessing": "official",
+  "schema_version": 1,
+  "source": "wasb"
+}

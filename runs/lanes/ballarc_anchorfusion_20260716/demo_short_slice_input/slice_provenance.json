@@ -1,0 +1,8 @@
+{
+  "pbvision_policy": "R&D reference only; never GT, training, or redistribution",
+  "purpose": "byte-identity regression only",
+  "rebase_time_origin_s": 158.333333,
+  "source": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/pbvision_11min_20260713",
+  "source_frame_end_exclusive": 4900,
+  "source_frame_start": 4750
+}

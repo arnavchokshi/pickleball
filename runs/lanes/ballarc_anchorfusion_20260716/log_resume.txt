@@ -1,0 +1,1232 @@
+OpenAI Codex v0.144.0
+--------
+[1mworkdir:[0m /Users/arnavchokshi/Desktop/pickleball
+[1mmodel:[0m gpt-5.6-sol
+[1mprovider:[0m openai
+[1mapproval:[0m never
+[1msandbox:[0m workspace-write [workdir, /tmp, $TMPDIR]
+[1mreasoning effort:[0m high
+[1mreasoning summaries:[0m none
+[1msession id:[0m 019f6ba4-9064-70b0-b8d7-697e20662bea
+--------
+[36muser[0m
+RESUME BRIEF from the Track A manager (your codex process was externally killed ~09:56 mid-preset_balanced; all disk state survived — do not redo preset_conservative). Confirmed state: PRESET_REGISTRATION.json locked; preset_conservative COMPLETE with metrics (killed=true on flight_sanity_violation, 16 violations, 53/371 segments fit, 18.77% in-rally frame coverage, 39.7min wall); preset_balanced was mid-run (its jsonl+dir exist — restart it cleanly). REMAINING: (1) finish preset_balanced and any third registered preset EXACTLY as pre-registered — no new presets, no tuning; (2) MANDATORY violation TAXONOMY for every flight-sanity failure in every preset (classify each: split-landed-mid-flight vs bridged-unmarked-direction-change vs weak-fit-passed-through vs structural/anchor-semantics incompatibility with soft splits — this taxonomy decides whether the mechanism is fixable or must wait for Track G typed event anchors, so be precise, with segment ids and evidence); (3) Wolverine byte-identity/no-soft-anchor regression + the no-audio boundary statement (Step 2 of the spec); (4) focused tests green (guard tests must still pass); (5) report.json per the lane schema with the full per-preset table incl. kill-rule status per preset, honest_issues, API-surface doc for Track C, BEST-STACK DELTA. The kill rule stands: a preset with ANY flight-sanity violation is dead — report it, do not soften it. If ALL presets kill, objective_result reflects that honestly and the taxonomy becomes the primary deliverable. Fence unchanged: ball_arc_solver.py, ball_arc_chain.py, your tests, your lane dir only.
+[2m2026-07-16T16:57:45.776625Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T16:57:46.051619Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[1m[31mERROR:[0m[0m Reconnecting... 2/5
+[2m2026-07-16T16:57:47.262026Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[{"metric":"Conservative preset","baseline":"1/188","after":"53/371 fit; 18.77% in-rally frame coverage; 16 flight-sanity violations; killed","target":"material recovery with 0 violations","verdict":"FAIL"}],"changes":[],"full_suite":{"command":"Resume audit starting; no new command run yet","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["The externally interrupted balanced run is incomplete and will not be scored. I will preserve its logs as interrupted evidence, then restart that exact registered preset cleanly.","The conservative preset remains dead. I will add a segment-by-segment failure taxonomy without changing or softening that ruling."],"next":"Audit the survived state, archive the interrupted balanced artifacts inside the lane, restart balanced unchanged, then run broad unchanged.","session_id":null}
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'git status --short -- threed/racketsport/ball_arc_solver.py threed/racketsport/ball_arc_chain.py tests/racketsport/test_ball_arc_solver.py tests/racketsport/test_ball_arc_chain.py runs/lanes/ballarc_anchorfusion_20260716; find runs/lanes/ballarc_anchorfusion_20260716 -maxdepth 2 -type f -print | sort; wc -l runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl 2>/dev/null || true; test -f runs/lanes/ballarc_anchorfusion_20260716/preset_balanced_metrics.json && cat runs/lanes/ballarc_anchorfusion_20260716/preset_balanced_metrics.json || true; tail -3 runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl 2>/dev/null || true'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+ M tests/racketsport/test_ball_arc_chain.py
+ M tests/racketsport/test_ball_arc_solver.py
+ M threed/racketsport/ball_arc_chain.py
+ M threed/racketsport/ball_arc_solver.py
+runs/lanes/ballarc_anchorfusion_20260716/PRESET_REGISTRATION.json
+runs/lanes/ballarc_anchorfusion_20260716/__pycache__/run_probe.cpython-314.pyc
+runs/lanes/ballarc_anchorfusion_20260716/log.txt
+runs/lanes/ballarc_anchorfusion_20260716/log_resume.txt
+runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl
+runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.stderr
+runs/lanes/ballarc_anchorfusion_20260716/preset_balanced/ball_bounce_candidates.json
+runs/lanes/ballarc_anchorfusion_20260716/preset_conservative.jsonl
+runs/lanes/ballarc_anchorfusion_20260716/preset_conservative.stderr
+runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_arc_render.json
+runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_bounce_candidates.json
+runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_chain_manifest.json
+runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_flight_sanity.json
+runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_track_arc_solved.json
+runs/lanes/ballarc_anchorfusion_20260716/preset_conservative_metrics.json
+runs/lanes/ballarc_anchorfusion_20260716/run_probe.py
+runs/lanes/ballarc_anchorfusion_20260716/spec.md
+      67 runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl
+{"degradation": null, "duration_s": 1.6333329999999933, "end_kind": "bounce", "event": "segment_end", "monotonic_s": 242657.93642725, "segment_id": 3, "start_kind": "bounce", "status": "fit", "t0": 159.866667, "t1": 161.5, "wall_s": 4.712755457992898}
+{"degradation": {"authority": "degraded", "budget_s": 5.0, "candidate_count": 0, "candidate_frame_count": 0, "duration_s": 5.366667, "elapsed_s": 5.000023, "evidence_provenance": "missing", "observation_count": 49, "outcome_type": "segment_budget_exceeded", "reason": "segment_budget_exceeded"}, "duration_s": 5.366667000000007, "end_kind": "bounce", "event": "segment_end", "monotonic_s": 242662.937366833, "segment_id": 4, "start_kind": "bounce", "status": "blocked:segment_budget_exceeded", "t0": 161.5, "t1": 166.866667, "wall_s": 5.000871791999089}
+{"degradation": {"authority": "degraded", "budget_s": 5.0, "candidate_count": 0, "candidate_frame_count": 0, "duration_s": 89.866666, "elapsed_s": 5.000727, "evidence_provenance": "missing", "observation_count": 1653, "outcome_type": "segment_budget_exceeded", "reason": "segment_budget_exceeded"}, "duration_s": 89.86666600000001, "end_kind": "bounce", "event": "segment_end", "monotonic_s": 242667.940509541, "segment_id": 5, "start_kind": "bounce", "status": "blocked:segment_budget_exceeded", "t0": 166.866667, "t1": 256.733333, "wall_s": 5.002891041018302}
+
+[2m2026-07-16T16:58:06.947075Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'mkdir -p runs/lanes/ballarc_anchorfusion_20260716/interrupted_balanced_0956 && mv runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.stderr runs/lanes/ballarc_anchorfusion_20260716/preset_balanced runs/lanes/ballarc_anchorfusion_20260716/interrupted_balanced_0956/ && find runs/lanes/ballarc_anchorfusion_20260716/interrupted_balanced_0956 -maxdepth 2 -type f -print | sort'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+runs/lanes/ballarc_anchorfusion_20260716/interrupted_balanced_0956/preset_balanced.jsonl
+runs/lanes/ballarc_anchorfusion_20260716/interrupted_balanced_0956/preset_balanced.stderr
+runs/lanes/ballarc_anchorfusion_20260716/interrupted_balanced_0956/preset_balanced/ball_bounce_candidates.json
+
+[2m2026-07-16T16:58:14.789689Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '.venv/bin/python runs/lanes/ballarc_anchorfusion_20260716/run_probe.py --preset audio_soft_score006_spacing175_rally_v1 --clip pbvision_11min_20260713 --input-dir runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/pbvision_11min_20260713 --onsets runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json --out-dir runs/lanes/ballarc_anchorfusion_20260716/preset_balanced --metrics runs/lanes/ballarc_anchorfusion_20260716/preset_balanced_metrics.json --budget-s 5 > runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl 2> runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.stderr'[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T16:58:24.293087Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json
+base='runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/'
+s=json.load(open(base+'ball_flight_sanity.json')); a=json.load(open(base+'ball_track_arc_solved.json'))
+for seg in s['segments']:
+ if seg['verdict']=='fail':
+  print('\\nSANITY',seg['segment_id'],seg['frame_start'],seg['frame_end'],seg['t0'],seg['t1'],seg['reasons'])
+  print('counts',seg.get('sample_count'),seg.get('frame_reasons'))
+  soft=[x for x in a.get('soft_split_boundaries',{}).get('applied',[]) if seg['t0'] < x['corrected_time_s'] < seg['t1']]
+  print('soft_count',len(soft),'soft',[(x['boundary_id'],x['corrected_time_s']) for x in soft])
+  fits=[x for x in a['segments'] if x['t0'] < seg['t1'] and x['t1'] > seg['t0'] and str(x['status']).startswith('fit')]
+  print('fits',[(x['segment_id'],x['status'],x['t0'],x['t1'],bool(x.get('soft_split_provenance'))) for x in fits])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T16:58:37.578318Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[31m exited 1 in 402ms:[0m
+Traceback (most recent call last):
+  File "<stdin>", line 6, in <module>
+KeyError: 't0'
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,pprint
+s=json.load(open('runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_flight_sanity.json'))
+print(s['segments'][0].keys());pprint.pp(s['segments'][0])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T16:58:42.196877Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 183ms:[0m
+dict_keys(['end_anchor', 'frame_end', 'frame_start', 'reasons', 'sample_count', 'segment_id', 'start_anchor', 'verdict'])
+{'end_anchor': {'anchor_id': 'auto_bounce_candidate_001177_001',
+                'frame': 1177,
+                'kind': 'bounce',
+                'status': 'auto_bounce_candidate',
+                't': 39.233333},
+ 'frame_end': 1177,
+ 'frame_start': 1177,
+ 'reasons': ['insufficient_world_samples'],
+ 'sample_count': 1,
+ 'segment_id': 0,
+ 'start_anchor': {'anchor_id': 'auto_bounce_candidate_000493_000',
+                  'frame': 493,
+                  'kind': 'bounce',
+                  'status': 'auto_bounce_candidate',
+                  't': 16.433333},
+ 'verdict': 'not_evaluated'}
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json
+base='runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/'
+s=json.load(open(base+'ball_flight_sanity.json')); a=json.load(open(base+'ball_track_arc_solved.json'))
+for seg in s['segments']:
+ if seg['verdict']=='fail':
+  t0=seg['start_anchor']['t'];t1=seg['end_anchor']['t']
+  print('\\nSANITY',seg['segment_id'],seg['frame_start'],seg['frame_end'],t0,t1,seg['reasons'],'samples',seg['sample_count'])
+  soft=[x for x in a.get('soft_split_boundaries',{}).get('applied',[]) if t0 < x['corrected_time_s'] < t1]
+  print('soft_count',len(soft),'soft',[(x['boundary_id'],x['corrected_time_s']) for x in soft])
+  fits=[x for x in a['segments'] if x['t0'] < t1 and x['t1'] > t0 and str(x['status']).startswith('fit')]
+  print('fits',[(x['segment_id'],x['status'],x['t0'],x['t1'],bool(x.get('soft_split_provenance'))) for x in fits])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T16:58:51.470997Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 270ms:[0m
+
+SANITY 1 1177 2079 39.233333 69.3 ['horizontal_direction_reversal', 'speed_jump', 'outside_court_volume'] samples 272
+soft_count 8 soft [('audio_onset_soft_0105', 39.377291386), ('audio_onset_soft_0117', 42.800941527), ('audio_onset_soft_0122', 45.273516933), ('audio_onset_soft_0130', 47.957249242), ('audio_onset_soft_0145', 52.323443512), ('audio_onset_soft_0159', 55.221145932), ('audio_onset_soft_0164', 57.387322443), ('audio_onset_soft_0187', 66.430719599)]
+fits [(5, 'fit_bvp_fallback', 39.233333, 39.377291386, True), (6, 'fit_bvp_fallback', 39.377291386, 42.800941527, True), (7, 'fit_bvp_fallback', 42.800941527, 45.273516933, True), (8, 'fit_bvp_fallback', 45.273516933, 47.957249242, True), (9, 'fit_bvp_fallback', 47.957249242, 52.323443512, True)]
+
+SANITY 2 2079 4796 69.3 159.866667 ['outside_court_volume'] samples 650
+soft_count 29 soft [('audio_onset_soft_0201', 69.384849232), ('audio_onset_soft_0205', 71.425823447), ('audio_onset_soft_0222', 74.520915098), ('audio_onset_soft_0231', 77.895215421), ('audio_onset_soft_0241', 82.362968955), ('audio_onset_soft_0248', 85.287049346), ('audio_onset_soft_0260', 87.684231484), ('audio_onset_soft_0268', 89.993651021), ('audio_onset_soft_0284', 93.213863951), ('audio_onset_soft_0299', 96.611951277), ('audio_onset_soft_0317', 100.387023829), ('audio_onset_soft_0332', 104.397958762), ('audio_onset_soft_0342', 106.752981642), ('audio_onset_soft_0357', 111.252980076), ('audio_onset_soft_0362', 113.942090724), ('audio_onset_soft_0367', 115.975117306), ('audio_onset_soft_0377', 118.478671745), ('audio_onset_soft_0395', 122.690168774), ('audio_onset_soft_0402', 125.065636067), ('audio_onset_soft_0412', 128.309294653), ('audio_onset_soft_0439', 133.400778927), ('audio_onset_soft_0454', 136.558988687), ('audio_onset_soft_0470', 140.094339523), ('audio_onset_soft_0478', 142.234289252), ('audio_onset_soft_0495', 144.996276969), ('audio_onset_soft_0500', 147.122662539), ('audio_onset_soft_0513', 152.775601922), ('audio_onset_soft_0521', 156.162129759), ('audio_onset_soft_0531', 158.595728955)]
+fits [(14, 'fit_bvp_fallback', 69.3, 69.384849232, True), (18, 'fit_bvp_fallback', 77.895215421, 82.362968955, True), (20, 'fit_bvp_fallback', 85.287049346, 87.684231484, True), (21, 'fit_bvp_fallback', 87.684231484, 89.993651021, True), (27, 'fit_bvp_fallback', 106.752981642, 111.252980076, True), (29, 'fit_bvp_fallback', 113.942090724, 115.975117306, True), (30, 'fit_bvp_fallback', 115.975117306, 118.478671745, True), (40, 'fit_bvp_fallback', 147.122662539, 152.775601922, True), (41, 'fit_bvp_fallback', 152.775601922, 156.162129759, True), (43, 'fit_bvp_fallback', 158.595728955, 159.866667, True)]
+
+SANITY 3 4796 4845 159.866667 161.5 ['outside_court_volume'] samples 50
+soft_count 1 soft [('audio_onset_soft_0544', 161.343085476)]
+fits [(44, 'fit_bvp_fallback', 159.866667, 161.343085476, True), (45, 'fit_bvp_fallback', 161.343085476, 161.5, True)]
+
+SANITY 5 5006 7702 166.866667 256.733333 ['outside_court_volume'] samples 392
+soft_count 26 soft [('audio_onset_soft_0562', 167.708671111), ('audio_onset_soft_0571', 170.399004006), ('audio_onset_soft_0592', 175.00408453), ('audio_onset_soft_0598', 177.156071904), ('audio_onset_soft_0607', 179.371436491), ('audio_onset_soft_0628', 184.811889169), ('audio_onset_soft_0646', 190.305455493), ('audio_onset_soft_0657', 192.810081038), ('audio_onset_soft_0676', 197.709787904), ('audio_onset_soft_0683', 200.512370808), ('audio_onset_soft_0706', 206.075991832), ('audio_onset_soft_0716', 208.357977072), ('audio_onset_soft_0723', 211.620951832), ('audio_onset_soft_0732', 215.803199453), ('audio_onset_soft_0746', 218.421194707), ('audio_onset_soft_0760', 221.325230718), ('audio_onset_soft_0774', 223.789952216), ('audio_onset_soft_0782', 226.691076498), ('audio_onset_soft_0808', 232.797135749), ('audio_onset_soft_0822', 235.616065232), ('audio_onset_soft_0832', 237.941955813), ('audio_onset_soft_0843', 240.208052701), ('audio_onset_soft_0853', 242.488447533), ('audio_onset_soft_0864', 244.805039146), ('audio_onset_soft_0873', 247.218818318), ('audio_onset_soft_0892', 251.750787704)]
+fits [(47, 'fit_bvp_fallback', 166.866667, 167.708671111, True), (51, 'fit_bvp_fallback', 177.156071904, 179.371436491, True), (54, 'fit_bvp_fallback', 190.305455493, 192.810081038, True), (59, 'fit_bvp_fallback', 208.357977072, 211.620951832, True), (61, 'fit_bvp_fallback', 215.803199453, 218.421194707, True), (63, 'fit_bvp_fallback', 221.325230718, 223.789952216, True), (67, 'fit_bvp_fallback', 235.616065232, 237.941955813, True), (69, 'fit_bvp_fallback', 240.208052701, 242.488447533, True)]
+
+SANITY 6 7702 7951 256.733333 265.033333 ['outside_court_volume'] samples 108
+soft_count 2 soft [('audio_onset_soft_0924', 259.087967351), ('audio_onset_soft_0948', 263.853854892)]
+fits [(74, 'fit_bvp_fallback', 256.733333, 259.087967351, True), (76, 'fit_bvp_fallback', 263.853854892, 265.033333, True)]
+
+SANITY 7 7951 10912 265.033333 369.7 ['outside_court_volume'] samples 239
+soft_count 23 soft [('audio_onset_soft_0964', 267.058651518), ('audio_onset_soft_0982', 271.016158274), ('audio_onset_soft_0996', 274.012243749), ('audio_onset_soft_1017', 279.594150002), ('audio_onset_soft_1040', 286.539088459), ('audio_onset_soft_1050', 289.237902879), ('audio_onset_soft_1060', 291.517845227), ('audio_onset_soft_1076', 296.501226162), ('audio_onset_soft_1085', 299.84407886), ('audio_onset_soft_1095', 303.436952702), ('audio_onset_soft_1112', 307.481327728), ('audio_onset_soft_1122', 311.337123495), ('audio_onset_soft_1149', 319.867022032), ('audio_onset_soft_1160', 323.466063198), ('audio_onset_soft_1173', 326.729334647), ('audio_onset_soft_1192', 331.479066186), ('audio_onset_soft_1202', 333.713022078), ('audio_onset_soft_1214', 337.865031307), ('audio_onset_soft_1220', 344.807968878), ('audio_onset_soft_1227', 347.356949775), ('audio_onset_soft_1237', 354.233087643), ('audio_onset_soft_1255', 361.152982523), ('audio_onset_soft_1265', 363.749941882)]
+fits [(79, 'fit_bvp_fallback', 271.016158274, 274.012243749, True), (87, 'fit_bvp_fallback', 303.436952702, 307.481327728, True), (91, 'fit_bvp_fallback', 323.466063198, 326.729334647, True), (99, 'fit_bvp_fallback', 361.152982523, 363.749941882, True)]
+
+SANITY 8 11505 12536 369.7 417.866667 ['outside_court_volume'] samples 177
+soft_count 10 soft [('audio_onset_soft_1297', 370.991487787), ('audio_onset_soft_1314', 375.585206567), ('audio_onset_soft_1326', 382.894054365), ('audio_onset_soft_1338', 385.637833055), ('audio_onset_soft_1357', 389.71007613), ('audio_onset_soft_1366', 391.998690913), ('audio_onset_soft_1422', 407.532694814), ('audio_onset_soft_1434', 410.201172347), ('audio_onset_soft_1445', 413.392057356), ('audio_onset_soft_1455', 417.442904057)]
+fits [(104, 'fit_bvp_fallback', 382.894054365, 385.637833055, True), (106, 'fit_bvp_fallback', 389.71007613, 391.998690913, True), (109, 'fit_bvp_fallback', 410.201172347, 413.392057356, True), (111, 'fit_bvp_fallback', 417.442904057, 417.866667, True)]
+
+SANITY 9 12536 14043 417.866667 468.1 ['outside_court_volume'] samples 134
+soft_count 8 soft [('audio_onset_soft_1462', 419.586355435), ('audio_onset_soft_1474', 422.65399616), ('audio_onset_soft_1502', 429.322023672), ('audio_onset_soft_1542', 446.030076451), ('audio_onset_soft_1557', 452.474645194), ('audio_onset_soft_1573', 457.111947688), ('audio_onset_soft_1585', 459.727135128), ('audio_onset_soft_1603', 465.4596322)]
+fits [(112, 'fit_bvp_fallback', 417.866667, 419.586355435, True), (118, 'fit_bvp_fallback', 457.111947688, 459.727135128, True)]
+
+SANITY 10 14043 14074 468.1 479.766667 ['outside_court_volume'] samples 32
+soft_count 2 soft [('audio_onset_soft_1612', 469.330517154), ('audio_onset_soft_1638', 477.609553035)]
+fits [(121, 'fit_bvp_fallback', 468.1, 469.330517154, True)]
+
+SANITY 11 14483 14489 479.766667 501.6 ['outside_court_volume'] samples 7
+soft_count 6 soft [('audio_onset_soft_1646', 481.100130254), ('audio_onset_soft_1657', 484.45604657), ('audio_onset_soft_1669', 486.995287587), ('audio_onset_soft_1681', 490.762877247), ('audio_onset_soft_1689', 495.118011875), ('audio_onset_soft_1700', 498.319057481)]
+fits [(125, 'fit_bvp_fallback', 481.100130254, 484.45604657, True)]
+
+SANITY 12 15085 15394 501.6 513.133333 ['outside_court_volume'] samples 75
+soft_count 2 soft [('audio_onset_soft_1711', 502.80932926), ('audio_onset_soft_1731', 507.285986729)]
+fits [(132, 'fit_bvp_fallback', 502.80932926, 507.285986729, True)]
+
+SANITY 13 15394 16827 513.133333 560.9 ['outside_court_volume'] samples 185
+soft_count 12 soft [('audio_onset_soft_1751', 514.523054285), ('audio_onset_soft_1763', 518.024678407), ('audio_onset_soft_1772', 520.22915849), ('audio_onset_soft_1783', 523.609186637), ('audio_onset_soft_1793', 530.547300239), ('audio_onset_soft_1810', 535.449367141), ('audio_onset_soft_1816', 537.452182636), ('audio_onset_soft_1826', 540.59698782), ('audio_onset_soft_1832', 542.691933402), ('audio_onset_soft_1841', 545.939296879), ('audio_onset_soft_1850', 548.69999675), ('audio_onset_soft_1878', 559.885202896)]
+fits [(134, 'fit_bvp_fallback', 513.133333, 514.523054285, True), (135, 'fit_bvp_fallback', 514.523054285, 518.024678407, True), (140, 'fit_bvp_fallback', 535.449367141, 537.452182636, True), (146, 'fit_bvp_fallback', 559.885202896, 560.9, True)]
+
+SANITY 14 16827 16875 560.9 575.133333 ['outside_court_volume'] samples 49
+soft_count 3 soft [('audio_onset_soft_1891', 562.48598466), ('audio_onset_soft_1906', 566.211893609), ('audio_onset_soft_1918', 570.357094866)]
+fits [(147, 'fit_bvp_fallback', 560.9, 562.48598466, True)]
+
+SANITY 16 18044 19909 601.466667 663.633333 ['outside_court_volume'] samples 285
+soft_count 17 soft [('audio_onset_soft_2013', 601.601657295), ('audio_onset_soft_2025', 604.912652903), ('audio_onset_soft_2037', 606.958256692), ('audio_onset_soft_2047', 608.97630562), ('audio_onset_soft_2056', 612.125391133), ('audio_onset_soft_2064', 615.057033354), ('audio_onset_soft_2088', 624.577183991), ('audio_onset_soft_2102', 628.618077917), ('audio_onset_soft_2110', 631.55653176), ('audio_onset_soft_2115', 634.053184585), ('audio_onset_soft_2127', 638.2955624), ('audio_onset_soft_2147', 644.755199786), ('audio_onset_soft_2152', 647.161131125), ('audio_onset_soft_2169', 652.984227707), ('audio_onset_soft_2184', 657.302194938), ('audio_onset_soft_2198', 659.311972384), ('audio_onset_soft_2207', 662.444939569)]
+fits [(156, 'fit_bvp_fallback', 601.466667, 601.601657295, True), (157, 'fit_bvp_fallback', 601.601657295, 604.912652903, True), (158, 'fit_bvp_fallback', 604.912652903, 606.958256692, True), (159, 'fit_bvp_fallback', 606.958256692, 608.97630562, True), (160, 'fit_bvp_fallback', 608.97630562, 612.125391133, True), (173, 'fit_bvp_fallback', 662.444939569, 663.633333, True)]
+
+SANITY 17 19909 20531 663.633333 684.366667 ['outside_court_volume'] samples 43
+soft_count 3 soft [('audio_onset_soft_2211', 665.139903863), ('audio_onset_soft_2221', 667.939098277), ('audio_onset_soft_2262', 683.015783531)]
+fits [(177, 'fit_bvp_fallback', 683.015783531, 684.366667, True)]
+
+SANITY 18 20531 20741 684.366667 692.566667 ['outside_court_volume'] samples 60
+soft_count 3 soft [('audio_onset_soft_2276', 686.614791489), ('audio_onset_soft_2285', 689.030231817), ('audio_onset_soft_2294', 691.407100862)]
+fits [(180, 'fit_bvp_fallback', 689.030231817, 691.407100862, True)]
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,pprint
+p='runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_flight_sanity.json';d=json.load(open(p))
+for x in d['segments']:
+ if x['verdict']=='fail': pprint.pp(x); break
+print('failed frames sample')
+for x in d['frames']:
+ if x['demote']:
+  print(x)
+  if x['frame']>1220:break
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T16:59:06.400793Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 113ms:[0m
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+base='runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/'
+a=json.load(open(base+'ball_track_arc_solved.json')); s=json.load(open(base+'ball_flight_sanity.json'))
+segby={x['segment_id']:x for x in a['segments']}
+for g in s['segments']:
+ if g['verdict']"'!='"'fail':continue
+ outside=g.get('court_volume',{}).get('outside_frames',[])
+ c=collections.Counter()
+ ids=collections.Counter()
+ for f in outside:
+  fr=a['frames'][f]
+  sid=fr.get('segment_id'); ids[sid]+=1
+  c[segby.get(sid,{}).get('status','none')]+=1
+ print(g['segment_id'],g['reasons'],'outside',len(outside),'status_counts',dict(c),'source_ids',dict(ids))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T16:59:17.104787Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 147ms:[0m
+1 ['horizontal_direction_reversal', 'speed_jump', 'outside_court_volume'] outside 262 status_counts {'none': 262} source_ids {None: 262}
+2 ['outside_court_volume'] outside 645 status_counts {'none': 645} source_ids {None: 645}
+3 ['outside_court_volume'] outside 20 status_counts {'none': 20} source_ids {None: 20}
+5 ['outside_court_volume'] outside 369 status_counts {'none': 369} source_ids {None: 369}
+6 ['outside_court_volume'] outside 105 status_counts {'none': 105} source_ids {None: 105}
+7 ['outside_court_volume'] outside 239 status_counts {'none': 239} source_ids {None: 239}
+8 ['outside_court_volume'] outside 177 status_counts {'none': 177} source_ids {None: 177}
+9 ['outside_court_volume'] outside 128 status_counts {'none': 128} source_ids {None: 128}
+10 ['outside_court_volume'] outside 29 status_counts {'none': 29} source_ids {None: 29}
+11 ['outside_court_volume'] outside 7 status_counts {'none': 7} source_ids {None: 7}
+12 ['outside_court_volume'] outside 74 status_counts {'none': 74} source_ids {None: 74}
+13 ['outside_court_volume'] outside 181 status_counts {'none': 181} source_ids {None: 181}
+14 ['outside_court_volume'] outside 39 status_counts {'none': 39} source_ids {None: 39}
+16 ['outside_court_volume'] outside 280 status_counts {'none': 280} source_ids {None: 280}
+17 ['outside_court_volume'] outside 43 status_counts {'none': 43} source_ids {None: 43}
+18 ['outside_court_volume'] outside 60 status_counts {'none': 60} source_ids {None: 60}
+
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,pprint
+a=json.load(open('runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_track_arc_solved.json'))
+for i in [1179,1186,1300,1500]:
+ print(i);pprint.pp(a['frames'][i])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T16:59:24.338656Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 158ms:[0m
+1179
+{'approx': False,
+ 'arc_solver': {'bvp_fallback_segment': True,
+                'inlier_sighting': False,
+                'lane': 'BALL-ARC-SOLVER',
+                'not_for_detection_metrics': True,
+                'outlier_sighting_pruned': True,
+                'render_only': True,
+                'rescued': False,
+                'segment_id': 5,
+                'segment_status': 'fit_bvp_fallback',
+                'weak_segment': False},
+ 'band': 'arc_weak',
+ 'conf': 0.67182392,
+ 'flight_sanity_demoted': True,
+ 'flight_sanity_original': {'band': 'arc_weak',
+                            'sigma_m': 3.801596,
+                            'world_xyz': [-4.11143152,
+                                          -11.100225889,
+                                          1.18783247]},
+ 'flight_sanity_reasons': ['fit_bvp_fallback',
+                           'horizontal_direction_reversal',
+                           'outside_court_volume',
+                           'speed_jump'],
+ 'not_for_detection_metrics': True,
+ 'render_only': True,
+ 'sigma_m': 3.801596,
+ 'source': 'event_anchored_drag_arc_solver',
+ 't': 39.3,
+ 'visible': True,
+ 'world_xyz': [-4.11143152, -11.100225889, 1.18783247],
+ 'xy': [261.510986, 350.506866]}
+1186
+{'approx': False,
+ 'arc_solver': {'bvp_fallback_segment': True,
+                'inlier_sighting': False,
+                'lane': 'BALL-ARC-SOLVER',
+                'not_for_detection_metrics': True,
+                'outlier_sighting_pruned': True,
+                'render_only': True,
+                'rescued': False,
+                'segment_id': 6,
+                'segment_status': 'fit_bvp_fallback',
+                'weak_segment': False},
+ 'band': 'arc_weak',
+ 'conf': 0.8791275,
+ 'flight_sanity_demoted': True,
+ 'flight_sanity_original': {'band': 'arc_weak',
+                            'sigma_m': 8.0,
+                            'world_xyz': [5.971365508,
+                                          -6.570496815,
+                                          2.351194928]},
+ 'flight_sanity_reasons': ['fit_bvp_fallback',
+                           'horizontal_direction_reversal',
+                           'speed_jump'],
+ 'not_for_detection_metrics': True,
+ 'render_only': True,
+ 'sigma_m': 8.0,
+ 'source': 'event_anchored_drag_arc_solver',
+ 't': 39.533333,
+ 'visible': True,
+ 'world_xyz': [5.971365508, -6.570496815, 2.351194928],
+ 'xy': [599.926331, 234.946594]}
+1300
+{'approx': False,
+ 'arc_solver': {'bvp_fallback_segment': True,
+                'inlier_sighting': False,
+                'lane': 'BALL-ARC-SOLVER',
+                'not_for_detection_metrics': True,
+                'outlier_sighting_pruned': True,
+                'render_only': True,
+                'rescued': False,
+                'segment_id': 7,
+                'segment_status': 'fit_bvp_fallback',
+                'weak_segment': False},
+ 'band': 'arc_weak',
+ 'conf': 0.53920239,
+ 'flight_sanity_demoted': True,
+ 'flight_sanity_original': {'band': 'arc_weak',
+                            'sigma_m': 8.001805,
+                            'world_xyz': [27.123199806,
+                                          -1.655918915,
+                                          0.027466462]},
+ 'flight_sanity_reasons': ['fit_bvp_fallback',
+                           'horizontal_direction_reversal',
+                           'outside_court_volume',
+                           'speed_jump'],
+ 'not_for_detection_metrics': True,
+ 'render_only': True,
+ 'sigma_m': 8.001805,
+ 'source': 'event_anchored_drag_arc_solver',
+ 't': 43.333333,
+ 'visible': True,
+ 'world_xyz': [27.123199806, -1.655918915, 0.027466462],
+ 'xy': [878.014221, 269.003235]}
+1500
+{'approx': False,
+ 'arc_solver': {'bvp_fallback_segment': True,
+                'inlier_sighting': False,
+                'lane': 'BALL-ARC-SOLVER',
+                'not_for_detection_metrics': True,
+                'outlier_sighting_pruned': False,
+                'render_only': True,
+                'rescued': False,
+                'segment_id': 9,
+                'segment_status': 'fit_bvp_fallback',
+                'weak_segment': False},
+ 'band': 'arc_weak',
+ 'conf': 0.20901555,
+ 'flight_sanity_demoted': True,
+ 'flight_sanity_original': {'band': 'arc_weak',
+                            'sigma_m': 8.000686,
+                            'world_xyz': [48.876695818,
+                                          3.110114557,
+                                          10.925747185]},
+ 'flight_sanity_reasons': ['fit_bvp_fallback',
+                           'horizontal_direction_reversal',
+                           'outside_court_volume',
+                           'speed_jump'],
+ 'not_for_detection_metrics': True,
+ 'render_only': True,
+ 'sigma_m': 8.000686,
+ 'source': 'event_anchored_drag_arc_solver',
+ 't': 50.0,
+ 'visible': False,
+ 'world_xyz': [48.876695818, 3.110114557, 10.925747185],
+ 'xy': [0.0, 0.0]}
+
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced restart active; conservative taxonomy inspection in parallel (read-only)","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Conservative failure evidence is dominated by outside-court-volume output from soft-created fit_bvp_fallback chunks; one hard span also has a 120.64-degree reversal and 48.69 m/s speed jump near a soft boundary. I’m preserving those as distinct taxonomy evidence, not merging them into a generic violation count."],"next":"Finish balanced/broad, then generate the same per-segment taxonomy for all presets with solver segment IDs, boundary IDs/times, gate reasons, and weak-fit involvement.","session_id":null}
+[2m2026-07-16T16:59:52.823149Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:00:12.811981Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:00:26.473875Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:00:46.505504Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections,os
+p='runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl';rows=[json.loads(x) for x in open(p) if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print('rows',len(rows),'soft',len(soft),collections.Counter(x.get('status') for x in soft),'weak',len(weak),collections.Counter(x.get('status') for x in weak),'metrics',os.path.exists('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced_metrics.json'))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T17:00:54.803988Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 166ms:[0m
+[2m2026-07-16T17:01:09.099730Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:01:31.488314Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:01:45.835964Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:02:05.885501Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'wc -l runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+      48 runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl
+
+[2m2026-07-16T17:02:09.241188Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced clean restart active: 48 prepass calls logged","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Enabled balanced soft pass has not started yet."],"next":"Continue exact preregistered run.","session_id":null}
+[2m2026-07-16T17:02:24.537196Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:02:44.397315Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:02:57.749650Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:03:18.360308Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'wc -l runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+      64 runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl
+
+[2m2026-07-16T17:03:33.424680Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:03:47.684546Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:04:06.983206Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:04:20.509914Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:04:40.640636Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'wc -l runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+      79 runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl
+
+[2m2026-07-16T17:04:46.731334Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced clean restart active: 79 prepass calls logged","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Still before enabled balanced split pass."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:05:02.056107Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:05:22.080186Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:05:45.006577Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:06:05.032578Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(rows),len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'] if soft else None)
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+96 0 Counter() None
+
+[2m2026-07-16T17:06:11.022813Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:06:25.712129Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:06:45.746186Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:06:58.946974Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:07:18.962547Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(rows),len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'] if soft else None)
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T17:07:25.988554Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 118ms:[0m
+113 14 Counter({'blocked:segment_budget_exceeded': 8, 'fit': 6}) 57.387322443
+
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[{"metric":"Balanced interim soft chunks","baseline":"1 fitted segment frozen baseline","after":"6 fit / 14 processed","target":"material recovery with 0 final violations","verdict":"PASS"}],"changes":[],"full_suite":{"command":"Balanced clean restart active in enabled soft pass","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim only: 8/14 chunks timed out and final sanity is unavailable."],"next":"Continue full preset unchanged.","session_id":null}
+[2m2026-07-16T17:07:42.939194Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:08:02.952436Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:08:17.091429Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:08:37.228479Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+37 Counter({'blocked:segment_budget_exceeded': 21, 'fit': 16}) 122.690168774
+
+[2m2026-07-16T17:08:58.915996Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:09:11.987189Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:09:32.079762Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:09:45.477808Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:10:05.516743Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+55 Counter({'blocked:segment_budget_exceeded': 33, 'fit': 22}) 170.399004006
+
+[2m2026-07-16T17:10:10.789917Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced enabled soft pass: 55 chunks processed","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim 22 fits / 33 timeouts; final gate not run."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:10:29.122641Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:10:49.028166Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:11:01.646969Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:11:22.227948Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 276ms:[0m
+74 Counter({'blocked:segment_budget_exceeded': 43, 'fit': 31}) 221.325230718
+
+[2m2026-07-16T17:11:27.944590Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:11:41.531354Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:12:01.515111Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:12:14.980679Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:12:35.145288Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+92 Counter({'blocked:segment_budget_exceeded': 52, 'fit': 40}) 274.012243749
+
+[2m2026-07-16T17:12:40.654132Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced enabled soft pass: 92 chunks processed","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim 40 fits / 52 timeouts; final gate not run."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:12:56.189697Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:13:16.122318Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:13:28.839381Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:13:48.890264Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+108 Counter({'blocked:segment_budget_exceeded': 63, 'fit': 45}) 333.713022078
+
+[2m2026-07-16T17:13:54.922991Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:14:09.457668Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:14:29.487820Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:14:42.904049Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:15:02.956751Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+125 Counter({'blocked:segment_budget_exceeded': 76, 'fit': 49}) 410.201172347
+
+[2m2026-07-16T17:15:08.374396Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced enabled soft pass: 125 chunks processed","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim 49 fits / 76 timeouts; final gate not run."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:15:23.344631Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:15:43.389801Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:15:55.901163Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:16:15.927560Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+145 Counter({'blocked:segment_budget_exceeded': 86, 'fit': 59}) 481.100130254
+
+[2m2026-07-16T17:16:24.976319Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:16:37.909726Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:16:57.958734Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:17:11.669553Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:17:31.677208Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+161 Counter({'blocked:segment_budget_exceeded': 95, 'fit': 66}) 523.609186637
+
+[2m2026-07-16T17:17:36.992970Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced enabled soft pass: 161 chunks processed","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim 66 fits / 95 timeouts; final gate not run."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:17:51.918324Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:18:11.918105Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:18:25.409085Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:18:45.362321Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+179 Counter({'blocked:segment_budget_exceeded': 108, 'fit': 71}) 585.248345036
+
+[2m2026-07-16T17:18:53.649305Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:19:09.781089Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:19:29.801553Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:19:47.191572Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:20:07.188838Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'],'weak',len(weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+200 Counter({'blocked:segment_budget_exceeded': 119, 'fit': 81}) 649.044368117 weak 0
+
+[2m2026-07-16T17:20:13.503413Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced enabled soft pass: 200 chunks processed","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim 81 fits / 119 timeouts; final weak/sanity phases pending."],"next":"Finish remaining capture and final gates.","session_id":null}
+[2m2026-07-16T17:20:29.283229Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:20:49.307677Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:21:10.770282Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:21:30.788343Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print('soft',len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'],'weak',len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+soft 214 Counter({'blocked:segment_budget_exceeded': 129, 'fit': 85}) 692.566667 weak 6 Counter({'fit_weak': 3, 'blocked:segment_budget_exceeded': 3})
+
+[2m2026-07-16T17:21:36.994345Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:21:55.475371Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:22:15.495661Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:22:28.511711Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:22:48.530060Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+22 Counter({'blocked:segment_budget_exceeded': 15, 'fit_weak': 7})
+
+[2m2026-07-16T17:22:54.112203Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced confident pass complete: 85 fit / 214 soft-created chunks; weak phase at 22 groups","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["129 confident soft chunks timed out. Final sanity and wall time remain pending."],"next":"Complete bounded weak phase and gate.","session_id":null}
+[2m2026-07-16T17:23:12.177813Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:23:32.180284Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:23:44.836482Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:24:04.855550Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+42 Counter({'blocked:segment_budget_exceeded': 31, 'fit_weak': 11})
+
+[2m2026-07-16T17:24:17.585794Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:24:30.882242Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:24:50.899460Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:25:03.657603Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:25:23.693737Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+57 Counter({'blocked:segment_budget_exceeded': 44, 'fit_weak': 13})
+
+[2m2026-07-16T17:25:30.855156Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced weak phase: 57 groups","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["13 weak fits / 44 timeouts; final gate pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:25:46.165031Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:26:06.165931Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:26:20.377697Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:26:40.402685Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+74 Counter({'blocked:segment_budget_exceeded': 57, 'fit_weak': 17})
+
+[2m2026-07-16T17:26:46.601806Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:27:02.057319Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:27:22.092895Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:27:42.671657Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:28:02.919426Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T17:28:09.510055Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 163ms:[0m
+91 Counter({'blocked:segment_budget_exceeded': 73, 'fit_weak': 18})
+
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced weak phase: 91 groups","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["18 weak fits / 73 timeouts; final gate pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:28:25.895171Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:28:46.022915Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:28:59.785423Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:29:19.808315Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:29:30.295789Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 172ms:[0m
+109 Counter({'blocked:segment_budget_exceeded': 90, 'fit_weak': 19})
+
+[2m2026-07-16T17:29:39.245743Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:29:52.891711Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:30:12.890945Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:30:25.654956Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:30:45.699132Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+124 Counter({'blocked:segment_budget_exceeded': 103, 'fit_weak': 21})
+
+[2m2026-07-16T17:30:51.417492Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced weak phase: 124 groups","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["21 weak fits / 103 timeouts; final gate pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:31:06.594228Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:31:26.587653Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:31:39.375405Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:31:59.392816Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+142 Counter({'blocked:segment_budget_exceeded': 110, 'fit_weak': 32})
+
+[2m2026-07-16T17:32:05.081561Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:32:18.151914Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:32:38.179245Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:32:51.948214Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:33:11.993039Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+157 Counter({'blocked:segment_budget_exceeded': 122, 'fit_weak': 35})
+
+[2m2026-07-16T17:33:17.178027Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced weak phase: 157 groups","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["35 weak fits / 122 timeouts; final gate pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:33:34.769049Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:33:54.779790Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:34:07.704859Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:34:27.708919Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T17:34:35.070883Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 278ms:[0m
+174 Counter({'blocked:segment_budget_exceeded': 133, 'fit_weak': 41})
+
+[2m2026-07-16T17:35:00.553268Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:35:20.581994Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:35:37.440899Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:35:57.446658Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.jsonl') if x.strip()]
+weak=[x for x in rows if x.get('event')=='weak_segment_end']
+print(len(weak),collections.Counter(x.get('status') for x in weak))
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+195 Counter({'blocked:segment_budget_exceeded': 146, 'fit_weak': 49})
+
+[2m2026-07-16T17:36:03.370190Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Balanced weak phase: 195 groups","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["49 weak fits / 146 timeouts; final gate pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:36:21.393336Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:36:41.406655Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:36:45.125403Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 2301930ms:[0m
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json
+for p in ['preset_conservative_metrics.json','preset_balanced_metrics.json']:
+ d=json.load(open('runs/lanes/ballarc_anchorfusion_20260716/'+p))
+ print(p,d['selection']['selected_count'],d['after']['segments_fit_count'],d['after']['segment_count'],d['after']['in_rally_frame_coverage_percent'],d['after']['physics_violation_count'],d['after']['wall_min'],d['kill_rule'],d['after']['provenance_audit'])
+PY
+wc -c runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.stderr"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+preset_conservative_metrics.json 168 53 371 18.767444456849393 16 39.686782087499644 {'killed': True, 'reasons': ['flight_sanity_violation']} {'invalid_provenance_segment_ids': [], 'missing_provenance_segment_ids': [], 'pass': True, 'soft_split_segment_count': 181}
+preset_balanced_metrics.json 202 85 361 29.65278553086971 18 38.34280647499982 {'killed': True, 'reasons': ['flight_sanity_violation']} {'invalid_provenance_segment_ids': [], 'missing_provenance_segment_ids': [], 'pass': True, 'soft_split_segment_count': 214}
+       0 runs/lanes/ballarc_anchorfusion_20260716/preset_balanced.stderr
+
+[2m2026-07-16T17:36:51.347040Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[{"metric":"Balanced segments fit","baseline":"1/188","after":"85/361; 29.65% in-rally frame coverage","target":"materially above baseline","verdict":"PASS"},{"metric":"Balanced physics violations","baseline":null,"after":"18; preset killed","target":"0","verdict":"FAIL"},{"metric":"Balanced wall time","baseline":"1493.096 s","after":"2300.568 s (38.34 min)","target":"<=2700 s","verdict":"PASS"},{"metric":"Balanced provenance","baseline":null,"after":"214 soft-split segments; 0 missing/invalid","target":"0 missing/invalid","verdict":"PASS"}],"changes":[],"full_suite":{"command":"Balanced full-demo clean restart completed with 5 s guard","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Balanced is dead under the unchanged kill rule: 18 flight-sanity failures despite better fit coverage.","No accuracy claim: all fit outputs are preview-band and the onsets are review-only."],"next":"Run the third and final preregistered broad preset exactly as locked, then taxonomy and regressions.","session_id":null}
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc '.venv/bin/python runs/lanes/ballarc_anchorfusion_20260716/run_probe.py --preset audio_soft_score003_spacing150_rally_v1 --clip pbvision_11min_20260713 --input-dir runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/pbvision_11min_20260713 --onsets runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json --out-dir runs/lanes/ballarc_anchorfusion_20260716/preset_broad --metrics runs/lanes/ballarc_anchorfusion_20260716/preset_broad_metrics.json --budget-s 5 > runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl 2> runs/lanes/ballarc_anchorfusion_20260716/preset_broad.stderr'[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T17:37:05.127464Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:37:21.272933Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:37:41.281241Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:37:54.619657Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:38:14.684411Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'wc -l runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+      16 runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl
+
+[2m2026-07-16T17:38:21.637683Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad full-demo preset active in frozen prepasses","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["No broad result yet."],"next":"Continue exact registered preset.","session_id":null}
+[2m2026-07-16T17:38:37.221302Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:38:57.222667Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:39:10.272897Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:39:30.298895Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'wc -l runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+      33 runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl
+
+[2m2026-07-16T17:39:39.725321Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:39:56.730917Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:40:16.766710Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:40:31.028924Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:40:51.058777Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'wc -l runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+      52 runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl
+
+[2m2026-07-16T17:41:05.254782Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad full-demo preset active: 52 prepass calls logged","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Enabled broad pass not reached."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:41:21.207796Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:41:41.271674Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:41:58.526733Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:42:18.617784Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'wc -l runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+      68 runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl
+
+[2m2026-07-16T17:42:26.482873Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:42:45.098102Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:43:05.102357Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:43:18.393130Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:43:38.403868Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'wc -l runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+      84 runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl
+
+[2m2026-07-16T17:43:46.011219Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad full-demo preset active: 84 prepass calls logged","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Enabled broad pass not reached."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:44:03.599578Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:44:23.607224Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:44:43.531245Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:45:03.535326Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(rows),len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'] if soft else None)
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+101 2 Counter({'fit': 1, 'blocked:segment_budget_exceeded': 1}) 21.648670307
+
+[2m2026-07-16T17:45:09.749821Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:45:27.394081Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:45:47.426043Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:46:00.788125Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:46:20.796912Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+24 Counter({'fit': 15, 'blocked:segment_budget_exceeded': 9}) 71.425823447
+
+[2m2026-07-16T17:46:30.122599Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[{"metric":"Broad interim soft chunks","baseline":"1 fitted segment frozen baseline","after":"15 fit / 24 processed","target":"material recovery with 0 final violations","verdict":"PASS"}],"changes":[],"full_suite":{"command":"Broad enabled soft pass active","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim only: 9 timeouts and no final gate."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:46:46.822217Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:47:06.814486Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:47:25.033016Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:47:45.054161Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+48 Counter({'fit': 28, 'blocked:segment_budget_exceeded': 20}) 134.964887596
+
+[2m2026-07-16T17:47:51.395228Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:48:14.088126Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:48:34.108347Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:48:47.784581Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:49:07.803790Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+72 Counter({'fit': 41, 'blocked:segment_budget_exceeded': 31}) 192.810081038
+
+[2m2026-07-16T17:49:16.278749Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad enabled soft pass: 72 chunks processed","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim 41 fits / 31 timeouts; final gate pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:49:32.942284Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:49:52.949081Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:50:08.155810Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:50:28.171440Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+94 Counter({'fit': 51, 'blocked:segment_budget_exceeded': 43}) 251.750787704
+
+[2m2026-07-16T17:50:40.319464Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:50:55.893638Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:51:15.907204Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:51:29.659021Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:51:49.728470Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+117 Counter({'fit': 66, 'blocked:segment_budget_exceeded': 51}) 307.481327728
+
+[2m2026-07-16T17:51:57.508431Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad enabled soft pass: 117 chunks processed","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim 66 fits / 51 timeouts; final gate pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:52:14.822445Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:52:34.864358Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:52:49.138738Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:53:09.180364Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[2m2026-07-16T17:53:16.378553Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[32m succeeded in 101ms:[0m
+[2m2026-07-16T17:53:35.952253Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:53:55.991509Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:54:10.996086Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:54:30.998897Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+155 Counter({'blocked:segment_budget_exceeded': 79, 'fit': 76}) 424.313808556
+
+[2m2026-07-16T17:54:44.635810Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad enabled soft pass: 155 chunks processed","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim 76 fits / 79 timeouts; final gate pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:55:01.036297Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:55:21.168264Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:55:39.480151Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:55:59.476283Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+177 Counter({'blocked:segment_budget_exceeded': 90, 'fit': 87}) 486.995287587
+
+[2m2026-07-16T17:56:07.053641Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:56:22.154088Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:56:42.156661Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:56:56.069183Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:57:16.124093Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+195 Counter({'blocked:segment_budget_exceeded': 102, 'fit': 93}) 530.547300239
+
+[2m2026-07-16T17:57:24.233788Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad enabled soft pass: 195 chunks processed","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Interim 93 fits / 102 timeouts; final gate pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T17:57:46.287825Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:58:06.312709Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:58:20.651062Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T17:58:41.369409Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc ".venv/bin/python - <<'PY'
+import json,collections
+rows=[json.loads(x) for x in open('runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl') if x.strip()]
+soft=[x for x in rows if x.get('event')=='segment_end' and ('audio_onset_soft' in (x.get('start_kind'),x.get('end_kind')))]
+print(len(soft),collections.Counter(x.get('status') for x in soft),soft[-1]['t1'])
+PY"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 166ms:[0m
+215 Counter({'blocked:segment_budget_exceeded': 117, 'fit': 98}) 589.825092662
+
+[2m2026-07-16T17:58:53.988833Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:01:06.018954Z[0m [31mERROR[0m [2mcodex_models_manager::manager[0m[2m:[0m failed to refresh available models: timeout waiting for child process to exit
+[2m2026-07-16T18:01:47.376932Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:02:12.871489Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:02:28.819134Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:02:48.823453Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(65740) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:02:56.299787Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad enabled soft pass still active near end of capture","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["A transient sandbox realpath denial affected one read-only status helper; it did not touch the running probe."],"next":"Poll the existing probe session directly, then inspect with shell tools if needed.","session_id":null}
+[2m2026-07-16T18:03:14.636025Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:03:34.641043Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:03:48.832469Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:04:08.837624Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(65843) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:04:21.242104Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(65844) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:04:27.942457Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:04:43.553189Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:05:03.556154Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(65893) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'ls -l runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+-rw-r--r--@ 1 501  staff  174297 Jul 16 11:05 runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl
+
+[2m2026-07-16T18:05:13.743371Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(65894) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:05:21.124228Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(65908) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "rg -c '\"event\": \"segment_end\"' runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl || true"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+rg: runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl: Operation not permitted (os error 1)
+
+[2m2026-07-16T18:05:28.314255Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:05:53.400628Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:06:13.405389Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad probe remains active; direct session healthy","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Concurrent read attempts on the growing broad JSONL are being denied by the managed sandbox, so I am not fabricating interim counts. The probe session itself remains active and will be judged from its completed metrics artifact."],"next":"Continue direct polling until completion, then read finalized artifacts.","session_id":null}
+[2m2026-07-16T18:06:30.839753Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:06:50.844289Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:07:05.491862Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:07:25.497327Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:07:43.590566Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:08:03.594770Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad full-demo probe active","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Final broad metrics are still pending."],"next":"Continue bounded run.","session_id":null}
+[2m2026-07-16T18:08:21.370444Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:08:41.375675Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:08:55.631229Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:09:15.635814Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66163) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'test -f runs/lanes/ballarc_anchorfusion_20260716/preset_broad_metrics.json && echo ready || echo active'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+active
+
+[2m2026-07-16T18:09:20.850167Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:09:36.058259Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:09:56.063011Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:10:11.353326Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:10:31.359606Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad full-demo probe active; metrics file not yet present","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["No final broad result yet."],"next":"Continue.","session_id":null}
+[2m2026-07-16T18:10:53.900951Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:11:13.904192Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:11:29.415575Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:11:49.419758Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:12:06.345812Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:12:26.349155Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad full-demo probe active under 5 s guard","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["Final broad artifact still pending."],"next":"Continue.","session_id":null}
+[2m2026-07-16T18:12:48.330206Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:13:08.335225Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:13:23.252832Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:13:43.257492Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66340) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'test -f runs/lanes/ballarc_anchorfusion_20260716/preset_broad_metrics.json && echo ready || echo active'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+active
+
+[2m2026-07-16T18:13:51.048091Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:14:08.451976Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:14:28.454807Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:14:49.686469Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:15:09.691959Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad full-demo probe active; no metrics artifact yet","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":null},"honest_issues":["The final broad result remains pending."],"next":"Continue bounded execution.","session_id":null}
+[2m2026-07-16T18:15:26.231177Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:15:46.237468Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:16:01.915212Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:16:21.921311Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66433) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc "date '+%H:%M:%S'; stat -f '%Sm %z' -t '%H:%M:%S' runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl; test -f runs/lanes/ballarc_anchorfusion_20260716/preset_broad_metrics.json && echo ready || true"[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+11:16:36
+11:16:33 230377
+
+[2m2026-07-16T18:16:36.471353Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:16:52.919477Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:17:12.923431Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:17:34.549991Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[2m2026-07-16T18:17:54.197179Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[31m exited 1 in 2450179ms:[0m
+codex(66475) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:18:01.289956Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66500) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -lc 'ls -le@ runs/lanes/ballarc_anchorfusion_20260716/preset_broad.stderr runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl; xattr -l runs/lanes/ballarc_anchorfusion_20260716/preset_broad.stderr 2>/dev/null || true'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+-rw-r--r--@ 1 501  staff  232339 Jul 16 11:16 runs/lanes/ballarc_anchorfusion_20260716/preset_broad.jsonl
+	com.apple.provenance	    -1 
+-rw-r--r--@ 1 501  staff    1118 Jul 16 11:17 runs/lanes/ballarc_anchorfusion_20260716/preset_broad.stderr
+	com.apple.provenance	    -1 
+
+[2m2026-07-16T18:18:18.390629Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66503) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:18:25.846402Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66504) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:18:33.837957Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66506) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:18:42.417048Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"PARTIAL","acceptance":[],"changes":[],"full_suite":{"command":"Broad probe exited 1 after ~30+ min; failure diagnosis blocked by transient workspace read denials","passed":0,"failed":1,"skipped":0,"failures_all_preexisting":false,"failure_notes":"The managed sandbox currently returns Operation not permitted for reading any workspace file, including unchanged source files, so I cannot yet classify whether the broad failure is probe logic, filesystem state, or infrastructure."},"honest_issues":["Broad is not complete and will not be scored from its partial run.","I will not restart or alter it until I can read the exact stderr, because that would risk repeating work blindly."],"next":"Retry read access with a fresh non-login shell; if restored, diagnose stderr and restart only the exact broad preset if needed.","session_id":null}
+codex(66508) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:19:00.585618Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66510) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -c 'git show HEAD:threed/racketsport/ball_arc_solver.py | head -1'[0m in /Users/arnavchokshi/Desktop/pickleball
+[32m succeeded in 0ms:[0m
+fatal: Unable to read current working directory: Operation not permitted
+
+[2m2026-07-16T18:19:10.600104Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66513) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:19:19.911344Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66514) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -c 'sleep 10
+head -1 /Users/arnavchokshi/Desktop/pickleball/threed/racketsport/ball_arc_solver.py 2>&1'[0m in /tmp
+[2m2026-07-16T18:19:47.079190Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[31m exited 1 in 9979ms:[0m
+head: /Users/arnavchokshi/Desktop/pickleball/threed/racketsport/ball_arc_solver.py: Operation not permitted
+
+[2m2026-07-16T18:19:52.600872Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+codex(66536) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[35m[3mexec[0m[0m
+[1m/bin/zsh -c 'ls -lde@ /Users/arnavchokshi/Desktop /Users/arnavchokshi/Desktop/pickleball /Users/arnavchokshi/Desktop/pickleball/threed'[0m in /tmp
+[32m succeeded in 0ms:[0m
+drwx------@ 32 501  staff  1024 Jul 16 10:39 /Users/arnavchokshi/Desktop
+	com.apple.macl	  -1 
+ 0: ABCDEFAB-CDEF-ABCD-EFAB-CDEF0000000C deny delete
+drwxr-xr-x@ 47 501  staff  1504 Jul 16 10:35 /Users/arnavchokshi/Desktop/pickleball
+	com.apple.macl	  -1 
+	com.apple.quarantine	  -1 
+drwxr-xr-x@  5 501  staff   160 Jul 16 10:37 /Users/arnavchokshi/Desktop/pickleball/threed
+	com.apple.provenance	  -1 
+
+[2m2026-07-16T18:20:06.613387Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"BLOCKED","acceptance":[{"metric":"Conservative preset","baseline":"1/188","after":"53/371 fit, 18.77% in-rally coverage, 16 violations, killed","target":"material recovery with 0 violations","verdict":"FAIL"},{"metric":"Balanced preset","baseline":"1/188","after":"85/361 fit, 29.65% in-rally coverage, 18 violations, killed","target":"material recovery with 0 violations","verdict":"FAIL"},{"metric":"Broad preset","baseline":"1/188","after":"incomplete; exact preregistered run exited 1 before metrics","target":"complete full-demo result","verdict":"FAIL"}],"changes":["Archived the externally interrupted balanced attempt under runs/lanes/ballarc_anchorfusion_20260716/interrupted_balanced_0956/ and completed a clean exact balanced restart."],"full_suite":{"command":"Not run: workspace contents became unreadable after the broad probe exited","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":"Every content read now fails with Operation not permitted, including unchanged source files. Directory metadata shows the Desktop/repo acquired macOS access-control/quarantine metadata during the run; approval escalation is unavailable."},"honest_issues":["Mandatory broad result, all-preset taxonomy artifact, Wolverine byte identity, focused tests, and final report.json remain incomplete.","I will not fabricate the broad error or taxonomy from partial logs, and I will not remove macOS quarantine/access-control metadata outside the lane fence."],"next":"Resume this same lane in a fresh workspace-authorized process. First read preset_broad.stderr, preserve the failed attempt, rerun only the exact broad preset if needed, then finish taxonomy/regressions/tests/report without redoing conservative or balanced.","session_id":null}
+codex(66555) MallocStackLogging: can't turn off malloc stack logging because it was not enabled.
+[2m2026-07-16T18:20:39.576217Z[0m [31mERROR[0m [2mcodex_core::util[0m[2m:[0m Custom tool call output is missing for call id: call_4fzKDm1BF3JxODAm60rYJRai
+[35m[3mcodex[0m[0m
+{"objective_result":"BLOCKED","acceptance":[{"metric":"Conservative preset recovery with zero physics violations","baseline":"1/188 segments fit","after":"53/371 fit; 18.77% in-rally frame coverage; 16 violations; killed","target":"Material recovery with 0 violations","verdict":"FAIL"},{"metric":"Balanced preset recovery with zero physics violations","baseline":"1/188 segments fit","after":"85/361 fit; 29.65% in-rally frame coverage; 18 violations; killed","target":"Material recovery with 0 violations","verdict":"FAIL"},{"metric":"Broad preset completion","baseline":"1/188 segments fit","after":"Run exited 1 before producing metrics","target":"Complete exact preregistered preset","verdict":"FAIL"},{"metric":"Full-run wall time","baseline":"1493.096 s","after":"Conservative 2381.207 s; balanced 2300.568 s","target":"<=2700 s per preset","verdict":"PASS"},{"metric":"Soft-split provenance","baseline":null,"after":"Conservative 181 and balanced 214 soft-split segments; 0 missing/invalid","target":"0 missing/invalid","verdict":"PASS"}],"changes":["threed/racketsport/ball_arc_solver.py: added typed boundary-only SoftSegmentBoundary support and guarded soft-partition fitting.","threed/racketsport/ball_arc_chain.py: added the default-off soft_split_boundaries API and manifest provenance.","tests/racketsport/test_ball_arc_solver.py: added soft-boundary authority, sanity, and no-soft byte-parity tests.","tests/racketsport/test_ball_arc_chain.py: added default-off chain API and typed-manifest tests.","runs/lanes/ballarc_anchorfusion_20260716/PRESET_REGISTRATION.json: locked three presets before scoring.","runs/lanes/ballarc_anchorfusion_20260716/interrupted_balanced_0956/: preserved the externally interrupted balanced attempt before its clean restart."],"full_suite":{"command":"Not run: workspace content reads began failing with Operation not permitted after the broad probe exited","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":"The sandbox cannot currently read even unchanged source files. Mandatory taxonomy, Wolverine regression, focused suite, and final lane report therefore could not be completed."},"honest_issues":["Conservative and balanced are dead under the explicit kill rule despite increased fit coverage.","Broad remains incomplete and unscored; its stderr cannot currently be read.","The mandatory per-segment violation taxonomy is incomplete.","Wolverine/demo-slice byte identity, no-audio boundary evidence, focused tests, and report.json remain incomplete.","Fit is not accuracy. Outputs remain preview-band, and the audio onsets are review-only/not gate-verified."],"next":"Resume in a fresh workspace-authorized process. Read and preserve the failed broad attempt, rerun only the exact broad preset if required, then finish taxonomy, Wolverine/no-audio regression, focused tests, and report.json without rerunning conservative or balanced.","session_id":null}
+[2mtokens used[0m
+818,149
+{"objective_result":"BLOCKED","acceptance":[{"metric":"Conservative preset recovery with zero physics violations","baseline":"1/188 segments fit","after":"53/371 fit; 18.77% in-rally frame coverage; 16 violations; killed","target":"Material recovery with 0 violations","verdict":"FAIL"},{"metric":"Balanced preset recovery with zero physics violations","baseline":"1/188 segments fit","after":"85/361 fit; 29.65% in-rally frame coverage; 18 violations; killed","target":"Material recovery with 0 violations","verdict":"FAIL"},{"metric":"Broad preset completion","baseline":"1/188 segments fit","after":"Run exited 1 before producing metrics","target":"Complete exact preregistered preset","verdict":"FAIL"},{"metric":"Full-run wall time","baseline":"1493.096 s","after":"Conservative 2381.207 s; balanced 2300.568 s","target":"<=2700 s per preset","verdict":"PASS"},{"metric":"Soft-split provenance","baseline":null,"after":"Conservative 181 and balanced 214 soft-split segments; 0 missing/invalid","target":"0 missing/invalid","verdict":"PASS"}],"changes":["threed/racketsport/ball_arc_solver.py: added typed boundary-only SoftSegmentBoundary support and guarded soft-partition fitting.","threed/racketsport/ball_arc_chain.py: added the default-off soft_split_boundaries API and manifest provenance.","tests/racketsport/test_ball_arc_solver.py: added soft-boundary authority, sanity, and no-soft byte-parity tests.","tests/racketsport/test_ball_arc_chain.py: added default-off chain API and typed-manifest tests.","runs/lanes/ballarc_anchorfusion_20260716/PRESET_REGISTRATION.json: locked three presets before scoring.","runs/lanes/ballarc_anchorfusion_20260716/interrupted_balanced_0956/: preserved the externally interrupted balanced attempt before its clean restart."],"full_suite":{"command":"Not run: workspace content reads began failing with Operation not permitted after the broad probe exited","passed":0,"failed":0,"skipped":0,"failures_all_preexisting":false,"failure_notes":"The sandbox cannot currently read even unchanged source files. Mandatory taxonomy, Wolverine regression, focused suite, and final lane report therefore could not be completed."},"honest_issues":["Conservative and balanced are dead under the explicit kill rule despite increased fit coverage.","Broad remains incomplete and unscored; its stderr cannot currently be read.","The mandatory per-segment violation taxonomy is incomplete.","Wolverine/demo-slice byte identity, no-audio boundary evidence, focused tests, and report.json remain incomplete.","Fit is not accuracy. Outputs remain preview-band, and the audio onsets are review-only/not gate-verified."],"next":"Resume in a fresh workspace-authorized process. Read and preserve the failed broad attempt, rerun only the exact broad preset if required, then finish taxonomy, Wolverine/no-audio regression, focused tests, and report.json without rerunning conservative or balanced.","session_id":null}

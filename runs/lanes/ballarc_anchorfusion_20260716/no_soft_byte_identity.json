@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "lane": "ballarc_anchorfusion_20260716",
+  "verified": false,
+  "authority": "regression",
+  "adopted_guard_commit": "af6b8d40f21c55065f9e9421f3ff69b23e3c97e3",
+  "default_off_contract": "soft_split_boundaries omitted; no audio artifact supplied",
+  "wolverine": {
+    "audio_available": false,
+    "budget_s": 30.0,
+    "baseline_directory": "runs/lanes/ballarc_scale_guard_20260715/wolverine_guard30",
+    "current_directory": "runs/lanes/ballarc_anchorfusion_20260716/wolverine_no_soft_current",
+    "byte_identical_count": 5,
+    "artifact_sha256": {
+      "ball_arc_render.json": "aa596d50dae2d306b4c21c670353c4058e6896542d0e8e781cedc10500008a67",
+      "ball_bounce_candidates.json": "37b6b25aa010276da5cf16f426f7bb51b812dc2fb5f3cd779b5e7787e107e7e7",
+      "ball_flight_sanity.json": "ceb4f3ed19997964fa257b2a7e942d4357b9a38966ee5418624a0b2bb80ca9ba",
+      "ball_track_arc_solved.json": "ee91dde09c36dc208252d7c7917b9de801160d01cb0a4827cff008f4c6623713",
+      "events_selected.json": "98c358a05ea6e24705a49364a703556da4ceacea790134fef32a290b94b4c2ca"
+    },
+    "pass": true
+  },
+  "demo_short_slice": {
+    "source_frames": [4750, 4899],
+    "pbvision_policy": "R&D reference only; never GT, training, or redistribution",
+    "budget_s": 30.0,
+    "budget_trip_count": 0,
+    "baseline_source": "git archive of af6b8d40f",
+    "baseline_directory": "demo_short_slice_adopted_guard30",
+    "current_directory": "demo_short_slice_current_no_soft30",
+    "byte_identical_count": 5,
+    "artifact_sha256": {
+      "ball_arc_render.json": "f3ef040ff0639c54a1601bd7d224073c1d491c638f7b150d00eb524ae55907be",
+      "ball_bounce_candidates.json": "9ec9b532f6b5c50252fa2e810e5427fa8d35ebfd3efe9493af19a586e9e0ff8c",
+      "ball_flight_sanity.json": "997f6a72c048e8faa9b4eaba49ff21e4afb13d5292a2f24c77f795e2b1c9147c",
+      "ball_track_arc_solved.json": "96a4aaaad9f8532c6fa7488762c397140439a158c59e28723282e073a07f8462",
+      "events_selected.json": "4e8f9c1a1b982329a3cb8d023693cc8b7dcb964e8aaba653089cedff1e864ac4"
+    },
+    "pass": true
+  },
+  "five_second_diagnostic": {
+    "source_frames": [0, 2099],
+    "byte_identical_count": 3,
+    "differing_artifacts": [
+      "ball_track_arc_solved.json",
+      "events_selected.json"
+    ],
+    "interpretation": "Known load sensitivity at the cooperative 5 s cutoff; not used as no-trip parity proof. The production default remains 5 s and unchanged."
+  },
+  "no_audio_boundary": "Wolverine internal cards have no audio, so no soft boundaries are available and the exact adopted output path is retained. This recovery mechanism currently applies only to audio-bearing captures; all product captures have audio, while internal cards do not."
+}

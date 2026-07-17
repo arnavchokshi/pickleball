@@ -1,0 +1,413 @@
+{
+  "artifact_type": "racketsport_ball_arc_events_selected",
+  "candidate_prediction": true,
+  "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+  "generated_at": "2026-07-16T00:00:00Z",
+  "not_ground_truth": true,
+  "provenance": {
+    "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+    "derived_from": "ball_track_arc_solved.json",
+    "solver_status": "ran",
+    "writer": "run_default_ball_arc_chain"
+  },
+  "rejected": [],
+  "rejected_count": 0,
+  "rejected_optional_count": 0,
+  "schema_version": 2,
+  "selected": [
+    {
+      "anchor_id": "rally_endpoint_0_start_000000",
+      "candidate_confidence": 0.65,
+      "details": {
+        "candidate_prediction": false,
+        "role": "start"
+      },
+      "frame": 0,
+      "immovable": true,
+      "kind": "rally_endpoint",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "rally_endpoint",
+      "sigma_m": 2.0,
+      "source": "ball_ray_plane_weak_endpoint_prior",
+      "status": "rally_endpoint_weak",
+      "t": 0.0,
+      "world_xyz": [
+        1.499946814,
+        13.06307989,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "auto_bounce_candidate_000012_000",
+      "candidate_confidence": 0.65,
+      "details": {
+        "ball_radius_m": 0.0371,
+        "candidate_index": 0,
+        "candidate_prediction": true,
+        "human_reviewed": false,
+        "method": "image_y_cusp",
+        "not_ground_truth": true,
+        "pixel_xy": [
+          152.263,
+          391.45
+        ]
+      },
+      "frame": 12,
+      "immovable": false,
+      "kind": "bounce",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "auto_bounce_candidate",
+      "sigma_m": 0.18,
+      "source": "track_geometry_candidate",
+      "status": "auto_bounce_candidate",
+      "t": 0.4,
+      "world_xyz": [
+        -2.629860331,
+        4.957591485,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "auto_bounce_candidate_000025_001",
+      "candidate_confidence": 0.65,
+      "details": {
+        "ball_radius_m": 0.0371,
+        "candidate_index": 1,
+        "candidate_prediction": true,
+        "human_reviewed": false,
+        "method": "image_y_cusp",
+        "not_ground_truth": true,
+        "pixel_xy": [
+          17.947,
+          368.665
+        ]
+      },
+      "frame": 25,
+      "immovable": false,
+      "kind": "bounce",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "auto_bounce_candidate",
+      "sigma_m": 0.18,
+      "source": "track_geometry_candidate",
+      "status": "auto_bounce_candidate",
+      "t": 0.833333,
+      "world_xyz": [
+        -3.32396602,
+        7.848406395,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "auto_bounce_candidate_000157_002",
+      "candidate_confidence": 0.65,
+      "details": {
+        "ball_radius_m": 0.0371,
+        "candidate_index": 2,
+        "candidate_prediction": true,
+        "human_reviewed": false,
+        "method": "image_y_cusp",
+        "not_ground_truth": true,
+        "pixel_xy": [
+          353.67,
+          364.846
+        ]
+      },
+      "frame": 157,
+      "immovable": false,
+      "kind": "bounce",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "auto_bounce_candidate",
+      "sigma_m": 0.18,
+      "source": "track_geometry_candidate",
+      "status": "auto_bounce_candidate",
+      "t": 5.233333,
+      "world_xyz": [
+        -0.705940893,
+        5.658583989,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "auto_bounce_candidate_000216_003",
+      "candidate_confidence": 0.65,
+      "details": {
+        "ball_radius_m": 0.0371,
+        "candidate_index": 3,
+        "candidate_prediction": true,
+        "human_reviewed": false,
+        "method": "image_y_cusp",
+        "not_ground_truth": true,
+        "pixel_xy": [
+          394.869,
+          369.422
+        ]
+      },
+      "frame": 216,
+      "immovable": false,
+      "kind": "bounce",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "auto_bounce_candidate",
+      "sigma_m": 0.18,
+      "source": "track_geometry_candidate",
+      "status": "auto_bounce_candidate",
+      "t": 7.2,
+      "world_xyz": [
+        -0.520458379,
+        4.973381953,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "solver_bounce_000223",
+      "candidate_confidence": 0.65,
+      "child_initial_speed_mps": [
+        23.5927,
+        9.50155
+      ],
+      "details": {
+        "ball_radius_m": 0.0371,
+        "bounce_bounce_gate_failure_recovery": true,
+        "confidence": "lower_confidence_solver_proposed",
+        "discovery_acceptance": {
+          "accepted": true,
+          "child_initial_speed_mps": [
+            23.5927,
+            9.50155
+          ],
+          "child_statuses": [
+            "fit",
+            "fit"
+          ],
+          "parent_inlier_fraction": 0.129032,
+          "parent_score": 313.699481,
+          "reason": "gate_failure_split_recovered",
+          "score_gain": 239.912642,
+          "selection_split_penalty": 0.25,
+          "split_inlier_fraction": 0.625,
+          "split_score": 73.786839
+        },
+        "discovery_reprojection_error_px": 109.960007,
+        "parent_segment_id": 4,
+        "pixel_xy": [
+          284.075378,
+          327.634705
+        ]
+      },
+      "frame": 223,
+      "immovable": false,
+      "kind": "bounce",
+      "parent_end": "auto_bounce_candidate_000247_004",
+      "parent_score": 321.446844,
+      "parent_start": "auto_bounce_candidate_000216_003",
+      "residual_reduction": 0.769676,
+      "score_gain": 160.816503,
+      "selected": true,
+      "selection": "selected_optional",
+      "selection_reason": "reduced_residual_and_plausible",
+      "sigma_m": 0.18,
+      "source": "ray_intersection_z_ball_radius",
+      "split_score": 74.036839,
+      "status": "candidate_prediction",
+      "t": 7.433333,
+      "world_xyz": [
+        -0.150104604,
+        10.459373828,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "auto_bounce_candidate_000247_004",
+      "candidate_confidence": 0.65,
+      "details": {
+        "ball_radius_m": 0.0371,
+        "candidate_index": 4,
+        "candidate_prediction": true,
+        "human_reviewed": false,
+        "method": "image_y_cusp",
+        "not_ground_truth": true,
+        "pixel_xy": [
+          382.041,
+          389.595
+        ]
+      },
+      "frame": 247,
+      "immovable": false,
+      "kind": "bounce",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "auto_bounce_candidate",
+      "sigma_m": 0.18,
+      "source": "track_geometry_candidate",
+      "status": "auto_bounce_candidate",
+      "t": 8.233333,
+      "world_xyz": [
+        -1.075211414,
+        3.598238451,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "auto_bounce_candidate_000254_005",
+      "candidate_confidence": 0.65,
+      "details": {
+        "ball_radius_m": 0.0371,
+        "candidate_index": 5,
+        "candidate_prediction": true,
+        "human_reviewed": false,
+        "method": "image_y_cusp",
+        "not_ground_truth": true,
+        "pixel_xy": [
+          416.317,
+          381.128
+        ]
+      },
+      "frame": 254,
+      "immovable": false,
+      "kind": "bounce",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "auto_bounce_candidate",
+      "sigma_m": 0.18,
+      "source": "track_geometry_candidate",
+      "status": "auto_bounce_candidate",
+      "t": 8.466667,
+      "world_xyz": [
+        -0.659409943,
+        3.94613787,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "auto_bounce_candidate_000266_006",
+      "candidate_confidence": 0.65,
+      "details": {
+        "ball_radius_m": 0.0371,
+        "candidate_index": 6,
+        "candidate_prediction": true,
+        "human_reviewed": false,
+        "method": "gap_ballistic_intersection",
+        "not_ground_truth": true,
+        "pixel_xy": [
+          454.322,
+          376.556
+        ]
+      },
+      "frame": 266,
+      "immovable": false,
+      "kind": "bounce",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "auto_bounce_candidate",
+      "sigma_m": 0.18,
+      "source": "track_geometry_candidate",
+      "status": "auto_bounce_candidate",
+      "t": 8.9,
+      "world_xyz": [
+        -0.28462747,
+        4.012610687,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "auto_bounce_candidate_000272_007",
+      "candidate_confidence": 0.65,
+      "details": {
+        "ball_radius_m": 0.0371,
+        "candidate_index": 7,
+        "candidate_prediction": true,
+        "human_reviewed": false,
+        "method": "image_y_cusp",
+        "not_ground_truth": true,
+        "pixel_xy": [
+          471.338,
+          460.892
+        ]
+      },
+      "frame": 272,
+      "immovable": false,
+      "kind": "bounce",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "auto_bounce_candidate",
+      "sigma_m": 0.18,
+      "source": "track_geometry_candidate",
+      "status": "auto_bounce_candidate",
+      "t": 9.066667,
+      "world_xyz": [
+        -1.720000932,
+        -0.237954964,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "auto_bounce_candidate_000289_008",
+      "candidate_confidence": 0.65,
+      "details": {
+        "ball_radius_m": 0.0371,
+        "candidate_index": 8,
+        "candidate_prediction": true,
+        "human_reviewed": false,
+        "method": "image_y_cusp",
+        "not_ground_truth": true,
+        "pixel_xy": [
+          484.824,
+          468.169
+        ]
+      },
+      "frame": 289,
+      "immovable": false,
+      "kind": "bounce",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "auto_bounce_candidate",
+      "sigma_m": 0.18,
+      "source": "track_geometry_candidate",
+      "status": "auto_bounce_candidate",
+      "t": 9.633333,
+      "world_xyz": [
+        -1.746349995,
+        -0.536474012,
+        0.0371
+      ]
+    },
+    {
+      "anchor_id": "rally_endpoint_0_end_000299",
+      "candidate_confidence": 0.65,
+      "details": {
+        "candidate_prediction": false,
+        "role": "end"
+      },
+      "frame": 299,
+      "immovable": true,
+      "kind": "rally_endpoint",
+      "selected": true,
+      "selection": "mandatory",
+      "selection_reason": "rally_endpoint",
+      "sigma_m": 2.0,
+      "source": "ball_ray_plane_weak_endpoint_prior",
+      "status": "rally_endpoint_weak",
+      "t": 9.966667,
+      "world_xyz": [
+        -1.542277604,
+        -0.247314791,
+        0.0371
+      ]
+    }
+  ],
+  "selected_count": 12,
+  "selected_optional_count": 1,
+  "selection_policy": {
+    "mandatory": "human-reviewed bounces, auto-bounce candidates, and weak rally endpoints",
+    "min_residual_reduction": 0.05,
+    "optional": "fused contacts and solver-proposed bounces",
+    "selection_max_speed_mps": 35.0,
+    "split_penalty": 0.25
+  },
+  "source": "default_ball_arc_chain_event_selection",
+  "source_artifact": "ball_track_arc_solved.json"
+}

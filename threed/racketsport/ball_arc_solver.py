@@ -308,6 +308,56 @@ class AnchorEvent:
 
 
 @dataclass(frozen=True)
+class SoftSegmentBoundary:
+    """Non-physical evidence that may only partition a hard-anchor span.
+
+    A soft boundary deliberately has no world position or event kind.  The
+    solver may use its corrected time to bound numerical work, but it may not
+    turn the boundary into bounce/contact evidence or an endpoint constraint.
+    """
+
+    boundary_id: str
+    corrected_time_s: float
+    frame: int
+    onset_ids: tuple[str, ...]
+    selection_rule_id: str
+    anchor_class: str = "audio_onset_soft"
+    source_artifact: str | None = None
+
+    def __post_init__(self) -> None:
+        if self.anchor_class != "audio_onset_soft":
+            raise ValueError("soft boundary anchor_class must be audio_onset_soft")
+        if not self.boundary_id:
+            raise ValueError("soft boundary requires boundary_id")
+        if not math.isfinite(float(self.corrected_time_s)) or float(self.corrected_time_s) < 0.0:
+            raise ValueError("soft boundary corrected_time_s must be finite and non-negative")
+        if int(self.frame) < 0:
+            raise ValueError("soft boundary frame must be non-negative")
+        if not self.onset_ids or any(not str(onset_id) for onset_id in self.onset_ids):
+            raise ValueError("soft boundary requires non-empty onset_ids")
+        if not self.selection_rule_id:
+            raise ValueError("soft boundary requires selection_rule_id")
+
+    def to_json(self) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "boundary_id": self.boundary_id,
+            "anchor_class": self.anchor_class,
+            "onset_ids": [str(onset_id) for onset_id in self.onset_ids],
+            "corrected_time_s": _round(float(self.corrected_time_s), 9),
+            "frame": int(self.frame),
+            "selection_rule_id": self.selection_rule_id,
+            "allowed_role": "segment_split_boundary_only",
+            "event_type": None,
+            "world_constraint": None,
+            "counts_as_bounce_evidence": False,
+            "counts_as_flight_sanity_anchor": False,
+        }
+        if self.source_artifact is not None:
+            payload["source_artifact"] = self.source_artifact
+        return payload
+
+
+@dataclass(frozen=True)
 class FlightSegmentFit:
     segment_id: int
     status: str
@@ -327,6 +377,7 @@ class FlightSegmentFit:
     physical_sanity: Mapping[str, Any]
     size_residuals_m: Mapping[str, Any]
     spin_scalar: float = 0.0
+    soft_split_provenance: tuple[Mapping[str, Any], ...] = ()
     primary_observations: tuple[BallObservation, ...] = ()
     candidate_sets_by_frame: Mapping[int, tuple[BallObservation, ...]] | None = None
     selected_observations_by_frame: Mapping[int, BallObservation] | None = None
@@ -388,6 +439,8 @@ class FlightSegmentFit:
                 str(frame): _observation_candidate_payload(obs)
                 for frame, obs in sorted(selected.items())
             }
+        if self.soft_split_provenance:
+            payload["soft_split_provenance"] = [dict(item) for item in self.soft_split_provenance]
         if self.diagnostics:
             payload["diagnostics"] = dict(self.diagnostics)
         if self.degradation:
@@ -470,6 +523,10 @@ def order_event_anchors(anchors: Sequence[AnchorEvent]) -> list[AnchorEvent]:
         if priority.get(anchor.status, 9) < priority.get(existing.status, 9):
             deduped[duplicate_index] = anchor
     return sorted(deduped, key=lambda item: (item.t, item.frame, priority.get(item.status, 9)))
+
+
+def _is_soft_split_anchor(anchor: AnchorEvent) -> bool:
+    return anchor.kind == "audio_onset_soft" and anchor.status == "soft_split_boundary"
 
 
 def fit_flight_segment(
@@ -597,6 +654,18 @@ def _fit_flight_segment_once(
     )
     if not _finite_vec3(start_anchor.world_xyz) or not _finite_vec3(end_anchor.world_xyz):
         return _blocked_segment(segment_id, start_anchor, end_anchor, "nonfinite_anchor")
+    if _is_soft_split_anchor(start_anchor) or _is_soft_split_anchor(end_anchor):
+        return _fit_soft_split_segment_once(
+            segment_id=segment_id,
+            start_anchor=start_anchor,
+            end_anchor=end_anchor,
+            observations=observations,
+            calibration=calibration,
+            physics=phys,
+            config=cfg,
+            net_plane=net_plane,
+            max_nfev=max_nfev,
+        )
 
     initial_free_fit = _fit_free_flight_segment_once(
         segment_id=segment_id,
@@ -776,6 +845,219 @@ def _fit_flight_segment_once(
         }
         return replace(no_spin_fit, diagnostics=diagnostics_payload)
     return final_fit
+
+
+def _fit_soft_split_segment_once(
+    *,
+    segment_id: int,
+    start_anchor: AnchorEvent,
+    end_anchor: AnchorEvent,
+    observations: Sequence[BallObservation],
+    calibration: Mapping[str, Any],
+    physics: PhysicsParameters,
+    config: BallArcSolverConfig,
+    net_plane: Mapping[str, Any] | None = None,
+    max_nfev: int | None = None,
+) -> FlightSegmentFit:
+    """Fit a time-partitioned chunk without treating soft evidence as 3D evidence."""
+
+    cfg = replace(config, fit_spin_scalar=False)
+    soft_start = _is_soft_split_anchor(start_anchor)
+    soft_end = _is_soft_split_anchor(end_anchor)
+    if not (soft_start or soft_end):
+        raise ValueError("soft split fitter requires at least one soft boundary")
+    try:
+        import numpy as np
+        from scipy.optimize import least_squares
+    except ImportError as exc:
+        return _blocked_segment(segment_id, start_anchor, end_anchor, f"missing_numeric_dependency:{exc}")
+
+    dt = end_anchor.t - start_anchor.t
+    initial_velocity = _initial_velocity_guess(start_anchor.world_xyz, end_anchor.world_xyz, dt, physics)
+    p0 = np.asarray(start_anchor.world_xyz, dtype=float)
+    initial = np.asarray([p0[0], p0[1], p0[2], *initial_velocity], dtype=float)
+    if soft_start:
+        x_min, x_max, y_min, y_max, _ = _court_volume_bounds(cfg)
+        lower = np.asarray([x_min, y_min, 0.0, -60.0, -60.0, -60.0])
+        upper = np.asarray([x_max, y_max, cfg.max_plausible_apex_m, 60.0, 60.0, 60.0])
+    else:
+        start_sigma = _anchor_sigma_m(start_anchor, cfg)
+        relax = max(0.02, cfg.anchor_relax_sigma_multiplier * start_sigma)
+        lower = np.asarray(
+            [p0[0] - relax, p0[1] - relax, max(0.0, p0[2] - relax), -60.0, -60.0, -60.0]
+        )
+        upper = np.asarray(
+            [p0[0] + relax, p0[1] + relax, p0[2] + relax, 60.0, 60.0, 60.0]
+        )
+    if not np.all(np.isfinite(lower)) or not np.all(np.isfinite(upper)) or not np.all(lower < upper):
+        return _blocked_segment(segment_id, start_anchor, end_anchor, "invalid_segment_bounds")
+    initial = np.minimum(np.maximum(initial, lower + 1e-9), upper - 1e-9)
+    times = [start_anchor.t, end_anchor.t, *[obs.t for obs in observations]]
+    hard_start_sigma = _anchor_sigma_m(start_anchor, cfg)
+    hard_end_sigma = _anchor_sigma_m(end_anchor, cfg)
+
+    def residuals(params: Any) -> Any:
+        initial_position = (float(params[0]), float(params[1]), float(params[2]))
+        velocity = (float(params[3]), float(params[4]), float(params[5]))
+        predicted = _integrate_positions(
+            initial_position,
+            velocity,
+            times,
+            t0=start_anchor.t,
+            physics=physics,
+            config=cfg,
+        )
+        by_time = {round(t, 9): point for t, point in zip(times, predicted, strict=True)}
+        residual: list[float] = []
+        if not soft_start:
+            residual.extend(
+                _scaled_vec(
+                    _sub(initial_position, start_anchor.world_xyz),
+                    hard_start_sigma / cfg.endpoint_anchor_weight,
+                )
+            )
+        endpoint = by_time[round(end_anchor.t, 9)]
+        if not soft_end:
+            residual.extend(
+                _scaled_vec(
+                    _sub(endpoint, end_anchor.world_xyz),
+                    hard_end_sigma / cfg.endpoint_anchor_weight,
+                )
+            )
+        for obs in observations:
+            point = by_time[round(obs.t, 9)]
+            projected = _project_world_point(calibration, point)
+            sigma_px = cfg.robust_pixel_sigma / max(0.35, math.sqrt(max(obs.confidence, 1e-6)))
+            residual.append((projected[0] - obs.xy[0]) / sigma_px)
+            residual.append((projected[1] - obs.xy[1]) / sigma_px)
+            size_residual = _size_depth_residual(
+                calibration,
+                obs,
+                point,
+                physics=physics,
+                config=cfg,
+                sigma_floor_m=cfg.size_depth_sigma_m,
+            )
+            if size_residual is not None:
+                residual.append(size_residual[0] / size_residual[1])
+        if net_plane is not None:
+            residual.append(
+                _net_soft_residual(
+                    initial_position,
+                    velocity,
+                    start_anchor.t,
+                    end_anchor.t,
+                    physics,
+                    cfg,
+                    net_plane,
+                )
+            )
+        return np.asarray(residual, dtype=float)
+
+    result = least_squares(
+        residuals,
+        initial,
+        bounds=(lower, upper),
+        loss=cfg.robust_loss,
+        f_scale=cfg.robust_f_scale,
+        max_nfev=max_nfev or 4000,
+    )
+    params = result.x if result.success else initial
+    initial_position = (float(params[0]), float(params[1]), float(params[2]))
+    velocity = (float(params[3]), float(params[4]), float(params[5]))
+    obs_errors = _observation_reprojection_errors(
+        observations,
+        calibration=calibration,
+        initial_position=initial_position,
+        velocity=velocity,
+        t0=start_anchor.t,
+        physics=physics,
+        config=cfg,
+    )
+    inlier_frames = tuple(
+        obs.frame for obs in observations if obs_errors.get(obs.frame, math.inf) <= cfg.max_reprojection_inlier_px
+    )
+    outlier_frames = tuple(
+        obs.frame for obs in observations if obs_errors.get(obs.frame, 0.0) > cfg.max_reprojection_inlier_px
+    )
+    errors = [obs_errors[obs.frame] for obs in observations if obs.frame in obs_errors]
+    inlier_errors = [obs_errors[frame] for frame in inlier_frames if frame in obs_errors]
+    endpoint_pred = _integrate_positions(
+        initial_position,
+        velocity,
+        [end_anchor.t],
+        t0=start_anchor.t,
+        physics=physics,
+        config=cfg,
+    )[0]
+    net_clearance = _net_clearance_m(
+        initial_position,
+        velocity,
+        start_anchor.t,
+        end_anchor.t,
+        physics,
+        cfg,
+        net_plane,
+    )
+    physical = _physical_sanity(
+        initial_position,
+        velocity,
+        start_anchor.t,
+        end_anchor.t,
+        physics,
+        cfg,
+        net_clearance,
+    )
+    size_residuals = _size_residual_distribution(
+        observations,
+        calibration=calibration,
+        initial_position=initial_position,
+        velocity=velocity,
+        t0=start_anchor.t,
+        physics=physics,
+        config=cfg,
+        sigma_floor_m=cfg.size_depth_sigma_m,
+    )
+    diagnostics = {
+        "soft_split_boundary": {
+            "enabled": True,
+            "allowed_role": "segment_split_boundary_only",
+            "start_is_soft": soft_start,
+            "end_is_soft": soft_end,
+            "world_endpoint_constraints_from_soft_evidence": False,
+            "bvp_endpoint_pinning_skipped": True,
+            "event_type_asserted": False,
+            "counts_as_bounce_evidence": False,
+            "counts_as_flight_sanity_anchor": False,
+        },
+        "soft_split_optimizer_constraints": {
+            "start_world_constraint": not soft_start,
+            "end_world_constraint": not soft_end,
+            "soft_world_initialization_used_as_evidence": False,
+            "soft_z_radius_constraint": False,
+        },
+        "spin_scalar_fit": {"enabled": False, "fit": False, "reason": "soft_split_boundary_only"},
+    }
+    return FlightSegmentFit(
+        segment_id=segment_id,
+        status="fit" if result.success else "fit_optimizer_not_converged",
+        start_anchor=start_anchor,
+        end_anchor=end_anchor,
+        initial_position_m=initial_position,
+        initial_velocity_mps=velocity,
+        observations=tuple(observations),
+        inlier_frames=inlier_frames,
+        outlier_frames=outlier_frames,
+        reprojection_errors_px=obs_errors,
+        reprojection_rmse_px=_rmse(inlier_errors),
+        max_reprojection_error_px=max(errors) if errors else None,
+        endpoint_error_m=0.0 if soft_end else _distance(endpoint_pred, end_anchor.world_xyz),
+        net_clearance_m=net_clearance,
+        net_clearance_ok=None if net_clearance is None else net_clearance >= -cfg.net_clearance_slack_m,
+        physical_sanity=physical,
+        size_residuals_m=size_residuals,
+        diagnostics=diagnostics,
+    )
 
 
 def _fit_free_flight_segment_once(
@@ -2203,6 +2485,7 @@ def solve_ball_arc_track(
     rally_spans: Mapping[str, Any] | None = None,
     net_plane: Mapping[str, Any] | None = None,
     extra_anchors: Sequence[AnchorEvent] = (),
+    soft_split_boundaries: Sequence[SoftSegmentBoundary] = (),
     frame_times: Any = None,
     physics: PhysicsParameters | None = None,
     config: BallArcSolverConfig | None = None,
@@ -2349,6 +2632,19 @@ def solve_ball_arc_track(
             physics=phys,
             config=cfg,
             net_plane=net_plane,
+        )
+    soft_split_report: dict[str, Any] | None = None
+    if soft_split_boundaries:
+        segments, soft_split_report = _fit_segments_from_anchors(
+            anchors,
+            observations=observations,
+            candidate_sets_by_frame=candidate_sets_by_frame,
+            calibration=calibration,
+            physics=phys,
+            config=cfg,
+            net_plane=net_plane,
+            soft_split_boundaries=soft_split_boundaries,
+            return_soft_split_report=True,
         )
     confident_segments = list(segments)
     confident_segments, protected_span_prior_report = _apply_protected_span_priors_from_frozen_baseline(
@@ -2513,6 +2809,26 @@ def solve_ball_arc_track(
             "ball_physics3d_reference": physics3d_summary,
         },
     }
+    if soft_split_report is not None:
+        artifact["soft_split_boundaries"] = soft_split_report
+        artifact["policy"]["audio_onset_soft_split"] = {
+            "default_off": True,
+            "allowed_role": "segment_split_boundary_only",
+            "event_type_asserted": False,
+            "pins_world_position": False,
+            "pins_z_to_ball_radius": False,
+            "counts_as_bounce_evidence": False,
+            "counts_as_flight_sanity_anchor": False,
+        }
+        artifact["summary"].update(
+            {
+                "soft_split_boundary_supplied_count": int(soft_split_report["supplied_count"]),
+                "soft_split_boundary_applied_count": int(soft_split_report["applied_count"]),
+                "soft_split_segment_count": sum(
+                    1 for segment in all_segments if bool(segment.soft_split_provenance)
+                ),
+            }
+        )
     if budget_exceeded_segments:
         segment_ids = [segment.segment_id for segment in budget_exceeded_segments]
         artifact["degraded_reasons"] = [
@@ -2595,27 +2911,173 @@ def _fit_segments_from_anchors(
     net_plane: Mapping[str, Any] | None,
     refine_endpoints: bool = True,
     max_nfev: int | None = None,
-) -> list[FlightSegmentFit]:
+    soft_split_boundaries: Sequence[SoftSegmentBoundary] = (),
+    return_soft_split_report: bool = False,
+) -> list[FlightSegmentFit] | tuple[list[FlightSegmentFit], dict[str, Any]]:
     segments: list[FlightSegmentFit] = []
+    if not soft_split_boundaries:
+        for start, end in zip(anchors, anchors[1:]):
+            segment = _fit_anchor_pair(
+                len(segments),
+                start,
+                end,
+                observations=observations,
+                candidate_sets_by_frame=candidate_sets_by_frame,
+                calibration=calibration,
+                physics=physics,
+                config=config,
+                net_plane=net_plane,
+                block_insufficient_observations=False,
+                max_nfev=max_nfev,
+                refine_endpoints=refine_endpoints,
+            )
+            if segment is None:
+                continue
+            segments.append(segment)
+        if not return_soft_split_report:
+            return segments
+        return segments, {
+            "anchor_class": "audio_onset_soft",
+            "allowed_role": "segment_split_boundary_only",
+            "supplied_count": 0,
+            "applied_count": 0,
+            "rejected_count": 0,
+            "supplied": [],
+            "applied": [],
+            "rejected": [],
+        }
+    applied_boundary_ids: set[str] = set()
+    rejected: list[dict[str, Any]] = []
+    ordered_soft = sorted(
+        soft_split_boundaries,
+        key=lambda item: (float(item.corrected_time_s), int(item.frame), item.boundary_id),
+    )
     for start, end in zip(anchors, anchors[1:]):
-        segment = _fit_anchor_pair(
-            len(segments),
-            start,
-            end,
-            observations=observations,
-            candidate_sets_by_frame=candidate_sets_by_frame,
-            calibration=calibration,
-            physics=physics,
-            config=config,
-            net_plane=net_plane,
-            block_insufficient_observations=False,
-            max_nfev=max_nfev,
-            refine_endpoints=refine_endpoints,
-        )
-        if segment is None:
-            continue
-        segments.append(segment)
-    return segments
+        span_soft = [
+            boundary
+            for boundary in ordered_soft
+            if start.t + config.min_segment_dt_s < boundary.corrected_time_s < end.t - config.min_segment_dt_s
+        ]
+        materialized: list[tuple[AnchorEvent, SoftSegmentBoundary]] = []
+        for boundary in span_soft:
+            soft_anchor = _soft_split_anchor_for_span(
+                boundary,
+                observations=observations,
+                calibration=calibration,
+                span_start=start,
+                span_end=end,
+                config=config,
+            )
+            if soft_anchor is None:
+                rejected.append(
+                    {
+                        **boundary.to_json(),
+                        "reason": "no_visible_primary_observation_in_hard_anchor_span",
+                    }
+                )
+                continue
+            materialized.append((soft_anchor, boundary))
+            applied_boundary_ids.add(boundary.boundary_id)
+        boundaries_by_id = {boundary.boundary_id: boundary for _, boundary in materialized}
+        span_anchors = [start, *[anchor for anchor, _ in materialized], end]
+        span_used_soft = bool(materialized)
+        for child_start, child_end in zip(span_anchors, span_anchors[1:]):
+            segment = _fit_anchor_pair(
+                len(segments),
+                child_start,
+                child_end,
+                observations=observations,
+                candidate_sets_by_frame=candidate_sets_by_frame,
+                calibration=calibration,
+                physics=physics,
+                config=config,
+                net_plane=net_plane,
+                block_insufficient_observations=False,
+                max_nfev=max_nfev,
+                refine_endpoints=refine_endpoints,
+            )
+            if segment is None:
+                continue
+            if span_used_soft:
+                provenance = tuple(
+                    boundaries_by_id[anchor.anchor_id].to_json()
+                    for anchor in (child_start, child_end)
+                    if anchor.anchor_id in boundaries_by_id
+                )
+                segment = replace(segment, soft_split_provenance=provenance)
+            segments.append(segment)
+    if not return_soft_split_report:
+        return segments
+    supplied = [boundary.to_json() for boundary in ordered_soft]
+    applied = [
+        boundary.to_json() for boundary in ordered_soft if boundary.boundary_id in applied_boundary_ids
+    ]
+    outside = [
+        {**boundary.to_json(), "reason": "outside_selected_hard_anchor_intervals"}
+        for boundary in ordered_soft
+        if boundary.boundary_id not in applied_boundary_ids
+        and not any(item.get("boundary_id") == boundary.boundary_id for item in rejected)
+    ]
+    return segments, {
+        "anchor_class": "audio_onset_soft",
+        "allowed_role": "segment_split_boundary_only",
+        "supplied_count": len(supplied),
+        "applied_count": len(applied),
+        "rejected_count": len(rejected) + len(outside),
+        "supplied": supplied,
+        "applied": applied,
+        "rejected": [*rejected, *outside],
+    }
+
+
+def _soft_split_anchor_for_span(
+    boundary: SoftSegmentBoundary,
+    *,
+    observations: Sequence[BallObservation],
+    calibration: Mapping[str, Any],
+    span_start: AnchorEvent,
+    span_end: AnchorEvent,
+    config: BallArcSolverConfig,
+) -> AnchorEvent | None:
+    span_observations = [
+        observation
+        for observation in observations
+        if span_start.t - 1e-9 <= observation.t <= span_end.t + 1e-9 and observation.visible
+    ]
+    if not span_observations:
+        return None
+    nearest = min(
+        span_observations,
+        key=lambda observation: (
+            abs(observation.t - float(boundary.corrected_time_s)),
+            abs(observation.frame - int(boundary.frame)),
+            observation.frame,
+        ),
+    )
+    origin, direction = pixel_ray_world(calibration, nearest.xy)
+    initialization_z_m = min(1.0, float(config.max_plausible_apex_m) / 2.0)
+    try:
+        initialization = intersect_ray_z(origin, direction, initialization_z_m)
+    except ValueError:
+        initialization = tuple(float(value) for value in origin)
+    return AnchorEvent(
+        anchor_id=boundary.boundary_id,
+        kind="audio_onset_soft",
+        t=float(boundary.corrected_time_s),
+        frame=int(boundary.frame),
+        world_xyz=initialization,
+        sigma_m=max(1.0, float(config.max_plausible_apex_m)),
+        status="soft_split_boundary",
+        immovable=False,
+        source="audio_onset_soft_split_boundary",
+        details={
+            **boundary.to_json(),
+            "initialization_only": True,
+            "initialization_source": "nearest_primary_observation_ray_at_neutral_z",
+            "initialization_observation_frame": int(nearest.frame),
+            "initialization_z_m": initialization_z_m,
+        },
+    )
 
 
 def _fit_anchor_pair(
@@ -6665,6 +7127,7 @@ __all__ = [
     "BallObservation",
     "FlightSegmentFit",
     "PhysicsParameters",
+    "SoftSegmentBoundary",
     "anchor_sigma_for_bounce",
     "build_bounce_anchor",
     "fit_flight_segment",

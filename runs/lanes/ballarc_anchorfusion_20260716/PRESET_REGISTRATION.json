@@ -57,7 +57,20 @@
       "score_floor": 0.03,
       "min_inter_split_spacing_s": 1.5,
       "intent": "broad"
+    },
+    {
+      "intent": "typed_contact_hi_conf",
+      "selection_rule_id": "typed_hi_score090_spacing025_rally_v1",
+      "score_floor": 0.9,
+      "min_inter_split_spacing_s": 0.25,
+      "anchor_class": "trained_contact_typed_hi",
+      "source_artifact": "runs/lanes/ballarc_anchorfusion_20260716/typed_anchors_hi09_nms.json",
+      "source_upstream": "runs/lanes/event_head_pretrain_20260716/anchors/pbvision_11min_event_head_anchors.json",
+      "registered_note": "ADDENDUM registered 2026-07-16 by the Track A manager BEFORE scoring this class. The three audio presets above are UNTOUCHED and remain final/killed. New anchor class: trained event-head contacts, >=0.9 tail only (123 of 5100 raw), NMS-deduped at 0.20s -> 101 anchors (0.145/s, 2.46/rally) vs the 20 auto-bounce anchors that caused the segment-sparsity pathology. Role is IDENTICAL to the audio class: split-boundary only; never bounce/contact evidence, never z=radius, never a flight-sanity anchor. Same frozen flight-sanity gate, same 0-violation kill rule, same guard (5s). Head is review-only/not_gate_verified and carries a tennis->pickleball domain gap; this is a diagnostic, not a promotion. VERIFIED=0.",
+      "status": "REGISTERED_THEN_WITHDRAWN_UNSCORED",
+      "withdrawal_note": "WITHDRAWN 2026-07-16 before any score was produced, on Track G2's binding ANCHOR_VERDICT.md: the event head's zero-shot tennis->pickleball transfer FAILED. G2 cross-check: >=0.9 candidates carry an independent audio onset within +-0.15s only 70.2% of the time against a ~99.3% chance baseline (at/below chance = zero discriminative information); raw output sprays 4,990 HIT in 697s (7.16/s, ~98% of seconds contain a HIT, median gap 4 frames, unrescuable by wider NMS). MANAGER'S INDEPENDENT CORROBORATION: the >=0.9 tail is 123/123 HIT with ZERO BOUNCE events - bounces are exactly the class that supplies z=radius flight resets, so even a trustworthy high-confidence HIT subset could not supply the anchor semantics this taxonomy says are missing. A partial run was launched and KILLED at 39 segments (6 fit / 33 budget-exceeded) with no metrics produced and no score recorded; preset_typed_hi.jsonl is retained as an audit trail of the withdrawn attempt, NOT as a result. The three audio presets above remain final and killed."
     }
   ],
-  "no_threshold_shopping": "All three rules were locked before running or inspecting any soft-split arc coverage result. Every preset will be reported, including killed presets."
+  "no_threshold_shopping": "All three rules were locked before running or inspecting any soft-split arc coverage result. Every preset will be reported, including killed presets.",
+  "addendum_registered_at": "2026-07-16T22:4x (manager, before typed-class scoring)"
 }

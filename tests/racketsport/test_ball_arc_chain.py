@@ -9,6 +9,7 @@ import pytest
 
 from threed.racketsport import ball_arc_chain
 from threed.racketsport.ball_arc_chain import BallArcSolverRun
+from threed.racketsport.ball_arc_solver import SoftSegmentBoundary
 from threed.racketsport.schemas import BallArcRender, validate_artifact_file
 
 
@@ -83,6 +84,54 @@ def test_default_chain_records_degraded_marker_without_candidate_sidecars(
     assert artifact["chain_config_degraded"] == "no_candidate_sidecars"
     assert manifest["chain_config_degraded"] == "no_candidate_sidecars"
     assert result["summary"]["chain_config_degraded"] == "no_candidate_sidecars"
+
+
+def test_default_chain_soft_split_api_is_additive_default_off_and_typed(
+    tmp_path: Path,
+    monkeypatch: Any,
+) -> None:
+    ball_track_path = _write_json(tmp_path / "ball_track.json", _ball_track_payload())
+    calibration_path = _write_json(tmp_path / "court_calibration.json", _calibration_payload())
+    boundary = SoftSegmentBoundary(
+        boundary_id="audio_soft_0003",
+        corrected_time_s=0.1,
+        frame=3,
+        onset_ids=("onset_3",),
+        selection_rule_id="audio_soft_score010_spacing200_rally_v1",
+        source_artifact="review_only_audio.json",
+    )
+    captured_off: dict[str, Any] = {}
+    _patch_default_chain_solver(monkeypatch, captured_off)
+    ball_arc_chain.run_default_ball_arc_chain(
+        clip="unit_clip",
+        ball_track_path=ball_track_path,
+        court_calibration_path=calibration_path,
+        out_dir=tmp_path / "off",
+        generated_at="2026-07-16T00:00:00Z",
+    )
+    off_manifest = json.loads((tmp_path / "off" / "ball_chain_manifest.json").read_text(encoding="utf-8"))
+    assert captured_off["soft_split_boundaries"] == ()
+    assert "soft_split_input" not in off_manifest
+
+    captured_on: dict[str, Any] = {}
+    _patch_default_chain_solver(monkeypatch, captured_on)
+    result = ball_arc_chain.run_default_ball_arc_chain(
+        clip="unit_clip",
+        ball_track_path=ball_track_path,
+        court_calibration_path=calibration_path,
+        out_dir=tmp_path / "on",
+        soft_split_boundaries=[boundary],
+        generated_at="2026-07-16T00:00:00Z",
+    )
+    manifest = json.loads((tmp_path / "on" / "ball_chain_manifest.json").read_text(encoding="utf-8"))
+    assert captured_on["soft_split_boundaries"] == [boundary]
+    assert manifest["soft_split_input"]["anchor_class"] == "audio_onset_soft"
+    assert manifest["soft_split_input"]["allowed_role"] == "segment_split_boundary_only"
+    assert manifest["soft_split_input"]["boundaries"][0]["event_type"] is None
+    assert manifest["soft_split_input"]["boundaries"][0]["world_constraint"] is None
+    assert manifest["policy"]["audio_onset_soft_split_default_off"] is True
+    assert manifest["policy"]["audio_onset_soft_split_not_event_evidence"] is True
+    assert result["summary"]["soft_split_boundary_supplied_count"] == 1
 
 
 def test_default_chain_candidate_flags_are_default_off_and_ransac_filters_only_when_enabled(

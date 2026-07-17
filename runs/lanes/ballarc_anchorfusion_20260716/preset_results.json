@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "verified": false,
+  "authority": "preview",
+  "coverage_definitions": {
+    "in_rally_frame_coverage": "Input frames whose timestamp is inside a pre-registered rally-active span and any emitted status=fit* segment, divided by all input frames in those rally-active spans.",
+    "total_segment_fit_fraction": "Emitted solver segments with status beginning fit divided by all emitted solver segments, including weak segments."
+  },
+  "baseline": {
+    "segments_fit": 1,
+    "segments_total": 188,
+    "fit_fraction_percent": 0.5319148936,
+    "segment_duration_s": {"count": 188, "min": 1.633333, "median": 33.833334, "p90": 81.13, "p95": 89.066667, "max": 111.933334}
+  },
+  "presets": [
+    {
+      "intent": "conservative",
+      "selection_rule_id": "audio_soft_score010_spacing200_rally_v1",
+      "score_floor": 0.1,
+      "minimum_spacing_s": 2.0,
+      "selected_onsets": 168,
+      "segments_fit": 53,
+      "segments_total": 371,
+      "segment_fit_percent": 14.285714,
+      "in_rally_frames_fit": 3362,
+      "in_rally_frames_total": 17914,
+      "in_rally_frame_coverage_percent": 18.767444,
+      "wall_min": 39.686782,
+      "guard_budget_s": 5.0,
+      "physics_violations": 16,
+      "provenance_missing": 0,
+      "provenance_invalid": 0,
+      "soft_split_segment_duration_s": {"count": 181, "min": 0.084849, "median": 3.149086, "p90": 6.444569, "p95": 7.308848, "max": 16.708053},
+      "kill_rule_status": "KILLED"
+    },
+    {
+      "intent": "balanced",
+      "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+      "score_floor": 0.06,
+      "minimum_spacing_s": 1.75,
+      "selected_onsets": 202,
+      "segments_fit": 85,
+      "segments_total": 361,
+      "segment_fit_percent": 23.545706,
+      "in_rally_frames_fit": 5312,
+      "in_rally_frames_total": 17914,
+      "in_rally_frame_coverage_percent": 29.652786,
+      "wall_min": 38.342806,
+      "guard_budget_s": 5.0,
+      "physics_violations": 18,
+      "provenance_missing": 0,
+      "provenance_invalid": 0,
+      "soft_split_segment_duration_s": {"count": 214, "min": 0.13499, "median": 2.694004, "p90": 5.012137, "p95": 6.087747, "max": 15.534004},
+      "kill_rule_status": "KILLED"
+    },
+    {
+      "intent": "broad",
+      "selection_rule_id": "audio_soft_score003_spacing150_rally_v1",
+      "score_floor": 0.03,
+      "minimum_spacing_s": 1.5,
+      "selected_onsets": 241,
+      "segments_fit": 123,
+      "segments_total": 367,
+      "segment_fit_percent": 33.514986,
+      "in_rally_frames_fit": 7826,
+      "in_rally_frames_total": 17914,
+      "in_rally_frame_coverage_percent": 43.686502,
+      "wall_min": 37.185285,
+      "guard_budget_s": 5.0,
+      "physics_violations": 18,
+      "provenance_missing": 0,
+      "provenance_invalid": 0,
+      "soft_split_segment_duration_s": {"count": 253, "min": 0.13499, "median": 2.307012, "p90": 4.44523, "p95": 5.183078, "max": 12.835089},
+      "kill_rule_status": "KILLED"
+    }
+  ],
+  "taxonomy_verdict": "needs-typed-anchors",
+  "best_stack_delta": "(b) PENDING default-off soft_split_boundaries entry; no current config edit because every preset is killed"
+}

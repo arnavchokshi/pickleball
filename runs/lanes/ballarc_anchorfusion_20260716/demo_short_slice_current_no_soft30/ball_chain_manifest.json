@@ -1,0 +1,101 @@
+{
+  "artifact_type": "racketsport_ball_chain_run_manifest",
+  "clip": "pbvision_demo_short_slice_4750_4899",
+  "configs": {
+    "product_veto": {
+      "veto_px": 40.0,
+      "weak_support_required": true
+    },
+    "solver_a_free": {
+      "candidate_association_mode": "free",
+      "candidate_score_floors": {},
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": true,
+      "enable_event_subset_selection": true,
+      "max_candidates_per_frame": 12
+    },
+    "solver_b_rescue_tn05": {
+      "candidate_association_mode": "rescue_only",
+      "candidate_score_floors": {
+        "tracknet": 0.5,
+        "wasb": 0.0
+      },
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": false,
+      "enable_event_subset_selection": false,
+      "max_candidates_per_frame": 12
+    }
+  },
+  "generated_at": "2026-07-16T00:00:00Z",
+  "heldout_authorized": false,
+  "inputs": {
+    "ball_candidates_0": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_input/ball_candidates.json",
+      "sha256": "ee9fab7135c2a3eb5b9f870ede62660616b8c3156cbd7b0fe3ae1090143e0caa"
+    },
+    "ball_track": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_input/ball_track.json",
+      "sha256": "0918fa0143fd1b60e588be17fba07d793914cc60ba76c7199ede7f0f54afc4fd"
+    },
+    "court_calibration": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_input/court_calibration.json",
+      "sha256": "2a17d7945836254dd982a74cbe0b5533aa90ef019d657d8b1fb964a853f4208b"
+    },
+    "frame_times": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_input/frame_times.json",
+      "sha256": "a24c01b64b171dba058b0793a1d088d81aa0518bce4f416782af8d4805764b06"
+    },
+    "net_plane": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_input/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    }
+  },
+  "net_plane_provenance": {
+    "consumed_net_plane": true,
+    "reason": "consumed"
+  },
+  "outputs": {
+    "auto_bounce_candidates": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_current_no_soft30/ball_bounce_candidates.json",
+      "sha256": "9ec9b532f6b5c50252fa2e810e5427fa8d35ebfd3efe9493af19a586e9e0ff8c"
+    },
+    "ball_arc_render": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_current_no_soft30/ball_arc_render.json",
+      "sha256": "f3ef040ff0639c54a1601bd7d224073c1d491c638f7b150d00eb524ae55907be"
+    },
+    "ball_flight_sanity": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_current_no_soft30/ball_flight_sanity.json",
+      "sha256": "997f6a72c048e8faa9b4eaba49ff21e4afb13d5292a2f24c77f795e2b1c9147c"
+    },
+    "ball_track_arc_solved": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_current_no_soft30/ball_track_arc_solved.json",
+      "sha256": "96a4aaaad9f8532c6fa7488762c397140439a158c59e28723282e073a07f8462"
+    },
+    "events_selected": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_current_no_soft30/events_selected.json",
+      "sha256": "4e8f9c1a1b982329a3cb8d023693cc8b7dcb964e8aaba653089cedff1e864ac4"
+    }
+  },
+  "policy": {
+    "ball_arc_render_only": true,
+    "candidate_sidecars_consumed_when_present": true,
+    "net_plane_consumed_when_valid": true,
+    "outdoor_indoor_labels_read": false,
+    "render_only_3d": true,
+    "seed_anchor_prepass": false
+  },
+  "schema_version": 1,
+  "summary": {
+    "auto_bounce_candidate_count": 2,
+    "ball_arc_render_bridge_sample_count": 0,
+    "ball_arc_render_sample_count": 0,
+    "coverage_world_xyz_count": 96,
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 0,
+    "segment_count": 2,
+    "solver_status": "ran"
+  }
+}

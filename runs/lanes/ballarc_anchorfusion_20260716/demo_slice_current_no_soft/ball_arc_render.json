@@ -1,0 +1,37 @@
+{
+  "artifact_type": "racketsport_ball_arc_render",
+  "bridges": [],
+  "clip_id": "pbvision_demo_slice_0000_2099",
+  "generated_at": "2026-07-16T00:00:00Z",
+  "not_for_detection_metrics": true,
+  "policy": {
+    "bridge_samples_low_confidence": true,
+    "dense_samples_from_parametric_solver": true,
+    "does_not_change_solver_status": true,
+    "does_not_feed_detection_metrics": true,
+    "not_for_detection_metrics": true,
+    "render_only": true
+  },
+  "render_only": true,
+  "samples": [],
+  "schema_version": 1,
+  "segments": [],
+  "solver_status": "degraded",
+  "solver_trusted_for_render": false,
+  "source": "parametric_ball_arc_render_v1",
+  "source_artifact": "ball_track_arc_solved.json",
+  "summary": {
+    "base_sample_count": 0,
+    "bridge_sample_count": 0,
+    "fail_closed_enabled": true,
+    "fail_closed_policy": "arc_segment_fail_closed_v1",
+    "fail_closed_suppressed_segment_ids": [],
+    "fps": 30.0,
+    "rally_span_count": 0,
+    "sample_count": 0,
+    "segment_count": 0,
+    "solver_trusted_for_render": false,
+    "supersample_rate": 4
+  },
+  "trusted_for_ball_detection_metrics": false
+}

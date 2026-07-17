@@ -1,0 +1,30 @@
+Traceback (most recent call last):
+  File "/tmp/ballarc_guard_af6b8d40f_20260716/runs/lanes/ballarc_scale_guard_20260715/run_probe.py", line 123, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "/tmp/ballarc_guard_af6b8d40f_20260716/runs/lanes/ballarc_scale_guard_20260715/run_probe.py", line 108, in main
+    result = run_default_ball_arc_chain(
+        clip=args.clip,
+    ...<6 lines>...
+        generated_at="2026-07-16T00:00:00Z",
+    )
+  File "/private/tmp/ballarc_guard_af6b8d40f_20260716/threed/racketsport/ball_arc_chain.py", line 175, in run_default_ball_arc_chain
+    ball_candidate_sidecars = [load_ball_candidates_file(path).model_dump() for path in candidate_paths]
+                               ~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "/private/tmp/ballarc_guard_af6b8d40f_20260716/threed/racketsport/schemas/__init__.py", line 2765, in load_ball_candidates_file
+    return BallCandidates.model_validate(payload)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/pydantic/main.py", line 732, in model_validate
+    return cls.__pydantic_validator__.validate_python(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        obj,
+        ^^^^
+    ...<5 lines>...
+        by_name=by_name,
+        ^^^^^^^^^^^^^^^^
+    )
+    ^
+pydantic_core._pydantic_core.ValidationError: 1 validation error for BallCandidates
+slice_frame_end_exclusive
+  Extra inputs are not permitted [type=extra_forbidden, input_value=2100, input_type=int]
+    For further information visit https://errors.pydantic.dev/2.13/v/extra_forbidden

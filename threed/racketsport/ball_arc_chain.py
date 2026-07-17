@@ -14,6 +14,7 @@ from threed.racketsport.ball_arc_solver import (
     AnchorEvent,
     BallArcSolverConfig,
     PhysicsParameters,
+    SoftSegmentBoundary,
     _court_volume_bounds,
     _integrate_positions,
     solve_ball_arc_track,
@@ -131,6 +132,7 @@ def run_default_ball_arc_chain(
     recovery_v2_enable_low_confidence_2d_updates: bool = False,
     enable_joint_anchor_search: bool = False,
     enable_joint_anchor_pinning: bool = False,
+    soft_split_boundaries: Sequence[SoftSegmentBoundary] = (),
     generated_at: str | None = None,
 ) -> dict[str, Any]:
     """Run the default single-primary-track arc chain into ``out_dir``."""
@@ -250,6 +252,7 @@ def run_default_ball_arc_chain(
         rally_spans=None,
         frame_times=frame_times,
         extra_anchors=[*seed_extra_anchors, *joint_anchor_extra_anchors],
+        soft_split_boundaries=soft_split_boundaries,
         physics=PhysicsParameters.for_ball_type(ball_type),
         config=solver_config,
         out_dir=out_dir,
@@ -264,6 +267,10 @@ def run_default_ball_arc_chain(
         "ball_candidates": [str(path) for path in candidate_paths],
         "frame_times": str(frame_times_path or ""),
     }
+    if soft_split_boundaries:
+        run.artifact["inputs"]["soft_split_boundaries"] = [
+            boundary.to_json() for boundary in soft_split_boundaries
+        ]
     if ransac_track_path is not None:
         run.artifact["inputs"]["source_ball_track"] = str(ball_track_path)
     if chain_config_degraded is not None:
@@ -390,6 +397,23 @@ def run_default_ball_arc_chain(
             "net_plane_consumed_when_valid": True,
         },
     }
+    if soft_split_boundaries:
+        soft_report = run.artifact.get("soft_split_boundaries")
+        soft_summary = soft_report if isinstance(soft_report, Mapping) else {}
+        manifest["soft_split_input"] = {
+            "default_off": True,
+            "anchor_class": "audio_onset_soft",
+            "allowed_role": "segment_split_boundary_only",
+            "supplied_count": len(soft_split_boundaries),
+            "applied_count": int(soft_summary.get("applied_count") or 0),
+            "boundaries": [boundary.to_json() for boundary in soft_split_boundaries],
+        }
+        manifest["policy"]["audio_onset_soft_split_default_off"] = True
+        manifest["policy"]["audio_onset_soft_split_not_event_evidence"] = True
+        manifest["summary"]["soft_split_boundary_supplied_count"] = len(soft_split_boundaries)
+        manifest["summary"]["soft_split_boundary_applied_count"] = int(
+            soft_summary.get("applied_count") or 0
+        )
     if enable_ransac_arc_gate or enable_ukf_fallback or enable_recovery_policy_v2 or enable_joint_anchor_search:
         manifest["candidate_flags"] = {
             "ransac_arc_gate": bool(enable_ransac_arc_gate),
@@ -503,6 +527,12 @@ def run_default_ball_arc_chain(
         )
         result_summary["tt3d_candidate_fallback_segment_count"] = _fallback_segment_count(run.artifact)
         result_summary["tt3d_chosen_anchor_count"] = int(joint_anchor_payload["summary"]["chosen_anchor_count"])
+    if soft_split_boundaries:
+        result_summary["soft_split_boundary_supplied_count"] = len(soft_split_boundaries)
+        result_summary["soft_split_boundary_applied_count"] = int(
+            summary.get("soft_split_boundary_applied_count") or 0
+        )
+        result_summary["soft_split_segment_count"] = int(summary.get("soft_split_segment_count") or 0)
     if segment_budget_exceeded_count:
         result_summary.update(
             {
@@ -981,6 +1011,7 @@ def solve_arc_with_flight_sanity(
     ball_candidate_sidecars: Sequence[Mapping[str, Any]] = (),
     candidate_extra_tracks: Mapping[str, Mapping[str, Any]] | None = None,
     extra_anchors: Sequence[AnchorEvent] = (),
+    soft_split_boundaries: Sequence[SoftSegmentBoundary] = (),
     write_events_selected: bool = True,
 ) -> BallArcSolverRun:
     """Solve arcs and immediately apply the render flight-sanity demotion gate."""
@@ -998,6 +1029,7 @@ def solve_arc_with_flight_sanity(
         rally_spans=rally_spans,
         net_plane=net_plane,
         extra_anchors=extra_anchors,
+        soft_split_boundaries=soft_split_boundaries,
         frame_times=frame_times,
         physics=physics,
         config=config,

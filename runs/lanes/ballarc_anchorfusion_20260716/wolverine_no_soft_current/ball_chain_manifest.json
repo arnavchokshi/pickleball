@@ -1,0 +1,101 @@
+{
+  "artifact_type": "racketsport_ball_chain_run_manifest",
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "configs": {
+    "product_veto": {
+      "veto_px": 40.0,
+      "weak_support_required": true
+    },
+    "solver_a_free": {
+      "candidate_association_mode": "free",
+      "candidate_score_floors": {},
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": true,
+      "enable_event_subset_selection": true,
+      "max_candidates_per_frame": 12
+    },
+    "solver_b_rescue_tn05": {
+      "candidate_association_mode": "rescue_only",
+      "candidate_score_floors": {
+        "tracknet": 0.5,
+        "wasb": 0.0
+      },
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": false,
+      "enable_event_subset_selection": false,
+      "max_candidates_per_frame": 12
+    }
+  },
+  "generated_at": "2026-07-16T00:00:00Z",
+  "heldout_authorized": false,
+  "inputs": {
+    "ball_candidates_0": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/ball_candidates.json",
+      "sha256": "12a392423cd929cec6cf1cfc443bfbfcfbe4a0107ecb2f95c31fcf2bcf68d568"
+    },
+    "ball_track": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+      "sha256": "fd33df9e48950c79777b80fbf6ae954e735761f2d3e4fa53d0d98fd9bc97a9c5"
+    },
+    "court_calibration": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+      "sha256": "fb4e6f7f54d2c40e2c7b491e436261f747240945a6f0d154c4dd943e28edbacf"
+    },
+    "frame_times": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/frame_times.json",
+      "sha256": "f67a8668c06f46bc06b55c466054cc7074736b8c4ed2a7caa5d0eeb6c909acde"
+    },
+    "net_plane": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    }
+  },
+  "net_plane_provenance": {
+    "consumed_net_plane": true,
+    "reason": "consumed"
+  },
+  "outputs": {
+    "auto_bounce_candidates": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/wolverine_no_soft_current/ball_bounce_candidates.json",
+      "sha256": "37b6b25aa010276da5cf16f426f7bb51b812dc2fb5f3cd779b5e7787e107e7e7"
+    },
+    "ball_arc_render": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/wolverine_no_soft_current/ball_arc_render.json",
+      "sha256": "aa596d50dae2d306b4c21c670353c4058e6896542d0e8e781cedc10500008a67"
+    },
+    "ball_flight_sanity": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/wolverine_no_soft_current/ball_flight_sanity.json",
+      "sha256": "ceb4f3ed19997964fa257b2a7e942d4357b9a38966ee5418624a0b2bb80ca9ba"
+    },
+    "ball_track_arc_solved": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/wolverine_no_soft_current/ball_track_arc_solved.json",
+      "sha256": "ee91dde09c36dc208252d7c7917b9de801160d01cb0a4827cff008f4c6623713"
+    },
+    "events_selected": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/wolverine_no_soft_current/events_selected.json",
+      "sha256": "98c358a05ea6e24705a49364a703556da4ceacea790134fef32a290b94b4c2ca"
+    }
+  },
+  "policy": {
+    "ball_arc_render_only": true,
+    "candidate_sidecars_consumed_when_present": true,
+    "net_plane_consumed_when_valid": true,
+    "outdoor_indoor_labels_read": false,
+    "render_only_3d": true,
+    "seed_anchor_prepass": false
+  },
+  "schema_version": 1,
+  "summary": {
+    "auto_bounce_candidate_count": 9,
+    "ball_arc_render_bridge_sample_count": 0,
+    "ball_arc_render_sample_count": 398,
+    "coverage_world_xyz_count": 300,
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 0,
+    "segment_count": 11,
+    "solver_status": "ran"
+  }
+}

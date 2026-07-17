@@ -1,0 +1,2994 @@
+{
+  "artifact_type": "racketsport_ball_candidates",
+  "candidate_prediction": true,
+  "fps": 30.0,
+  "frames": [
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1014.5487060546875,
+            262.4928283691406
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1014.6326293945312,
+            262.70245361328125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1014.8350830078125,
+            262.42437744140625
+          ]
+        }
+      ],
+      "frame": 0
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1005.27978515625,
+            267.21685791015625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1005.321533203125,
+            267.21405029296875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1005.3321533203125,
+            267.2193298339844
+          ]
+        }
+      ],
+      "frame": 1
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            996.25732421875,
+            272.7877197265625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            997.1642456054688,
+            272.4518737792969
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            997.3997802734375,
+            272.52337646484375
+          ]
+        }
+      ],
+      "frame": 2
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            987.7816772460938,
+            279.6614074707031
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            987.8677368164062,
+            279.3542175292969
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            987.9178466796875,
+            279.51226806640625
+          ]
+        }
+      ],
+      "frame": 3
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            977.5000610351562,
+            288.8046875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            978.72900390625,
+            287.4277038574219
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            978.8154296875,
+            286.7968444824219
+          ]
+        }
+      ],
+      "frame": 4
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            968.312255859375,
+            291.7096862792969
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            969.5567626953125,
+            295.20318603515625
+          ]
+        },
+        {
+          "score": 0.5063313245773315,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            967.5,
+            300.0
+          ]
+        }
+      ],
+      "frame": 5
+    },
+    {
+      "candidates": [],
+      "frame": 6
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            961.5477905273438,
+            294.4122619628906
+          ]
+        }
+      ],
+      "frame": 7
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            961.82275390625,
+            287.93927001953125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            962.2765502929688,
+            284.8946838378906
+          ]
+        }
+      ],
+      "frame": 8
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            962.82666015625,
+            282.095947265625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            963.0919189453125,
+            281.0532531738281
+          ]
+        }
+      ],
+      "frame": 9
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            962.2191772460938,
+            279.768798828125
+          ]
+        }
+      ],
+      "frame": 10
+    },
+    {
+      "candidates": [],
+      "frame": 11
+    },
+    {
+      "candidates": [],
+      "frame": 12
+    },
+    {
+      "candidates": [],
+      "frame": 13
+    },
+    {
+      "candidates": [],
+      "frame": 14
+    },
+    {
+      "candidates": [],
+      "frame": 15
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            957.4999389648438,
+            283.727783203125
+          ]
+        }
+      ],
+      "frame": 16
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            951.2686157226562,
+            280.0000305175781
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            951.7504272460938,
+            276.3075866699219
+          ]
+        }
+      ],
+      "frame": 17
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            938.7734985351562,
+            264.0313415527344
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            939.1522216796875,
+            265.4017333984375
+          ]
+        }
+      ],
+      "frame": 18
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            930.733154296875,
+            253.7684326171875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            930.9739990234375,
+            255.3302764892578
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            931.6131591796875,
+            253.54574584960938
+          ]
+        }
+      ],
+      "frame": 19
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            920.2711181640625,
+            244.60464477539062
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            920.467529296875,
+            244.73985290527344
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            920.587158203125,
+            244.84327697753906
+          ]
+        }
+      ],
+      "frame": 20
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            909.410400390625,
+            234.50807189941406
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            909.4395751953125,
+            234.56199645996094
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            909.7982177734375,
+            234.95277404785156
+          ]
+        }
+      ],
+      "frame": 21
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            895.9005126953125,
+            224.552978515625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            896.470458984375,
+            224.6908416748047
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            896.906005859375,
+            224.79196166992188
+          ]
+        }
+      ],
+      "frame": 22
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            884.2354736328125,
+            215.57464599609375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            884.4708251953125,
+            215.02340698242188
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            884.63818359375,
+            215.18568420410156
+          ]
+        }
+      ],
+      "frame": 23
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            870.3801879882812,
+            205.56155395507812
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            870.673828125,
+            205.97879028320312
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            870.8656005859375,
+            206.49087524414062
+          ]
+        }
+      ],
+      "frame": 24
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            855.7152709960938,
+            196.85296630859375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            855.735107421875,
+            197.2921905517578
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            855.8685302734375,
+            196.65158081054688
+          ]
+        }
+      ],
+      "frame": 25
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            840.1660766601562,
+            188.7989044189453
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            840.7198486328125,
+            188.77769470214844
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            841.4208984375,
+            187.5988006591797
+          ]
+        }
+      ],
+      "frame": 26
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            824.761962890625,
+            180.34194946289062
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            824.829833984375,
+            180.1219024658203
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            824.9948120117188,
+            179.99937438964844
+          ]
+        }
+      ],
+      "frame": 27
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            808.67138671875,
+            172.45103454589844
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            808.677734375,
+            172.14144897460938
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            808.7181396484375,
+            172.88116455078125
+          ]
+        }
+      ],
+      "frame": 28
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            790.019775390625,
+            167.38339233398438
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            790.0244750976562,
+            166.84068298339844
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            790.5166015625,
+            166.43861389160156
+          ]
+        }
+      ],
+      "frame": 29
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            771.0509643554688,
+            160.6903076171875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            771.946044921875,
+            160.02915954589844
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            771.9813232421875,
+            160.2921142578125
+          ]
+        }
+      ],
+      "frame": 30
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            751.1849975585938,
+            154.85504150390625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            751.9476318359375,
+            155.00311279296875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            752.040283203125,
+            154.9967803955078
+          ]
+        }
+      ],
+      "frame": 31
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            608.353759765625,
+            357.08544921875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            729.7066650390625,
+            151.49240112304688
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            729.8864135742188,
+            151.26806640625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            730.1666870117188,
+            150.9435272216797
+          ]
+        }
+      ],
+      "frame": 32
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            706.5516357421875,
+            146.80987548828125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            706.6799926757812,
+            147.49769592285156
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            707.4425048828125,
+            147.49652099609375
+          ]
+        }
+      ],
+      "frame": 33
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            681.7815551757812,
+            143.73492431640625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            682.1941528320312,
+            144.17051696777344
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            682.83203125,
+            144.29043579101562
+          ]
+        }
+      ],
+      "frame": 34
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            656.3187255859375,
+            143.65774536132812
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            656.3909912109375,
+            143.4945526123047
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            657.141845703125,
+            142.55738830566406
+          ]
+        }
+      ],
+      "frame": 35
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            628.6597900390625,
+            141.66561889648438
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            629.2377319335938,
+            143.6815948486328
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            629.7710571289062,
+            143.29273986816406
+          ]
+        }
+      ],
+      "frame": 36
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            599.677490234375,
+            142.83750915527344
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            600.2847900390625,
+            143.01515197753906
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            600.6244506835938,
+            143.77169799804688
+          ]
+        }
+      ],
+      "frame": 37
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            569.3009033203125,
+            144.27325439453125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            570.3655395507812,
+            144.31454467773438
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            570.6145629882812,
+            145.7188720703125
+          ]
+        }
+      ],
+      "frame": 38
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            534.2682495117188,
+            153.54066467285156
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            534.867919921875,
+            152.8298797607422
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            535.9600219726562,
+            153.06483459472656
+          ]
+        }
+      ],
+      "frame": 39
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            499.9334411621094,
+            156.42623901367188
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            501.21563720703125,
+            157.7113494873047
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            502.388427734375,
+            157.83078002929688
+          ]
+        }
+      ],
+      "frame": 40
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            462.5116271972656,
+            167.26242065429688
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            463.88043212890625,
+            167.6646270751953
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            466.2536926269531,
+            167.5
+          ]
+        }
+      ],
+      "frame": 41
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            424.2113952636719,
+            177.7702178955078
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            424.80181884765625,
+            176.85296630859375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            425.8240051269531,
+            176.69070434570312
+          ]
+        }
+      ],
+      "frame": 42
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            382.2723693847656,
+            189.7209014892578
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            383.23004150390625,
+            189.8604736328125
+          ]
+        }
+      ],
+      "frame": 43
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            335.3304748535156,
+            206.46620178222656
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            338.4068603515625,
+            205.01808166503906
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            944.0280151367188,
+            317.00140380859375
+          ]
+        }
+      ],
+      "frame": 44
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            292.1894226074219,
+            221.31532287597656
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            293.1618347167969,
+            220.2437744140625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            938.8540649414062,
+            316.24371337890625
+          ]
+        }
+      ],
+      "frame": 45
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            227.50001525878906,
+            243.77943420410156
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            238.8157958984375,
+            246.26112365722656
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            239.24655151367188,
+            244.97976684570312
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            936.8583984375,
+            315.3509216308594
+          ]
+        }
+      ],
+      "frame": 46
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1267.6165771484375,
+            206.2533416748047
+          ]
+        }
+      ],
+      "frame": 47
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            117.5,
+            303.7003173828125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            125.63758087158203,
+            302.4924621582031
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1256.830322265625,
+            203.1328125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1257.134765625,
+            202.24758911132812
+          ]
+        },
+        {
+          "score": 0.5266625285148621,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            130.0,
+            300.0
+          ]
+        }
+      ],
+      "frame": 48
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1245.1064453125,
+            197.36936950683594
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1245.2359619140625,
+            196.98504638671875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1245.308349609375,
+            197.3814239501953
+          ]
+        },
+        {
+          "score": 0.622651219367981,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            942.5,
+            320.0
+          ]
+        }
+      ],
+      "frame": 49
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            935.5761108398438,
+            320.943115234375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1232.370849609375,
+            193.0335693359375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1232.422119140625,
+            193.66256713867188
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1232.58349609375,
+            192.868408203125
+          ]
+        }
+      ],
+      "frame": 50
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1219.744140625,
+            187.41732788085938
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1220.12255859375,
+            188.15533447265625
+          ]
+        }
+      ],
+      "frame": 51
+    },
+    {
+      "candidates": [],
+      "frame": 52
+    },
+    {
+      "candidates": [],
+      "frame": 53
+    },
+    {
+      "candidates": [],
+      "frame": 54
+    },
+    {
+      "candidates": [],
+      "frame": 55
+    },
+    {
+      "candidates": [],
+      "frame": 56
+    },
+    {
+      "candidates": [],
+      "frame": 57
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1133.216796875,
+            150.63368225097656
+          ]
+        }
+      ],
+      "frame": 58
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1119.9044189453125,
+            147.39503479003906
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1120.0106201171875,
+            147.4099578857422
+          ]
+        }
+      ],
+      "frame": 59
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1107.7874755859375,
+            143.63043212890625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1108.29150390625,
+            143.468505859375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1108.610595703125,
+            143.74981689453125
+          ]
+        }
+      ],
+      "frame": 60
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1094.9114990234375,
+            139.93655395507812
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1094.95947265625,
+            140.1594696044922
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1095.027587890625,
+            140.04391479492188
+          ]
+        }
+      ],
+      "frame": 61
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1082.871826171875,
+            137.01768493652344
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1083.04541015625,
+            137.4405975341797
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1083.1993408203125,
+            137.7842559814453
+          ]
+        }
+      ],
+      "frame": 62
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1069.678955078125,
+            133.28225708007812
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1069.697021484375,
+            133.38284301757812
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1069.947265625,
+            134.36984252929688
+          ]
+        }
+      ],
+      "frame": 63
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            5.000000476837158,
+            427.4662780761719
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1057.347900390625,
+            129.78912353515625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1057.579833984375,
+            130.13858032226562
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1057.593017578125,
+            129.89874267578125
+          ]
+        }
+      ],
+      "frame": 64
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1044.66259765625,
+            127.68341064453125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1044.94091796875,
+            127.43214416503906
+          ]
+        }
+      ],
+      "frame": 65
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1030.6729736328125,
+            123.69859313964844
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1031.16552734375,
+            124.60121154785156
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1035.0,
+            123.74419403076172
+          ]
+        },
+        {
+          "score": 0.5753147602081299,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1027.5,
+            122.5
+          ]
+        }
+      ],
+      "frame": 66
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1016.9064331054688,
+            120.6142349243164
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1017.0784912109375,
+            121.29563903808594
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1018.2015991210938,
+            120.63800048828125
+          ]
+        },
+        {
+          "score": 0.5338779091835022,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            30.0,
+            420.0
+          ]
+        }
+      ],
+      "frame": 67
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            41.2611083984375,
+            423.77880859375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1004.8947143554688,
+            118.40322875976562
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1006.1737060546875,
+            119.98507690429688
+          ]
+        }
+      ],
+      "frame": 68
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            53.734657287597656,
+            430.0
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1001.3335571289062,
+            119.99999237060547
+          ]
+        },
+        {
+          "score": 0.525748074054718,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1002.5,
+            115.0
+          ]
+        },
+        {
+          "score": 0.5089297890663147,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            52.5,
+            435.0
+          ]
+        }
+      ],
+      "frame": 69
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            55.0,
+            440.0379943847656
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            62.42185592651367,
+            440.0
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            63.71959686279297,
+            436.23370361328125
+          ]
+        }
+      ],
+      "frame": 70
+    },
+    {
+      "candidates": [],
+      "frame": 71
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            78.77503967285156,
+            460.84405517578125
+          ]
+        }
+      ],
+      "frame": 72
+    },
+    {
+      "candidates": [],
+      "frame": 73
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            99.03514099121094,
+            482.76171875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            102.5509033203125,
+            481.23828125
+          ]
+        },
+        {
+          "score": 0.5040185451507568,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            107.5,
+            480.0
+          ]
+        }
+      ],
+      "frame": 74
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            111.29749298095703,
+            479.9999694824219
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            114.065673828125,
+            476.5213623046875
+          ]
+        },
+        {
+          "score": 0.5074365139007568,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            112.5,
+            480.0
+          ]
+        }
+      ],
+      "frame": 75
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            118.69508361816406,
+            464.99920654296875
+          ]
+        }
+      ],
+      "frame": 76
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            120.212890625,
+            454.7015075683594
+          ]
+        },
+        {
+          "score": 0.5145707726478577,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            125.0,
+            455.0
+          ]
+        }
+      ],
+      "frame": 77
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            122.5,
+            446.22808837890625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            123.98115539550781,
+            444.3670654296875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            132.251220703125,
+            446.5719299316406
+          ]
+        },
+        {
+          "score": 0.5116158723831177,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            125.0,
+            447.5
+          ]
+        }
+      ],
+      "frame": 78
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            127.79441833496094,
+            435.3784484863281
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            131.36074829101562,
+            436.3913269042969
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            136.6658935546875,
+            439.17364501953125
+          ]
+        },
+        {
+          "score": 0.534315824508667,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            130.0,
+            437.5
+          ]
+        },
+        {
+          "score": 0.5105705261230469,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            140.0,
+            437.5
+          ]
+        }
+      ],
+      "frame": 79
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            136.44845581054688,
+            430.7933349609375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            138.30836486816406,
+            434.46075439453125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            139.43214416503906,
+            431.92254638671875
+          ]
+        },
+        {
+          "score": 0.5402799248695374,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            862.5,
+            85.0
+          ]
+        }
+      ],
+      "frame": 80
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            145.0366973876953,
+            432.4766540527344
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            145.34022521972656,
+            428.0213623046875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            148.29959106445312,
+            430.76177978515625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            854.9984130859375,
+            84.92498779296875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            855.089111328125,
+            84.91923522949219
+          ]
+        }
+      ],
+      "frame": 81
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            151.21609497070312,
+            431.83514404296875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            154.74203491210938,
+            428.0888671875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            157.18994140625,
+            429.12274169921875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            845.0060424804688,
+            80.49869537353516
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            845.6925048828125,
+            81.6895751953125
+          ]
+        }
+      ],
+      "frame": 82
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            157.6644287109375,
+            433.3424072265625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            162.54798889160156,
+            427.5233154296875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            163.72109985351562,
+            430.76611328125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            835.0051879882812,
+            77.81732177734375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            835.2224731445312,
+            78.36996459960938
+          ]
+        }
+      ],
+      "frame": 83
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            164.70172119140625,
+            434.6824951171875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            171.04469299316406,
+            432.4886779785156
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            172.41281127929688,
+            432.980712890625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            825.4177856445312,
+            75.84258270263672
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            826.6863403320312,
+            75.59896850585938
+          ]
+        }
+      ],
+      "frame": 84
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            171.0975799560547,
+            440.04913330078125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            177.5321044921875,
+            436.6661071777344
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            178.11044311523438,
+            435.8996887207031
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            817.8600463867188,
+            72.56092834472656
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            817.9181518554688,
+            72.30833435058594
+          ]
+        }
+      ],
+      "frame": 85
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            179.4440460205078,
+            445.987060546875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            182.50534057617188,
+            444.40997314453125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            182.9563751220703,
+            442.4599609375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            810.3565063476562,
+            69.56816864013672
+          ]
+        },
+        {
+          "score": 0.5425094962120056,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            810.0,
+            67.5
+          ]
+        }
+      ],
+      "frame": 86
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            190.81224060058594,
+            450.8165283203125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            802.1734619140625,
+            64.08116912841797
+          ]
+        },
+        {
+          "score": 0.5180219411849976,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            187.5,
+            452.5
+          ]
+        }
+      ],
+      "frame": 87
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            196.92819213867188,
+            458.3667297363281
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            199.30494689941406,
+            461.0276794433594
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            794.0607299804688,
+            58.038482666015625
+          ]
+        }
+      ],
+      "frame": 88
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            198.4527587890625,
+            449.2483215332031
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            200.22296142578125,
+            448.9526062011719
+          ]
+        }
+      ],
+      "frame": 89
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            200.02488708496094,
+            441.1088562011719
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            202.49159240722656,
+            440.9614562988281
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            203.95379638671875,
+            442.8430480957031
+          ]
+        }
+      ],
+      "frame": 90
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            205.12933349609375,
+            435.1884765625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            206.2521209716797,
+            440.0
+          ]
+        },
+        {
+          "score": 0.5095233917236328,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            207.5,
+            435.0
+          ]
+        }
+      ],
+      "frame": 91
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            209.10887145996094,
+            433.13677978515625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            211.27198791503906,
+            431.2082214355469
+          ]
+        }
+      ],
+      "frame": 92
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            212.51211547851562,
+            426.4990539550781
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            213.08433532714844,
+            430.7803649902344
+          ]
+        },
+        {
+          "score": 0.5051419734954834,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            220.0,
+            430.0
+          ]
+        }
+      ],
+      "frame": 93
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            218.33834838867188,
+            425.82177734375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            220.00001525878906,
+            428.779052734375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            221.50604248046875,
+            429.51800537109375
+          ]
+        }
+      ],
+      "frame": 94
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            222.5,
+            428.7198181152344
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            227.49998474121094,
+            428.7475280761719
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            268.4815979003906,
+            293.5586853027344
+          ]
+        }
+      ],
+      "frame": 95
+    },
+    {
+      "candidates": [],
+      "frame": 96
+    },
+    {
+      "candidates": [],
+      "frame": 97
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            236.5284423828125,
+            441.5096435546875
+          ]
+        }
+      ],
+      "frame": 98
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            242.10675048828125,
+            437.11895751953125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            242.56109619140625,
+            435.87200927734375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1010.0000610351562,
+            271.231201171875
+          ]
+        },
+        {
+          "score": 0.5351654291152954,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1005.0,
+            272.5
+          ]
+        }
+      ],
+      "frame": 99
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            242.10009765625,
+            430.07867431640625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            242.50486755371094,
+            429.5228271484375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            243.1132354736328,
+            431.5684509277344
+          ]
+        }
+      ],
+      "frame": 100
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            243.57504272460938,
+            428.01885986328125
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            244.4736328125,
+            424.45654296875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            244.8837890625,
+            426.1802673339844
+          ]
+        }
+      ],
+      "frame": 101
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            247.24761962890625,
+            424.16943359375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            247.74343872070312,
+            424.142333984375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            248.724853515625,
+            423.7483215332031
+          ]
+        }
+      ],
+      "frame": 102
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            248.7828369140625,
+            423.4793395996094
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            249.67913818359375,
+            422.1392822265625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            251.7123565673828,
+            421.2891845703125
+          ]
+        }
+      ],
+      "frame": 103
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            252.5,
+            421.2408142089844
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            256.4425048828125,
+            422.78082275390625
+          ]
+        }
+      ],
+      "frame": 104
+    },
+    {
+      "candidates": [],
+      "frame": 105
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            257.85504150390625,
+            426.4152526855469
+          ]
+        }
+      ],
+      "frame": 106
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            263.2010192871094,
+            432.572021484375
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            266.590087890625,
+            430.35986328125
+          ]
+        }
+      ],
+      "frame": 107
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            262.810546875,
+            426.36688232421875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            264.4421691894531,
+            426.310546875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            267.0237731933594,
+            425.56292724609375
+          ]
+        }
+      ],
+      "frame": 108
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            265.92144775390625,
+            422.2293395996094
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            266.56231689453125,
+            421.54168701171875
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            267.091796875,
+            424.2841796875
+          ]
+        }
+      ],
+      "frame": 109
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            266.2611999511719,
+            421.2596130371094
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            266.29473876953125,
+            421.20416259765625
+          ]
+        },
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            268.749755859375,
+            418.8284606933594
+          ]
+        }
+      ],
+      "frame": 110
+    },
+    {
+      "candidates": [
+        {
+          "score": 0.525953471660614,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            272.5,
+            420.0
+          ]
+        }
+      ],
+      "frame": 111
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            271.28082275390625,
+            420.0
+          ]
+        }
+      ],
+      "frame": 112
+    },
+    {
+      "candidates": [],
+      "frame": 113
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1016.35400390625,
+            300.6190185546875
+          ]
+        }
+      ],
+      "frame": 114
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1018.230224609375,
+            298.853271484375
+          ]
+        }
+      ],
+      "frame": 115
+    },
+    {
+      "candidates": [
+        {
+          "score": 1.0,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1018.7523803710938,
+            300.298583984375
+          ]
+        },
+        {
+          "score": 0.5064995288848877,
+          "source_detector": "wasb_concomp",
+          "xy": [
+            1020.0,
+            297.5
+          ]
+        }
+      ],
+      "frame": 116
+    },
+    {
+      "candidates": [],
+      "frame": 117
+    },
+    {
+      "candidates": [],
+      "frame": 118
+    },
+    {
+      "candidates": [],
+      "frame": 119
+    },
+    {
+      "candidates": [],
+      "frame": 120
+    },
+    {
+      "candidates": [],
+      "frame": 121
+    },
+    {
+      "candidates": [],
+      "frame": 122
+    },
+    {
+      "candidates": [],
+      "frame": 123
+    },
+    {
+      "candidates": [],
+      "frame": 124
+    },
+    {
+      "candidates": [],
+      "frame": 125
+    },
+    {
+      "candidates": [],
+      "frame": 126
+    },
+    {
+      "candidates": [],
+      "frame": 127
+    },
+    {
+      "candidates": [],
+      "frame": 128
+    },
+    {
+      "candidates": [],
+      "frame": 129
+    },
+    {
+      "candidates": [],
+      "frame": 130
+    },
+    {
+      "candidates": [],
+      "frame": 131
+    },
+    {
+      "candidates": [],
+      "frame": 132
+    },
+    {
+      "candidates": [],
+      "frame": 133
+    },
+    {
+      "candidates": [],
+      "frame": 134
+    },
+    {
+      "candidates": [],
+      "frame": 135
+    },
+    {
+      "candidates": [],
+      "frame": 136
+    },
+    {
+      "candidates": [],
+      "frame": 137
+    },
+    {
+      "candidates": [],
+      "frame": 138
+    },
+    {
+      "candidates": [],
+      "frame": 139
+    },
+    {
+      "candidates": [],
+      "frame": 140
+    },
+    {
+      "candidates": [],
+      "frame": 141
+    },
+    {
+      "candidates": [],
+      "frame": 142
+    },
+    {
+      "candidates": [],
+      "frame": 143
+    },
+    {
+      "candidates": [],
+      "frame": 144
+    },
+    {
+      "candidates": [],
+      "frame": 145
+    },
+    {
+      "candidates": [],
+      "frame": 146
+    },
+    {
+      "candidates": [],
+      "frame": 147
+    },
+    {
+      "candidates": [],
+      "frame": 148
+    },
+    {
+      "candidates": [],
+      "frame": 149
+    }
+  ],
+  "input_preprocessing": "official",
+  "max_candidates_per_frame": 5,
+  "nms_radius_px": null,
+  "not_ground_truth": true,
+  "primary_output": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_pbv11r_rerun_20260715/pbvision_11min_20260713/ball_track.json",
+  "provenance": {
+    "blob_det_method": "concomp",
+    "input_preprocessing": "official",
+    "postprocessor": "TracknetV2Postprocessor",
+    "video": "/home/arnavchokshi/pbv11r_work/source_video.mp4",
+    "wasb_checkpoint": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+    "wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT"
+  },
+  "schema_version": 1,
+  "source": "wasb",
+  "source_mode": "wasb_predict"
+}

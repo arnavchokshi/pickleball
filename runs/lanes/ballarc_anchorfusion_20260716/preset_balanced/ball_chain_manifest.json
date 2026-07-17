@@ -1,0 +1,3910 @@
+{
+  "artifact_type": "racketsport_ball_chain_run_manifest",
+  "clip": "pbvision_11min_20260713",
+  "configs": {
+    "product_veto": {
+      "veto_px": 40.0,
+      "weak_support_required": true
+    },
+    "solver_a_free": {
+      "candidate_association_mode": "free",
+      "candidate_score_floors": {},
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": true,
+      "enable_event_subset_selection": true,
+      "max_candidates_per_frame": 12
+    },
+    "solver_b_rescue_tn05": {
+      "candidate_association_mode": "rescue_only",
+      "candidate_score_floors": {
+        "tracknet": 0.5,
+        "wasb": 0.0
+      },
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": false,
+      "enable_event_subset_selection": false,
+      "max_candidates_per_frame": 12
+    }
+  },
+  "degraded_reasons": [
+    {
+      "evidence_provenance": "missing",
+      "reason": "segment_budget_exceeded",
+      "segment_ids": [
+        0,
+        1,
+        2,
+        5,
+        6,
+        8,
+        12,
+        13,
+        14,
+        15,
+        18,
+        19,
+        20,
+        22,
+        25,
+        27,
+        29,
+        30,
+        31,
+        32,
+        35,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        47,
+        48,
+        53,
+        55,
+        58,
+        61,
+        62,
+        63,
+        65,
+        66,
+        67,
+        69,
+        70,
+        74,
+        76,
+        77,
+        78,
+        80,
+        83,
+        84,
+        85,
+        90,
+        91,
+        93,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        107,
+        109,
+        110,
+        111,
+        112,
+        113,
+        114,
+        116,
+        117,
+        118,
+        119,
+        122,
+        124,
+        125,
+        127,
+        130,
+        131,
+        134,
+        135,
+        136,
+        139,
+        143,
+        144,
+        145,
+        147,
+        148,
+        150,
+        151,
+        152,
+        154,
+        155,
+        160,
+        161,
+        162,
+        163,
+        164,
+        166,
+        167,
+        169,
+        170,
+        173,
+        174,
+        175,
+        176,
+        177,
+        178,
+        180,
+        181,
+        183,
+        190,
+        192,
+        194,
+        195,
+        196,
+        197,
+        199,
+        200,
+        201,
+        202,
+        203,
+        204,
+        205,
+        208,
+        209,
+        211,
+        212,
+        214,
+        215,
+        216,
+        217,
+        218,
+        219,
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        226,
+        227,
+        228,
+        229,
+        230,
+        231,
+        232,
+        233,
+        234,
+        235,
+        236,
+        237,
+        238,
+        239,
+        240,
+        241,
+        242,
+        243,
+        244,
+        245,
+        246,
+        247,
+        248,
+        249,
+        250,
+        251,
+        252,
+        253,
+        254,
+        255,
+        256,
+        257,
+        258,
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        266,
+        267,
+        268,
+        269,
+        270,
+        271,
+        272,
+        273,
+        274,
+        275,
+        276,
+        277,
+        278,
+        279,
+        280,
+        281,
+        282,
+        283,
+        284,
+        285,
+        286,
+        287,
+        288,
+        289,
+        290,
+        291,
+        292,
+        293,
+        294,
+        295,
+        296,
+        297,
+        298,
+        299,
+        300,
+        301,
+        302,
+        303,
+        304,
+        305,
+        306,
+        307,
+        308,
+        309,
+        310,
+        311,
+        312,
+        313,
+        314,
+        315,
+        316,
+        317,
+        318,
+        319,
+        320,
+        321,
+        322,
+        323,
+        324,
+        325,
+        326,
+        327,
+        328,
+        329,
+        330,
+        331,
+        332,
+        333,
+        334,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341,
+        342,
+        343,
+        344,
+        345,
+        346,
+        347,
+        348,
+        349,
+        350,
+        351,
+        352,
+        353,
+        354,
+        355,
+        356,
+        357,
+        358,
+        359,
+        360
+      ]
+    }
+  ],
+  "generated_at": "2026-07-16T00:00:00Z",
+  "heldout_authorized": false,
+  "inputs": {
+    "ball_candidates_0": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/pbvision_11min_20260713/ball_candidates.json",
+      "sha256": "26af039bd1b246923533cd8cfa9430721216a0b2eaa9536151e27eec426200e9"
+    },
+    "ball_track": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/pbvision_11min_20260713/ball_track.json",
+      "sha256": "d13951adb3e67e77d8424b64d0fce21d3899019a730d5affae4e6795b2341359"
+    },
+    "court_calibration": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/pbvision_11min_20260713/court_calibration.json",
+      "sha256": "2a17d7945836254dd982a74cbe0b5533aa90ef019d657d8b1fb964a853f4208b"
+    },
+    "frame_times": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/pbvision_11min_20260713/frame_times.json",
+      "sha256": "3de16760f9b680b7c51a48bbd07430d4322664cbd5c9d1337f13abc2d936b643"
+    },
+    "net_plane": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/vm_pull_partial/pbvision_11min_20260713/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    }
+  },
+  "net_plane_provenance": {
+    "consumed_net_plane": true,
+    "reason": "consumed"
+  },
+  "outputs": {
+    "auto_bounce_candidates": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/preset_balanced/ball_bounce_candidates.json",
+      "sha256": "13333d6921207bc5dda6a9498c8235367014499b8c997b28b915294cd2239b29"
+    },
+    "ball_arc_render": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/preset_balanced/ball_arc_render.json",
+      "sha256": "a1066cce739c0d8f9b4e0c7cf20d5660584e20e6504c4da3d49761bde0eacf85"
+    },
+    "ball_flight_sanity": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/preset_balanced/ball_flight_sanity.json",
+      "sha256": "1ddea69dfaca920823a8edc032be346995438fe8ba998ec119561218f5885e60"
+    },
+    "ball_track_arc_solved": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_anchorfusion_20260716/preset_balanced/ball_track_arc_solved.json",
+      "sha256": "db8e7246f4e416bd89797a57c4d3c1ba354054455a123de4d7a83dcbf3bedeb5"
+    }
+  },
+  "policy": {
+    "audio_onset_soft_split_default_off": true,
+    "audio_onset_soft_split_not_event_evidence": true,
+    "ball_arc_render_only": true,
+    "candidate_sidecars_consumed_when_present": true,
+    "net_plane_consumed_when_valid": true,
+    "outdoor_indoor_labels_read": false,
+    "render_only_3d": true,
+    "seed_anchor_prepass": false
+  },
+  "schema_version": 1,
+  "soft_split_input": {
+    "allowed_role": "segment_split_boundary_only",
+    "anchor_class": "audio_onset_soft",
+    "applied_count": 196,
+    "boundaries": [
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0001",
+        "corrected_time_s": 1.26066682,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 38,
+        "onset_ids": [
+          "onset_0001"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0007",
+        "corrected_time_s": 3.974915709,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 119,
+        "onset_ids": [
+          "onset_0007"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0015",
+        "corrected_time_s": 9.387730158,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 282,
+        "onset_ids": [
+          "onset_0015"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0021",
+        "corrected_time_s": 11.74015854,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 352,
+        "onset_ids": [
+          "onset_0021"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0032",
+        "corrected_time_s": 15.531301469,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 466,
+        "onset_ids": [
+          "onset_0032"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0042",
+        "corrected_time_s": 19.611181905,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 588,
+        "onset_ids": [
+          "onset_0042"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0049",
+        "corrected_time_s": 21.648670307,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 649,
+        "onset_ids": [
+          "onset_0049"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0065",
+        "corrected_time_s": 26.221949433,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 787,
+        "onset_ids": [
+          "onset_0065"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0071",
+        "corrected_time_s": 28.092104676,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 843,
+        "onset_ids": [
+          "onset_0071"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0080",
+        "corrected_time_s": 30.116085409,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 903,
+        "onset_ids": [
+          "onset_0080"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0094",
+        "corrected_time_s": 34.960957364,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 1049,
+        "onset_ids": [
+          "onset_0094"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0105",
+        "corrected_time_s": 39.377291386,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 1181,
+        "onset_ids": [
+          "onset_0105"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0117",
+        "corrected_time_s": 42.800941527,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 1284,
+        "onset_ids": [
+          "onset_0117"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0122",
+        "corrected_time_s": 45.273516933,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 1358,
+        "onset_ids": [
+          "onset_0122"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0130",
+        "corrected_time_s": 47.957249242,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 1439,
+        "onset_ids": [
+          "onset_0130"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0145",
+        "corrected_time_s": 52.323443512,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 1570,
+        "onset_ids": [
+          "onset_0145"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0159",
+        "corrected_time_s": 55.221145932,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 1657,
+        "onset_ids": [
+          "onset_0159"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0164",
+        "corrected_time_s": 57.387322443,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 1722,
+        "onset_ids": [
+          "onset_0164"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0175",
+        "corrected_time_s": 61.618156751,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 1849,
+        "onset_ids": [
+          "onset_0175"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0195",
+        "corrected_time_s": 67.696043501,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2031,
+        "onset_ids": [
+          "onset_0195"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0202",
+        "corrected_time_s": 69.52424966,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2086,
+        "onset_ids": [
+          "onset_0202"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0205",
+        "corrected_time_s": 71.425823447,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2143,
+        "onset_ids": [
+          "onset_0205"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0222",
+        "corrected_time_s": 74.520915098,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2236,
+        "onset_ids": [
+          "onset_0222"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0231",
+        "corrected_time_s": 77.895215421,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2337,
+        "onset_ids": [
+          "onset_0231"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0241",
+        "corrected_time_s": 82.362968955,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2471,
+        "onset_ids": [
+          "onset_0241"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0248",
+        "corrected_time_s": 85.287049346,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2559,
+        "onset_ids": [
+          "onset_0248"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0260",
+        "corrected_time_s": 87.684231484,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2631,
+        "onset_ids": [
+          "onset_0260"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0268",
+        "corrected_time_s": 89.993651021,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2700,
+        "onset_ids": [
+          "onset_0268"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0284",
+        "corrected_time_s": 93.213863951,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2796,
+        "onset_ids": [
+          "onset_0284"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0299",
+        "corrected_time_s": 96.611951277,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 2898,
+        "onset_ids": [
+          "onset_0299"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0317",
+        "corrected_time_s": 100.387023829,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3012,
+        "onset_ids": [
+          "onset_0317"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0325",
+        "corrected_time_s": 102.299174501,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3069,
+        "onset_ids": [
+          "onset_0325"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0332",
+        "corrected_time_s": 104.397958762,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3132,
+        "onset_ids": [
+          "onset_0332"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0342",
+        "corrected_time_s": 106.752981642,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3203,
+        "onset_ids": [
+          "onset_0342"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0357",
+        "corrected_time_s": 111.252980076,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3338,
+        "onset_ids": [
+          "onset_0357"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0362",
+        "corrected_time_s": 113.942090724,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3418,
+        "onset_ids": [
+          "onset_0362"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0367",
+        "corrected_time_s": 115.975117306,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3479,
+        "onset_ids": [
+          "onset_0367"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0377",
+        "corrected_time_s": 118.478671745,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3554,
+        "onset_ids": [
+          "onset_0377"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0388",
+        "corrected_time_s": 120.917797946,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3628,
+        "onset_ids": [
+          "onset_0388"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0395",
+        "corrected_time_s": 122.690168774,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3681,
+        "onset_ids": [
+          "onset_0395"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0402",
+        "corrected_time_s": 125.065636067,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3752,
+        "onset_ids": [
+          "onset_0402"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0412",
+        "corrected_time_s": 128.309294653,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3849,
+        "onset_ids": [
+          "onset_0412"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0424",
+        "corrected_time_s": 130.364970078,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 3911,
+        "onset_ids": [
+          "onset_0424"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0439",
+        "corrected_time_s": 133.400778927,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4002,
+        "onset_ids": [
+          "onset_0439"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0454",
+        "corrected_time_s": 136.558988687,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4097,
+        "onset_ids": [
+          "onset_0454"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0470",
+        "corrected_time_s": 140.094339523,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4203,
+        "onset_ids": [
+          "onset_0470"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0477",
+        "corrected_time_s": 141.95539169,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4259,
+        "onset_ids": [
+          "onset_0477"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0495",
+        "corrected_time_s": 144.996276969,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4350,
+        "onset_ids": [
+          "onset_0495"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0500",
+        "corrected_time_s": 147.122662539,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4414,
+        "onset_ids": [
+          "onset_0500"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0504",
+        "corrected_time_s": 149.372012032,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4481,
+        "onset_ids": [
+          "onset_0504"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0517",
+        "corrected_time_s": 154.374165817,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4631,
+        "onset_ids": [
+          "onset_0517"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0524",
+        "corrected_time_s": 156.725220714,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4702,
+        "onset_ids": [
+          "onset_0524"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0531",
+        "corrected_time_s": 158.595728955,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4758,
+        "onset_ids": [
+          "onset_0531"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0544",
+        "corrected_time_s": 161.343085476,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 4840,
+        "onset_ids": [
+          "onset_0544"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0562",
+        "corrected_time_s": 167.708671111,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5031,
+        "onset_ids": [
+          "onset_0562"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0571",
+        "corrected_time_s": 170.399004006,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5112,
+        "onset_ids": [
+          "onset_0571"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0586",
+        "corrected_time_s": 173.037076602,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5191,
+        "onset_ids": [
+          "onset_0586"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0592",
+        "corrected_time_s": 175.00408453,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5250,
+        "onset_ids": [
+          "onset_0592"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0598",
+        "corrected_time_s": 177.156071904,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5315,
+        "onset_ids": [
+          "onset_0598"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0607",
+        "corrected_time_s": 179.371436491,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5381,
+        "onset_ids": [
+          "onset_0607"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0616",
+        "corrected_time_s": 181.566160565,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5447,
+        "onset_ids": [
+          "onset_0616"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0628",
+        "corrected_time_s": 184.811889169,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5544,
+        "onset_ids": [
+          "onset_0628"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0639",
+        "corrected_time_s": 187.111860151,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5613,
+        "onset_ids": [
+          "onset_0639"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0646",
+        "corrected_time_s": 190.305455493,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5709,
+        "onset_ids": [
+          "onset_0646"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0657",
+        "corrected_time_s": 192.810081038,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5784,
+        "onset_ids": [
+          "onset_0657"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0665",
+        "corrected_time_s": 194.659150923,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5840,
+        "onset_ids": [
+          "onset_0665"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0676",
+        "corrected_time_s": 197.709787904,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5931,
+        "onset_ids": [
+          "onset_0676"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0681",
+        "corrected_time_s": 199.663348067,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 5990,
+        "onset_ids": [
+          "onset_0681"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0695",
+        "corrected_time_s": 203.661308519,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6110,
+        "onset_ids": [
+          "onset_0695"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0706",
+        "corrected_time_s": 206.075991832,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6182,
+        "onset_ids": [
+          "onset_0706"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0716",
+        "corrected_time_s": 208.357977072,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6251,
+        "onset_ids": [
+          "onset_0716"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0723",
+        "corrected_time_s": 211.620951832,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6349,
+        "onset_ids": [
+          "onset_0723"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0732",
+        "corrected_time_s": 215.803199453,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6474,
+        "onset_ids": [
+          "onset_0732"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0746",
+        "corrected_time_s": 218.421194707,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6553,
+        "onset_ids": [
+          "onset_0746"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0760",
+        "corrected_time_s": 221.325230718,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6640,
+        "onset_ids": [
+          "onset_0760"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0770",
+        "corrected_time_s": 223.248519054,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6697,
+        "onset_ids": [
+          "onset_0770"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0782",
+        "corrected_time_s": 226.691076498,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6801,
+        "onset_ids": [
+          "onset_0782"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0808",
+        "corrected_time_s": 232.797135749,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 6984,
+        "onset_ids": [
+          "onset_0808"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0822",
+        "corrected_time_s": 235.616065232,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7068,
+        "onset_ids": [
+          "onset_0822"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0832",
+        "corrected_time_s": 237.941955813,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7138,
+        "onset_ids": [
+          "onset_0832"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0843",
+        "corrected_time_s": 240.208052701,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7206,
+        "onset_ids": [
+          "onset_0843"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0853",
+        "corrected_time_s": 242.488447533,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7275,
+        "onset_ids": [
+          "onset_0853"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0866",
+        "corrected_time_s": 245.311010943,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7359,
+        "onset_ids": [
+          "onset_0866"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0873",
+        "corrected_time_s": 247.218818318,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7417,
+        "onset_ids": [
+          "onset_0873"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0892",
+        "corrected_time_s": 251.750787704,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7553,
+        "onset_ids": [
+          "onset_0892"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0915",
+        "corrected_time_s": 256.767956341,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7703,
+        "onset_ids": [
+          "onset_0915"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0924",
+        "corrected_time_s": 259.087967351,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7773,
+        "onset_ids": [
+          "onset_0924"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0937",
+        "corrected_time_s": 260.893462238,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7827,
+        "onset_ids": [
+          "onset_0937"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0948",
+        "corrected_time_s": 263.853854892,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 7916,
+        "onset_ids": [
+          "onset_0948"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0964",
+        "corrected_time_s": 267.058651518,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8012,
+        "onset_ids": [
+          "onset_0964"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0982",
+        "corrected_time_s": 271.016158274,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8130,
+        "onset_ids": [
+          "onset_0982"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_0996",
+        "corrected_time_s": 274.012243749,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8220,
+        "onset_ids": [
+          "onset_0996"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1017",
+        "corrected_time_s": 279.594150002,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8388,
+        "onset_ids": [
+          "onset_1017"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1030",
+        "corrected_time_s": 283.156927201,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8495,
+        "onset_ids": [
+          "onset_1030"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1040",
+        "corrected_time_s": 286.539088459,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8596,
+        "onset_ids": [
+          "onset_1040"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1050",
+        "corrected_time_s": 289.237902879,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8677,
+        "onset_ids": [
+          "onset_1050"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1060",
+        "corrected_time_s": 291.517845227,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8746,
+        "onset_ids": [
+          "onset_1060"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1076",
+        "corrected_time_s": 296.501226162,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8895,
+        "onset_ids": [
+          "onset_1076"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1085",
+        "corrected_time_s": 299.84407886,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 8995,
+        "onset_ids": [
+          "onset_1085"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1095",
+        "corrected_time_s": 303.436952702,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 9103,
+        "onset_ids": [
+          "onset_1095"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1112",
+        "corrected_time_s": 307.481327728,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 9224,
+        "onset_ids": [
+          "onset_1112"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1122",
+        "corrected_time_s": 311.337123495,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 9340,
+        "onset_ids": [
+          "onset_1122"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1143",
+        "corrected_time_s": 316.402947558,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 9492,
+        "onset_ids": [
+          "onset_1143"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1149",
+        "corrected_time_s": 319.867022032,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 9596,
+        "onset_ids": [
+          "onset_1149"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1160",
+        "corrected_time_s": 323.466063198,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 9704,
+        "onset_ids": [
+          "onset_1160"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1173",
+        "corrected_time_s": 326.729334647,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 9802,
+        "onset_ids": [
+          "onset_1173"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1193",
+        "corrected_time_s": 331.736900536,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 9952,
+        "onset_ids": [
+          "onset_1193"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1202",
+        "corrected_time_s": 333.713022078,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 10011,
+        "onset_ids": [
+          "onset_1202"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1214",
+        "corrected_time_s": 337.865031307,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 10136,
+        "onset_ids": [
+          "onset_1214"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1220",
+        "corrected_time_s": 344.807968878,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 10344,
+        "onset_ids": [
+          "onset_1220"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1227",
+        "corrected_time_s": 347.356949775,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 10421,
+        "onset_ids": [
+          "onset_1227"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1233",
+        "corrected_time_s": 350.304877454,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 10509,
+        "onset_ids": [
+          "onset_1233"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1237",
+        "corrected_time_s": 354.233087643,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 10627,
+        "onset_ids": [
+          "onset_1237"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1255",
+        "corrected_time_s": 361.152982523,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 10835,
+        "onset_ids": [
+          "onset_1255"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1265",
+        "corrected_time_s": 363.749941882,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 10912,
+        "onset_ids": [
+          "onset_1265"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1297",
+        "corrected_time_s": 370.991487787,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 11130,
+        "onset_ids": [
+          "onset_1297"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1314",
+        "corrected_time_s": 375.585206567,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 11268,
+        "onset_ids": [
+          "onset_1314"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1326",
+        "corrected_time_s": 382.894054365,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 11487,
+        "onset_ids": [
+          "onset_1326"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1338",
+        "corrected_time_s": 385.637833055,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 11569,
+        "onset_ids": [
+          "onset_1338"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1347",
+        "corrected_time_s": 387.519201537,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 11626,
+        "onset_ids": [
+          "onset_1347"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1357",
+        "corrected_time_s": 389.71007613,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 11691,
+        "onset_ids": [
+          "onset_1357"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1366",
+        "corrected_time_s": 391.998690913,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 11760,
+        "onset_ids": [
+          "onset_1366"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1422",
+        "corrected_time_s": 407.532694814,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 12226,
+        "onset_ids": [
+          "onset_1422"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1434",
+        "corrected_time_s": 410.201172347,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 12306,
+        "onset_ids": [
+          "onset_1434"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1445",
+        "corrected_time_s": 413.392057356,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 12402,
+        "onset_ids": [
+          "onset_1445"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1455",
+        "corrected_time_s": 417.442904057,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 12523,
+        "onset_ids": [
+          "onset_1455"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1462",
+        "corrected_time_s": 419.586355435,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 12588,
+        "onset_ids": [
+          "onset_1462"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1474",
+        "corrected_time_s": 422.65399616,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 12680,
+        "onset_ids": [
+          "onset_1474"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1502",
+        "corrected_time_s": 429.322023672,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 12880,
+        "onset_ids": [
+          "onset_1502"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1517",
+        "corrected_time_s": 433.005149673,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 12990,
+        "onset_ids": [
+          "onset_1517"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1530",
+        "corrected_time_s": 438.769996687,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 13163,
+        "onset_ids": [
+          "onset_1530"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1542",
+        "corrected_time_s": 446.030076451,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 13381,
+        "onset_ids": [
+          "onset_1542"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1557",
+        "corrected_time_s": 452.474645194,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 13574,
+        "onset_ids": [
+          "onset_1557"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1567",
+        "corrected_time_s": 455.302078032,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 13659,
+        "onset_ids": [
+          "onset_1567"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1573",
+        "corrected_time_s": 457.111947688,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 13713,
+        "onset_ids": [
+          "onset_1573"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1585",
+        "corrected_time_s": 459.727135128,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 13792,
+        "onset_ids": [
+          "onset_1585"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1603",
+        "corrected_time_s": 465.4596322,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 13964,
+        "onset_ids": [
+          "onset_1603"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1606",
+        "corrected_time_s": 467.35295524,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14021,
+        "onset_ids": [
+          "onset_1606"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1612",
+        "corrected_time_s": 469.330517154,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14080,
+        "onset_ids": [
+          "onset_1612"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1638",
+        "corrected_time_s": 477.609553035,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14328,
+        "onset_ids": [
+          "onset_1638"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1646",
+        "corrected_time_s": 481.100130254,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14433,
+        "onset_ids": [
+          "onset_1646"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1657",
+        "corrected_time_s": 484.45604657,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14534,
+        "onset_ids": [
+          "onset_1657"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1669",
+        "corrected_time_s": 486.995287587,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14610,
+        "onset_ids": [
+          "onset_1669"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1674",
+        "corrected_time_s": 488.846618533,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14665,
+        "onset_ids": [
+          "onset_1674"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1681",
+        "corrected_time_s": 490.762877247,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14723,
+        "onset_ids": [
+          "onset_1681"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1689",
+        "corrected_time_s": 495.118011875,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14854,
+        "onset_ids": [
+          "onset_1689"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1700",
+        "corrected_time_s": 498.319057481,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 14950,
+        "onset_ids": [
+          "onset_1700"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1711",
+        "corrected_time_s": 502.80932926,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15084,
+        "onset_ids": [
+          "onset_1711"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1724",
+        "corrected_time_s": 505.507004012,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15165,
+        "onset_ids": [
+          "onset_1724"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1731",
+        "corrected_time_s": 507.285986729,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15219,
+        "onset_ids": [
+          "onset_1731"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1747",
+        "corrected_time_s": 512.300082857,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15369,
+        "onset_ids": [
+          "onset_1747"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1751",
+        "corrected_time_s": 514.523054285,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15436,
+        "onset_ids": [
+          "onset_1751"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1763",
+        "corrected_time_s": 518.024678407,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15541,
+        "onset_ids": [
+          "onset_1763"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1772",
+        "corrected_time_s": 520.22915849,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15607,
+        "onset_ids": [
+          "onset_1772"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1783",
+        "corrected_time_s": 523.609186637,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15708,
+        "onset_ids": [
+          "onset_1783"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1791",
+        "corrected_time_s": 528.760075892,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15863,
+        "onset_ids": [
+          "onset_1791"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1793",
+        "corrected_time_s": 530.547300239,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 15916,
+        "onset_ids": [
+          "onset_1793"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1810",
+        "corrected_time_s": 535.449367141,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16063,
+        "onset_ids": [
+          "onset_1810"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1816",
+        "corrected_time_s": 537.452182636,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16124,
+        "onset_ids": [
+          "onset_1816"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1826",
+        "corrected_time_s": 540.59698782,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16218,
+        "onset_ids": [
+          "onset_1826"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1832",
+        "corrected_time_s": 542.691933402,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16281,
+        "onset_ids": [
+          "onset_1832"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1841",
+        "corrected_time_s": 545.939296879,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16378,
+        "onset_ids": [
+          "onset_1841"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1850",
+        "corrected_time_s": 548.69999675,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16461,
+        "onset_ids": [
+          "onset_1850"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1878",
+        "corrected_time_s": 559.885202896,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16797,
+        "onset_ids": [
+          "onset_1878"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1891",
+        "corrected_time_s": 562.48598466,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16875,
+        "onset_ids": [
+          "onset_1891"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1900",
+        "corrected_time_s": 564.425825417,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16933,
+        "onset_ids": [
+          "onset_1900"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1906",
+        "corrected_time_s": 566.211893609,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 16986,
+        "onset_ids": [
+          "onset_1906"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1918",
+        "corrected_time_s": 570.357094866,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 17111,
+        "onset_ids": [
+          "onset_1918"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1942",
+        "corrected_time_s": 576.569195186,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 17297,
+        "onset_ids": [
+          "onset_1942"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1955",
+        "corrected_time_s": 579.801669772,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 17394,
+        "onset_ids": [
+          "onset_1955"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1972",
+        "corrected_time_s": 585.248345036,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 17557,
+        "onset_ids": [
+          "onset_1972"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1983",
+        "corrected_time_s": 589.825092662,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 17695,
+        "onset_ids": [
+          "onset_1983"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_1987",
+        "corrected_time_s": 592.22420924,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 17767,
+        "onset_ids": [
+          "onset_1987"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2000",
+        "corrected_time_s": 595.893952325,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 17877,
+        "onset_ids": [
+          "onset_2000"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2013",
+        "corrected_time_s": 601.601657295,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18048,
+        "onset_ids": [
+          "onset_2013"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2025",
+        "corrected_time_s": 604.912652903,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18147,
+        "onset_ids": [
+          "onset_2025"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2037",
+        "corrected_time_s": 606.958256692,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18209,
+        "onset_ids": [
+          "onset_2037"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2047",
+        "corrected_time_s": 608.97630562,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18269,
+        "onset_ids": [
+          "onset_2047"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2056",
+        "corrected_time_s": 612.125391133,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18364,
+        "onset_ids": [
+          "onset_2056"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2064",
+        "corrected_time_s": 615.057033354,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18452,
+        "onset_ids": [
+          "onset_2064"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2078",
+        "corrected_time_s": 620.815989033,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18624,
+        "onset_ids": [
+          "onset_2078"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2088",
+        "corrected_time_s": 624.577183991,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18737,
+        "onset_ids": [
+          "onset_2088"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2095",
+        "corrected_time_s": 626.530602663,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18796,
+        "onset_ids": [
+          "onset_2095"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2102",
+        "corrected_time_s": 628.618077917,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18859,
+        "onset_ids": [
+          "onset_2102"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2110",
+        "corrected_time_s": 631.55653176,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 18947,
+        "onset_ids": [
+          "onset_2110"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2115",
+        "corrected_time_s": 634.053184585,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19022,
+        "onset_ids": [
+          "onset_2115"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2127",
+        "corrected_time_s": 638.2955624,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19149,
+        "onset_ids": [
+          "onset_2127"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2142",
+        "corrected_time_s": 642.958880744,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19289,
+        "onset_ids": [
+          "onset_2142"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2147",
+        "corrected_time_s": 644.755199786,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19343,
+        "onset_ids": [
+          "onset_2147"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2152",
+        "corrected_time_s": 647.161131125,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19415,
+        "onset_ids": [
+          "onset_2152"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2160",
+        "corrected_time_s": 649.044368117,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19471,
+        "onset_ids": [
+          "onset_2160"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2164",
+        "corrected_time_s": 651.09398427,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19533,
+        "onset_ids": [
+          "onset_2164"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2169",
+        "corrected_time_s": 652.984227707,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19590,
+        "onset_ids": [
+          "onset_2169"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2184",
+        "corrected_time_s": 657.302194938,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19719,
+        "onset_ids": [
+          "onset_2184"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2198",
+        "corrected_time_s": 659.311972384,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19779,
+        "onset_ids": [
+          "onset_2198"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2207",
+        "corrected_time_s": 662.444939569,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19873,
+        "onset_ids": [
+          "onset_2207"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2211",
+        "corrected_time_s": 665.139903863,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 19954,
+        "onset_ids": [
+          "onset_2211"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2221",
+        "corrected_time_s": 667.939098277,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 20038,
+        "onset_ids": [
+          "onset_2221"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2262",
+        "corrected_time_s": 683.015783531,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 20490,
+        "onset_ids": [
+          "onset_2262"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2276",
+        "corrected_time_s": 686.614791489,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 20598,
+        "onset_ids": [
+          "onset_2276"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2285",
+        "corrected_time_s": 689.030231817,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 20671,
+        "onset_ids": [
+          "onset_2285"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      },
+      {
+        "allowed_role": "segment_split_boundary_only",
+        "anchor_class": "audio_onset_soft",
+        "boundary_id": "audio_onset_soft_2294",
+        "corrected_time_s": 691.407100862,
+        "counts_as_bounce_evidence": false,
+        "counts_as_flight_sanity_anchor": false,
+        "event_type": null,
+        "frame": 20742,
+        "onset_ids": [
+          "onset_2294"
+        ],
+        "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+        "source_artifact": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+        "world_constraint": null
+      }
+    ],
+    "default_off": true,
+    "supplied_count": 202
+  },
+  "summary": {
+    "auto_bounce_candidate_count": 20,
+    "ball_arc_render_bridge_sample_count": 0,
+    "ball_arc_render_sample_count": 0,
+    "coverage_world_xyz_count": 4358,
+    "degraded_segment_count": 276,
+    "missing_segment_count": 276,
+    "missing_segment_reasons": {
+      "segment_budget_exceeded": 276
+    },
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 0,
+    "segment_budget_exceeded_count": 276,
+    "segment_budget_exceeded_ids": [
+      0,
+      1,
+      2,
+      5,
+      6,
+      8,
+      12,
+      13,
+      14,
+      15,
+      18,
+      19,
+      20,
+      22,
+      25,
+      27,
+      29,
+      30,
+      31,
+      32,
+      35,
+      37,
+      38,
+      39,
+      40,
+      41,
+      42,
+      43,
+      44,
+      45,
+      47,
+      48,
+      53,
+      55,
+      58,
+      61,
+      62,
+      63,
+      65,
+      66,
+      67,
+      69,
+      70,
+      74,
+      76,
+      77,
+      78,
+      80,
+      83,
+      84,
+      85,
+      90,
+      91,
+      93,
+      96,
+      97,
+      98,
+      99,
+      100,
+      101,
+      102,
+      103,
+      104,
+      107,
+      109,
+      110,
+      111,
+      112,
+      113,
+      114,
+      116,
+      117,
+      118,
+      119,
+      122,
+      124,
+      125,
+      127,
+      130,
+      131,
+      134,
+      135,
+      136,
+      139,
+      143,
+      144,
+      145,
+      147,
+      148,
+      150,
+      151,
+      152,
+      154,
+      155,
+      160,
+      161,
+      162,
+      163,
+      164,
+      166,
+      167,
+      169,
+      170,
+      173,
+      174,
+      175,
+      176,
+      177,
+      178,
+      180,
+      181,
+      183,
+      190,
+      192,
+      194,
+      195,
+      196,
+      197,
+      199,
+      200,
+      201,
+      202,
+      203,
+      204,
+      205,
+      208,
+      209,
+      211,
+      212,
+      214,
+      215,
+      216,
+      217,
+      218,
+      219,
+      220,
+      221,
+      222,
+      223,
+      224,
+      225,
+      226,
+      227,
+      228,
+      229,
+      230,
+      231,
+      232,
+      233,
+      234,
+      235,
+      236,
+      237,
+      238,
+      239,
+      240,
+      241,
+      242,
+      243,
+      244,
+      245,
+      246,
+      247,
+      248,
+      249,
+      250,
+      251,
+      252,
+      253,
+      254,
+      255,
+      256,
+      257,
+      258,
+      259,
+      260,
+      261,
+      262,
+      263,
+      264,
+      265,
+      266,
+      267,
+      268,
+      269,
+      270,
+      271,
+      272,
+      273,
+      274,
+      275,
+      276,
+      277,
+      278,
+      279,
+      280,
+      281,
+      282,
+      283,
+      284,
+      285,
+      286,
+      287,
+      288,
+      289,
+      290,
+      291,
+      292,
+      293,
+      294,
+      295,
+      296,
+      297,
+      298,
+      299,
+      300,
+      301,
+      302,
+      303,
+      304,
+      305,
+      306,
+      307,
+      308,
+      309,
+      310,
+      311,
+      312,
+      313,
+      314,
+      315,
+      316,
+      317,
+      318,
+      319,
+      320,
+      321,
+      322,
+      323,
+      324,
+      325,
+      326,
+      327,
+      328,
+      329,
+      330,
+      331,
+      332,
+      333,
+      334,
+      335,
+      336,
+      337,
+      338,
+      339,
+      340,
+      341,
+      342,
+      343,
+      344,
+      345,
+      346,
+      347,
+      348,
+      349,
+      350,
+      351,
+      352,
+      353,
+      354,
+      355,
+      356,
+      357,
+      358,
+      359,
+      360
+    ],
+    "segment_count": 361,
+    "soft_split_boundary_applied_count": 196,
+    "soft_split_boundary_supplied_count": 202,
+    "solver_status": "degraded"
+  }
+}

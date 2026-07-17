@@ -1,0 +1,107 @@
+{
+  "artifact_type": "racketsport_ball_bounce_candidates_track_geometry",
+  "candidate_prediction": true,
+  "candidates": [
+    {
+      "candidate_prediction": true,
+      "conf": 0.75470322,
+      "frame": 493,
+      "human_reviewed": false,
+      "in_extended_court_bounds": true,
+      "method": "image_y_cusp",
+      "not_ground_truth": true,
+      "sharpness_px_s": 303.797,
+      "source": "track_geometry_candidate",
+      "t": 16.433333,
+      "vy_after_px_s": -194.649,
+      "vy_before_px_s": 109.149,
+      "world_xy_at_ball_radius": [
+        -2.0726,
+        -7.9632
+      ],
+      "xy": [
+        324.373,
+        341.819
+      ]
+    },
+    {
+      "candidate_prediction": true,
+      "conf": 0.74566239,
+      "frame": 1177,
+      "human_reviewed": false,
+      "in_extended_court_bounds": true,
+      "method": "image_y_cusp",
+      "not_ground_truth": true,
+      "sharpness_px_s": 257.075,
+      "source": "track_geometry_candidate",
+      "t": 39.233333,
+      "vy_after_px_s": -159.2,
+      "vy_before_px_s": 97.874,
+      "world_xy_at_ball_radius": [
+        -1.7668,
+        -7.3969
+      ],
+      "xy": [
+        318.819,
+        335.425
+      ]
+    },
+    {
+      "candidate_prediction": true,
+      "conf": 0.60755605,
+      "frame": 2079,
+      "human_reviewed": false,
+      "in_extended_court_bounds": true,
+      "method": "image_y_cusp",
+      "not_ground_truth": true,
+      "sharpness_px_s": 332.644,
+      "source": "track_geometry_candidate",
+      "t": 69.3,
+      "vy_after_px_s": -241.86,
+      "vy_before_px_s": 90.784,
+      "world_xy_at_ball_radius": [
+        -1.4077,
+        -7.0382
+      ],
+      "xy": [
+        321.942,
+        330.818
+      ]
+    }
+  ],
+  "clip_id": "pbvision_demo_slice_0000_2099",
+  "diagnostic_only": false,
+  "human_reviewed": false,
+  "method": {
+    "court_margin_m": 2.0,
+    "gap_max_ray_rms_m": 2.0,
+    "gap_max_speed_mps": 35.0,
+    "gap_min_image_speed_px_s": 40.0,
+    "gap_min_vertical_speed_mps": 0.5,
+    "gap_window_frames": 4,
+    "max_gap_hidden_frames": 24,
+    "max_visible_gap_frames": 3,
+    "min_candidate_separation_frames": 6,
+    "min_gap_hidden_frames": 2,
+    "min_run_len": 7,
+    "sharpness_relative_floor": 0.15,
+    "smoothing_window": 5
+  },
+  "not_ground_truth": true,
+  "policy": {
+    "notes": [
+      "Built from the 2D ball track + court calibration geometry only.",
+      "No reviewed label or reviewed-bounce file is required or consumed.",
+      "These are algorithmic geometric candidates, not human-reviewed ground truth."
+    ]
+  },
+  "schema_version": 1,
+  "source": "track_geometry_candidate",
+  "summary": {
+    "final_candidate_count": 3,
+    "gap_ballistic_intersection_count": 0,
+    "in_court_bounds_count": 6,
+    "raw_candidate_count": 89,
+    "raw_local_extrema_count": 89
+  }
+}

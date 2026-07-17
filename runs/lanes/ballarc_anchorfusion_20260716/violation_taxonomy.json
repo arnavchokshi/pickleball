@@ -1,0 +1,4418 @@
+{
+  "aggregate_classification_counts": {
+    "anchor-semantics-structural": 42,
+    "bridged-unmarked-direction-change": 1,
+    "split-landed-mid-flight": 9,
+    "weak-fit-passed-through": 0
+  },
+  "authority": "preview",
+  "classification_rule": {
+    "anchor-semantics-structural": "The remaining failure is outside-court geometry from non-weak free-depth/BVP fallback fits whose audio endpoints cannot legally act as physics anchors in the unchanged gate.",
+    "bridged-unmarked-direction-change": "A direction/speed/vertical-topology check fails without a split within five frames.",
+    "precedence": [
+      "weak-fit-passed-through",
+      "split-landed-mid-flight",
+      "bridged-unmarked-direction-change",
+      "anchor-semantics-structural"
+    ],
+    "split-landed-mid-flight": "A failed direction/speed check is within five frames of an interior audio soft split.",
+    "weak-fit-passed-through": "Any gate-failing frame is marked weak_segment=true."
+  },
+  "lane": "ballarc_anchorfusion_20260716",
+  "presets": [
+    {
+      "classification_counts": {
+        "anchor-semantics-structural": 15,
+        "bridged-unmarked-direction-change": 0,
+        "split-landed-mid-flight": 1,
+        "weak-fit-passed-through": 0
+      },
+      "failures": [
+        {
+          "classification": "split-landed-mid-flight",
+          "evidence_interpretation": "A failed motion check occurs within five frames of an untyped audio split; the split landed inside a physical flight and independent fits disagree.",
+          "flight_sanity_segment_id": 1,
+          "frame_end": 2079,
+          "frame_start": 1177,
+          "interior_soft_boundary_count": 8,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0105",
+            "audio_onset_soft_0117",
+            "audio_onset_soft_0122",
+            "audio_onset_soft_0130",
+            "audio_onset_soft_0145",
+            "audio_onset_soft_0159",
+            "audio_onset_soft_0164",
+            "audio_onset_soft_0187"
+          ],
+          "max_court_overage_m": 48.135587,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 5,
+              "frame": 1186,
+              "kind": "horizontal_direction_reversal",
+              "measured": 120.637839,
+              "nearest_soft_boundary_frame": 1181,
+              "nearest_soft_boundary_id": "audio_onset_soft_0105",
+              "signed_delta_frames": 5,
+              "threshold": 120.0,
+              "unit": "deg"
+            },
+            {
+              "absolute_delta_frames": 5,
+              "frame": 1186,
+              "kind": "speed_jump",
+              "measured": 48.69026,
+              "nearest_soft_boundary_frame": 1181,
+              "nearest_soft_boundary_id": "audio_onset_soft_0105",
+              "signed_delta_frames": 5,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 262,
+          "reasons": [
+            "horizontal_direction_reversal",
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0105",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 5,
+              "start_anchor": "auto_bounce_candidate_001177_001",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0117",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 6,
+              "start_anchor": "audio_onset_soft_0105",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0122",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 7,
+              "start_anchor": "audio_onset_soft_0117",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0130",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 8,
+              "start_anchor": "audio_onset_soft_0122",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0145",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 9,
+              "start_anchor": "audio_onset_soft_0130",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 69.3,
+          "t_start": 39.233333,
+          "violating_frame_count": 262,
+          "violating_solver_segment_ids": [
+            5,
+            6,
+            7,
+            8,
+            9
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 2,
+          "frame_end": 4796,
+          "frame_start": 2079,
+          "interior_soft_boundary_count": 29,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0201",
+            "audio_onset_soft_0205",
+            "audio_onset_soft_0222",
+            "audio_onset_soft_0231",
+            "audio_onset_soft_0241",
+            "audio_onset_soft_0248",
+            "audio_onset_soft_0260",
+            "audio_onset_soft_0268",
+            "audio_onset_soft_0284",
+            "audio_onset_soft_0299",
+            "audio_onset_soft_0317",
+            "audio_onset_soft_0332",
+            "audio_onset_soft_0342",
+            "audio_onset_soft_0357",
+            "audio_onset_soft_0362",
+            "audio_onset_soft_0367",
+            "audio_onset_soft_0377",
+            "audio_onset_soft_0395",
+            "audio_onset_soft_0402",
+            "audio_onset_soft_0412",
+            "audio_onset_soft_0439",
+            "audio_onset_soft_0454",
+            "audio_onset_soft_0470",
+            "audio_onset_soft_0478",
+            "audio_onset_soft_0495",
+            "audio_onset_soft_0500",
+            "audio_onset_soft_0513",
+            "audio_onset_soft_0521",
+            "audio_onset_soft_0531"
+          ],
+          "max_court_overage_m": 66.988069,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 645,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0201",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 14,
+              "start_anchor": "auto_bounce_candidate_002079_002",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0241",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 18,
+              "start_anchor": "audio_onset_soft_0231",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0260",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 20,
+              "start_anchor": "audio_onset_soft_0248",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0268",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 21,
+              "start_anchor": "audio_onset_soft_0260",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0357",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 27,
+              "start_anchor": "audio_onset_soft_0342",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0367",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 29,
+              "start_anchor": "audio_onset_soft_0362",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0377",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 30,
+              "start_anchor": "audio_onset_soft_0367",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0513",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 40,
+              "start_anchor": "audio_onset_soft_0500",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0521",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 41,
+              "start_anchor": "audio_onset_soft_0513",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_004796_003",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 43,
+              "start_anchor": "audio_onset_soft_0531",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 159.866667,
+          "t_start": 69.3,
+          "violating_frame_count": 645,
+          "violating_solver_segment_ids": [
+            14,
+            18,
+            20,
+            21,
+            27,
+            29,
+            30,
+            40,
+            41,
+            43
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 3,
+          "frame_end": 4845,
+          "frame_start": 4796,
+          "interior_soft_boundary_count": 1,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0544"
+          ],
+          "max_court_overage_m": 5.847874,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 20,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_004796_003",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 43,
+              "start_anchor": "audio_onset_soft_0531",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0544",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 44,
+              "start_anchor": "auto_bounce_candidate_004796_003",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_004845_004",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 45,
+              "start_anchor": "audio_onset_soft_0544",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 161.5,
+          "t_start": 159.866667,
+          "violating_frame_count": 20,
+          "violating_solver_segment_ids": [
+            43,
+            44,
+            45
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 5,
+          "frame_end": 7702,
+          "frame_start": 5006,
+          "interior_soft_boundary_count": 26,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0562",
+            "audio_onset_soft_0571",
+            "audio_onset_soft_0592",
+            "audio_onset_soft_0598",
+            "audio_onset_soft_0607",
+            "audio_onset_soft_0628",
+            "audio_onset_soft_0646",
+            "audio_onset_soft_0657",
+            "audio_onset_soft_0676",
+            "audio_onset_soft_0683",
+            "audio_onset_soft_0706",
+            "audio_onset_soft_0716",
+            "audio_onset_soft_0723",
+            "audio_onset_soft_0732",
+            "audio_onset_soft_0746",
+            "audio_onset_soft_0760",
+            "audio_onset_soft_0774",
+            "audio_onset_soft_0782",
+            "audio_onset_soft_0808",
+            "audio_onset_soft_0822",
+            "audio_onset_soft_0832",
+            "audio_onset_soft_0843",
+            "audio_onset_soft_0853",
+            "audio_onset_soft_0864",
+            "audio_onset_soft_0873",
+            "audio_onset_soft_0892"
+          ],
+          "max_court_overage_m": 69.559601,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 369,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0562",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 47,
+              "start_anchor": "auto_bounce_candidate_005006_005",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0607",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 51,
+              "start_anchor": "audio_onset_soft_0598",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0657",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 54,
+              "start_anchor": "audio_onset_soft_0646",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0723",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 59,
+              "start_anchor": "audio_onset_soft_0716",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0746",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 61,
+              "start_anchor": "audio_onset_soft_0732",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0774",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 63,
+              "start_anchor": "audio_onset_soft_0760",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0832",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 67,
+              "start_anchor": "audio_onset_soft_0822",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0853",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 69,
+              "start_anchor": "audio_onset_soft_0843",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 256.733333,
+          "t_start": 166.866667,
+          "violating_frame_count": 369,
+          "violating_solver_segment_ids": [
+            47,
+            51,
+            54,
+            59,
+            61,
+            63,
+            67,
+            69
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 6,
+          "frame_end": 7951,
+          "frame_start": 7702,
+          "interior_soft_boundary_count": 2,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0924",
+            "audio_onset_soft_0948"
+          ],
+          "max_court_overage_m": 42.940837,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 105,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0924",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 74,
+              "start_anchor": "auto_bounce_candidate_007702_006",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_007951_007",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 76,
+              "start_anchor": "audio_onset_soft_0948",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 265.033333,
+          "t_start": 256.733333,
+          "violating_frame_count": 105,
+          "violating_solver_segment_ids": [
+            74,
+            76
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 7,
+          "frame_end": 10912,
+          "frame_start": 7951,
+          "interior_soft_boundary_count": 22,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0964",
+            "audio_onset_soft_0982",
+            "audio_onset_soft_0996",
+            "audio_onset_soft_1017",
+            "audio_onset_soft_1040",
+            "audio_onset_soft_1050",
+            "audio_onset_soft_1060",
+            "audio_onset_soft_1076",
+            "audio_onset_soft_1085",
+            "audio_onset_soft_1095",
+            "audio_onset_soft_1112",
+            "audio_onset_soft_1122",
+            "audio_onset_soft_1149",
+            "audio_onset_soft_1160",
+            "audio_onset_soft_1173",
+            "audio_onset_soft_1192",
+            "audio_onset_soft_1202",
+            "audio_onset_soft_1214",
+            "audio_onset_soft_1220",
+            "audio_onset_soft_1227",
+            "audio_onset_soft_1237",
+            "audio_onset_soft_1255"
+          ],
+          "max_court_overage_m": 64.848732,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 239,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_007951_007",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 76,
+              "start_anchor": "audio_onset_soft_0948",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0996",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 79,
+              "start_anchor": "audio_onset_soft_0982",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1112",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 87,
+              "start_anchor": "audio_onset_soft_1095",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1173",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 91,
+              "start_anchor": "audio_onset_soft_1160",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1265",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 99,
+              "start_anchor": "audio_onset_soft_1255",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 363.733333,
+          "t_start": 265.033333,
+          "violating_frame_count": 239,
+          "violating_solver_segment_ids": [
+            76,
+            79,
+            87,
+            91,
+            99
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 8,
+          "frame_end": 12536,
+          "frame_start": 11505,
+          "interior_soft_boundary_count": 7,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1338",
+            "audio_onset_soft_1357",
+            "audio_onset_soft_1366",
+            "audio_onset_soft_1422",
+            "audio_onset_soft_1434",
+            "audio_onset_soft_1445",
+            "audio_onset_soft_1455"
+          ],
+          "max_court_overage_m": 57.213805,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 177,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1338",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 104,
+              "start_anchor": "audio_onset_soft_1326",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1366",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 106,
+              "start_anchor": "audio_onset_soft_1357",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1445",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 109,
+              "start_anchor": "audio_onset_soft_1434",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_012536_009",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 111,
+              "start_anchor": "audio_onset_soft_1455",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 417.866667,
+          "t_start": 383.5,
+          "violating_frame_count": 177,
+          "violating_solver_segment_ids": [
+            104,
+            106,
+            109,
+            111
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 9,
+          "frame_end": 14043,
+          "frame_start": 12536,
+          "interior_soft_boundary_count": 8,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1462",
+            "audio_onset_soft_1474",
+            "audio_onset_soft_1502",
+            "audio_onset_soft_1542",
+            "audio_onset_soft_1557",
+            "audio_onset_soft_1573",
+            "audio_onset_soft_1585",
+            "audio_onset_soft_1603"
+          ],
+          "max_court_overage_m": 57.28743,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 128,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_012536_009",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 111,
+              "start_anchor": "audio_onset_soft_1455",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1462",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 112,
+              "start_anchor": "auto_bounce_candidate_012536_009",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1585",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 118,
+              "start_anchor": "audio_onset_soft_1573",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 468.1,
+          "t_start": 417.866667,
+          "violating_frame_count": 128,
+          "violating_solver_segment_ids": [
+            111,
+            112,
+            118
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 10,
+          "frame_end": 14074,
+          "frame_start": 14043,
+          "interior_soft_boundary_count": 0,
+          "interior_soft_boundary_ids": [],
+          "max_court_overage_m": 28.908202,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 29,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1612",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 121,
+              "start_anchor": "auto_bounce_candidate_014043_010",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 469.133333,
+          "t_start": 468.1,
+          "violating_frame_count": 29,
+          "violating_solver_segment_ids": [
+            121
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 11,
+          "frame_end": 14489,
+          "frame_start": 14483,
+          "interior_soft_boundary_count": 0,
+          "interior_soft_boundary_ids": [],
+          "max_court_overage_m": 59.611175,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 7,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1657",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 125,
+              "start_anchor": "audio_onset_soft_1646",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 482.966667,
+          "t_start": 482.766667,
+          "violating_frame_count": 7,
+          "violating_solver_segment_ids": [
+            125
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 12,
+          "frame_end": 15394,
+          "frame_start": 15085,
+          "interior_soft_boundary_count": 1,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1731"
+          ],
+          "max_court_overage_m": 62.023536,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 74,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1731",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 132,
+              "start_anchor": "audio_onset_soft_1711",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 513.133333,
+          "t_start": 502.833333,
+          "violating_frame_count": 74,
+          "violating_solver_segment_ids": [
+            132
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 13,
+          "frame_end": 16827,
+          "frame_start": 15394,
+          "interior_soft_boundary_count": 12,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1751",
+            "audio_onset_soft_1763",
+            "audio_onset_soft_1772",
+            "audio_onset_soft_1783",
+            "audio_onset_soft_1793",
+            "audio_onset_soft_1810",
+            "audio_onset_soft_1816",
+            "audio_onset_soft_1826",
+            "audio_onset_soft_1832",
+            "audio_onset_soft_1841",
+            "audio_onset_soft_1850",
+            "audio_onset_soft_1878"
+          ],
+          "max_court_overage_m": 78.189188,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 181,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1751",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 134,
+              "start_anchor": "auto_bounce_candidate_015394_013",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1763",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 135,
+              "start_anchor": "audio_onset_soft_1751",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1816",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 140,
+              "start_anchor": "audio_onset_soft_1810",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_016827_014",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 146,
+              "start_anchor": "audio_onset_soft_1878",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 560.9,
+          "t_start": 513.133333,
+          "violating_frame_count": 181,
+          "violating_solver_segment_ids": [
+            134,
+            135,
+            140,
+            146
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 14,
+          "frame_end": 16875,
+          "frame_start": 16827,
+          "interior_soft_boundary_count": 0,
+          "interior_soft_boundary_ids": [],
+          "max_court_overage_m": 21.65643,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 39,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_016827_014",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 146,
+              "start_anchor": "audio_onset_soft_1878",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1891",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 147,
+              "start_anchor": "auto_bounce_candidate_016827_014",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 562.5,
+          "t_start": 560.9,
+          "violating_frame_count": 39,
+          "violating_solver_segment_ids": [
+            146,
+            147
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 16,
+          "frame_end": 19909,
+          "frame_start": 18044,
+          "interior_soft_boundary_count": 17,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_2013",
+            "audio_onset_soft_2025",
+            "audio_onset_soft_2037",
+            "audio_onset_soft_2047",
+            "audio_onset_soft_2056",
+            "audio_onset_soft_2064",
+            "audio_onset_soft_2088",
+            "audio_onset_soft_2102",
+            "audio_onset_soft_2110",
+            "audio_onset_soft_2115",
+            "audio_onset_soft_2127",
+            "audio_onset_soft_2147",
+            "audio_onset_soft_2152",
+            "audio_onset_soft_2169",
+            "audio_onset_soft_2184",
+            "audio_onset_soft_2198",
+            "audio_onset_soft_2207"
+          ],
+          "max_court_overage_m": 53.812076,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 280,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_2013",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 156,
+              "start_anchor": "auto_bounce_candidate_018044_016",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2025",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 157,
+              "start_anchor": "audio_onset_soft_2013",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2037",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 158,
+              "start_anchor": "audio_onset_soft_2025",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2047",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 159,
+              "start_anchor": "audio_onset_soft_2037",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2056",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 160,
+              "start_anchor": "audio_onset_soft_2047",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_019909_017",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 173,
+              "start_anchor": "audio_onset_soft_2207",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 663.633333,
+          "t_start": 601.466667,
+          "violating_frame_count": 280,
+          "violating_solver_segment_ids": [
+            156,
+            157,
+            158,
+            159,
+            160,
+            173
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 17,
+          "frame_end": 20531,
+          "frame_start": 19909,
+          "interior_soft_boundary_count": 3,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_2211",
+            "audio_onset_soft_2221",
+            "audio_onset_soft_2262"
+          ],
+          "max_court_overage_m": 16.295395,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 43,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_019909_017",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 173,
+              "start_anchor": "audio_onset_soft_2207",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_020531_018",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 177,
+              "start_anchor": "audio_onset_soft_2262",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 684.366667,
+          "t_start": 663.633333,
+          "violating_frame_count": 43,
+          "violating_solver_segment_ids": [
+            173,
+            177
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 18,
+          "frame_end": 20741,
+          "frame_start": 20531,
+          "interior_soft_boundary_count": 2,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_2276",
+            "audio_onset_soft_2285"
+          ],
+          "max_court_overage_m": 52.283569,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 60,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_020531_018",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 177,
+              "start_anchor": "audio_onset_soft_2262",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2294",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 180,
+              "start_anchor": "audio_onset_soft_2285",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 691.366667,
+          "t_start": 684.366667,
+          "violating_frame_count": 60,
+          "violating_solver_segment_ids": [
+            177,
+            180
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        }
+      ],
+      "in_rally_frame_coverage_percent": 18.767444456849393,
+      "killed": true,
+      "physics_violation_count": 16,
+      "preset": "conservative",
+      "segments_fit_count": 53,
+      "selected_onset_count": 168,
+      "selection_rule_id": "audio_soft_score010_spacing200_rally_v1"
+    },
+    {
+      "classification_counts": {
+        "anchor-semantics-structural": 14,
+        "bridged-unmarked-direction-change": 1,
+        "split-landed-mid-flight": 3,
+        "weak-fit-passed-through": 0
+      },
+      "failures": [
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 0,
+          "frame_end": 1177,
+          "frame_start": 804,
+          "interior_soft_boundary_count": 3,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0071",
+            "audio_onset_soft_0080",
+            "audio_onset_soft_0094"
+          ],
+          "max_court_overage_m": 50.849515,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 77,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0071",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 3,
+              "start_anchor": "audio_onset_soft_0065",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0080",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 4,
+              "start_anchor": "audio_onset_soft_0071",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 39.233333,
+          "t_start": 26.8,
+          "violating_frame_count": 77,
+          "violating_solver_segment_ids": [
+            3,
+            4
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "split-landed-mid-flight",
+          "evidence_interpretation": "A failed motion check occurs within five frames of an untyped audio split; the split landed inside a physical flight and independent fits disagree.",
+          "flight_sanity_segment_id": 1,
+          "frame_end": 2079,
+          "frame_start": 1177,
+          "interior_soft_boundary_count": 9,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0105",
+            "audio_onset_soft_0117",
+            "audio_onset_soft_0122",
+            "audio_onset_soft_0130",
+            "audio_onset_soft_0145",
+            "audio_onset_soft_0159",
+            "audio_onset_soft_0164",
+            "audio_onset_soft_0175",
+            "audio_onset_soft_0195"
+          ],
+          "max_court_overage_m": 47.110028,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 2,
+              "frame": 1360,
+              "kind": "horizontal_direction_reversal",
+              "measured": 164.629176,
+              "nearest_soft_boundary_frame": 1358,
+              "nearest_soft_boundary_id": "audio_onset_soft_0122",
+              "signed_delta_frames": 2,
+              "threshold": 120.0,
+              "unit": "deg"
+            },
+            {
+              "absolute_delta_frames": 2,
+              "frame": 1360,
+              "kind": "speed_jump",
+              "measured": 30.824766,
+              "nearest_soft_boundary_frame": 1358,
+              "nearest_soft_boundary_id": "audio_onset_soft_0122",
+              "signed_delta_frames": 2,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 167,
+          "reasons": [
+            "horizontal_direction_reversal",
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0105",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 7,
+              "start_anchor": "auto_bounce_candidate_001177_001",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0122",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 9,
+              "start_anchor": "audio_onset_soft_0117",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0130",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 10,
+              "start_anchor": "audio_onset_soft_0122",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0145",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 11,
+              "start_anchor": "audio_onset_soft_0130",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_002079_002",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 16,
+              "start_anchor": "audio_onset_soft_0195",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 69.3,
+          "t_start": 39.233333,
+          "violating_frame_count": 167,
+          "violating_solver_segment_ids": [
+            7,
+            9,
+            10,
+            11,
+            16
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "split-landed-mid-flight",
+          "evidence_interpretation": "A failed motion check occurs within five frames of an untyped audio split; the split landed inside a physical flight and independent fits disagree.",
+          "flight_sanity_segment_id": 2,
+          "frame_end": 4796,
+          "frame_start": 2079,
+          "interior_soft_boundary_count": 33,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0202",
+            "audio_onset_soft_0205",
+            "audio_onset_soft_0222",
+            "audio_onset_soft_0231",
+            "audio_onset_soft_0241",
+            "audio_onset_soft_0248",
+            "audio_onset_soft_0260",
+            "audio_onset_soft_0268",
+            "audio_onset_soft_0284",
+            "audio_onset_soft_0299",
+            "audio_onset_soft_0317",
+            "audio_onset_soft_0325",
+            "audio_onset_soft_0332",
+            "audio_onset_soft_0342",
+            "audio_onset_soft_0357",
+            "audio_onset_soft_0362",
+            "audio_onset_soft_0367",
+            "audio_onset_soft_0377",
+            "audio_onset_soft_0388",
+            "audio_onset_soft_0395",
+            "audio_onset_soft_0402",
+            "audio_onset_soft_0412",
+            "audio_onset_soft_0424",
+            "audio_onset_soft_0439",
+            "audio_onset_soft_0454",
+            "audio_onset_soft_0470",
+            "audio_onset_soft_0477",
+            "audio_onset_soft_0495",
+            "audio_onset_soft_0500",
+            "audio_onset_soft_0504",
+            "audio_onset_soft_0517",
+            "audio_onset_soft_0524",
+            "audio_onset_soft_0531"
+          ],
+          "max_court_overage_m": 66.988069,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 1,
+              "frame": 4415,
+              "kind": "speed_jump",
+              "measured": 55.59372,
+              "nearest_soft_boundary_frame": 4414,
+              "nearest_soft_boundary_id": "audio_onset_soft_0500",
+              "signed_delta_frames": 1,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 536,
+          "reasons": [
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0202",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 17,
+              "start_anchor": "auto_bounce_candidate_002079_002",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0241",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 21,
+              "start_anchor": "audio_onset_soft_0231",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0260",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 23,
+              "start_anchor": "audio_onset_soft_0248",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0268",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 24,
+              "start_anchor": "audio_onset_soft_0260",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0299",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 26,
+              "start_anchor": "audio_onset_soft_0284",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0325",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 28,
+              "start_anchor": "audio_onset_soft_0317",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0367",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 33,
+              "start_anchor": "audio_onset_soft_0362",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0377",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 34,
+              "start_anchor": "audio_onset_soft_0367",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0395",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 36,
+              "start_anchor": "audio_onset_soft_0388",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0504",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 46,
+              "start_anchor": "audio_onset_soft_0500",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0531",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 49,
+              "start_anchor": "audio_onset_soft_0524",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_004796_003",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 50,
+              "start_anchor": "audio_onset_soft_0531",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 159.866667,
+          "t_start": 69.3,
+          "violating_frame_count": 536,
+          "violating_solver_segment_ids": [
+            17,
+            21,
+            23,
+            24,
+            26,
+            28,
+            33,
+            34,
+            36,
+            46,
+            49,
+            50
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 3,
+          "frame_end": 4845,
+          "frame_start": 4796,
+          "interior_soft_boundary_count": 1,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0544"
+          ],
+          "max_court_overage_m": 5.847874,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 20,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_004796_003",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 50,
+              "start_anchor": "audio_onset_soft_0531",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0544",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 51,
+              "start_anchor": "auto_bounce_candidate_004796_003",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_004845_004",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 52,
+              "start_anchor": "audio_onset_soft_0544",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 161.5,
+          "t_start": 159.866667,
+          "violating_frame_count": 20,
+          "violating_solver_segment_ids": [
+            50,
+            51,
+            52
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 5,
+          "frame_end": 7702,
+          "frame_start": 5006,
+          "interior_soft_boundary_count": 31,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0562",
+            "audio_onset_soft_0571",
+            "audio_onset_soft_0586",
+            "audio_onset_soft_0592",
+            "audio_onset_soft_0598",
+            "audio_onset_soft_0607",
+            "audio_onset_soft_0616",
+            "audio_onset_soft_0628",
+            "audio_onset_soft_0639",
+            "audio_onset_soft_0646",
+            "audio_onset_soft_0657",
+            "audio_onset_soft_0665",
+            "audio_onset_soft_0676",
+            "audio_onset_soft_0681",
+            "audio_onset_soft_0695",
+            "audio_onset_soft_0706",
+            "audio_onset_soft_0716",
+            "audio_onset_soft_0723",
+            "audio_onset_soft_0732",
+            "audio_onset_soft_0746",
+            "audio_onset_soft_0760",
+            "audio_onset_soft_0770",
+            "audio_onset_soft_0782",
+            "audio_onset_soft_0808",
+            "audio_onset_soft_0822",
+            "audio_onset_soft_0832",
+            "audio_onset_soft_0843",
+            "audio_onset_soft_0853",
+            "audio_onset_soft_0866",
+            "audio_onset_soft_0873",
+            "audio_onset_soft_0892"
+          ],
+          "max_court_overage_m": 69.794605,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 780,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0562",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 54,
+              "start_anchor": "auto_bounce_candidate_005006_005",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0586",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 56,
+              "start_anchor": "audio_onset_soft_0571",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0592",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 57,
+              "start_anchor": "audio_onset_soft_0586",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0607",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 59,
+              "start_anchor": "audio_onset_soft_0598",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0616",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 60,
+              "start_anchor": "audio_onset_soft_0607",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0657",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 64,
+              "start_anchor": "audio_onset_soft_0646",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0695",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 68,
+              "start_anchor": "audio_onset_soft_0681",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0723",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 71,
+              "start_anchor": "audio_onset_soft_0716",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0732",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 72,
+              "start_anchor": "audio_onset_soft_0723",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0746",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 73,
+              "start_anchor": "audio_onset_soft_0732",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0770",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 75,
+              "start_anchor": "audio_onset_soft_0760",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0832",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 79,
+              "start_anchor": "audio_onset_soft_0822",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0853",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 81,
+              "start_anchor": "audio_onset_soft_0843",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0866",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 82,
+              "start_anchor": "audio_onset_soft_0853",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 256.733333,
+          "t_start": 166.866667,
+          "violating_frame_count": 780,
+          "violating_solver_segment_ids": [
+            54,
+            56,
+            57,
+            59,
+            60,
+            64,
+            68,
+            71,
+            72,
+            73,
+            75,
+            79,
+            81,
+            82
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 6,
+          "frame_end": 7951,
+          "frame_start": 7702,
+          "interior_soft_boundary_count": 3,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0924",
+            "audio_onset_soft_0937",
+            "audio_onset_soft_0948"
+          ],
+          "max_court_overage_m": 49.1625,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 247,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0924",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 86,
+              "start_anchor": "auto_bounce_candidate_007702_006",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0937",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 87,
+              "start_anchor": "audio_onset_soft_0924",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0948",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 88,
+              "start_anchor": "audio_onset_soft_0937",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_007951_007",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 89,
+              "start_anchor": "audio_onset_soft_0948",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 265.033333,
+          "t_start": 256.733333,
+          "violating_frame_count": 247,
+          "violating_solver_segment_ids": [
+            86,
+            87,
+            88,
+            89
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 7,
+          "frame_end": 10912,
+          "frame_start": 7951,
+          "interior_soft_boundary_count": 25,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0964",
+            "audio_onset_soft_0982",
+            "audio_onset_soft_0996",
+            "audio_onset_soft_1017",
+            "audio_onset_soft_1030",
+            "audio_onset_soft_1040",
+            "audio_onset_soft_1050",
+            "audio_onset_soft_1060",
+            "audio_onset_soft_1076",
+            "audio_onset_soft_1085",
+            "audio_onset_soft_1095",
+            "audio_onset_soft_1112",
+            "audio_onset_soft_1122",
+            "audio_onset_soft_1143",
+            "audio_onset_soft_1149",
+            "audio_onset_soft_1160",
+            "audio_onset_soft_1173",
+            "audio_onset_soft_1193",
+            "audio_onset_soft_1202",
+            "audio_onset_soft_1214",
+            "audio_onset_soft_1220",
+            "audio_onset_soft_1227",
+            "audio_onset_soft_1233",
+            "audio_onset_soft_1237",
+            "audio_onset_soft_1255"
+          ],
+          "max_court_overage_m": 71.664554,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 475,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_007951_007",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 89,
+              "start_anchor": "audio_onset_soft_0948",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0996",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 92,
+              "start_anchor": "audio_onset_soft_0982",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1030",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 94,
+              "start_anchor": "audio_onset_soft_1017",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1040",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 95,
+              "start_anchor": "audio_onset_soft_1030",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1160",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 105,
+              "start_anchor": "audio_onset_soft_1149",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1173",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 106,
+              "start_anchor": "audio_onset_soft_1160",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1202",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 108,
+              "start_anchor": "audio_onset_soft_1193",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1265",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 115,
+              "start_anchor": "audio_onset_soft_1255",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 363.733333,
+          "t_start": 265.033333,
+          "violating_frame_count": 475,
+          "violating_solver_segment_ids": [
+            89,
+            92,
+            94,
+            95,
+            105,
+            106,
+            108,
+            115
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 8,
+          "frame_end": 12536,
+          "frame_start": 11505,
+          "interior_soft_boundary_count": 8,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1338",
+            "audio_onset_soft_1347",
+            "audio_onset_soft_1357",
+            "audio_onset_soft_1366",
+            "audio_onset_soft_1422",
+            "audio_onset_soft_1434",
+            "audio_onset_soft_1445",
+            "audio_onset_soft_1455"
+          ],
+          "max_court_overage_m": 57.213805,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 187,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1338",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 120,
+              "start_anchor": "audio_onset_soft_1326",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1347",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 121,
+              "start_anchor": "audio_onset_soft_1338",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1366",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 123,
+              "start_anchor": "audio_onset_soft_1357",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1445",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 126,
+              "start_anchor": "audio_onset_soft_1434",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_012536_009",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 128,
+              "start_anchor": "audio_onset_soft_1455",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 417.866667,
+          "t_start": 383.5,
+          "violating_frame_count": 187,
+          "violating_solver_segment_ids": [
+            120,
+            121,
+            123,
+            126,
+            128
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "bridged-unmarked-direction-change",
+          "evidence_interpretation": "The failed direction/velocity topology is not marked by a nearby typed event anchor.",
+          "flight_sanity_segment_id": 9,
+          "frame_end": 14043,
+          "frame_start": 12536,
+          "interior_soft_boundary_count": 12,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1462",
+            "audio_onset_soft_1474",
+            "audio_onset_soft_1502",
+            "audio_onset_soft_1517",
+            "audio_onset_soft_1530",
+            "audio_onset_soft_1542",
+            "audio_onset_soft_1557",
+            "audio_onset_soft_1567",
+            "audio_onset_soft_1573",
+            "audio_onset_soft_1585",
+            "audio_onset_soft_1603",
+            "audio_onset_soft_1606"
+          ],
+          "max_court_overage_m": 57.28743,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 47,
+              "frame": 12541,
+              "kind": "horizontal_direction_reversal",
+              "measured": 166.324854,
+              "nearest_soft_boundary_frame": 12588,
+              "nearest_soft_boundary_id": "audio_onset_soft_1462",
+              "signed_delta_frames": -47,
+              "threshold": 120.0,
+              "unit": "deg"
+            },
+            {
+              "absolute_delta_frames": 47,
+              "frame": 12541,
+              "kind": "speed_jump",
+              "measured": 46.283722,
+              "nearest_soft_boundary_frame": 12588,
+              "nearest_soft_boundary_id": "audio_onset_soft_1462",
+              "signed_delta_frames": -47,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 294,
+          "reasons": [
+            "vertical_multi_apex",
+            "horizontal_direction_reversal",
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_012536_009",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 128,
+              "start_anchor": "audio_onset_soft_1455",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1462",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 129,
+              "start_anchor": "auto_bounce_candidate_012536_009",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1517",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 132,
+              "start_anchor": "audio_onset_soft_1502",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1530",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 133,
+              "start_anchor": "audio_onset_soft_1517",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1573",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 137,
+              "start_anchor": "audio_onset_soft_1567",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1585",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 138,
+              "start_anchor": "audio_onset_soft_1573",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1606",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 140,
+              "start_anchor": "audio_onset_soft_1603",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 468.1,
+          "t_start": 417.866667,
+          "violating_frame_count": 294,
+          "violating_solver_segment_ids": [
+            128,
+            129,
+            132,
+            133,
+            137,
+            138,
+            140
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 10,
+          "frame_end": 14080,
+          "frame_start": 14043,
+          "interior_soft_boundary_count": 0,
+          "interior_soft_boundary_ids": [],
+          "max_court_overage_m": 32.509129,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 35,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1612",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 142,
+              "start_anchor": "auto_bounce_candidate_014043_010",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 469.333333,
+          "t_start": 468.1,
+          "violating_frame_count": 35,
+          "violating_solver_segment_ids": [
+            142
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 11,
+          "frame_end": 15048,
+          "frame_start": 14434,
+          "interior_soft_boundary_count": 6,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1657",
+            "audio_onset_soft_1669",
+            "audio_onset_soft_1674",
+            "audio_onset_soft_1681",
+            "audio_onset_soft_1689",
+            "audio_onset_soft_1700"
+          ],
+          "max_court_overage_m": 71.03824,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 115,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1657",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 146,
+              "start_anchor": "audio_onset_soft_1646",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1681",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 149,
+              "start_anchor": "audio_onset_soft_1674",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 501.6,
+          "t_start": 481.133333,
+          "violating_frame_count": 115,
+          "violating_solver_segment_ids": [
+            146,
+            149
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "split-landed-mid-flight",
+          "evidence_interpretation": "A failed motion check occurs within five frames of an untyped audio split; the split landed inside a physical flight and independent fits disagree.",
+          "flight_sanity_segment_id": 12,
+          "frame_end": 15394,
+          "frame_start": 15048,
+          "interior_soft_boundary_count": 4,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1711",
+            "audio_onset_soft_1724",
+            "audio_onset_soft_1731",
+            "audio_onset_soft_1747"
+          ],
+          "max_court_overage_m": 54.559924,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 0,
+              "frame": 15369,
+              "kind": "speed_jump",
+              "measured": 9.41744,
+              "nearest_soft_boundary_frame": 15369,
+              "nearest_soft_boundary_id": "audio_onset_soft_1747",
+              "signed_delta_frames": 0,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 184,
+          "reasons": [
+            "vertical_multi_apex",
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1711",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 153,
+              "start_anchor": "auto_bounce_candidate_015048_012",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1747",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 156,
+              "start_anchor": "audio_onset_soft_1731",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 513.133333,
+          "t_start": 501.6,
+          "violating_frame_count": 184,
+          "violating_solver_segment_ids": [
+            153,
+            156
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 13,
+          "frame_end": 16827,
+          "frame_start": 15394,
+          "interior_soft_boundary_count": 13,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1751",
+            "audio_onset_soft_1763",
+            "audio_onset_soft_1772",
+            "audio_onset_soft_1783",
+            "audio_onset_soft_1791",
+            "audio_onset_soft_1793",
+            "audio_onset_soft_1810",
+            "audio_onset_soft_1816",
+            "audio_onset_soft_1826",
+            "audio_onset_soft_1832",
+            "audio_onset_soft_1841",
+            "audio_onset_soft_1850",
+            "audio_onset_soft_1878"
+          ],
+          "max_court_overage_m": 78.515568,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 279,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1751",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 158,
+              "start_anchor": "auto_bounce_candidate_015394_013",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1763",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 159,
+              "start_anchor": "audio_onset_soft_1751",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1816",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 165,
+              "start_anchor": "audio_onset_soft_1810",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1841",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 168,
+              "start_anchor": "audio_onset_soft_1832",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_016827_014",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 171,
+              "start_anchor": "audio_onset_soft_1878",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 560.9,
+          "t_start": 513.133333,
+          "violating_frame_count": 279,
+          "violating_solver_segment_ids": [
+            158,
+            159,
+            165,
+            168,
+            171
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 14,
+          "frame_end": 16875,
+          "frame_start": 16827,
+          "interior_soft_boundary_count": 0,
+          "interior_soft_boundary_ids": [],
+          "max_court_overage_m": 21.65643,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 39,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_016827_014",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 171,
+              "start_anchor": "audio_onset_soft_1878",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1891",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 172,
+              "start_anchor": "auto_bounce_candidate_016827_014",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 562.5,
+          "t_start": 560.9,
+          "violating_frame_count": 39,
+          "violating_solver_segment_ids": [
+            171,
+            172
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 15,
+          "frame_end": 18044,
+          "frame_start": 17460,
+          "interior_soft_boundary_count": 4,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1972",
+            "audio_onset_soft_1983",
+            "audio_onset_soft_1987",
+            "audio_onset_soft_2000"
+          ],
+          "max_court_overage_m": 78.435461,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 127,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1972",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 179,
+              "start_anchor": "audio_onset_soft_1955",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2000",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 182,
+              "start_anchor": "audio_onset_soft_1987",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 601.466667,
+          "t_start": 582.0,
+          "violating_frame_count": 127,
+          "violating_solver_segment_ids": [
+            179,
+            182
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 16,
+          "frame_end": 19909,
+          "frame_start": 18044,
+          "interior_soft_boundary_count": 22,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_2013",
+            "audio_onset_soft_2025",
+            "audio_onset_soft_2037",
+            "audio_onset_soft_2047",
+            "audio_onset_soft_2056",
+            "audio_onset_soft_2064",
+            "audio_onset_soft_2078",
+            "audio_onset_soft_2088",
+            "audio_onset_soft_2095",
+            "audio_onset_soft_2102",
+            "audio_onset_soft_2110",
+            "audio_onset_soft_2115",
+            "audio_onset_soft_2127",
+            "audio_onset_soft_2142",
+            "audio_onset_soft_2147",
+            "audio_onset_soft_2152",
+            "audio_onset_soft_2160",
+            "audio_onset_soft_2164",
+            "audio_onset_soft_2169",
+            "audio_onset_soft_2184",
+            "audio_onset_soft_2198",
+            "audio_onset_soft_2207"
+          ],
+          "max_court_overage_m": 63.06047,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 452,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_2013",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 184,
+              "start_anchor": "auto_bounce_candidate_018044_016",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2025",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 185,
+              "start_anchor": "audio_onset_soft_2013",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2037",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 186,
+              "start_anchor": "audio_onset_soft_2025",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2047",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 187,
+              "start_anchor": "audio_onset_soft_2037",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2056",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 188,
+              "start_anchor": "audio_onset_soft_2047",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2064",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 189,
+              "start_anchor": "audio_onset_soft_2056",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2088",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 191,
+              "start_anchor": "audio_onset_soft_2078",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2102",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 193,
+              "start_anchor": "audio_onset_soft_2095",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2147",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 198,
+              "start_anchor": "audio_onset_soft_2142",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_019909_017",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 206,
+              "start_anchor": "audio_onset_soft_2207",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 663.633333,
+          "t_start": 601.466667,
+          "violating_frame_count": 452,
+          "violating_solver_segment_ids": [
+            184,
+            185,
+            186,
+            187,
+            188,
+            189,
+            191,
+            193,
+            198,
+            206
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 17,
+          "frame_end": 20531,
+          "frame_start": 19909,
+          "interior_soft_boundary_count": 3,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_2211",
+            "audio_onset_soft_2221",
+            "audio_onset_soft_2262"
+          ],
+          "max_court_overage_m": 35.439122,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 85,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_019909_017",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 206,
+              "start_anchor": "audio_onset_soft_2207",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2211",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 207,
+              "start_anchor": "auto_bounce_candidate_019909_017",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_020531_018",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 210,
+              "start_anchor": "audio_onset_soft_2262",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 684.366667,
+          "t_start": 663.633333,
+          "violating_frame_count": 85,
+          "violating_solver_segment_ids": [
+            206,
+            207,
+            210
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 18,
+          "frame_end": 20741,
+          "frame_start": 20531,
+          "interior_soft_boundary_count": 2,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_2276",
+            "audio_onset_soft_2285"
+          ],
+          "max_court_overage_m": 52.283569,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 72,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_020531_018",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 210,
+              "start_anchor": "audio_onset_soft_2262",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2294",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 213,
+              "start_anchor": "audio_onset_soft_2285",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 691.366667,
+          "t_start": 684.366667,
+          "violating_frame_count": 72,
+          "violating_solver_segment_ids": [
+            210,
+            213
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        }
+      ],
+      "in_rally_frame_coverage_percent": 29.65278553086971,
+      "killed": true,
+      "physics_violation_count": 18,
+      "preset": "balanced",
+      "segments_fit_count": 85,
+      "selected_onset_count": 202,
+      "selection_rule_id": "audio_soft_score006_spacing175_rally_v1"
+    },
+    {
+      "classification_counts": {
+        "anchor-semantics-structural": 13,
+        "bridged-unmarked-direction-change": 0,
+        "split-landed-mid-flight": 5,
+        "weak-fit-passed-through": 0
+      },
+      "failures": [
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 0,
+          "frame_end": 1177,
+          "frame_start": 493,
+          "interior_soft_boundary_count": 8,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0042",
+            "audio_onset_soft_0049",
+            "audio_onset_soft_0059",
+            "audio_onset_soft_0065",
+            "audio_onset_soft_0070",
+            "audio_onset_soft_0080",
+            "audio_onset_soft_0086",
+            "audio_onset_soft_0094"
+          ],
+          "max_court_overage_m": 58.673284,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 323,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0042",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 0,
+              "start_anchor": "auto_bounce_candidate_000493_000",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0059",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 2,
+              "start_anchor": "audio_onset_soft_0049",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0070",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 4,
+              "start_anchor": "audio_onset_soft_0065",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0080",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 5,
+              "start_anchor": "audio_onset_soft_0070",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0094",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 7,
+              "start_anchor": "audio_onset_soft_0086",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 39.233333,
+          "t_start": 16.433333,
+          "violating_frame_count": 323,
+          "violating_solver_segment_ids": [
+            0,
+            2,
+            4,
+            5,
+            7
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "split-landed-mid-flight",
+          "evidence_interpretation": "A failed motion check occurs within five frames of an untyped audio split; the split landed inside a physical flight and independent fits disagree.",
+          "flight_sanity_segment_id": 1,
+          "frame_end": 2079,
+          "frame_start": 1177,
+          "interior_soft_boundary_count": 12,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0105",
+            "audio_onset_soft_0112",
+            "audio_onset_soft_0117",
+            "audio_onset_soft_0122",
+            "audio_onset_soft_0130",
+            "audio_onset_soft_0135",
+            "audio_onset_soft_0145",
+            "audio_onset_soft_0159",
+            "audio_onset_soft_0164",
+            "audio_onset_soft_0175",
+            "audio_onset_soft_0182",
+            "audio_onset_soft_0197"
+          ],
+          "max_court_overage_m": 63.950055,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 1,
+              "frame": 2038,
+              "kind": "horizontal_direction_reversal",
+              "measured": 179.794537,
+              "nearest_soft_boundary_frame": 2037,
+              "nearest_soft_boundary_id": "audio_onset_soft_0197",
+              "signed_delta_frames": 1,
+              "threshold": 120.0,
+              "unit": "deg"
+            },
+            {
+              "absolute_delta_frames": 1,
+              "frame": 1359,
+              "kind": "speed_jump",
+              "measured": 30.042291,
+              "nearest_soft_boundary_frame": 1358,
+              "nearest_soft_boundary_id": "audio_onset_soft_0122",
+              "signed_delta_frames": 1,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 249,
+          "reasons": [
+            "vertical_multi_apex",
+            "horizontal_direction_reversal",
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0105",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 9,
+              "start_anchor": "auto_bounce_candidate_001177_001",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0122",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 12,
+              "start_anchor": "audio_onset_soft_0117",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0130",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 13,
+              "start_anchor": "audio_onset_soft_0122",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0135",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 14,
+              "start_anchor": "audio_onset_soft_0130",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0182",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 19,
+              "start_anchor": "audio_onset_soft_0175",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_002079_002",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 21,
+              "start_anchor": "audio_onset_soft_0197",
+              "status": "fit"
+            }
+          ],
+          "t_end": 69.3,
+          "t_start": 39.233333,
+          "violating_frame_count": 249,
+          "violating_solver_segment_ids": [
+            9,
+            12,
+            13,
+            14,
+            19,
+            21
+          ],
+          "violating_solver_statuses": [
+            "fit",
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "split-landed-mid-flight",
+          "evidence_interpretation": "A failed motion check occurs within five frames of an untyped audio split; the split landed inside a physical flight and independent fits disagree.",
+          "flight_sanity_segment_id": 2,
+          "frame_end": 4796,
+          "frame_start": 2079,
+          "interior_soft_boundary_count": 36,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0202",
+            "audio_onset_soft_0205",
+            "audio_onset_soft_0222",
+            "audio_onset_soft_0231",
+            "audio_onset_soft_0241",
+            "audio_onset_soft_0248",
+            "audio_onset_soft_0260",
+            "audio_onset_soft_0268",
+            "audio_onset_soft_0284",
+            "audio_onset_soft_0299",
+            "audio_onset_soft_0307",
+            "audio_onset_soft_0317",
+            "audio_onset_soft_0325",
+            "audio_onset_soft_0332",
+            "audio_onset_soft_0342",
+            "audio_onset_soft_0357",
+            "audio_onset_soft_0362",
+            "audio_onset_soft_0367",
+            "audio_onset_soft_0377",
+            "audio_onset_soft_0388",
+            "audio_onset_soft_0395",
+            "audio_onset_soft_0402",
+            "audio_onset_soft_0412",
+            "audio_onset_soft_0424",
+            "audio_onset_soft_0439",
+            "audio_onset_soft_0448",
+            "audio_onset_soft_0454",
+            "audio_onset_soft_0470",
+            "audio_onset_soft_0477",
+            "audio_onset_soft_0495",
+            "audio_onset_soft_0500",
+            "audio_onset_soft_0504",
+            "audio_onset_soft_0513",
+            "audio_onset_soft_0517",
+            "audio_onset_soft_0524",
+            "audio_onset_soft_0531"
+          ],
+          "max_court_overage_m": 105.016048,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 6,
+              "frame": 4420,
+              "kind": "horizontal_direction_reversal",
+              "measured": 166.713827,
+              "nearest_soft_boundary_frame": 4414,
+              "nearest_soft_boundary_id": "audio_onset_soft_0500",
+              "signed_delta_frames": 6,
+              "threshold": 120.0,
+              "unit": "deg"
+            },
+            {
+              "absolute_delta_frames": 1,
+              "frame": 4415,
+              "kind": "speed_jump",
+              "measured": 55.59372,
+              "nearest_soft_boundary_frame": 4414,
+              "nearest_soft_boundary_id": "audio_onset_soft_0500",
+              "signed_delta_frames": 1,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 856,
+          "reasons": [
+            "vertical_multi_apex",
+            "horizontal_direction_reversal",
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0202",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 22,
+              "start_anchor": "auto_bounce_candidate_002079_002",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0260",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 28,
+              "start_anchor": "audio_onset_soft_0248",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0268",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 29,
+              "start_anchor": "audio_onset_soft_0260",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0284",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 30,
+              "start_anchor": "audio_onset_soft_0268",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0307",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 32,
+              "start_anchor": "audio_onset_soft_0299",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0317",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 33,
+              "start_anchor": "audio_onset_soft_0307",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0325",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 34,
+              "start_anchor": "audio_onset_soft_0317",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0357",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 37,
+              "start_anchor": "audio_onset_soft_0342",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0367",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 39,
+              "start_anchor": "audio_onset_soft_0362",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0377",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 40,
+              "start_anchor": "audio_onset_soft_0367",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0395",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 42,
+              "start_anchor": "audio_onset_soft_0388",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0448",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 47,
+              "start_anchor": "audio_onset_soft_0439",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0504",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 53,
+              "start_anchor": "audio_onset_soft_0500",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0513",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 54,
+              "start_anchor": "audio_onset_soft_0504",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0517",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 55,
+              "start_anchor": "audio_onset_soft_0513",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0531",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 57,
+              "start_anchor": "audio_onset_soft_0524",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_004796_003",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 58,
+              "start_anchor": "audio_onset_soft_0531",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 159.866667,
+          "t_start": 69.3,
+          "violating_frame_count": 856,
+          "violating_solver_segment_ids": [
+            22,
+            28,
+            29,
+            30,
+            32,
+            33,
+            34,
+            37,
+            39,
+            40,
+            42,
+            47,
+            53,
+            54,
+            55,
+            57,
+            58
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 3,
+          "frame_end": 4845,
+          "frame_start": 4796,
+          "interior_soft_boundary_count": 1,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0544"
+          ],
+          "max_court_overage_m": 5.847874,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 20,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_004796_003",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 58,
+              "start_anchor": "audio_onset_soft_0531",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0544",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 59,
+              "start_anchor": "auto_bounce_candidate_004796_003",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_004845_004",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 60,
+              "start_anchor": "audio_onset_soft_0544",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 161.5,
+          "t_start": 159.866667,
+          "violating_frame_count": 20,
+          "violating_solver_segment_ids": [
+            58,
+            59,
+            60
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "split-landed-mid-flight",
+          "evidence_interpretation": "A failed motion check occurs within five frames of an untyped audio split; the split landed inside a physical flight and independent fits disagree.",
+          "flight_sanity_segment_id": 5,
+          "frame_end": 7702,
+          "frame_start": 5006,
+          "interior_soft_boundary_count": 34,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0562",
+            "audio_onset_soft_0571",
+            "audio_onset_soft_0586",
+            "audio_onset_soft_0592",
+            "audio_onset_soft_0598",
+            "audio_onset_soft_0607",
+            "audio_onset_soft_0616",
+            "audio_onset_soft_0628",
+            "audio_onset_soft_0639",
+            "audio_onset_soft_0646",
+            "audio_onset_soft_0657",
+            "audio_onset_soft_0665",
+            "audio_onset_soft_0676",
+            "audio_onset_soft_0681",
+            "audio_onset_soft_0685",
+            "audio_onset_soft_0695",
+            "audio_onset_soft_0706",
+            "audio_onset_soft_0716",
+            "audio_onset_soft_0723",
+            "audio_onset_soft_0732",
+            "audio_onset_soft_0746",
+            "audio_onset_soft_0760",
+            "audio_onset_soft_0768",
+            "audio_onset_soft_0782",
+            "audio_onset_soft_0808",
+            "audio_onset_soft_0822",
+            "audio_onset_soft_0832",
+            "audio_onset_soft_0843",
+            "audio_onset_soft_0853",
+            "audio_onset_soft_0866",
+            "audio_onset_soft_0873",
+            "audio_onset_soft_0884",
+            "audio_onset_soft_0892",
+            "audio_onset_soft_0898"
+          ],
+          "max_court_overage_m": 74.973683,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 1,
+              "frame": 7600,
+              "kind": "speed_jump",
+              "measured": 15.526879,
+              "nearest_soft_boundary_frame": 7599,
+              "nearest_soft_boundary_id": "audio_onset_soft_0898",
+              "signed_delta_frames": 1,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 1029,
+          "reasons": [
+            "vertical_multi_apex",
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0562",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 62,
+              "start_anchor": "auto_bounce_candidate_005006_005",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0586",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 64,
+              "start_anchor": "audio_onset_soft_0571",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0592",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 65,
+              "start_anchor": "audio_onset_soft_0586",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0607",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 67,
+              "start_anchor": "audio_onset_soft_0598",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0616",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 68,
+              "start_anchor": "audio_onset_soft_0607",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0657",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 72,
+              "start_anchor": "audio_onset_soft_0646",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0695",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 77,
+              "start_anchor": "audio_onset_soft_0685",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0723",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 80,
+              "start_anchor": "audio_onset_soft_0716",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0732",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 81,
+              "start_anchor": "audio_onset_soft_0723",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0746",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 82,
+              "start_anchor": "audio_onset_soft_0732",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0760",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 83,
+              "start_anchor": "audio_onset_soft_0746",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0768",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 84,
+              "start_anchor": "audio_onset_soft_0760",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0832",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 88,
+              "start_anchor": "audio_onset_soft_0822",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0853",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 90,
+              "start_anchor": "audio_onset_soft_0843",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0866",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 91,
+              "start_anchor": "audio_onset_soft_0853",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0892",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 94,
+              "start_anchor": "audio_onset_soft_0884",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0898",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 95,
+              "start_anchor": "audio_onset_soft_0892",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_007702_006",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 96,
+              "start_anchor": "audio_onset_soft_0898",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 256.733333,
+          "t_start": 166.866667,
+          "violating_frame_count": 1029,
+          "violating_solver_segment_ids": [
+            62,
+            64,
+            65,
+            67,
+            68,
+            72,
+            77,
+            80,
+            81,
+            82,
+            83,
+            84,
+            88,
+            90,
+            91,
+            94,
+            95,
+            96
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 6,
+          "frame_end": 7951,
+          "frame_start": 7702,
+          "interior_soft_boundary_count": 3,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0924",
+            "audio_onset_soft_0937",
+            "audio_onset_soft_0948"
+          ],
+          "max_court_overage_m": 49.1625,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 246,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0924",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 97,
+              "start_anchor": "auto_bounce_candidate_007702_006",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0937",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 98,
+              "start_anchor": "audio_onset_soft_0924",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0948",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 99,
+              "start_anchor": "audio_onset_soft_0937",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_007951_007",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 100,
+              "start_anchor": "audio_onset_soft_0948",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 265.033333,
+          "t_start": 256.733333,
+          "violating_frame_count": 246,
+          "violating_solver_segment_ids": [
+            97,
+            98,
+            99,
+            100
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 7,
+          "frame_end": 10882,
+          "frame_start": 7951,
+          "interior_soft_boundary_count": 34,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_0955",
+            "audio_onset_soft_0964",
+            "audio_onset_soft_0982",
+            "audio_onset_soft_0996",
+            "audio_onset_soft_1006",
+            "audio_onset_soft_1017",
+            "audio_onset_soft_1025",
+            "audio_onset_soft_1030",
+            "audio_onset_soft_1032",
+            "audio_onset_soft_1040",
+            "audio_onset_soft_1050",
+            "audio_onset_soft_1060",
+            "audio_onset_soft_1070",
+            "audio_onset_soft_1076",
+            "audio_onset_soft_1085",
+            "audio_onset_soft_1095",
+            "audio_onset_soft_1112",
+            "audio_onset_soft_1115",
+            "audio_onset_soft_1122",
+            "audio_onset_soft_1143",
+            "audio_onset_soft_1149",
+            "audio_onset_soft_1156",
+            "audio_onset_soft_1160",
+            "audio_onset_soft_1173",
+            "audio_onset_soft_1193",
+            "audio_onset_soft_1202",
+            "audio_onset_soft_1210",
+            "audio_onset_soft_1214",
+            "audio_onset_soft_1220",
+            "audio_onset_soft_1227",
+            "audio_onset_soft_1231",
+            "audio_onset_soft_1237",
+            "audio_onset_soft_1246",
+            "audio_onset_soft_1255"
+          ],
+          "max_court_overage_m": 70.896844,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 1309,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_0955",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 101,
+              "start_anchor": "auto_bounce_candidate_007951_007",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_0996",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 104,
+              "start_anchor": "audio_onset_soft_0982",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1006",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 105,
+              "start_anchor": "audio_onset_soft_0996",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1025",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 107,
+              "start_anchor": "audio_onset_soft_1017",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1030",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 108,
+              "start_anchor": "audio_onset_soft_1025",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1032",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 109,
+              "start_anchor": "audio_onset_soft_1030",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1040",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 110,
+              "start_anchor": "audio_onset_soft_1032",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1050",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 111,
+              "start_anchor": "audio_onset_soft_1040",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1060",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 112,
+              "start_anchor": "audio_onset_soft_1050",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1112",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 117,
+              "start_anchor": "audio_onset_soft_1095",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1143",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 120,
+              "start_anchor": "audio_onset_soft_1122",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1156",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 122,
+              "start_anchor": "audio_onset_soft_1149",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1173",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 124,
+              "start_anchor": "audio_onset_soft_1160",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1193",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 125,
+              "start_anchor": "audio_onset_soft_1173",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1202",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 126,
+              "start_anchor": "audio_onset_soft_1193",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1214",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 128,
+              "start_anchor": "audio_onset_soft_1210",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1237",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 132,
+              "start_anchor": "audio_onset_soft_1231",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1246",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 133,
+              "start_anchor": "audio_onset_soft_1237",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1255",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 134,
+              "start_anchor": "audio_onset_soft_1246",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1263",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 135,
+              "start_anchor": "audio_onset_soft_1255",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 362.733333,
+          "t_start": 265.033333,
+          "violating_frame_count": 1309,
+          "violating_solver_segment_ids": [
+            101,
+            104,
+            105,
+            107,
+            108,
+            109,
+            110,
+            111,
+            112,
+            117,
+            120,
+            122,
+            124,
+            125,
+            126,
+            128,
+            132,
+            133,
+            134,
+            135
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 8,
+          "frame_end": 12536,
+          "frame_start": 11505,
+          "interior_soft_boundary_count": 10,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1338",
+            "audio_onset_soft_1347",
+            "audio_onset_soft_1357",
+            "audio_onset_soft_1366",
+            "audio_onset_soft_1403",
+            "audio_onset_soft_1411",
+            "audio_onset_soft_1422",
+            "audio_onset_soft_1434",
+            "audio_onset_soft_1445",
+            "audio_onset_soft_1455"
+          ],
+          "max_court_overage_m": 57.213805,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 203,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1338",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 142,
+              "start_anchor": "audio_onset_soft_1326",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1347",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 143,
+              "start_anchor": "audio_onset_soft_1338",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1366",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 145,
+              "start_anchor": "audio_onset_soft_1357",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1445",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 150,
+              "start_anchor": "audio_onset_soft_1434",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_012536_009",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 152,
+              "start_anchor": "audio_onset_soft_1455",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 417.866667,
+          "t_start": 383.5,
+          "violating_frame_count": 203,
+          "violating_solver_segment_ids": [
+            142,
+            143,
+            145,
+            150,
+            152
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "split-landed-mid-flight",
+          "evidence_interpretation": "A failed motion check occurs within five frames of an untyped audio split; the split landed inside a physical flight and independent fits disagree.",
+          "flight_sanity_segment_id": 9,
+          "frame_end": 14043,
+          "frame_start": 12536,
+          "interior_soft_boundary_count": 15,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1462",
+            "audio_onset_soft_1474",
+            "audio_onset_soft_1484",
+            "audio_onset_soft_1502",
+            "audio_onset_soft_1517",
+            "audio_onset_soft_1523",
+            "audio_onset_soft_1530",
+            "audio_onset_soft_1538",
+            "audio_onset_soft_1542",
+            "audio_onset_soft_1557",
+            "audio_onset_soft_1567",
+            "audio_onset_soft_1573",
+            "audio_onset_soft_1585",
+            "audio_onset_soft_1603",
+            "audio_onset_soft_1606"
+          ],
+          "max_court_overage_m": 76.625767,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 0,
+              "frame": 13080,
+              "kind": "horizontal_direction_reversal",
+              "measured": 179.990023,
+              "nearest_soft_boundary_frame": 13080,
+              "nearest_soft_boundary_id": "audio_onset_soft_1523",
+              "signed_delta_frames": 0,
+              "threshold": 120.0,
+              "unit": "deg"
+            },
+            {
+              "absolute_delta_frames": 0,
+              "frame": 13080,
+              "kind": "speed_jump",
+              "measured": 60.930597,
+              "nearest_soft_boundary_frame": 13080,
+              "nearest_soft_boundary_id": "audio_onset_soft_1523",
+              "signed_delta_frames": 0,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 694,
+          "reasons": [
+            "vertical_multi_apex",
+            "horizontal_direction_reversal",
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_012536_009",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 152,
+              "start_anchor": "audio_onset_soft_1455",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1462",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 153,
+              "start_anchor": "auto_bounce_candidate_012536_009",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1502",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 156,
+              "start_anchor": "audio_onset_soft_1484",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1517",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 157,
+              "start_anchor": "audio_onset_soft_1502",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1523",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 158,
+              "start_anchor": "audio_onset_soft_1517",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1530",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 159,
+              "start_anchor": "audio_onset_soft_1523",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1538",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 160,
+              "start_anchor": "audio_onset_soft_1530",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1542",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 161,
+              "start_anchor": "audio_onset_soft_1538",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1573",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 164,
+              "start_anchor": "audio_onset_soft_1567",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1585",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 165,
+              "start_anchor": "audio_onset_soft_1573",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1606",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 167,
+              "start_anchor": "audio_onset_soft_1603",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 468.1,
+          "t_start": 417.866667,
+          "violating_frame_count": 694,
+          "violating_solver_segment_ids": [
+            152,
+            153,
+            156,
+            157,
+            158,
+            159,
+            160,
+            161,
+            164,
+            165,
+            167
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 10,
+          "frame_end": 14328,
+          "frame_start": 14043,
+          "interior_soft_boundary_count": 3,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1612",
+            "audio_onset_soft_1627",
+            "audio_onset_soft_1633"
+          ],
+          "max_court_overage_m": 67.567643,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 195,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1612",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 169,
+              "start_anchor": "auto_bounce_candidate_014043_010",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1627",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 170,
+              "start_anchor": "audio_onset_soft_1612",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1638",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 172,
+              "start_anchor": "audio_onset_soft_1633",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 477.6,
+          "t_start": 468.1,
+          "violating_frame_count": 195,
+          "violating_solver_segment_ids": [
+            169,
+            170,
+            172
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 11,
+          "frame_end": 15048,
+          "frame_start": 14434,
+          "interior_soft_boundary_count": 7,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1651",
+            "audio_onset_soft_1657",
+            "audio_onset_soft_1669",
+            "audio_onset_soft_1674",
+            "audio_onset_soft_1681",
+            "audio_onset_soft_1689",
+            "audio_onset_soft_1700"
+          ],
+          "max_court_overage_m": 16.521617,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 47,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1651",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 175,
+              "start_anchor": "audio_onset_soft_1646",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 501.6,
+          "t_start": 481.133333,
+          "violating_frame_count": 47,
+          "violating_solver_segment_ids": [
+            175
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "split-landed-mid-flight",
+          "evidence_interpretation": "A failed motion check occurs within five frames of an untyped audio split; the split landed inside a physical flight and independent fits disagree.",
+          "flight_sanity_segment_id": 12,
+          "frame_end": 15394,
+          "frame_start": 15048,
+          "interior_soft_boundary_count": 4,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1711",
+            "audio_onset_soft_1724",
+            "audio_onset_soft_1731",
+            "audio_onset_soft_1747"
+          ],
+          "max_court_overage_m": 54.559924,
+          "nearest_boundary_to_failed_motion_check": [
+            {
+              "absolute_delta_frames": 0,
+              "frame": 15369,
+              "kind": "speed_jump",
+              "measured": 9.41744,
+              "nearest_soft_boundary_frame": 15369,
+              "nearest_soft_boundary_id": "audio_onset_soft_1747",
+              "signed_delta_frames": 0,
+              "threshold": 8.75,
+              "unit": "mps"
+            }
+          ],
+          "outside_court_frame_count": 184,
+          "reasons": [
+            "vertical_multi_apex",
+            "speed_jump",
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1711",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 183,
+              "start_anchor": "auto_bounce_candidate_015048_012",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1747",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 186,
+              "start_anchor": "audio_onset_soft_1731",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 513.133333,
+          "t_start": 501.6,
+          "violating_frame_count": 184,
+          "violating_solver_segment_ids": [
+            183,
+            186
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 13,
+          "frame_end": 16827,
+          "frame_start": 15394,
+          "interior_soft_boundary_count": 17,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1751",
+            "audio_onset_soft_1757",
+            "audio_onset_soft_1763",
+            "audio_onset_soft_1772",
+            "audio_onset_soft_1779",
+            "audio_onset_soft_1783",
+            "audio_onset_soft_1791",
+            "audio_onset_soft_1793",
+            "audio_onset_soft_1801",
+            "audio_onset_soft_1810",
+            "audio_onset_soft_1816",
+            "audio_onset_soft_1826",
+            "audio_onset_soft_1832",
+            "audio_onset_soft_1841",
+            "audio_onset_soft_1850",
+            "audio_onset_soft_1860",
+            "audio_onset_soft_1878"
+          ],
+          "max_court_overage_m": 59.085808,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 400,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1751",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 188,
+              "start_anchor": "auto_bounce_candidate_015394_013",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1757",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 189,
+              "start_anchor": "audio_onset_soft_1751",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1783",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 193,
+              "start_anchor": "audio_onset_soft_1779",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1816",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 198,
+              "start_anchor": "audio_onset_soft_1810",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1841",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 201,
+              "start_anchor": "audio_onset_soft_1832",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1860",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 203,
+              "start_anchor": "audio_onset_soft_1850",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_016827_014",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 205,
+              "start_anchor": "audio_onset_soft_1878",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 560.9,
+          "t_start": 513.133333,
+          "violating_frame_count": 400,
+          "violating_solver_segment_ids": [
+            188,
+            189,
+            193,
+            198,
+            201,
+            203,
+            205
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 14,
+          "frame_end": 17111,
+          "frame_start": 16827,
+          "interior_soft_boundary_count": 4,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1891",
+            "audio_onset_soft_1900",
+            "audio_onset_soft_1906",
+            "audio_onset_soft_1916"
+          ],
+          "max_court_overage_m": 55.233295,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 184,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_016827_014",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 205,
+              "start_anchor": "audio_onset_soft_1878",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1891",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 206,
+              "start_anchor": "auto_bounce_candidate_016827_014",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1906",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 208,
+              "start_anchor": "audio_onset_soft_1900",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1916",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 209,
+              "start_anchor": "audio_onset_soft_1906",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_1918",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 210,
+              "start_anchor": "audio_onset_soft_1916",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 570.366667,
+          "t_start": 560.9,
+          "violating_frame_count": 184,
+          "violating_solver_segment_ids": [
+            205,
+            206,
+            208,
+            209,
+            210
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 15,
+          "frame_end": 18044,
+          "frame_start": 17460,
+          "interior_soft_boundary_count": 4,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_1972",
+            "audio_onset_soft_1983",
+            "audio_onset_soft_1987",
+            "audio_onset_soft_2000"
+          ],
+          "max_court_overage_m": 78.435461,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 127,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_1972",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 214,
+              "start_anchor": "audio_onset_soft_1955",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2000",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 217,
+              "start_anchor": "audio_onset_soft_1987",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 601.466667,
+          "t_start": 582.0,
+          "violating_frame_count": 127,
+          "violating_solver_segment_ids": [
+            214,
+            217
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 16,
+          "frame_end": 19909,
+          "frame_start": 18044,
+          "interior_soft_boundary_count": 23,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_2013",
+            "audio_onset_soft_2025",
+            "audio_onset_soft_2037",
+            "audio_onset_soft_2047",
+            "audio_onset_soft_2056",
+            "audio_onset_soft_2064",
+            "audio_onset_soft_2078",
+            "audio_onset_soft_2088",
+            "audio_onset_soft_2095",
+            "audio_onset_soft_2102",
+            "audio_onset_soft_2110",
+            "audio_onset_soft_2115",
+            "audio_onset_soft_2127",
+            "audio_onset_soft_2142",
+            "audio_onset_soft_2147",
+            "audio_onset_soft_2152",
+            "audio_onset_soft_2159",
+            "audio_onset_soft_2164",
+            "audio_onset_soft_2169",
+            "audio_onset_soft_2175",
+            "audio_onset_soft_2184",
+            "audio_onset_soft_2196",
+            "audio_onset_soft_2207"
+          ],
+          "max_court_overage_m": 58.553068,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 522,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_2013",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 219,
+              "start_anchor": "auto_bounce_candidate_018044_016",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2025",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 220,
+              "start_anchor": "audio_onset_soft_2013",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2037",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 221,
+              "start_anchor": "audio_onset_soft_2025",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2047",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 222,
+              "start_anchor": "audio_onset_soft_2037",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2056",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 223,
+              "start_anchor": "audio_onset_soft_2047",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2064",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 224,
+              "start_anchor": "audio_onset_soft_2056",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2088",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 226,
+              "start_anchor": "audio_onset_soft_2078",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2102",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 228,
+              "start_anchor": "audio_onset_soft_2095",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2147",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 233,
+              "start_anchor": "audio_onset_soft_2142",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2159",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 235,
+              "start_anchor": "audio_onset_soft_2152",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2175",
+              "soft_split_provenance_count": 2,
+              "solver_segment_id": 238,
+              "start_anchor": "audio_onset_soft_2169",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_019909_017",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 242,
+              "start_anchor": "audio_onset_soft_2207",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 663.633333,
+          "t_start": 601.466667,
+          "violating_frame_count": 522,
+          "violating_solver_segment_ids": [
+            219,
+            220,
+            221,
+            222,
+            223,
+            224,
+            226,
+            228,
+            233,
+            235,
+            238,
+            242
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 17,
+          "frame_end": 20531,
+          "frame_start": 19909,
+          "interior_soft_boundary_count": 4,
+          "interior_soft_boundary_ids": [
+            "audio_onset_soft_2211",
+            "audio_onset_soft_2221",
+            "audio_onset_soft_2255",
+            "audio_onset_soft_2262"
+          ],
+          "max_court_overage_m": 35.439122,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 84,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "auto_bounce_candidate_019909_017",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 242,
+              "start_anchor": "audio_onset_soft_2207",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "audio_onset_soft_2211",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 243,
+              "start_anchor": "auto_bounce_candidate_019909_017",
+              "status": "fit_bvp_fallback"
+            },
+            {
+              "end_anchor": "auto_bounce_candidate_020531_018",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 247,
+              "start_anchor": "audio_onset_soft_2262",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 684.366667,
+          "t_start": 663.633333,
+          "violating_frame_count": 84,
+          "violating_solver_segment_ids": [
+            242,
+            243,
+            247
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        },
+        {
+          "classification": "anchor-semantics-structural",
+          "evidence_interpretation": "Only untyped soft endpoints/free-depth fits are available inside the hard bounce-to-bounce gate span; the unchanged gate cannot treat audio splits as physics anchors.",
+          "flight_sanity_segment_id": 18,
+          "frame_end": 20536,
+          "frame_start": 20531,
+          "interior_soft_boundary_count": 0,
+          "interior_soft_boundary_ids": [],
+          "max_court_overage_m": 0.837498,
+          "nearest_boundary_to_failed_motion_check": [],
+          "outside_court_frame_count": 5,
+          "reasons": [
+            "outside_court_volume"
+          ],
+          "solver_segment_evidence": [
+            {
+              "end_anchor": "audio_onset_soft_2268",
+              "soft_split_provenance_count": 1,
+              "solver_segment_id": 248,
+              "start_anchor": "auto_bounce_candidate_020531_018",
+              "status": "fit_bvp_fallback"
+            }
+          ],
+          "t_end": 684.533333,
+          "t_start": 684.366667,
+          "violating_frame_count": 5,
+          "violating_solver_segment_ids": [
+            248
+          ],
+          "violating_solver_statuses": [
+            "fit_bvp_fallback"
+          ],
+          "weak_violating_frames": []
+        }
+      ],
+      "in_rally_frame_coverage_percent": 43.68650217706821,
+      "killed": true,
+      "physics_violation_count": 18,
+      "preset": "broad",
+      "segments_fit_count": 123,
+      "selected_onset_count": 241,
+      "selection_rule_id": "audio_soft_score003_spacing150_rally_v1"
+    }
+  ],
+  "schema_version": 1,
+  "taxonomy_verdict": "needs-typed-anchors",
+  "taxonomy_verdict_reason": "Threshold/spacing changes cannot give review-only audio onsets contact semantics. Across all presets, failures are dominated by anchor-semantics-structural free-depth/BVP fallback geometry; none are weak-fit pass-throughs. Denser presets recover more fits but do not reduce the unchanged gate's violation count to zero. Zero-violation recovery therefore requires Track G typed event anchors (or equivalent physics-bearing contact evidence), not another audio preset search.",
+  "trend_conservative_to_balanced": {
+    "explanation": "Balanced selected 34 additional untyped boundaries, so more short pools fit and frame coverage rose. The same additional free-depth fits exposed two previously unevaluated hard gate spans (0 and 15) as outside-court failures, raising violations from 16 to 18.",
+    "in_rally_coverage_percentage_point_delta": 10.885341074020317,
+    "new_failed_flight_sanity_segment_ids": [
+      0,
+      15
+    ],
+    "physics_violation_delta": 2,
+    "segments_fit_delta": 32,
+    "selected_onset_delta": 34
+  },
+  "verified": false
+}

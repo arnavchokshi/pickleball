@@ -19,6 +19,7 @@ from threed.racketsport.ball_arc_solver import (
     BallArcSolverConfig,
     BallObservation,
     PhysicsParameters,
+    SoftSegmentBoundary,
     build_bounce_anchor,
     fit_flight_segment,
     fit_weak_flight_segment,
@@ -26,6 +27,7 @@ from threed.racketsport.ball_arc_solver import (
     solve_ball_arc_track,
 )
 from threed.racketsport.ball_arc_chain import build_ball_arc_render_artifact
+from threed.racketsport.ball_flight_sanity import evaluate_ball_flight_sanity
 from threed.racketsport.flight_simulator import (
     FlightSimulationConfig,
     generate_trajectory_pair,
@@ -70,6 +72,131 @@ def test_order_event_anchors_sorts_and_prefers_human_reviewed_duplicates() -> No
     assert [anchor.anchor_id for anchor in ordered] == ["c0", "b1-reviewed", "c2"]
     assert ordered[1].world_xyz == pytest.approx((1.1, 0.0, BALL_RADIUS_M))
     assert ordered[1].immovable is True
+
+
+def test_audio_soft_boundary_only_splits_and_carries_typed_provenance() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    p0 = (0.0, -2.0, 1.0)
+    t1 = 1.0
+    v0 = (0.4, 3.0, _vz_for_endpoint(p0[2], BALL_RADIUS_M, t1))
+    frames = []
+    for frame in range(31):
+        t = frame / 30.0
+        frames.append(
+            {
+                "frame": frame,
+                "t": t,
+                "xy": list(_project(calibration, _no_drag_position(p0, v0, t))),
+                "conf": 0.99,
+                "visible": True,
+            }
+        )
+    boundary = SoftSegmentBoundary(
+        boundary_id="audio_soft_15",
+        corrected_time_s=0.5,
+        frame=15,
+        onset_ids=("onset_0015",),
+        selection_rule_id="audio_soft_score010_spacing200_rally_v1",
+        source_artifact="review_only_audio_onsets.json",
+    )
+    artifact = solve_ball_arc_track(
+        ball_track={"schema_version": 1, "fps": 30.0, "source": "synthetic", "frames": frames},
+        calibration=calibration,
+        extra_anchors=[
+            _anchor("contact-start", "contact", 0.0, p0, frame=0, sigma_m=0.04),
+            _anchor(
+                "bounce-end",
+                "bounce",
+                t1,
+                _no_drag_position(p0, v0, t1),
+                frame=30,
+                sigma_m=0.04,
+                status="human_reviewed",
+            ),
+        ],
+        soft_split_boundaries=[boundary],
+        physics=physics,
+        config=BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_event_subset_selection=False,
+            enable_weak_segments=False,
+            robust_pixel_sigma=2.0,
+            max_reprojection_inlier_px=8.0,
+        ),
+        clip_id="soft-split-synthetic",
+    )
+
+    assert artifact["summary"]["soft_split_boundary_applied_count"] == 1
+    assert artifact["summary"]["soft_split_segment_count"] == 2
+    assert [anchor["kind"] for anchor in artifact["anchors"]] == ["contact", "bounce"]
+    assert artifact["summary"]["auto_bounce_candidate_count"] == 0
+    assert artifact["summary"]["contact_anchor_count"] == 1
+    for segment in artifact["segments"]:
+        provenance = segment["soft_split_provenance"]
+        assert len(provenance) == 1
+        assert provenance[0]["anchor_class"] == "audio_onset_soft"
+        assert provenance[0]["onset_ids"] == ["onset_0015"]
+        assert provenance[0]["corrected_time_s"] == pytest.approx(0.5)
+        assert provenance[0]["selection_rule_id"] == "audio_soft_score010_spacing200_rally_v1"
+        assert provenance[0]["event_type"] is None
+        assert provenance[0]["world_constraint"] is None
+        assert provenance[0]["counts_as_bounce_evidence"] is False
+        assert provenance[0]["counts_as_flight_sanity_anchor"] is False
+        diagnostics = segment["diagnostics"]["soft_split_boundary"]
+        assert diagnostics["world_endpoint_constraints_from_soft_evidence"] is False
+        assert diagnostics["bvp_endpoint_pinning_skipped"] is True
+
+    sanity = evaluate_ball_flight_sanity(artifact, solver_config=BallArcSolverConfig(), physics=physics)
+    assert sanity["summary"]["segment_count"] == 1
+    assert sanity["summary"]["failed_segment_count"] == 0
+
+
+def test_no_soft_boundaries_is_byte_identical_to_omitted_default() -> None:
+    calibration = _projection_calibration()
+    physics = PhysicsParameters.no_drag()
+    p0 = (0.0, -1.0, 1.0)
+    t1 = 0.3
+    v0 = (0.2, 2.0, _vz_for_endpoint(p0[2], BALL_RADIUS_M, t1))
+    frames = [
+        {
+            "frame": frame,
+            "t": frame / 30.0,
+            "xy": list(_project(calibration, _no_drag_position(p0, v0, frame / 30.0))),
+            "conf": 0.99,
+            "visible": True,
+        }
+        for frame in range(10)
+    ]
+    kwargs = {
+        "ball_track": {"schema_version": 1, "fps": 30.0, "source": "synthetic", "frames": frames},
+        "calibration": calibration,
+        "extra_anchors": [
+            _anchor("contact-start", "contact", 0.0, p0, frame=0, sigma_m=0.04),
+            _anchor(
+                "bounce-end",
+                "bounce",
+                t1,
+                _no_drag_position(p0, v0, t1),
+                frame=9,
+                sigma_m=0.04,
+                status="human_reviewed",
+            ),
+        ],
+        "physics": physics,
+        "config": BallArcSolverConfig(
+            enable_event_discovery=False,
+            enable_event_subset_selection=False,
+            enable_weak_segments=False,
+        ),
+        "clip_id": "byte-parity-no-soft",
+    }
+    omitted = solve_ball_arc_track(**kwargs)
+    explicit_empty = solve_ball_arc_track(**kwargs, soft_split_boundaries=[])
+
+    encode = lambda payload: json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    assert encode(omitted) == encode(explicit_empty)
+    assert "soft_split_boundaries" not in omitted
 
 
 def test_solve_ball_arc_track_uses_frame_time_table_when_frame_timestamps_are_missing() -> None:

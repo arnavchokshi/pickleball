@@ -1,0 +1,7960 @@
+{
+  "artifact_type": "racketsport_ball_arc_render",
+  "bridges": [],
+  "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+  "generated_at": "2026-07-16T00:00:00Z",
+  "not_for_detection_metrics": true,
+  "policy": {
+    "bridge_samples_low_confidence": true,
+    "dense_samples_from_parametric_solver": true,
+    "does_not_change_solver_status": true,
+    "does_not_feed_detection_metrics": true,
+    "not_for_detection_metrics": true,
+    "render_only": true
+  },
+  "render_only": true,
+  "samples": [
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.614496,
+        4.96378
+      ],
+      "frame_float": 12.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.399198425,
+      "world_xyz": [
+        -2.614496,
+        4.96378,
+        0.040484
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.615846,
+        4.969315
+      ],
+      "frame_float": 12.023807,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.4,
+      "world_xyz": [
+        -2.615846,
+        4.969315,
+        0.042243
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.628521,
+        5.021268
+      ],
+      "frame_float": 12.247507,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.407531759,
+      "world_xyz": [
+        -2.628521,
+        5.021268,
+        0.058446
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.642517,
+        5.078637
+      ],
+      "frame_float": 12.495013,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.415865092,
+      "world_xyz": [
+        -2.642517,
+        5.078637,
+        0.075691
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.656484,
+        5.135888
+      ],
+      "frame_float": 12.74252,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.424198426,
+      "world_xyz": [
+        -2.656484,
+        5.135888,
+        0.09222
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.670422,
+        5.193022
+      ],
+      "frame_float": 12.990026,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.432531759,
+      "world_xyz": [
+        -2.670422,
+        5.193022,
+        0.108035
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.671761,
+        5.198509
+      ],
+      "frame_float": 13.013824,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.433333,
+      "world_xyz": [
+        -2.671761,
+        5.198509,
+        0.109518
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.684332,
+        5.250039
+      ],
+      "frame_float": 13.237533,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.440865093,
+      "world_xyz": [
+        -2.684332,
+        5.250039,
+        0.123137
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.698214,
+        5.306941
+      ],
+      "frame_float": 13.485039,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.449198427,
+      "world_xyz": [
+        -2.698214,
+        5.306941,
+        0.137528
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.712068,
+        5.363727
+      ],
+      "frame_float": 13.732546,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.45753176,
+      "world_xyz": [
+        -2.712068,
+        5.363727,
+        0.15121
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.725894,
+        5.4204
+      ],
+      "frame_float": 13.980053,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.465865094,
+      "world_xyz": [
+        -2.725894,
+        5.4204,
+        0.164184
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.727223,
+        5.425848
+      ],
+      "frame_float": 14.00387,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.466667,
+      "world_xyz": [
+        -2.727223,
+        5.425848,
+        0.165395
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.739692,
+        5.47696
+      ],
+      "frame_float": 14.227559,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.474198428,
+      "world_xyz": [
+        -2.739692,
+        5.47696,
+        0.176452
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.753463,
+        5.533407
+      ],
+      "frame_float": 14.475066,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.482531761,
+      "world_xyz": [
+        -2.753463,
+        5.533407,
+        0.188015
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.767207,
+        5.589741
+      ],
+      "frame_float": 14.722572,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.490865095,
+      "world_xyz": [
+        -2.767207,
+        5.589741,
+        0.198874
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.780923,
+        5.645965
+      ],
+      "frame_float": 14.970079,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.499198428,
+      "world_xyz": [
+        -2.780923,
+        5.645965,
+        0.209032
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.782241,
+        5.651367
+      ],
+      "frame_float": 14.993886,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.5,
+      "world_xyz": [
+        -2.782241,
+        5.651367,
+        0.209972
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.794613,
+        5.702078
+      ],
+      "frame_float": 15.217585,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.507531762,
+      "world_xyz": [
+        -2.794613,
+        5.702078,
+        0.21849
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.808275,
+        5.758081
+      ],
+      "frame_float": 15.465092,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.515865096,
+      "world_xyz": [
+        -2.808275,
+        5.758081,
+        0.227249
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.821911,
+        5.813975
+      ],
+      "frame_float": 15.712599,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.524198429,
+      "world_xyz": [
+        -2.821911,
+        5.813975,
+        0.23531
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.835521,
+        5.86976
+      ],
+      "frame_float": 15.960105,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.532531763,
+      "world_xyz": [
+        -2.835521,
+        5.86976,
+        0.242675
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.836828,
+        5.875118
+      ],
+      "frame_float": 15.983903,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.533333,
+      "world_xyz": [
+        -2.836828,
+        5.875118,
+        0.243347
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.849104,
+        5.925437
+      ],
+      "frame_float": 16.207612,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.540865096,
+      "world_xyz": [
+        -2.849104,
+        5.925437,
+        0.249346
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.86266,
+        5.981006
+      ],
+      "frame_float": 16.455118,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.54919843,
+      "world_xyz": [
+        -2.86266,
+        5.981006,
+        0.255323
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.876191,
+        6.036469
+      ],
+      "frame_float": 16.702625,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.557531764,
+      "world_xyz": [
+        -2.876191,
+        6.036469,
+        0.260608
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.889696,
+        6.091824
+      ],
+      "frame_float": 16.950131,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.565865097,
+      "world_xyz": [
+        -2.889696,
+        6.091824,
+        0.265203
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.890994,
+        6.097146
+      ],
+      "frame_float": 16.973949,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.566667,
+      "world_xyz": [
+        -2.890994,
+        6.097146,
+        0.265609
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.903175,
+        6.147074
+      ],
+      "frame_float": 17.197638,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.574198431,
+      "world_xyz": [
+        -2.903175,
+        6.147074,
+        0.269109
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.916628,
+        6.202218
+      ],
+      "frame_float": 17.445145,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.582531764,
+      "world_xyz": [
+        -2.916628,
+        6.202218,
+        0.272327
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.930055,
+        6.257258
+      ],
+      "frame_float": 17.692651,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.590865098,
+      "world_xyz": [
+        -2.930055,
+        6.257258,
+        0.274859
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.943457,
+        6.312192
+      ],
+      "frame_float": 17.940158,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.599198432,
+      "world_xyz": [
+        -2.943457,
+        6.312192,
+        0.276705
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.944745,
+        6.317471
+      ],
+      "frame_float": 17.963965,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.6,
+      "world_xyz": [
+        -2.944745,
+        6.317471,
+        0.276846
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.956834,
+        6.367023
+      ],
+      "frame_float": 18.187664,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.607531765,
+      "world_xyz": [
+        -2.956834,
+        6.367023,
+        0.277867
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.970185,
+        6.42175
+      ],
+      "frame_float": 18.435171,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.615865099,
+      "world_xyz": [
+        -2.970185,
+        6.42175,
+        0.278347
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.983511,
+        6.476373
+      ],
+      "frame_float": 18.682677,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.624198433,
+      "world_xyz": [
+        -2.983511,
+        6.476373,
+        0.278146
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.996812,
+        6.530894
+      ],
+      "frame_float": 18.930184,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.632531766,
+      "world_xyz": [
+        -2.996812,
+        6.530894,
+        0.277264
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -2.998089,
+        6.53613
+      ],
+      "frame_float": 18.953981,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.633333,
+      "world_xyz": [
+        -2.998089,
+        6.53613,
+        0.277144
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.010088,
+        6.585312
+      ],
+      "frame_float": 19.177691,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.6408651,
+      "world_xyz": [
+        -3.010088,
+        6.585312,
+        0.275704
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.023339,
+        6.639628
+      ],
+      "frame_float": 19.425197,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.649198433,
+      "world_xyz": [
+        -3.023339,
+        6.639628,
+        0.273466
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.036565,
+        6.693842
+      ],
+      "frame_float": 19.672704,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.657531767,
+      "world_xyz": [
+        -3.036565,
+        6.693842,
+        0.270553
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.049766,
+        6.747954
+      ],
+      "frame_float": 19.92021,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.665865101,
+      "world_xyz": [
+        -3.049766,
+        6.747954,
+        0.266964
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.051035,
+        6.753156
+      ],
+      "frame_float": 19.944027,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.666667,
+      "world_xyz": [
+        -3.051035,
+        6.753156,
+        0.266583
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.062943,
+        6.801965
+      ],
+      "frame_float": 20.167717,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.674198434,
+      "world_xyz": [
+        -3.062943,
+        6.801965,
+        0.262701
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.076095,
+        6.855875
+      ],
+      "frame_float": 20.415223,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.682531768,
+      "world_xyz": [
+        -3.076095,
+        6.855875,
+        0.257767
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.089222,
+        6.909685
+      ],
+      "frame_float": 20.66273,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.690865101,
+      "world_xyz": [
+        -3.089222,
+        6.909685,
+        0.252161
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.102325,
+        6.963394
+      ],
+      "frame_float": 20.910237,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.699198435,
+      "world_xyz": [
+        -3.102325,
+        6.963394,
+        0.245885
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.103584,
+        6.968554
+      ],
+      "frame_float": 20.934044,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.7,
+      "world_xyz": [
+        -3.103584,
+        6.968554,
+        0.245246
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.115404,
+        7.017002
+      ],
+      "frame_float": 21.157743,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.707531769,
+      "world_xyz": [
+        -3.115404,
+        7.017002,
+        0.23894
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.128458,
+        7.070511
+      ],
+      "frame_float": 21.40525,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.715865102,
+      "world_xyz": [
+        -3.128458,
+        7.070511,
+        0.231328
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.141487,
+        7.12392
+      ],
+      "frame_float": 21.652756,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.724198436,
+      "world_xyz": [
+        -3.141487,
+        7.12392,
+        0.22305
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.154493,
+        7.177229
+      ],
+      "frame_float": 21.900263,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.732531769,
+      "world_xyz": [
+        -3.154493,
+        7.177229,
+        0.214107
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.155742,
+        7.18235
+      ],
+      "frame_float": 21.92406,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.733333,
+      "world_xyz": [
+        -3.155742,
+        7.18235,
+        0.213212
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.167474,
+        7.230439
+      ],
+      "frame_float": 22.147769,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.740865103,
+      "world_xyz": [
+        -3.167474,
+        7.230439,
+        0.2045
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.180431,
+        7.28355
+      ],
+      "frame_float": 22.395276,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.749198437,
+      "world_xyz": [
+        -3.180431,
+        7.28355,
+        0.194231
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.193364,
+        7.336561
+      ],
+      "frame_float": 22.642783,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.75753177,
+      "world_xyz": [
+        -3.193364,
+        7.336561,
+        0.1833
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.206272,
+        7.389474
+      ],
+      "frame_float": 22.890289,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.765865104,
+      "world_xyz": [
+        -3.206272,
+        7.389474,
+        0.17171
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.207513,
+        7.39456
+      ],
+      "frame_float": 22.914106,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.766667,
+      "world_xyz": [
+        -3.207513,
+        7.39456,
+        0.17056
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.219157,
+        7.442288
+      ],
+      "frame_float": 23.137796,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.774198438,
+      "world_xyz": [
+        -3.219157,
+        7.442288,
+        0.159461
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.232017,
+        7.495003
+      ],
+      "frame_float": 23.385302,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.782531771,
+      "world_xyz": [
+        -3.232017,
+        7.495003,
+        0.146554
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.244854,
+        7.547619
+      ],
+      "frame_float": 23.632809,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.790865105,
+      "world_xyz": [
+        -3.244854,
+        7.547619,
+        0.132991
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.257666,
+        7.600137
+      ],
+      "frame_float": 23.880315,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.799198438,
+      "world_xyz": [
+        -3.257666,
+        7.600137,
+        0.118773
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.258897,
+        7.605183
+      ],
+      "frame_float": 23.904123,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.8,
+      "world_xyz": [
+        -3.258897,
+        7.605183,
+        0.117371
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.270454,
+        7.652556
+      ],
+      "frame_float": 24.127822,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.807531772,
+      "world_xyz": [
+        -3.270454,
+        7.652556,
+        0.103902
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.283219,
+        7.704876
+      ],
+      "frame_float": 24.375329,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.815865106,
+      "world_xyz": [
+        -3.283219,
+        7.704876,
+        0.088378
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.295959,
+        7.757098
+      ],
+      "frame_float": 24.622835,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.824198439,
+      "world_xyz": [
+        -3.295959,
+        7.757098,
+        0.072203
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.308675,
+        7.809222
+      ],
+      "frame_float": 24.870342,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.832531773,
+      "world_xyz": [
+        -3.308675,
+        7.809222,
+        0.055378
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.309896,
+        7.814229
+      ],
+      "frame_float": 24.894139,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.833333,
+      "world_xyz": [
+        -3.309896,
+        7.814229,
+        0.053726
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.223336,
+      "court_xy": [
+        -3.315327,
+        7.836488
+      ],
+      "frame_float": 25.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 1,
+      "t": 0.836897253,
+      "world_xyz": [
+        -3.315327,
+        7.836488,
+        0.046305
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.318191,
+        10.471562
+      ],
+      "frame_float": 223.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.425918297,
+      "world_xyz": [
+        -0.318191,
+        10.471562,
+        0.064149
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.326336,
+        10.399734
+      ],
+      "frame_float": 223.218787,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.433333,
+      "world_xyz": [
+        -0.326336,
+        10.399734,
+        0.096585
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.327343,
+        10.390849
+      ],
+      "frame_float": 223.245893,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.434251631,
+      "world_xyz": [
+        -0.327343,
+        10.390849,
+        0.10056
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.336469,
+        10.310376
+      ],
+      "frame_float": 223.491787,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.442584964,
+      "world_xyz": [
+        -0.336469,
+        10.310376,
+        0.136183
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.345568,
+        10.230141
+      ],
+      "frame_float": 223.73768,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.450918298,
+      "world_xyz": [
+        -0.345568,
+        10.230141,
+        0.171021
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.35464,
+        10.150141
+      ],
+      "frame_float": 223.983573,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.459251631,
+      "world_xyz": [
+        -0.35464,
+        10.150141,
+        0.205076
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.36269,
+        10.079151
+      ],
+      "frame_float": 224.20238,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.466667,
+      "world_xyz": [
+        -0.36269,
+        10.079151,
+        0.234724
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.363685,
+        10.070376
+      ],
+      "frame_float": 224.229466,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.467584965,
+      "world_xyz": [
+        -0.363685,
+        10.070376,
+        0.238351
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.372704,
+        9.990842
+      ],
+      "frame_float": 224.47536,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.475918299,
+      "world_xyz": [
+        -0.372704,
+        9.990842,
+        0.27085
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.381697,
+        9.911538
+      ],
+      "frame_float": 224.721253,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.484251632,
+      "world_xyz": [
+        -0.381697,
+        9.911538,
+        0.302575
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.390664,
+        9.832461
+      ],
+      "frame_float": 224.967146,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.492584966,
+      "world_xyz": [
+        -0.390664,
+        9.832461,
+        0.333529
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.398622,
+        9.762289
+      ],
+      "frame_float": 225.185943,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.5,
+      "world_xyz": [
+        -0.398622,
+        9.762289,
+        0.360426
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.399606,
+        9.753611
+      ],
+      "frame_float": 225.213039,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.5009183,
+      "world_xyz": [
+        -0.399606,
+        9.753611,
+        0.363715
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.408522,
+        9.674984
+      ],
+      "frame_float": 225.458933,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.509251633,
+      "world_xyz": [
+        -0.408522,
+        9.674984,
+        0.393135
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.417413,
+        9.596579
+      ],
+      "frame_float": 225.704826,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.517584967,
+      "world_xyz": [
+        -0.417413,
+        9.596579,
+        0.421791
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.42628,
+        9.518394
+      ],
+      "frame_float": 225.950719,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.5259183,
+      "world_xyz": [
+        -0.42628,
+        9.518394,
+        0.449687
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.434148,
+        9.449011
+      ],
+      "frame_float": 226.169506,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.533333,
+      "world_xyz": [
+        -0.434148,
+        9.449011,
+        0.473871
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.435121,
+        9.440427
+      ],
+      "frame_float": 226.196612,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.534251634,
+      "world_xyz": [
+        -0.435121,
+        9.440427,
+        0.476826
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.443938,
+        9.362677
+      ],
+      "frame_float": 226.442506,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.542584968,
+      "world_xyz": [
+        -0.443938,
+        9.362677,
+        0.503209
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.45273,
+        9.285142
+      ],
+      "frame_float": 226.688399,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.550918301,
+      "world_xyz": [
+        -0.45273,
+        9.285142,
+        0.528838
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.461499,
+        9.207819
+      ],
+      "frame_float": 226.934292,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.559251635,
+      "world_xyz": [
+        -0.461499,
+        9.207819,
+        0.553718
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.469281,
+        9.139192
+      ],
+      "frame_float": 227.153099,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.566667,
+      "world_xyz": [
+        -0.469281,
+        9.139192,
+        0.575228
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.470243,
+        9.130708
+      ],
+      "frame_float": 227.180185,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.567584968,
+      "world_xyz": [
+        -0.470243,
+        9.130708,
+        0.577849
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.478964,
+        9.053806
+      ],
+      "frame_float": 227.426079,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.575918302,
+      "world_xyz": [
+        -0.478964,
+        9.053806,
+        0.601235
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.487661,
+        8.977112
+      ],
+      "frame_float": 227.671972,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.584251636,
+      "world_xyz": [
+        -0.487661,
+        8.977112,
+        0.623877
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.496334,
+        8.900625
+      ],
+      "frame_float": 227.917865,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.592584969,
+      "world_xyz": [
+        -0.496334,
+        8.900625,
+        0.645779
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.504033,
+        8.832739
+      ],
+      "frame_float": 228.136662,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.6,
+      "world_xyz": [
+        -0.504033,
+        8.832739,
+        0.664645
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.504985,
+        8.824342
+      ],
+      "frame_float": 228.163759,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.600918303,
+      "world_xyz": [
+        -0.504985,
+        8.824342,
+        0.666941
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.513612,
+        8.748263
+      ],
+      "frame_float": 228.409652,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.609251636,
+      "world_xyz": [
+        -0.513612,
+        8.748263,
+        0.687367
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.522217,
+        8.672385
+      ],
+      "frame_float": 228.655545,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.61758497,
+      "world_xyz": [
+        -0.522217,
+        8.672385,
+        0.707059
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.530799,
+        8.596708
+      ],
+      "frame_float": 228.901438,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.625918304,
+      "world_xyz": [
+        -0.530799,
+        8.596708,
+        0.726019
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.538415,
+        8.529539
+      ],
+      "frame_float": 229.120225,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.633333,
+      "world_xyz": [
+        -0.538415,
+        8.529539,
+        0.742275
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.539358,
+        8.521229
+      ],
+      "frame_float": 229.147332,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.634251637,
+      "world_xyz": [
+        -0.539358,
+        8.521229,
+        0.744249
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.547895,
+        8.445947
+      ],
+      "frame_float": 229.393225,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.642584971,
+      "world_xyz": [
+        -0.547895,
+        8.445947,
+        0.761751
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.55641,
+        8.370861
+      ],
+      "frame_float": 229.639118,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.650918305,
+      "world_xyz": [
+        -0.55641,
+        8.370861,
+        0.778527
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.564902,
+        8.29597
+      ],
+      "frame_float": 229.885011,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.659251638,
+      "world_xyz": [
+        -0.564902,
+        8.29597,
+        0.79458
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.572441,
+        8.229491
+      ],
+      "frame_float": 230.103818,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.666667,
+      "world_xyz": [
+        -0.572441,
+        8.229491,
+        0.808258
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.573373,
+        8.221271
+      ],
+      "frame_float": 230.130905,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.667584972,
+      "world_xyz": [
+        -0.573373,
+        8.221271,
+        0.809912
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.581822,
+        8.146765
+      ],
+      "frame_float": 230.376798,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.675918305,
+      "world_xyz": [
+        -0.581822,
+        8.146765,
+        0.824523
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.590249,
+        8.072449
+      ],
+      "frame_float": 230.622691,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.684251639,
+      "world_xyz": [
+        -0.590249,
+        8.072449,
+        0.838418
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.598655,
+        7.998322
+      ],
+      "frame_float": 230.868584,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.692584973,
+      "world_xyz": [
+        -0.598655,
+        7.998322,
+        0.851597
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.606117,
+        7.932522
+      ],
+      "frame_float": 231.087381,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.7,
+      "world_xyz": [
+        -0.606117,
+        7.932522,
+        0.862723
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.60704,
+        7.924383
+      ],
+      "frame_float": 231.114478,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.700918306,
+      "world_xyz": [
+        -0.60704,
+        7.924383,
+        0.864062
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.615404,
+        7.850631
+      ],
+      "frame_float": 231.360371,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.70925164,
+      "world_xyz": [
+        -0.615404,
+        7.850631,
+        0.875815
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.623746,
+        7.777064
+      ],
+      "frame_float": 231.606264,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.717584973,
+      "world_xyz": [
+        -0.623746,
+        7.777064,
+        0.886859
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.632068,
+        7.703682
+      ],
+      "frame_float": 231.852158,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.725918307,
+      "world_xyz": [
+        -0.632068,
+        7.703682,
+        0.897195
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.639454,
+        7.638543
+      ],
+      "frame_float": 232.070944,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.733333,
+      "world_xyz": [
+        -0.639454,
+        7.638543,
+        0.905798
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.640368,
+        7.630482
+      ],
+      "frame_float": 232.098051,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.734251641,
+      "world_xyz": [
+        -0.640368,
+        7.630482,
+        0.906825
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.648649,
+        7.557465
+      ],
+      "frame_float": 232.343944,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.742584974,
+      "world_xyz": [
+        -0.648649,
+        7.557465,
+        0.915751
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.656908,
+        7.484629
+      ],
+      "frame_float": 232.589837,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.750918308,
+      "world_xyz": [
+        -0.656908,
+        7.484629,
+        0.923975
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.665147,
+        7.411973
+      ],
+      "frame_float": 232.835731,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.759251641,
+      "world_xyz": [
+        -0.665147,
+        7.411973,
+        0.931498
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.672462,
+        7.34747
+      ],
+      "frame_float": 233.054537,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.766667,
+      "world_xyz": [
+        -0.672462,
+        7.34747,
+        0.937605
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.673366,
+        7.339495
+      ],
+      "frame_float": 233.081624,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.767584975,
+      "world_xyz": [
+        -0.673366,
+        7.339495,
+        0.938323
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.681565,
+        7.267195
+      ],
+      "frame_float": 233.327517,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.775918309,
+      "world_xyz": [
+        -0.681565,
+        7.267195,
+        0.94445
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.689744,
+        7.195072
+      ],
+      "frame_float": 233.57341,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.784251642,
+      "world_xyz": [
+        -0.689744,
+        7.195072,
+        0.949883
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.697903,
+        7.123125
+      ],
+      "frame_float": 233.819304,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.792584976,
+      "world_xyz": [
+        -0.697903,
+        7.123125,
+        0.954622
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.705146,
+        7.059253
+      ],
+      "frame_float": 234.0381,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.8,
+      "world_xyz": [
+        -0.705146,
+        7.059253,
+        0.958257
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.706042,
+        7.051352
+      ],
+      "frame_float": 234.065197,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.80091831,
+      "world_xyz": [
+        -0.706042,
+        7.051352,
+        0.958669
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.714161,
+        6.979753
+      ],
+      "frame_float": 234.31109,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.809251643,
+      "world_xyz": [
+        -0.714161,
+        6.979753,
+        0.962026
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.722261,
+        6.908328
+      ],
+      "frame_float": 234.556983,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.817584977,
+      "world_xyz": [
+        -0.722261,
+        6.908328,
+        0.964695
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.730341,
+        6.837074
+      ],
+      "frame_float": 234.802877,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.82591831,
+      "world_xyz": [
+        -0.730341,
+        6.837074,
+        0.966678
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.737514,
+        6.773819
+      ],
+      "frame_float": 235.021663,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.833333,
+      "world_xyz": [
+        -0.737514,
+        6.773819,
+        0.967865
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.738401,
+        6.765992
+      ],
+      "frame_float": 235.04877,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.834251644,
+      "world_xyz": [
+        -0.738401,
+        6.765992,
+        0.967975
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.746443,
+        6.69508
+      ],
+      "frame_float": 235.294663,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.842584978,
+      "world_xyz": [
+        -0.746443,
+        6.69508,
+        0.968589
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.754465,
+        6.624337
+      ],
+      "frame_float": 235.540556,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.850918311,
+      "world_xyz": [
+        -0.754465,
+        6.624337,
+        0.968521
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.762468,
+        6.553763
+      ],
+      "frame_float": 235.78645,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.859251645,
+      "world_xyz": [
+        -0.762468,
+        6.553763,
+        0.967774
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.769574,
+        6.491105
+      ],
+      "frame_float": 236.005256,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.866667,
+      "world_xyz": [
+        -0.769574,
+        6.491105,
+        0.966538
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.770452,
+        6.483357
+      ],
+      "frame_float": 236.032343,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.867584978,
+      "world_xyz": [
+        -0.770452,
+        6.483357,
+        0.966348
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.778417,
+        6.413118
+      ],
+      "frame_float": 236.278236,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.875918312,
+      "world_xyz": [
+        -0.778417,
+        6.413118,
+        0.964245
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.786363,
+        6.343046
+      ],
+      "frame_float": 236.52413,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.884251646,
+      "world_xyz": [
+        -0.786363,
+        6.343046,
+        0.961467
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.794291,
+        6.273139
+      ],
+      "frame_float": 236.770023,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.892584979,
+      "world_xyz": [
+        -0.794291,
+        6.273139,
+        0.958015
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.801329,
+        6.211075
+      ],
+      "frame_float": 236.988819,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.9,
+      "world_xyz": [
+        -0.801329,
+        6.211075,
+        0.954378
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.8022,
+        6.203397
+      ],
+      "frame_float": 237.015916,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.900918313,
+      "world_xyz": [
+        -0.8022,
+        6.203397,
+        0.953891
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.81009,
+        6.13382
+      ],
+      "frame_float": 237.261809,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.909251646,
+      "world_xyz": [
+        -0.81009,
+        6.13382,
+        0.949097
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.817961,
+        6.064406
+      ],
+      "frame_float": 237.507703,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.91758498,
+      "world_xyz": [
+        -0.817961,
+        6.064406,
+        0.943633
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.825814,
+        5.995156
+      ],
+      "frame_float": 237.753596,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.925918314,
+      "world_xyz": [
+        -0.825814,
+        5.995156,
+        0.937503
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.832786,
+        5.933675
+      ],
+      "frame_float": 237.972382,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.933333,
+      "world_xyz": [
+        -0.832786,
+        5.933675,
+        0.931488
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.833649,
+        5.926067
+      ],
+      "frame_float": 237.999489,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.934251647,
+      "world_xyz": [
+        -0.833649,
+        5.926067,
+        0.930706
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.841465,
+        5.85714
+      ],
+      "frame_float": 238.245382,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.942584981,
+      "world_xyz": [
+        -0.841465,
+        5.85714,
+        0.923245
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.849263,
+        5.788375
+      ],
+      "frame_float": 238.491276,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.950918315,
+      "world_xyz": [
+        -0.849263,
+        5.788375,
+        0.915122
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.857043,
+        5.71977
+      ],
+      "frame_float": 238.737169,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.959251648,
+      "world_xyz": [
+        -0.857043,
+        5.71977,
+        0.906337
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.86395,
+        5.658857
+      ],
+      "frame_float": 238.955975,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.966667,
+      "world_xyz": [
+        -0.86395,
+        5.658857,
+        0.897965
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.864804,
+        5.651325
+      ],
+      "frame_float": 238.983062,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.967584982,
+      "world_xyz": [
+        -0.864804,
+        5.651325,
+        0.896892
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.872548,
+        5.58304
+      ],
+      "frame_float": 239.228955,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.975918315,
+      "world_xyz": [
+        -0.872548,
+        5.58304,
+        0.88679
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.880273,
+        5.514914
+      ],
+      "frame_float": 239.474849,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.984251649,
+      "world_xyz": [
+        -0.880273,
+        5.514914,
+        0.87603
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.887981,
+        5.446946
+      ],
+      "frame_float": 239.720742,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 7.992584983,
+      "world_xyz": [
+        -0.887981,
+        5.446946,
+        0.864615
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.894824,
+        5.386601
+      ],
+      "frame_float": 239.939538,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.0,
+      "world_xyz": [
+        -0.894824,
+        5.386601,
+        0.853909
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.895671,
+        5.379136
+      ],
+      "frame_float": 239.966635,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.000918316,
+      "world_xyz": [
+        -0.895671,
+        5.379136,
+        0.852547
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.903342,
+        5.311484
+      ],
+      "frame_float": 240.212529,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.00925165,
+      "world_xyz": [
+        -0.903342,
+        5.311484,
+        0.839826
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.910996,
+        5.243989
+      ],
+      "frame_float": 240.458422,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.017584983,
+      "world_xyz": [
+        -0.910996,
+        5.243989,
+        0.826455
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.918632,
+        5.17665
+      ],
+      "frame_float": 240.704315,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.025918317,
+      "world_xyz": [
+        -0.918632,
+        5.17665,
+        0.812435
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.925412,
+        5.116866
+      ],
+      "frame_float": 240.923102,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.033333,
+      "world_xyz": [
+        -0.925412,
+        5.116866,
+        0.799415
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.926251,
+        5.109468
+      ],
+      "frame_float": 240.950208,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.034251651,
+      "world_xyz": [
+        -0.926251,
+        5.109468,
+        0.797767
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.933852,
+        5.042442
+      ],
+      "frame_float": 241.196102,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.042584984,
+      "world_xyz": [
+        -0.933852,
+        5.042442,
+        0.782452
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.941435,
+        4.975571
+      ],
+      "frame_float": 241.441995,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.050918318,
+      "world_xyz": [
+        -0.941435,
+        4.975571,
+        0.766493
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.949,
+        4.908855
+      ],
+      "frame_float": 241.687888,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.059251652,
+      "world_xyz": [
+        -0.949,
+        4.908855,
+        0.749891
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.955718,
+        4.849619
+      ],
+      "frame_float": 241.906694,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.066667,
+      "world_xyz": [
+        -0.955718,
+        4.849619,
+        0.734578
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.956548,
+        4.842294
+      ],
+      "frame_float": 241.933781,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.067584985,
+      "world_xyz": [
+        -0.956548,
+        4.842294,
+        0.732647
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.964079,
+        4.775888
+      ],
+      "frame_float": 242.179675,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.075918319,
+      "world_xyz": [
+        -0.964079,
+        4.775888,
+        0.714763
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.971592,
+        4.709635
+      ],
+      "frame_float": 242.425568,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.084251652,
+      "world_xyz": [
+        -0.971592,
+        4.709635,
+        0.69624
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.979087,
+        4.643536
+      ],
+      "frame_float": 242.671461,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.092584986,
+      "world_xyz": [
+        -0.979087,
+        4.643536,
+        0.67708
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.985742,
+        4.584851
+      ],
+      "frame_float": 242.890257,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.1,
+      "world_xyz": [
+        -0.985742,
+        4.584851,
+        0.659497
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.986566,
+        4.577591
+      ],
+      "frame_float": 242.917354,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.10091832,
+      "world_xyz": [
+        -0.986566,
+        4.577591,
+        0.657284
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -0.994026,
+        4.511799
+      ],
+      "frame_float": 243.163248,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.109251653,
+      "world_xyz": [
+        -0.994026,
+        4.511799,
+        0.636854
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.00147,
+        4.44616
+      ],
+      "frame_float": 243.409141,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.117584987,
+      "world_xyz": [
+        -1.00147,
+        4.44616,
+        0.615791
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.008896,
+        4.380674
+      ],
+      "frame_float": 243.655034,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.12591832,
+      "world_xyz": [
+        -1.008896,
+        4.380674,
+        0.594097
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.015489,
+        4.322535
+      ],
+      "frame_float": 243.873821,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.133333,
+      "world_xyz": [
+        -1.015489,
+        4.322535,
+        0.574265
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.016305,
+        4.31534
+      ],
+      "frame_float": 243.900927,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.134251654,
+      "world_xyz": [
+        -1.016305,
+        4.31534,
+        0.571773
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.023696,
+        4.250158
+      ],
+      "frame_float": 244.146821,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.142584988,
+      "world_xyz": [
+        -1.023696,
+        4.250158,
+        0.548821
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.031071,
+        4.185129
+      ],
+      "frame_float": 244.392714,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.150918321,
+      "world_xyz": [
+        -1.031071,
+        4.185129,
+        0.525243
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.038428,
+        4.120251
+      ],
+      "frame_float": 244.638607,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.159251655,
+      "world_xyz": [
+        -1.038428,
+        4.120251,
+        0.501039
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.04496,
+        4.062647
+      ],
+      "frame_float": 244.857413,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.166667,
+      "world_xyz": [
+        -1.04496,
+        4.062647,
+        0.478977
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.045768,
+        4.055524
+      ],
+      "frame_float": 244.884501,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.167584988,
+      "world_xyz": [
+        -1.045768,
+        4.055524,
+        0.476211
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.053091,
+        3.990949
+      ],
+      "frame_float": 245.130394,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.175918322,
+      "world_xyz": [
+        -1.053091,
+        3.990949,
+        0.450762
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.060396,
+        3.926526
+      ],
+      "frame_float": 245.376287,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.184251656,
+      "world_xyz": [
+        -1.060396,
+        3.926526,
+        0.424691
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.067685,
+        3.862253
+      ],
+      "frame_float": 245.62218,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.192584989,
+      "world_xyz": [
+        -1.067685,
+        3.862253,
+        0.398002
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.074156,
+        3.80519
+      ],
+      "frame_float": 245.840976,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.2,
+      "world_xyz": [
+        -1.074156,
+        3.80519,
+        0.373734
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.074956,
+        3.798131
+      ],
+      "frame_float": 245.868074,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.200918323,
+      "world_xyz": [
+        -1.074956,
+        3.798131,
+        0.370695
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.08221,
+        3.734161
+      ],
+      "frame_float": 246.113967,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.209251657,
+      "world_xyz": [
+        -1.08221,
+        3.734161,
+        0.342772
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.089448,
+        3.67034
+      ],
+      "frame_float": 246.35986,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.21758499,
+      "world_xyz": [
+        -1.089448,
+        3.67034,
+        0.314235
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.096668,
+        3.606671
+      ],
+      "frame_float": 246.605753,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.225918324,
+      "world_xyz": [
+        -1.096668,
+        3.606671,
+        0.285084
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.103078,
+        3.550146
+      ],
+      "frame_float": 246.82454,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.233333,
+      "world_xyz": [
+        -1.103078,
+        3.550146,
+        0.258634
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.103871,
+        3.543151
+      ],
+      "frame_float": 246.851647,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.234251657,
+      "world_xyz": [
+        -1.103871,
+        3.543151,
+        0.255323
+      ]
+    },
+    {
+      "band": "arc_interpolated",
+      "bridge": false,
+      "confidence": 0.751713,
+      "court_xy": [
+        -1.108208,
+        3.504901
+      ],
+      "frame_float": 247.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 5,
+      "t": 8.239279359,
+      "world_xyz": [
+        -1.108208,
+        3.504901,
+        0.237072
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.649595,
+        3.937305
+      ],
+      "frame_float": 254.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.46094604,
+      "world_xyz": [
+        -0.649595,
+        3.937305,
+        0.113349
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.644183,
+        3.938059
+      ],
+      "frame_float": 254.155731,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.466667,
+      "world_xyz": [
+        -0.644183,
+        3.938059,
+        0.125156
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.641713,
+        3.938403
+      ],
+      "frame_float": 254.226842,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.469279374,
+      "world_xyz": [
+        -0.641713,
+        3.938403,
+        0.130439
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.633836,
+        3.9395
+      ],
+      "frame_float": 254.453685,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.477612707,
+      "world_xyz": [
+        -0.633836,
+        3.9395,
+        0.146837
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.625964,
+        3.940596
+      ],
+      "frame_float": 254.680527,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.485946041,
+      "world_xyz": [
+        -0.625964,
+        3.940596,
+        0.162545
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.618096,
+        3.941692
+      ],
+      "frame_float": 254.90737,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.494279374,
+      "world_xyz": [
+        -0.618096,
+        3.941692,
+        0.177563
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.612698,
+        3.942443
+      ],
+      "frame_float": 255.063091,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.5,
+      "world_xyz": [
+        -0.612698,
+        3.942443,
+        0.187473
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.610233,
+        3.942787
+      ],
+      "frame_float": 255.134212,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.502612708,
+      "world_xyz": [
+        -0.610233,
+        3.942787,
+        0.191891
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.602374,
+        3.943881
+      ],
+      "frame_float": 255.361055,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.510946042,
+      "world_xyz": [
+        -0.602374,
+        3.943881,
+        0.205531
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.594519,
+        3.944975
+      ],
+      "frame_float": 255.587897,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.519279375,
+      "world_xyz": [
+        -0.594519,
+        3.944975,
+        0.218483
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.586669,
+        3.946068
+      ],
+      "frame_float": 255.81474,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.527612709,
+      "world_xyz": [
+        -0.586669,
+        3.946068,
+        0.230748
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.581282,
+        3.946819
+      ],
+      "frame_float": 255.970452,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.533333,
+      "world_xyz": [
+        -0.581282,
+        3.946819,
+        0.238769
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.578821,
+        3.947161
+      ],
+      "frame_float": 256.041582,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.535946043,
+      "world_xyz": [
+        -0.578821,
+        3.947161,
+        0.242326
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.570978,
+        3.948254
+      ],
+      "frame_float": 256.268424,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.544279376,
+      "world_xyz": [
+        -0.570978,
+        3.948254,
+        0.253218
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.563138,
+        3.949345
+      ],
+      "frame_float": 256.495267,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.55261271,
+      "world_xyz": [
+        -0.563138,
+        3.949345,
+        0.263424
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.555301,
+        3.950437
+      ],
+      "frame_float": 256.722109,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.560946043,
+      "world_xyz": [
+        -0.555301,
+        3.950437,
+        0.272945
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.549923,
+        3.951186
+      ],
+      "frame_float": 256.87784,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.566667,
+      "world_xyz": [
+        -0.549923,
+        3.951186,
+        0.279085
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.547468,
+        3.951528
+      ],
+      "frame_float": 256.948952,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.569279377,
+      "world_xyz": [
+        -0.547468,
+        3.951528,
+        0.281781
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.539637,
+        3.952618
+      ],
+      "frame_float": 257.175794,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.577612711,
+      "world_xyz": [
+        -0.539637,
+        3.952618,
+        0.289933
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.531809,
+        3.953708
+      ],
+      "frame_float": 257.402637,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.585946044,
+      "world_xyz": [
+        -0.531809,
+        3.953708,
+        0.297401
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.523985,
+        3.954798
+      ],
+      "frame_float": 257.629479,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.594279378,
+      "world_xyz": [
+        -0.523985,
+        3.954798,
+        0.304185
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.518615,
+        3.955546
+      ],
+      "frame_float": 257.785201,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.6,
+      "world_xyz": [
+        -0.518615,
+        3.955546,
+        0.308447
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.516163,
+        3.955887
+      ],
+      "frame_float": 257.856321,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.602612711,
+      "world_xyz": [
+        -0.516163,
+        3.955887,
+        0.310286
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.508343,
+        3.956976
+      ],
+      "frame_float": 258.083164,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.610946045,
+      "world_xyz": [
+        -0.508343,
+        3.956976,
+        0.315704
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.500526,
+        3.958065
+      ],
+      "frame_float": 258.310006,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.619279379,
+      "world_xyz": [
+        -0.500526,
+        3.958065,
+        0.32044
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.492711,
+        3.959153
+      ],
+      "frame_float": 258.536849,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.627612712,
+      "world_xyz": [
+        -0.492711,
+        3.959153,
+        0.324493
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.487348,
+        3.9599
+      ],
+      "frame_float": 258.692561,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.633333,
+      "world_xyz": [
+        -0.487348,
+        3.9599,
+        0.32688
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.484899,
+        3.960241
+      ],
+      "frame_float": 258.763691,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.635946046,
+      "world_xyz": [
+        -0.484899,
+        3.960241,
+        0.327864
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.477089,
+        3.961329
+      ],
+      "frame_float": 258.990534,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.644279379,
+      "world_xyz": [
+        -0.477089,
+        3.961329,
+        0.330553
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.469281,
+        3.962416
+      ],
+      "frame_float": 259.217376,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.652612713,
+      "world_xyz": [
+        -0.469281,
+        3.962416,
+        0.332561
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.461475,
+        3.963503
+      ],
+      "frame_float": 259.444219,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.660946047,
+      "world_xyz": [
+        -0.461475,
+        3.963503,
+        0.333887
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.456117,
+        3.96425
+      ],
+      "frame_float": 259.599949,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.666667,
+      "world_xyz": [
+        -0.456117,
+        3.96425,
+        0.334403
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.453671,
+        3.96459
+      ],
+      "frame_float": 259.671061,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.66927938,
+      "world_xyz": [
+        -0.453671,
+        3.96459,
+        0.334532
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.445869,
+        3.965677
+      ],
+      "frame_float": 259.897903,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.677612714,
+      "world_xyz": [
+        -0.445869,
+        3.965677,
+        0.334495
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.438069,
+        3.966763
+      ],
+      "frame_float": 260.124746,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.685946048,
+      "world_xyz": [
+        -0.438069,
+        3.966763,
+        0.333778
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.430272,
+        3.967849
+      ],
+      "frame_float": 260.351588,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.694279381,
+      "world_xyz": [
+        -0.430272,
+        3.967849,
+        0.33238
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.42492,
+        3.968594
+      ],
+      "frame_float": 260.50731,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.7,
+      "world_xyz": [
+        -0.42492,
+        3.968594,
+        0.331027
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.422476,
+        3.968935
+      ],
+      "frame_float": 260.578431,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.702612715,
+      "world_xyz": [
+        -0.422476,
+        3.968935,
+        0.330302
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.414683,
+        3.97002
+      ],
+      "frame_float": 260.805273,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.710946048,
+      "world_xyz": [
+        -0.414683,
+        3.97002,
+        0.327543
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.406892,
+        3.971105
+      ],
+      "frame_float": 261.032116,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.719279382,
+      "world_xyz": [
+        -0.406892,
+        3.971105,
+        0.324104
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.399103,
+        3.97219
+      ],
+      "frame_float": 261.258958,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.727612716,
+      "world_xyz": [
+        -0.399103,
+        3.97219,
+        0.319985
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.393758,
+        3.972934
+      ],
+      "frame_float": 261.414671,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.733333,
+      "world_xyz": [
+        -0.393758,
+        3.972934,
+        0.316764
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.391317,
+        3.973274
+      ],
+      "frame_float": 261.485801,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.735946049,
+      "world_xyz": [
+        -0.391317,
+        3.973274,
+        0.315186
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.383532,
+        3.974358
+      ],
+      "frame_float": 261.712643,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.744279383,
+      "world_xyz": [
+        -0.383532,
+        3.974358,
+        0.309709
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.375751,
+        3.975442
+      ],
+      "frame_float": 261.939485,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.752612716,
+      "world_xyz": [
+        -0.375751,
+        3.975442,
+        0.303552
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.367972,
+        3.976525
+      ],
+      "frame_float": 262.166328,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.76094605,
+      "world_xyz": [
+        -0.367972,
+        3.976525,
+        0.296716
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.362634,
+        3.977268
+      ],
+      "frame_float": 262.322058,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.766667,
+      "world_xyz": [
+        -0.362634,
+        3.977268,
+        0.29163
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.360196,
+        3.977608
+      ],
+      "frame_float": 262.39317,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.769279384,
+      "world_xyz": [
+        -0.360196,
+        3.977608,
+        0.289201
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.352423,
+        3.97869
+      ],
+      "frame_float": 262.620013,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.777612717,
+      "world_xyz": [
+        -0.352423,
+        3.97869,
+        0.281009
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.344653,
+        3.979773
+      ],
+      "frame_float": 262.846855,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.785946051,
+      "world_xyz": [
+        -0.344653,
+        3.979773,
+        0.272139
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.336886,
+        3.980854
+      ],
+      "frame_float": 263.073698,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.794279384,
+      "world_xyz": [
+        -0.336886,
+        3.980854,
+        0.262592
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.331556,
+        3.981596
+      ],
+      "frame_float": 263.229419,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.8,
+      "world_xyz": [
+        -0.331556,
+        3.981596,
+        0.255646
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.329122,
+        3.981935
+      ],
+      "frame_float": 263.30054,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.802612718,
+      "world_xyz": [
+        -0.329122,
+        3.981935,
+        0.252367
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.321362,
+        3.983016
+      ],
+      "frame_float": 263.527383,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.810946052,
+      "world_xyz": [
+        -0.321362,
+        3.983016,
+        0.241467
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.313605,
+        3.984096
+      ],
+      "frame_float": 263.754225,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.819279385,
+      "world_xyz": [
+        -0.313605,
+        3.984096,
+        0.229891
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.305852,
+        3.985176
+      ],
+      "frame_float": 263.981067,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.827612719,
+      "world_xyz": [
+        -0.305852,
+        3.985176,
+        0.217639
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.300533,
+        3.985917
+      ],
+      "frame_float": 264.13678,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.833333,
+      "world_xyz": [
+        -0.300533,
+        3.985917,
+        0.208838
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.298103,
+        3.986255
+      ],
+      "frame_float": 264.20791,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.835946053,
+      "world_xyz": [
+        -0.298103,
+        3.986255,
+        0.204712
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.290358,
+        3.987334
+      ],
+      "frame_float": 264.434752,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.844279386,
+      "world_xyz": [
+        -0.290358,
+        3.987334,
+        0.191112
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.282617,
+        3.988412
+      ],
+      "frame_float": 264.661595,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.85261272,
+      "world_xyz": [
+        -0.282617,
+        3.988412,
+        0.176838
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.274881,
+        3.989489
+      ],
+      "frame_float": 264.888437,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.860946053,
+      "world_xyz": [
+        -0.274881,
+        3.989489,
+        0.161891
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.269572,
+        3.990229
+      ],
+      "frame_float": 265.044168,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.866667,
+      "world_xyz": [
+        -0.269572,
+        3.990229,
+        0.15124
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.267148,
+        3.990566
+      ],
+      "frame_float": 265.11528,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.869279387,
+      "world_xyz": [
+        -0.267148,
+        3.990566,
+        0.146271
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.259421,
+        3.991642
+      ],
+      "frame_float": 265.342122,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.877612721,
+      "world_xyz": [
+        -0.259421,
+        3.991642,
+        0.129981
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.251698,
+        3.992718
+      ],
+      "frame_float": 265.568965,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.885946054,
+      "world_xyz": [
+        -0.251698,
+        3.992718,
+        0.113019
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.24398,
+        3.993793
+      ],
+      "frame_float": 265.795807,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.894279388,
+      "world_xyz": [
+        -0.24398,
+        3.993793,
+        0.095388
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.238685,
+        3.99453
+      ],
+      "frame_float": 265.951528,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.9,
+      "world_xyz": [
+        -0.238685,
+        3.99453,
+        0.082897
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.130661,
+      "court_xy": [
+        -0.237037,
+        3.994759
+      ],
+      "frame_float": 266.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 7,
+      "t": 8.901780668,
+      "world_xyz": [
+        -0.237037,
+        3.994759,
+        0.078944
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.717013,
+        -0.237334
+      ],
+      "frame_float": 272.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.067335997,
+      "world_xyz": [
+        -1.717013,
+        -0.237334,
+        0.030106
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.71732,
+        -0.241698
+      ],
+      "frame_float": 272.251193,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.075669331,
+      "world_xyz": [
+        -1.71732,
+        -0.241698,
+        0.052719
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.717626,
+        -0.246058
+      ],
+      "frame_float": 272.502385,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.084002664,
+      "world_xyz": [
+        -1.717626,
+        -0.246058,
+        0.074634
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.717933,
+        -0.250415
+      ],
+      "frame_float": 272.753578,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.092335998,
+      "world_xyz": [
+        -1.717933,
+        -0.250415,
+        0.095852
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.718214,
+        -0.254419
+      ],
+      "frame_float": 272.984595,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.1,
+      "world_xyz": [
+        -1.718214,
+        -0.254419,
+        0.114751
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.718239,
+        -0.254769
+      ],
+      "frame_float": 273.004771,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.100669331,
+      "world_xyz": [
+        -1.718239,
+        -0.254769,
+        0.116373
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.718545,
+        -0.25912
+      ],
+      "frame_float": 273.255963,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.109002665,
+      "world_xyz": [
+        -1.718545,
+        -0.25912,
+        0.1362
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.71885,
+        -0.263468
+      ],
+      "frame_float": 273.507156,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.117335999,
+      "world_xyz": [
+        -1.71885,
+        -0.263468,
+        0.155333
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.719156,
+        -0.267813
+      ],
+      "frame_float": 273.758349,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.125669332,
+      "world_xyz": [
+        -1.719156,
+        -0.267813,
+        0.173773
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.719437,
+        -0.271806
+      ],
+      "frame_float": 273.989355,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.133333,
+      "world_xyz": [
+        -1.719437,
+        -0.271806,
+        0.190119
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.719461,
+        -0.272155
+      ],
+      "frame_float": 274.009541,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.134002666,
+      "world_xyz": [
+        -1.719461,
+        -0.272155,
+        0.19152
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.719766,
+        -0.276495
+      ],
+      "frame_float": 274.260734,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.142336,
+      "world_xyz": [
+        -1.719766,
+        -0.276495,
+        0.208576
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.720071,
+        -0.280832
+      ],
+      "frame_float": 274.511926,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.150669333,
+      "world_xyz": [
+        -1.720071,
+        -0.280832,
+        0.224941
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.720376,
+        -0.285167
+      ],
+      "frame_float": 274.763119,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.159002667,
+      "world_xyz": [
+        -1.720376,
+        -0.285167,
+        0.240616
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.720656,
+        -0.289152
+      ],
+      "frame_float": 274.994146,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.166667,
+      "world_xyz": [
+        -1.720656,
+        -0.289152,
+        0.254424
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.720681,
+        -0.289499
+      ],
+      "frame_float": 275.014312,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.167336,
+      "world_xyz": [
+        -1.720681,
+        -0.289499,
+        0.255602
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.720985,
+        -0.29383
+      ],
+      "frame_float": 275.265504,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.175669334,
+      "world_xyz": [
+        -1.720985,
+        -0.29383,
+        0.269899
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.721289,
+        -0.298158
+      ],
+      "frame_float": 275.516697,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.184002668,
+      "world_xyz": [
+        -1.721289,
+        -0.298158,
+        0.283509
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.721594,
+        -0.302484
+      ],
+      "frame_float": 275.76789,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.192336001,
+      "world_xyz": [
+        -1.721594,
+        -0.302484,
+        0.296431
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.721873,
+        -0.306461
+      ],
+      "frame_float": 275.998906,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.2,
+      "world_xyz": [
+        -1.721873,
+        -0.306461,
+        0.307709
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.721898,
+        -0.306808
+      ],
+      "frame_float": 276.019082,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.200669335,
+      "world_xyz": [
+        -1.721898,
+        -0.306808,
+        0.308667
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.722202,
+        -0.311131
+      ],
+      "frame_float": 276.270275,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.209002668,
+      "world_xyz": [
+        -1.722202,
+        -0.311131,
+        0.320216
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.722505,
+        -0.315451
+      ],
+      "frame_float": 276.521468,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.217336002,
+      "world_xyz": [
+        -1.722505,
+        -0.315451,
+        0.33108
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.722809,
+        -0.31977
+      ],
+      "frame_float": 276.77266,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.225669336,
+      "world_xyz": [
+        -1.722809,
+        -0.31977,
+        0.341259
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.723088,
+        -0.323741
+      ],
+      "frame_float": 277.003667,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.233333,
+      "world_xyz": [
+        -1.723088,
+        -0.323741,
+        0.350016
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.723113,
+        -0.324088
+      ],
+      "frame_float": 277.023853,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.234002669,
+      "world_xyz": [
+        -1.723113,
+        -0.324088,
+        0.350754
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.723416,
+        -0.328404
+      ],
+      "frame_float": 277.275046,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.242336003,
+      "world_xyz": [
+        -1.723416,
+        -0.328404,
+        0.359564
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.723719,
+        -0.332718
+      ],
+      "frame_float": 277.526238,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.250669336,
+      "world_xyz": [
+        -1.723719,
+        -0.332718,
+        0.36769
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.724023,
+        -0.337031
+      ],
+      "frame_float": 277.777431,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.25900267,
+      "world_xyz": [
+        -1.724023,
+        -0.337031,
+        0.375134
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.724302,
+        -0.340997
+      ],
+      "frame_float": 278.008458,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.266667,
+      "world_xyz": [
+        -1.724302,
+        -0.340997,
+        0.381376
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.724326,
+        -0.341343
+      ],
+      "frame_float": 278.028624,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.267336004,
+      "world_xyz": [
+        -1.724326,
+        -0.341343,
+        0.381894
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.724629,
+        -0.345654
+      ],
+      "frame_float": 278.279816,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.275669337,
+      "world_xyz": [
+        -1.724629,
+        -0.345654,
+        0.387971
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.724932,
+        -0.349964
+      ],
+      "frame_float": 278.531009,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.284002671,
+      "world_xyz": [
+        -1.724932,
+        -0.349964,
+        0.393366
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.725235,
+        -0.354273
+      ],
+      "frame_float": 278.782201,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.292336005,
+      "world_xyz": [
+        -1.725235,
+        -0.354273,
+        0.398079
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.725514,
+        -0.358235
+      ],
+      "frame_float": 279.013218,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.3,
+      "world_xyz": [
+        -1.725514,
+        -0.358235,
+        0.401812
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.725538,
+        -0.358581
+      ],
+      "frame_float": 279.033394,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.300669338,
+      "world_xyz": [
+        -1.725538,
+        -0.358581,
+        0.40211
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.725841,
+        -0.362889
+      ],
+      "frame_float": 279.284587,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.309002672,
+      "world_xyz": [
+        -1.725841,
+        -0.362889,
+        0.40546
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.726144,
+        -0.367195
+      ],
+      "frame_float": 279.535779,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.317336005,
+      "world_xyz": [
+        -1.726144,
+        -0.367195,
+        0.408128
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.726446,
+        -0.371501
+      ],
+      "frame_float": 279.786972,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.325669339,
+      "world_xyz": [
+        -1.726446,
+        -0.371501,
+        0.410114
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.726725,
+        -0.37546
+      ],
+      "frame_float": 280.017979,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.333333,
+      "world_xyz": [
+        -1.726725,
+        -0.37546,
+        0.411339
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.726749,
+        -0.375806
+      ],
+      "frame_float": 280.038165,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.334002673,
+      "world_xyz": [
+        -1.726749,
+        -0.375806,
+        0.411419
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.727052,
+        -0.38011
+      ],
+      "frame_float": 280.289357,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.342336006,
+      "world_xyz": [
+        -1.727052,
+        -0.38011,
+        0.412043
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.727354,
+        -0.384414
+      ],
+      "frame_float": 280.54055,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.35066934,
+      "world_xyz": [
+        -1.727354,
+        -0.384414,
+        0.411986
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.727657,
+        -0.388718
+      ],
+      "frame_float": 280.791743,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.359002673,
+      "world_xyz": [
+        -1.727657,
+        -0.388718,
+        0.411248
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.727935,
+        -0.392675
+      ],
+      "frame_float": 281.022769,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.366667,
+      "world_xyz": [
+        -1.727935,
+        -0.392675,
+        0.409968
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.727959,
+        -0.39302
+      ],
+      "frame_float": 281.042935,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.367336007,
+      "world_xyz": [
+        -1.727959,
+        -0.39302,
+        0.409829
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.728262,
+        -0.397322
+      ],
+      "frame_float": 281.294128,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.375669341,
+      "world_xyz": [
+        -1.728262,
+        -0.397322,
+        0.407729
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.728564,
+        -0.401623
+      ],
+      "frame_float": 281.545321,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.384002674,
+      "world_xyz": [
+        -1.728564,
+        -0.401623,
+        0.404949
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.728867,
+        -0.405924
+      ],
+      "frame_float": 281.796513,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.392336008,
+      "world_xyz": [
+        -1.728867,
+        -0.405924,
+        0.401488
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.729145,
+        -0.409878
+      ],
+      "frame_float": 282.02753,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.4,
+      "world_xyz": [
+        -1.729145,
+        -0.409878,
+        0.397705
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.729169,
+        -0.410223
+      ],
+      "frame_float": 282.047706,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.400669341,
+      "world_xyz": [
+        -1.729169,
+        -0.410223,
+        0.397347
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.729471,
+        -0.414522
+      ],
+      "frame_float": 282.298898,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.409002675,
+      "world_xyz": [
+        -1.729471,
+        -0.414522,
+        0.392526
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.729773,
+        -0.41882
+      ],
+      "frame_float": 282.550091,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.417336009,
+      "world_xyz": [
+        -1.729773,
+        -0.41882,
+        0.387025
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.730075,
+        -0.423116
+      ],
+      "frame_float": 282.801284,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.425669342,
+      "world_xyz": [
+        -1.730075,
+        -0.423116,
+        0.380844
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.730353,
+        -0.427067
+      ],
+      "frame_float": 283.03229,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.433333,
+      "world_xyz": [
+        -1.730353,
+        -0.427067,
+        0.374561
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.730377,
+        -0.427412
+      ],
+      "frame_float": 283.052476,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.434002676,
+      "world_xyz": [
+        -1.730377,
+        -0.427412,
+        0.373984
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.730679,
+        -0.431706
+      ],
+      "frame_float": 283.303669,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.44233601,
+      "world_xyz": [
+        -1.730679,
+        -0.431706,
+        0.366446
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.730981,
+        -0.435999
+      ],
+      "frame_float": 283.554862,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.450669343,
+      "world_xyz": [
+        -1.730981,
+        -0.435999,
+        0.358228
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.731283,
+        -0.440291
+      ],
+      "frame_float": 283.806054,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.459002677,
+      "world_xyz": [
+        -1.731283,
+        -0.440291,
+        0.349332
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.73156,
+        -0.444237
+      ],
+      "frame_float": 284.037081,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.466667,
+      "world_xyz": [
+        -1.73156,
+        -0.444237,
+        0.340552
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.731585,
+        -0.444581
+      ],
+      "frame_float": 284.057247,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.46733601,
+      "world_xyz": [
+        -1.731585,
+        -0.444581,
+        0.339759
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.731886,
+        -0.44887
+      ],
+      "frame_float": 284.30844,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.475669344,
+      "world_xyz": [
+        -1.731886,
+        -0.44887,
+        0.329508
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.732188,
+        -0.453157
+      ],
+      "frame_float": 284.559632,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.484002678,
+      "world_xyz": [
+        -1.732188,
+        -0.453157,
+        0.31858
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.732489,
+        -0.457442
+      ],
+      "frame_float": 284.810825,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.492336011,
+      "world_xyz": [
+        -1.732489,
+        -0.457442,
+        0.306975
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.732766,
+        -0.461381
+      ],
+      "frame_float": 285.041841,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.5,
+      "world_xyz": [
+        -1.732766,
+        -0.461381,
+        0.295706
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.73279,
+        -0.461725
+      ],
+      "frame_float": 285.062018,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.500669345,
+      "world_xyz": [
+        -1.73279,
+        -0.461725,
+        0.294695
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.733091,
+        -0.466007
+      ],
+      "frame_float": 285.31321,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.509002678,
+      "world_xyz": [
+        -1.733091,
+        -0.466007,
+        0.281739
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.733392,
+        -0.470286
+      ],
+      "frame_float": 285.564403,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.517336012,
+      "world_xyz": [
+        -1.733392,
+        -0.470286,
+        0.268109
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.733693,
+        -0.474564
+      ],
+      "frame_float": 285.815596,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.525669346,
+      "world_xyz": [
+        -1.733693,
+        -0.474564,
+        0.253804
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.733969,
+        -0.478495
+      ],
+      "frame_float": 286.046602,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.533333,
+      "world_xyz": [
+        -1.733969,
+        -0.478495,
+        0.240054
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.733993,
+        -0.478839
+      ],
+      "frame_float": 286.066788,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.534002679,
+      "world_xyz": [
+        -1.733993,
+        -0.478839,
+        0.238826
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.734294,
+        -0.483112
+      ],
+      "frame_float": 286.317981,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.542336013,
+      "world_xyz": [
+        -1.734294,
+        -0.483112,
+        0.223175
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.734594,
+        -0.487382
+      ],
+      "frame_float": 286.569173,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.550669346,
+      "world_xyz": [
+        -1.734594,
+        -0.487382,
+        0.206852
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.734894,
+        -0.49165
+      ],
+      "frame_float": 286.820366,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.55900268,
+      "world_xyz": [
+        -1.734894,
+        -0.49165,
+        0.189857
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.73517,
+        -0.495574
+      ],
+      "frame_float": 287.051393,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.566667,
+      "world_xyz": [
+        -1.73517,
+        -0.495574,
+        0.173635
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.735194,
+        -0.495916
+      ],
+      "frame_float": 287.071559,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.567336014,
+      "world_xyz": [
+        -1.735194,
+        -0.495916,
+        0.172192
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.735494,
+        -0.500179
+      ],
+      "frame_float": 287.322751,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.575669347,
+      "world_xyz": [
+        -1.735494,
+        -0.500179,
+        0.153857
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.735793,
+        -0.504439
+      ],
+      "frame_float": 287.573944,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.584002681,
+      "world_xyz": [
+        -1.735793,
+        -0.504439,
+        0.134853
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.736093,
+        -0.508696
+      ],
+      "frame_float": 287.825137,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.592336015,
+      "world_xyz": [
+        -1.736093,
+        -0.508696,
+        0.115181
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.736368,
+        -0.512609
+      ],
+      "frame_float": 288.056153,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.6,
+      "world_xyz": [
+        -1.736368,
+        -0.512609,
+        0.0965
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.736392,
+        -0.512951
+      ],
+      "frame_float": 288.076329,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.600669348,
+      "world_xyz": [
+        -1.736392,
+        -0.512951,
+        0.094841
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.736691,
+        -0.517202
+      ],
+      "frame_float": 288.327522,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.609002682,
+      "world_xyz": [
+        -1.736691,
+        -0.517202,
+        0.073835
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.736989,
+        -0.52145
+      ],
+      "frame_float": 288.578715,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.617336015,
+      "world_xyz": [
+        -1.736989,
+        -0.52145,
+        0.052164
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.737288,
+        -0.525695
+      ],
+      "frame_float": 288.829907,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.625669349,
+      "world_xyz": [
+        -1.737288,
+        -0.525695,
+        0.029829
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102977,
+      "court_xy": [
+        -1.73749,
+        -0.528568
+      ],
+      "frame_float": 289.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 9,
+      "t": 9.631312188,
+      "world_xyz": [
+        -1.73749,
+        -0.528568,
+        0.014327
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.743451,
+        -0.538699
+      ],
+      "frame_float": 289.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.632940621,
+      "world_xyz": [
+        -1.743451,
+        -0.538699,
+        0.043558
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.743297,
+        -0.538566
+      ],
+      "frame_float": 289.011756,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.633333,
+      "world_xyz": [
+        -1.743297,
+        -0.538566,
+        0.044229
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.74018,
+        -0.535868
+      ],
+      "frame_float": 289.249677,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.641273955,
+      "world_xyz": [
+        -1.74018,
+        -0.535868,
+        0.057492
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.73691,
+        -0.533038
+      ],
+      "frame_float": 289.499354,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.649607288,
+      "world_xyz": [
+        -1.73691,
+        -0.533038,
+        0.070739
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.733642,
+        -0.530209
+      ],
+      "frame_float": 289.749031,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.657940622,
+      "world_xyz": [
+        -1.733642,
+        -0.530209,
+        0.083299
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.730375,
+        -0.527382
+      ],
+      "frame_float": 289.998708,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.666273955,
+      "world_xyz": [
+        -1.730375,
+        -0.527382,
+        0.095173
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.730221,
+        -0.527249
+      ],
+      "frame_float": 290.010484,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.666667,
+      "world_xyz": [
+        -1.730221,
+        -0.527249,
+        0.095716
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.72711,
+        -0.524556
+      ],
+      "frame_float": 290.248385,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.674607289,
+      "world_xyz": [
+        -1.72711,
+        -0.524556,
+        0.106361
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.723846,
+        -0.521731
+      ],
+      "frame_float": 290.498062,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.682940623,
+      "world_xyz": [
+        -1.723846,
+        -0.521731,
+        0.116864
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.720583,
+        -0.518907
+      ],
+      "frame_float": 290.747739,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.691273956,
+      "world_xyz": [
+        -1.720583,
+        -0.518907,
+        0.126682
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.717321,
+        -0.516083
+      ],
+      "frame_float": 290.997416,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.69960729,
+      "world_xyz": [
+        -1.717321,
+        -0.516083,
+        0.135815
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.717167,
+        -0.51595
+      ],
+      "frame_float": 291.009182,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.7,
+      "world_xyz": [
+        -1.717167,
+        -0.51595,
+        0.136229
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.71406,
+        -0.513261
+      ],
+      "frame_float": 291.247093,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.707940624,
+      "world_xyz": [
+        -1.71406,
+        -0.513261,
+        0.144265
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.710801,
+        -0.51044
+      ],
+      "frame_float": 291.49677,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.716273957,
+      "world_xyz": [
+        -1.710801,
+        -0.51044,
+        0.152031
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.707542,
+        -0.50762
+      ],
+      "frame_float": 291.746447,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.724607291,
+      "world_xyz": [
+        -1.707542,
+        -0.50762,
+        0.159114
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.704284,
+        -0.5048
+      ],
+      "frame_float": 291.996125,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.732940624,
+      "world_xyz": [
+        -1.704284,
+        -0.5048,
+        0.165515
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.704131,
+        -0.504667
+      ],
+      "frame_float": 292.007881,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.733333,
+      "world_xyz": [
+        -1.704131,
+        -0.504667,
+        0.165799
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.701027,
+        -0.501981
+      ],
+      "frame_float": 292.245802,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.741273958,
+      "world_xyz": [
+        -1.701027,
+        -0.501981,
+        0.171232
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.697771,
+        -0.499162
+      ],
+      "frame_float": 292.495479,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.749607292,
+      "world_xyz": [
+        -1.697771,
+        -0.499162,
+        0.176268
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.694515,
+        -0.496345
+      ],
+      "frame_float": 292.745156,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.757940625,
+      "world_xyz": [
+        -1.694515,
+        -0.496345,
+        0.180621
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.69126,
+        -0.493527
+      ],
+      "frame_float": 292.994833,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.766273959,
+      "world_xyz": [
+        -1.69126,
+        -0.493527,
+        0.184292
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.691107,
+        -0.493395
+      ],
+      "frame_float": 293.006609,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.766667,
+      "world_xyz": [
+        -1.691107,
+        -0.493395,
+        0.184449
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.688006,
+        -0.490711
+      ],
+      "frame_float": 293.24451,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.774607292,
+      "world_xyz": [
+        -1.688006,
+        -0.490711,
+        0.187282
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.684752,
+        -0.487895
+      ],
+      "frame_float": 293.494187,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.782940626,
+      "world_xyz": [
+        -1.684752,
+        -0.487895,
+        0.189591
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.681499,
+        -0.485079
+      ],
+      "frame_float": 293.743864,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.79127396,
+      "world_xyz": [
+        -1.681499,
+        -0.485079,
+        0.191218
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.678246,
+        -0.482263
+      ],
+      "frame_float": 293.993541,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.799607293,
+      "world_xyz": [
+        -1.678246,
+        -0.482263,
+        0.192164
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.678093,
+        -0.482131
+      ],
+      "frame_float": 294.005307,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.8,
+      "world_xyz": [
+        -1.678093,
+        -0.482131,
+        0.192192
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.674994,
+        -0.479448
+      ],
+      "frame_float": 294.243218,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.807940627,
+      "world_xyz": [
+        -1.674994,
+        -0.479448,
+        0.192429
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.671742,
+        -0.476634
+      ],
+      "frame_float": 294.492895,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.81627396,
+      "world_xyz": [
+        -1.671742,
+        -0.476634,
+        0.192012
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.66849,
+        -0.47382
+      ],
+      "frame_float": 294.742572,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.824607294,
+      "world_xyz": [
+        -1.66849,
+        -0.47382,
+        0.190915
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.66524,
+        -0.471006
+      ],
+      "frame_float": 294.992249,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.832940628,
+      "world_xyz": [
+        -1.66524,
+        -0.471006,
+        0.189137
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.665086,
+        -0.470874
+      ],
+      "frame_float": 295.004005,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.833333,
+      "world_xyz": [
+        -1.665086,
+        -0.470874,
+        0.189037
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.661989,
+        -0.468193
+      ],
+      "frame_float": 295.241926,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.841273961,
+      "world_xyz": [
+        -1.661989,
+        -0.468193,
+        0.186679
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.658739,
+        -0.46538
+      ],
+      "frame_float": 295.491603,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.849607295,
+      "world_xyz": [
+        -1.658739,
+        -0.46538,
+        0.18354
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.65549,
+        -0.462568
+      ],
+      "frame_float": 295.74128,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.857940629,
+      "world_xyz": [
+        -1.65549,
+        -0.462568,
+        0.17972
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.652242,
+        -0.459756
+      ],
+      "frame_float": 295.990957,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.866273962,
+      "world_xyz": [
+        -1.652242,
+        -0.459756,
+        0.175221
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.652088,
+        -0.459624
+      ],
+      "frame_float": 296.002733,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.866667,
+      "world_xyz": [
+        -1.652088,
+        -0.459624,
+        0.174992
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.648994,
+        -0.456945
+      ],
+      "frame_float": 296.240634,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.874607296,
+      "world_xyz": [
+        -1.648994,
+        -0.456945,
+        0.170041
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.645747,
+        -0.454135
+      ],
+      "frame_float": 296.490311,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.882940629,
+      "world_xyz": [
+        -1.645747,
+        -0.454135,
+        0.164182
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.6425,
+        -0.451325
+      ],
+      "frame_float": 296.739988,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.891273963,
+      "world_xyz": [
+        -1.6425,
+        -0.451325,
+        0.157643
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.639255,
+        -0.448516
+      ],
+      "frame_float": 296.989665,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.899607297,
+      "world_xyz": [
+        -1.639255,
+        -0.448516,
+        0.150425
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.639102,
+        -0.448384
+      ],
+      "frame_float": 297.001431,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.9,
+      "world_xyz": [
+        -1.639102,
+        -0.448384,
+        0.150068
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.636011,
+        -0.445708
+      ],
+      "frame_float": 297.239342,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.90794063,
+      "world_xyz": [
+        -1.636011,
+        -0.445708,
+        0.142528
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.632767,
+        -0.442901
+      ],
+      "frame_float": 297.48902,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.916273964,
+      "world_xyz": [
+        -1.632767,
+        -0.442901,
+        0.133953
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.629525,
+        -0.440095
+      ],
+      "frame_float": 297.738697,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.924607297,
+      "world_xyz": [
+        -1.629525,
+        -0.440095,
+        0.1247
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.626284,
+        -0.437289
+      ],
+      "frame_float": 297.988374,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.932940631,
+      "world_xyz": [
+        -1.626284,
+        -0.437289,
+        0.114769
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.626131,
+        -0.437157
+      ],
+      "frame_float": 298.000129,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.933333,
+      "world_xyz": [
+        -1.626131,
+        -0.437157,
+        0.114285
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.623044,
+        -0.434485
+      ],
+      "frame_float": 298.238051,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.941273965,
+      "world_xyz": [
+        -1.623044,
+        -0.434485,
+        0.104161
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.619805,
+        -0.431682
+      ],
+      "frame_float": 298.487728,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.949607298,
+      "world_xyz": [
+        -1.619805,
+        -0.431682,
+        0.092876
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.616568,
+        -0.42888
+      ],
+      "frame_float": 298.737405,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.957940632,
+      "world_xyz": [
+        -1.616568,
+        -0.42888,
+        0.080915
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.613332,
+        -0.426079
+      ],
+      "frame_float": 298.987082,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.966273965,
+      "world_xyz": [
+        -1.613332,
+        -0.426079,
+        0.068278
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.613179,
+        -0.425947
+      ],
+      "frame_float": 298.998858,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.966667,
+      "world_xyz": [
+        -1.613179,
+        -0.425947,
+        0.067666
+      ]
+    },
+    {
+      "band": "arc_weak",
+      "bridge": false,
+      "confidence": 0.102108,
+      "court_xy": [
+        -1.613164,
+        -0.425934
+      ],
+      "frame_float": 299.0,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "segment_id": 10,
+      "t": 9.96670513,
+      "world_xyz": [
+        -1.613164,
+        -0.425934,
+        0.067606
+      ]
+    }
+  ],
+  "schema_version": 1,
+  "segments": [
+    {
+      "anchor_frames": [
+        12,
+        25
+      ],
+      "anchor_types": [
+        "bounce",
+        "bounce"
+      ],
+      "bridge": false,
+      "confidence": 0.223336,
+      "endpoint_error_m": 0.000292,
+      "fit_status": "fit",
+      "flight_sanity_reasons": [
+        "outside_court_volume"
+      ],
+      "flight_sanity_verdict": "fail",
+      "frame_end": 25,
+      "frame_start": 12,
+      "max_reprojection_error_px": 2.307095,
+      "net_clearance_m": null,
+      "net_clearance_ok": null,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "reprojection_rmse_px": 1.390714,
+      "segment_id": 1,
+      "shot": {
+        "distance_m": 2.95696,
+        "end": {
+          "court_xy": [
+            -3.315327,
+            7.836488
+          ],
+          "world_xyz": [
+            -3.315327,
+            7.836488,
+            0.046305
+          ]
+        },
+        "height_over_net_definition": "ball_bottom_clearance_over_net_top",
+        "height_over_net_m": null,
+        "not_for_detection_metrics": true,
+        "path_distance_m": 3.006008,
+        "peak": {
+          "court_xy": [
+            -2.970185,
+            6.42175
+          ],
+          "world_xyz": [
+            -2.970185,
+            6.42175,
+            0.278347
+          ]
+        },
+        "render_only": true,
+        "speed_mph": 16.643947,
+        "speed_mps": 7.44051,
+        "start": {
+          "court_xy": [
+            -2.614496,
+            4.96378
+          ],
+          "world_xyz": [
+            -2.614496,
+            4.96378,
+            0.040484
+          ]
+        }
+      },
+      "t0": 0.399198425,
+      "t1": 0.836897253
+    },
+    {
+      "anchor_frames": [
+        223,
+        247
+      ],
+      "anchor_types": [
+        "bounce",
+        "bounce"
+      ],
+      "bridge": false,
+      "confidence": 0.751713,
+      "endpoint_error_m": 7e-06,
+      "fit_status": "fit",
+      "flight_sanity_reasons": [],
+      "flight_sanity_verdict": "pass",
+      "frame_end": 247,
+      "frame_start": 223,
+      "max_reprojection_error_px": 16.214515,
+      "net_clearance_m": null,
+      "net_clearance_ok": null,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "reprojection_rmse_px": 7.074984,
+      "segment_id": 5,
+      "shot": {
+        "distance_m": 7.011312,
+        "end": {
+          "court_xy": [
+            -1.108208,
+            3.504901
+          ],
+          "world_xyz": [
+            -1.108208,
+            3.504901,
+            0.237072
+          ]
+        },
+        "height_over_net_definition": "ball_bottom_clearance_over_net_top",
+        "height_over_net_m": null,
+        "not_for_detection_metrics": true,
+        "path_distance_m": 7.257379,
+        "peak": {
+          "court_xy": [
+            -0.746443,
+            6.69508
+          ],
+          "world_xyz": [
+            -0.746443,
+            6.69508,
+            0.968589
+          ]
+        },
+        "render_only": true,
+        "speed_mph": 23.968611,
+        "speed_mps": 10.714928,
+        "start": {
+          "court_xy": [
+            -0.318191,
+            10.471562
+          ],
+          "world_xyz": [
+            -0.318191,
+            10.471562,
+            0.064149
+          ]
+        }
+      },
+      "t0": 7.425918297,
+      "t1": 8.239279359
+    },
+    {
+      "anchor_frames": [
+        254,
+        266
+      ],
+      "anchor_types": [
+        "bounce",
+        "bounce"
+      ],
+      "bridge": false,
+      "confidence": 0.130661,
+      "endpoint_error_m": 1e-06,
+      "fit_status": "fit_bvp_fallback",
+      "flight_sanity_reasons": [],
+      "flight_sanity_verdict": "pass",
+      "frame_end": 266,
+      "frame_start": 254,
+      "max_reprojection_error_px": 12.950288,
+      "net_clearance_m": null,
+      "net_clearance_ok": null,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "reprojection_rmse_px": 6.188602,
+      "segment_id": 7,
+      "shot": {
+        "distance_m": 0.416539,
+        "end": {
+          "court_xy": [
+            -0.237037,
+            3.994759
+          ],
+          "world_xyz": [
+            -0.237037,
+            3.994759,
+            0.078944
+          ]
+        },
+        "height_over_net_definition": "ball_bottom_clearance_over_net_top",
+        "height_over_net_m": null,
+        "not_for_detection_metrics": true,
+        "path_distance_m": 0.662915,
+        "peak": {
+          "court_xy": [
+            -0.453671,
+            3.96459
+          ],
+          "world_xyz": [
+            -0.453671,
+            3.96459,
+            0.334532
+          ]
+        },
+        "render_only": true,
+        "speed_mph": 5.145065,
+        "speed_mps": 2.30005,
+        "start": {
+          "court_xy": [
+            -0.649595,
+            3.937305
+          ],
+          "world_xyz": [
+            -0.649595,
+            3.937305,
+            0.113349
+          ]
+        }
+      },
+      "t0": 8.46094604,
+      "t1": 8.901780668
+    },
+    {
+      "anchor_frames": [
+        272,
+        289
+      ],
+      "anchor_types": [
+        "bounce",
+        "bounce"
+      ],
+      "bridge": false,
+      "confidence": 0.102977,
+      "endpoint_error_m": 2e-06,
+      "fit_status": "fit_bvp_fallback",
+      "flight_sanity_reasons": [],
+      "flight_sanity_verdict": "not_evaluated",
+      "frame_end": 289,
+      "frame_start": 272,
+      "max_reprojection_error_px": 1.483513,
+      "net_clearance_m": null,
+      "net_clearance_ok": null,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "reprojection_rmse_px": 0.924728,
+      "segment_id": 9,
+      "shot": {
+        "distance_m": 0.291953,
+        "end": {
+          "court_xy": [
+            -1.73749,
+            -0.528568
+          ],
+          "world_xyz": [
+            -1.73749,
+            -0.528568,
+            0.014327
+          ]
+        },
+        "height_over_net_definition": "ball_bottom_clearance_over_net_top",
+        "height_over_net_m": null,
+        "not_for_detection_metrics": true,
+        "path_distance_m": 0.858241,
+        "peak": {
+          "court_xy": [
+            -1.727052,
+            -0.38011
+          ],
+          "world_xyz": [
+            -1.727052,
+            -0.38011,
+            0.412043
+          ]
+        },
+        "render_only": true,
+        "speed_mph": 6.2747,
+        "speed_mps": 2.805042,
+        "start": {
+          "court_xy": [
+            -1.717013,
+            -0.237334
+          ],
+          "world_xyz": [
+            -1.717013,
+            -0.237334,
+            0.030106
+          ]
+        }
+      },
+      "t0": 9.067335997,
+      "t1": 9.631312188
+    },
+    {
+      "anchor_frames": [
+        289,
+        299
+      ],
+      "anchor_types": [
+        "bounce",
+        "rally_endpoint"
+      ],
+      "bridge": false,
+      "confidence": 0.102108,
+      "endpoint_error_m": 0.001898,
+      "fit_status": "fit_bvp_fallback",
+      "flight_sanity_reasons": [],
+      "flight_sanity_verdict": "not_evaluated",
+      "frame_end": 299,
+      "frame_start": 289,
+      "max_reprojection_error_px": 2.356219,
+      "net_clearance_m": null,
+      "net_clearance_ok": null,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "reprojection_rmse_px": 1.322095,
+      "segment_id": 10,
+      "shot": {
+        "distance_m": 0.17231,
+        "end": {
+          "court_xy": [
+            -1.613164,
+            -0.425934
+          ],
+          "world_xyz": [
+            -1.613164,
+            -0.425934,
+            0.067606
+          ]
+        },
+        "height_over_net_definition": "ball_bottom_clearance_over_net_top",
+        "height_over_net_m": null,
+        "not_for_detection_metrics": true,
+        "path_distance_m": 0.337723,
+        "peak": {
+          "court_xy": [
+            -1.674994,
+            -0.479448
+          ],
+          "world_xyz": [
+            -1.674994,
+            -0.479448,
+            0.192429
+          ]
+        },
+        "render_only": true,
+        "speed_mph": 4.004979,
+        "speed_mps": 1.790386,
+        "start": {
+          "court_xy": [
+            -1.743451,
+            -0.538699
+          ],
+          "world_xyz": [
+            -1.743451,
+            -0.538699,
+            0.043558
+          ]
+        }
+      },
+      "t0": 9.632940621,
+      "t1": 9.96670513
+    }
+  ],
+  "solver_status": "ran",
+  "solver_trusted_for_render": true,
+  "source": "parametric_ball_arc_render_v1",
+  "source_artifact": "ball_track_arc_solved.json",
+  "summary": {
+    "base_sample_count": 398,
+    "bridge_sample_count": 0,
+    "fail_closed_enabled": true,
+    "fail_closed_policy": "arc_segment_fail_closed_v1",
+    "fail_closed_suppressed_segment_ids": [
+      0,
+      2,
+      3,
+      4,
+      6,
+      8
+    ],
+    "fps": 29.999999,
+    "rally_span_count": 0,
+    "sample_count": 398,
+    "segment_count": 5,
+    "solver_trusted_for_render": true,
+    "supersample_rate": 4
+  },
+  "trusted_for_ball_detection_metrics": false
+}
