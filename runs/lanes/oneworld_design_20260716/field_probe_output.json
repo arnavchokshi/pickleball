@@ -1,0 +1,831 @@
+{
+  "audio_onsets_v2.json": {
+    "frame_rate": 30.0,
+    "not_gate_verified": true,
+    "onset_count": 0,
+    "onset_fields": [],
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/audio_onsets_v2.json",
+    "pop_band_ratio_first": null,
+    "status": "blocked",
+    "trusted_for_contact": false
+  },
+  "ball_track.json": {
+    "ball_candidates_sibling_exists": false,
+    "confidence_repair_marker": {
+      "type": "NoneType",
+      "value": null
+    },
+    "fps": {
+      "type": "float",
+      "value": 30.0
+    },
+    "frame_fields": [
+      "approx",
+      "conf",
+      "speed_mps",
+      "spin_rpm",
+      "t",
+      "visible",
+      "world_xyz",
+      "xy"
+    ],
+    "frame_sample": {
+      "approx": false,
+      "conf": 0.86482644,
+      "speed_mps": null,
+      "spin_rpm": null,
+      "t": 0.0,
+      "visible": true,
+      "world_xyz": null,
+      "xy": [
+        354.676941,
+        307.531799
+      ]
+    },
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/ball_track.json",
+    "source": {
+      "type": "str",
+      "value": "wasb"
+    }
+  },
+  "ball_track_arc_solved.json": {
+    "anchor_fields": [
+      "anchor_id",
+      "details",
+      "frame",
+      "immovable",
+      "kind",
+      "sigma_m",
+      "source",
+      "status",
+      "t",
+      "world_xyz"
+    ],
+    "anchor_sample": {
+      "anchor_id": "rally_endpoint_0_start_000000",
+      "details": {
+        "candidate_prediction": false,
+        "role": "start"
+      },
+      "frame": 0,
+      "immovable": true,
+      "kind": "rally_endpoint",
+      "sigma_m": 2.0,
+      "source": "ball_ray_plane_weak_endpoint_prior",
+      "status": "rally_endpoint_weak",
+      "t": 0.0,
+      "world_xyz": [
+        1.499887279,
+        13.063090754,
+        0.0371
+      ]
+    },
+    "ball_arc_render_sibling_exists": false,
+    "frame_fields": [
+      "approx",
+      "arc_solver",
+      "band",
+      "conf",
+      "not_for_detection_metrics",
+      "render_only",
+      "sigma_m",
+      "source",
+      "speed_mps",
+      "spin_rpm",
+      "t",
+      "visible",
+      "world_xyz",
+      "xy"
+    ],
+    "frame_sample": {
+      "approx": false,
+      "band": "anchored_measured",
+      "conf": 0.86482644,
+      "sigma_m": 2.001858,
+      "t": 0.0,
+      "world_xyz": [
+        -0.377492154,
+        7.063090754,
+        0.432489464
+      ]
+    },
+    "kill_reasons": [],
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/ball_track_arc_solved.json",
+    "policy": {
+      "feeds_world_only": true,
+      "not_for_detection_metrics": true,
+      "notes": [
+        "Monocular sightings are fit as camera rays through event-anchored physics arcs.",
+        "Output is for world rendering and diagnostics only.",
+        "Do not use this artifact for BALL detector metrics, gates, training, or promotion."
+      ],
+      "outdoor_indoor_labels_read": false,
+      "render_only": true
+    },
+    "segment_budget_exceeded": false,
+    "segment_fields": [
+      "anchors_used",
+      "end_anchor",
+      "endpoint_error_m",
+      "frame_end",
+      "frame_start",
+      "initial_position_m",
+      "initial_speed_mps",
+      "initial_velocity_mps",
+      "inlier_count",
+      "inlier_frames",
+      "max_reprojection_error_px",
+      "net_clearance_m",
+      "net_clearance_ok",
+      "outlier_count",
+      "outlier_frames",
+      "physical_sanity",
+      "reprojection_rmse_px",
+      "segment_id",
+      "size_residuals_m",
+      "start_anchor",
+      "status",
+      "t0",
+      "t1"
+    ],
+    "segment_sample": {
+      "anchors_used": [
+        {
+          "anchor_id": "rally_endpoint_0_start_000000",
+          "details": {
+            "candidate_prediction": false,
+            "role": "start"
+          },
+          "frame": 0,
+          "immovable": true,
+          "kind": "rally_endpoint",
+          "sigma_m": 2.0,
+          "source": "ball_ray_plane_weak_endpoint_prior",
+          "status": "rally_endpoint_weak",
+          "t": 0.0,
+          "world_xyz": [
+            1.499887279,
+            13.063090754,
+            0.0371
+          ]
+        },
+        {
+          "anchor_id": "bounce_0000",
+          "details": {
+            "ball_radius_m": 0.0371,
+            "pixel_xy": [
+              151.942352,
+              391.208405
+            ]
+          },
+          "frame": 12,
+          "immovable": true,
+          "kind": "bounce",
+          "sigma_m": 0.121063,
+          "source": "ray_intersection_z_ball_radius",
+          "status": "human_reviewed",
+          "t": 0.4,
+          "world_xyz": [
+            -2.628912878,
+            4.97725634,
+            0.0371
+          ]
+        }
+      ],
+      "frame_end": 12,
+      "frame_start": 0,
+      "physical_sanity": {
+        "apex_height_m": 0.43528,
+        "initial_speed_mps": 8.291936,
+        "net_clearance_m": null,
+        "violation": false,
+        "violations": []
+      },
+      "reprojection_rmse_px": 8.622576,
+      "segment_id": 0,
+      "status": "fit"
+    },
+    "status": "ran"
+  },
+  "contact_windows.json": {
+    "event_count": 24,
+    "event_fields": [
+      "confidence",
+      "frame",
+      "player_id",
+      "sources",
+      "t",
+      "trust_band_note",
+      "type",
+      "window"
+    ],
+    "event_sample": {
+      "confidence": 0.6808895,
+      "frame": 5,
+      "player_id": 3,
+      "sources": {
+        "ball_inflection": 0.76187,
+        "wrist_vel": 0.599909
+      },
+      "t": 0.175,
+      "trust_band_note": "wrist+ball cues, unverified",
+      "type": "contact",
+      "window": {
+        "importance": 0.6808895,
+        "t0": 0.13999999999999999,
+        "t1": 0.22999999999999998
+      }
+    },
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/contact_windows.json",
+    "refined_sibling_exists": false
+  },
+  "court_calibration.json": {
+    "capture_quality": {
+      "keys": [
+        "grade",
+        "reasons"
+      ],
+      "type": "dict"
+    },
+    "companion_court_trust_band": {
+      "badge": "preview",
+      "evidence_path": "/Users/arnavchokshi/Desktop/pickleball/runs/process_video_glue_20260702T_live_wolverine2/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+      "gate_id": "court_calibration_pck5px_gate",
+      "gate_status": "metric15_unverified",
+      "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=warn, metric_confidence=low, reasons=reprojection_high, single_view_planar_full_calibration, distortion_model=zero_distortion_grid_search_focal, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+      "stage": "CAL"
+    },
+    "coordinate_contract": {
+      "type": "NoneType",
+      "value": null
+    },
+    "coordinate_frame": {
+      "type": "str",
+      "value": "court_netcenter_z_up_m"
+    },
+    "extrinsics": {
+      "keys": [
+        "R",
+        "camera_height_m",
+        "t"
+      ],
+      "type": "dict"
+    },
+    "homography": {
+      "length": 3,
+      "sample": [
+        [
+          163.56453782740323,
+          -14.817632138087717,
+          690.9390252512021
+        ],
+        [
+          9.8125834996995,
+          14.803423903854188,
+          429.6198287813165
+        ],
+        [
+          0.060941255432142544,
+          0.07409813040903583,
+          1.0
+        ]
+      ],
+      "type": "list"
+    },
+    "inline_trust_band": {
+      "type": "NoneType",
+      "value": null
+    },
+    "intrinsics": {
+      "keys": [
+        "cx",
+        "cy",
+        "dist",
+        "fx",
+        "fy",
+        "source"
+      ],
+      "type": "dict"
+    },
+    "metric_confidence": {
+      "type": "str",
+      "value": "low"
+    },
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/court_calibration.json",
+    "schema_version": {
+      "type": "int",
+      "value": 1
+    },
+    "source": {
+      "type": "str",
+      "value": "metric_15pt_reviewed"
+    }
+  },
+  "court_zones.json": {
+    "court_polygon_m": [
+      [
+        -3.048,
+        -6.7056000000000004
+      ],
+      [
+        3.048,
+        -6.7056000000000004
+      ],
+      [
+        3.048,
+        6.7056000000000004
+      ],
+      [
+        -3.048,
+        6.7056000000000004
+      ]
+    ],
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/court_zones.json",
+    "zone_names": [
+      "court",
+      "far_left_service",
+      "far_nvz",
+      "far_right_service",
+      "near_left_service",
+      "near_nvz",
+      "near_right_service"
+    ]
+  },
+  "demo_reality": {
+    "ball_fields": [
+      "bounces",
+      "fps",
+      "frames",
+      "input_preprocessing",
+      "schema_version",
+      "source"
+    ],
+    "ball_world_xyz_count": 0,
+    "court_coordinate_frame": null,
+    "court_metric_confidence": null,
+    "has_audio_onsets_v2": false,
+    "has_contact_windows": false,
+    "has_smpl_motion": false,
+    "has_tracks": false,
+    "run_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/pbv11_headtohead_20260713/rerun_20260715/cpu_events_full/pbvision_11min_20260713"
+  },
+  "net_plane.json": {
+    "center_height_in": 34.0,
+    "endpoints": [
+      [
+        -3.3528000000000002,
+        0.0,
+        0.9144
+      ],
+      [
+        3.3528000000000002,
+        0.0,
+        0.9144
+      ]
+    ],
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/net_plane.json",
+    "plane": {
+      "normal": [
+        0.0,
+        1.0,
+        0.0
+      ],
+      "point": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    "post_height_in": 36.0
+  },
+  "placement.json": {
+    "fps": {
+      "type": "float",
+      "value": 30.0
+    },
+    "frame_fields": [
+      "covariance_m2",
+      "frame_idx",
+      "fused_world_xy",
+      "original_world_xy",
+      "signals",
+      "smoothed_world_xy",
+      "source_counts",
+      "stance",
+      "t"
+    ],
+    "frame_sample": {
+      "covariance_m2": [
+        [
+          2.352795835969658e-07,
+          2.240204848381952e-07
+        ],
+        [
+          2.2402048483819527e-07,
+          5.642450454109281e-07
+        ]
+      ],
+      "frame_idx": 0,
+      "fused_world_xy": [
+        -1.4935363119127438,
+        -2.6604292702547987
+      ],
+      "signals": [
+        {
+          "covariance_m2": [
+            [
+              0.28573990202639016,
+              0.4264789684574829
+            ],
+            [
+              0.4264789684574829,
+              0.8956141386520019
+            ]
+          ],
+          "name": "bbox",
+          "reason": null,
+          "sigma_m": [
+            0.5345464451536369,
+            0.9463689231224797
+          ],
+          "used": true,
+          "xy": [
+            -1.6920796002841427,
+            -3.0117146000703676
+          ]
+        },
+        {
+          "covariance_m2": [
+            [
+              0.0021663498761819435,
+              0.0023537133476385494
+            ],
+            [
+              0.0023537133476385494,
+              0.005490751504838019
+            ]
+          ],
+          "name": "native2d",
+          "reason": null,
+          "sigma_m": [
+            0.04654406381249862,
+            0.07409960529475186
+          ],
+          "used": true,
+          "xy": [
+            -1.4922176254311073,
+            -2.6583743330829908
+          ]
+        },
+        {
+          "name": "sam3d",
+          "reason": "missing",
+          "sigma_m": null,
+          "used": false,
+          "xy": null
+        }
+      ],
+      "smoothed_world_xy": [
+        -1.5903862315416173,
+        -2.6787989680303306
+      ],
+      "t": 0.0
+    },
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/placement.json",
+    "world_declarations": {
+      "homography_pixel_convention": null,
+      "undistort_applied": false
+    }
+  },
+  "placement_trajectory_refined.json": {
+    "VERIFIED": 0,
+    "artifact_type": "placement_trajectory_refined",
+    "coordinate_space": "world_court_netcenter_z_up_m",
+    "fps": 30.0,
+    "frame_fields": [
+      "confidence_provenance",
+      "frame_idx",
+      "joint_conf",
+      "joints_world",
+      "placement_trajectory_refinement",
+      "skeleton_implausible",
+      "skeleton_plausibility",
+      "smoothing_flag",
+      "t",
+      "transl_world"
+    ],
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/trackI_placefuse_20260716/wolverine/placement_trajectory_refined.json",
+    "player_id": 18,
+    "preview_band": true,
+    "refinement_fields": [
+      "correction_convention",
+      "correction_magnitude_m",
+      "covariance_m2",
+      "provenance",
+      "refined_foot_positions",
+      "refined_transl_world",
+      "rigid_correction_xyz_m"
+    ],
+    "refinement_sample": {
+      "correction_magnitude_m": 0.0,
+      "covariance_m2": [
+        [
+          0.04,
+          0.0,
+          0.0
+        ],
+        [
+          0.0,
+          0.04,
+          0.0
+        ],
+        [
+          0.0,
+          0.0,
+          0.04
+        ]
+      ],
+      "provenance": {
+        "evidence": {
+          "body": {
+            "effective_robust_weight": 3.5165137735478993,
+            "nominal_weight": 3.5165137735478993
+          },
+          "court_plane": {
+            "effective_robust_weight": 0.0,
+            "nominal_weight": 0.2
+          },
+          "plant": {
+            "effective_robust_weight": 0.0,
+            "nominal_weight": 0.0
+          },
+          "smoothness": {
+            "effective_robust_weight": 0.0,
+            "nominal_weight": 0.0
+          },
+          "trk": {
+            "effective_robust_weight": 14.066055094191597,
+            "nominal_weight": 14.066055094191597
+          }
+        },
+        "plant_anchored": false,
+        "plant_phases": [],
+        "z_soft_prior": {
+          "active": true,
+          "bounded": false,
+          "clamped_to_plane": false,
+          "gain": 0.009900990099009901,
+          "sole_z_after_m": 0.0,
+          "sole_z_before_m": 0.0
+        }
+      },
+      "refined_transl_world": [
+        -1.7512516683296742,
+        5.961560526968086,
+        0.0
+      ],
+      "rigid_correction_xyz_m": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    "same_run_as_manager_wolverine": false,
+    "top_fields": [
+      "VERIFIED",
+      "artifact_type",
+      "coordinate_space",
+      "fps",
+      "joint_names",
+      "placement_trajectory_refinement",
+      "players",
+      "preview_band",
+      "preview_only",
+      "provenance",
+      "schema_version",
+      "source_model",
+      "world_frame"
+    ],
+    "world_frame": "court_Z0"
+  },
+  "racket_pose_estimate.json": {
+    "frame_fields": [
+      "ambiguous",
+      "conf",
+      "confidence_provenance",
+      "frame",
+      "not_for_detection_metrics",
+      "pose_se3",
+      "proxy_inputs",
+      "render_only",
+      "reprojection_error_px",
+      "source",
+      "t",
+      "translation_unit",
+      "trust",
+      "trust_band",
+      "world_frame"
+    ],
+    "frame_sample": {
+      "ambiguous": false,
+      "conf": 0.934242,
+      "frame": 0,
+      "pose_se3": {
+        "R": [
+          [
+            0.164541417,
+            -0.215644887,
+            0.962508912
+          ],
+          [
+            -0.583861919,
+            0.765198448,
+            0.27125006
+          ],
+          [
+            -0.795004014,
+            -0.606604169,
+            0.0
+          ]
+        ],
+        "t": [
+          -1.425493646,
+          -2.522600832,
+          0.727082126
+        ]
+      },
+      "reprojection_error_px": null,
+      "source": "wrist_proxy",
+      "t": 0.0,
+      "translation_unit": "m",
+      "world_frame": "court_Z0"
+    },
+    "hypotheses_sibling_exists": false,
+    "not_for_detection_metrics": true,
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/racket_pose_estimate.json",
+    "racket_candidates_sibling_exists": false,
+    "racket_pose_sibling_exists": false,
+    "render_only": true,
+    "translation_unit": "m",
+    "trust": "estimated_from_wrist",
+    "world_frame": "court_Z0"
+  },
+  "rally_spans.json": {
+    "not_ground_truth": true,
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/rally_spans.json",
+    "span_count": 1,
+    "span_fields": [
+      "sources",
+      "t0",
+      "t1"
+    ],
+    "span_sample": {
+      "sources": [
+        "ball",
+        "player_motion"
+      ],
+      "t0": 0.0,
+      "t1": 10.0
+    }
+  },
+  "smpl_motion.json": {
+    "fps": {
+      "type": "float",
+      "value": 30.0
+    },
+    "frame_fields": [
+      "body_pose",
+      "foot_contact",
+      "foot_lock",
+      "frame_idx",
+      "global_orient",
+      "grf",
+      "joint_conf",
+      "joints_world",
+      "left_hand_pose",
+      "mesh_vertices_world",
+      "right_hand_pose",
+      "t",
+      "temporal_smoothing_reset",
+      "track_world_xy",
+      "transl_world"
+    ],
+    "frame_sample": {
+      "frame_idx": 0,
+      "joints_world_count": 70,
+      "left_wrist_conf": 0.9342419505119324,
+      "left_wrist_idx9": [
+        -1.8060191616554682,
+        -3.061715708493798,
+        0.7800266585049264
+      ],
+      "right_wrist_conf": 0.9342419505119324,
+      "right_wrist_idx10": [
+        -1.6448032047926395,
+        -3.124864866831099,
+        0.7717128269007787
+      ],
+      "t": 0.0,
+      "transl_world": [
+        -1.692079600284143,
+        -3.0117146000703703,
+        0.0
+      ]
+    },
+    "model": {
+      "type": "str",
+      "value": "sam3dbody_world_joints"
+    },
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/smpl_motion.json",
+    "player_count": 4,
+    "skeleton_stride": {
+      "type": "NoneType",
+      "value": null
+    },
+    "world_frame": {
+      "type": "str",
+      "value": "court_Z0"
+    }
+  },
+  "tracks.json": {
+    "fps": {
+      "type": "float",
+      "value": 30.0
+    },
+    "frame_fields": [
+      "bbox",
+      "conf",
+      "t",
+      "world_xy"
+    ],
+    "frame_sample": {
+      "bbox": [
+        600.265869140625,
+        254.38856506347656,
+        761.7278442382812,
+        546.86279296875
+      ],
+      "conf": 0.9342419505119324,
+      "t": 0.0,
+      "world_xy": [
+        -1.5903862315416173,
+        -2.6787989680303306
+      ]
+    },
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/tracks.json",
+    "placement_provenance": {
+      "keys": [
+        "generated_at",
+        "native2d_keypoints",
+        "placement",
+        "refine_from_sam3d",
+        "sam3d_keypoints",
+        "source_counts",
+        "stage",
+        "stance_phase_count",
+        "stance_phases",
+        "tracks",
+        "tracks_backup",
+        "undistort_applied"
+      ],
+      "type": "dict"
+    },
+    "player_count": 4,
+    "player_fields": [
+      "frames",
+      "id",
+      "role",
+      "side"
+    ],
+    "repair_markers": {
+      "type": "NoneType",
+      "value": null
+    }
+  },
+  "virtual_world.json": {
+    "artifact_type": "racketsport_virtual_world",
+    "fps": 30.0,
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/manager_stage_sam3d_wolverine_v5_1_20260703T2012Z/virtual_world.json",
+    "summary_fields": [
+      "ambiguous_paddle_frame_count",
+      "approx_ball_frame_count",
+      "ball_frame_count",
+      "floor_contact_player_frame_count",
+      "floor_placed_player_frame_count",
+      "joint_player_frame_count",
+      "max_abs_floor_offset_m",
+      "max_floor_penetration_m",
+      "mesh_player_count",
+      "mesh_player_frame_count",
+      "paddle_frame_count",
+      "paddle_player_count",
+      "paddle_source",
+      "physics_modes",
+      "player_count",
+      "temporal_coverage",
+      "track_only_player_frame_count",
+      "warnings"
+    ],
+    "world_frame": "court_Z0"
+  }
+}
