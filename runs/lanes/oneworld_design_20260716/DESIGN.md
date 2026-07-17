@@ -558,6 +558,74 @@ Exact request to Track C (Track K never edits `process_video.py`):
    verifies serial/overlap order, cold/reuse/partial/malformed behavior,
    dependency hashes, output declarations, and the wide suite.
 
+## 8.5 Strategic rationale: the anchor-source hierarchy (owner framing, 2026-07-16)
+
+Why contact co-location is the structural point of this pass, not a fusion nicety.
+
+pb.vision's ball-3D works because trained event heads give them **an anchor at every event**:
+bounces pinned to z=radius (154/154), net interactions pinned to the net plane, and a trained
+radius head (R²=0.71) supplying depth. Gravity then determines the arc between anchors. Our arcs
+fail for the same reason from the other side: **anchor sparsity** (~20 auto-anchors across 697s
+-> game-scale segments balloon; see runs/lanes/ballarc_scale_guard_20260715). Anchors are the
+whole ballgame.
+
+But pb.vision has **no 3D players** — their world is ball/events/court only. We have accurate,
+correctly-placed SAM-3D-Body meshes (foot-slide 34mm -> 7mm as of Track I's placefuse). That
+asymmetry creates an anchor class they structurally cannot copy:
+
+**Anchor-source hierarchy (ranked by what each is worth to us):**
+1. **Contact co-located with the hitter's hand — 3D, MEASURED, OURS ALONE.** A paddle contact
+   happens at the hitter's hand, and we know that hand's position in 3D. So a confirmed contact
+   yields a *measured* 3D ball anchor, not an inferred-depth 2D one. It needs **zero trained
+   event heads** — BODY + court + ball-2D proximity is enough to propose it — and it compounds
+   when the event head lands (better proposals -> more co-locations).
+2. **Bounce at the court plane — 3D, both of us.** z = ball radius, soft-weighted (§3.4).
+3. **Net interaction at the net plane — 3D, both of us.** (§3.4; net_cross carries time residual
+   only, no positional pull.)
+4. **Trained-event / radius-head depth — pb.vision has it, we're building it** (Track G).
+
+### 8.5.1 Measured evidence on the Wolverine bundle (manager probe, 2026-07-16)
+
+Honest status: **v1 emits ZERO co-location anchors today** — all 24 declared contacts abstain
+(22 at >1.2m, 2 too_close_to_call), because §3.5 evaluates co-location **at the declared event
+frame** and those frames are mistimed. The class is not disproven by that; it is blocked by
+upstream event timing. The manager probe
+(runs/lanes/oneworld_impl_20260716/anchor_window_probe.py, output *_output.json, EXIT 0)
+searched +/-15 frames (+/-0.5s) around each declared contact for the closest approach of the 3D
+ball to any BODY wrist, **with a chance baseline at random non-event frames**:
+
+| statistic | declared contacts (n=24) | chance / random non-event frames (n=24) |
+|---|---|---|
+| distance at the declared frame, median | 3.126 m | — |
+| windowed closest-approach, median | **1.167 m** | **4.499 m** |
+| closest approach <= 0.50 m (paddle-length band) | **6/24** | **0/24** |
+| closest approach <= 1.20 m | **15/24** | 6/24 |
+
+The signal is **real and ~4x above chance**: declared contacts have the ball passing near a
+wrist within +/-0.5s far more often than random frames do. A ball at true contact should sit
+~0.3-0.5m from the wrist (paddle length), so the 6/24 in that band are plausibly true
+co-locations; 0/24 within 0.30m is the physically *expected* result, not a failure.
+
+Two upstream defects, now quantified, block harvest:
+- **Event timing**: best-approach offsets spread across the whole window
+  (-15,-13,-13,-12,-11,-11,-10,-9,-7,-6,-5,-5,-4,-2,0,2,3,3,4,5,6,10,10,13 frames), several
+  pegged at the window edge — so some true offsets are >0.5s and this window is too narrow to
+  measure them.
+- **Attribution**: only **9/24** declared hitters are the nearest player — roughly a coin flip.
+
+### 8.5.2 The unlock (design change proposed, NOT silently applied)
+
+The anchor class needs a **bounded closest-approach search inside the event window** instead of
+trusting the declared frame: propose the co-location anchor at argmin distance over the window,
+gate it on (a) the paddle-length band, (b) a chance-baseline margin recomputed per clip, (c)
+agreement between the co-located player and independent wrist-speed evidence, and emit it as a
+*proposed measured anchor* with its dt recorded as an honest event-timing correction — never
+rewriting the raw event. This is exactly the anchor class Track A's arc solver is starving for,
+and it arrives with no trained event head. It is a **v2 behavior**: it changes §3.5's join rule,
+so it needs its own failing-first tests, a per-clip chance baseline (a wide window will always
+find a spurious nearest wrist), and a pre-registered kill rule — the same discipline that made
+this probe trustworthy. Not adopted here; specified for the next window.
+
 ## 9. Honest limitations and promotion wall
 
 - Arc segments are sparse/weak today; Track-A anchors may improve them, but v1

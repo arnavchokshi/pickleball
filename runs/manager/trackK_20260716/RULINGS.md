@@ -119,6 +119,35 @@ ruling; concurrent-tree churn made a clean wide run impossible in the window. Ge
 Lane again printed protected label paths in a git-status diagnostic (paths only, no content) —
 second occurrence of the same class; the exclusion rule is now a standing Track K spec line.
 
+## ANCHOR-SOURCE HIERARCHY + the probe that tested it (owner framing, 2026-07-16 wrap-up)
+Owner/coordinator framing folded into DESIGN.md §8.5 so it survives the session: pb.vision's
+ball-3D works on ANCHOR DENSITY (trained event heads -> bounce z=radius 154/154, net plane,
+radius head R²=0.71 depth; gravity fills between). Our arc failure = anchor sparsity (20/697s) —
+same fact, other side. They have NO 3D players; we have correctly-placed BODY (foot-slide
+34->7mm). Therefore contact co-location = an anchor class they structurally cannot copy:
+(1) contact at hitter's hand [3D MEASURED, ours alone, zero trained heads needed],
+(2) bounce at court plane [3D, both], (3) net plane [3D, both], (4) trained-event/radius depth
+[theirs today, Track G building].
+
+MANAGER PROBE (anchor_window_probe.py, EXIT 0, read-only) — tested whether the class yields on
+Wolverine, WITH a chance baseline (the check that made it trustworthy rather than wishful):
+| stat | declared contacts n=24 | chance (random non-event frames) n=24 |
+| dist at declared frame, median | 3.126m | — |
+| windowed closest-approach, median | 1.167m | 4.499m |
+| <=0.50m (paddle band) | 6/24 | 0/24 |
+| <=1.20m | 15/24 | 6/24 |
+VERDICT: the co-location signal is REAL, ~4x above chance — but v1 emits ZERO anchors today
+because §3.5 evaluates at the DECLARED event frame, and those frames are mistimed (best-approach
+offsets spread -15..+13 frames, several pegged at the window edge = some true offsets exceed
+0.5s) with attribution near coin-flip (9/24 declared hitter == nearest player). The class is
+BLOCKED UPSTREAM, not disproven. 0/24 within 0.30m is physically EXPECTED (ball sits ~0.3-0.5m
+from the wrist at true contact — paddle length), so it is not evidence against.
+UNLOCK (specified, deliberately NOT applied): bounded closest-approach search inside the event
+window w/ per-clip chance-margin gate + independent wrist-speed agreement, emitting a proposed
+measured anchor + its dt as an honest timing correction, raw events immutable. v2 behavior —
+needs failing-first tests + pre-registered kill rule. This is the anchor class Track A's solver
+is starving for, available with no trained event head.
+
 ## DESIGN AMENDMENTS 1+2 (owner win condition, relayed 2026-07-16) — RULED: ADOPT into impl
 Owner: demo videos must show 4 placed players, each w/ semi-decent paddle orientation, and
 continuous well-placed 3D ball w/ visible paddle/floor/net events; "then I say what I see wrong
