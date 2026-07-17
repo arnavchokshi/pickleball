@@ -1,0 +1,11 @@
+Shutdown scheduled for Fri 2026-07-17 05:41:08 UTC, use 'shutdown -c' to cancel.
+RAIL_PROOF_BEGIN
+USEC=1784266868185130
+WARN_WALL=1
+MODE=poweroff
+RAIL_PROOF_END
+2026-07-17T04:56:09Z
+NVIDIA A100-SXM4-80GB
+2026-07-17T05:04:26Z vm_conf030 CLOSE: PREREG RESULT FAIL (one shot, no iteration).
+Gate arm0a PASS ~3e-11. conf030: burl 0.9234/0.9850 clean+material; wolv 0.7780/0.6767 + 2 sw + 16 spectFP (worse than 0.18 floor).
+VM DELETED 05:03:30Z list+disks confirmed. Wall 0.15h, est $0.22-0.38 (cap $2). Pull md5 55c956715663c236b4e1d4b441813151.

@@ -1,0 +1,13 @@
+864963c71ecc1679
+dc76b9a9a47af04a9e05283c77f9471b  /tmp/detbench_data.tar.gz
+97b094545d788aec1b8d9b66bb0281d5  /tmp/burlington_gold_0300_low_steep_corner.rfdetr_conf030.json
+0eb0fadf53cd3d6bc6205db4ed2bbf38  /tmp/wolverine_mixed_0200_mid_steep_corner.rfdetr_conf030.json
+ * [new ref]                    -> detbench_pin
+M	third_party/blurball
+VM_HEAD=cabdb8cf21139eb276cab060c7858b5998421e40
+cd7ae4891c482a257807761f3b934a90  scripts/racketsport/score_person_track_sources.py
+be38f76547d05d8ac7b12274de5b659d  threed/racketsport/person_track_gt_scoring.py
+ea30bfdf3a57bf7e2fff06476ec6295c  threed/racketsport/raw_pool_person_authority.py
+5e761c5db3327a1841fc0e54281bb9d7  threed/racketsport/player_global_association.py
+2809d3227f7d078f
+env OK True

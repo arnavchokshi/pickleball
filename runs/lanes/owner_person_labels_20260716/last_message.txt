@@ -1,0 +1,13 @@
+STOP_ENVIRONMENT_VENV_PERMISSION
+
+The lane is not complete or staged.
+
+- Tooling and 11 focused tests passed with exit code 0.
+- All 1,200 candidate JPEG extractions completed.
+- YOLO inference failed because the environment denied access to installed `torchvision`.
+- Access then failed for `.venv/pyvenv.cfg` and the repository directory itself.
+- No network installs were attempted.
+- No `pack_manifest.json`, staged review page, or ingested dataset was declared complete.
+- `VERIFIED=0` remains binding.
+
+Failure evidence and resumable state are recorded in [report.json](/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/report.json). Do not begin owner labeling yet.

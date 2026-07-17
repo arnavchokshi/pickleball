@@ -1,0 +1,56 @@
+17:05:38Z
+DFINE_SHA=7fe2f8889f0b7b817f20c315b40fc15a4fb64ae6
+dfine_hgnetv2_l_obj2coco.yml
+dfine_hgnetv2_l_obj365.yml
+dfine_hgnetv2_m_obj2coco.yml
+dfine_hgnetv2_m_obj365.yml
+dfine_hgnetv2_n_obj2coco.yml
+dfine_hgnetv2_n_obj365.yml
+dfine_hgnetv2_s_obj2coco.yml
+dfine_hgnetv2_s_obj365.yml
+dfine_hgnetv2_x_obj2coco.yml
+dfine_hgnetv2_x_obj365.yml
+c913aef6dc89c327c1a8b9e4ee5cf93eeeb3a1692ffe8ab40f1aa576ee6c3611  /home/arnavchokshi/dfine_l_obj2coco_e25.pth
+126083766
+/home/arnavchokshi/venvs/rfdetr/bin/python3: can't open file '/home/arnavchokshi/runs/lanes/trk_detbench_20260716/scripts/dump_dfine_raw.py': [Errno 2] No such file or directory
+    from src.core import YAMLConfig  # noqa: E402
+  File "/home/arnavchokshi/dfine_repo/src/__init__.py", line 6, in <module>
+    from . import data, nn, optim, zoo
+  File "/home/arnavchokshi/dfine_repo/src/data/__init__.py", line 7, in <module>
+    from .dataloader import *
+  File "/home/arnavchokshi/dfine_repo/src/data/dataloader.py", line 18, in <module>
+    from ..core import register
+  File "/home/arnavchokshi/dfine_repo/src/core/__init__.py", line 6, in <module>
+    from ._config import BaseConfig
+  File "/home/arnavchokshi/dfine_repo/src/core/_config.py", line 15, in <module>
+    from torch.utils.tensorboard import SummaryWriter
+  File "/home/arnavchokshi/venvs/rfdetr/lib/python3.10/site-packages/torch/utils/tensorboard/__init__.py", line 1, in <module>
+    import tensorboard
+ModuleNotFoundError: No module named 'tensorboard'
+label distribution (score>=0.3): Counter({0: 23, 56: 7, 32: 5, 38: 4, 74: 1})
+  label=0 score=0.938 box=[1136.0, 314.0, 1384.0, 802.0]
+  label=0 score=0.931 box=[1004.0, 350.0, 1106.0, 625.0]
+  label=0 score=0.889 box=[1483.0, 370.0, 1536.0, 509.0]
+  label=0 score=0.874 box=[1676.0, 370.0, 1746.0, 522.0]
+  label=0 score=0.843 box=[300.0, 413.0, 346.0, 506.0]
+  label=0 score=0.820 box=[231.0, 403.0, 271.0, 504.0]
+  label=0 score=0.809 box=[573.0, 390.0, 643.0, 489.0]
+  label=0 score=0.756 box=[155.0, 423.0, 198.0, 492.0]
+  label=0 score=0.750 box=[185.0, 425.0, 222.0, 491.0]
+  label=0 score=0.732 box=[72.0, 430.0, 108.0, 497.0]
+=== ARM3 dump: burlington_gold_0300_low_steep_corner ===
+{"n_frames": 600, "detector_ms_per_frame_batch1": 24.48959966665787}
+=== ARM3 feeder+assoc: burlington_gold_0300_low_steep_corner ===
+{"n_frames": 600, "detector_ms_per_frame_batch1": 24.48959966665787}
+detbench_out/scored/burlington_gold_0300_low_steep_corner/arm3_dfine_l/tracks.json
+{"score_path": null, "status": "ok"}
+=== ARM3 dump: wolverine_mixed_0200_mid_steep_corner ===
+{"n_frames": 300, "detector_ms_per_frame_batch1": 24.95656795667249}
+=== ARM3 feeder+assoc: wolverine_mixed_0200_mid_steep_corner ===
+{"n_frames": 300, "detector_ms_per_frame_batch1": 24.95656795667249}
+detbench_out/scored/wolverine_mixed_0200_mid_steep_corner/arm3_dfine_l/tracks.json
+{"score_path": null, "status": "ok"}
+=== cumulative scoring s05 ===
+detbench_out/scores/s05_after_arm3/person_track_gt_scoring_report.json
+detbench_out/scores/s05_after_arm3/PERSON_TRACK_GT_SCORING_REPORT.md
+17:09:15Z

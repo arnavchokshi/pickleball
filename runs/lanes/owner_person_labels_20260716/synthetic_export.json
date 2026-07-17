@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "session_id": "person_labels_20260716",
+  "storage_key": "person_labels_20260716",
+  "frames": [
+    {
+      "frame_id": "3bdc20c4b6a8ea72f3c4",
+      "boxes": [],
+      "empty_confirmed": true,
+      "ms_spent": 1000
+    }
+  ]
+}

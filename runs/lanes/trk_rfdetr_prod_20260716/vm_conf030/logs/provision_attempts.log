@@ -1,0 +1,29 @@
+=== attempt 1 2026-07-17T04:52:17Z tier=a100-80 zone=us-central1-a rc=1 ===
+ERROR: (gcloud.compute.instances.create) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A a2-ultragpu-1g VM instance with 1 nvidia-a100-80gb accelerator(s) and
+      1 local SSD(s) is currently unavailable in the us-central1-a zone. Consider
+      trying your request in another zone which has capacity to accommodate your request.
+      Alternatively, you can try your request again with a different VM hardware configuration
+      or at a later time. For more information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: local-ssd:1,nvidia-a100-80gb:1
+      vmType: a2-ultragpu-1g
+      zone: us-central1-a
+      zonesAvailable: ''
+    reason: stockout
+message: The zone 'projects/gifted-electron-498923-h1/zones/us-central1-a' does not
+  have enough resources available to fulfill the request.  '(resource type:compute)'.
+=== attempt 2 2026-07-17T04:55:34Z tier=a100-80 zone=asia-southeast1-c rc=0 ===
+Created [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/asia-southeast1-c/instances/pickleball-gpu-conf030].
+pickleball-gpu-conf030	asia-southeast1-c	RUNNING

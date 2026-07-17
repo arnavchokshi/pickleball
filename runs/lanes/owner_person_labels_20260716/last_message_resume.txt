@@ -1,0 +1,19 @@
+Completed and ready for Track F’s independent browser verification. I am not declaring it STAGED; `VERIFIED=0` remains binding.
+
+- [Open review page](/Users/arnavchokshi/Desktop/person_labels_20260716/START_HERE.html)
+- [Final report](/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/report.json)
+- [Pack manifest](/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/pack_manifest.json)
+
+Results:
+
+- 450 frames: 300 gameplay, 100 spectator-rich, 50 empty/sparse.
+- 81 scratch frames, exactly 18%; proposals withheld.
+- 359 train / 91 validation, whole-session disjoint.
+- 12/12 tests passed, exit 0.
+- Deterministic manifest and page rebuilds were byte-identical.
+- All 450 JPEGs decode at 1920×1080.
+- Synthetic ingest dry-run passed; partial export refusal verified.
+- Page state execution verified autosave/export, empty confirmation, edit/delete provenance, and navigation isolation.
+- Connected browser inventory was unavailable, so Track F’s browser verification remains required.
+
+Owner instruction: “After Track F says GO, open START_HERE.html in Chrome or Safari, review all 450 frames, then click Export labels and send back `person_labels_export.json`.”

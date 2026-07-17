@@ -1,0 +1,19 @@
+Running as unit: lane-heartbeat-watch.service
+=== identities ===
+864963c71ecc167935bcba09
+dc76b9a9a47af04a9e05283c77f9471b  /tmp/detbench_data.tar.gz
+=== pin ===
+ * [new ref]                    -> detbench_pin
+M	third_party/blurball
+VM_HEAD=cabdb8cf21139eb276cab060c7858b5998421e40
+=== preflight md5 ===
+cd7ae4891c482a257807761f3b934a90  scripts/racketsport/score_person_track_sources.py
+be38f76547d05d8ac7b12274de5b659d  threed/racketsport/person_track_gt_scoring.py
+ea30bfdf3a57bf7e2fff06476ec6295c  threed/racketsport/raw_pool_person_authority.py
+5e761c5db3327a1841fc0e54281bb9d7  threed/racketsport/player_global_association.py
+07deba04bc00f9eaff9670676ac3ec45  scripts/racketsport/benchmark_person_trackers.py
+2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154  models/checkpoints/osnet_x1_0_market1501.pt
+401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7  models/checkpoints/yolo26m.pt
+/home/arnavchokshi/coldstart_20260706/repo/.venv/lib/python3.10/site-packages/torchreid/reid/metrics/rank.py:11: UserWarning: Cython evaluation (very fast so highly recommended) is unavailable, now use python evaluation.
+  warnings.warn(
+env OK 0.2.5 2.5.1+cu124 8.4.87 True

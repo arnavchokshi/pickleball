@@ -1,0 +1,70 @@
+=== RAIL: scheduling sudo shutdown -P +210 (hard teardown rail) ===
+Shutdown scheduled for Thu 2026-07-16 20:11:06 UTC, use 'shutdown -c' to cancel.
+RAIL_PROOF_BEGIN
+Shutdown scheduled for Thu 2026-07-16 20:11:06 UTC, use 'shutdown -c' to cancel.
+-- /run/systemd/shutdown/scheduled --
+USEC=1784232666712742
+WARN_WALL=1
+MODE=poweroff
+RAIL_PROOF_END
+=== RAIL: 60-min no-heartbeat self-stop watcher ===
+Running as unit: lane-heartbeat-watch.service
+HEARTBEAT_WATCHER_ARMED
+=== GPU + compute mode (standing policy: DEFAULT for single self-dispatch lane) ===
+Set compute mode to DEFAULT for GPU 00000000:04:00.0.
+All done.
+NVIDIA H100 80GB HBM3, 81559 MiB, 580.159.03
+=== repo discovery ===
+REPO_NOT_FOUND: searching...
+REPO=
+FATAL: no repo on snapshot
+=== bundle identity (VM side) ===
+864963c71ecc167935bcba09dd71c731e4314269c686aac2eba92534b61ccc41  /tmp/pickleball_head.bundle
+dc76b9a9a47af04a9e05283c77f9471b  /tmp/detbench_data.tar.gz
+=== fetch + checkout pin ===
+The bundle records a complete history.
+ * [new ref]                    -> detbench_pin
+Previous HEAD position was e64865c wave7+: morning owner rulings booked (mesh full-rate + contact slo-mo, no storage/speed gating for now, try-things grant); speed gate dispatched post-reauth
+M	third_party/WASB-SBDT
+M	third_party/blurball
+HEAD is now at cabdb8c Track K online (one-world fusion, NS-04.4/04.5): design lane dispatched + coordination seams declared
+VM_HEAD=cabdb8cf21139eb276cab060c7858b5998421e40
+=== keyscan self ===
+keyscan done (34.57.246.108)
+=== unpack payload ===
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.quarantine'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.lastuseddate#PS'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.quarantine'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.lastuseddate#PS'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+=== preflight md5 (VM) ===
+07deba04bc00f9eaff9670676ac3ec45  scripts/racketsport/benchmark_person_trackers.py
+cd7ae4891c482a257807761f3b934a90  scripts/racketsport/score_person_track_sources.py
+tar: Ignoring unknown extended header keyword 'LIBARCHIVE.xattr.com.apple.provenance'
+be38f76547d05d8ac7b12274de5b659d  threed/racketsport/person_track_gt_scoring.py
+ea30bfdf3a57bf7e2fff06476ec6295c  threed/racketsport/raw_pool_person_authority.py
+5e761c5db3327a1841fc0e54281bb9d7  threed/racketsport/player_global_association.py
+=== ckpt sha256 (VM) ===
+401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7  models/checkpoints/yolo26m.pt
+2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154  models/checkpoints/osnet_x1_0_market1501.pt

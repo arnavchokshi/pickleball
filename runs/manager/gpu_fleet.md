@@ -14,6 +14,36 @@ since — overnight GPU spend $0 (conditional MOVE-1 #3 GO correctly NOT exercis
 187/188 + CAL ingestion allowlist both said NO-GO). Exposure nil. Re-confirm with one list call
 after owner reauth.
 
+**UPDATE 2026-07-16T16:03Z (trk_detbench_20260716 lane):** auth is LIVE this session
+(`gcloud auth list` → ACTIVE hello@swayformations.com; `gcloud compute instances list` succeeds) —
+the "DEAD" note above is stale, superseded here.
+
+## 2026-07-16T16:03-16:27Z trk_detbench_20260716 — NO-ATTEMPT (H100 a3-highgpu-1g SPOT stockout,
+## all 6 zone-ladder attempts)
+
+- Provision gate: fresh `gcloud compute instances list --filter=labels.fable-fleet=pickleball` at
+  16:03Z → only `pickleball-a100-fleet1` (TERMINATED, historical snapshot source); 0 RUNNING fleet
+  VMs; no pre-existing `trk_detbench` VM to reconcile. Gate PASS.
+- 6 real `gcloud compute instances create pickleball-h100-detbench` attempts (a3-highgpu-1g,
+  `--provisioning-model=SPOT --instance-termination-action=STOP`, boot disk pd-balanced 200GB
+  `--create-disk=...,source-snapshot=projects/gifted-electron-498923-h1/global/snapshots/pickleball-fleet-snap-20260709-w7close`,
+  labels `fable-lane=trk_detbench_20260716,fable-fleet=pickleball,owner=arnavchokshi`), 120s
+  inter-attempt backoff, across the full spec'd ladder + one repeat: asia-southeast1-b,
+  asia-southeast1-c, us-central1-a, us-central1-b, europe-west4-b, asia-southeast1-b (retry) —
+  **every attempt returned `ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS` (reason: stockout /
+  resource_availability)**, ~24 minutes wall (16:03Z→16:27Z), within the 30-min no-attempt cap.
+- Post-ladder confirm: `gcloud compute instances list --filter="name~pickleball-h100-detbench"` →
+  0 items; `gcloud compute disks list --filter="name~pickleball-h100-detbench"` → 0 items — no
+  orphaned VM or disk from any of the 6 failed attempts. **Cost: $0.00. GPU-hours: 0.**
+- Outcome: trk_detbench_20260716 STOPPED at the provision gate per spec's no-attempt rule (fence:
+  "if the VM ladder no-attempts out, STOP with the evidence"). Zero benchmark arms run. See
+  `runs/lanes/trk_detbench_20260716/report.json` for full per-attempt evidence.
+- Fleet state after this lane: unchanged from before it ran — still EMPTY (0 running fleet VMs).
+- **DISPATCH 2 (AMENDMENT 1, same day 16:31Z):** manager authorized SKU fallback ladder (2x H100
+  quick attempts → A100-80GB → A100-40GB). Attempt 1 (H100 ase1-b) STOCKOUT again; attempt 2
+  (H100 us-central1-a) **SUCCEEDED** — `pickleball-h100-detbench` RUNNING 2026-07-16T16:36:37Z.
+  A100 tiers never needed. Row added to the live table above.
+
 ## Current fleet state (2026-07-16T02:51Z, Track A manager session close)
 
 EMPTY — zero fleet VMs running or stopped except the historical `pickleball-a100-fleet1`
@@ -24,7 +54,10 @@ body4d-waker-ctrl 30GB non-fleet + pickleball-a100-fleet1 200GB historical). Non
 
 | vm_name | zone | gpu | model | status | lane | $/hr | created_at | notes |
 |---|---|---|---|---|---|---|---|---|
-| (none running) | | | | | | | | |
+| pickleball-gpu-conf030 | asia-southeast1-c | A100-80GB | a2-ultragpu-1g SPOT | DONE+DELETED 2026-07-17T05:03:30Z (list-confirmed; disks 0) | trk_rfdetr_prod_20260716/vm_conf030 (Track F, PREREG_conf030 single-shot) | spot band ~$1.5-2.5 | 2026-07-17T04:54:30Z | wall **0.15h** → est **$0.22-0.38** (cap $2). Rail armed+verified 04:56:09Z (poweroff 05:41:08 UTC). Env gate PASS (~3e-11). **PREREG RESULT: FAIL** — conf030 wolverine 0.7780/0.6767 + 2 sw + 16 spectFP (WORSE than 0.18 floor's 1/4: surviving spectators are high-conf); burlington clean+material 0.9234/0.9850. One shot, no iteration, per prereg → coordinator's 2b. Pull md5 both sides 55c956715663c236b4e1d4b441813151. See runs/lanes/trk_rfdetr_prod_20260716/vm_conf030/ |
+| pickleball-gpu-rfdetrflip | us-central1-a | A100-80GB | a2-ultragpu-1g SPOT | DONE+DELETED 2026-07-17T04:43:08Z (list-confirmed; disks 0) | trk_rfdetr_prod_20260716/vm_rerun (Track F, owner-directed) | spot band ~$1.5-2.5 | 2026-07-17T04:31:00Z | wall **0.20h** → est **$0.30-0.50** (cap $5). Rail armed+verified 04:33:55Z (`shutdown -P +100` → poweroff 06:13:54 UTC, proof in lane log). Gate arm0a PASS (~3e-11 both clips — VM score-faithful where Mac was not). POOLDIAG M4 CONFIRMED end-to-end (YOLO26m @ conf .18/imgsz 960 through per-frame feeder reproduces frozen pins EXACTLY, Δ=0.000000). RF-DETR-L variant P: burl 0.9220/0.9933 clean; wolv 0.8036/0.7233, 1 sw + 4 spectFP (down from F's 16, not zero). Pull md5 both sides 0df9955dc38443841851afbdc7876801. Ladder: usc1-a H100 stockout, ase1-b H100 revoked mid-STAGING (0 orphans), usc1-a A100-80 success. See runs/lanes/trk_rfdetr_prod_20260716/vm_rerun/ |
+| pickleball-h100-detbench | us-central1-a | H100-80GB | a3-highgpu-1g SPOT | DONE+DELETED 2026-07-16T17:16:41Z (list-confirmed; disks 0) | trk_detbench_20260716 (dispatch 2, AMENDMENT 1) | spot band ~$2.2-3.7 | 2026-07-16T16:36:37Z | wall 0.67h → est **$1.5-2.5**. Rail WAS armed+verified (shutdown -P +210, proof in lane log 16:39:56Z) + 60-min heartbeat self-stop unit. All 6 arms ran + scored; artifacts pulled two-sided md5 4ccc6129... See runs/lanes/trk_detbench_20260716/{report.json,DECISION_TABLE.md} |
+| pickleball-t4-eventhead | us-central1-b | T4 | n1-standard-8 SPOT | RESTARTING (was TERMINATED ~18:2xZ by own idle watchdog during the ~9.5h Mac freeze — rail design worked, staged disk INTACT: labels/jhong93/OpenTT/pbvision sha-verified + code at CODE_GREEN pins; restart re-arms rail at boot; AV1→h264 transcode of 5 pilot videos completing Mac-side) | event_head_pretrain_20260716 (Track G2, slot 2-of-2 per owner directive) | spot band ~$0.2-0.4 | 2026-07-16T17:32:29Z | AMENDMENT-2 railed re-create after: 12 stockouts across 2 ladders (attempt-1 NO-ATTEMPT $0.00), T4 instance 1 fail-closed DELETE at 17:26:50Z (ssh rail-arm raced DLVM first-boot driver install, 480s window), instance 2 discarded unrailed pre-amendment; instance 3 arms its OWN rail at boot via startup script — RAIL_ARMED verified 17:34:01Z (+330 poweroff scheduled + idle watchdog pid 1134, verify latency ~0s); spend so far ~$0.04-0.08 vs $10 HARD cap (user-authorized; $15 relay not honorable); DELETE + list+disks confirm at lane end; Mac MPS insurance train live (killed at GPU TRAIN_STARTED). OPS LESSON booked: arm rails at boot via startup script, never via post-RUNNING ssh on fresh DLVM images. NOTE 17:31Z reconcile: detbench absent from live list — Track F teardown presumed complete (their row to close) |
 
 ## 2026-07-15/16 pbv11_headtohead RE-RUN — CLOSED (partial; VM deleted + confirmed)
 
@@ -47,6 +80,28 @@ body4d-waker-ctrl 30GB non-fleet + pickleball-a100-fleet1 200GB historical). Non
   rail. (2) Mac-side watchers die on laptop sleep — the VM-side rail is the only real cost bound.
   (3) SIGINT does NOT write PIPELINE_SUMMARY.json (KeyboardInterrupt escapes the runner) — per-stage
   timing had to come from artifact mtimes.
+
+## 2026-07-17 Track F close — ALL TRACK F VMs TORN DOWN, fleet clean
+
+Three Track F sessions today, all DELETE + instances-list + disks-list confirmed, all under cap:
+
+| vm | sku/zone | wall | est $ | outcome |
+|---|---|---|---|---|
+| pickleball-h100-detbench | H100 a3-highgpu-1g SPOT, usc1-a | 0.67h | $1.5-2.5 | zero-shot detector card (4 arms + baseline reproduction) |
+| pickleball-gpu-rfdetrflip | A100-80 a2-ultragpu-1g SPOT, usc1-a | 0.20h | $0.3-0.5 | env-fidelity PASS + pooldiag SOLVED + RF-DETR-L variant-P card |
+| pickleball-gpu-conf030 | A100-80 a2-ultragpu-1g SPOT, usc1-a | 0.15h | $0.22-0.38 | preregistered conf-0.30 single shot: FAILED (decisive negative) |
+
+Track F total: ~1.0 GPU-hours, **~$2.0-3.4**. Zero orphans; zero idle spend. Track G's
+pickleball-t4-eventhead was RUNNING throughout and was never touched by any Track F lane.
+
+OPS NOTES BANKED: (1) H100 a3-highgpu-1g SPOT stocked out fleet-wide repeatedly 2026-07-16
+(6/6 zones, then 2 more attempts) — the A100-80 tier absorbed every Track F run at lower cost;
+consider A100-first for light-inference lanes. (2) One attempt showed brief STAGING then
+capacity-revoked stockout w/ auto-clean (verified 0 orphans) — describe-before-proceed caught it.
+(3) SNAPSHOT RE-BAKE list grows: OSNet ckpt + torchreid (already known) + `rfdetr` package
+(needed by any future detector lane). (4) On-VM `sudo shutdown -P +N` rail armed as the FIRST
+ssh action, with the scheduled-time line captured to the lane log, worked on all three VMs and
+is now standard for Track F lanes.
 
 ## Standing policy (owner-set)
 

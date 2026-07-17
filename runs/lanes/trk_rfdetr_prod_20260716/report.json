@@ -1,0 +1,190 @@
+{
+  "lane": "trk_rfdetr_prod_20260716",
+  "spec": "runs/lanes/trk_rfdetr_prod_20260716/spec.md",
+  "status": "STOPPED_GATE1",
+  "verified": 0,
+  "verdict": "NO_ATTEMPT",
+  "stop_reason": "ENV-FIDELITY GATE failed on wolverine; strict ordered protocol stopped before pooldiag and RF-DETR inference.",
+  "typed_stop": "STOP — Gate 1 failed on Wolverine. Gates 2-5 were not executed.",
+  "environment": {
+    "venv": "runs/lanes/trk_rfdetr_prod_20260716/.lane_venv",
+    "repo_venv_touched": false,
+    "python": "3.11.7",
+    "platform": "macOS 26.5.2 arm64",
+    "device": "cpu",
+    "mps_available": false,
+    "cuda_available": false,
+    "torch": "2.5.1",
+    "torchvision": "0.20.1",
+    "torchreid": "0.2.5",
+    "rfdetr": "1.8.3",
+    "opencv": "5.0.0",
+    "numpy": "2.4.6",
+    "scipy": "1.17.1",
+    "pydantic": "2.11.3"
+  },
+  "identity_pins": {
+    "scripts/racketsport/benchmark_person_trackers.py": {
+      "md5": "07deba04bc00f9eaff9670676ac3ec45",
+      "match": true
+    },
+    "scripts/racketsport/score_person_track_sources.py": {
+      "md5": "cd7ae4891c482a257807761f3b934a90",
+      "match": true
+    },
+    "threed/racketsport/person_track_gt_scoring.py": {
+      "md5": "be38f76547d05d8ac7b12274de5b659d",
+      "match": true
+    },
+    "threed/racketsport/raw_pool_person_authority.py": {
+      "md5": "ea30bfdf3a57bf7e2fff06476ec6295c",
+      "match": true
+    },
+    "threed/racketsport/player_global_association.py": {
+      "md5": "5e761c5db3327a1841fc0e54281bb9d7",
+      "match": true
+    },
+    "models/checkpoints/osnet_x1_0_market1501.pt": {
+      "sha256": "2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154",
+      "match": true
+    },
+    "models/checkpoints/yolo26m.pt": {
+      "sha256": "401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7",
+      "match": true
+    }
+  },
+  "gate_outcomes_in_order": [
+    {
+      "gate": 1,
+      "name": "ENV-FIDELITY",
+      "status": "FAIL_STOP",
+      "protocol": {
+        "pool": "runs/lanes/trk_flip_20260713/preflip_production/<clip>",
+        "association": "run_raw_pool_person_authority",
+        "court_margin_m": 1.0,
+        "reid_backend": "osnet",
+        "reid_batch_size": 32,
+        "expected_players": 4,
+        "iou_threshold": 0.5,
+        "other_knobs": "defaults"
+      },
+      "clips": {
+        "burlington_gold_0300_low_steep_corner": {
+          "status": "PASS",
+          "idf1": 0.8830775880700238,
+          "idf1_pin": 0.8830775881,
+          "idf1_abs_diff": 2.9976243716141056e-11,
+          "cov4": 0.7116666666666667,
+          "cov4_pin": 0.7116666667,
+          "cov4_abs_diff": 3.33333360913457e-11,
+          "id_switches": 0,
+          "true_spectator_fp": 0,
+          "far_off_court_fp_frames": 0,
+          "tracks_sha256": "ff6036952dc2d596cdffe31f7a1f3107e4bb5c3b468bc80e043f8b4a18cf860f",
+          "detbench_tracks_sha256": "ff6036952dc2d596cdffe31f7a1f3107e4bb5c3b468bc80e043f8b4a18cf860f",
+          "tracks_byte_match": true
+        },
+        "wolverine_mixed_0200_mid_steep_corner": {
+          "status": "FAIL",
+          "idf1": 0.7640256959314775,
+          "idf1_pin": 0.8515962036,
+          "idf1_abs_diff": 0.08757050766852248,
+          "cov4": 0.8166666666666667,
+          "cov4_pin": 0.76,
+          "cov4_abs_diff": 0.056666666666666754,
+          "id_switches": 2,
+          "true_spectator_fp": 9,
+          "far_off_court_fp_frames": 0,
+          "tracks_sha256": "5069ef6e4ec718794ab037a9d46c75e78f8ee17caf0e7e09e7a54cd07232202a",
+          "detbench_tracks_sha256": "54e3e4baea52114be7448f117abf0e16efbcfd38b7953f594a97da1196eb17e6",
+          "tracks_byte_match": false,
+          "local_synthetic_frame_count": 230,
+          "detbench_synthetic_frame_count": 213,
+          "local_exact_four_player_frames": 245,
+          "detbench_exact_four_player_frames": 228,
+          "diagnosis": "Same pool, calibration, code/checkpoint identities, config, fragment count, embedding count, and merge counts, but CPU-generated embeddings cross association boundaries differently on Wolverine. The local harness is not score-faithful for this card."
+        }
+      }
+    },
+    {
+      "gate": 2,
+      "name": "POOL-CONSTRUCTION ATTRIBUTION / POOLDIAG PHASE 1",
+      "status": "NOT_EXECUTED_DUE_TO_GATE1_STOP"
+    },
+    {
+      "gate": 3,
+      "name": "PRODUCTION-EQUIVALENT RF-DETR-L POOL",
+      "status": "NOT_EXECUTED_DUE_TO_GATE1_STOP"
+    },
+    {
+      "gate": 4,
+      "name": "SCORE THE FROZEN CARD",
+      "status": "NOT_EXECUTED_DUE_TO_GATE1_STOP"
+    },
+    {
+      "gate": 5,
+      "name": "VERDICT",
+      "status": "NO_ATTEMPT"
+    }
+  ],
+  "m1_m5": {
+    "M1_persisted_pool_filtering": "UNRESOLVED_NOT_EXECUTED",
+    "M2_botsort_lifecycle": "UNRESOLVED_NOT_EXECUTED",
+    "M3_gmc": "UNRESOLVED_NOT_EXECUTED",
+    "M4_preprocessing": "UNRESOLVED_NOT_EXECUTED",
+    "M5_version": "UNRESOLVED_NOT_EXECUTED"
+  },
+  "decision_table": {
+    "columns": [
+      "idf1",
+      "cov4",
+      "id_switches",
+      "true_spectator_fp",
+      "far_off_court_fp_frames",
+      "detector_ms_per_frame"
+    ],
+    "burlington_gold_0300_low_steep_corner": {
+      "frozen_yolo26m_baseline_pin": [0.8830775881, 0.7116666667, 0, 0, 0, null],
+      "local_arm0a_environment_reproduction": [0.8830775880700238, 0.7116666666666667, 0, 0, 0, null],
+      "rfdetr_l_production": null
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "frozen_yolo26m_baseline_pin": [0.8515962036, 0.76, 0, 0, 0, null],
+      "local_arm0a_environment_reproduction": [0.7640256959314775, 0.8166666666666667, 2, 9, 0, null],
+      "rfdetr_l_production": null
+    }
+  },
+  "checkpoint_identities": {
+    "rf-detr-large-2026.pth": {
+      "detbench_expected_sha256": "0f4e20e19a99c0f8a62b5685f57f6c8b5c371c59081feda6752a0561a79ccf38",
+      "local_downloaded": false,
+      "reason": "Strict Gate 1 STOP occurred before candidate setup/inference."
+    }
+  },
+  "license_posture": {
+    "rfdetr_large": "Apache-2.0 per owner directive",
+    "incumbent_yolo26m": "AGPL-3.0 per frozen benchmark spec",
+    "candidate_inference_executed": false
+  },
+  "deliverables": {
+    "report_json": "runs/lanes/trk_rfdetr_prod_20260716/report.json",
+    "decision_table": "runs/lanes/trk_rfdetr_prod_20260716/DECISION_TABLE.md",
+    "pooldiag_phase1": "runs/lanes/trk_rfdetr_prod_20260716/POOLDIAG_PHASE1.md",
+    "flip_proposal": null
+  },
+  "honesty": [
+    "VERIFIED=0 remains binding.",
+    "This historical card produced no RF-DETR result because the mandatory local environment-fidelity gate failed first.",
+    "No preview flip proposal was written.",
+    "The fresh-clip full gate remains unmet."
+  ],
+  "fence_compliance": {
+    "writes_only_lane_dir": true,
+    "repo_venv_touched": false,
+    "gpu_fleet_used": false,
+    "pipeline_code_changed": false,
+    "config_changed": false,
+    "best_stack_changed": false,
+    "commits_created": false
+  }
+}

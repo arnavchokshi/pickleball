@@ -1,0 +1,31 @@
+=== ARM2 smoke 3 frames (also downloads seg weights) ===
+[2026-07-16 16:55:56] [WARNING] rf-detr - Using a different number of positional encodings than DINOv2, which means we're not loading DINOv2 backbone weights. This is not a problem if finetuning a pretrained RF-DETR model.
+[2026-07-16 16:55:56] [WARNING] rf-detr - Using patch size 12 instead of 14, which means we're not loading DINOv2 backbone weights. This is not a problem if finetuning a pretrained RF-DETR model.
+[2026-07-16 16:55:57] [WARNING] rf-detr - load_pretrain_weights: checkpoint lacks args.num_queries / args.group_detr; falling back to flat slice. With group_detr=13 this may scramble per-group query structure if the checkpoint was trained with group_detr > 1.
+[2026-07-16 16:55:57] [WARNING] rf-detr - Pretrained weights at '/home/arnavchokshi/.roboflow/models/rf-detr-seg-large.pt' loaded only partially — this typically produces lower accuracy. 1 model parameter(s) not in checkpoint (left at random init): [_kp_active_mask]. Check that the model configuration (encoder, hidden_dim, out_feature_indexes, projector_scale, ...) matches the architecture the checkpoint was trained with.
+[2026-07-16 16:55:57] [WARNING] rf-detr - Model is not optimized for inference. Latency may be higher than expected. For full GPU throughput (e.g. ~8x on T4 via FP16 Tensor Cores), call model.optimize_for_inference(dtype=torch.float16).
+{"n_frames": 3, "person_class_id": 1, "rfdetr_version": "unknown", "detector_ms_per_frame_batch1": 557.8924143333855}
+=== seg weights ===
+total 274436
+drwxrwxr-x 2 arnavchokshi arnavchokshi      4096 Jul 16 16:55 .
+drwxrwxr-x 3 arnavchokshi arnavchokshi      4096 Jul 16 16:51 ..
+-rw------- 1 arnavchokshi arnavchokshi 135954129 Jul 16 16:51 rf-detr-large-2026.pth
+-rw------- 1 arnavchokshi arnavchokshi 145055866 Jul 16 16:55 rf-detr-seg-large.pt
+persons frame0: 78
+masks frame0: 78 format: coco_rle
+ca7b7c630ba22496067cc4f034c4e70c8e47fd7adcea04c3a49aa8c1755cbe6b  /home/arnavchokshi/.roboflow/models/rf-detr-seg-large.pt
+=== ARM2 dump: burlington_gold_0300_low_steep_corner ===
+{"n_frames": 600, "person_class_id": 1, "rfdetr_version": "unknown", "detector_ms_per_frame_batch1": 263.3075043050019}
+=== ARM2 dump: wolverine_mixed_0200_mid_steep_corner ===
+{"n_frames": 300, "person_class_id": 1, "rfdetr_version": "unknown", "detector_ms_per_frame_batch1": 253.55853141000205}
+=== ARM2 BOTSORT feeder + association: burlington_gold_0300_low_steep_corner ===
+{"n_frames": 600, "detector_ms_per_frame_batch1": 263.3075043050019}
+detbench_out/scored/burlington_gold_0300_low_steep_corner/arm2_rfdetr_seg_l/tracks.json
+{"score_path": null, "status": "ok"}
+=== ARM2 BOTSORT feeder + association: wolverine_mixed_0200_mid_steep_corner ===
+{"n_frames": 300, "detector_ms_per_frame_batch1": 253.55853141000205}
+detbench_out/scored/wolverine_mixed_0200_mid_steep_corner/arm2_rfdetr_seg_l/tracks.json
+{"score_path": null, "status": "ok"}
+=== cumulative scoring s04 ===
+detbench_out/scores/s04_after_arm2/person_track_gt_scoring_report.json
+detbench_out/scores/s04_after_arm2/PERSON_TRACK_GT_SCORING_REPORT.md

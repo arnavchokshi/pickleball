@@ -1,0 +1,51 @@
+17:09:42Z
+DEIMV2_SHA=0fff8d4dcdc272e6cf2d84be31399db471357941
+base
+dataset
+deim_dfine
+deim_rtdetrv2
+deimv2
+runtime.yml
+./tools/inference
+./.git/info
+[{"type":"file","oid":"a6344aac8c09253b3b630fb776ae94478aa0275b","size":1519,"path":".gitattributes"},{"type":"file","oid":"515962fb9f765195c14254deb0878b47c7d0ca5e","size":352,"path":"README.md"},{"type":"file","oid":"ab1747d3c4daf55d0decc348c8df1a612d53f7bd","size":1373,"path":"config.json"},{"type":"file","oid":"ea4195ad5fefef86ba4904876f8c1d6ec2b4c1f8","size":130596044,"lfs":{"oid":"c0d0f45fa62b785126db5b40f5530866fecaab2d340cea812d2ba5f0f5646163","size":130596044,"pointerSize":134},"xetHash":"9e51030e07a69351b71d802ee96f610937e0c8d5ade9954dbdf9c1d005f4e0dc","path":"model.safetensors"}]c0d0f45fa62b785126db5b40f5530866fecaab2d340cea812d2ba5f0f5646163  /home/arnavchokshi/deimv2_dinov3_l_coco.safetensors
+130596044
+807
+['backbone.norms.0.num_batches_tracked', 'backbone.norms.1.num_batches_tracked', 'backbone.norms.2.num_batches_tracked', 'backbone.sta.conv2.1.num_batches_tracked', 'backbone.sta.conv3.2.num_batches_tracked']
+['encoder.pan_blocks.1.cv4.norm.running_var', 'encoder.pan_blocks.1.cv4.norm.weight', 'decoder.valid_mask']
+Using Lite Spatial Prior Module with inplanes=32
+     --- Use Gateway@True ---
+     --- Use Share Bbox Head@False ---
+     --- Use Share Score Head@False ---
+     --- Wide Layer@1 ---
+label distribution (score>=0.3): Counter({0: 19, 38: 2, 32: 1, 56: 1})
+  label=0 score=0.910 box=[1136.0, 315.0, 1383.0, 785.0]
+  label=0 score=0.883 box=[1003.0, 350.0, 1107.0, 625.0]
+  label=0 score=0.829 box=[1483.0, 370.0, 1537.0, 508.0]
+  label=0 score=0.789 box=[1676.0, 371.0, 1752.0, 519.0]
+  label=0 score=0.723 box=[233.0, 401.0, 273.0, 505.0]
+  label=0 score=0.704 box=[303.0, 415.0, 347.0, 506.0]
+  label=0 score=0.650 box=[155.0, 423.0, 184.0, 493.0]
+  label=0 score=0.646 box=[184.0, 425.0, 218.0, 491.0]
+  label=0 score=0.635 box=[125.0, 434.0, 163.0, 496.0]
+  label=0 score=0.629 box=[71.0, 430.0, 105.0, 498.0]
+=== ARM4 dump: burlington_gold_0300_low_steep_corner ===
+load_state_dict: missing=2 unexpected=0
+  missing sample: ['decoder.up', 'decoder.reg_scale']
+{"n_frames": 600, "detector_ms_per_frame_batch1": 21.001157499998346}
+=== ARM4 feeder+assoc: burlington_gold_0300_low_steep_corner ===
+{"n_frames": 600, "detector_ms_per_frame_batch1": 21.001157499998346}
+detbench_out/scored/burlington_gold_0300_low_steep_corner/arm4_deimv2_l/tracks.json
+{"score_path": null, "status": "ok"}
+=== ARM4 dump: wolverine_mixed_0200_mid_steep_corner ===
+load_state_dict: missing=2 unexpected=0
+  missing sample: ['decoder.up', 'decoder.reg_scale']
+{"n_frames": 300, "detector_ms_per_frame_batch1": 21.61681797667825}
+=== ARM4 feeder+assoc: wolverine_mixed_0200_mid_steep_corner ===
+{"n_frames": 300, "detector_ms_per_frame_batch1": 21.61681797667825}
+detbench_out/scored/wolverine_mixed_0200_mid_steep_corner/arm4_deimv2_l/tracks.json
+{"score_path": null, "status": "ok"}
+=== FINAL cumulative scoring s06 ===
+detbench_out/scores/s06_after_arm4/person_track_gt_scoring_report.json
+detbench_out/scores/s06_after_arm4/PERSON_TRACK_GT_SCORING_REPORT.md
+17:13:54Z

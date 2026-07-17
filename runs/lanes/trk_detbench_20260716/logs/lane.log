@@ -1,0 +1,19 @@
+lane trk_detbench_20260716 started; provisioning in progress (zone ladder)
+2026-07-16T16:29:01Z LANE CLOSE: NO-ATTEMPT.
+Provision gate PASS (auth live, fleet clean). 6/6 zone-ladder create attempts STOCKOUT (asia-southeast1-b, asia-southeast1-c, us-central1-a, us-central1-b, europe-west4-b, asia-southeast1-b retry).
+Orphan check: 0 instances, 0 disks named/labeled for this lane. Cost $0.00, 0 GPU-hours.
+Deliverables written: report.json, DECISION_TABLE.md, scripts/feeder_yolo26m_botsort_arm0b.py (untested draft). gpu_fleet.md updated (auth correction + no-attempt row).
+2026-07-16T16:33:15Z DISPATCH 2 (AMENDMENT 1): re-entered provision gate (fleet clean, auth live). Starting amended SKU ladder: 2x H100, 4x A100-80, 3x A100-40 (a2-highgpu-1g absent from us-east4 entirely -- 3-zone tier).
+Shutdown scheduled for Thu 2026-07-16 20:09:55 UTC, use 'shutdown -c' to cancel.
+RAIL_PROOF_BEGIN
+USEC=1784232595068188
+WARN_WALL=1
+MODE=poweroff
+RAIL_PROOF_END
+2026-07-16T16:39:56Z
+2026-07-16T17:22:50Z LANE CLOSE (dispatch 2): COMPLETE.
+Arm 0a repro PASS (~3e-11). Arm 0b FEEDER_DRIFT (paired-protocol interpretation invoked).
+Arm1 RF-DETR-L: reject-as-drop-in / adopt-next-step-as-fine-tune-base. Arm2 seg reject (masks archived). Arm3 D-FINE reject. Arm4 DEIMv2 reject.
+Fine-tune decision: GO (RF-DETR-L base).
+VM pickleball-h100-detbench DELETED 17:16:41Z, list+disks confirmed. Wall 0.67h, est $1.5-2.5.
+Pull tarball md5 both sides 4ccc612921eba5daa047eacf7571d3c4 (19.7MB) + 112-file sha256 manifest.

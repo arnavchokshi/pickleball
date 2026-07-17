@@ -1,0 +1,60 @@
+{
+  "lane": "trk_rfdetr_prod_20260716/vm_conf030",
+  "mission": "PREREG_conf030.md single-shot: second and FINAL frozen-threshold attempt permitted by the detbench stop rule. One run at conf >= 0.30, both clips, no iteration regardless of outcome. VERIFIED=0; no proposal writing; no best_stack/code changes.",
+  "status": "COMPLETE",
+  "prereg_result": "FAIL",
+  "prereg_criteria": "PASS requires: wolverine sw=0 AND spectFP=0 AND farFP=0, WHILE burlington all-clean with material gain (cov4 >= 0.95-class, IDF1 > baseline).",
+  "prereg_evaluation": {
+    "wolverine_all_clean": false,
+    "burlington_all_clean": true,
+    "burlington_material_gain": true,
+    "consequence": "Per prereg: FAIL -> coordinator's 2b executes (ship-for-demo flip proposal at the production-equivalent 0.18 operating point with the wolverine regression stated verbatim). This lane writes NO proposal."
+  },
+  "env_fidelity_gate": {
+    "result": "PASS",
+    "burlington": {"idf1_diff_vs_pin": 3.0e-11, "cov4_diff": 3.3e-11, "sw": 0, "spectFP": 0, "farFP": 0},
+    "wolverine": {"idf1_diff_vs_pin": 2.4e-11, "cov4_diff": 0.0, "sw": 0, "spectFP": 0, "farFP": 0}
+  },
+  "decision_rows": {
+    "columns": ["idf1", "cov4", "switches", "true_spectator_fp", "far_off_court_fp", "hota"],
+    "burlington_rfdetr_l_conf030": [0.923398, 0.985, 0, 0, 0, 0.9261],
+    "wolverine_rfdetr_l_conf030": [0.778020, 0.676667, 2, 16, 0, 0.7782],
+    "reference_frozen_baseline": {"burlington": [0.8830775881, 0.7116666667, 0, 0, 0, 0.8892], "wolverine": [0.8515962036, 0.76, 0, 0, 0, 0.8611]},
+    "reference_variant_p_conf018": {"burlington": [0.922018, 0.993333, 0, 0, 0, 0.9248], "wolverine": [0.803625, 0.723333, 1, 4, 0, 0.8021]}
+  },
+  "interpretation": "Raising the conf floor 0.18 -> 0.30 made wolverine WORSE on every axis (2 sw vs 1, 16 spectFP vs 4, cov4 0.677 vs 0.723, IDF1 0.778 vs 0.804): the wolverine spectator detections are high-confidence, so a conf floor cannot remove them, while the higher floor fragments genuine far-player tracks (more switches, less coverage). Burlington is insensitive (0.9234/0.9850 vs 0.9220/0.9933). Threshold-only fixes for the wolverine regression are now exhausted per the two-attempt stop rule.",
+  "inputs_identity": {
+    "source": "pinned detbench arm-1 RF-DETR-L raw detections (ckpt sha256 0f4e20e1..., person class id 1, native 704), NO re-inference",
+    "filtered_inputs_md5_both_sides": {"burlington": "97b094545d788aec1b8d9b66bb0281d5 (37175 -> 9395 dets)", "wolverine": "0eb0fadf53cd3d6bc6205db4ed2bbf38 (5259 -> 2085 dets)"},
+    "pipeline": "per-frame BOTSORT (botsort_no_reid_loose.yaml) -> frozen association (margin 1.0 + OSNet defaults) -> frozen scorer (IoU 0.5, expected 4, frozen GT)",
+    "preflight": "bundle 864963c7... / payload dc76b9a9... / 4 scorer+association md5s / OSNet sha256 prefix all MATCH two-sided; VM HEAD cabdb8cf"
+  },
+  "provisioning": {
+    "gate": "fresh fleet list 04:51:36Z -> Track G T4 RUNNING (untouched) + historical fleet1; no pre-existing conf030 VM",
+    "ladder": [
+      {"n": 1, "tier": "a100-80 a2-ultragpu-1g", "zone": "us-central1-a", "result": "STOCKOUT"},
+      {"n": 2, "tier": "a100-80 a2-ultragpu-1g", "zone": "asia-southeast1-c", "result": "SUCCESS, RUNNING ~04:54:30Z"}
+    ],
+    "h100_skipped_per_coordinator": true,
+    "vm": "pickleball-gpu-conf030, A100-SXM4-80GB SPOT, ase1-c, pd-balanced 200GB from pickleball-fleet-snap-20260709-w7close"
+  },
+  "rail_proof": "sudo shutdown -P +45 as FIRST ssh action, 04:56:09Z: 'Shutdown scheduled for Fri 2026-07-17 05:41:08 UTC'; /run/systemd/shutdown/scheduled MODE=poweroff (logs/lane.log).",
+  "teardown": {
+    "running_utc": "2026-07-17T04:54:30Z",
+    "deleted_utc": "2026-07-17T05:03:30Z",
+    "wall_hours": 0.15,
+    "instances_list_confirm": "fleet filter -> only pickleball-t4-eventhead (Track G) + historical fleet1; name~conf030 -> 0 items",
+    "disks_list_confirm": "name~conf030 -> 0 items",
+    "cost_estimate_usd": {"low": 0.22, "high": 0.38, "basis": "0.15h x A100-80 spot ~$1.5-2.5/hr", "cap": 2.0, "under_cap": true}
+  },
+  "artifacts": {
+    "pull_tarball": "vm_conf030/pulled/conf030_pull.tar.gz, md5 both sides 55c956715663c236b4e1d4b441813151",
+    "full_manifest": "vm_conf030/pulled/conf030_ALL_SHA256.txt (28 files)",
+    "scores": "vm_conf030/pulled/final/person_track_gt_scoring_report.json"
+  },
+  "honest_issues": [
+    "Same caveat as vm_rerun: the RF-DETR-L detector stage ran on the detbench H100 session (pinned raw dumps reused); only filter/track/associate/score ran on this A100.",
+    "The prereg PASS bar's 'cov4 >= 0.95-class' was evaluated as cov4 >= 0.95 exactly; burlington 0.985 clears it either way.",
+    "Both eval clips remain historical-internal; nothing here is promotion evidence; the fresh-clip full gate remains unmet (prereg states this too)."
+  ]
+}

@@ -1,0 +1,37 @@
+2026-07-16T16:24:00Z attempt log:
+1 asia-southeast1-b STOCKOUT (resource_availability)
+2 asia-southeast1-c STOCKOUT (stockout)
+3 us-central1-a STOCKOUT (stockout)
+4 us-central1-b STOCKOUT (resource_availability)
+5 europe-west4-b STOCKOUT (stockout)
+6 asia-southeast1-b (retry) in progress
+
+=== dispatch2 attempt 1 2026-07-16T16:34:37Z tier=h100 mt=a3-highgpu-1g zone=asia-southeast1-b rc=1 ===
+ERROR: (gcloud.compute.instances.create) Could not fetch resource:
+---
+code: ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS
+errorDetails:
+- help:
+    links:
+    - description: Troubleshooting documentation
+      url: https://cloud.google.com/compute/docs/resource-error
+- localizedMessage:
+    locale: en-US
+    message: A a3-highgpu-1g VM instance with 1 nvidia-h100-80gb accelerator(s) and
+      2 local SSD(s) is currently unavailable in the asia-southeast1-b zone. Alternatively,
+      you can try your request again with a different VM hardware configuration or
+      at a later time. For more information, see the troubleshooting documentation.
+- errorInfo:
+    domain: compute.googleapis.com
+    metadatas:
+      attachment: local-ssd:2,nvidia-h100-80gb:1
+      vmType: a3-highgpu-1g
+      zone: asia-southeast1-b
+      zonesAvailable: ''
+    reason: resource_availability
+message: The zone 'projects/gifted-electron-498923-h1/zones/asia-southeast1-b' does
+  not have enough resources available to fulfill the request.  'NULL:0/NULL:0/NULL:0
+  (state:STOCKOUT, sub-state:STOCKOUT, resource type:compute)'.
+=== dispatch2 attempt 2 2026-07-16T16:38:25Z tier=h100 mt=a3-highgpu-1g zone=us-central1-a rc=0 ===
+Created [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/us-central1-a/instances/pickleball-h100-detbench].
+pickleball-h100-detbench	us-central1-a	RUNNING

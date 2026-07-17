@@ -1,0 +1,10 @@
+{"pool_path": "rfdetrflip_out/pools/yolo_mech018_960/burlington_gold_0300_low_steep_corner/tracked_detections.json", "metrics_path": "rfdetrflip_out/pools/yolo_mech018_960/burlington_gold_0300_low_steep_corner/metrics.json", "n_frames": 600, "ms_per_frame_batch1": 53.89813496999996}
+rfdetrflip_out/scored/burlington_gold_0300_low_steep_corner/yolo_mech018_960/tracks.json
+{"score_path": null, "status": "ok"}
+{"pool_path": "rfdetrflip_out/pools/yolo_mech018_960/wolverine_mixed_0200_mid_steep_corner/tracked_detections.json", "metrics_path": "rfdetrflip_out/pools/yolo_mech018_960/wolverine_mixed_0200_mid_steep_corner/metrics.json", "n_frames": 300, "ms_per_frame_batch1": 58.22482988333339}
+rfdetrflip_out/scored/wolverine_mixed_0200_mid_steep_corner/yolo_mech018_960/tracks.json
+{"score_path": null, "status": "ok"}
+STEP_mech_confirm_DONE
+rfdetrflip_out/scores/s04_final/person_track_gt_scoring_report.json
+rfdetrflip_out/scores/s04_final/PERSON_TRACK_GT_SCORING_REPORT.md
+STEP_score_DONE

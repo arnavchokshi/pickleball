@@ -1,0 +1,21 @@
+=== SMOKE: feeder 30 frames burlington ===
+{"pool_path": "/tmp/feeder_smoke/tracked_detections.json", "metrics_path": "/tmp/feeder_smoke/metrics.json", "n_frames": 30, "ms_per_frame_batch1": 101.26792873333368}
+fps 59.94005994005994 frames 30
+frame10 dets 17
+{'bbox': [1225.689208984375, 325.68115234375, 1392.9044189453125, 737.0972290039062], 'class': 'person', 'conf': 0.9186211824417114, 'track_id': 1}
+track_ids [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 32, 34, 43]
+=== ARM 0b feeder: burlington_gold_0300_low_steep_corner ===
+{"pool_path": "detbench_out/pools/arm0b/burlington_gold_0300_low_steep_corner/tracked_detections.json", "metrics_path": "detbench_out/pools/arm0b/burlington_gold_0300_low_steep_corner/metrics.json", "n_frames": 600, "ms_per_frame_batch1": 34.59352314500004}
+=== ARM 0b association: burlington_gold_0300_low_steep_corner ===
+detbench_out/scored/burlington_gold_0300_low_steep_corner/arm0b_feeder/raw_pool_authority_summary.json
+detbench_out/scored/burlington_gold_0300_low_steep_corner/arm0b_feeder/tracks.json
+{"score_path": null, "status": "ok"}
+=== ARM 0b feeder: wolverine_mixed_0200_mid_steep_corner ===
+{"pool_path": "detbench_out/pools/arm0b/wolverine_mixed_0200_mid_steep_corner/tracked_detections.json", "metrics_path": "detbench_out/pools/arm0b/wolverine_mixed_0200_mid_steep_corner/metrics.json", "n_frames": 300, "ms_per_frame_batch1": 38.091109369999955}
+=== ARM 0b association: wolverine_mixed_0200_mid_steep_corner ===
+detbench_out/scored/wolverine_mixed_0200_mid_steep_corner/arm0b_feeder/raw_pool_authority_summary.json
+detbench_out/scored/wolverine_mixed_0200_mid_steep_corner/arm0b_feeder/tracks.json
+{"score_path": null, "status": "ok"}
+=== cumulative scoring (arms 0a+0b) ===
+detbench_out/scores/s02_after_arm0b/person_track_gt_scoring_report.json
+detbench_out/scores/s02_after_arm0b/PERSON_TRACK_GT_SCORING_REPORT.md

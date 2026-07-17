@@ -1,0 +1,313 @@
+{
+  "schema_version": 1,
+  "lane": "owner_person_labels_20260716",
+  "status": "READY_FOR_MANAGER_BROWSER_VERIFICATION",
+  "objective_result": "PASS_TOOLING_AND_OWNER_PACK_GENERATION",
+  "verified": false,
+  "verified_binding": "VERIFIED=0",
+  "declaration": {
+    "pack_generated_and_self_verified": true,
+    "declared_staged": false,
+    "reason": "The binding spec reserves the STAGED declaration for the Track F manager after independent browser verification."
+  },
+  "recovered_from": {
+    "status": "STOP_ENVIRONMENT_VENV_PERMISSION",
+    "resolution": "Machine-wide macOS TCC/permissions freeze was repaired before this resumed run.",
+    "fresh_reconciliation": {
+      "repo_and_venv_readable": true,
+      "candidate_jpegs_found": 1200,
+      "venv_probe_exit_code": 0,
+      "one_frame_yolo26m_cpu_probe_exit_code": 0
+    }
+  },
+  "artifacts": {
+    "sampler": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/tools/sample_frames.py",
+    "ingest": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/tools/ingest_labels.py",
+    "tests": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/tests/test_person_label_channel.py",
+    "candidate_manifest": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/work/candidate_manifest.json",
+    "detection_checkpoint": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/work/candidate_detections.json",
+    "pack_manifest": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/pack_manifest.json",
+    "synthetic_export": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/owner_person_labels_20260716/synthetic_export.json",
+    "owner_page": "/Users/arnavchokshi/Desktop/person_labels_20260716/START_HERE.html",
+    "owner_frames": "/Users/arnavchokshi/Desktop/person_labels_20260716/frames"
+  },
+  "sampler": {
+    "seed": 20260716,
+    "device": "cpu",
+    "model": "models/checkpoints/yolo26m.pt",
+    "confidence": 0.25,
+    "eligible_gameplay_clips": 30,
+    "universe_interpretation": "The probe has 39 landscape rows; 9 landscape Screen Recording rows are excluded, leaving 30 landscape IMG gameplay clips. Two portrait rows are excluded separately.",
+    "session_count": 12,
+    "session_cluster_rule": "Sort numeric IMG suffixes; start a new session when the adjacent suffix gap exceeds 100.",
+    "initial_candidate_count": 1200,
+    "initial_candidate_strata": {
+      "empty_sparse": 45,
+      "gameplay": 145,
+      "spectator_rich": 1010
+    },
+    "initial_gate_result": "Insufficient gameplay supply: after five gameplay fills for the sparse deficit, only 140 of 300 gameplay slots were fillable.",
+    "final_candidate_count": 2700,
+    "final_candidate_strata": {
+      "empty_sparse": 81,
+      "gameplay": 327,
+      "spectator_rich": 2292
+    },
+    "final_selected_counts": {
+      "empty_sparse": 50,
+      "gameplay": 300,
+      "spectator_rich": 100,
+      "total": 450
+    },
+    "backfills": [],
+    "scratch": {
+      "count": 81,
+      "fraction": 0.18,
+      "by_stratum": {
+        "empty_sparse": 9,
+        "gameplay": 54,
+        "spectator_rich": 18
+      },
+      "proposals_withheld_from_page": true
+    },
+    "selected_counts_by_session": {
+      "session_01": {
+        "empty_sparse": 18,
+        "gameplay": 2,
+        "spectator_rich": 0,
+        "total": 20
+      },
+      "session_02": {
+        "empty_sparse": 0,
+        "gameplay": 0,
+        "spectator_rich": 10,
+        "total": 10
+      },
+      "session_03": {
+        "empty_sparse": 0,
+        "gameplay": 0,
+        "spectator_rich": 10,
+        "total": 10
+      },
+      "session_04": {
+        "empty_sparse": 0,
+        "gameplay": 0,
+        "spectator_rich": 10,
+        "total": 10
+      },
+      "session_05": {
+        "empty_sparse": 0,
+        "gameplay": 0,
+        "spectator_rich": 10,
+        "total": 10
+      },
+      "session_06": {
+        "empty_sparse": 0,
+        "gameplay": 0,
+        "spectator_rich": 9,
+        "total": 9
+      },
+      "session_07": {
+        "empty_sparse": 6,
+        "gameplay": 9,
+        "spectator_rich": 10,
+        "total": 25
+      },
+      "session_08": {
+        "empty_sparse": 18,
+        "gameplay": 1,
+        "spectator_rich": 1,
+        "total": 20
+      },
+      "session_09": {
+        "empty_sparse": 0,
+        "gameplay": 81,
+        "spectator_rich": 10,
+        "total": 91
+      },
+      "session_10": {
+        "empty_sparse": 0,
+        "gameplay": 0,
+        "spectator_rich": 10,
+        "total": 10
+      },
+      "session_11": {
+        "empty_sparse": 0,
+        "gameplay": 0,
+        "spectator_rich": 10,
+        "total": 10
+      },
+      "session_12": {
+        "empty_sparse": 8,
+        "gameplay": 207,
+        "spectator_rich": 10,
+        "total": 225
+      }
+    },
+    "determinism": {
+      "same_seed_rebuilds": 2,
+      "manifest_byte_identical": true,
+      "page_byte_identical": true,
+      "pack_manifest_sha256": "f07ddbf88cfad76a1420490108ef40b0c36ea072969156a87614e45623e7ac5f",
+      "page_sha256": "a9c8f6f97281e2190a670e339c5c32982c653e8b1a2f7e04523a4ea633ff395f"
+    }
+  },
+  "split": {
+    "policy": "Session-disjoint holdout of one or two whole sessions closest to 20% of selected frames.",
+    "validation_sessions": [
+      "session_09"
+    ],
+    "train_frames": 359,
+    "validation_frames": 91,
+    "session_disjoint": true
+  },
+  "page": {
+    "frame_count": 450,
+    "page_bytes": 189586,
+    "pack_bytes": 90650344,
+    "jpeg_dimensions": "1920x1080",
+    "jpeg_decode_count": 450,
+    "jpeg_decode_failures": 0,
+    "manifest_absent_from_staging_folder": true,
+    "top_level_staging_entries": [
+      "START_HERE.html",
+      "frames"
+    ],
+    "native_video_elements": 0,
+    "external_fetches": 0,
+    "stratum_source_leak_grep_hits": 0,
+    "javascript_syntax_check": "pass",
+    "next_image_preload": true,
+    "local_storage_key": "person_labels_20260716",
+    "state_machine_execution_test": {
+      "empty_confirmation_persists": true,
+      "proposal_adjustment_source": true,
+      "proposal_deletion_source": true,
+      "navigation_preserves_prior_answer": true,
+      "export_matches_stored_state": true
+    },
+    "interactive_browser_self_check": "not available: the connected browser inventory was empty",
+    "manager_browser_verification_required": true
+  },
+  "ingest": {
+    "partial_without_allow_partial_exit_code": 1,
+    "partial_refusal_expected": true,
+    "synthetic_allow_partial_dry_run_exit_code": 0,
+    "dry_run_wrote_output": false,
+    "synthetic_frames_ingested": 1,
+    "synthetic_empty_confirmed": 1,
+    "eval_guard_status": "clean",
+    "session_disjointness_assertion": true,
+    "idempotent_write_test": "pass",
+    "real_owner_labels_ingested": false,
+    "real_output_reason": "No owner export exists yet; synthetic evidence was dry-run only."
+  },
+  "tests": {
+    "command": "MPLCONFIGDIR=/tmp/mplconfig .venv/bin/python -m pytest runs/lanes/owner_person_labels_20260716/tests -q",
+    "exit_code": 0,
+    "passed": 12,
+    "failed": 0,
+    "duration_s": 1.53,
+    "coverage": [
+      "sampler byte determinism",
+      "one-to-two-session split construction",
+      "scratch proposal withholding",
+      "page stratum and source blindness",
+      "no native video element",
+      "offline JavaScript state machine execution",
+      "localStorage persistence and export equality",
+      "direct page-render CLI",
+      "export-to-ingest schema round trip",
+      "synthetic audit math",
+      "empty-confirm path",
+      "idempotent ingest writes",
+      "partial-export refusal and override",
+      "direct ingest dry-run CLI",
+      "invalid box schema rejection"
+    ]
+  },
+  "verification_commands": [
+    {
+      "name": "fresh venv imports",
+      "exit_code": 0
+    },
+    {
+      "name": "single-frame YOLO26m CPU inference",
+      "exit_code": 0
+    },
+    {
+      "name": "1200-candidate bounded detector plus selection",
+      "exit_code": 1,
+      "expected_or_explained": true,
+      "reason": "Measured gameplay stratum supply was insufficient; no pack was accepted."
+    },
+    {
+      "name": "2700-candidate bounded detector, selection, and staging",
+      "exit_code": 0
+    },
+    {
+      "name": "same-seed cached rebuild number 1",
+      "exit_code": 0
+    },
+    {
+      "name": "same-seed cached rebuild number 2",
+      "exit_code": 0
+    },
+    {
+      "name": "final focused pytest",
+      "exit_code": 0
+    },
+    {
+      "name": "450 JPEG decode and dimension audit, page grep, JavaScript syntax",
+      "exit_code": 0
+    },
+    {
+      "name": "synthetic ingest dry-run with allow-partial",
+      "exit_code": 0
+    },
+    {
+      "name": "py_compile, both CLI help commands, diff check, final artifact assertions",
+      "exit_code": 0
+    },
+    {
+      "name": "list_scaffold_tools",
+      "exit_code": 0,
+      "summary": "299 tools; zero missing direct-CLI tests; zero missing related tests."
+    },
+    {
+      "name": "audit_dead_code",
+      "exit_code": 0,
+      "summary": "590 Python sources; zero unknown Python sources."
+    },
+    {
+      "name": "audit_storage_policy",
+      "exit_code": 1,
+      "summary": "Zero unknown large tracked files and zero unknown large untracked source files. Global audit status remains fail because previously allowlisted source files are absent from the current worktree; this lane did not modify the allowlist or those paths."
+    }
+  ],
+  "owner_instruction": "After Track F says GO, open /Users/arnavchokshi/Desktop/person_labels_20260716/START_HERE.html in Chrome or Safari, review all 450 frames, then click Export labels and send back person_labels_export.json.",
+  "expected_owner_session": {
+    "frame_count": 450,
+    "seconds_per_frame_range": [
+      10,
+      15
+    ],
+    "computed_minutes_range": [
+      75,
+      113
+    ],
+    "binding_budget_minutes": [
+      75,
+      115
+    ]
+  },
+  "deviations_and_honest_limits": [
+    "Candidate count expanded from 1200 to 2700 because measured 3-4-person gameplay supply was only 145/1200; the final candidate pool supplied all target strata without backfill.",
+    "The connected browser inventory was empty, so no live browser self-check is claimed. Static checks plus an executing Node DOM/localStorage state-machine harness passed; Track F still performs independent browser verification.",
+    "The repository-wide storage audit exits 1 because previously allowlisted source files are missing. It reports zero unknown large files, including zero introduced by this lane.",
+    "No owner labels or model outputs were produced. The data output directory remains absent until a real owner export is ingested.",
+    "This is tooling plus a generated owner pack, not model accuracy evidence or a product promotion."
+  ],
+  "best_stack_delta": "NO stack delta; data-channel tooling only.",
+  "git_commit_created": false
+}

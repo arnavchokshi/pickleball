@@ -1,0 +1,14 @@
+04:21:29Z vm_rerun mission start; pool forensics (Mac-side, artifact-only) clock starts
+Shutdown scheduled for Fri 2026-07-17 06:13:54 UTC, use 'shutdown -c' to cancel.
+RAIL_PROOF_BEGIN
+USEC=1784268834313394
+WARN_WALL=1
+MODE=poweroff
+RAIL_PROOF_END
+2026-07-17T04:33:55Z
+NVIDIA A100-SXM4-80GB, 81920 MiB
+2026-07-17T04:44:56Z vm_rerun CLOSE: COMPLETE.
+Gate arm0a PASS ~3e-11 both clips (A100 score-faithful; Mac CPU is the outlier).
+POOLDIAG: M4 CONFIRMED TOTAL (conf .18/imgsz 960 generator defaults = entire FEEDER_DRIFT; M1/M2/M3/M5 EXCLUDED; end-to-end confirm delta 0.000000).
+RF-DETR-L variant P: burl 0.9220/0.9933 clean (hypothesis half-1 CONFIRMED); wolv 0.8036/0.7233 + 1 sw + 4 spectFP (16->4, NOT zero; hypothesis half-2 REFUTED; frozen-card axes still fail).
+VM DELETED 04:43:08Z list+disks confirmed. Wall 0.20h, est $0.30-0.50 (cap $5). Pull md5 0df9955dc38443841851afbdc7876801.

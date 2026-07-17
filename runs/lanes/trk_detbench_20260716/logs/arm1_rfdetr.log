@@ -1,0 +1,33 @@
+16:48:53Z
+=== ARM1 integration budget starts ===
+Name: rfdetr
+Version: 1.8.3
+ERROR: Pipe to stdout was broken
+Exception ignored in: <_io.TextIOWrapper name='<stdout>' mode='w' encoding='utf-8'>
+BrokenPipeError: [Errno 32] Broken pipe
+rfdetr venv torch 2.13.0+cu130 cuda True
+16:51:05Z
+[2026-07-16 16:51:30] [INFO] rf-detr - File /home/arnavchokshi/.roboflow/models/rf-detr-large-2026.pth already exists with correct MD5 hash.
+[2026-07-16 16:51:30] [WARNING] rf-detr - load_pretrain_weights: checkpoint lacks args.num_queries / args.group_detr; falling back to flat slice. With group_detr=13 this may scramble per-group query structure if the checkpoint was trained with group_detr > 1.
+[2026-07-16 16:51:30] [WARNING] rf-detr - Pretrained weights at '/home/arnavchokshi/.roboflow/models/rf-detr-large-2026.pth' loaded only partially — this typically produces lower accuracy. 1 model parameter(s) not in checkpoint (left at random init): [_kp_active_mask]. Check that the model configuration (encoder, hidden_dim, out_feature_indexes, projector_scale, ...) matches the architecture the checkpoint was trained with.
+[2026-07-16 16:51:31] [WARNING] rf-detr - Model is not optimized for inference. Latency may be higher than expected. For full GPU throughput (e.g. ~8x on T4 via FP16 Tensor Cores), call model.optimize_for_inference(dtype=torch.float16).
+{"n_frames": 5, "person_class_id": 0, "rfdetr_version": "unknown", "detector_ms_per_frame_batch1": 324.3614667999964}
+=== downloaded weights ===
+/home/arnavchokshi/.roboflow/models/rf-detr-large-2026.pth
+=== ARM1 dump: burlington_gold_0300_low_steep_corner ===
+{"n_frames": 600, "person_class_id": 1, "rfdetr_version": "unknown", "detector_ms_per_frame_batch1": 31.18410287833474}
+=== ARM1 dump: wolverine_mixed_0200_mid_steep_corner ===
+{"n_frames": 300, "person_class_id": 1, "rfdetr_version": "unknown", "detector_ms_per_frame_batch1": 31.828170346667928}
+=== ARM1 BOTSORT feeder: burlington_gold_0300_low_steep_corner ===
+{"n_frames": 600, "detector_ms_per_frame_batch1": 31.18410287833474}
+=== ARM1 association: burlington_gold_0300_low_steep_corner ===
+detbench_out/scored/burlington_gold_0300_low_steep_corner/arm1_rfdetr_l/tracks.json
+{"score_path": null, "status": "ok"}
+=== ARM1 BOTSORT feeder: wolverine_mixed_0200_mid_steep_corner ===
+{"n_frames": 300, "detector_ms_per_frame_batch1": 31.828170346667928}
+=== ARM1 association: wolverine_mixed_0200_mid_steep_corner ===
+detbench_out/scored/wolverine_mixed_0200_mid_steep_corner/arm1_rfdetr_l/tracks.json
+{"score_path": null, "status": "ok"}
+=== cumulative scoring s03 ===
+detbench_out/scores/s03_after_arm1/person_track_gt_scoring_report.json
+detbench_out/scores/s03_after_arm1/PERSON_TRACK_GT_SCORING_REPORT.md

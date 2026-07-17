@@ -1,0 +1,12 @@
+=== GATE: arm0a ===
+{"score_path": null, "status": "ok"}
+{"score_path": null, "status": "ok"}
+=== PREREG conf030: pool + assoc both clips ===
+{"n_frames": 600, "detector_ms_per_frame_batch1": 31.18410287833474}
+{"score_path": null, "status": "ok"}
+{"n_frames": 300, "detector_ms_per_frame_batch1": 31.828170346667928}
+{"score_path": null, "status": "ok"}
+=== score ===
+conf030_out/scores/final/person_track_gt_scoring_report.json
+conf030_out/scores/final/PERSON_TRACK_GT_SCORING_REPORT.md
+05:01:20Z

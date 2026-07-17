@@ -1,0 +1,13 @@
+STOP — Gate 1 failed on Wolverine, so Gates 2–5 were not executed.
+
+- Burlington: exact PASS — IDF1 `0.8830775881`, cov4 `0.7116666667`, 0 switches/FPs.
+- Wolverine: FAIL — IDF1 `0.7640256959` vs `0.8515962036`; cov4 `0.8166666667` vs `0.76`; 2 switches; 9 spectator FPs.
+- Verdict: `NO_ATTEMPT`, `VERIFIED=0`.
+- Repo `.venv`, GPU fleet, pipeline code, configs, and best stack were untouched.
+- `FLIP_PROPOSAL.md` correctly absent.
+
+Artifacts:
+
+- [report.json](/Users/arnavchokshi/Desktop/pickleball/runs/lanes/trk_rfdetr_prod_20260716/report.json)
+- [DECISION_TABLE.md](/Users/arnavchokshi/Desktop/pickleball/runs/lanes/trk_rfdetr_prod_20260716/DECISION_TABLE.md)
+- [POOLDIAG_PHASE1.md](/Users/arnavchokshi/Desktop/pickleball/runs/lanes/trk_rfdetr_prod_20260716/POOLDIAG_PHASE1.md) — truthfully marked not executed due to Gate 1 STOP.

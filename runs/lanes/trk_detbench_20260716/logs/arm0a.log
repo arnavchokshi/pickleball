@@ -1,0 +1,21 @@
+=== ARM 0a association: burlington_gold_0300_low_steep_corner ===
+  warnings.warn(
+detbench_out/scored/burlington_gold_0300_low_steep_corner/arm0a_repro/raw_pool_authority_summary.json
+detbench_out/scored/burlington_gold_0300_low_steep_corner/arm0a_repro/tracks.json
+{"score_path": null, "status": "ok"}
+=== ARM 0a association: wolverine_mixed_0200_mid_steep_corner ===
+
+real	0m21.195s
+user	0m47.321s
+sys	0m4.402s
+  warnings.warn(
+detbench_out/scored/wolverine_mixed_0200_mid_steep_corner/arm0a_repro/raw_pool_authority_summary.json
+detbench_out/scored/wolverine_mixed_0200_mid_steep_corner/arm0a_repro/tracks.json
+{"score_path": null, "status": "ok"}
+
+real	0m8.231s
+user	0m18.407s
+sys	0m3.211s
+=== ARM 0a scoring ===
+detbench_out/scores/s01_after_arm0a/person_track_gt_scoring_report.json
+detbench_out/scores/s01_after_arm0a/PERSON_TRACK_GT_SCORING_REPORT.md

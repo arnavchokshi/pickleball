@@ -1,0 +1,163 @@
+{
+  "lane": "trk_detbench_20260716",
+  "spec": "runs/lanes/trk_detbench_20260716/spec.md (incl. AMENDMENT 1, Track F manager, SKU fallback authorization)",
+  "authoritative_benchmark_spec": "runs/research_trk_rkt_20260716/benchmark_spec_trk.md",
+  "status": "COMPLETE",
+  "status_meaning": "Dispatch 2 (post-AMENDMENT-1) completed the full mission: VM provisioned (H100, amended ladder attempt 2), teardown rail VERIFIED armed before any work, arm 0a baseline reproduction PASSED at ~3e-11 (bar 0.0001), arm 0b feeder confound check flagged FEEDER_DRIFT (deltas >> 0.005, so all candidates are read paired-protocol vs 0b, both deltas reported), all four candidate arms ran and were scored with the frozen scorer + frozen association, incremental scoring after every arm, artifacts pulled two-sided, VM DELETED + list-confirmed. Diagnostic only; VERIFIED=0; no best_stack change; no promotion.",
+  "dispatch_1_history": {
+    "outcome": "NO_ATTEMPT (H100 SPOT stockout, 6/6 zones, $0, no orphans, ~24 min 16:03-16:27Z)",
+    "attempts": ["asia-southeast1-b STOCKOUT", "asia-southeast1-c STOCKOUT", "us-central1-a STOCKOUT", "us-central1-b STOCKOUT", "europe-west4-b STOCKOUT", "asia-southeast1-b(retry) STOCKOUT"],
+    "evidence": "runs/lanes/trk_detbench_20260716/logs/provision_attempts.log; fleet ledger dated section"
+  },
+  "dispatch_2_provisioning": {
+    "gate": "fresh fleet list 16:31Z -> only historical pickleball-a100-fleet1 TERMINATED; auth live; no pre-existing detbench VM",
+    "amended_ladder": "H100 ase1-b, usc1-a (2 quick) -> A100-80 a2-ultragpu-1g ase1-c/usc1-a/use4-c/euw4-a -> A100-40 a2-highgpu-1g ase1-b/usc1-a/euw4-b (a2-highgpu-1g does not exist in us-east4 at all - verified via machine-types list)",
+    "attempts": [
+      {"n": 1, "tier": "h100", "zone": "asia-southeast1-b", "result": "STOCKOUT"},
+      {"n": 2, "tier": "h100", "zone": "us-central1-a", "result": "SUCCESS 16:36:37Z"}
+    ],
+    "vm": "pickleball-h100-detbench, a3-highgpu-1g SPOT, us-central1-a, pd-balanced 200GB from snapshot pickleball-fleet-snap-20260709-w7close, labels fable-lane=trk_detbench_20260716,fable-fleet=pickleball,owner=arnavchokshi",
+    "a100_tiers_needed": false
+  },
+  "teardown_rail_proof": {
+    "armed_at_first_ssh": "sudo shutdown -P +210 at 16:39:56Z -> 'Shutdown scheduled for Thu 2026-07-16 20:09:55 UTC'; /run/systemd/shutdown/scheduled: USEC=1784232595068188 MODE=poweroff (re-armed 20:11:06 by bootstrap re-run; both proofs in logs/lane.log + logs/vm_bootstrap.log)",
+    "heartbeat_self_stop": "lane-heartbeat-watch systemd unit armed (60-min no-heartbeat -> shutdown -P now); /tmp/lane_heartbeat touched by every command batch",
+    "verified_before_any_work": true
+  },
+  "boot_ritual": {
+    "repo_on_snapshot": "~/coldstart_20260706/repo (vm_bootstrap.sh find-depth missed it; located manually)",
+    "dirty_check": "only the 2 by-design vendor-submodule lines + untracked .venv -> no reset needed",
+    "code_identity": {
+      "mac_head_sha": "cabdb8cf21139eb276cab060c7858b5998421e40",
+      "bundle_sha256_both_sides": "864963c71ecc167935bcba09dd71c731e4314269c686aac2eba92534b61ccc41",
+      "vm_checked_out": "cabdb8cf21139eb276cab060c7858b5998421e40 (detached, from bundle)"
+    },
+    "keyscan": "fresh ssh-keyscan self entries (localhost + 34.57.246.108) appended to configs/ssh/a100_known_hosts on VM after checkout",
+    "compute_mode": "nvidia-smi -c DEFAULT (single lane)",
+    "snapshot_gaps_filled": "torchreid 0.2.5 pip-installed into pipeline venv; OSNet ckpt shipped in payload (snapshot lacks both, as documented)"
+  },
+  "transfer_manifest_two_sided": {
+    "payload_md5_both_sides": "dc76b9a9a47af04a9e05283c77f9471b (detbench_data.tar.gz: eval videos x2, frozen GT x2, default+preflip production pools 4 files/clip, preflip_score reproduction target, OSNet ckpt, feeder script)",
+    "bundle_sha256_both_sides": "864963c71ecc167935bcba09dd71c731e4314269c686aac2eba92534b61ccc41"
+  },
+  "preflight_vm_byte_verify": {
+    "scripts/racketsport/benchmark_person_trackers.py": "07deba04bc00f9eaff9670676ac3ec45 MATCH",
+    "scripts/racketsport/score_person_track_sources.py": "cd7ae4891c482a257807761f3b934a90 MATCH",
+    "threed/racketsport/person_track_gt_scoring.py": "be38f76547d05d8ac7b12274de5b659d MATCH",
+    "threed/racketsport/raw_pool_person_authority.py": "ea30bfdf3a57bf7e2fff06476ec6295c MATCH",
+    "threed/racketsport/player_global_association.py": "5e761c5db3327a1841fc0e54281bb9d7 MATCH",
+    "models/checkpoints/yolo26m.pt": "sha256 401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7 MATCH",
+    "models/checkpoints/osnet_x1_0_market1501.pt": "sha256 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154 MATCH",
+    "result": "ALL MATCH on-VM vs Mac"
+  },
+  "environment_pins": {
+    "pipeline_venv": {"ultralytics": "8.4.87", "torch": "2.5.1+cu124", "torchreid": "0.2.5 (installed this lane)", "python": "3.10"},
+    "candidate_venv": {"rfdetr": "1.8.3", "torch": "2.13.0+cu130", "extras": "tensorboard faster-coco-eval calflops safetensors pycocotools (for D-FINE/DEIMv2/masks)"},
+    "gpu": "NVIDIA H100 80GB HBM3, driver 580.159.03"
+  },
+  "checkpoint_identities": {
+    "rf-detr-large-2026.pth": {"sha256": "0f4e20e19a99c0f8a62b5685f57f6c8b5c371c59081feda6752a0561a79ccf38", "bytes": 135954129, "note": "byte count matches benchmark_spec_trk.md HEAD-200 pin (135,954,129); md5 self-verified by rfdetr downloader"},
+    "rf-detr-seg-large.pt": {"sha256": "ca7b7c630ba22496067cc4f034c4e70c8e47fd7adcea04c3a49aa8c1755cbe6b", "bytes": 145055866, "note": "actual artifact name rfdetr 1.8.3 downloads for RFDETRSegLarge (spec called it rf-detr-seg-l-ft.pth)"},
+    "dfine_l_obj2coco_e25.pth": {"sha256": "c913aef6dc89c327c1a8b9e4ee5cf93eeeb3a1692ffe8ab40f1aa576ee6c3611", "bytes": 126083766, "url": "github.com/Peterande/storage/releases/download/dfinev1.0/dfine_l_obj2coco_e25.pth", "repo_sha": "7fe2f8889f0b7b817f20c315b40fc15a4fb64ae6"},
+    "deimv2_dinov3_l_coco (HF model.safetensors)": {"sha256": "c0d0f45fa62b785126db5b40f5530866fecaab2d340cea812d2ba5f0f5646163", "bytes": 130596044, "note": "sha256 equals the HF LFS oid exactly; repo Intellindust-AI-Lab/DEIMv2 @ 0fff8d4dcdc272e6cf2d84be31399db471357941; NOT the _S_COCO artifact"}
+  },
+  "arm_0a_reproduction": {
+    "bar": "match preflip_score within 0.0001",
+    "burlington": {"idf1": 0.8830775881, "pin": 0.8830775881, "diff": 3.0e-11, "cov4": 0.7116666667, "cov4_diff": 3.3e-11, "switches": 0, "spectFP": 0, "farFP": 0},
+    "wolverine": {"idf1": 0.8515962036, "pin": 0.8515962036, "diff": 2.4e-11, "cov4": 0.76, "cov4_diff": 0.0, "switches": 0, "spectFP": 0, "farFP": 0},
+    "verdict": "PASS (exact to float print precision) - harness and frozen association reproduce the frozen baseline on the VM"
+  },
+  "arm_0b_feeder_check": {
+    "tolerance": 0.005,
+    "burlington": {"dIDF1_vs_0a": 0.016588, "dcov4_vs_0a": 0.261667},
+    "wolverine": {"dIDF1_vs_0a": -0.032420, "dcov4_vs_0a": 0.166667, "new_switches": 2, "new_true_spectator_fp": 19},
+    "verdict": "FEEDER_DRIFT (both clips, both metrics, far beyond 0.005). Per spec: candidate arms are interpreted paired-protocol vs 0b; deltas vs both 0a and 0b reported.",
+    "interpretation": "The lane feeder (YOLO26m model.predict per-frame -> BOTSORT.update on the raw untrimmed pool) is NOT equivalent to the production pool path that produced the frozen trk_flip raw pools. The feeder pool admits more low-conf/spectator detections (cov4 jumps 0.71->0.97 on burlington but wolverine picks up 2 switches + 19 true-spectator FPs). Candidate detector rows therefore carry this same protocol offset, and cross-arm comparisons are only clean within the feeder protocol (0b vs arms 1-4)."
+  },
+  "decision_table_per_arm_per_clip": {
+    "columns": ["idf1", "cov4", "id_switches", "true_spectator_fp", "far_off_court_fp_frames", "hota", "deta", "assa", "near_miss_rate", "false_negatives", "detector_ms_per_frame_batch1"],
+    "burlington_gold_0300_low_steep_corner": {
+      "arm0a_repro_BASELINE":  [0.8831, 0.7117, 0, 0, 0, 0.8892, 0.7906, 1.0000, 0.0826, 357, null],
+      "arm0b_feeder":          [0.8997, 0.9733, 0, 0, 0, 0.9042, 0.8176, 1.0000, 0.0973, 248, 34.59],
+      "arm1_rfdetr_l":         [0.9204, 0.9967, 0, 0, 0, 0.9233, 0.8525, 1.0000, 0.0792, 192, 31.18],
+      "arm2_rfdetr_seg_l":     [0.8771, 0.6617, 0, 0, 0, 0.8838, 0.7811, 1.0000, 0.0824, 384, 263.31],
+      "arm3_dfine_l":          [0.8893, 0.7100, 0, 0, 0, 0.8948, 0.8007, 1.0000, 0.0759, 343, 24.49],
+      "arm4_deimv2_l":         [0.9088, 0.9117, 0, 0, 0, 0.9126, 0.8328, 1.0000, 0.0810, 243, 21.00]
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "arm0a_repro_BASELINE":  [0.8516, 0.7600, 0, 0, 0, 0.8611, 0.7415, 1.0000, 0.1172, 213, null],
+      "arm0b_feeder":          [0.8192, 0.9267, 2, 19, 0, 0.8104, 0.7866, 0.8349, 0.0951, 153, 38.09],
+      "arm1_rfdetr_l":         [0.7955, 0.7267, 1, 16, 0, 0.7947, 0.7224, 0.8743, 0.1119, 232, 31.83],
+      "arm2_rfdetr_seg_l":     [0.7433, 0.3900, 2, 0, 0, 0.7479, 0.6701, 0.8349, 0.0816, 345, 253.56],
+      "arm3_dfine_l":          [0.8157, 0.5767, 1, 0, 0, 0.8130, 0.7446, 0.8876, 0.0936, 232, 24.96],
+      "arm4_deimv2_l":         [0.7005, 0.3100, 5, 18, 0, 0.7101, 0.6281, 0.8029, 0.1169, 364, 21.62]
+    }
+  },
+  "verdicts": {
+    "arm_0a": "PASS (reproduction bar met)",
+    "arm_0b": "FEEDER_DRIFT flagged (not a candidate; the confound check did its job)",
+    "arm_1_rfdetr_l": "reject AS ZERO-SHOT DROP-IN (wolverine: 1 new switch + 16 spectator FP vs frozen baseline, cov4 -0.03 vs 0a / -0.20 vs paired 0b) BUT adopt-next-step AS THE FINE-TUNE BASE: burlington sweep (best IDF1 0.9204, cov4 0.9967, zero FP axes, and faster than the YOLO26m feeder 31.2 vs 34.6 ms/f), cleaner FP axes than its paired 0b baseline on wolverine (1<2 switches, 16<19 spectFP), Apache-2.0 vs incumbent AGPL",
+    "arm_2_rfdetr_seg_l": "reject (boxes): cov4 collapse both clips (0.66/0.39 - the predicted far-player recall regression at 504 native), 2 wolverine switches, detector wall ~7.4x baseline (>20% kill rule). Masks ARCHIVED (coco_rle, pulled) for the future mask-cue lane - that was this arm's other purpose",
+    "arm_3_dfine_l": "reject: burlington par-only with frozen baseline (0.8893/0.7100 vs 0.8831/0.7117), wolverine 1 new switch + cov4 0.5767 (worse than both baselines); no gate-relevant gain to trade",
+    "arm_4_deimv2_l": "reject: worst wolverine row of the bench (5 switches, 18 spectator FP, cov4 0.31) despite a good burlington row (0.9088/0.9117 clean) and fastest detector (21 ms/f); far-side small-player instability is disqualifying"
+  },
+  "fine_tune_decision_arm_go_no_go": {
+    "recommendation": "GO - RF-DETR-L is the fine-tune base",
+    "evidence": [
+      "Ceiling exists: zero-shot RF-DETR-L burlington cov4 0.9967 crosses even the 0.95 promotion-bar level on that clip with zero switches/spectator/far FPs - the architecture can cover 4 players in this domain when players are resolvable",
+      "Speed is free: 31.2-31.8 ms/f batch-1 fp32 unoptimized is FASTER than the YOLO26m baseline feeder (34.6-38.1) - no runtime tax to pay for",
+      "The failure mode is domain, not architecture: every candidate AND the YOLO26m feeder itself degrade on wolverine's far-side small players + spectator-heavy pool; this is exactly what benchmark_spec_trk.md's fine-tune recipe (single on_court_player class + labeled spectator/passer hard negatives) targets",
+      "License: Apache-2.0 challenger vs AGPL-3.0 incumbent (NS-07.3 relicense pressure applies to the baseline itself)",
+      "Controls behaved: independent same-session controls (D-FINE-L, DEIMv2-L) did not beat RF-DETR-L, confirming the crosscheck ruling's rank-1 (refutation held)"
+    ],
+    "cautions": [
+      "Zero-shot RF-DETR-L is NOT adoptable today (wolverine gate axes fail vs the frozen baseline row) - the fine-tune must clear the pre-registered stop rule (two frozen-threshold attempts without material coverage gain, or ANY new switch/spectator/far FP -> stop the branch)",
+      "FEEDER_DRIFT means the fine-tune evaluation MUST route through the production pool path (or pin the paired 0b protocol) before any number is compared to the frozen baseline; do not mix protocols",
+      "rfdetr 1.8.3 emitted partial-load warnings (checkpoint lacks args.num_queries/group_detr -> flat-slice fallback; _kp_active_mask left random-init). Detections were empirically verified sane (boxes match production pool player boxes), but the fine-tune lane should pin the loader path and confirm these warnings are benign for training"
+    ]
+  },
+  "runtime_summary_ms_per_frame_batch1": {
+    "baseline_feeder_yolo26m_imgsz1536": {"burlington": 34.59, "wolverine": 38.09},
+    "rfdetr_l_704_fp32_unoptimized": {"burlington": 31.18, "wolverine": 31.83, "vs_baseline": "-10% to -16% (PASS)"},
+    "rfdetr_seg_l_504": {"burlington": 263.31, "wolverine": 253.56, "vs_baseline": "+660% (FAIL >20% rule)"},
+    "dfine_l_640": {"burlington": 24.49, "wolverine": 24.96, "vs_baseline": "-29% to -34% (PASS)"},
+    "deimv2_l_640": {"burlington": 21.00, "wolverine": 21.62, "vs_baseline": "-39% to -43% (PASS)"},
+    "note": "different native input sizes per detector (1536/704/504/640) - each model's designed operating point per the frozen protocol (no threshold/size grid allowed)"
+  },
+  "pulled_artifacts": {
+    "tarball": "runs/lanes/trk_detbench_20260716/vm_pull/detbench_pull.tar.gz",
+    "md5_both_sides": "4ccc612921eba5daa047eacf7571d3c4",
+    "bytes": 19720752,
+    "contents": "detbench_out/{raw,pools,scored,scores,masks} EXCLUDING per-arm reid_embeddings.json (large, non-load-bearing; precedent trk_reid_apron)",
+    "full_manifest": "runs/lanes/trk_detbench_20260716/vm_pull/detbench_ALL_SHA256.txt (112 files, sha256 of EVERYTHING incl. excluded embeddings)",
+    "scores_also_pulled_loose": "runs/lanes/trk_detbench_20260716/pulled/scores/s01..s06 (incremental after every arm - early results were safe from the start)",
+    "mask_archive": "arm2 RF-DETR-Seg-L per-frame coco_rle person masks, both clips, inside the tarball (detbench_out/masks/arm2_rfdetr_seg_l/*.masks.json)"
+  },
+  "teardown": {
+    "vm": "pickleball-h100-detbench",
+    "running_utc": "2026-07-16T16:36:37Z",
+    "deleted_utc": "2026-07-16T17:16:41Z",
+    "wall_hours": 0.67,
+    "instances_list_confirm": "gcloud instances list (fleet filter) -> only historical pickleball-a100-fleet1 TERMINATED at delete time; name~pickleball-h100-detbench -> 0 items",
+    "disks_list_confirm": "name~detbench -> 0 items",
+    "cost_estimate_usd": {"low": 1.47, "high": 2.48, "basis": "0.67h x spot band $2.2-3.7/hr (not invoice-backed)", "cap": 15.0, "under_cap": true},
+    "preemptions": 0
+  },
+  "fence_compliance": {
+    "writes": ["runs/lanes/trk_detbench_20260716/**", "runs/manager/gpu_fleet.md rows"],
+    "no_pipeline_code_edits": true, "no_config_edits": true, "no_best_stack_change": true, "no_git_commits": true,
+    "adapter_scripts": "all in runs/lanes/trk_detbench_20260716/scripts/ (feeder_yolo26m_botsort_arm0b.py, candidate_detector_feeder.py, dump_rfdetr_raw.py, dump_dfine_raw.py, dump_deimv2_raw.py, vm_bootstrap.sh, provision_ladder_dispatch2.sh)"
+  },
+  "honest_issues": [
+    "FEEDER_DRIFT is the biggest caveat on every candidate number: the lane feeder path (model.predict + BOTSORT.update on untrimmed pools) is measurably different from the production pool path (arm 0b vs 0a: burlington cov4 0.97 vs 0.71 from the SAME detector+tracker). All cross-arm readings in this card are clean only within the feeder protocol; absolute comparisons to the frozen baseline carry the protocol offset. Root cause not fully diagnosed this lane (candidates: production pre-role-lock trimming of the raw pool, decode path differences, model.track vs predict preprocessing).",
+    "rfdetr 1.8.3 load warnings (flat-slice fallback for group_detr; _kp_active_mask random-init) on BOTH rfdetr checkpoints - outputs empirically verified sane against known player boxes, but this is a package/checkpoint version-skew smell the fine-tune lane must pin down.",
+    "RF-DETR person class id: the package's class-name list is 0-indexed ('person' at 0) but the model emits 1-based COCO category ids - person is empirically id 1 (verified by box positions). Recorded because the mismatch would silently zero out detections if trusted naively.",
+    "DEIMv2 safetensors load had missing=2 keys (decoder.up, decoder.reg_scale - non-learned scale buffers left at module defaults); probe boxes were sane. unexpected=0.",
+    "Arm 2's mask archive stores per-frame per-detection masks UNLINKED to final track identities (the future mask-cue lane must do its own linking).",
+    "detector ms/frame numbers are fp32 batch-1 without optimize_for_inference() (rfdetr) / without TensorRT (all) - honest same-condition comparison, but absolute latencies are not deployment numbers.",
+    "arm0a detector wall is null in the runtime table because arm 0a consumed frozen pools (no detector ran - by design).",
+    "The reproduction pins matched to ~3e-11 rather than exactly 0.0 because the spec quotes 10-digit rounded values; the underlying scorer outputs are consistent with bitwise reproduction of the frozen preflip_score report.",
+    "vm_bootstrap.sh's repo autodiscovery (find -maxdepth 3) missed the snapshot's repo at depth 4 (~/coldstart_20260706/repo); located manually, no impact. The snapshot repo was at e64865cf before the bundle pin was applied; bundle checkout to cabdb8cf succeeded cleanly.",
+    "Dispatch-1 stockout history preserved: the first 6-attempt H100-only ladder no-attempted out same day ($0); AMENDMENT 1 authorized the SKU fallback ladder, and H100 landed on amended attempt 2 (us-central1-a) - the A100 tiers were never needed."
+  ]
+}

@@ -1,0 +1,16 @@
+PASS: page loads without JS errors
+PASS: no <video> elements
+PASS: DOM leaks no stratum/clip info — leaked: 
+PASS: frame image/canvas renders at size
+PASS: drawing a box autosaves to localStorage
+PASS: saved state contains a boxes/labels field
+PASS: class-toggle/delete keys no JS errors
+PASS: progress counter exists
+PASS: next-frame navigation updates progress — 1 of 450 -> 2 of 450
+PASS: frame-to-frame nav <= 2s — 604ms
+PASS: empty-confirm persists
+PASS: reload preserves localStorage state
+PASS: reload no JS errors
+PASS: Export downloads valid JSON — schema_version,session_id,storage_key,frames
+PASS: Save button visible and large
+ALL CHECKS PASSED
