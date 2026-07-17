@@ -1104,6 +1104,7 @@
       "gate": "independent NS-02 BODY world-placement GT plus current slide/reprojection/phase gates",
       "provenance": {
         "lane": "trackI_placefuse_20260716",
+        "commit": "0ec239325",
         "date": "2026-07-16",
         "evidence_paths": [
           "runs/lanes/trackI_placefuse_20260716/report.json",
