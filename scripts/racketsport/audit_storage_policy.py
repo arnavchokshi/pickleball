@@ -32,6 +32,18 @@ GENERATED_RELATIVE_DIRS = {
 }
 
 ALLOWED_LARGE_TRACKED_FILES = {
+    # ballarc_anchorfusion_20260716 (Track A close): the three pre-registered audio-anchor
+    # presets' scored solver outputs. These ARE the evidence behind the ruling — all 3
+    # presets REJECTED on the 0-violation kill rule (18.77% / 29.65% / 43.69% in-rally
+    # coverage at 16 / 18 / 18 flight-sanity violations vs frozen baseline 1/188) plus the
+    # 52-row violation taxonomy (42 anchor-semantics-structural -> needs-typed-anchors).
+    # Registered rather than pruned. Untracked instead (2026-07-17 wrap-up): the
+    # interrupted_broad_tcc/ duplicate (killed mid-run by the 07-16 TCC freeze, superseded
+    # by the completed preset_broad) and the two raw codex process logs (log.txt,
+    # log_resume2.txt) — gzipped worktree-only per the trackI precedent.
+    "runs/lanes/ballarc_anchorfusion_20260716/preset_broad/ball_track_arc_solved.json",
+    "runs/lanes/ballarc_anchorfusion_20260716/preset_balanced/ball_track_arc_solved.json",
+    "runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_track_arc_solved.json",
     "runs/lanes/event_head_scaffold_20260716/dataset/manifest_a.json",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_seed_official_aug/checkpoints/latest.pt",

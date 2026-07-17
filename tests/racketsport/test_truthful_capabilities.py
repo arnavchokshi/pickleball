@@ -101,6 +101,14 @@ ARCHIVED_DOCS = {
 }
 
 ALLOWED_LARGE_TRACKED_FILES = {
+    # ballarc_anchorfusion_20260716 (Track A close): the three pre-registered audio-anchor
+    # presets' scored solver outputs -- the evidence behind the ruling that ALL THREE were
+    # REJECTED on the 0-violation kill rule (18.77%/29.65%/43.69% in-rally coverage at
+    # 16/18/18 flight-sanity violations vs frozen baseline 1/188) and the 52-row taxonomy
+    # (42 anchor-semantics-structural -> needs-typed-anchors). Registered, not pruned.
+    "runs/lanes/ballarc_anchorfusion_20260716/preset_broad/ball_track_arc_solved.json",
+    "runs/lanes/ballarc_anchorfusion_20260716/preset_balanced/ball_track_arc_solved.json",
+    "runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_track_arc_solved.json",
     "cvat_upload/04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",
     "runs/lanes/event_head_scaffold_20260716/dataset/manifest_a.json",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
@@ -461,6 +469,12 @@ def test_runbook_documents_current_process_video_entrypoint() -> None:
     expected_order = [
         f"**{node.name}**"
         for node in sorted(AUTHORITATIVE_STAGE_GRAPH, key=lambda node: node.serial_order)
+    ]
+    placement_trajectory_index = expected_order.index("**placement_trajectory_refine**")
+    assert expected_order[placement_trajectory_index - 1 : placement_trajectory_index + 2] == [
+        "**grounding_refine**",
+        "**placement_trajectory_refine**",
+        "**paddle_pose**",
     ]
     refined_index = expected_order.index("**events_refined**")
     assert expected_order[refined_index : refined_index + 3] == [
