@@ -42,6 +42,20 @@ leg = the ONLY remaining blocker for the MOVE-1 #3 standing GO. Dispatch checkli
 Track I placement-refiner as explicit opt-in PREVIEW ARM if Track C has it wired at dispatch; don't
 hold the run otherwise.)_
 
+_(2026-07-16 late Track A manager — OWNER WIN CONDITION folded into the MOVE-1 #3 run plan (co-equal
+with the head-to-head scorecard): the run must ALSO produce the first fused-demo artifact set —
+[1] full BODY on ALL rally windows: requires overriding the default mesh budget
+(--target-mesh-frame-budget 0 or raised, RUNBOOK controlled-run override) — WALL/COST MATH CHANGES:
+BODY at full-rally cadence on 697s is the dominant new cost; size at dispatch against the 5h cap and
+raise the cap request explicitly if the estimate exceeds it, do NOT silently trim mesh coverage;
+[2] both-IPPE paddle artifacts (evidence17 landed — verify flags at pin); [3] explicit refined
+stages + G2 typed anchors in the arc pass — REQUIRES Track C refinedstage runner plumbing for the
+soft/typed anchor chain input (my chain API is default-off; runner wiring is theirs); [4] Track I
+placement-refiner opt-in preview arm (wiring permitting); [5] MANDATORY dispatch-time step: confirm
+with Track C which placewire/one-world runner hunks are LANDED, pin main at a SHA that includes
+them, record the hunk inventory in the dispatch spec. Coverage ruling (anchorfusion taxonomy) still
+gates everything.)_
+
 _(2026-07-16 ~01:2x Track A manager: pbv11_calsolve_20260716 RULED **BLOCKED (honest kill accepted)**,
 manager-verified: the line-evidence 15-intersection solve is REAL (camera median 2.61px; refreshed
 evidence 1.64px; independent validator auto_calibration_ready TRUE incl. top_net 3.49px; overlay
