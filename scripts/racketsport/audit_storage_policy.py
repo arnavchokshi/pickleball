@@ -33,7 +33,6 @@ GENERATED_RELATIVE_DIRS = {
 
 ALLOWED_LARGE_TRACKED_FILES = {
     "runs/lanes/event_head_scaffold_20260716/dataset/manifest_a.json",
-    "runs/lanes/event_head_scaffold_20260716/dataset/manifest_b.json",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_seed_official_aug/checkpoints/latest.pt",
     "cvat_upload/04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",

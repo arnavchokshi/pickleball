@@ -102,6 +102,7 @@ ARCHIVED_DOCS = {
 
 ALLOWED_LARGE_TRACKED_FILES = {
     "cvat_upload/04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",
+    "runs/lanes/event_head_scaffold_20260716/dataset/manifest_a.json",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_seed_official_aug/checkpoints/latest.pt",
     "cvat_upload/court_keypoints_20260707/packages/court_keypoints_metric15_20260707_6frames.zip",
