@@ -54,14 +54,18 @@ soft/typed anchor chain input (my chain API is default-off; runner wiring is the
 placement-refiner opt-in preview arm (wiring permitting); [5] MANDATORY dispatch-time step: confirm
 with Track C which placewire/one-world runner hunks are LANDED, pin main at a SHA that includes
 them, record the hunk inventory in the dispatch spec. Coverage ruling (anchorfusion taxonomy) still
-gates everything. ENVELOPE PRE-AUTHORIZED (coordinator, post-1e8fbd842): wall cap <=8h, lane spend
-<=$35, H100 spot <=$5/hr or cheaper SKU (A100 ok if H100 thin) — CONDITIONAL on dispatch spec
-recording explicit sizing math (BODY frames x measured per-frame cost from prior runs + stage
-overheads, >=25% margin under the cap). If honest sizing exceeds the envelope: trim to FULL mesh
-cadence on a contiguous representative rally block (first N rallies end-to-end), never sparse
-cadence across all — watchable complete segment beats threadbare whole. Boot-armed on-VM rail,
-idle self-stop, ledgers, delete+list-confirm unchanged. Announce run start to coordinator when it
-fires.)_
+gates everything. ENVELOPE (coordinator, post-1e8fbd842, AMENDED d97571f84+1): wall cap <=8h, lane
+spend <=$35, H100 spot <=$5/hr or cheaper SKU (A100 ok if H100 thin). SCOPE — this is NOT a
+free-standing authorization: "applies ONLY to the single MOVE-1 #3 dispatch by Track A; conditional
+on the recorded sizing math with >=25% margin; requires coordinator confirmation of the dispatch
+spec BEFORE provisioning; no other lane or track may cite this entry as spend authority." PROCESS:
+Track A sends the coordinator the sized dispatch spec (cost estimate, wall estimate, SKU, Track C
+hunk inventory, trim decision if any) and WAITS for explicit confirm before any provision call.
+Sizing math = BODY frames x measured per-frame cost from prior runs + stage overheads, >=25% margin
+under the cap. If honest sizing exceeds the envelope: trim to FULL mesh cadence on a contiguous
+representative rally block (first N rallies end-to-end), never sparse cadence across all —
+watchable complete segment beats threadbare whole. Boot-armed on-VM rail, idle self-stop, ledgers,
+delete+list-confirm unchanged. Coverage gate precedes all of it.)_
 
 _(2026-07-16 ~01:2x Track A manager: pbv11_calsolve_20260716 RULED **BLOCKED (honest kill accepted)**,
 manager-verified: the line-evidence 15-intersection solve is REAL (camera median 2.61px; refreshed
