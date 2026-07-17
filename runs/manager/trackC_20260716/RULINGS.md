@@ -95,3 +95,33 @@ Wide suite ran during a heavy cross-track landing window (5+ commits mid-run): 3
   schema/source-class signatures, calpolicy modules untouched by the failing tests.
   Routed to the CAL/MOVE-1 owner to land data + test pins together.
 Track C-owned surfaces: all green (focused 195+47, doc pins, --help, 318/319 CLI).
+
+## Wave 4 (2026-07-16, wrap-up)
+
+### placewire_20260716 — ADOPT (scoped pass, wiring only), commit 02982d358
+Track I's adopted placement-trajectory fusion (0ec239325) is wired as an OPT-IN stage after
+grounding_refine, DEFAULT OFF. Their proposed hunk was re-derived against the
+post-refinedstage canonical graph (not blind-applied). Default-off byte parity at the
+artifact boundary; flag-on produces placement_trajectory_refined.json preview-banded with
+typed provenance; typed spine16 failure semantics; RUN_IDENTITY + stage counts + RUNBOOK +
+truthful pin + authoritative-graph test coherent; raw artifacts never overwritten; consumes
+the existing rev-13 PENDING best_stack entry without editing it. Unblocks Track K's
+one-world fusion (this artifact is their preferred player-trajectory input).
+Manager verification (real exit codes): focused 197 passed; the only 2 failures are Track F's
+unregistered 154MB bundle (runs/lanes/trk_detbench_20260716/transfer_stage/
+pickleball_head.bundle) — storage-audit-proven, flagged, not Track C's; --help EXIT 0.
+Lane-reported wide suite 3920 passed / 35 failed EXIT 1, every failure attributed outside
+placewire (Track I's rev-12 manifest test pin vs the adopted rev-13 manifest; the ~25
+owner/CAL worktree court-data failures; Track F storage; sandbox binds).
+
+### Cross-track flags open at wrap-up (routed, not Track C's to fix)
+- Track F commit d1b536b3f: unregistered 154MB bundle -> 2 storage-policy doc-test failures
+  repo-wide.
+- Track I: tests/racketsport/test_best_stack_manifest.py still pins revision 12 while their
+  adopted commit moved the manifest to revision 13 -> independent failure.
+- CAL/MOVE-1 owner: ~25 court-family failures from an in-progress court-label worktree
+  landing (data-count pins; data + test pins must land together).
+
+## Window closed 2026-07-16 (owner wrap-up directive). Next runner window handoff:
+runs/manager/trackC_20260716/HANDOFF_NEXT_RUNNER_WINDOW.md (Track K stage-175 wiring FIRST
+— queued, deliberately not dispatched; then blur/diameter into events).
