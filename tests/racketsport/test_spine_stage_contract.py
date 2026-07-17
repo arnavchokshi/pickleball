@@ -24,7 +24,7 @@ def _frames_pipeline(tmp_path: Path) -> process_video.ProcessVideoPipeline:
     return process_video.ProcessVideoPipeline(options)
 
 
-def test_authoritative_graph_projects_exact_20_21_22_stage_contracts() -> None:
+def test_authoritative_graph_projects_exact_22_23_24_stage_contracts() -> None:
     serial = process_video.authoritative_stage_names(
         rally_gating=False,
         verify_viewer=False,
@@ -36,13 +36,14 @@ def test_authoritative_graph_projects_exact_20_21_22_stage_contracts() -> None:
         body_schedule="overlap",
     )
 
-    assert len(serial) == 20
-    assert len(process_video.authoritative_stage_names(rally_gating=True, verify_viewer=False)) == 21
-    assert len(process_video.authoritative_stage_names(rally_gating=False, verify_viewer=True)) == 21
-    assert len(process_video.authoritative_stage_names(rally_gating=True, verify_viewer=True)) == 22
+    assert len(serial) == 22
+    assert len(process_video.authoritative_stage_names(rally_gating=True, verify_viewer=False)) == 23
+    assert len(process_video.authoritative_stage_names(rally_gating=False, verify_viewer=True)) == 23
+    assert len(process_video.authoritative_stage_names(rally_gating=True, verify_viewer=True)) == 24
     assert set(overlap) == set(serial)
     assert serial[6:12] == ("ball", "ball_arc", "events", "ball_fill", "frames", "body")
     assert overlap[6:12] == ("frames", "ball", "ball_arc", "events", "ball_fill", "body")
+    assert serial[15:18] == overlap[15:18] == ("events_refined", "ball_arc_refined", "world")
 
 
 def test_typed_optional_absence_degrades_and_execution_continues(tmp_path: Path) -> None:

@@ -1,6 +1,6 @@
 # Process Video Runbook
 
-Last updated: 2026-07-15.
+Last updated: 2026-07-16.
 
 `scripts/racketsport/process_video.py` is the current one-command pipeline for a
 video-to-scrubber bundle. It is the entrypoint future agents should start from
@@ -123,8 +123,8 @@ be called CAL promotion.
 After argument parsing and option construction succeed, `process_video.py`
 writes `PIPELINE_SUMMARY.json` even on partial runs. Pre-flight argument/path
 failures can exit before any run directory or `PIPELINE_SUMMARY.json` exists.
-The default serial path has 20 stage outcomes. Optional `rally_gating` makes
-21, and optional viewer verification also makes 21; enabling both makes 22. The
+The default serial path has 22 stage outcomes. Optional `rally_gating` makes
+23, and optional viewer verification also makes 23; enabling both makes 24. The
 order below is projected from `AUTHORITATIVE_STAGE_GRAPH` in
 `scripts/racketsport/process_video.py`; overlap mode uses the same graph and
 only moves `frames` ahead of the four overlapped BALL/event stages:
@@ -161,21 +161,28 @@ before fresh BALL/audio and does not yet trim all downstream decoding.
     refinement when inputs exist.
 15. **paddle_pose** - write a fail-closed, render-only estimated paddle artifact
     when BODY wrist/palm evidence exists.
-16. **world** - currently calls `_refine_events_after_body()` and
-    `_stage_refined_ball_arc()` before composing `virtual_world.json` and
-    `trust_bands.json`; those refinements remain hidden inside `world` until
-    explicit timed stages land.
-17. **confidence_gate** - write `confidence_gated_world.json` unless
+16. **events_refined** - build the separately versioned post-BODY
+    `contact_windows_refined_v1.json` from dependency-current BODY, paddle,
+    ball, timebase, and audio evidence. Raw `contact_windows.json` remains
+    immutable; content hashes gate reuse.
+17. **ball_arc_refined** - re-run the render-only arc chain from current
+    refined contacts when its dependency hashes changed. Segment guard
+    timeouts remain typed degraded outcomes and this stage records their real
+    wall time.
+18. **world** - compose `virtual_world.json` and `trust_bands.json` from the
+    already-finished refined artifacts; refinement time is not folded into
+    this stage.
+19. **confidence_gate** - write `confidence_gated_world.json` unless
     `--no-confidence-gate` is set.
-18. **match_stats** - default-on fail-open placement/court movement stats.
-19. **coaching_facts** - build deterministic rally metrics and coaching facts,
+20. **match_stats** - default-on fail-open placement/court movement stats.
+21. **coaching_facts** - build deterministic rally metrics and coaching facts,
     then run the zero-fabrication audit before the manifest. This stage fails
     closed: on audit failure the facts are excluded and the bundle stays
     `partial`.
-20. **manifest** - write `replay_viewer_manifest.json` and optional point scene,
+22. **manifest** - write `replay_viewer_manifest.json` and optional point scene,
     linking only finished current stats and audited coaching facts.
-Optional final stage: **verify** via `--verify-viewer`. It is stage 21 without
-rally gating and stage 22 with rally gating.
+Optional final stage: **verify** via `--verify-viewer`. It is stage 23 without
+rally gating and stage 24 with rally gating.
 
 `match_stats` and audited deterministic `coaching_facts` run before `manifest`.
 

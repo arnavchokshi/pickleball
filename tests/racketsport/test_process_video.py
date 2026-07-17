@@ -2122,7 +2122,7 @@ def test_post_body_refined_events_are_versioned_and_raw_is_immutable(tmp_path: P
     )
     pipeline = process_video.ProcessVideoPipeline(options)
 
-    outcome = pipeline._refine_events_after_body()
+    outcome = pipeline._stage_events_refined()
 
     assert outcome.status == "ran"
     assert raw_path.read_bytes() == raw_bytes
@@ -2147,7 +2147,7 @@ def test_post_body_refinement_records_absent_reason_without_body(tmp_path: Path)
     _write_json(options.clip_dir / "contact_windows.json", _contact_windows_payload())
     pipeline = process_video.ProcessVideoPipeline(options)
 
-    outcome = pipeline._refine_events_after_body()
+    outcome = pipeline._stage_events_refined()
 
     assert outcome.status == "skipped"
     assert outcome.metrics["reason"] == "missing_sam3d_skeleton3d"
@@ -2170,13 +2170,13 @@ def test_refined_contact_reuse_refuses_dependency_hash_mismatch(tmp_path: Path, 
     _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
     monkeypatch.setattr(process_video, "build_wrist_velocity_peaks_from_file", lambda *args, **kwargs: {"schema_version": 1, "peaks": []})
     pipeline = process_video.ProcessVideoPipeline(options)
-    first = pipeline._refine_events_after_body()
+    first = pipeline._stage_events_refined()
     assert first.status == "ran"
 
     skeleton = _sam3d_skeleton_payload()
     skeleton["players"][0]["frames"][0]["joints_world"][0][0] = 99.0
     _write_json(options.clip_dir / "skeleton3d.json", skeleton)
-    second = pipeline._refine_events_after_body()
+    second = pipeline._stage_events_refined()
 
     assert second.status == "ran"
     assert second.metrics["reuse_refusal_reason"] == "contact_dependency_hash_mismatch"
@@ -2273,10 +2273,10 @@ def test_post_body_refined_contacts_rerun_arc_chain_dependency_safely(
 
     monkeypatch.setattr(process_video, "run_default_ball_arc_chain", _fake_arc)
     pipeline = process_video.ProcessVideoPipeline(options)
-    assert pipeline._refine_events_after_body().status == "ran"
+    assert pipeline._stage_events_refined().status == "ran"
 
-    first = pipeline._stage_refined_ball_arc()
-    second = pipeline._stage_refined_ball_arc()
+    first = pipeline._stage_ball_arc_refined()
+    second = pipeline._stage_ball_arc_refined()
 
     assert first.status == "ran"
     assert second.status == "skipped"
@@ -2288,8 +2288,8 @@ def test_post_body_refined_contacts_rerun_arc_chain_dependency_safely(
     changed = _ball_track_payload(frame_count=3)
     changed["frames"][0]["x_px"] = 777.0
     _write_json(options.clip_dir / "ball_track.json", changed)
-    assert pipeline._refine_events_after_body().status == "ran"
-    third = pipeline._stage_refined_ball_arc()
+    assert pipeline._stage_events_refined().status == "ran"
+    third = pipeline._stage_ball_arc_refined()
 
     assert third.status == "ran"
     assert third.metrics["reuse_refusal_reason"] == "contact_dependency_hash_mismatch"
@@ -2407,6 +2407,7 @@ def test_default_stage_order_runs_camera_motion_before_placement(tmp_path: Path)
         "placement",
     )
     assert names[6:10] == ("ball", "ball_arc", "events", "ball_fill")
+    assert names[15:18] == ("events_refined", "ball_arc_refined", "world")
 
 
 def test_camera_motion_auto_default_skips_static_probe_without_writing_artifact(

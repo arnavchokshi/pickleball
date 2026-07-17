@@ -461,6 +461,12 @@ def test_runbook_documents_current_process_video_entrypoint() -> None:
         f"**{node.name}**"
         for node in sorted(AUTHORITATIVE_STAGE_GRAPH, key=lambda node: node.serial_order)
     ]
+    refined_index = expected_order.index("**events_refined**")
+    assert expected_order[refined_index : refined_index + 3] == [
+        "**events_refined**",
+        "**ball_arc_refined**",
+        "**world**",
+    ]
     last_index = -1
     for marker in expected_order:
         index = text.index(marker)

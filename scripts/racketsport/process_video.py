@@ -343,12 +343,14 @@ AUTHORITATIVE_STAGE_GRAPH: tuple[PipelineStageDefinition, ...] = (
     PipelineStageDefinition("placement_refine", 130, 130),
     PipelineStageDefinition("grounding_refine", 140, 140),
     PipelineStageDefinition("paddle_pose", 150, 150),
-    PipelineStageDefinition("world", 160, 160),
-    PipelineStageDefinition("confidence_gate", 170, 170),
-    PipelineStageDefinition("match_stats", 180, 180),
-    PipelineStageDefinition("coaching_facts", 190, 190),
-    PipelineStageDefinition("manifest", 200, 200),
-    PipelineStageDefinition("verify", 210, 210, "verify_viewer"),
+    PipelineStageDefinition("events_refined", 160, 160),
+    PipelineStageDefinition("ball_arc_refined", 170, 170),
+    PipelineStageDefinition("world", 180, 180),
+    PipelineStageDefinition("confidence_gate", 190, 190),
+    PipelineStageDefinition("match_stats", 200, 200),
+    PipelineStageDefinition("coaching_facts", 210, 210),
+    PipelineStageDefinition("manifest", 220, 220),
+    PipelineStageDefinition("verify", 230, 230, "verify_viewer"),
 )
 
 
@@ -468,7 +470,19 @@ RUN_IDENTITY_DEPENDENCIES: dict[str, tuple[str, ...]] = {
     "placement_refine": ("placement", "body"),
     "grounding_refine": ("calibration", "tracking", "events", "body", "placement_refine"),
     "paddle_pose": ("body",),
-    "world": ("calibration", "tracking", "ball_fill", "body", "placement_refine", "grounding_refine", "paddle_pose"),
+    "events_refined": ("events", "grounding_refine", "paddle_pose"),
+    "ball_arc_refined": ("ball_arc", "events_refined"),
+    "world": (
+        "calibration",
+        "tracking",
+        "ball_fill",
+        "body",
+        "placement_refine",
+        "grounding_refine",
+        "paddle_pose",
+        "events_refined",
+        "ball_arc_refined",
+    ),
     "confidence_gate": ("world",),
     "match_stats": ("placement", "world"),
     "coaching_facts": ("world", "match_stats"),
@@ -529,14 +543,23 @@ RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
     "body": ("body_full_clip_gate.json", "body_mesh_readiness.json", "body_compute_execution.json"),
     "grounding_refine": ("body_grounding_refinement.json",),
     "paddle_pose": (PADDLE_POSE_ARTIFACT_NAME,),
+    "events_refined": (
+        "wrist_velocity_peaks_refined_v1.json",
+        "contact_windows_refined_v1.json",
+        "contact_refinement_v1.json",
+    ),
+    "ball_arc_refined": (
+        "ball_bounce_candidates.json",
+        "ball_track_arc_solved.json",
+        "ball_arc_render.json",
+        "ball_flight_sanity.json",
+        "ball_chain_manifest.json",
+        "ball_arc_refined_dependencies_v1.json",
+    ),
     "world": (
         "virtual_world.json",
         "trust_bands.json",
         "ball_fail_closed_verdicts.json",
-        "wrist_velocity_peaks_refined_v1.json",
-        "contact_windows_refined_v1.json",
-        "contact_refinement_v1.json",
-        "ball_arc_refined_dependencies_v1.json",
     ),
     "confidence_gate": ("confidence_gated_world.json", "confidence_gate_summary.json"),
     "manifest": ("replay_viewer_manifest.json", "replay_scene.json", "replay_review"),
@@ -856,14 +879,22 @@ class ProcessVideoPipeline:
             candidates = {
                 "events_selected": opts.events_selected,
                 "ball_track_arc_solved": opts.ball_track_arc_solved,
+                "frame_times": self.clip_dir / "frame_times.json",
+                "tracks_fps_source": self.clip_dir / "tracks.json",
                 "ball_track": self.clip_dir / "ball_track.json",
+                "ball_candidates": self.clip_dir / "ball_candidates.json",
                 "skeleton3d": self.clip_dir / "skeleton3d.json",
-                "audio": self.clip_dir / "audio_onsets_v2.json",
                 "calibration": self.clip_dir / "court_calibration.json",
                 "timebase_contract": self.clip_dir / "timebase_contract.json",
             }
-        elif name == "world":
-            candidates = self._contact_dependency_paths(refined=True)
+        elif name == "events_refined":
+            candidates = {
+                key: value
+                for key, value in self._contact_dependency_paths(refined=True).items()
+                if key != "wrist_velocity_peaks_refined"
+            }
+        elif name == "ball_arc_refined":
+            candidates = self._refined_arc_dependency_paths()
         elif name == "confidence_gate":
             candidates = {"confidence_calibration_curves": opts.confidence_calibration_curves}
         return {key: Path(value) for key, value in candidates.items() if value is not None}
@@ -1254,7 +1285,20 @@ class ProcessVideoPipeline:
         finally:
             self._active_reuse_decisions.pop(name, None)
         outcome.wall_seconds = time.monotonic() - started
-        if spec is not None and source_identity is not None and outcome.status in {"ran", "reused", "skipped"}:
+        # Track A's guard produces complete, render-only artifacts with typed
+        # missing segments. Preserve those expensive self-killed results as a
+        # reusable generation; exception-based/no-artifact degradations remain
+        # unpublished and must retry.
+        typed_arc_degrade_is_reusable = (
+            name in {"ball_arc", "ball_arc_refined"}
+            and outcome.status == "degraded"
+            and int(outcome.metrics.get("segment_budget_exceeded_count") or 0) > 0
+        )
+        if (
+            spec is not None
+            and source_identity is not None
+            and (outcome.status in {"ran", "reused", "skipped"} or typed_arc_degrade_is_reusable)
+        ):
             try:
                 with self._run_identity_store.transaction(
                     spec,
@@ -3033,9 +3077,15 @@ class ProcessVideoPipeline:
             notes.append("ball_arc chain consumed candidate sidecars under the frozen row-22 default config")
         if status != "ran":
             notes.append(f"arc solver self-killed with status={status}; virtual_world will ignore this artifact")
+        typed_timeout_count = int(summary.get("segment_budget_exceeded_count") or 0)
+        typed_timeout_ids = [int(value) for value in (summary.get("segment_budget_exceeded_ids") or [])]
+        typed_missing_reasons = summary.get("missing_segment_reasons")
+        if not isinstance(typed_missing_reasons, Mapping):
+            typed_missing_reasons = {}
+        stage_status = "ran" if status == "ran" and typed_timeout_count == 0 else "degraded"
         return StageOutcome(
             stage="ball_arc",
-            status="ran",
+            status=stage_status,
             wall_seconds=time.monotonic() - started,
             notes=notes,
             artifacts=["ball_bounce_candidates.json", "ball_track_arc_solved.json", "ball_arc_render.json", "ball_flight_sanity.json", "ball_chain_manifest.json"],
@@ -3049,6 +3099,9 @@ class ProcessVideoPipeline:
                 "flight_sanity_demoted_frame_count": summary.get("flight_sanity_demoted_frame_count"),
                 "flight_sanity_failed_segment_count": summary.get("flight_sanity_failed_segment_count"),
                 "chain_config_degraded": summary.get("chain_config_degraded"),
+                "segment_budget_exceeded_count": typed_timeout_count,
+                "segment_budget_exceeded_ids": typed_timeout_ids,
+                "missing_segment_reasons": dict(typed_missing_reasons),
             },
         )
 
@@ -3482,9 +3535,18 @@ class ProcessVideoPipeline:
             }, f"audio extraction unavailable with explicit reason audio_extraction_error ({type(exc).__name__}: {exc}); contact windows use visual cues only"
 
     def _contact_dependency_paths(self, *, refined: bool) -> dict[str, Path | None]:
+        # audio_onsets_v2.json is the audio configuration identity: its
+        # content includes detector_version plus every onset-extraction knob
+        # in summary. Hashing that artifact binds both config and output
+        # without inventing a second, potentially divergent config sidecar.
         paths: dict[str, Path | None] = {
+            "frame_times": self.clip_dir / "frame_times.json",
+            "tracks_fps_source": self.clip_dir / "tracks.json",
             "ball_track": self.clip_dir / "ball_track.json",
+            "ball_candidates": self.clip_dir / "ball_candidates.json",
+            "ball_inflections_coarse": self.clip_dir / "ball_inflections.json",
             "skeleton3d": self.clip_dir / "skeleton3d.json",
+            "wrist_velocity_peaks_coarse": self.clip_dir / "wrist_velocity_peaks.json",
             "audio": self.clip_dir / "audio_onsets_v2.json",
             "calibration": self.clip_dir / "court_calibration.json",
             "timebase_contract": self.clip_dir / "timebase_contract.json",
@@ -3493,7 +3555,7 @@ class ProcessVideoPipeline:
             paths.update(
                 {
                     "raw_contact_windows": self.clip_dir / "contact_windows.json",
-                    "ball_inflections": self.clip_dir / "ball_inflections.json",
+                    "wrist_velocity_peaks_refined": self.clip_dir / "wrist_velocity_peaks_refined_v1.json",
                     "paddle": self.clip_dir / PADDLE_POSE_ARTIFACT_NAME,
                 }
             )
@@ -3563,7 +3625,7 @@ class ProcessVideoPipeline:
             "audio": self.clip_dir / "audio_onsets_v2.json",
         }
 
-    def _stage_refined_ball_arc(self) -> StageOutcome:
+    def _stage_ball_arc_refined(self) -> StageOutcome:
         """Re-run the public BALL arc chain only when refined inputs changed."""
 
         refined_path = self.clip_dir / "contact_windows_refined_v1.json"
@@ -3620,6 +3682,7 @@ class ProcessVideoPipeline:
         }
         if (
             not self.options.force
+            and self._identity_allows_reuse("ball_arc_refined")
             and all(path.is_file() for path in artifact_paths.values())
             and dependency_hashes_match(prior_dependencies, current_dependencies)
         ):
@@ -3651,6 +3714,19 @@ class ProcessVideoPipeline:
                 rally_spans_path=_existing_optional_path(self.clip_dir / "rally_spans.json"),
                 frame_times_path=_existing_optional_path(self.clip_dir / "frame_times.json"),
             )
+        except TimeoutError as exc:
+            provenance_path.unlink(missing_ok=True)
+            return StageOutcome(
+                stage="ball_arc_refined",
+                status="degraded",
+                wall_seconds=time.monotonic() - started,
+                notes=[f"refined-contact arc rerun timed out fail-closed ({type(exc).__name__}: {exc})"],
+                metrics={
+                    "reason": "arc_chain_timeout",
+                    "typed_degraded_reason": "segment_budget_exceeded",
+                    "reuse_refusal_reason": reuse_refusal_reason,
+                },
+            )
         except Exception as exc:  # noqa: BLE001 - downstream refinement is fail-closed
             provenance_path.unlink(missing_ok=True)
             return StageOutcome(
@@ -3675,20 +3751,38 @@ class ProcessVideoPipeline:
         }
         _write_json(provenance_path, provenance)
         summary = result.get("summary") if isinstance(result.get("summary"), Mapping) else {}
+        chain_status = str(result.get("status") or "unknown")
+        typed_timeout_count = int(summary.get("segment_budget_exceeded_count") or 0)
+        typed_timeout_ids = [int(value) for value in (summary.get("segment_budget_exceeded_ids") or [])]
+        typed_missing_reasons = summary.get("missing_segment_reasons")
+        if not isinstance(typed_missing_reasons, Mapping):
+            typed_missing_reasons = {}
+        stage_status = "ran" if chain_status == "ran" and typed_timeout_count == 0 else "degraded"
+        notes = ["re-ran the public BALL arc chain from dependency-current post-BODY refined contacts"]
+        if typed_timeout_count:
+            notes.append(
+                "refined arc render-only chain self-killed segment(s) with typed "
+                f"segment_budget_exceeded outcomes: ids={typed_timeout_ids}"
+            )
+        elif stage_status == "degraded":
+            notes.append(f"refined arc render-only chain returned degraded status={chain_status}")
         return StageOutcome(
             stage="ball_arc_refined",
-            status="ran",
+            status=stage_status,
             wall_seconds=time.monotonic() - started,
-            notes=["re-ran the public BALL arc chain from dependency-current post-BODY refined contacts"],
+            notes=notes,
             artifacts=[*artifact_paths, provenance_path.name],
             metrics={
-                "solver_status": str(result.get("status") or "unknown"),
+                "solver_status": chain_status,
                 "seed_anchor_count": summary.get("seed_anchor_count"),
+                "segment_budget_exceeded_count": typed_timeout_count,
+                "segment_budget_exceeded_ids": typed_timeout_ids,
+                "missing_segment_reasons": dict(typed_missing_reasons),
                 "reuse_refusal_reason": reuse_refusal_reason,
             },
         )
 
-    def _refine_events_after_body(self) -> StageOutcome:
+    def _stage_events_refined(self) -> StageOutcome:
         """Build a separate post-BODY contact generation without touching raw proposals."""
 
         raw_path = self.clip_dir / "contact_windows.json"
@@ -3747,6 +3841,7 @@ class ProcessVideoPipeline:
         if (
             refined_path.is_file()
             and not self.options.force
+            and self._identity_allows_reuse("events_refined")
             and _valid_artifact("contact_windows", refined_path)
             and reuse_refusal_reason is None
         ):
@@ -4405,16 +4500,13 @@ class ProcessVideoPipeline:
     # ------------------------------------------------------------------
 
     def _stage_world(self) -> StageOutcome:
-        refined_events = self._refine_events_after_body()
-        refined_arc = self._stage_refined_ball_arc()
         court_path = self.clip_dir / "court_calibration.json"
         if not court_path.is_file():
             return StageOutcome(
                 stage="world",
                 status="blocked",
                 wall_seconds=0.0,
-                notes=["requires court_calibration.json", *refined_events.notes, *refined_arc.notes],
-                metrics={"events_refined": refined_events.as_dict(), "ball_arc_refined": refined_arc.as_dict()},
+                notes=["requires court_calibration.json"],
             )
 
         tracks = _read_optional_json(self.clip_dir / "tracks.json")
@@ -4467,8 +4559,6 @@ class ProcessVideoPipeline:
             status="ran",
             wall_seconds=0.0,
             notes=[
-                *refined_events.notes,
-                *refined_arc.notes,
                 "assembled virtual_world.json with per-entity trust bands (never invented; read from real upstream state)",
             ],
             artifacts=[
@@ -4478,8 +4568,6 @@ class ProcessVideoPipeline:
             ],
             metrics={
                 **dict(payload.get("summary", {})),
-                "events_refined": refined_events.as_dict(),
-                "ball_arc_refined": refined_arc.as_dict(),
             },
         )
 
