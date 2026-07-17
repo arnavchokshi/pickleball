@@ -1,0 +1,42 @@
+{
+  "artifact_type": "placement_z_prior_ablation",
+  "rows": [
+    {
+      "clip": "burlington",
+      "default_z_soft_max_slide_m": 0.0067242135899252585,
+      "default_z_soft_phase_count": 11,
+      "max_slide_delta_due_to_z_soft_m": 0.0,
+      "phase_count_delta_due_to_z_soft": 0,
+      "z_disabled_max_slide_m": 0.0067242135899252585,
+      "z_disabled_phase_count": 11
+    },
+    {
+      "clip": "outdoor",
+      "default_z_soft_max_slide_m": 0.00560138604477655,
+      "default_z_soft_phase_count": 8,
+      "max_slide_delta_due_to_z_soft_m": 0.0,
+      "phase_count_delta_due_to_z_soft": 0,
+      "z_disabled_max_slide_m": 0.00560138604477655,
+      "z_disabled_phase_count": 8
+    },
+    {
+      "clip": "wolverine",
+      "default_z_soft_max_slide_m": 0.006264169349653123,
+      "default_z_soft_phase_count": 2,
+      "max_slide_delta_due_to_z_soft_m": 0.0,
+      "phase_count_delta_due_to_z_soft": 0,
+      "z_disabled_max_slide_m": 0.006264169349653123,
+      "z_disabled_phase_count": 2
+    },
+    {
+      "clip": "img1605",
+      "default_z_soft_max_slide_m": 0.006752277456248803,
+      "default_z_soft_phase_count": 3,
+      "max_slide_delta_due_to_z_soft_m": 0.0,
+      "phase_count_delta_due_to_z_soft": 0,
+      "z_disabled_max_slide_m": 0.006752277456248803,
+      "z_disabled_phase_count": 3
+    }
+  ],
+  "schema_version": 1
+}

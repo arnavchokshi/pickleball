@@ -1,0 +1,34 @@
+{
+  "artifact_type": "placement_refinement_determinism",
+  "rows": [
+    {
+      "byte_identical": true,
+      "clip": "burlington",
+      "command": "/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python scripts/racketsport/build_refined_placement.py --skeleton /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/burlington/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/skeleton3d.json --tracks /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/burlington/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/tracks.json --phases /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_footattr_fix_20260707/skeleton_direct/burlington/foot_contact_phases.json --out /Users/arnavchokshi/Desktop/pickleball/runs/lanes/trackI_placefuse_20260716/burlington/placement_trajectory_refined.json",
+      "first_md5": "72752d54e1546cd7af36c648a335c799",
+      "second_md5": "72752d54e1546cd7af36c648a335c799"
+    },
+    {
+      "byte_identical": true,
+      "clip": "outdoor",
+      "command": "/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python scripts/racketsport/build_refined_placement.py --skeleton /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/outdoor/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/skeleton3d.json --tracks /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/outdoor/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/tracks.json --phases /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_footattr_fix_20260707/skeleton_direct/outdoor/foot_contact_phases.json --out /Users/arnavchokshi/Desktop/pickleball/runs/lanes/trackI_placefuse_20260716/outdoor/placement_trajectory_refined.json",
+      "first_md5": "12ce04b54c4031b6abd231b093ef840a",
+      "second_md5": "12ce04b54c4031b6abd231b093ef840a"
+    },
+    {
+      "byte_identical": true,
+      "clip": "wolverine",
+      "command": "/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python scripts/racketsport/build_refined_placement.py --skeleton /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/wolverine/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/skeleton3d.json --tracks /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/wolverine/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/tracks.json --phases /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_footattr_fix_20260707/skeleton_direct/wolverine/foot_contact_phases.json --out /Users/arnavchokshi/Desktop/pickleball/runs/lanes/trackI_placefuse_20260716/wolverine/placement_trajectory_refined.json",
+      "first_md5": "356692b3eaedcd2d6450d18c6d9a98a4",
+      "second_md5": "356692b3eaedcd2d6450d18c6d9a98a4"
+    },
+    {
+      "byte_identical": true,
+      "clip": "img1605",
+      "command": "/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python scripts/racketsport/build_refined_placement.py --skeleton /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/img1605/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b/skeleton3d.json --tracks /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/img1605/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b/tracks.json --phases /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_footattr_fix_20260707/skeleton_direct/img1605/foot_contact_phases.json --out /Users/arnavchokshi/Desktop/pickleball/runs/lanes/trackI_placefuse_20260716/img1605/placement_trajectory_refined.json",
+      "first_md5": "d2c31fe81f26751c2ae3a1e6216b28e4",
+      "second_md5": "d2c31fe81f26751c2ae3a1e6216b28e4"
+    }
+  ],
+  "schema_version": 1
+}

@@ -1,0 +1,307 @@
+{
+  "accepted_phase": {
+    "max_slide_m": 0.048380190412025174,
+    "median_phase_slide_m": 0.010903248808226379,
+    "p95_slide_m": 0.04463249625164529,
+    "per_phase": [
+      {
+        "end_frame_index": 59,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9128051400184631,
+        "player_id": "1",
+        "slide_m": 0.010779906085227962,
+        "start_frame_index": 58
+      },
+      {
+        "end_frame_index": 21,
+        "foot": "right",
+        "frame_count": 4,
+        "min_confidence": 0.9367968440055847,
+        "player_id": "1",
+        "slide_m": 0.010903248808226379,
+        "start_frame_index": 18
+      },
+      {
+        "end_frame_index": 75,
+        "foot": "right",
+        "frame_count": 4,
+        "min_confidence": 0.9136648178100586,
+        "player_id": "1",
+        "slide_m": 0.048380190412025174,
+        "start_frame_index": 72
+      }
+    ],
+    "phase_count": 3,
+    "phase_frame_count": 10
+  },
+  "artifact_type": "placement_slide_validation",
+  "clip": "img1605",
+  "coordinate_space": "world_court_netcenter_z_up_m",
+  "disagreement_m": {
+    "frozen_windows": {
+      "payload_vs_body_reference": null,
+      "trk_vs_payload": {
+        "count": 10,
+        "median": 0.0415043133860425,
+        "p95": 0.07608456603652841
+      }
+    },
+    "payload_vs_body_reference": null,
+    "trk_vs_payload": {
+      "count": 359,
+      "median": 0.03939842704440032,
+      "p95": 0.13188713725696669
+    }
+  },
+  "distortion_state": {
+    "coefficients_present": true,
+    "declared_evidence_space": "pixels_raw_native",
+    "homography_pixel_convention": "raw_pixels",
+    "homography_projection_applies_distortion": false,
+    "root_projection": "ideal_pinhole_undistorted_native"
+  },
+  "frozen_phase": {
+    "max_slide_m": 0.048380190412025174,
+    "median_phase_slide_m": 0.010903248808226379,
+    "p95_slide_m": 0.04463249625164529,
+    "per_phase": [
+      {
+        "end_frame_index": 59,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9128051400184631,
+        "player_id": "1",
+        "slide_m": 0.010779906085227962,
+        "start_frame_index": 58
+      },
+      {
+        "end_frame_index": 21,
+        "foot": "right",
+        "frame_count": 4,
+        "min_confidence": 0.9367968440055847,
+        "player_id": "1",
+        "slide_m": 0.010903248808226379,
+        "start_frame_index": 18
+      },
+      {
+        "end_frame_index": 75,
+        "foot": "right",
+        "frame_count": 4,
+        "min_confidence": 0.9136648178100586,
+        "player_id": "1",
+        "slide_m": 0.048380190412025174,
+        "start_frame_index": 72
+      }
+    ],
+    "phase_count": 3,
+    "phase_frame_count": 10
+  },
+  "inputs": {
+    "body_reference_skeleton": null,
+    "calibration": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/img1605/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b/court_calibration.json",
+      "sha256": "e2ab042c1ab6a188773d063fa36500792a2ada5ea3b370ccfd0f981536be4cc0"
+    },
+    "keypoints_2d": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/img1605/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b/sam3d_keypoints_2d.json",
+      "sha256": "f7bbfa062e6ed4585ebcf9655e550bdd8dc7692abc6a31b09e6abc15e95d080f"
+    },
+    "phases": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_footattr_fix_20260707/skeleton_direct/img1605/foot_contact_phases.json",
+      "sha256": "52f1851c989b56279e38e0cd3282fe3e658058766df688a189d515977af7f3bb"
+    },
+    "skeleton": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/img1605/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b/skeleton3d.json",
+      "sha256": "7cd665e88fe703070ec1a1efa7e80df4fefb4d687de69c3c077e60cc9d09ee05"
+    },
+    "tracks": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/img1605/owner_IMG_1605_8a193402780b/owner_IMG_1605_8a193402780b/tracks.json",
+      "sha256": "1e4e9c9aa5c3971afb61e6c589d70ccec8891b5a166f8c41e5be7de5e08555b5"
+    }
+  },
+  "producer": {
+    "accepted_phase_keys": [
+      {
+        "end_frame_index": 59,
+        "foot": "left",
+        "player_id": "1",
+        "start_frame_index": 58
+      },
+      {
+        "end_frame_index": 21,
+        "foot": "right",
+        "player_id": "1",
+        "start_frame_index": 18
+      },
+      {
+        "end_frame_index": 75,
+        "foot": "right",
+        "player_id": "1",
+        "start_frame_index": 72
+      }
+    ],
+    "phase_count": 3,
+    "rejected_phase_count": 19,
+    "rejected_phases": [
+      {
+        "end_frame_index": 35,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 9
+      },
+      {
+        "end_frame_index": 40,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 38
+      },
+      {
+        "end_frame_index": 52,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 47
+      },
+      {
+        "end_frame_index": 72,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 63
+      },
+      {
+        "end_frame_index": 82,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 76
+      },
+      {
+        "end_frame_index": 66,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 34
+      },
+      {
+        "end_frame_index": 218,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 216
+      },
+      {
+        "end_frame_index": 237,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 236
+      },
+      {
+        "end_frame_index": 255,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 242
+      },
+      {
+        "end_frame_index": 278,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 275
+      },
+      {
+        "end_frame_index": 218,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 217
+      },
+      {
+        "end_frame_index": 240,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 237
+      },
+      {
+        "end_frame_index": 253,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 245
+      },
+      {
+        "end_frame_index": 260,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 259
+      },
+      {
+        "end_frame_index": 272,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 271
+      },
+      {
+        "end_frame_index": 279,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 275
+      },
+      {
+        "end_frame_index": 284,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 283
+      },
+      {
+        "end_frame_index": 289,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 288
+      },
+      {
+        "end_frame_index": 280,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 278
+      }
+    ],
+    "rejected_reasons": {
+      "low_body_contact_confidence": 12,
+      "phase_penetrates_ground": 7
+    },
+    "source": "threed.racketsport.foot_contact.build_body_skeleton_foot_contact_phases"
+  },
+  "reprojection_px": {
+    "count": 718,
+    "evidence_space": "pixels_raw_native",
+    "foot_bbox_fallback_count": 0,
+    "foot_midpoint": {
+      "count": 359,
+      "median": 11.070261574134976,
+      "p95": 32.04795400131899
+    },
+    "median": 31.57657928023481,
+    "p95": 147.3717736776077,
+    "projection_model": "typed court homography for foot midpoint; typed ideal pinhole for root",
+    "root": {
+      "count": 359,
+      "median": 51.22405541889349,
+      "p95": 152.1074195912636
+    }
+  },
+  "schema_version": 1,
+  "world_frame": "court_Z0"
+}

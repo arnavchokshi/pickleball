@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "revision": 12,
-  "updated": "2026-07-13",
+  "revision": 13,
+  "updated": "2026-07-16",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
     "Explicit CLI flag overrides manifest defaults; absent manifest entry is a hard error on decision paths.",
@@ -1091,6 +1091,33 @@
         "byte_parity": "ball_track/predictions/candidates/size_observations all byte-identical flag-on",
         "reviewed_union_gate": "PENDING-owner-review"
       }
+    },
+    "body.placement_trajectory_refine": {
+      "stage": "placement_trajectory_refine",
+      "selection": "plant-aware robust per-player court-frame rigid trajectory candidate",
+      "value": {
+        "enabled": false,
+        "artifact": "placement_trajectory_refined.json",
+        "config": "PlacementTrajectoryConfig schema_v1"
+      },
+      "status": "PENDING",
+      "gate": "independent NS-02 BODY world-placement GT plus current slide/reprojection/phase gates",
+      "provenance": {
+        "lane": "trackI_placefuse_20260716",
+        "date": "2026-07-16",
+        "evidence_paths": [
+          "runs/lanes/trackI_placefuse_20260716/report.json",
+          "runs/lanes/trackI_placefuse_20260716/fused_metrics.json",
+          "runs/lanes/trackI_placefuse_20260716/sensitivity_metrics.json"
+        ]
+      },
+      "proven_against": {
+        "scope": "same four internal eval-only cards",
+        "arm_a_pass": "4/4",
+        "arm_b_max_and_median_improved": "4/4",
+        "independent_gt": false
+      },
+      "notes": "preview_band; do_not_promote; disabled until Track C wiring and independent court-frame GT. VERIFIED=0."
     }
   },
   "selection_constant_coverage": {

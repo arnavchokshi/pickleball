@@ -1,0 +1,1434 @@
+{
+  "accepted_phase": {
+    "max_slide_m": 0.03455377233204998,
+    "median_phase_slide_m": 0.008226890284311238,
+    "p95_slide_m": 0.025578479220722004,
+    "per_phase": [
+      {
+        "end_frame_index": 79,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.910426914691925,
+        "player_id": "2",
+        "slide_m": 0.008285930319614918,
+        "start_frame_index": 76
+      },
+      {
+        "end_frame_index": 130,
+        "foot": "left",
+        "frame_count": 5,
+        "min_confidence": 0.9159528017044067,
+        "player_id": "2",
+        "slide_m": 0.03455377233204998,
+        "start_frame_index": 126
+      },
+      {
+        "end_frame_index": 165,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.9210858345031738,
+        "player_id": "2",
+        "slide_m": 0.01282080971586026,
+        "start_frame_index": 162
+      },
+      {
+        "end_frame_index": 181,
+        "foot": "left",
+        "frame_count": 3,
+        "min_confidence": 0.9168384671211243,
+        "player_id": "2",
+        "slide_m": 0.014417601924195505,
+        "start_frame_index": 179
+      },
+      {
+        "end_frame_index": 245,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9253171682357788,
+        "player_id": "2",
+        "slide_m": 0.001318293320477637,
+        "start_frame_index": 244
+      },
+      {
+        "end_frame_index": 256,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.9231035113334656,
+        "player_id": "2",
+        "slide_m": 0.00816785024900756,
+        "start_frame_index": 253
+      },
+      {
+        "end_frame_index": 388,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9361830949783325,
+        "player_id": "2",
+        "slide_m": 0.0028471264961571316,
+        "start_frame_index": 387
+      },
+      {
+        "end_frame_index": 401,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.9308097958564758,
+        "player_id": "2",
+        "slide_m": 0.000900321657611169,
+        "start_frame_index": 398
+      },
+      {
+        "end_frame_index": 406,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9342547655105591,
+        "player_id": "2",
+        "slide_m": 0.009144416953099472,
+        "start_frame_index": 405
+      },
+      {
+        "end_frame_index": 439,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.9156772494316101,
+        "player_id": "2",
+        "slide_m": 0.018235057584180956,
+        "start_frame_index": 436
+      },
+      {
+        "end_frame_index": 536,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9121530055999756,
+        "player_id": "2",
+        "slide_m": 0.006100164199571192,
+        "start_frame_index": 535
+      },
+      {
+        "end_frame_index": 570,
+        "foot": "left",
+        "frame_count": 3,
+        "min_confidence": 0.9313409924507141,
+        "player_id": "2",
+        "slide_m": 0.005039914314151367,
+        "start_frame_index": 568
+      }
+    ],
+    "phase_count": 12,
+    "phase_frame_count": 39
+  },
+  "artifact_type": "placement_slide_validation",
+  "clip": "burlington",
+  "coordinate_space": "world_court_netcenter_z_up_m",
+  "disagreement_m": {
+    "frozen_windows": {
+      "payload_vs_body_reference": null,
+      "trk_vs_payload": {
+        "count": 39,
+        "median": 0.049704762097374566,
+        "p95": 0.0723765037330151
+      }
+    },
+    "payload_vs_body_reference": null,
+    "trk_vs_payload": {
+      "count": 1785,
+      "median": 0.05693258291929413,
+      "p95": 0.11519095982782472
+    }
+  },
+  "distortion_state": {
+    "coefficients_present": true,
+    "declared_evidence_space": "pixels_raw_native",
+    "homography_pixel_convention": "raw_pixels",
+    "homography_projection_applies_distortion": false,
+    "root_projection": "ideal_pinhole_undistorted_native"
+  },
+  "frozen_phase": {
+    "max_slide_m": 0.03455377233204998,
+    "median_phase_slide_m": 0.008226890284311238,
+    "p95_slide_m": 0.025578479220722004,
+    "per_phase": [
+      {
+        "end_frame_index": 79,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.910426914691925,
+        "player_id": "2",
+        "slide_m": 0.008285930319614918,
+        "start_frame_index": 76
+      },
+      {
+        "end_frame_index": 130,
+        "foot": "left",
+        "frame_count": 5,
+        "min_confidence": 0.9159528017044067,
+        "player_id": "2",
+        "slide_m": 0.03455377233204998,
+        "start_frame_index": 126
+      },
+      {
+        "end_frame_index": 165,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.9210858345031738,
+        "player_id": "2",
+        "slide_m": 0.01282080971586026,
+        "start_frame_index": 162
+      },
+      {
+        "end_frame_index": 181,
+        "foot": "left",
+        "frame_count": 3,
+        "min_confidence": 0.9168384671211243,
+        "player_id": "2",
+        "slide_m": 0.014417601924195505,
+        "start_frame_index": 179
+      },
+      {
+        "end_frame_index": 245,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9253171682357788,
+        "player_id": "2",
+        "slide_m": 0.001318293320477637,
+        "start_frame_index": 244
+      },
+      {
+        "end_frame_index": 256,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.9231035113334656,
+        "player_id": "2",
+        "slide_m": 0.00816785024900756,
+        "start_frame_index": 253
+      },
+      {
+        "end_frame_index": 388,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9361830949783325,
+        "player_id": "2",
+        "slide_m": 0.0028471264961571316,
+        "start_frame_index": 387
+      },
+      {
+        "end_frame_index": 401,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.9308097958564758,
+        "player_id": "2",
+        "slide_m": 0.000900321657611169,
+        "start_frame_index": 398
+      },
+      {
+        "end_frame_index": 406,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9342547655105591,
+        "player_id": "2",
+        "slide_m": 0.009144416953099472,
+        "start_frame_index": 405
+      },
+      {
+        "end_frame_index": 439,
+        "foot": "left",
+        "frame_count": 4,
+        "min_confidence": 0.9156772494316101,
+        "player_id": "2",
+        "slide_m": 0.018235057584180956,
+        "start_frame_index": 436
+      },
+      {
+        "end_frame_index": 536,
+        "foot": "left",
+        "frame_count": 2,
+        "min_confidence": 0.9121530055999756,
+        "player_id": "2",
+        "slide_m": 0.006100164199571192,
+        "start_frame_index": 535
+      },
+      {
+        "end_frame_index": 570,
+        "foot": "left",
+        "frame_count": 3,
+        "min_confidence": 0.9313409924507141,
+        "player_id": "2",
+        "slide_m": 0.005039914314151367,
+        "start_frame_index": 568
+      }
+    ],
+    "phase_count": 12,
+    "phase_frame_count": 39
+  },
+  "inputs": {
+    "body_reference_skeleton": null,
+    "calibration": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/burlington/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/court_calibration.json",
+      "sha256": "aec27ecc0f377ee930f363173032316332811ac573199a633ebe499747abed1d"
+    },
+    "keypoints_2d": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/burlington/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/sam3d_keypoints_2d.json",
+      "sha256": "42e9783201ccf2842dea9e53bf307f05ce6d16b65c7988b277fce396f977b1b2"
+    },
+    "phases": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w4_footattr_fix_20260707/skeleton_direct/burlington/foot_contact_phases.json",
+      "sha256": "a824515455c11735dff4f9610439db6b8772288aa5c7093d03930bab915c2045"
+    },
+    "skeleton": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/burlington/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/skeleton3d.json",
+      "sha256": "a3cb71a75014e2095004b66a666db993fd981cc64efff21b8be27922ee3c6395"
+    },
+    "tracks": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w3_freshworlds_20260707/burlington/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/tracks.json",
+      "sha256": "e9091b95eb716b866c659a0a0f97a03329bb2f3d51c11301f05cc670d8f3dd9c"
+    }
+  },
+  "producer": {
+    "accepted_phase_keys": [
+      {
+        "end_frame_index": 79,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 76
+      },
+      {
+        "end_frame_index": 130,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 126
+      },
+      {
+        "end_frame_index": 165,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 162
+      },
+      {
+        "end_frame_index": 181,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 179
+      },
+      {
+        "end_frame_index": 245,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 244
+      },
+      {
+        "end_frame_index": 256,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 253
+      },
+      {
+        "end_frame_index": 388,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 387
+      },
+      {
+        "end_frame_index": 401,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 398
+      },
+      {
+        "end_frame_index": 406,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 405
+      },
+      {
+        "end_frame_index": 439,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 436
+      },
+      {
+        "end_frame_index": 536,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 535
+      },
+      {
+        "end_frame_index": 570,
+        "foot": "left",
+        "player_id": "2",
+        "start_frame_index": 568
+      }
+    ],
+    "phase_count": 12,
+    "rejected_phase_count": 149,
+    "rejected_phases": [
+      {
+        "end_frame_index": 63,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 62
+      },
+      {
+        "end_frame_index": 68,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 67
+      },
+      {
+        "end_frame_index": 118,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 74
+      },
+      {
+        "end_frame_index": 128,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 123
+      },
+      {
+        "end_frame_index": 134,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 131
+      },
+      {
+        "end_frame_index": 141,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 137
+      },
+      {
+        "end_frame_index": 159,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 145
+      },
+      {
+        "end_frame_index": 171,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 163
+      },
+      {
+        "end_frame_index": 182,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 175
+      },
+      {
+        "end_frame_index": 205,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 204
+      },
+      {
+        "end_frame_index": 213,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 209
+      },
+      {
+        "end_frame_index": 252,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 226
+      },
+      {
+        "end_frame_index": 261,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 259
+      },
+      {
+        "end_frame_index": 295,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 287
+      },
+      {
+        "end_frame_index": 307,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 299
+      },
+      {
+        "end_frame_index": 482,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 467
+      },
+      {
+        "end_frame_index": 494,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 487
+      },
+      {
+        "end_frame_index": 507,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 505
+      },
+      {
+        "end_frame_index": 520,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 519
+      },
+      {
+        "end_frame_index": 543,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 525
+      },
+      {
+        "end_frame_index": 573,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 560
+      },
+      {
+        "end_frame_index": 580,
+        "foot": "left",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 577
+      },
+      {
+        "end_frame_index": 59,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 57
+      },
+      {
+        "end_frame_index": 68,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 65
+      },
+      {
+        "end_frame_index": 118,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 74
+      },
+      {
+        "end_frame_index": 127,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 123
+      },
+      {
+        "end_frame_index": 133,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 132
+      },
+      {
+        "end_frame_index": 142,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 138
+      },
+      {
+        "end_frame_index": 148,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 146
+      },
+      {
+        "end_frame_index": 175,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 152
+      },
+      {
+        "end_frame_index": 187,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 185
+      },
+      {
+        "end_frame_index": 214,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 207
+      },
+      {
+        "end_frame_index": 238,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 231
+      },
+      {
+        "end_frame_index": 259,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 242
+      },
+      {
+        "end_frame_index": 274,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 272
+      },
+      {
+        "end_frame_index": 282,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 279
+      },
+      {
+        "end_frame_index": 295,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 288
+      },
+      {
+        "end_frame_index": 310,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 299
+      },
+      {
+        "end_frame_index": 321,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 318
+      },
+      {
+        "end_frame_index": 476,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 472
+      },
+      {
+        "end_frame_index": 481,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 479
+      },
+      {
+        "end_frame_index": 493,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 486
+      },
+      {
+        "end_frame_index": 511,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 505
+      },
+      {
+        "end_frame_index": 528,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 518
+      },
+      {
+        "end_frame_index": 537,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 535
+      },
+      {
+        "end_frame_index": 542,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 541
+      },
+      {
+        "end_frame_index": 571,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 560
+      },
+      {
+        "end_frame_index": 581,
+        "foot": "right",
+        "player_id": "1",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 579
+      },
+      {
+        "end_frame_index": 8,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 0
+      },
+      {
+        "end_frame_index": 22,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 13
+      },
+      {
+        "end_frame_index": 30,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 25
+      },
+      {
+        "end_frame_index": 38,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 37
+      },
+      {
+        "end_frame_index": 62,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 57
+      },
+      {
+        "end_frame_index": 90,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 89
+      },
+      {
+        "end_frame_index": 110,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 98
+      },
+      {
+        "end_frame_index": 121,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 114
+      },
+      {
+        "end_frame_index": 136,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 135
+      },
+      {
+        "end_frame_index": 158,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 154
+      },
+      {
+        "end_frame_index": 206,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 186
+      },
+      {
+        "end_frame_index": 234,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 232
+      },
+      {
+        "end_frame_index": 298,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 293
+      },
+      {
+        "end_frame_index": 349,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 344
+      },
+      {
+        "end_frame_index": 362,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 357
+      },
+      {
+        "end_frame_index": 377,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 376
+      },
+      {
+        "end_frame_index": 429,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 425
+      },
+      {
+        "end_frame_index": 447,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 442
+      },
+      {
+        "end_frame_index": 460,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 455
+      },
+      {
+        "end_frame_index": 468,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 465
+      },
+      {
+        "end_frame_index": 475,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 474
+      },
+      {
+        "end_frame_index": 494,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 493
+      },
+      {
+        "end_frame_index": 499,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 498
+      },
+      {
+        "end_frame_index": 503,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 502
+      },
+      {
+        "end_frame_index": 518,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 508
+      },
+      {
+        "end_frame_index": 540,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 539
+      },
+      {
+        "end_frame_index": 547,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 546
+      },
+      {
+        "end_frame_index": 576,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 575
+      },
+      {
+        "end_frame_index": 585,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 582
+      },
+      {
+        "end_frame_index": 29,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 0
+      },
+      {
+        "end_frame_index": 47,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 35
+      },
+      {
+        "end_frame_index": 54,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 52
+      },
+      {
+        "end_frame_index": 62,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 59
+      },
+      {
+        "end_frame_index": 84,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 67
+      },
+      {
+        "end_frame_index": 90,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 89
+      },
+      {
+        "end_frame_index": 110,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 98
+      },
+      {
+        "end_frame_index": 120,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 113
+      },
+      {
+        "end_frame_index": 130,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 125
+      },
+      {
+        "end_frame_index": 145,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 135
+      },
+      {
+        "end_frame_index": 156,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 148
+      },
+      {
+        "end_frame_index": 193,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 159
+      },
+      {
+        "end_frame_index": 212,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 196
+      },
+      {
+        "end_frame_index": 221,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 220
+      },
+      {
+        "end_frame_index": 247,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 227
+      },
+      {
+        "end_frame_index": 255,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 252
+      },
+      {
+        "end_frame_index": 298,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 294
+      },
+      {
+        "end_frame_index": 323,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 322
+      },
+      {
+        "end_frame_index": 329,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 326
+      },
+      {
+        "end_frame_index": 339,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 335
+      },
+      {
+        "end_frame_index": 346,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 345
+      },
+      {
+        "end_frame_index": 362,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 357
+      },
+      {
+        "end_frame_index": 400,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 366
+      },
+      {
+        "end_frame_index": 419,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 416
+      },
+      {
+        "end_frame_index": 439,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 433
+      },
+      {
+        "end_frame_index": 453,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 442
+      },
+      {
+        "end_frame_index": 471,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 456
+      },
+      {
+        "end_frame_index": 481,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 480
+      },
+      {
+        "end_frame_index": 492,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 488
+      },
+      {
+        "end_frame_index": 529,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 509
+      },
+      {
+        "end_frame_index": 540,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 535
+      },
+      {
+        "end_frame_index": 552,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 550
+      },
+      {
+        "end_frame_index": 558,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 557
+      },
+      {
+        "end_frame_index": 585,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 563
+      },
+      {
+        "end_frame_index": 597,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 590
+      },
+      {
+        "end_frame_index": 88,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 87
+      },
+      {
+        "end_frame_index": 96,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 91
+      },
+      {
+        "end_frame_index": 140,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 139
+      },
+      {
+        "end_frame_index": 186,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 181
+      },
+      {
+        "end_frame_index": 197,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 195
+      },
+      {
+        "end_frame_index": 201,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 200
+      },
+      {
+        "end_frame_index": 215,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 214
+      },
+      {
+        "end_frame_index": 250,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 248
+      },
+      {
+        "end_frame_index": 279,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 278
+      },
+      {
+        "end_frame_index": 305,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 294
+      },
+      {
+        "end_frame_index": 324,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 311
+      },
+      {
+        "end_frame_index": 401,
+        "foot": "left",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 400
+      },
+      {
+        "end_frame_index": 53,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 52
+      },
+      {
+        "end_frame_index": 57,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 56
+      },
+      {
+        "end_frame_index": 64,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 62
+      },
+      {
+        "end_frame_index": 69,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 67
+      },
+      {
+        "end_frame_index": 89,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 87
+      },
+      {
+        "end_frame_index": 151,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 147
+      },
+      {
+        "end_frame_index": 167,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 162
+      },
+      {
+        "end_frame_index": 250,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 248
+      },
+      {
+        "end_frame_index": 261,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 255
+      },
+      {
+        "end_frame_index": 269,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 265
+      },
+      {
+        "end_frame_index": 280,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 276
+      },
+      {
+        "end_frame_index": 288,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 287
+      },
+      {
+        "end_frame_index": 295,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 294
+      },
+      {
+        "end_frame_index": 300,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 299
+      },
+      {
+        "end_frame_index": 313,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 312
+      },
+      {
+        "end_frame_index": 317,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 316
+      },
+      {
+        "end_frame_index": 326,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 321
+      },
+      {
+        "end_frame_index": 407,
+        "foot": "right",
+        "player_id": "4",
+        "rejection_reason": "phase_penetrates_ground",
+        "start_frame_index": 405
+      },
+      {
+        "end_frame_index": 25,
+        "foot": "left",
+        "player_id": "5",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 24
+      },
+      {
+        "end_frame_index": 32,
+        "foot": "left",
+        "player_id": "5",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 31
+      },
+      {
+        "end_frame_index": 150,
+        "foot": "left",
+        "player_id": "5",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 147
+      },
+      {
+        "end_frame_index": 164,
+        "foot": "left",
+        "player_id": "5",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 160
+      },
+      {
+        "end_frame_index": 153,
+        "foot": "right",
+        "player_id": "5",
+        "rejection_reason": "low_body_contact_confidence",
+        "start_frame_index": 150
+      },
+      {
+        "end_frame_index": 264,
+        "foot": "left",
+        "player_id": "2",
+        "rejection_reason": "simultaneous_bilateral_contact",
+        "start_frame_index": 261
+      },
+      {
+        "end_frame_index": 261,
+        "foot": "right",
+        "player_id": "2",
+        "rejection_reason": "simultaneous_bilateral_contact",
+        "start_frame_index": 260
+      }
+    ],
+    "rejected_reasons": {
+      "low_body_contact_confidence": 27,
+      "phase_penetrates_ground": 120,
+      "simultaneous_bilateral_contact": 2
+    },
+    "source": "threed.racketsport.foot_contact.build_body_skeleton_foot_contact_phases"
+  },
+  "reprojection_px": {
+    "count": 3570,
+    "evidence_space": "pixels_raw_native",
+    "foot_bbox_fallback_count": 0,
+    "foot_midpoint": {
+      "count": 1785,
+      "median": 27.49207021316044,
+      "p95": 51.65024517472285
+    },
+    "median": 72.2669024884388,
+    "p95": 171.98697748728,
+    "projection_model": "typed court homography for foot midpoint; typed ideal pinhole for root",
+    "root": {
+      "count": 1785,
+      "median": 132.57112975440003,
+      "p95": 175.96118236491216
+    }
+  },
+  "schema_version": 1,
+  "world_frame": "court_Z0"
+}

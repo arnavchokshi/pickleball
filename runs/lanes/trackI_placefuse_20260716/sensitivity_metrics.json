@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "artifact_type": "placement_trajectory_sensitivity",
+  "rows": [
+    {
+      "config": "plant_weight_x0.5",
+      "clip": "burlington",
+      "arm_a_max_slide_m": 0.012578614246513135,
+      "arm_b_max_slide_m": 0.014891426609783091,
+      "arm_b_median_phase_slide_m": 0.0037629336643625363,
+      "phase_count": 11,
+      "reprojection_median_px": 72.26755263995307,
+      "reprojection_p95_px": 172.00018045639172
+    },
+    {
+      "config": "plant_weight_x0.5",
+      "clip": "img1605",
+      "arm_a_max_slide_m": 0.010622457555381323,
+      "arm_b_max_slide_m": 0.02089651178906669,
+      "arm_b_median_phase_slide_m": 0.005005311501011413,
+      "phase_count": 3,
+      "reprojection_median_px": 31.510149254583638,
+      "reprojection_p95_px": 147.37144438698584
+    },
+    {
+      "config": "plant_weight_x0.5",
+      "clip": "outdoor",
+      "arm_a_max_slide_m": 0.013920544153655495,
+      "arm_b_max_slide_m": 0.0183751698273676,
+      "arm_b_median_phase_slide_m": 0.004343374667727556,
+      "phase_count": 8,
+      "reprojection_median_px": 55.86532520574515,
+      "reprojection_p95_px": 129.06757597224183
+    },
+    {
+      "config": "plant_weight_x0.5",
+      "clip": "wolverine",
+      "arm_a_max_slide_m": 0.009600409925695485,
+      "arm_b_max_slide_m": 0.009600409925695485,
+      "arm_b_median_phase_slide_m": 0.0068502417357872766,
+      "phase_count": 2,
+      "reprojection_median_px": 75.11746435071153,
+      "reprojection_p95_px": 170.61447164518566
+    },
+    {
+      "config": "plant_weight_x2.0",
+      "clip": "burlington",
+      "arm_a_max_slide_m": 0.0039389779970317946,
+      "arm_b_max_slide_m": 0.005493693794253239,
+      "arm_b_median_phase_slide_m": 0.0013942543793405964,
+      "phase_count": 11,
+      "reprojection_median_px": 72.26755263995307,
+      "reprojection_p95_px": 172.00018045639172
+    },
+    {
+      "config": "plant_weight_x2.0",
+      "clip": "img1605",
+      "arm_a_max_slide_m": 0.0039047637258776253,
+      "arm_b_max_slide_m": 0.007763750234410237,
+      "arm_b_median_phase_slide_m": 0.0019228577058902623,
+      "phase_count": 3,
+      "reprojection_median_px": 31.55687243918169,
+      "reprojection_p95_px": 147.37144438698584
+    },
+    {
+      "config": "plant_weight_x2.0",
+      "clip": "outdoor",
+      "arm_a_max_slide_m": 0.0032666964029922176,
+      "arm_b_max_slide_m": 0.006856198229682697,
+      "arm_b_median_phase_slide_m": 0.0017582586681995696,
+      "phase_count": 8,
+      "reprojection_median_px": 55.86532520574515,
+      "reprojection_p95_px": 129.077015768359
+    },
+    {
+      "config": "plant_weight_x2.0",
+      "clip": "wolverine",
+      "arm_a_max_slide_m": 0.0037014607313048137,
+      "arm_b_max_slide_m": 0.0037014607313048137,
+      "arm_b_median_phase_slide_m": 0.0026161384241210816,
+      "phase_count": 2,
+      "reprojection_median_px": 75.11746435071153,
+      "reprojection_p95_px": 170.61447164518574
+    },
+    {
+      "config": "smoothness_weight_x0.5",
+      "clip": "burlington",
+      "arm_a_max_slide_m": 0.00660082155089028,
+      "arm_b_max_slide_m": 0.009545118325766567,
+      "arm_b_median_phase_slide_m": 0.0024114391448421734,
+      "phase_count": 11,
+      "reprojection_median_px": 72.26755263995307,
+      "reprojection_p95_px": 172.00018045639172
+    },
+    {
+      "config": "smoothness_weight_x0.5",
+      "clip": "img1605",
+      "arm_a_max_slide_m": 0.006850556786339371,
+      "arm_b_max_slide_m": 0.013336297921435425,
+      "arm_b_median_phase_slide_m": 0.003171503914866198,
+      "phase_count": 3,
+      "reprojection_median_px": 31.556897015519137,
+      "reprojection_p95_px": 147.37144438698584
+    },
+    {
+      "config": "smoothness_weight_x0.5",
+      "clip": "outdoor",
+      "arm_a_max_slide_m": 0.005521633126423216,
+      "arm_b_max_slide_m": 0.011756521510582403,
+      "arm_b_median_phase_slide_m": 0.0026958541006446555,
+      "phase_count": 8,
+      "reprojection_median_px": 55.86532520574515,
+      "reprojection_p95_px": 129.06757597224149
+    },
+    {
+      "config": "smoothness_weight_x0.5",
+      "clip": "wolverine",
+      "arm_a_max_slide_m": 0.00605579380606581,
+      "arm_b_max_slide_m": 0.00605579380606581,
+      "arm_b_median_phase_slide_m": 0.004342483714476512,
+      "phase_count": 2,
+      "reprojection_median_px": 75.11746435071153,
+      "reprojection_p95_px": 170.61447164518574
+    },
+    {
+      "config": "smoothness_weight_x2.0",
+      "clip": "burlington",
+      "arm_a_max_slide_m": 0.006945233103344123,
+      "arm_b_max_slide_m": 0.009377299492665952,
+      "arm_b_median_phase_slide_m": 0.0023882710484038564,
+      "phase_count": 11,
+      "reprojection_median_px": 72.26755263995307,
+      "reprojection_p95_px": 172.00018045639172
+    },
+    {
+      "config": "smoothness_weight_x2.0",
+      "clip": "img1605",
+      "arm_a_max_slide_m": 0.006571783291880057,
+      "arm_b_max_slide_m": 0.01340245645073762,
+      "arm_b_median_phase_slide_m": 0.0034039768985496517,
+      "phase_count": 3,
+      "reprojection_median_px": 31.548558203246543,
+      "reprojection_p95_px": 147.37144438698584
+    },
+    {
+      "config": "smoothness_weight_x2.0",
+      "clip": "outdoor",
+      "arm_a_max_slide_m": 0.005744031420618202,
+      "arm_b_max_slide_m": 0.011822120144137194,
+      "arm_b_median_phase_slide_m": 0.003300062517182947,
+      "phase_count": 8,
+      "reprojection_median_px": 55.86532520574515,
+      "reprojection_p95_px": 129.06757597224149
+    },
+    {
+      "config": "smoothness_weight_x2.0",
+      "clip": "wolverine",
+      "arm_a_max_slide_m": 0.006625874156968964,
+      "arm_b_max_slide_m": 0.006625874156968964,
+      "arm_b_median_phase_slide_m": 0.004627523889928089,
+      "phase_count": 2,
+      "reprojection_median_px": 75.11746435071153,
+      "reprojection_p95_px": 170.61447164518574
+    },
+    {
+      "config": "trk_weight_x0.5",
+      "clip": "burlington",
+      "arm_a_max_slide_m": 0.004692477547339617,
+      "arm_b_max_slide_m": 0.006330413162891047,
+      "arm_b_median_phase_slide_m": 0.0016125954369505973,
+      "phase_count": 11,
+      "reprojection_median_px": 72.26749524838863,
+      "reprojection_p95_px": 171.98837824903157
+    },
+    {
+      "config": "trk_weight_x0.5",
+      "clip": "img1605",
+      "arm_a_max_slide_m": 0.004452028464381066,
+      "arm_b_max_slide_m": 0.00906085906465635,
+      "arm_b_median_phase_slide_m": 0.0023128880726037402,
+      "phase_count": 3,
+      "reprojection_median_px": 31.55361439728155,
+      "reprojection_p95_px": 147.37144438698587
+    },
+    {
+      "config": "trk_weight_x0.5",
+      "clip": "outdoor",
+      "arm_a_max_slide_m": 0.0038706056447554192,
+      "arm_b_max_slide_m": 0.00772814819459566,
+      "arm_b_median_phase_slide_m": 0.002193192425270832,
+      "phase_count": 8,
+      "reprojection_median_px": 55.86259418966549,
+      "reprojection_p95_px": 129.0783314695585
+    },
+    {
+      "config": "trk_weight_x0.5",
+      "clip": "wolverine",
+      "arm_a_max_slide_m": 0.00450269633730836,
+      "arm_b_max_slide_m": 0.00450269633730836,
+      "arm_b_median_phase_slide_m": 0.003193866138015327,
+      "phase_count": 2,
+      "reprojection_median_px": 75.11738268954079,
+      "reprojection_p95_px": 170.60350380553476
+    },
+    {
+      "config": "trk_weight_x2.0",
+      "clip": "burlington",
+      "arm_a_max_slide_m": 0.011810997328171983,
+      "arm_b_max_slide_m": 0.014065256516011712,
+      "arm_b_median_phase_slide_m": 0.003543300865015248,
+      "phase_count": 11,
+      "reprojection_median_px": 72.26759090102743,
+      "reprojection_p95_px": 172.00226337019123
+    },
+    {
+      "config": "trk_weight_x2.0",
+      "clip": "img1605",
+      "arm_a_max_slide_m": 0.010079904599534147,
+      "arm_b_max_slide_m": 0.01962111765683926,
+      "arm_b_median_phase_slide_m": 0.004639298471934351,
+      "phase_count": 3,
+      "reprojection_median_px": 31.5301253928356,
+      "reprojection_p95_px": 147.37144438698587
+    },
+    {
+      "config": "trk_weight_x2.0",
+      "clip": "outdoor",
+      "arm_a_max_slide_m": 0.012931571527184407,
+      "arm_b_max_slide_m": 0.017663562765871266,
+      "arm_b_median_phase_slide_m": 0.0039964460393097315,
+      "phase_count": 8,
+      "reprojection_median_px": 55.86714603973607,
+      "reprojection_p95_px": 129.0663126502131
+    },
+    {
+      "config": "trk_weight_x2.0",
+      "clip": "wolverine",
+      "arm_a_max_slide_m": 0.008861500004070029,
+      "arm_b_max_slide_m": 0.008861500004070029,
+      "arm_b_median_phase_slide_m": 0.006360088144560069,
+      "phase_count": 2,
+      "reprojection_median_px": 75.11751884539181,
+      "reprojection_p95_px": 170.6217842994354
+    }
+  ]
+}
