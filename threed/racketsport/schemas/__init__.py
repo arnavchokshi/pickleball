@@ -319,6 +319,30 @@ class CourtCalibrationCoordinateContract(BaseModel):
     homography_pixel_convention: Literal["raw_pixels", "undistorted_pixels"]
 
 
+class CourtCalibrationProvenance(BaseModel):
+    """Reproducibility identity required by preview external-CAL imports."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    method: str = Field(min_length=1)
+    inputs: list[str] = Field(min_length=1)
+    code_identity: str = Field(min_length=1)
+
+    @field_validator("method", "code_identity")
+    @classmethod
+    def _identity_must_not_be_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("calibration provenance identity must not be blank")
+        return value
+
+    @field_validator("inputs")
+    @classmethod
+    def _inputs_must_not_contain_blank_identities(cls, value: list[str]) -> list[str]:
+        if any(not item.strip() for item in value):
+            raise ValueError("calibration provenance inputs must not contain blank identities")
+        return value
+
+
 class CourtCalibration(StrictArtifact):
     sport: Literal["pickleball", "tennis"]
     coordinate_frame: Literal["court_netcenter_z_up_m"] | None = None
@@ -337,6 +361,14 @@ class CourtCalibration(StrictArtifact):
     source: str | None = None
     solved_over_frames: list[int] | None = None
     coordinate_contract: CourtCalibrationCoordinateContract | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    provenance: CourtCalibrationProvenance | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    trust_band: Literal["preview"] | None = Field(
         default=None,
         exclude_if=lambda value: value is None,
     )

@@ -295,6 +295,10 @@ class ManualCalibrationRunner:
         )
 
 
+class ExternalCalibrationPolicyError(ValueError):
+    """A declared external-CAL source violated its source-specific trust contract."""
+
+
 class ExternalCalibrationRunner:
     """Consumes an already-solved ``court_calibration.json``-shaped artifact instead of
     re-deriving one from ``capture_sidecar.json`` manual taps / ARKit keypoints.
@@ -304,10 +308,10 @@ class ExternalCalibrationRunner:
     ``threed.racketsport.court_calibration_metric15.metric_calibration_from_reviewed_keypoints_15pt``,
     which fits real (fx, fy, k1, k2) intrinsics + a `solvePnP` pose from 15 reviewed court
     keypoints instead of the guessed-intrinsics 4-corner PnP `ManualCalibrationRunner` falls
-    back to. Only calibrations whose ``intrinsics.source`` is in ``trusted_intrinsics_sources``
-    are accepted -- this runner exists specifically so a reviewed, real-focal-length
-    calibration can bypass the guessed-intrinsics path, not so any arbitrary
-    externally-produced calibration can skip validation.
+    back to. Only calibrations whose ``intrinsics.source`` is in the reviewed or ruled
+    preview source policy are accepted. The preview class has additional disclosure
+    requirements and a permanent preview trust ceiling; arbitrary externally-produced
+    calibration still cannot skip validation.
 
     court_zones.json/net_plane.json are pure sport-template artifacts (independent of how
     the calibration was solved) and are always regenerated here. court_line_evidence.json
@@ -322,9 +326,15 @@ class ExternalCalibrationRunner:
     real_model = False
     source_mode = "external_metric_calibration"
 
+    METRIC_15PT_REVIEWED_SOURCE = "metric_15pt_reviewed"
+    LINE_EVIDENCE_SOLVED_PREVIEW_SOURCE = "line_evidence_solved_preview"
+
     #: intrinsics.source values accepted as already-reviewed/real (never a guessed-focal
     #: source like "estimated_from_declared_court_corners") -- see court_calibration_metric15.py.
     TRUSTED_INTRINSICS_SOURCES = frozenset({"metric_15pt_reviewed"})
+    PREVIEW_INTRINSICS_SOURCES = frozenset({LINE_EVIDENCE_SOLVED_PREVIEW_SOURCE})
+    EXTERNAL_INTRINSICS_SOURCES = TRUSTED_INTRINSICS_SOURCES | PREVIEW_INTRINSICS_SOURCES
+    REVIEWED_GATE_MARKERS = frozenset({METRIC_15PT_REVIEWED_SOURCE, "reviewed_15pt_correspondences"})
 
     def __init__(self, *, source_path: str | Path, trusted_intrinsics_sources: frozenset[str] | None = None) -> None:
         self.source_path = Path(source_path)
@@ -334,7 +344,24 @@ class ExternalCalibrationRunner:
         if not self.source_path.is_file():
             raise FileNotFoundError(f"--court-calibration artifact not found: {self.source_path}")
 
-        calibration = validate_artifact_file("court_calibration", self.source_path)
+        with self.source_path.open("r", encoding="utf-8") as handle:
+            raw_calibration = json.load(handle)
+        raw_source = raw_calibration.get("source") if isinstance(raw_calibration, Mapping) else None
+        raw_intrinsics = raw_calibration.get("intrinsics") if isinstance(raw_calibration, Mapping) else None
+        raw_intrinsics_source = raw_intrinsics.get("source") if isinstance(raw_intrinsics, Mapping) else None
+        declares_line_evidence_preview = self.LINE_EVIDENCE_SOLVED_PREVIEW_SOURCE in {
+            raw_source,
+            raw_intrinsics_source,
+        }
+        try:
+            calibration = CourtCalibration.model_validate(raw_calibration)
+        except Exception as exc:
+            if declares_line_evidence_preview:
+                raise ExternalCalibrationPolicyError(
+                    f"{self.source_path}: {self.LINE_EVIDENCE_SOLVED_PREVIEW_SOURCE} artifact failed strict "
+                    f"court-calibration schema validation: {exc}"
+                ) from exc
+            raise
         if not isinstance(calibration, CourtCalibration):
             raise ValueError(f"{self.source_path} did not validate as CourtCalibration")
         if calibration.sport != context.sport:
@@ -343,12 +370,19 @@ class ExternalCalibrationRunner:
                 f"the requested sport={context.sport!r}"
             )
         source = calibration.intrinsics.source
-        if source not in self.trusted_intrinsics_sources:
+        source_class = calibration.source
+        if self.LINE_EVIDENCE_SOLVED_PREVIEW_SOURCE in {source, source_class}:
+            self._validate_line_evidence_solved_preview(calibration)
+            calibration.trust_band = "preview"
+        allowed_sources = self.trusted_intrinsics_sources | self.PREVIEW_INTRINSICS_SOURCES
+        if source not in allowed_sources:
             raise ValueError(
                 f"{self.source_path}: intrinsics.source={source!r} is not a trusted external calibration "
-                f"source (expected one of {sorted(self.trusted_intrinsics_sources)}); refusing to consume an "
+                f"source (expected one of {sorted(allowed_sources)}); refusing to consume an "
                 "unreviewed/guessed calibration through --court-calibration"
             )
+
+        is_line_evidence_preview = source == self.LINE_EVIDENCE_SOLVED_PREVIEW_SOURCE
 
         net_plane = build_net_plane(context.sport)
         artifacts: dict[str, Any] = {
@@ -362,13 +396,20 @@ class ExternalCalibrationRunner:
         line_evidence, evidence_notes = _calibration_line_evidence(context, calibration=calibration, net_plane=net_plane)
         _write_json_artifact(context.run_dir / "court_line_evidence.json", line_evidence)
         artifacts["court_line_evidence.json"] = line_evidence
-        # Task #45 S1: `source` has already been checked above to be in
-        # `self.trusted_intrinsics_sources` (metric_15pt_reviewed by default) -- any
-        # calibration that reaches this point is, by construction, trusted. So a
-        # not-ready automatic evidence result downgrades to an advisory note instead of
-        # hard-failing the stage; an untrusted source never gets here at all (it already
-        # raised above), so that path's fail-closed behavior is completely unchanged.
-        advisory_note = _raise_if_video_evidence_not_ready(context, line_evidence, trusted=True)
+        # Task #45 S1 plus the 2026-07-16 preview ruling: reviewed external CAL and the
+        # explicitly opted-in, permanently preview-banded class may treat the future
+        # no-tap evidence signal as advisory. The label below preserves that distinction;
+        # arbitrary unlisted sources still fail before reaching this point.
+        advisory_note = _raise_if_video_evidence_not_ready(
+            context,
+            line_evidence,
+            trusted=True,
+            advisory_source_label=(
+                "explicitly opted-in preview-only external calibration"
+                if is_line_evidence_preview
+                else "reviewed external calibration"
+            ),
+        )
 
         dist = [float(value) for value in (calibration.intrinsics.dist or [])]
         notes = [
@@ -376,6 +417,11 @@ class ExternalCalibrationRunner:
             f"(intrinsics.source={source!r}); PnP/homography re-derivation from manual taps skipped",
             *evidence_notes,
         ]
+        if is_line_evidence_preview:
+            notes.append(
+                "line_evidence_solved_preview is permanently preview-banded and cannot satisfy "
+                "metric_15pt_reviewed source checks or CAL promotion gates"
+            )
         if any(abs(value) > 1e-9 for value in dist):
             notes.append(
                 f"intrinsics.dist is nonzero ({dist}): homography-based footpoint consumers must undistort "
@@ -395,15 +441,53 @@ class ExternalCalibrationRunner:
             stage=self.stage,
             status="ran",
             real_model=self.real_model,
-            source_mode=self.source_mode,
+            source_mode=(
+                "external_line_evidence_solved_preview" if is_line_evidence_preview else self.source_mode
+            ),
             produced_artifacts=tuple(artifacts),
             notes=tuple(notes),
             metrics={
                 **metrics,
                 "intrinsics_source": source,
                 "intrinsics_dist_nonzero": any(abs(value) > 1e-9 for value in dist),
+                **(
+                    {"calibration_source_class": source, "trust_band": "preview"}
+                    if is_line_evidence_preview
+                    else {}
+                ),
             },
         )
+
+    def _validate_line_evidence_solved_preview(self, calibration: CourtCalibration) -> None:
+        source = self.LINE_EVIDENCE_SOLVED_PREVIEW_SOURCE
+        if calibration.source != source or calibration.intrinsics.source != source:
+            raise ExternalCalibrationPolicyError(
+                f"{self.source_path}: {source} must be declared identically in both source and "
+                "intrinsics.source; mixed source identities are refused"
+            )
+        if calibration.coordinate_contract is None:
+            raise ExternalCalibrationPolicyError(
+                f"{self.source_path}: {source} requires coordinate_contract declarations for camera, "
+                "extrinsics, homography spaces, and raw-versus-undistorted pixel state"
+            )
+        has_per_correspondence_residuals = bool(calibration.per_keypoint_residual_px)
+        summary = calibration.reprojection_error_px
+        has_summary_residuals = summary.median is not None and summary.p95 is not None
+        if not (has_per_correspondence_residuals or has_summary_residuals):
+            raise ExternalCalibrationPolicyError(
+                f"{self.source_path}: {source} requires per-correspondence or summary residual diagnostics"
+            )
+        if calibration.provenance is None:
+            raise ExternalCalibrationPolicyError(
+                f"{self.source_path}: {source} requires full provenance with method, inputs, and code_identity"
+            )
+        reasons = frozenset(calibration.capture_quality.reasons)
+        reviewed_markers = self.REVIEWED_GATE_MARKERS & reasons
+        if reviewed_markers:
+            raise ExternalCalibrationPolicyError(
+                f"{self.source_path}: {source} cannot carry reviewed-calibration gate markers "
+                f"{sorted(reviewed_markers)}; refusing a source-class escalation attempt"
+            )
 
 
 class PrecomputedTrackingRunner:
@@ -3020,24 +3104,24 @@ def _unseeded_calibration_line_evidence(context: StageContext) -> tuple[Any, tup
     )
 
 
-def _raise_if_video_evidence_not_ready(context: StageContext, evidence: Any, *, trusted: bool = False) -> str | None:
+def _raise_if_video_evidence_not_ready(
+    context: StageContext,
+    evidence: Any,
+    *,
+    trusted: bool = False,
+    advisory_source_label: str = "trusted, owner-provided calibration",
+) -> str | None:
     """Fail-closed gate on the automatic court-line/net evidence detector.
 
     Task #45 S1: this automatic no-tap evidence detector is a future-facing signal --
     today it cannot reliably see every court's net/lines from a single video (see
     runs/v1_coldstart_20260702T061658Z/summary.json's ``missing_top_net`` finding,
     reproduced across all 4 eval clips regardless of calibration source). When
-    ``trusted`` is True the caller has already established this run's
-    ``court_calibration.json`` came from a real, owner-provided/reviewed source
-    (``ExternalCalibrationRunner`` with an intrinsics.source in
-    ``TRUSTED_INTRINSICS_SOURCES``, or ``ManualCalibrationRunner``'s human-tapped-corners
-    branch) -- for those sources a not-ready automatic evidence result is returned as an
-    advisory note instead of raised, so the one calibration input the current v1
-    owner-tap product path has does not get blocked by a gate designed for a different,
-    not-yet-built no-tap product surface. Untrusted/no-tap calibration (this function
-    called with the default ``trusted=False``) keeps the exact fail-closed behavior this
-    function always had -- see ``ManualCalibrationRunner``'s no-tap ARKit-keypoints
-    branch, which deliberately opts out of ``trusted`` too.
+    ``trusted`` is True the caller has already established that this run may degrade a
+    missing future no-tap signal to an advisory. That includes reviewed/owner-provided
+    sources and the explicitly opted-in, permanently preview-banded external source;
+    ``advisory_source_label`` keeps those trust classes distinct in the emitted note.
+    Untrusted/no-tap calibration (the default) keeps the exact fail-closed behavior.
     """
 
     if _calibration_video_path(context) is None:
@@ -3049,9 +3133,9 @@ def _raise_if_video_evidence_not_ready(context: StageContext, evidence: Any, *, 
     message = f"automatic court evidence not ready for video-backed run: {reasons}"
     if trusted:
         return (
-            f"ADVISORY (not blocking -- trusted calibration source): {message}; the automatic "
-            "no-tap court-evidence detector is not yet a blocking gate for a trusted, "
-            "owner-provided calibration -- see this stage's calibration_confidence metric and "
+            f"ADVISORY (not blocking -- {advisory_source_label}): {message}; the automatic "
+            f"no-tap court-evidence detector is not yet a blocking gate for this {advisory_source_label} -- "
+            "see this stage's calibration_confidence metric and "
             "downstream trust bands for the honest confidence signal instead"
         )
     raise ValueError(message)
