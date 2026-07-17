@@ -2,6 +2,82 @@
   "annotation": {
     "items": [
       {
+        "frame": "frame_000060.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            930.2097902097902,
+            1055.458149373598
+          ],
+          "far_left_corner": [
+            765.3146853146853,
+            1044.1294393624323
+          ],
+          "far_nvz_center": [
+            842.0979020979021,
+            1086.9267882935023
+          ],
+          "far_nvz_left": [
+            655.8041958041958,
+            1063.010622714375
+          ],
+          "near_baseline_center": [
+            268.1118881118881,
+            1278.88548570492
+          ],
+          "near_left_corner": [
+            26.433566433566433,
+            1179.4445867180218
+          ],
+          "near_nvz_center": [
+            682.2377622377622,
+            1139.794101678942
+          ],
+          "near_nvz_left": [
+            455.6643356643357,
+            1099.5142438614641
+          ],
+          "near_nvz_right": [
+            1048.5314685314686,
+            1197.6963972915664
+          ],
+          "near_right_corner": [
+            808.1118881118881,
+            1502.9421948146403
+          ],
+          "net_center": [
+            772.8671328671329,
+            1105.8079716454451
+          ],
+          "net_left_sideline": [
+            566.4335664335664,
+            1079.3743149527254
+          ],
+          "net_right_sideline": [
+            1078.7412587412587,
+            1143.5703383493305
+          ]
+        },
+        "review_id": "img1605_court_keypoints_000060",
+        "status": "reviewed_partial_visible",
+        "visibility_by_keypoint": {
+          "far_baseline_center": "visible",
+          "far_left_corner": "visible",
+          "far_nvz_center": "visible",
+          "far_nvz_left": "visible",
+          "far_nvz_right": "missing_occluded_or_off_frame",
+          "far_right_corner": "missing_occluded_or_off_frame",
+          "near_baseline_center": "visible",
+          "near_left_corner": "visible",
+          "near_nvz_center": "visible",
+          "near_nvz_left": "visible",
+          "near_nvz_right": "visible",
+          "near_right_corner": "visible",
+          "net_center": "visible",
+          "net_left_sideline": "visible",
+          "net_right_sideline": "visible"
+        }
+      },
+      {
         "frame": "frame_000151.jpg",
         "keypoints": {
           "far_baseline_center": [
@@ -80,6 +156,86 @@
           "net_left_sideline": "visible",
           "net_right_sideline": "visible"
         }
+      },
+      {
+        "frame": "frame_000240.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            866.013986013986,
+            1113.9898177646203
+          ],
+          "far_left_corner": [
+            704.8951048951049,
+            1102.6611077534546
+          ],
+          "far_nvz_center": [
+            780.4195804195804,
+            1146.717202241321
+          ],
+          "far_nvz_left": [
+            607.972027972028,
+            1121.5422911053975
+          ],
+          "far_nvz_right": [
+            1035.944055944056,
+            1170.6333678204485
+          ],
+          "far_right_corner": [
+            1067.4125874125873,
+            1132.871001116563
+          ],
+          "near_baseline_center": [
+            186.2937062937063,
+            1350.6339824423023
+          ],
+          "near_nvz_center": [
+            619.3006993006993,
+            1202.102006740353
+          ],
+          "near_nvz_left": [
+            391.46853146853147,
+            1161.8221489228752
+          ],
+          "near_nvz_right": [
+            978.0419580419581,
+            1253.7105745689964
+          ],
+          "near_right_corner": [
+            762.7972027972028,
+            1582.2431648927998
+          ],
+          "net_center": [
+            712.4475524475524,
+            1166.85713115006
+          ],
+          "net_left_sideline": [
+            502.23776223776224,
+            1139.1647289005439
+          ],
+          "net_right_sideline": [
+            1015.8041958041958,
+            1202.102006740353
+          ]
+        },
+        "review_id": "img1605_court_keypoints_000240",
+        "status": "reviewed_partial_visible",
+        "visibility_by_keypoint": {
+          "far_baseline_center": "visible",
+          "far_left_corner": "visible",
+          "far_nvz_center": "visible",
+          "far_nvz_left": "visible",
+          "far_nvz_right": "visible",
+          "far_right_corner": "visible",
+          "near_baseline_center": "visible",
+          "near_left_corner": "missing_occluded_or_off_frame",
+          "near_nvz_center": "visible",
+          "near_nvz_left": "visible",
+          "near_nvz_right": "visible",
+          "near_right_corner": "visible",
+          "net_center": "visible",
+          "net_left_sideline": "visible",
+          "net_right_sideline": "visible"
+        }
       }
     ]
   },
@@ -87,7 +243,7 @@
   "clip": "owner_IMG_1605_8a193402780b",
   "frames": {
     "available_review_frame_count": 3,
-    "frame_count": 1,
+    "frame_count": 3,
     "frame_dir": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames",
     "label_coordinate_space": [
       1080.0,
@@ -101,10 +257,10 @@
   },
   "review": {
     "not_full_metric15_calibration": true,
-    "reviewed_at_utc": "2026-07-03T02:27:41.683768+00:00",
+    "reviewed_at_utc": "2026-07-17T03:39:51.540223+00:00",
     "reviewer": "local_court_keypoint_review",
     "status": "reviewed_partial",
-    "visible_keypoint_frame_count": 1
+    "visible_keypoint_frame_count": 3
   },
   "schema_version": 1
 }
