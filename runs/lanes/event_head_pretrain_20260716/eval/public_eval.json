@@ -1,0 +1,98 @@
+{
+  "artifact_type": "event_head_eval_metrics",
+  "checkpoint": "/home/arnavchokshi/pickleball_g/runs/vm_out/train/best_event_head.pt",
+  "clip_count": 3,
+  "clip_summaries": [
+    {
+      "fps": 25.0,
+      "gt_count": 1,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/home/arnavchokshi/pickleball_g/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 29.970280226798366,
+      "gt_count": 1,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36638804951298,
+        "2": 66.73277609902595
+      },
+      "video": "/home/arnavchokshi/pickleball_g/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2019_womens_osaka_gauff.mp4"
+    },
+    {
+      "fps": 120.0,
+      "gt_count": 1,
+      "prediction_count": 0,
+      "source": "openttgames",
+      "tolerance_ms": {
+        "1": 8.333333333333334,
+        "2": 16.666666666666668
+      },
+      "video": "/home/arnavchokshi/pickleball_g/data/event_public_20260713/openttgames/videos/test_2.mp4"
+    }
+  ],
+  "mode": "public_heldout_slice",
+  "protocol_reference": "third_party/spot@edec4201 util/eval.py; type-aware extension",
+  "schema_version": 1,
+  "sources": [
+    "jhong93_spot",
+    "jhong93_spot",
+    "openttgames"
+  ],
+  "threshold": 0.5,
+  "tolerance_sweep": [
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.0,
+          "fn": 2,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        },
+        "HIT": {
+          "f1": 0.0,
+          "fn": 1,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        }
+      },
+      "tolerance_frames": 1
+    },
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.0,
+          "fn": 2,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        },
+        "HIT": {
+          "f1": 0.0,
+          "fn": 1,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        }
+      },
+      "tolerance_frames": 2
+    }
+  ],
+  "verified": false
+}

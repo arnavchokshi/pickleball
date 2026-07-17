@@ -1,0 +1,381 @@
+{
+  "artifact_type": "event_head_matched_window_eval_diagnostic",
+  "verified": false,
+  "eval_only": true,
+  "never_training": true,
+  "checkpoint": "runs/lanes/event_head_pretrain_20260716/checkpoints/best_event_head.pt",
+  "window_frames": 64,
+  "committed_cli_window_frames": 15,
+  "why": "committed eval_event_head.py hardcodes 15-frame windows; training used 64 \u2014 this re-scores at matched length",
+  "clips_scored": 16,
+  "gt_event_count": 42,
+  "sources": [
+    "jhong93_spot"
+  ],
+  "class_score_distribution": {
+    "max": 0.936639,
+    "p99": 0.418758,
+    "median": 5e-05,
+    "frames_scored": 1024
+  },
+  "threshold_sweep": [
+    {
+      "threshold": 0.5,
+      "prediction_count": 9,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 6,
+              "fp": 0,
+              "fn": 21,
+              "precision": 1.0,
+              "recall": 0.2222,
+              "f1": 0.3636
+            },
+            "BOUNCE": {
+              "tp": 2,
+              "fp": 1,
+              "fn": 13,
+              "precision": 0.6667,
+              "recall": 0.1333,
+              "f1": 0.2222
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 6,
+              "fp": 0,
+              "fn": 21,
+              "precision": 1.0,
+              "recall": 0.2222,
+              "f1": 0.3636
+            },
+            "BOUNCE": {
+              "tp": 3,
+              "fp": 0,
+              "fn": 12,
+              "precision": 1.0,
+              "recall": 0.2,
+              "f1": 0.3333
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 6,
+              "fp": 0,
+              "fn": 21,
+              "precision": 1.0,
+              "recall": 0.2222,
+              "f1": 0.3636
+            },
+            "BOUNCE": {
+              "tp": 3,
+              "fp": 0,
+              "fn": 12,
+              "precision": 1.0,
+              "recall": 0.2,
+              "f1": 0.3333
+            }
+          }
+        }
+      ]
+    },
+    {
+      "threshold": 0.3,
+      "prediction_count": 15,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 7,
+              "fp": 2,
+              "fn": 20,
+              "precision": 0.7778,
+              "recall": 0.2593,
+              "f1": 0.3889
+            },
+            "BOUNCE": {
+              "tp": 2,
+              "fp": 4,
+              "fn": 13,
+              "precision": 0.3333,
+              "recall": 0.1333,
+              "f1": 0.1905
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 7,
+              "fp": 2,
+              "fn": 20,
+              "precision": 0.7778,
+              "recall": 0.2593,
+              "f1": 0.3889
+            },
+            "BOUNCE": {
+              "tp": 5,
+              "fp": 1,
+              "fn": 10,
+              "precision": 0.8333,
+              "recall": 0.3333,
+              "f1": 0.4762
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 9,
+              "fp": 0,
+              "fn": 18,
+              "precision": 1.0,
+              "recall": 0.3333,
+              "f1": 0.5
+            },
+            "BOUNCE": {
+              "tp": 5,
+              "fp": 1,
+              "fn": 10,
+              "precision": 0.8333,
+              "recall": 0.3333,
+              "f1": 0.4762
+            }
+          }
+        }
+      ]
+    },
+    {
+      "threshold": 0.2,
+      "prediction_count": 18,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 7,
+              "fp": 5,
+              "fn": 20,
+              "precision": 0.5833,
+              "recall": 0.2593,
+              "f1": 0.359
+            },
+            "BOUNCE": {
+              "tp": 2,
+              "fp": 4,
+              "fn": 13,
+              "precision": 0.3333,
+              "recall": 0.1333,
+              "f1": 0.1905
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 8,
+              "fp": 4,
+              "fn": 19,
+              "precision": 0.6667,
+              "recall": 0.2963,
+              "f1": 0.4103
+            },
+            "BOUNCE": {
+              "tp": 5,
+              "fp": 1,
+              "fn": 10,
+              "precision": 0.8333,
+              "recall": 0.3333,
+              "f1": 0.4762
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 10,
+              "fp": 2,
+              "fn": 17,
+              "precision": 0.8333,
+              "recall": 0.3704,
+              "f1": 0.5128
+            },
+            "BOUNCE": {
+              "tp": 5,
+              "fp": 1,
+              "fn": 10,
+              "precision": 0.8333,
+              "recall": 0.3333,
+              "f1": 0.4762
+            }
+          }
+        }
+      ]
+    },
+    {
+      "threshold": 0.1,
+      "prediction_count": 18,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 7,
+              "fp": 5,
+              "fn": 20,
+              "precision": 0.5833,
+              "recall": 0.2593,
+              "f1": 0.359
+            },
+            "BOUNCE": {
+              "tp": 2,
+              "fp": 4,
+              "fn": 13,
+              "precision": 0.3333,
+              "recall": 0.1333,
+              "f1": 0.1905
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 8,
+              "fp": 4,
+              "fn": 19,
+              "precision": 0.6667,
+              "recall": 0.2963,
+              "f1": 0.4103
+            },
+            "BOUNCE": {
+              "tp": 5,
+              "fp": 1,
+              "fn": 10,
+              "precision": 0.8333,
+              "recall": 0.3333,
+              "f1": 0.4762
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 10,
+              "fp": 2,
+              "fn": 17,
+              "precision": 0.8333,
+              "recall": 0.3704,
+              "f1": 0.5128
+            },
+            "BOUNCE": {
+              "tp": 5,
+              "fp": 1,
+              "fn": 10,
+              "precision": 0.8333,
+              "recall": 0.3333,
+              "f1": 0.4762
+            }
+          }
+        }
+      ]
+    },
+    {
+      "threshold": 0.05,
+      "prediction_count": 20,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 8,
+              "fp": 6,
+              "fn": 19,
+              "precision": 0.5714,
+              "recall": 0.2963,
+              "f1": 0.3902
+            },
+            "BOUNCE": {
+              "tp": 2,
+              "fp": 4,
+              "fn": 13,
+              "precision": 0.3333,
+              "recall": 0.1333,
+              "f1": 0.1905
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 9,
+              "fp": 5,
+              "fn": 18,
+              "precision": 0.6429,
+              "recall": 0.3333,
+              "f1": 0.439
+            },
+            "BOUNCE": {
+              "tp": 5,
+              "fp": 1,
+              "fn": 10,
+              "precision": 0.8333,
+              "recall": 0.3333,
+              "f1": 0.4762
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 12,
+              "fp": 2,
+              "fn": 15,
+              "precision": 0.8571,
+              "recall": 0.4444,
+              "f1": 0.5854
+            },
+            "BOUNCE": {
+              "tp": 5,
+              "fp": 1,
+              "fn": 10,
+              "precision": 0.8333,
+              "recall": 0.3333,
+              "f1": 0.4762
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "model_config": {
+    "device": "cuda",
+    "weights": "imagenet",
+    "steps": 3956,
+    "image_size": 224,
+    "window_frames": 64,
+    "batch_size": 4,
+    "lr": 0.001,
+    "val_every": 494,
+    "seed": 20260716,
+    "max_wall_minutes": 150.0,
+    "limit_clips": null
+  }
+}

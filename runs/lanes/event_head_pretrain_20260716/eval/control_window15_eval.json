@@ -1,0 +1,381 @@
+{
+  "artifact_type": "event_head_matched_window_eval_diagnostic",
+  "verified": false,
+  "eval_only": true,
+  "never_training": true,
+  "checkpoint": "runs/lanes/event_head_pretrain_20260716/checkpoints/best_event_head.pt",
+  "window_frames": 15,
+  "committed_cli_window_frames": 15,
+  "why": "committed eval_event_head.py hardcodes 15-frame windows; training used 64 \u2014 this re-scores at matched length",
+  "clips_scored": 16,
+  "gt_event_count": 16,
+  "sources": [
+    "jhong93_spot"
+  ],
+  "class_score_distribution": {
+    "max": 0.556457,
+    "p99": 0.441483,
+    "median": 0.005214,
+    "frames_scored": 240
+  },
+  "threshold_sweep": [
+    {
+      "threshold": 0.5,
+      "prediction_count": 2,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 16,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 2,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 16,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 2,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 0,
+              "fp": 0,
+              "fn": 16,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 2,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "threshold": 0.3,
+      "prediction_count": 12,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 16,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 16,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 16,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "threshold": 0.2,
+      "prediction_count": 12,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 16,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 16,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 16,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 6,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "threshold": 0.1,
+      "prediction_count": 31,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 6,
+              "fp": 16,
+              "fn": 10,
+              "precision": 0.2727,
+              "recall": 0.375,
+              "f1": 0.3158
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 9,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 6,
+              "fp": 16,
+              "fn": 10,
+              "precision": 0.2727,
+              "recall": 0.375,
+              "f1": 0.3158
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 9,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 6,
+              "fp": 16,
+              "fn": 10,
+              "precision": 0.2727,
+              "recall": 0.375,
+              "f1": 0.3158
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 9,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "threshold": 0.05,
+      "prediction_count": 34,
+      "tolerances": [
+        {
+          "tolerance_frames": 1,
+          "per_class": {
+            "HIT": {
+              "tp": 6,
+              "fp": 16,
+              "fn": 10,
+              "precision": 0.2727,
+              "recall": 0.375,
+              "f1": 0.3158
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 12,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 2,
+          "per_class": {
+            "HIT": {
+              "tp": 6,
+              "fp": 16,
+              "fn": 10,
+              "precision": 0.2727,
+              "recall": 0.375,
+              "f1": 0.3158
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 12,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        },
+        {
+          "tolerance_frames": 5,
+          "per_class": {
+            "HIT": {
+              "tp": 6,
+              "fp": 16,
+              "fn": 10,
+              "precision": 0.2727,
+              "recall": 0.375,
+              "f1": 0.3158
+            },
+            "BOUNCE": {
+              "tp": 0,
+              "fp": 12,
+              "fn": 0,
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "model_config": {
+    "device": "cuda",
+    "weights": "imagenet",
+    "steps": 3956,
+    "image_size": 224,
+    "window_frames": 64,
+    "batch_size": 4,
+    "lr": 0.001,
+    "val_every": 494,
+    "seed": 20260716,
+    "max_wall_minutes": 150.0,
+    "limit_clips": null
+  }
+}

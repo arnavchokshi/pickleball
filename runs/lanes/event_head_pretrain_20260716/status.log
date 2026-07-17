@@ -1,0 +1,100 @@
+2026-07-16T16:48:24Z AUTH_OK account=hello@swayformations.com project=gifted-electron-498923-h1 config=sway-gcp-cutover
+2026-07-16T16:48:38Z PROVISION_ATTEMPT reuse pickleball-a100-fleet1 zone=asia-southeast1-a
+2026-07-16T16:48:53Z PROVISION_RESULT reuse pickleball-a100-fleet1 FAILED stockout ZONE_RESOURCE_POOL_EXHAUSTED asia-southeast1-a
+2026-07-16T16:52:36Z PROVISION_ATTEMPT fallback pickleball-l4-eventhead zone=us-central1-a g2-standard-8 image=pytorch-2-9-cu129-ubuntu-2204-nvidia-580(substituted for unavailable common-cu124/common-gpu-debian-11)
+2026-07-16T16:52:48Z PROVISION_RESULT fallback pickleball-l4-eventhead us-central1-a FAILED stockout ZONE_RESOURCE_POOL_EXHAUSTED
+2026-07-16T16:54:54Z PROVISION_ATTEMPT fallback pickleball-l4-eventhead zone=us-central1-b g2-standard-8
+2026-07-16T16:55:10Z PROVISION_RESULT fallback pickleball-l4-eventhead us-central1-b FAILED stockout ZONE_RESOURCE_POOL_EXHAUSTED
+2026-07-16T16:57:16Z PROVISION_ATTEMPT fallback pickleball-l4-eventhead zone=us-central1-c g2-standard-8
+2026-07-16T16:58:24Z PROVISION_RESULT fallback pickleball-l4-eventhead us-central1-c FAILED stockout ZONE_RESOURCE_POOL_EXHAUSTED
+2026-07-16T16:58:24Z BLOCKED_ON_PROVISION full spec'd ladder exhausted: reuse pickleball-a100-fleet1(asia-southeast1-a) stockout; fresh L4 g2-standard-8 usc1-a/-b/-c all stockout (ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS/reason=stockout). No spec-authorized zones/SKUs remain. Not expanding ladder without manager amendment (no retry storms rule). Stopping at provision gate per fleet precedent (see trk_detbench_20260716 dispatch-1 NO-ATTEMPT same-day pattern).
+2026-07-16T16:58:53Z CODE_GREEN_SEEN marker present, ruled ADOPT 2026-07-16T09:49:54-0700 by G2 manager
+2026-07-16T16:59:15Z TEARDOWN_DONE no VM ever entered RUNNING state (all provision attempts stockout); nothing to delete/stop; fleet reconciliation: instances list = {pickleball-h100-detbench RUNNING us-central1-a (Track F, untouched), pickleball-a100-fleet1 TERMINATED asia-southeast1-a (untouched, label unchanged, disk intact)}; disks list = {pickleball-h100-detbench 200GB pd-balanced READY, pickleball-a100-fleet1 200GB pd-standard READY} = 0 lane-created disks. Cost $0.00, 0 GPU-hours.
+2026-07-16T17:00:47Z AMENDMENT_1_RECEIVED expanded provision ladder authorized by G2 manager: Round A L4 (usc1-a retry, use1-b/c/d, usw1-a/b, euw4-b), Round B T4 (usc1-b/f, use1-c, usw1-b), Round C A100 fresh (usc1-a/c, ase1-b) + reuse-retry pickleball-a100-fleet1(ase1-a); 120s backoff, ~45min total wall cap, stop-on-first-RUNNING.
+2026-07-16T17:01:13Z PROVISION_ATTEMPT roundA-L4 pickleball-l4-eventhead zone=us-central1-a type=g2-standard-8
+2026-07-16T17:01:28Z PROVISION_RESULT FAILED roundA-L4 pickleball-l4-eventhead zone=us-central1-a reason: stockout message: A g2-standard-8 VM instance with 1 nvidia-l4 accelerator(s) is currently
+2026-07-16T17:03:28Z PROVISION_ATTEMPT roundA-L4 pickleball-l4-eventhead zone=us-east1-b type=g2-standard-8
+2026-07-16T17:03:40Z PROVISION_RESULT FAILED roundA-L4 pickleball-l4-eventhead zone=us-east1-b reason: stockout message: A g2-standard-8 VM instance with 1 nvidia-l4 accelerator(s) is currently
+2026-07-16T17:05:40Z PROVISION_ATTEMPT roundA-L4 pickleball-l4-eventhead zone=us-east1-c type=g2-standard-8
+2026-07-16T17:05:54Z PROVISION_RESULT FAILED roundA-L4 pickleball-l4-eventhead zone=us-east1-c reason: stockout message: A g2-standard-8 VM instance with 1 nvidia-l4 accelerator(s) is currently
+2026-07-16T17:07:05Z RAIL_WATCHER_STARTED independent rail-armer polling for lane VM RUNNING (cap 4500s)
+2026-07-16T17:07:13Z SAFETY_GAP_CLOSED per manager directive: independent background rail-armer watcher launched (logs/rail_armer_watcher.sh). It polls every 20s for any fable-lane=event_head_pretrain_20260716 VM in RUNNING state, arms 'sudo shutdown -P +330' + idle watchdog over SSH as its FIRST action on detection, logs RAIL_ARMED with RUNNING->armed latency, and fail-closes (DELETE, or STOP for a100-fleet1) if arming fails within 8 min. This covers any ladder rung succeeding while the agent is between turns. Ladder rung results already stream to this log via the ladder script's own logger.
+2026-07-16T17:07:54Z PROVISION_ATTEMPT roundA-L4 pickleball-l4-eventhead zone=us-east1-d type=g2-standard-8
+2026-07-16T17:08:06Z PROVISION_RESULT FAILED roundA-L4 pickleball-l4-eventhead zone=us-east1-d reason: stockout message: A g2-standard-8 VM instance with 1 nvidia-l4 accelerator(s) is currently
+2026-07-16T17:10:06Z PROVISION_ATTEMPT roundA-L4 pickleball-l4-eventhead zone=us-west1-a type=g2-standard-8
+2026-07-16T17:10:15Z PROVISION_RESULT FAILED roundA-L4 pickleball-l4-eventhead zone=us-west1-a reason: stockout message: A g2-standard-8 VM instance with 1 nvidia-l4 accelerator(s) is currently
+2026-07-16T17:12:15Z PROVISION_ATTEMPT roundA-L4 pickleball-l4-eventhead zone=us-west1-b type=g2-standard-8
+2026-07-16T17:12:26Z PROVISION_RESULT FAILED roundA-L4 pickleball-l4-eventhead zone=us-west1-b reason: stockout message: A g2-standard-8 VM instance with 1 nvidia-l4 accelerator(s) is currently
+2026-07-16T17:14:26Z PROVISION_ATTEMPT roundA-L4 pickleball-l4-eventhead zone=europe-west4-b type=g2-standard-8
+2026-07-16T17:14:38Z PROVISION_RESULT FAILED roundA-L4 pickleball-l4-eventhead zone=europe-west4-b reason: stockout message: A g2-standard-8 VM instance with 1 nvidia-l4 accelerator(s) is currently
+2026-07-16T17:16:38Z PROVISION_ATTEMPT roundB-T4 pickleball-t4-eventhead zone=us-central1-b type=n1-standard-8
+2026-07-16T17:17:21Z PROVISION_RESULT SUCCESS roundB-T4 pickleball-t4-eventhead zone=us-central1-b type=n1-standard-8 band=$0.2-0.4/hr -- RUNNING (stopping ladder)
+Created [https://www.googleapis.com/compute/v1/projects/gifted-electron-498923-h1/zones/us-central1-b/instances/pickleball-t4-eventhead].
+WARNING: Some requests generated warnings:
+ - Disk size: '200 GB' is larger than image size: '100 GB'. You might need to resize the root repartition manually if the operating system does not support automatic resizing. See https://cloud.google.com/compute/docs/disks/add-persistent-disk#resize_pd for details.
+
+NAME                     ZONE           MACHINE_TYPE   PREEMPTIBLE  INTERNAL_IP    EXTERNAL_IP   STATUS
+pickleball-t4-eventhead  us-central1-b  n1-standard-8  true         10.128.15.201  34.29.115.43  RUNNING
+2026-07-16T17:17:42Z RAIL_WATCHER_DETECTED pickleball-t4-eventhead zone=us-central1-b RUNNING; beginning SSH arm attempts
+2026-07-16T17:18:07Z RUNNING pickleball-t4-eventhead zone=us-central1-b type=n1-standard-8+1xT4 spot band=$0.2-0.4/hr created=2026-07-16T17:17:21Z (roundB-T4 rung 8; rounds A L4 all 7 zones stockout)
+2026-07-16T17:26:50Z ERROR_RAIL_ARM_FAILED pickleball-t4-eventhead zone=us-central1-b could not arm rail in 480s -> DELETED per spec fail-closed rule
+2026-07-16T17:28:37Z ERROR_ANALYSIS rail-arm SSH probes failed 480s w/ discarded stderr (watcher design flaw); known_hosts mtime shows host-key exchange happened => TCP ok, auth/exec layer suspect. VM deleted fail-closed (~9.5min T4 ≈ $0.03-0.06 spend). Re-provisioning same winning rung (T4 usc1-b) with interactive diagnosis + manual rail arm this time.
+2026-07-16T17:28:57Z PROVISION_ATTEMPT re-create pickleball-t4-eventhead zone=us-central1-b n1-standard-8+T4 (rung that won at 17:17:21Z)
+2026-07-16T17:30:36Z AMENDMENT_2_RECEIVED boot-armed rail via startup script; discarding the just-recreated unrailed VM (created 17:28:57Z pre-amendment) and re-provisioning with railed startup script. Estimated spend so far: VM1 9.5min + VM2 ~3min of T4 spot band $0.2-0.4/hr ≈ $0.04-0.08 against $10 cap.
+2026-07-16T17:31:44Z PRE_REATTEMPT_CLEAN instances: only a100-fleet1 TERMINATED remains (detbench deleted by its own lane if absent); disks: 0 lane disks (verified)
+2026-07-16T17:32:29Z PROVISION_ATTEMPT railed re-create pickleball-t4-eventhead zone=us-central1-b n1-standard-8+T4 startup=lane_vm_startup_railed.sh (boot-armed rail per AMENDMENT 2)
+2026-07-16T17:33:56Z RAIL_VERIFY_STARTED pickleball-t4-eventhead zone=us-central1-b (ssh every 20s, 20min cap, serial-port fallback)
+2026-07-16T17:34:01Z RAIL_ARMED pickleball-t4-eventhead boot-armed rail verified: shutdown scheduled MODE=poweroff (+330 from boot), /var/log/fable_rail.log rail_armed_at_boot + idle_watchdog_installed, watchdog pid(s)=--- 2026-07-16T17:33:39Z rail_armed_at_boot +330 2026-07-16T17:33:39Z idle_watchdog_installed pid=1134 --- 1134 1290  RUNNING->verified latency_s=0
+2026-07-16T17:34:50Z GPU_VERIFY starting nvidia-smi + torch CUDA check, then data staging
+2026-07-16T17:35:41Z GPU_VERIFIED Tesla T4 15360MiB driver 580.159.03, torch 2.9.1+cu129 cuda_avail=True. Starting data staging.
+2026-07-16T17:35:44Z DATA_LABELS_TAR built 2.0M md5=8075bee190a3e3ec9ffc20ebf5533efc
+2026-07-16T17:36:52Z DATA_LABELS_TAR built 2.0M md5=8075bee190a3e3ec9ffc20ebf5533efc
+2026-07-16T17:36:57Z DATA_LABELS_SHIPPED
+2026-07-16T17:39:21Z DATA_JHONG_VIDEOS_SHIPPED rsync attempt=1
+2026-07-16T17:39:29Z DATA_OPENTT_VMFETCH_INCOMPLETE falling back to rsync from Mac (game_4 3.9GB + test_2 225MB)
+2026-07-16T17:49:15Z DATA_OPENTT_VIDEOS_READY
+2026-07-16T17:49:20Z DATA_PBVISION_VMFETCH_SHA_MISMATCH_OR_FAIL falling back to scp of local verified file
+2026-07-16T17:49:36Z DATA_PBVISION_READY sha256 verified 272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383
+2026-07-16T17:49:36Z DATA_STAGED all label + video staging complete
+2026-07-16T17:50:41Z CODE_SHIPPED train_event_head.py=e68fb6e95cf9fe929a5ea4fd73acb305 build_event_head_anchor_candidates.py=4eb47fdfda64e50015ad4fa9bd70cb64 (all 9 files matched CODE_GREEN pins at ship time)
+2026-07-16T17:51:02Z VM_ENV_READY mac_head=509ca271b63a4630ebd58065dca706f90ef35401 (vm mirror git-init'd; true provenance is mac HEAD)
+2026-07-16T17:51:11Z TRAIN_STARTED vm_run_all.sh launched nohup-detached on pickleball-t4-eventhead
+2026-07-16T17:53:27Z ERROR_BUILDER_APPLEDOUBLE macOS ._* AppleDouble files in label tar broke shuttleset csv glob (UnicodeDecodeError). Fixed: deleted all ._*/.DS_Store on VM, relaunched vm_run_all.sh detached. Watchdog idle window was not exceeded.
+2026-07-16T17:55:30Z BUILDER_RECONCILED VM manifest totals == Mac scaffold manifest_a.json exactly: jhong93 3445rows/641media/33791ev, openttgames 12/2/4271, shuttleset 104/0/36484. Probe running.
+2026-07-16T17:58:22Z ERROR_AV1_DECODE VM cv2 (bundled ffmpeg) cannot decode AV1; 5 of 6 jhong93 pilot videos are AV1 (only usopen_2020 is h264). dav1d/libaom force via OPENCV_FFMPEG_CAPTURE_OPTIONS both failed. FIX: Mac-side transcode of the 5 AV1 files to h264 (frame-count preserving, -an, videotoolbox), rsync each to VM as it completes, then relaunch run. Mac originals untouched.
+2026-07-17T03:28:25Z RESUMED_POST_FREEZE lane resumed after ~9.5h Mac freeze (frozen ~18:0xZ Jul16 during AV1 transcode fix; owner restored ~03:25Z Jul17). Backfill of lost /tmp shadow log from agent memory: at ~18:05Z Jul16 the Mac hit a full directory-services lockout (Desktop tree EPERM from Bash AND Read tools; getpwuid 'No user exists for uid 501'; getaddrinfo dead; raw TCP OK) -> no path to VM; VM idle watchdog then powered it off as designed. PERMISSION_DENIED (OS-level EPERM, backfilled verbatim): "tail -2 .../status.log" and Read tool open .../status.log. Pre-freeze VM state: staging complete, code shipped (all 9 pins matched), builder reconciled, 4/5 AV1 videos replaced h264, 5th pending, training not running.
+2026-07-17T03:28:25Z AUTH_OK post-freeze account=hello@swayformations.com; RECONCILE list: pickleball-t4-eventhead TERMINATED usc1-b (disk intact) + pickleball-a100-fleet1 TERMINATED ase1-a; 0 running fleet VMs — matches manager expectation.
+2026-07-17T03:28:25Z PROVISION_ATTEMPT restart pickleball-t4-eventhead us-central1-b (manager resume step 2; railed startup re-arms at boot)
+2026-07-17T03:29:07Z TRANSCODE_DONE_MGR wimbledon_2019_womens_final_halep_williams.mp4 frames=87151 (h264, -an, originals untouched)
+2026-07-17T03:29:18Z RUNNING pickleball-t4-eventhead restarted, new external IP 34.63.126.127 (recycled-IP policy noted). Verifying rail re-arm.
+2026-07-17T03:29:18Z RAIL_VERIFY_STARTED pickleball-t4-eventhead zone=us-central1-b (ssh every 20s, 20min cap, serial-port fallback)
+2026-07-17T03:29:29Z RAIL_ARMED pickleball-t4-eventhead boot-armed rail verified: shutdown scheduled MODE=poweroff (+330 from boot), /var/log/fable_rail.log rail_armed_at_boot + idle_watchdog_installed, watchdog pid(s)=--- 2026-07-17T03:29:26Z rail_armed_at_boot +330 2026-07-17T03:29:26Z idle_watchdog_installed pid=956 --- 956 1075  RUNNING->verified latency_s=0
+2026-07-17T03:30:58Z DATA_SURVIVED disk spot-checks all pass: train_event_head.py md5 e68fb6e9... + build_event_head_anchor_candidates.py 4eb47fdf... match CODE_GREEN pins; pbvision max.mp4 sha256 272a2132... verified; 12 events_markup.json + 106 shuttleset csvs + jhong93 tennis labels present; OpenTT game_4+test_2 intact; 0 AppleDouble remnants. GROUND-TRUTH CORRECTION: VM videos_pilot file sizes == original AV1 sizes; NO transcoded file ever shipped pre-freeze (pre-freeze '4/5 shipped' belief was wrong; no TRANSCODE_SHIPPED lines exist). Shipping all 5 as manager transcodes complete.
+2026-07-17T03:32:10Z TRANSCODE_DONE_MGR usopen_2021_womens_semifinal_raducanu_sakkari.mp4 frames=134776 (h264, -an, originals untouched)
+2026-07-17T03:35:43Z TRANSCODE_DONE_MGR usopen_2019_womens_osaka_gauff.mp4 frames=119798 (h264, -an, originals untouched)
+2026-07-17T03:36:37Z ERROR_SHIP_SCRIPT_BASH32 first ship loop died instantly (declare -A unsupported on macOS bash 3.2, ran 7 min as zombie); rewritten bash-3.2-compatible and relaunched. 4/5 files ready to ship now.
+2026-07-17T03:37:31Z TRANSCODE_SHIPPED usopen_2019_womens_round1_williams_sharapova.mp4 (376M) -> VM videos_pilot (h264 over AV1, VM copy only)
+2026-07-17T03:38:46Z TRANSCODE_SHIPPED wimbledon_2019_womens_final_halep_williams.mp4 (416M) -> VM videos_pilot (h264 over AV1, VM copy only)
+2026-07-17T03:39:32Z TRANSCODE_DONE_MGR wimbledon_2019_womens_round1_gauff_williams.mp4 frames=126945 (h264, -an, originals untouched)
+2026-07-17T03:39:33Z TRANSCODE_PREFREEZE_VERIFIED usopen_2019_womens_round1_williams_sharapova.mp4 frames=94234
+2026-07-17T03:39:33Z TRANSCODE_MGR_BATCH_COMPLETE
+2026-07-17T03:40:56Z TRANSCODE_SHIPPED usopen_2021_womens_semifinal_raducanu_sakkari.mp4 (537M) -> VM videos_pilot (h264 over AV1, VM copy only)
+2026-07-17T03:41:55Z TRANSCODE_SHIPPED usopen_2019_womens_osaka_gauff.mp4 (477M) -> VM videos_pilot (h264 over AV1, VM copy only)
+2026-07-17T03:43:19Z TRANSCODE_SHIPPED wimbledon_2019_womens_round1_gauff_williams.mp4 (607M) -> VM videos_pilot (h264 over AV1, VM copy only)
+2026-07-17T03:43:39Z TRANSCODE_ALL_SHIPPED 5/5 h264 files on VM
+2026-07-17T03:44:04Z RUN_RELAUNCHED vm_run_all.sh nohup-detached post-freeze (cv2 sanity passed: h264 open/decode/seek OK, nb_frames 94234 == original, fps 29.97). Builder -> probe -> cap-formula train -> public eval -> anchors. Rail window: poweroff 08:59Z.
+2026-07-17T03:49:00Z PROBE 0.4396 steps/s (100-step probe, T4, batch4 x window64 @224, imagenet init); chosen step cap 3956 = min(20000, floor(2.5h*3600*0.4396)); val_every=494 (8 evals)
+2026-07-17T03:49:00Z TRAIN_STARTED 3956 steps, --max-wall-minutes 150, ETA train done ~06:18Z then public eval + anchors ~06:50Z; rail poweroff 08:59Z (margin ~2h)
+2026-07-17T03:49:29Z SPEND_CHECKPOINT ~$0.10-0.15 compute (3 short pre-freeze T4 sessions + 20min current) + ~$0.26 disk (9.5h frozen TERMINATED, 200GB pd-balanced) ≈ $0.40 booked; projected end-to-end ≈ $1.40-1.60 vs $10 cap. (SendMessage to manager unreachable; this log is the report channel.)
+2026-07-17T04:09:39Z TRAIN_PROGRESS 2026-07-17T03:48:07Z TRAIN_START steps=3956 val_every=494 (cap formula min(20000, floor(2.5h*3600*0.43962684240456207)))|04:01Z /home/arnavchokshi/pickleball_g/runs/vm_out/train/best_event_head.pt|04:01Z /home/arnavchokshi/pickleball_g/runs/vm_out/train/last_event_head.pt|0 %|
+2026-07-17T04:16:00Z BLOCKED_TRANSCODE_SHIP only 0/5 shipped within 45min cap
+2026-07-17T04:16:30Z CORRECTION the 04:16:00Z BLOCKED_TRANSCODE_SHIP line is FALSE — written by the zombie first ship script (bash-3.2 declare -A failure, kept looping with broken state until its 45min deadline). Ground truth: rewritten loop shipped 5/5 (TRANSCODE_SHIPPED lines 03:37-03:43Z, .shipped markers on disk), cv2 sanity passed, training started 03:48Z and is running. No block exists.
+2026-07-17T04:29:42Z TRAIN_PROGRESS 2026-07-17T03:48:07Z TRAIN_START steps=3956 val_every=494 (cap formula min(20000, floor(2.5h*3600*0.43962684240456207)))|04:26Z /home/arnavchokshi/pickleball_g/runs/vm_out/train/best_event_head.pt|04:26Z /home/arnavchokshi/pickleball_g/runs/vm_out/train/last_event_head.pt|0 %|
+2026-07-17T05:09:53Z TRAIN_PROGRESS 2026-07-17T03:48:07Z TRAIN_START steps=3956 val_every=494 (cap formula min(20000, floor(2.5h*3600*0.43962684240456207)))|04:39Z /home/arnavchokshi/pickleball_g/runs/vm_out/train/best_event_head.pt|05:06Z /home/arnavchokshi/pickleball_g/runs/vm_out/train/last_event_head.pt|0 %|
+2026-07-17T05:29:57Z TRAIN_PROGRESS 2026-07-17T03:48:07Z TRAIN_START steps=3956 val_every=494 (cap formula min(20000, floor(2.5h*3600*0.43962684240456207)))|04:39Z /home/arnavchokshi/pickleball_g/runs/vm_out/train/best_event_head.pt|05:19Z /home/arnavchokshi/pickleball_g/runs/vm_out/train/last_event_head.pt|0 %|
+2026-07-17T05:37:22Z TRAIN_DONE 3956/3956 steps status=complete (~107min, faster than probe est) best_val_f1=0.3631 @±2frames
+2026-07-17T05:37:22Z PUBLIC_EVAL_DONE (3-clip public held-out slice, ran on VM without path issues)
+2026-07-17T05:37:50Z TRAIN_DETAIL loss 1.287->0.10 (all finite); val F1@±2 sweep [494:0.0, 988:0.0, 1482:0.295, 1976:0.363(best), 2470:0.259, 2964:0.324, 3458:0.357, 3952:0.012, 3956:0.009] — late collapse, best ckpt=step1976 preserved; realized 0.619 steps/s; train_windows=226 val_windows=282. PUBLIC_EVAL detail: 0 TP at tol 1 and 2 (BOUNCE tp0 fp1 fn2; HIT tp0 fp0 fn1) across 3 clips — weak zero-shot transfer as expected, reported straight. Caveat: eval uses 15-frame windows vs 64-frame training windows.
+2026-07-17T05:41:01Z PULLED core artifacts two-sided md5: checkpoints/best_event_head.pt=654ec44d0752529ece8d1712ecc07347(MATCH) checkpoints/last_event_head.pt=827902125d0550be21ac028db880feea(MATCH) checkpoints/train_manifest.json=eb4e286767236134207ad86a3a1d9f2b(MATCH) checkpoints/dataset_manifest.json=99aaeed6a9993da06954d7274e3be299(MATCH) logs/probe_train_manifest.json=17b564c830955b4f0b5048ed31741ce7(MATCH) eval/public_eval.json=542a6949c68852cabc067becac6ce246(MATCH) logs/vm_run_all.log=d41d8cd98f00b204e9800998ecf8427e(MATCH) logs/vm_phases.log=a736689afd1c75baac55005b9abc7517(MATCH) logs/probe_stderr.log=d41d8cd98f00b204e9800998ecf8427e(MATCH) logs/train_stderr.log=d41d8cd98f00b204e9800998ecf8427e(MATCH) logs/builder_stdout.json=ff7f2dd89cb47a54ba3442a1ba028881(MATCH)
+2026-07-17T05:42:03Z PULLED core artifacts 11/11 two-sided md5 ALL MATCH: best_event_head.pt=654ec44d0752529ece8d1712ecc07347, last_event_head.pt=8279021 25d0550be21ac028db880feea, train_manifest.json=eb4e2867..., dataset_manifest.json=99aaeed6..., probe_train_manifest.json=17b564c8..., public_eval.json=542a6949..., vm_phases.log=a736689a..., builder_stdout.json=ff7f2dd8..., 3 stderr/run logs empty (d41d8cd9 = empty-file md5, expected: clean run).
+2026-07-17T05:42:03Z ANCHORS_THR020_LAUNCHED second anchor pass at threshold 0.2 launched CONCURRENTLY with the in-flight 0.5 pass (per manager order; T4 at 20% util is decode-bound with headroom, concurrency avoids serial ~2x wall and keeps both inside the 08:59Z rail).
