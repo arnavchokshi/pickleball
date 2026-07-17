@@ -83,3 +83,25 @@ lane plan: core module + CLIs + tests + scaffold rows + Wolverine
 baseline->fused metric table + honest demo partial). Slice 3 (runner stage
 175 wiring) remains a Track C-owned integration lane; request text is staged
 verbatim in DESIGN.md §7.
+
+## DESIGN AMENDMENTS 1+2 (owner win condition, relayed 2026-07-16) — RULED: ADOPT into impl
+Owner: demo videos must show 4 placed players, each w/ semi-decent paddle orientation, and
+continuous well-placed 3D ball w/ visible paddle/floor/net events; "then I say what I see wrong
+and we fix." Priority: demo-visible completeness w/ honest bands > per-metric polish.
+Injected mid-flight into oneworld_impl_20260716 as spec_addendum_A10.md (session resumed with
+addendum; old PID killed cleanly, resume PID recorded in codex.pid):
+- AMENDMENT 1 (A10): paddle ALWAYS emits display_pose_world + display_tier w/ honest band even
+  when unresolved (best-evidence hypothesis below resolve bar; display-only reprojection
+  tie-break allowed and recorded; gen-1 wrist proxy carried as unresolved_legacy_wrist_proxy).
+  NOT promotion: status/flags/both retained hypotheses unchanged. NS-04.5 "one early hypothesis
+  never promotes" preserved — this is band-carried display, resolve bar untouched.
+- A11: consolidated first-class typed events[] (paddle_contact/floor_bounce/net_contact/
+  net_cross w/ t, frame, locations raw+refined, hitter_id, confidence, band, evidence,
+  provenance) for the viewer; refinement lists remain.
+- AMENDMENT 2 (A12): ball continuity chain via estimate_tier (arc_measured -> physics_predicted
+  bounded 0.5s-from-support -> ray_court_projection altitude_unknown -> absent only when no 2D).
+  HONESTY RAILS: metrics computed ONLY on tier-1; M3 coverage reported STRATIFIED
+  (coverage_measured comparable to frozen 0.39 baseline; coverage_with_predicted labeled);
+  tier counts reported to the owner. Supersedes the design's strict display-absence for the
+  ball/paddle DISPLAY surfaces only; absence sentinels + raw immutability + preview band +
+  VERIFIED=0 unchanged.
