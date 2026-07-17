@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "registered_at": "2026-07-16T00:00:00Z",
+  "registration_status": "locked_before_arc_coverage_scoring",
+  "lane": "ballarc_anchorfusion_20260716",
+  "verified": false,
+  "source": {
+    "path": "runs/lanes/ball_evidence_q_20260713/pbvision_11min_audio_onsets_v2.json",
+    "sha256": "7fdcfa1ca46de44573b30c2b9cea16e39d65c4c90fbd5d22b9469d40d1f18980",
+    "onset_count": 2309,
+    "quality": "review-only",
+    "not_gate_verified": true,
+    "trusted_for_contact": false
+  },
+  "frozen_baseline": {
+    "path": "runs/lanes/ballarc_scale_guard_20260715/full_guard5_r4_metrics.json",
+    "sha256": "73531c9cadac83af92d8698e6025d4eb6f901a594362cb367c29ca3e2a1a7e5c",
+    "segments_fit": 1,
+    "segments_total": 188
+  },
+  "shared_rule": {
+    "anchor_class": "audio_onset_soft",
+    "allowed_role": "segment_split_boundary_only",
+    "forbidden_roles": [
+      "bounce_evidence",
+      "contact_evidence",
+      "event_type_assertion",
+      "z_equals_ball_radius_constraint",
+      "flight_sanity_anchor"
+    ],
+    "rally_active_span_rule": {
+      "source": "primary ball_track visible observations only",
+      "grouping": "time-order visible observations; bridge consecutive gaps <= 1.0 s",
+      "minimum_span_duration_s": 1.5,
+      "boundary_inclusion": "corrected_time_s within closed span"
+    },
+    "selection_order": "Within rally-active spans, sort passing onsets by descending score, then corrected_time_s, then onset_order; accept an onset only when it is at least preset.min_inter_split_spacing_s from every already accepted onset; finally emit in corrected-time order.",
+    "time_field": "corrected_time_s",
+    "id_field": "onset_order",
+    "density_note": "The raw density is about 3.3 onsets/s, so using every onset would create degenerate sub-second chunks and is prohibited."
+  },
+  "presets": [
+    {
+      "selection_rule_id": "audio_soft_score010_spacing200_rally_v1",
+      "score_floor": 0.1,
+      "min_inter_split_spacing_s": 2.0,
+      "intent": "conservative"
+    },
+    {
+      "selection_rule_id": "audio_soft_score006_spacing175_rally_v1",
+      "score_floor": 0.06,
+      "min_inter_split_spacing_s": 1.75,
+      "intent": "balanced"
+    },
+    {
+      "selection_rule_id": "audio_soft_score003_spacing150_rally_v1",
+      "score_floor": 0.03,
+      "min_inter_split_spacing_s": 1.5,
+      "intent": "broad"
+    }
+  ],
+  "no_threshold_shopping": "All three rules were locked before running or inspecting any soft-split arc coverage result. Every preset will be reported, including killed presets."
+}

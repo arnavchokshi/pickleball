@@ -1,0 +1,303 @@
+{
+  "after": {
+    "definition_in_rally_frame_coverage": "number of input frames whose timestamp is inside a preregistered rally-active span and inside any emitted status=fit* segment, divided by all input frames in those rally-active spans",
+    "definition_total_segment_fit_fraction": "number of emitted solver segments with status beginning fit divided by all emitted solver segments (confident plus weak)",
+    "guard_budget_s": 5.0,
+    "in_rally_frame_count": 17914,
+    "in_rally_frame_coverage_fraction": 0.29652785530869713,
+    "in_rally_frame_coverage_percent": 29.65278553086971,
+    "in_rally_frame_inside_fitted_segment_count": 5312,
+    "physics_sanity": {
+      "demoted_frame_count": 4280,
+      "failed_segment_count": 18,
+      "passed_segment_count": 0,
+      "segment_count": 19,
+      "skipped_segment_count": 1
+    },
+    "physics_violation_count": 18,
+    "provenance_audit": {
+      "invalid_provenance_segment_ids": [],
+      "missing_provenance_segment_ids": [],
+      "pass": true,
+      "soft_split_segment_count": 214
+    },
+    "segment_budget_exceeded_count": 276,
+    "segment_count": 361,
+    "segment_duration_s": {
+      "count": 361,
+      "max": 111.93333399999995,
+      "median": 4.531969386000014,
+      "min": 0.13499029499996595,
+      "p90": 62.36666599999998,
+      "p95": 79.533333
+    },
+    "segments_fit_count": 85,
+    "total_segment_fit_fraction": 0.23545706371191136,
+    "total_segment_fit_percent": 23.545706371191137,
+    "wall_min": 38.34280647499982,
+    "wall_s": 2300.568388499989
+  },
+  "authority": "preview",
+  "baseline": {
+    "metrics_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ballarc_scale_guard_20260715/full_guard5_r4_metrics.json",
+    "segment_count": 188,
+    "segment_duration_s": {
+      "count": 188,
+      "max": 111.93333399999995,
+      "median": 33.83333399999998,
+      "min": 1.6333329999999933,
+      "p90": 81.1299999,
+      "p95": 89.06666654999998
+    },
+    "segments_fit_count": 1
+  },
+  "fit_is_not_accuracy": true,
+  "kill_rule": {
+    "killed": true,
+    "reasons": [
+      "flight_sanity_violation"
+    ]
+  },
+  "lane": "ballarc_anchorfusion_20260716",
+  "preset": {
+    "intent": "balanced",
+    "min_inter_split_spacing_s": 1.75,
+    "score_floor": 0.06,
+    "selection_rule_id": "audio_soft_score006_spacing175_rally_v1"
+  },
+  "rally_active_spans": {
+    "count": 52,
+    "definition": {
+      "boundary_inclusion": "corrected_time_s within closed span",
+      "grouping": "time-order visible observations; bridge consecutive gaps <= 1.0 s",
+      "minimum_span_duration_s": 1.5,
+      "source": "primary ball_track visible observations only"
+    },
+    "duration_s": 595.4000019999999,
+    "spans": [
+      [
+        1.033333,
+        12.733333
+      ],
+      [
+        14.166667,
+        49.566667
+      ],
+      [
+        51.066667,
+        59.6
+      ],
+      [
+        61.366667,
+        64.9
+      ],
+      [
+        66.233333,
+        78.1
+      ],
+      [
+        80.9,
+        107.4
+      ],
+      [
+        108.533333,
+        143.366667
+      ],
+      [
+        144.933333,
+        147.233333
+      ],
+      [
+        148.6,
+        162.2
+      ],
+      [
+        165.966667,
+        182.233333
+      ],
+      [
+        183.366667,
+        187.533333
+      ],
+      [
+        189.1,
+        208.5
+      ],
+      [
+        210.566667,
+        212.933333
+      ],
+      [
+        214.066667,
+        229.233333
+      ],
+      [
+        231.466667,
+        233.266667
+      ],
+      [
+        235.033333,
+        247.866667
+      ],
+      [
+        249.033333,
+        253.3
+      ],
+      [
+        254.466667,
+        260.966667
+      ],
+      [
+        262.2,
+        277.0
+      ],
+      [
+        278.333333,
+        305.6
+      ],
+      [
+        306.8,
+        329.133333
+      ],
+      [
+        330.733333,
+        357.4
+      ],
+      [
+        358.7,
+        365.1
+      ],
+      [
+        369.5,
+        380.9
+      ],
+      [
+        382.866667,
+        392.8
+      ],
+      [
+        393.833333,
+        395.766667
+      ],
+      [
+        400.533333,
+        411.2
+      ],
+      [
+        412.333333,
+        415.1
+      ],
+      [
+        417.166667,
+        437.166667
+      ],
+      [
+        438.533333,
+        446.433333
+      ],
+      [
+        449.5,
+        462.466667
+      ],
+      [
+        463.533333,
+        489.233333
+      ],
+      [
+        490.5,
+        509.466667
+      ],
+      [
+        511.1,
+        520.966667
+      ],
+      [
+        522.0,
+        527.166667
+      ],
+      [
+        528.233333,
+        538.0
+      ],
+      [
+        539.266667,
+        550.166667
+      ],
+      [
+        552.033333,
+        554.866667
+      ],
+      [
+        556.4,
+        572.2
+      ],
+      [
+        574.666667,
+        580.833333
+      ],
+      [
+        584.433333,
+        586.366667
+      ],
+      [
+        589.166667,
+        596.8
+      ],
+      [
+        601.333333,
+        609.3
+      ],
+      [
+        610.733333,
+        612.566667
+      ],
+      [
+        613.766667,
+        616.5
+      ],
+      [
+        617.766667,
+        621.5
+      ],
+      [
+        622.733333,
+        634.433333
+      ],
+      [
+        636.533333,
+        654.933333
+      ],
+      [
+        656.1,
+        659.8
+      ],
+      [
+        661.6,
+        670.566667
+      ],
+      [
+        676.266667,
+        690.0
+      ],
+      [
+        691.066667,
+        692.9
+      ]
+    ]
+  },
+  "schema_version": 1,
+  "selection": {
+    "minimum_spacing_s": 1.75,
+    "passing_floor_and_rally_count": 787,
+    "raw_onset_count": 2309,
+    "score_floor": 0.06,
+    "selected_count": 202,
+    "selection_rule_id": "audio_soft_score006_spacing175_rally_v1"
+  },
+  "source_policy": {
+    "audio_onsets": "review-only; not_gate_verified; trusted_for_contact=false",
+    "pbvision_demo": "R&D reference only; not ground truth; not training; not redistributed",
+    "soft_anchor_role": "segment split boundary only"
+  },
+  "verified": false
+}
