@@ -1,0 +1,3779 @@
+{
+ "clip_id": "burlington_gold_0300_low_steep_corner",
+ "tracks_path": "extracted/rfdetrflip_out/scored/burlington_gold_0300_low_steep_corner/rfdetr_l_p/tracks.json",
+ "counts_by_category": {
+  "near_miss": 185,
+  "no_gt_frame": 0,
+  "TRUE_SPECTATOR": 0,
+  "outside_image": 0
+ },
+ "true_spectator_events": [],
+ "per_track": {
+  "1": {
+   "frames_present": 600,
+   "frames_matched": 532,
+   "match_rate": 0.8867,
+   "frame_range": [
+    0,
+    599
+   ],
+   "conf_min_med_max": [
+    0.876,
+    0.927,
+    0.951
+   ],
+   "excess_m_max": 0.0,
+   "excess_m_frames_gt0": 0
+  },
+  "2": {
+   "frames_present": 600,
+   "frames_matched": 565,
+   "match_rate": 0.9417,
+   "frame_range": [
+    0,
+    599
+   ],
+   "conf_min_med_max": [
+    0.839,
+    0.929,
+    0.952
+   ],
+   "excess_m_max": 0.796,
+   "excess_m_frames_gt0": 68
+  },
+  "3": {
+   "frames_present": 600,
+   "frames_matched": 575,
+   "match_rate": 0.9583,
+   "frame_range": [
+    0,
+    599
+   ],
+   "conf_min_med_max": [
+    0.195,
+    0.911,
+    0.938
+   ],
+   "excess_m_max": 0.0,
+   "excess_m_frames_gt0": 0
+  },
+  "4": {
+   "frames_present": 596,
+   "frames_matched": 539,
+   "match_rate": 0.9044,
+   "frame_range": [
+    0,
+    595
+   ],
+   "conf_min_med_max": [
+    0.181,
+    0.83,
+    0.924
+   ],
+   "excess_m_max": 0.0,
+   "excess_m_frames_gt0": 0
+  }
+ },
+ "all_unmatched_events": [
+  {
+   "frame": 145,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.496,
+   "conf": 0.7732,
+   "bbox_xywh": [
+    1489.0,
+    419.2,
+    68.6,
+    100.1
+   ],
+   "world_xy": [
+    -0.167,
+    4.637
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 146,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4673,
+   "conf": 0.7976,
+   "bbox_xywh": [
+    1492.8,
+    419.5,
+    65.0,
+    99.9
+   ],
+   "world_xy": [
+    -0.143,
+    4.636
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 147,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4786,
+   "conf": 0.8057,
+   "bbox_xywh": [
+    1491.8,
+    419.5,
+    66.5,
+    100.2
+   ],
+   "world_xy": [
+    -0.133,
+    4.601
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 148,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4849,
+   "conf": 0.7966,
+   "bbox_xywh": [
+    1491.7,
+    419.6,
+    66.5,
+    100.4
+   ],
+   "world_xy": [
+    -0.122,
+    4.568
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 195,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4953,
+   "conf": 0.9405,
+   "bbox_xywh": [
+    987.1,
+    359.2,
+    118.7,
+    263.8
+   ],
+   "world_xy": [
+    -0.419,
+    -3.259
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 196,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4897,
+   "conf": 0.9389,
+   "bbox_xywh": [
+    987.4,
+    359.2,
+    118.4,
+    263.9
+   ],
+   "world_xy": [
+    -0.416,
+    -3.261
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 197,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.489,
+   "conf": 0.9381,
+   "bbox_xywh": [
+    987.0,
+    358.9,
+    118.6,
+    264.2
+   ],
+   "world_xy": [
+    -0.417,
+    -3.263
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 198,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4878,
+   "conf": 0.9385,
+   "bbox_xywh": [
+    986.6,
+    358.6,
+    118.8,
+    264.6
+   ],
+   "world_xy": [
+    -0.417,
+    -3.266
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 199,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4817,
+   "conf": 0.9346,
+   "bbox_xywh": [
+    986.8,
+    358.4,
+    119.0,
+    265.0
+   ],
+   "world_xy": [
+    -0.411,
+    -3.27
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 200,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4766,
+   "conf": 0.9322,
+   "bbox_xywh": [
+    987.0,
+    358.3,
+    119.0,
+    265.2
+   ],
+   "world_xy": [
+    -0.408,
+    -3.271
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 201,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4748,
+   "conf": 0.931,
+   "bbox_xywh": [
+    986.6,
+    357.7,
+    119.0,
+    265.5
+   ],
+   "world_xy": [
+    -0.417,
+    -3.264
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 202,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.473,
+   "conf": 0.9304,
+   "bbox_xywh": [
+    986.4,
+    357.7,
+    119.1,
+    265.7
+   ],
+   "world_xy": [
+    -0.413,
+    -3.271
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 202,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4917,
+   "conf": 0.9344,
+   "bbox_xywh": [
+    1598.1,
+    356.2,
+    79.6,
+    178.6
+   ],
+   "world_xy": [
+    1.355,
+    3.759
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 203,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4644,
+   "conf": 0.9303,
+   "bbox_xywh": [
+    986.9,
+    357.2,
+    119.1,
+    266.2
+   ],
+   "world_xy": [
+    -0.41,
+    -3.268
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 203,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4847,
+   "conf": 0.9299,
+   "bbox_xywh": [
+    1595.7,
+    356.6,
+    81.6,
+    178.2
+   ],
+   "world_xy": [
+    1.342,
+    3.753
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 204,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4564,
+   "conf": 0.9314,
+   "bbox_xywh": [
+    987.3,
+    356.8,
+    119.4,
+    266.5
+   ],
+   "world_xy": [
+    -0.409,
+    -3.265
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 204,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.479,
+   "conf": 0.93,
+   "bbox_xywh": [
+    1594.3,
+    357.1,
+    82.3,
+    178.2
+   ],
+   "world_xy": [
+    1.347,
+    3.699
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 205,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4541,
+   "conf": 0.9355,
+   "bbox_xywh": [
+    987.3,
+    356.4,
+    118.7,
+    266.9
+   ],
+   "world_xy": [
+    -0.411,
+    -3.265
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 205,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4594,
+   "conf": 0.9285,
+   "bbox_xywh": [
+    1592.0,
+    358.0,
+    82.8,
+    177.9
+   ],
+   "world_xy": [
+    1.343,
+    3.64
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 206,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4494,
+   "conf": 0.935,
+   "bbox_xywh": [
+    987.6,
+    356.0,
+    118.1,
+    267.2
+   ],
+   "world_xy": [
+    -0.412,
+    -3.264
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 206,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4496,
+   "conf": 0.9299,
+   "bbox_xywh": [
+    1591.3,
+    358.3,
+    82.0,
+    178.0
+   ],
+   "world_xy": [
+    1.341,
+    3.603
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 207,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4417,
+   "conf": 0.9308,
+   "bbox_xywh": [
+    988.2,
+    355.6,
+    117.9,
+    267.8
+   ],
+   "world_xy": [
+    -0.406,
+    -3.267
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 207,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4483,
+   "conf": 0.9291,
+   "bbox_xywh": [
+    1591.3,
+    358.4,
+    81.1,
+    178.4
+   ],
+   "world_xy": [
+    1.351,
+    3.554
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 208,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.431,
+   "conf": 0.93,
+   "bbox_xywh": [
+    989.2,
+    355.1,
+    117.3,
+    268.3
+   ],
+   "world_xy": [
+    -0.402,
+    -3.264
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 208,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4463,
+   "conf": 0.9292,
+   "bbox_xywh": [
+    1591.3,
+    358.9,
+    80.3,
+    178.1
+   ],
+   "world_xy": [
+    1.355,
+    3.523
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 209,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4291,
+   "conf": 0.9297,
+   "bbox_xywh": [
+    989.0,
+    354.8,
+    117.0,
+    268.7
+   ],
+   "world_xy": [
+    -0.402,
+    -3.267
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 209,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4381,
+   "conf": 0.9246,
+   "bbox_xywh": [
+    1590.5,
+    359.5,
+    79.9,
+    177.8
+   ],
+   "world_xy": [
+    1.353,
+    3.495
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 210,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4251,
+   "conf": 0.9287,
+   "bbox_xywh": [
+    989.2,
+    354.3,
+    116.8,
+    269.3
+   ],
+   "world_xy": [
+    -0.399,
+    -3.27
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 210,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.433,
+   "conf": 0.9231,
+   "bbox_xywh": [
+    1590.5,
+    359.4,
+    78.5,
+    178.0
+   ],
+   "world_xy": [
+    1.35,
+    3.48
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 211,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4141,
+   "conf": 0.9282,
+   "bbox_xywh": [
+    990.2,
+    353.9,
+    116.2,
+    269.7
+   ],
+   "world_xy": [
+    -0.394,
+    -3.268
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 211,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.435,
+   "conf": 0.9226,
+   "bbox_xywh": [
+    1590.8,
+    359.4,
+    77.6,
+    178.1
+   ],
+   "world_xy": [
+    1.351,
+    3.471
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 212,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4029,
+   "conf": 0.9258,
+   "bbox_xywh": [
+    991.4,
+    353.5,
+    115.5,
+    270.1
+   ],
+   "world_xy": [
+    -0.391,
+    -3.263
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 212,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4367,
+   "conf": 0.918,
+   "bbox_xywh": [
+    1590.7,
+    359.5,
+    77.1,
+    178.3
+   ],
+   "world_xy": [
+    1.355,
+    3.448
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 213,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3971,
+   "conf": 0.9265,
+   "bbox_xywh": [
+    992.0,
+    353.2,
+    114.4,
+    270.3
+   ],
+   "world_xy": [
+    -0.394,
+    -3.26
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 213,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4321,
+   "conf": 0.921,
+   "bbox_xywh": [
+    1590.5,
+    359.8,
+    76.2,
+    178.1
+   ],
+   "world_xy": [
+    1.35,
+    3.44
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 214,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3909,
+   "conf": 0.9238,
+   "bbox_xywh": [
+    992.6,
+    352.9,
+    113.5,
+    270.6
+   ],
+   "world_xy": [
+    -0.394,
+    -3.258
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 214,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.431,
+   "conf": 0.9094,
+   "bbox_xywh": [
+    1590.4,
+    359.5,
+    75.3,
+    178.4
+   ],
+   "world_xy": [
+    1.347,
+    3.432
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 215,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3776,
+   "conf": 0.9239,
+   "bbox_xywh": [
+    994.5,
+    352.6,
+    111.6,
+    270.8
+   ],
+   "world_xy": [
+    -0.391,
+    -3.254
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 215,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4319,
+   "conf": 0.9027,
+   "bbox_xywh": [
+    1589.9,
+    359.2,
+    75.4,
+    178.8
+   ],
+   "world_xy": [
+    1.345,
+    3.422
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 216,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3607,
+   "conf": 0.9267,
+   "bbox_xywh": [
+    996.7,
+    352.2,
+    110.1,
+    271.3
+   ],
+   "world_xy": [
+    -0.381,
+    -3.25
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 216,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4378,
+   "conf": 0.9096,
+   "bbox_xywh": [
+    1590.2,
+    359.0,
+    75.0,
+    179.1
+   ],
+   "world_xy": [
+    1.349,
+    3.412
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 217,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3559,
+   "conf": 0.9247,
+   "bbox_xywh": [
+    997.2,
+    351.8,
+    109.0,
+    271.7
+   ],
+   "world_xy": [
+    -0.379,
+    -3.252
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 217,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4403,
+   "conf": 0.9115,
+   "bbox_xywh": [
+    1590.3,
+    358.6,
+    74.4,
+    179.7
+   ],
+   "world_xy": [
+    1.352,
+    3.392
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 218,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3541,
+   "conf": 0.9254,
+   "bbox_xywh": [
+    997.1,
+    351.4,
+    108.4,
+    272.2
+   ],
+   "world_xy": [
+    -0.38,
+    -3.255
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 218,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4398,
+   "conf": 0.9146,
+   "bbox_xywh": [
+    1589.8,
+    358.3,
+    74.1,
+    179.9
+   ],
+   "world_xy": [
+    1.343,
+    3.402
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 219,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3464,
+   "conf": 0.9241,
+   "bbox_xywh": [
+    997.8,
+    351.0,
+    108.1,
+    272.5
+   ],
+   "world_xy": [
+    -0.379,
+    -3.251
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 219,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4482,
+   "conf": 0.9153,
+   "bbox_xywh": [
+    1590.1,
+    358.0,
+    73.9,
+    180.2
+   ],
+   "world_xy": [
+    1.345,
+    3.404
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 220,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3384,
+   "conf": 0.9228,
+   "bbox_xywh": [
+    998.4,
+    350.7,
+    108.2,
+    272.6
+   ],
+   "world_xy": [
+    -0.379,
+    -3.245
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 220,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.456,
+   "conf": 0.9134,
+   "bbox_xywh": [
+    1590.5,
+    357.8,
+    73.6,
+    180.5
+   ],
+   "world_xy": [
+    1.35,
+    3.393
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 221,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3372,
+   "conf": 0.9225,
+   "bbox_xywh": [
+    998.3,
+    350.6,
+    107.5,
+    272.8
+   ],
+   "world_xy": [
+    -0.382,
+    -3.246
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 221,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4708,
+   "conf": 0.912,
+   "bbox_xywh": [
+    1589.8,
+    357.9,
+    74.4,
+    181.0
+   ],
+   "world_xy": [
+    1.36,
+    3.346
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 222,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3355,
+   "conf": 0.9241,
+   "bbox_xywh": [
+    998.2,
+    350.5,
+    107.1,
+    272.9
+   ],
+   "world_xy": [
+    -0.383,
+    -3.248
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 222,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4894,
+   "conf": 0.9168,
+   "bbox_xywh": [
+    1589.6,
+    358.0,
+    74.9,
+    181.0
+   ],
+   "world_xy": [
+    1.364,
+    3.334
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 223,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3306,
+   "conf": 0.9227,
+   "bbox_xywh": [
+    998.5,
+    350.4,
+    106.9,
+    272.9
+   ],
+   "world_xy": [
+    -0.383,
+    -3.246
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 224,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.325,
+   "conf": 0.9205,
+   "bbox_xywh": [
+    998.8,
+    350.3,
+    106.9,
+    273.0
+   ],
+   "world_xy": [
+    -0.38,
+    -3.245
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 225,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3233,
+   "conf": 0.925,
+   "bbox_xywh": [
+    998.5,
+    350.4,
+    107.3,
+    272.8
+   ],
+   "world_xy": [
+    -0.383,
+    -3.244
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 226,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3225,
+   "conf": 0.9251,
+   "bbox_xywh": [
+    998.1,
+    350.5,
+    107.9,
+    272.8
+   ],
+   "world_xy": [
+    -0.382,
+    -3.246
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 227,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3179,
+   "conf": 0.926,
+   "bbox_xywh": [
+    998.3,
+    350.6,
+    108.1,
+    272.6
+   ],
+   "world_xy": [
+    -0.382,
+    -3.244
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 228,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3142,
+   "conf": 0.9298,
+   "bbox_xywh": [
+    998.4,
+    350.7,
+    108.2,
+    272.5
+   ],
+   "world_xy": [
+    -0.381,
+    -3.243
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 229,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3156,
+   "conf": 0.931,
+   "bbox_xywh": [
+    997.6,
+    350.9,
+    108.7,
+    272.4
+   ],
+   "world_xy": [
+    -0.383,
+    -3.246
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 230,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3184,
+   "conf": 0.9305,
+   "bbox_xywh": [
+    996.6,
+    351.1,
+    109.7,
+    272.1
+   ],
+   "world_xy": [
+    -0.387,
+    -3.246
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 231,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3191,
+   "conf": 0.9305,
+   "bbox_xywh": [
+    995.8,
+    351.3,
+    110.6,
+    272.0
+   ],
+   "world_xy": [
+    -0.388,
+    -3.248
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 232,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3204,
+   "conf": 0.9313,
+   "bbox_xywh": [
+    995.0,
+    351.5,
+    111.5,
+    271.7
+   ],
+   "world_xy": [
+    -0.391,
+    -3.249
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 233,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3313,
+   "conf": 0.9299,
+   "bbox_xywh": [
+    992.4,
+    351.9,
+    114.1,
+    271.1
+   ],
+   "world_xy": [
+    -0.402,
+    -3.249
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 234,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3396,
+   "conf": 0.9297,
+   "bbox_xywh": [
+    990.4,
+    352.3,
+    115.9,
+    270.9
+   ],
+   "world_xy": [
+    -0.404,
+    -3.258
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 235,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3434,
+   "conf": 0.9292,
+   "bbox_xywh": [
+    989.0,
+    352.5,
+    117.4,
+    270.8
+   ],
+   "world_xy": [
+    -0.406,
+    -3.262
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 236,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.347,
+   "conf": 0.9277,
+   "bbox_xywh": [
+    987.7,
+    352.6,
+    118.7,
+    270.7
+   ],
+   "world_xy": [
+    -0.409,
+    -3.264
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 237,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3584,
+   "conf": 0.9278,
+   "bbox_xywh": [
+    985.2,
+    353.0,
+    120.7,
+    270.3
+   ],
+   "world_xy": [
+    -0.417,
+    -3.27
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 238,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3645,
+   "conf": 0.9306,
+   "bbox_xywh": [
+    983.5,
+    353.3,
+    122.1,
+    269.9
+   ],
+   "world_xy": [
+    -0.426,
+    -3.269
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 239,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3708,
+   "conf": 0.9255,
+   "bbox_xywh": [
+    981.7,
+    353.4,
+    123.9,
+    269.6
+   ],
+   "world_xy": [
+    -0.434,
+    -3.269
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 240,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3724,
+   "conf": 0.9233,
+   "bbox_xywh": [
+    980.7,
+    353.5,
+    125.4,
+    269.4
+   ],
+   "world_xy": [
+    -0.437,
+    -3.269
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 241,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3842,
+   "conf": 0.9223,
+   "bbox_xywh": [
+    977.9,
+    354.0,
+    128.0,
+    269.1
+   ],
+   "world_xy": [
+    -0.443,
+    -3.277
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 242,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.3939,
+   "conf": 0.9309,
+   "bbox_xywh": [
+    975.4,
+    354.2,
+    130.5,
+    268.9
+   ],
+   "world_xy": [
+    -0.448,
+    -3.282
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 243,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4045,
+   "conf": 0.9287,
+   "bbox_xywh": [
+    972.6,
+    354.3,
+    133.5,
+    268.8
+   ],
+   "world_xy": [
+    -0.455,
+    -3.287
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 244,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4138,
+   "conf": 0.9306,
+   "bbox_xywh": [
+    970.2,
+    354.3,
+    136.1,
+    268.8
+   ],
+   "world_xy": [
+    -0.46,
+    -3.293
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 244,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4697,
+   "conf": 0.3868,
+   "bbox_xywh": [
+    1403.5,
+    381.1,
+    84.4,
+    146.7
+   ],
+   "world_xy": [
+    -0.553,
+    3.304
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 245,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4291,
+   "conf": 0.9379,
+   "bbox_xywh": [
+    966.8,
+    354.8,
+    139.0,
+    268.4
+   ],
+   "world_xy": [
+    -0.469,
+    -3.301
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 245,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4513,
+   "conf": 0.2836,
+   "bbox_xywh": [
+    1399.6,
+    379.8,
+    88.1,
+    150.4
+   ],
+   "world_xy": [
+    -0.475,
+    3.072
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 246,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4418,
+   "conf": 0.9407,
+   "bbox_xywh": [
+    963.9,
+    355.2,
+    141.7,
+    268.0
+   ],
+   "world_xy": [
+    -0.476,
+    -3.308
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 246,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4338,
+   "conf": 0.2438,
+   "bbox_xywh": [
+    1396.0,
+    379.3,
+    91.1,
+    152.1
+   ],
+   "world_xy": [
+    -0.447,
+    2.955
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 247,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4439,
+   "conf": 0.9391,
+   "bbox_xywh": [
+    962.8,
+    355.4,
+    143.1,
+    267.8
+   ],
+   "world_xy": [
+    -0.48,
+    -3.308
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 247,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4173,
+   "conf": 0.2438,
+   "bbox_xywh": [
+    1392.5,
+    378.9,
+    94.1,
+    153.7
+   ],
+   "world_xy": [
+    -0.42,
+    2.838
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 248,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4445,
+   "conf": 0.9385,
+   "bbox_xywh": [
+    961.9,
+    355.8,
+    144.3,
+    267.3
+   ],
+   "world_xy": [
+    -0.483,
+    -3.307
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 248,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4381,
+   "conf": 0.2438,
+   "bbox_xywh": [
+    1387.4,
+    379.7,
+    93.2,
+    152.4
+   ],
+   "world_xy": [
+    -0.494,
+    2.847
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 249,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4493,
+   "conf": 0.939,
+   "bbox_xywh": [
+    960.6,
+    357.0,
+    145.7,
+    266.0
+   ],
+   "world_xy": [
+    -0.488,
+    -3.308
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 249,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4597,
+   "conf": 0.2438,
+   "bbox_xywh": [
+    1382.3,
+    380.5,
+    92.2,
+    151.1
+   ],
+   "world_xy": [
+    -0.568,
+    2.857
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 250,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4696,
+   "conf": 0.9413,
+   "bbox_xywh": [
+    956.5,
+    357.7,
+    149.0,
+    265.6
+   ],
+   "world_xy": [
+    -0.494,
+    -3.325
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 250,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.482,
+   "conf": 0.2438,
+   "bbox_xywh": [
+    1377.2,
+    381.3,
+    91.3,
+    149.9
+   ],
+   "world_xy": [
+    -0.641,
+    2.867
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 251,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4748,
+   "conf": 0.9452,
+   "bbox_xywh": [
+    955.1,
+    357.9,
+    150.2,
+    265.4
+   ],
+   "world_xy": [
+    -0.499,
+    -3.327
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 252,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4741,
+   "conf": 0.9482,
+   "bbox_xywh": [
+    954.6,
+    358.4,
+    150.9,
+    264.9
+   ],
+   "world_xy": [
+    -0.501,
+    -3.326
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 253,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4783,
+   "conf": 0.9499,
+   "bbox_xywh": [
+    953.7,
+    359.1,
+    151.2,
+    264.2
+   ],
+   "world_xy": [
+    -0.504,
+    -3.33
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 254,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4811,
+   "conf": 0.9508,
+   "bbox_xywh": [
+    953.1,
+    359.8,
+    150.9,
+    263.7
+   ],
+   "world_xy": [
+    -0.505,
+    -3.336
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 255,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4817,
+   "conf": 0.9513,
+   "bbox_xywh": [
+    952.9,
+    359.9,
+    150.2,
+    263.4
+   ],
+   "world_xy": [
+    -0.51,
+    -3.336
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 256,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4824,
+   "conf": 0.9502,
+   "bbox_xywh": [
+    952.5,
+    360.0,
+    149.6,
+    263.2
+   ],
+   "world_xy": [
+    -0.517,
+    -3.335
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 257,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4814,
+   "conf": 0.9488,
+   "bbox_xywh": [
+    952.2,
+    360.7,
+    150.1,
+    262.2
+   ],
+   "world_xy": [
+    -0.523,
+    -3.33
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 258,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4856,
+   "conf": 0.9474,
+   "bbox_xywh": [
+    951.6,
+    361.4,
+    149.3,
+    261.6
+   ],
+   "world_xy": [
+    -0.526,
+    -3.336
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 259,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.485,
+   "conf": 0.9464,
+   "bbox_xywh": [
+    951.7,
+    362.2,
+    148.1,
+    259.9
+   ],
+   "world_xy": [
+    -0.55,
+    -3.316
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 260,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4838,
+   "conf": 0.9484,
+   "bbox_xywh": [
+    951.9,
+    362.7,
+    146.4,
+    258.7
+   ],
+   "world_xy": [
+    -0.572,
+    -3.3
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 261,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4856,
+   "conf": 0.9474,
+   "bbox_xywh": [
+    952.1,
+    363.1,
+    144.2,
+    258.5
+   ],
+   "world_xy": [
+    -0.572,
+    -3.307
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 262,
+   "track_id": 1,
+   "category": "near_miss",
+   "best_real_iou": 0.4934,
+   "conf": 0.9436,
+   "bbox_xywh": [
+    952.1,
+    363.5,
+    139.8,
+    257.1
+   ],
+   "world_xy": [
+    -0.608,
+    -3.292
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 339,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4933,
+   "conf": 0.9144,
+   "bbox_xywh": [
+    1335.4,
+    373.6,
+    254.1,
+    290.4
+   ],
+   "world_xy": [
+    2.204,
+    -2.793
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 340,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4995,
+   "conf": 0.9201,
+   "bbox_xywh": [
+    1343.5,
+    373.6,
+    251.2,
+    286.2
+   ],
+   "world_xy": [
+    2.194,
+    -2.679
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 341,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4696,
+   "conf": 0.8956,
+   "bbox_xywh": [
+    1353.0,
+    374.0,
+    267.2,
+    283.3
+   ],
+   "world_xy": [
+    2.248,
+    -2.566
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 342,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4829,
+   "conf": 0.8977,
+   "bbox_xywh": [
+    1365.1,
+    376.1,
+    263.7,
+    283.0
+   ],
+   "world_xy": [
+    2.309,
+    -2.573
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 351,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4954,
+   "conf": 0.8617,
+   "bbox_xywh": [
+    1497.6,
+    416.2,
+    244.1,
+    247.5
+   ],
+   "world_xy": [
+    2.877,
+    -2.302
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 375,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4929,
+   "conf": 0.908,
+   "bbox_xywh": [
+    1342.1,
+    379.3,
+    103.5,
+    157.4
+   ],
+   "world_xy": [
+    -0.658,
+    2.236
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 376,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4836,
+   "conf": 0.9211,
+   "bbox_xywh": [
+    1344.1,
+    381.4,
+    102.2,
+    155.3
+   ],
+   "world_xy": [
+    -0.649,
+    2.249
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 377,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4731,
+   "conf": 0.9206,
+   "bbox_xywh": [
+    1346.3,
+    382.9,
+    100.6,
+    154.3
+   ],
+   "world_xy": [
+    -0.616,
+    2.215
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 378,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4709,
+   "conf": 0.9182,
+   "bbox_xywh": [
+    1348.3,
+    381.5,
+    99.4,
+    155.8
+   ],
+   "world_xy": [
+    -0.6,
+    2.215
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 379,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4724,
+   "conf": 0.9051,
+   "bbox_xywh": [
+    1349.7,
+    382.3,
+    98.3,
+    154.8
+   ],
+   "world_xy": [
+    -0.601,
+    2.236
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 380,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4736,
+   "conf": 0.9108,
+   "bbox_xywh": [
+    1351.2,
+    382.9,
+    96.7,
+    154.2
+   ],
+   "world_xy": [
+    -0.592,
+    2.232
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 381,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4833,
+   "conf": 0.924,
+   "bbox_xywh": [
+    1351.6,
+    383.4,
+    96.0,
+    154.0
+   ],
+   "world_xy": [
+    -0.584,
+    2.218
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 382,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4903,
+   "conf": 0.9228,
+   "bbox_xywh": [
+    1352.3,
+    384.5,
+    95.1,
+    152.9
+   ],
+   "world_xy": [
+    -0.578,
+    2.211
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 386,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4564,
+   "conf": 0.9344,
+   "bbox_xywh": [
+    1696.9,
+    407.4,
+    216.6,
+    271.9
+   ],
+   "world_xy": [
+    3.718,
+    -2.117
+   ],
+   "off_court_excess_m": 0.67,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 387,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4001,
+   "conf": 0.934,
+   "bbox_xywh": [
+    1705.7,
+    408.9,
+    213.3,
+    271.0
+   ],
+   "world_xy": [
+    3.748,
+    -2.11
+   ],
+   "off_court_excess_m": 0.7,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 388,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.3537,
+   "conf": 0.9353,
+   "bbox_xywh": [
+    1713.5,
+    411.7,
+    207.8,
+    269.1
+   ],
+   "world_xy": [
+    3.771,
+    -2.115
+   ],
+   "off_court_excess_m": 0.723,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 389,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.3039,
+   "conf": 0.9352,
+   "bbox_xywh": [
+    1723.5,
+    414.9,
+    198.5,
+    266.3
+   ],
+   "world_xy": [
+    3.794,
+    -2.111
+   ],
+   "off_court_excess_m": 0.746,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 390,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2627,
+   "conf": 0.9423,
+   "bbox_xywh": [
+    1731.4,
+    418.3,
+    191.1,
+    263.7
+   ],
+   "world_xy": [
+    3.812,
+    -2.116
+   ],
+   "off_court_excess_m": 0.764,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 391,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2311,
+   "conf": 0.9377,
+   "bbox_xywh": [
+    1737.5,
+    419.4,
+    185.0,
+    262.7
+   ],
+   "world_xy": [
+    3.825,
+    -2.111
+   ],
+   "off_court_excess_m": 0.777,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 392,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2015,
+   "conf": 0.9308,
+   "bbox_xywh": [
+    1743.1,
+    420.9,
+    179.2,
+    261.2
+   ],
+   "world_xy": [
+    3.835,
+    -2.101
+   ],
+   "off_court_excess_m": 0.787,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 393,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.1776,
+   "conf": 0.9305,
+   "bbox_xywh": [
+    1746.9,
+    424.5,
+    174.9,
+    258.4
+   ],
+   "world_xy": [
+    3.844,
+    -2.117
+   ],
+   "off_court_excess_m": 0.796,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 394,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.1721,
+   "conf": 0.936,
+   "bbox_xywh": [
+    1745.7,
+    425.6,
+    175.8,
+    256.7
+   ],
+   "world_xy": [
+    3.839,
+    -2.103
+   ],
+   "off_court_excess_m": 0.791,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 395,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.1736,
+   "conf": 0.9363,
+   "bbox_xywh": [
+    1742.6,
+    425.8,
+    178.6,
+    256.0
+   ],
+   "world_xy": [
+    3.831,
+    -2.098
+   ],
+   "off_court_excess_m": 0.783,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 395,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4905,
+   "conf": 0.9081,
+   "bbox_xywh": [
+    1348.2,
+    388.0,
+    99.0,
+    148.5
+   ],
+   "world_xy": [
+    -0.631,
+    2.27
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 396,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.1797,
+   "conf": 0.9343,
+   "bbox_xywh": [
+    1738.1,
+    425.5,
+    182.7,
+    256.2
+   ],
+   "world_xy": [
+    3.821,
+    -2.102
+   ],
+   "off_court_excess_m": 0.773,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 396,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4817,
+   "conf": 0.9109,
+   "bbox_xywh": [
+    1346.5,
+    385.4,
+    100.7,
+    151.2
+   ],
+   "world_xy": [
+    -0.634,
+    2.256
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 397,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.1852,
+   "conf": 0.9349,
+   "bbox_xywh": [
+    1733.7,
+    425.5,
+    186.9,
+    256.2
+   ],
+   "world_xy": [
+    3.812,
+    -2.109
+   ],
+   "off_court_excess_m": 0.764,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 397,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4775,
+   "conf": 0.9133,
+   "bbox_xywh": [
+    1344.0,
+    383.8,
+    103.1,
+    152.9
+   ],
+   "world_xy": [
+    -0.644,
+    2.248
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 398,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.1878,
+   "conf": 0.9364,
+   "bbox_xywh": [
+    1730.0,
+    426.3,
+    190.5,
+    255.4
+   ],
+   "world_xy": [
+    3.805,
+    -2.113
+   ],
+   "off_court_excess_m": 0.757,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 398,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.472,
+   "conf": 0.9171,
+   "bbox_xywh": [
+    1341.6,
+    382.3,
+    105.5,
+    154.2
+   ],
+   "world_xy": [
+    -0.661,
+    2.254
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 399,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.19,
+   "conf": 0.9372,
+   "bbox_xywh": [
+    1727.0,
+    423.5,
+    193.3,
+    258.2
+   ],
+   "world_xy": [
+    3.798,
+    -2.118
+   ],
+   "off_court_excess_m": 0.75,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 399,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4608,
+   "conf": 0.9185,
+   "bbox_xywh": [
+    1339.5,
+    381.6,
+    107.4,
+    154.8
+   ],
+   "world_xy": [
+    -0.675,
+    2.256
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 400,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.1975,
+   "conf": 0.936,
+   "bbox_xywh": [
+    1722.2,
+    421.3,
+    197.6,
+    260.6
+   ],
+   "world_xy": [
+    3.789,
+    -2.133
+   ],
+   "off_court_excess_m": 0.741,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 400,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4524,
+   "conf": 0.9245,
+   "bbox_xywh": [
+    1337.3,
+    381.5,
+    109.0,
+    154.7
+   ],
+   "world_xy": [
+    -0.695,
+    2.264
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 401,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2034,
+   "conf": 0.9358,
+   "bbox_xywh": [
+    1717.9,
+    418.8,
+    202.0,
+    263.4
+   ],
+   "world_xy": [
+    3.781,
+    -2.143
+   ],
+   "off_court_excess_m": 0.733,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 401,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4491,
+   "conf": 0.9211,
+   "bbox_xywh": [
+    1335.0,
+    381.7,
+    109.5,
+    154.1
+   ],
+   "world_xy": [
+    -0.731,
+    2.29
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 402,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2092,
+   "conf": 0.9412,
+   "bbox_xywh": [
+    1713.6,
+    415.4,
+    206.4,
+    267.1
+   ],
+   "world_xy": [
+    3.774,
+    -2.155
+   ],
+   "off_court_excess_m": 0.726,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 402,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4435,
+   "conf": 0.9196,
+   "bbox_xywh": [
+    1333.1,
+    381.2,
+    108.9,
+    154.6
+   ],
+   "world_xy": [
+    -0.75,
+    2.277
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 403,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.218,
+   "conf": 0.9375,
+   "bbox_xywh": [
+    1708.5,
+    412.4,
+    211.5,
+    270.0
+   ],
+   "world_xy": [
+    3.764,
+    -2.162
+   ],
+   "off_court_excess_m": 0.716,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 403,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4504,
+   "conf": 0.9165,
+   "bbox_xywh": [
+    1331.0,
+    381.0,
+    105.6,
+    154.8
+   ],
+   "world_xy": [
+    -0.783,
+    2.259
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 404,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2252,
+   "conf": 0.9371,
+   "bbox_xywh": [
+    1703.9,
+    409.0,
+    216.1,
+    273.4
+   ],
+   "world_xy": [
+    3.754,
+    -2.167
+   ],
+   "off_court_excess_m": 0.706,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 404,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4555,
+   "conf": 0.9112,
+   "bbox_xywh": [
+    1329.3,
+    379.6,
+    101.2,
+    156.1
+   ],
+   "world_xy": [
+    -0.82,
+    2.241
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 405,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2334,
+   "conf": 0.9391,
+   "bbox_xywh": [
+    1698.8,
+    405.8,
+    221.2,
+    277.0
+   ],
+   "world_xy": [
+    3.746,
+    -2.183
+   ],
+   "off_court_excess_m": 0.698,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 405,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4654,
+   "conf": 0.9137,
+   "bbox_xywh": [
+    1327.5,
+    378.3,
+    95.6,
+    157.9
+   ],
+   "world_xy": [
+    -0.84,
+    2.174
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 406,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2451,
+   "conf": 0.9343,
+   "bbox_xywh": [
+    1692.5,
+    402.6,
+    227.7,
+    281.2
+   ],
+   "world_xy": [
+    3.737,
+    -2.215
+   ],
+   "off_court_excess_m": 0.689,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 406,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4766,
+   "conf": 0.9135,
+   "bbox_xywh": [
+    1325.9,
+    377.9,
+    90.3,
+    157.8
+   ],
+   "world_xy": [
+    -0.895,
+    2.187
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 407,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2635,
+   "conf": 0.9357,
+   "bbox_xywh": [
+    1684.1,
+    398.7,
+    235.9,
+    286.7
+   ],
+   "world_xy": [
+    3.725,
+    -2.262
+   ],
+   "off_court_excess_m": 0.677,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 407,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4935,
+   "conf": 0.9073,
+   "bbox_xywh": [
+    1323.6,
+    378.3,
+    86.2,
+    157.3
+   ],
+   "world_xy": [
+    -0.939,
+    2.176
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 408,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.2909,
+   "conf": 0.9374,
+   "bbox_xywh": [
+    1673.4,
+    394.4,
+    244.7,
+    292.3
+   ],
+   "world_xy": [
+    3.705,
+    -2.309
+   ],
+   "off_court_excess_m": 0.657,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 409,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.3153,
+   "conf": 0.9417,
+   "bbox_xywh": [
+    1663.9,
+    391.0,
+    250.8,
+    297.4
+   ],
+   "world_xy": [
+    3.686,
+    -2.362
+   ],
+   "off_court_excess_m": 0.638,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 410,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.3485,
+   "conf": 0.9412,
+   "bbox_xywh": [
+    1652.5,
+    387.4,
+    257.9,
+    301.7
+   ],
+   "world_xy": [
+    3.658,
+    -2.4
+   ],
+   "off_court_excess_m": 0.61,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 411,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4004,
+   "conf": 0.9495,
+   "bbox_xywh": [
+    1636.2,
+    385.1,
+    267.8,
+    304.1
+   ],
+   "world_xy": [
+    3.615,
+    -2.434
+   ],
+   "off_court_excess_m": 0.567,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 411,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4872,
+   "conf": 0.8965,
+   "bbox_xywh": [
+    1316.9,
+    377.7,
+    77.2,
+    159.6
+   ],
+   "world_xy": [
+    -0.963,
+    1.972
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 412,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4461,
+   "conf": 0.9503,
+   "bbox_xywh": [
+    1622.7,
+    383.2,
+    274.0,
+    306.2
+   ],
+   "world_xy": [
+    3.575,
+    -2.466
+   ],
+   "off_court_excess_m": 0.527,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 412,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4741,
+   "conf": 0.9055,
+   "bbox_xywh": [
+    1315.2,
+    377.7,
+    78.1,
+    158.5
+   ],
+   "world_xy": [
+    -1.019,
+    2.051
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 413,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4565,
+   "conf": 0.9522,
+   "bbox_xywh": [
+    1611.4,
+    382.1,
+    277.2,
+    307.5
+   ],
+   "world_xy": [
+    3.538,
+    -2.497
+   ],
+   "off_court_excess_m": 0.49,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 413,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.466,
+   "conf": 0.8995,
+   "bbox_xywh": [
+    1312.9,
+    378.3,
+    80.0,
+    157.0
+   ],
+   "world_xy": [
+    -1.068,
+    2.111
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 414,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4578,
+   "conf": 0.9447,
+   "bbox_xywh": [
+    1600.4,
+    379.9,
+    276.9,
+    310.7
+   ],
+   "world_xy": [
+    3.499,
+    -2.55
+   ],
+   "off_court_excess_m": 0.451,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 414,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4585,
+   "conf": 0.9014,
+   "bbox_xywh": [
+    1309.9,
+    379.2,
+    82.9,
+    156.1
+   ],
+   "world_xy": [
+    -1.085,
+    2.111
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 415,
+   "track_id": 2,
+   "category": "near_miss",
+   "best_real_iou": 0.4737,
+   "conf": 0.925,
+   "bbox_xywh": [
+    1594.1,
+    377.5,
+    267.8,
+    313.0
+   ],
+   "world_xy": [
+    3.457,
+    -2.577
+   ],
+   "off_court_excess_m": 0.409,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 415,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4665,
+   "conf": 0.8998,
+   "bbox_xywh": [
+    1305.0,
+    380.0,
+    88.1,
+    154.5
+   ],
+   "world_xy": [
+    -1.138,
+    2.157
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 416,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4971,
+   "conf": 0.891,
+   "bbox_xywh": [
+    1297.5,
+    381.0,
+    95.4,
+    152.9
+   ],
+   "world_xy": [
+    -1.196,
+    2.182
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 425,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4651,
+   "conf": 0.65,
+   "bbox_xywh": [
+    1547.3,
+    354.7,
+    50.9,
+    196.2
+   ],
+   "world_xy": [
+    1.213,
+    2.125
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 426,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4219,
+   "conf": 0.5128,
+   "bbox_xywh": [
+    1547.3,
+    354.8,
+    46.0,
+    196.1
+   ],
+   "world_xy": [
+    1.195,
+    2.11
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 427,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.4196,
+   "conf": 0.2929,
+   "bbox_xywh": [
+    1547.3,
+    355.3,
+    45.1,
+    188.4
+   ],
+   "world_xy": [
+    1.017,
+    2.648
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 428,
+   "track_id": 3,
+   "category": "near_miss",
+   "best_real_iou": 0.472,
+   "conf": 0.2929,
+   "bbox_xywh": [
+    1549.8,
+    355.6,
+    51.2,
+    190.3
+   ],
+   "world_xy": [
+    1.111,
+    2.511
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 521,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.489,
+   "conf": 0.3231,
+   "bbox_xywh": [
+    1330.9,
+    425.2,
+    72.6,
+    114.6
+   ],
+   "world_xy": [
+    -0.771,
+    1.844
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 522,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.477,
+   "conf": 0.3231,
+   "bbox_xywh": [
+    1332.6,
+    426.4,
+    73.2,
+    113.6
+   ],
+   "world_xy": [
+    -0.748,
+    1.844
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 523,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4652,
+   "conf": 0.3231,
+   "bbox_xywh": [
+    1334.3,
+    427.5,
+    73.8,
+    112.6
+   ],
+   "world_xy": [
+    -0.725,
+    1.845
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 524,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4536,
+   "conf": 0.3231,
+   "bbox_xywh": [
+    1336.0,
+    428.7,
+    74.4,
+    111.6
+   ],
+   "world_xy": [
+    -0.702,
+    1.846
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 525,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4424,
+   "conf": 0.3231,
+   "bbox_xywh": [
+    1337.7,
+    429.8,
+    75.0,
+    110.6
+   ],
+   "world_xy": [
+    -0.679,
+    1.846
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 526,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4316,
+   "conf": 0.3231,
+   "bbox_xywh": [
+    1339.5,
+    431.0,
+    75.5,
+    109.5
+   ],
+   "world_xy": [
+    -0.656,
+    1.847
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 527,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.421,
+   "conf": 0.3231,
+   "bbox_xywh": [
+    1341.2,
+    432.2,
+    76.1,
+    108.5
+   ],
+   "world_xy": [
+    -0.633,
+    1.848
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 528,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4106,
+   "conf": 0.3231,
+   "bbox_xywh": [
+    1342.9,
+    433.3,
+    76.7,
+    107.5
+   ],
+   "world_xy": [
+    -0.609,
+    1.849
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 529,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4006,
+   "conf": 0.3231,
+   "bbox_xywh": [
+    1344.6,
+    434.5,
+    77.3,
+    106.5
+   ],
+   "world_xy": [
+    -0.586,
+    1.849
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 530,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.3907,
+   "conf": 0.3735,
+   "bbox_xywh": [
+    1346.3,
+    435.6,
+    77.9,
+    105.5
+   ],
+   "world_xy": [
+    -0.563,
+    1.85
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 531,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.3948,
+   "conf": 0.3347,
+   "bbox_xywh": [
+    1344.5,
+    437.9,
+    80.0,
+    103.0
+   ],
+   "world_xy": [
+    -0.576,
+    1.857
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 532,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.3999,
+   "conf": 0.306,
+   "bbox_xywh": [
+    1343.0,
+    439.1,
+    81.7,
+    102.0
+   ],
+   "world_xy": [
+    -0.577,
+    1.847
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 533,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4201,
+   "conf": 0.3093,
+   "bbox_xywh": [
+    1340.8,
+    437.2,
+    84.2,
+    104.3
+   ],
+   "world_xy": [
+    -0.571,
+    1.813
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 590,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4895,
+   "conf": 0.5227,
+   "bbox_xywh": [
+    1380.3,
+    383.3,
+    55.3,
+    157.6
+   ],
+   "world_xy": [
+    -0.385,
+    1.996
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 591,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.449,
+   "conf": 0.1851,
+   "bbox_xywh": [
+    1384.7,
+    383.2,
+    50.7,
+    157.8
+   ],
+   "world_xy": [
+    -0.362,
+    1.994
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 592,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4613,
+   "conf": 0.1825,
+   "bbox_xywh": [
+    1384.0,
+    382.1,
+    51.9,
+    158.1
+   ],
+   "world_xy": [
+    -0.393,
+    2.058
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 593,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4712,
+   "conf": 0.1825,
+   "bbox_xywh": [
+    1383.3,
+    381.0,
+    53.0,
+    158.3
+   ],
+   "world_xy": [
+    -0.424,
+    2.122
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 594,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4804,
+   "conf": 0.1825,
+   "bbox_xywh": [
+    1382.7,
+    379.9,
+    54.2,
+    158.6
+   ],
+   "world_xy": [
+    -0.455,
+    2.186
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  },
+  {
+   "frame": 595,
+   "track_id": 4,
+   "category": "near_miss",
+   "best_real_iou": 0.4896,
+   "conf": 0.1825,
+   "bbox_xywh": [
+    1382.0,
+    378.8,
+    55.4,
+    158.9
+   ],
+   "world_xy": [
+    -0.486,
+    2.249
+   ],
+   "off_court_excess_m": 0.0,
+   "gt_count_on_frame": 4,
+   "matched_gt_index": null
+  }
+ ]
+}

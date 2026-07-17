@@ -432,3 +432,36 @@ All work committed+pushed.)_
 _(2026-07-15, coordwire_20260715 CLOSE: NS-01.4/P0-D typed coordinate adoption is wired with a scoped pass across placement, ball target-court/in-out, ball arc camera projection, in/out uncertainty, and virtual-world ball lifting; canonical-beside-legacy Wolverine digests stayed byte-identical and distorted-synthetic/wrong-space coverage passed (22/22 coordinate parity, 274/274 broadened focused, both EXIT 0). Mandatory wide suite completed 3670 passed / 12 failed / 24 skipped, literal EXIT 1: 8 failures are managed-sandbox socket-bind denials and 4 ball_physics_fill failures isolate to concurrent tbwire's eager empty-frame-times fallback change (4/4 pass when the pre-tbwire fallback is restored in-memory), not coordwire math. P0-D's stage-adopted distorted-synthetic + real-iPhone slice is wired (scoped pass); NS-01.4 corrected-beats-raw on independent labels remains PENDING under NS-02. VERIFIED=0; BEST-STACK DELTA (c) none; no process_video.py hunk required or applied.)_
 
 _(2026-07-16, placewire_20260716 lane close: Track I placement-trajectory refinement is wired as canonical stage order 145 immediately after `grounding_refine`, opt-in via `--placement-trajectory-refine` or the existing rev-13 best-stack enablement value (currently false); disabled runs typed-skip without writing or mutating payload artifacts, enabled runs emit only `placement_trajectory_refined.json` with preview/VERIFIED=0 provenance, covariance, robust weights, immutable-input hashes, and content-addressed reuse identity. Focused current-HEAD result: 197 passed / 2 failed EXIT 1, both storage-policy failures introduced by concurrent Track F commit d1b536b3f's unregistered 154,743,315-byte bundle; the same focused suite was 199/199 EXIT 0 before that mid-wide commit. Wide: 3920 passed / 35 failed / 24 skipped EXIT 1 in 2827.94s; all failures attributed outside placewire (1 stale rev-12 best-stack test pin vs landed rev 13, 25 pre-existing owner/CAL dirty-label/data-count failures, 8 managed-sandbox socket binds, 1 mid-run Track F bundle storage failure). `process_video.py --help`, scaffold index, dead-code audit, py_compile, and all 185 placewire/process/spine tests EXIT 0. BEST-STACK DELTA = "(b) consumes the existing rev-13 PENDING entry, no edit". Scoped wiring pass only; preview band, do_not_promote, VERIFIED=0.)_
+
+_(2026-07-17 trkL_selection_20260717 CLOSE (Track L manager, wrap-up mode per coordinator): GHOST
+DIAGNOSIS SOLVED with numbers — wolverine's 4 surviving "spectator" FPs under RF-DETR-L variant P are
+NOT spectators and NOT detector output: they are 4 frames of a 42-frame SYNTHETIC interpolation bridge
+(conf exactly 0.3500, `_interpolate_detection` cap) manufactured when global association stitched GT
+player 1's tracklet (f0-44) to GT player 4's (f87+) and linearly bridged 10.4m across the court through
+the net at 7.4 m/s; interpolated footpoints are ON-COURT by construction → structurally invisible to
+ANY footpoint margin gate; production `max_gap_fill_frames: 48` + dt-scaled speed allowance (11.28m at
+43 frames) let it through; provenance stamp (`conf_source="interpolated_endpoint_min_capped_0_35"`)
+exists in player_id_repair but DIES at tracks.json export; the bridge also PADS cov4 (~32 fake frames
+of the 0.7233) and causes the near-miss-rate breach (0.1244) AND the f58 switch. conf030's 16 FPs =
+IDENTICAL bridge signature (forensically corrected: its "high-confidence spectators" interpretation is
+wrong — threshold attacks were doomed by mechanism, vindicating the owner's selection-layer directive).
+OSNet probe (production ckpt, CPU): stitch pair 0.448 = cross-identity band (0.42-0.55) vs legitimate
+re-bind 0.304 vs within-identity 0.10-0.16 → open-set veto separates on this clip. Counterfactuals
+(frozen scorer, fixed VM tracks, CPU diagnostic): stitch veto alone → spectFP 4→0, near-miss 0.0986
+(clears gate), IDF1 0.8141; + slot re-bind → sw 1→0, IDF1 0.8519 ≥ YOLO baseline 0.8516, HOTA 0.8614;
+honest cov4 floor 0.6167 (padding removed) — cov4 rebuild = identity-conditioned RAW-POOL recovery
+(min_conf 0.0 pool already exported), NOT geometric synthesis. Burlington structurally untouched (6
+synth frames, max run 3/1.14m). DELIVERED: runs/lanes/trkL_selection_20260717/{GHOST_DIAGNOSIS.md,
+DESIGN_selection_layer.md} — full layers A (soft court presence, SIGMA 0.5m/EMA 2s) + B (4-slot OSNet
+enrollment, open-set accept ≤0.35 / reject ≥0.42 / defer band, two-evidence-class stitch veto: ≥0.42
+AND >2.5m-or-net-crossing-without-real-support) + C (interpolation ban beyond 12f/2.5m, provenance
+survives export, pool recovery) w/ PRE-REGISTERED thresholds + frozen-card acceptance table (wolverine
+FULL PASS = 0/0/0 FP-axes + near-miss ≤0.10 + IDF1 ≥0.8036 + cov4 ≥0.7233-via-recovery; cov4
+0.6167-0.7233 all-else-green = PARTIAL coordinator ruling; burlington no-degradation) + invariants
+(OFF ⇒ byte-identical; VM env-fidelity first; bridge-fixture unit test) + exact dispatch instruction
+(build lane CPU Codex sol-high, 4 new files fenced, association modules READ-ONLY; then ONE ≤$2 A100
+micro eval session). NO code/best_stack changes; no GPU spent; VERIFIED=0. Diagnosis harness +
+counterfactuals + probe JSONs committed in lane dir (148K; extracted artifact trees deleted,
+reproducible from trk_rfdetr_prod tarballs). Coordinate future impl lane w/
+trk_rfdetr_integrate_20260717 (holds orchestrator/MANIFEST/best_stack when live; conf030 prereg FAILED
+→ its branch = 2b ship-at-0.18).)_
