@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "clip": "pbvision_11min_20260713",
+  "source_video": "data/pbvision_11min_20260713/source_video.mp4",
+  "source_sha256": "272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383",
+  "source_resolution": [1280, 720],
+  "source_fps": 30.0,
+  "source_duration_s": 697.4,
+  "note": "pb.vision demo video - R&D reference only; frames extracted at native 1280x720 (t=10,100,200,300,400,500,600,680s) for owner 15-pt court keypoint review; not ground truth until reviewed.",
+  "not_ground_truth": true
+}

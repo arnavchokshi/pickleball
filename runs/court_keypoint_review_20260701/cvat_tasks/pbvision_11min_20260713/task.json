@@ -1,0 +1,113 @@
+{
+  "artifact_type": "racketsport_cvat_task",
+  "clip": "pbvision_11min_20260713",
+  "corrections_hint": "Export annotations, then convert them into the correction template under review_bundle/corrections/<clip>/<target_file>.",
+  "images": [
+    {
+      "file_name": "frame_000001.jpg",
+      "frame": "frame_000001.jpg",
+      "review_id": "court_keypoints_manual_15pt_0000",
+      "target_file": "court_keypoints.json",
+      "note": "t=10s of source_video.mp4 (sha 272a2132..., R&D reference only)"
+    },
+    {
+      "file_name": "frame_000002.jpg",
+      "frame": "frame_000002.jpg",
+      "review_id": "court_keypoints_manual_15pt_0001",
+      "target_file": "court_keypoints.json",
+      "note": "t=100s of source_video.mp4 (sha 272a2132..., R&D reference only)"
+    },
+    {
+      "file_name": "frame_000003.jpg",
+      "frame": "frame_000003.jpg",
+      "review_id": "court_keypoints_manual_15pt_0002",
+      "target_file": "court_keypoints.json",
+      "note": "t=200s of source_video.mp4 (sha 272a2132..., R&D reference only)"
+    },
+    {
+      "file_name": "frame_000004.jpg",
+      "frame": "frame_000004.jpg",
+      "review_id": "court_keypoints_manual_15pt_0003",
+      "target_file": "court_keypoints.json",
+      "note": "t=300s of source_video.mp4 (sha 272a2132..., R&D reference only)"
+    },
+    {
+      "file_name": "frame_000005.jpg",
+      "frame": "frame_000005.jpg",
+      "review_id": "court_keypoints_manual_15pt_0004",
+      "target_file": "court_keypoints.json",
+      "note": "t=400s of source_video.mp4 (sha 272a2132..., R&D reference only)"
+    },
+    {
+      "file_name": "frame_000006.jpg",
+      "frame": "frame_000006.jpg",
+      "review_id": "court_keypoints_manual_15pt_0005",
+      "target_file": "court_keypoints.json",
+      "note": "t=500s of source_video.mp4 (sha 272a2132..., R&D reference only)"
+    },
+    {
+      "file_name": "frame_000007.jpg",
+      "frame": "frame_000007.jpg",
+      "review_id": "court_keypoints_manual_15pt_0006",
+      "target_file": "court_keypoints.json",
+      "note": "t=600s of source_video.mp4 (sha 272a2132..., R&D reference only)"
+    },
+    {
+      "file_name": "frame_000008.jpg",
+      "frame": "frame_000008.jpg",
+      "review_id": "court_keypoints_manual_15pt_0007",
+      "target_file": "court_keypoints.json",
+      "note": "t=680s of source_video.mp4 (sha 272a2132..., R&D reference only)"
+    }
+  ],
+  "labels": [
+    {
+      "attributes": [
+        "corner_name"
+      ],
+      "name": "court_corner"
+    },
+    {
+      "attributes": [
+        "keypoint_name"
+      ],
+      "name": "court_keypoint"
+    },
+    {
+      "attributes": [
+        "player_id"
+      ],
+      "name": "player_box"
+    },
+    {
+      "attributes": [
+        "visibility"
+      ],
+      "name": "ball"
+    },
+    {
+      "attributes": [
+        "event_type"
+      ],
+      "name": "event"
+    },
+    {
+      "attributes": [
+        "keypoint_name"
+      ],
+      "name": "racket_keypoint"
+    },
+    {
+      "attributes": [
+        "foot"
+      ],
+      "name": "foot_contact"
+    }
+  ],
+  "missing_source_image_count": 0,
+  "missing_source_images": [],
+  "not_ground_truth": true,
+  "schema_version": 1,
+  "status": "ready_for_cvat_review",
+  "task_name": "racketsport_pbvision_11min_20260713_label_review"
+}
