@@ -24,6 +24,24 @@ also refreshed to 07-16 truth. HARD RULE standing: NO third MOVE-1 GPU attempt
 without the coordinator's explicit go; prerequisites = ballarc guard adopted + harness v2 green +
 trusted CAL seed.)_
 
+_(2026-07-16 evening Track A manager: **CAL LEG CLOSED AT THE REVIEWED CLASS** — owner completed the
+15-pt review (semantics: unmarked = out-of-frame, honored by the metric15 loader which uses only
+marked points); wrapped via the designed `metric_calibration_from_reviewed_keypoints_15pt` path into
+eval_clips/ball/pbvision_11min_20260713/labels/court_calibration_metric15pt.json (source
+metric_15pt_reviewed, committed 1075cee57). GATE PREFLIGHT PROVEN: orchestrator ingests it, NO
+correction task, calibration stage RAN; tracking 'blocked' in the smoke was --no-gpu semantics only.
+CROSS-CHECK EVIDENCE: reviewed solve fx 719.3 vs line solve fx 743.0 (~3% agreement, principal
+points identical) — two independent solutions agree on the camera; reviewed fit residual 19.16px
+median/51.7px p95 is dominated by its designed zero-distortion choice (line solve fitted k1=-0.28 →
+2.61px). Consequences carried honestly: metric_confidence low + reprojection_unusable grade →
+in/out line calls abstain (too_close_to_call) while metric stages EXECUTE. OPEN QUESTION routed to
+the CAL owner (not a #3 blocker): whether the metric15 fit should model distortion for this camera
+class (designed distortion_improvement_threshold knob exists; manager did not touch it — fit-config
+decision belongs to the CAL policy owner). STEP 4 STATUS: auth ✓, CAL ✓ (reviewed class), coverage
+leg = the ONLY remaining blocker for the MOVE-1 #3 standing GO. Dispatch checklist addendum: include
+Track I placement-refiner as explicit opt-in PREVIEW ARM if Track C has it wired at dispatch; don't
+hold the run otherwise.)_
+
 _(2026-07-16 ~01:2x Track A manager: pbv11_calsolve_20260716 RULED **BLOCKED (honest kill accepted)**,
 manager-verified: the line-evidence 15-intersection solve is REAL (camera median 2.61px; refreshed
 evidence 1.64px; independent validator auto_calibration_ready TRUE incl. top_net 3.49px; overlay
