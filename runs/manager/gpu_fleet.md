@@ -44,6 +44,33 @@ the "DEAD" note above is stale, superseded here.
   (H100 us-central1-a) **SUCCEEDED** — `pickleball-h100-detbench` RUNNING 2026-07-16T16:36:37Z.
   A100 tiers never needed. Row added to the live table above.
 
+## 2026-07-17T05:47Z event_head_pretrain_20260716 CLOSE — VM DELETED, fleet EMPTY, ~$1.00-1.60 total
+
+- **Teardown confirmed by the G2 manager personally:** `gcloud compute instances delete
+  pickleball-t4-eventhead --zone=us-central1-b --quiet` EXIT 0 → `instances list
+  --filter=labels.fable-fleet=pickleball` shows ONLY `pickleball-a100-fleet1` TERMINATED (historical
+  snapshot source, untouched, label unchanged); `disks list` shows ZERO lane-created disks.
+- **Cost accounting (est., not invoice-backed):** T4 spot band $0.2-0.4/hr. Instance 3 (the real
+  worker) RUNNING 17:32Z→18:2xZ (~50min, idle-watchdog stop during the Mac freeze) + 03:33Z→05:47Z
+  (~2.2h) ≈ 3.0h compute ≈ **$0.60-1.20**; instances 1+2 ~12min ≈ $0.04-0.08; **plus ~$0.26 disk**
+  for the 200GB pd-balanced sitting through the ~9.5h freeze while TERMINATED. **Total ≈ $1.00-1.60
+  against the $10 HARD cap** (the $15 coordinator-relayed raise was never honored — only the
+  user/permission system authorizes spend).
+- **12 stockouts across 2 ladders before success** (fleet1 ase1-a ×2, L4 ×8 across usc1/use1/usw1/
+  euw4 — L4 was exhausted continent-wide that hour; T4 usc1-b succeeded on rung 8). **T4 is a
+  legitimate first rung for decode-bound work, not a fallback.**
+- **OPS LESSONS BOOKED (both cost real time this lane):**
+  1. **Arm rails at BOOT via startup-script metadata, never via post-RUNNING ssh.** On fresh DLVM
+     images the first-boot NVIDIA driver install owns the box for 5-8min; ssh arming raced it and
+     fail-closed DELETEd a healthy VM. The boot-armed rail verified in 0s on the retry.
+  2. **`nvidia-smi -c EXCLUSIVE_PROCESS` is fleet policy** (`scripts/fleet/lane_vm_startup.sh`) — a
+     second concurrent CUDA process on one lane VM fails loud by design. Do not plan concurrent GPU
+     passes on a single lane VM; serialize them.
+  3. Mac-side `tar` injects AppleDouble `._*` files that broke a CSV glob on the VM
+     (UnicodeDecodeError) — use `COPYFILE_DISABLE=1 tar` or strip on arrival.
+  4. VM `cv2`/bundled ffmpeg **cannot decode AV1** — fetch/stage h264 at the source; verify with a
+     10-frame decode check before training (30s check, saved 40min the hard way).
+
 ## Current fleet state (2026-07-16T02:51Z, Track A manager session close)
 
 EMPTY — zero fleet VMs running or stopped except the historical `pickleball-a100-fleet1`
@@ -57,7 +84,7 @@ body4d-waker-ctrl 30GB non-fleet + pickleball-a100-fleet1 200GB historical). Non
 | pickleball-gpu-conf030 | asia-southeast1-c | A100-80GB | a2-ultragpu-1g SPOT | DONE+DELETED 2026-07-17T05:03:30Z (list-confirmed; disks 0) | trk_rfdetr_prod_20260716/vm_conf030 (Track F, PREREG_conf030 single-shot) | spot band ~$1.5-2.5 | 2026-07-17T04:54:30Z | wall **0.15h** → est **$0.22-0.38** (cap $2). Rail armed+verified 04:56:09Z (poweroff 05:41:08 UTC). Env gate PASS (~3e-11). **PREREG RESULT: FAIL** — conf030 wolverine 0.7780/0.6767 + 2 sw + 16 spectFP (WORSE than 0.18 floor's 1/4: surviving spectators are high-conf); burlington clean+material 0.9234/0.9850. One shot, no iteration, per prereg → coordinator's 2b. Pull md5 both sides 55c956715663c236b4e1d4b441813151. See runs/lanes/trk_rfdetr_prod_20260716/vm_conf030/ |
 | pickleball-gpu-rfdetrflip | us-central1-a | A100-80GB | a2-ultragpu-1g SPOT | DONE+DELETED 2026-07-17T04:43:08Z (list-confirmed; disks 0) | trk_rfdetr_prod_20260716/vm_rerun (Track F, owner-directed) | spot band ~$1.5-2.5 | 2026-07-17T04:31:00Z | wall **0.20h** → est **$0.30-0.50** (cap $5). Rail armed+verified 04:33:55Z (`shutdown -P +100` → poweroff 06:13:54 UTC, proof in lane log). Gate arm0a PASS (~3e-11 both clips — VM score-faithful where Mac was not). POOLDIAG M4 CONFIRMED end-to-end (YOLO26m @ conf .18/imgsz 960 through per-frame feeder reproduces frozen pins EXACTLY, Δ=0.000000). RF-DETR-L variant P: burl 0.9220/0.9933 clean; wolv 0.8036/0.7233, 1 sw + 4 spectFP (down from F's 16, not zero). Pull md5 both sides 0df9955dc38443841851afbdc7876801. Ladder: usc1-a H100 stockout, ase1-b H100 revoked mid-STAGING (0 orphans), usc1-a A100-80 success. See runs/lanes/trk_rfdetr_prod_20260716/vm_rerun/ |
 | pickleball-h100-detbench | us-central1-a | H100-80GB | a3-highgpu-1g SPOT | DONE+DELETED 2026-07-16T17:16:41Z (list-confirmed; disks 0) | trk_detbench_20260716 (dispatch 2, AMENDMENT 1) | spot band ~$2.2-3.7 | 2026-07-16T16:36:37Z | wall 0.67h → est **$1.5-2.5**. Rail WAS armed+verified (shutdown -P +210, proof in lane log 16:39:56Z) + 60-min heartbeat self-stop unit. All 6 arms ran + scored; artifacts pulled two-sided md5 4ccc6129... See runs/lanes/trk_detbench_20260716/{report.json,DECISION_TABLE.md} |
-| pickleball-t4-eventhead | us-central1-b | T4 | n1-standard-8 SPOT | RESTARTING (was TERMINATED ~18:2xZ by own idle watchdog during the ~9.5h Mac freeze — rail design worked, staged disk INTACT: labels/jhong93/OpenTT/pbvision sha-verified + code at CODE_GREEN pins; restart re-arms rail at boot; AV1→h264 transcode of 5 pilot videos completing Mac-side) | event_head_pretrain_20260716 (Track G2, slot 2-of-2 per owner directive) | spot band ~$0.2-0.4 | 2026-07-16T17:32:29Z | AMENDMENT-2 railed re-create after: 12 stockouts across 2 ladders (attempt-1 NO-ATTEMPT $0.00), T4 instance 1 fail-closed DELETE at 17:26:50Z (ssh rail-arm raced DLVM first-boot driver install, 480s window), instance 2 discarded unrailed pre-amendment; instance 3 arms its OWN rail at boot via startup script — RAIL_ARMED verified 17:34:01Z (+330 poweroff scheduled + idle watchdog pid 1134, verify latency ~0s); spend so far ~$0.04-0.08 vs $10 HARD cap (user-authorized; $15 relay not honorable); DELETE + list+disks confirm at lane end; Mac MPS insurance train live (killed at GPU TRAIN_STARTED). OPS LESSON booked: arm rails at boot via startup script, never via post-RUNNING ssh on fresh DLVM images. NOTE 17:31Z reconcile: detbench absent from live list — Track F teardown presumed complete (their row to close) |
+| ~~pickleball-t4-eventhead~~ | us-central1-b | T4 | n1-standard-8 SPOT | **DELETED 2026-07-17T05:47:5xZ — list-confirmed (only historical a100-fleet1 TERMINATED remains) + disks list confirms ZERO lane disks (body4d-waker-ctrl 30GB non-fleet + a100-fleet1 200GB historical only). FLEET EMPTY.** | event_head_pretrain_20260716 (Track G2, slot 2-of-2 per owner directive) | spot band ~$0.2-0.4 | 2026-07-16T17:32:29Z | AMENDMENT-2 railed re-create after: 12 stockouts across 2 ladders (attempt-1 NO-ATTEMPT $0.00), T4 instance 1 fail-closed DELETE at 17:26:50Z (ssh rail-arm raced DLVM first-boot driver install, 480s window), instance 2 discarded unrailed pre-amendment; instance 3 arms its OWN rail at boot via startup script — RAIL_ARMED verified 17:34:01Z (+330 poweroff scheduled + idle watchdog pid 1134, verify latency ~0s); spend so far ~$0.04-0.08 vs $10 HARD cap (user-authorized; $15 relay not honorable); DELETE + list+disks confirm at lane end; Mac MPS insurance train live (killed at GPU TRAIN_STARTED). OPS LESSON booked: arm rails at boot via startup script, never via post-RUNNING ssh on fresh DLVM images. NOTE 17:31Z reconcile: detbench absent from live list — Track F teardown presumed complete (their row to close) |
 
 ## 2026-07-15/16 pbv11_headtohead RE-RUN — CLOSED (partial; VM deleted + confirmed)
 

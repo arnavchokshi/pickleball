@@ -188,9 +188,23 @@ eval (16 clips, 42 GT events, thr 0.5, tol ±2f): HIT tp6/fp0 (recall ~22%), BOU
 headline is RETRACTED as a measurement artifact — the committed eval CLI scores 15-frame windows
 against a 64-frame-context head (eval_event_head.py:68-69); the identical checkpoint on the identical
 clips scores 9 TP / 0 FP at matched 64f and 0 TP at 15f (evidence: eval/matched_window64_eval.json vs
-eval/control_window15_eval.json). WEIGHTING GUIDANCE: expect sparse-but-clean HITs on the demo video
-— but the domain gap is real and untested (tennis/TT broadcast → pickleball, zero fine-tune), so
-treat precision as a public-domain observation, not a demo-video guarantee. Per OWNER DIRECTIVE
+eval/control_window15_eval.json). **RETRACTION + FINAL VERDICT 2026-07-17 06:0x — DO NOT INGEST
+these anchors. My own "expect sparse-but-clean HITs on the demo video" guidance above is WITHDRAWN;
+the measured demo-video output disproves it.** Zero-shot transfer to pickleball FAILED (not "weak
+success"): 4,990 HIT candidates over 697.4s = 7.16/s (real games have ~200-400 contacts total),
+median inter-HIT gap 4 frames at stride 2, **98% of all seconds contain a HIT** (the video has 41
+rallies WITH dead time) — a near-uniform activation carpet, not discrete events; wider NMS merging
+does not rescue it (327 clusters @5f, 103 @10f, 49 @15f). The audio cross-check cannot rescue it
+either and is itself informative for you: 70.2% of candidates have an onset within ±0.15s but the
+CHANCE baseline is ~99.3% (2,309 onsets / 697.4s = 0.302s mean spacing → any arbitrary timestamp
+co-locates) — i.e. co-location at/below chance, ZERO discriminative information. That independently
+corroborates the owner's audio-bleed observation and is direct evidence for why an audio-only anchor
+class trips physics. Full numbers + method:
+runs/lanes/event_head_pretrain_20260716/ANCHOR_VERDICT.md. The lane's real deliverables are the
+checkpoint + SCALE_UP_SPEC.md (root cause: 2.4% label reach / 18.1% media coverage /
+one-window-per-row — the head saw a rounding error of the corpus and zero pickleball). Re-attempt
+anchors ONLY from a pickleball-fine-tuned checkpoint that first passes a cheap pre-flight:
+candidates/second must land ~0.3-1.0, not 7. Per OWNER DIRECTIVE
 2026-07-16 (neighboring-court audio bleed), each candidate carries an EVIDENCE VECTOR — event_head
 score + audio onset proximity/strength (review-only pbvision onsets, ±0.15s window) + 2D ball-track
 kink (direction-change deg from the salvaged 697s chain) + wrist_swing_proximity marked
