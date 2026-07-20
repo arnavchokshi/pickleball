@@ -72,12 +72,15 @@ codex exec \
 run_in_background: true; absolute paths ALWAYS; add `-c tools.web_search=true` for research lanes.
 **MODEL POLICY (owner directive 2026-07-19, supersedes 2026-07-09): every Codex dispatch uses `gpt-5.6-sol`
 ONLY — pin the model explicitly on every dispatch, never rely on the CLI default, never any other model.
-Reasoning effort is TIERED BY DIFFICULTY:
+Speed: DEFAULT always (no priority/speed override). Reasoning effort is TIERED BY DIFFICULTY
+(`-c model_reasoning_effort=...`; ladder high < xhigh < ultra — `ultra` is a real CLI tier ABOVE xhigh,
+probe-verified 2026-07-19):
 - `high` = the default for spec-complete implementation/mechanical lanes;
-- `xhigh` ("ultra") = REQUIRED when the problem is genuinely hard (novel design, ambiguous root-cause,
+- `xhigh` = intermediate, when a lane has real design latitude but bounded risk;
+- `ultra` = REQUIRED when the problem is genuinely hard (novel design, ambiguous root-cause,
   gate-adjacent correctness, anything where a wrong approach is expensive to unwind);
 - NEXT-STEP / APPROACH DECISIONS: whenever the manager is deciding what to do next or choosing between
-  approaches, Fable does the thinking AND dispatches a `gpt-5.6-sol` `xhigh` advisory lane (structured
+  approaches, Fable does the thinking AND dispatches a `gpt-5.6-sol` `ultra` advisory lane (structured
   facts + options + tradeoffs, never conclusions-only); Fable rules on its output. Strategy is never
   decided at `high`.
 State the chosen tier + one-line justification in the lane row.**
