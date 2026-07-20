@@ -1,0 +1,423 @@
+{
+ "inputs": {
+  "tracks_sha256_matches_fusion_pin": true,
+  "stack_note": "tracks.json = PRODUCTION stack input the fusion consumed; trkL f45-86 diag was on the RF-DETR-L(P) variant \u2014 same fabrication code path (player_id_repair), spans independently derived here from the conf-0.35 pin signature"
+ },
+ "synthetic_runs_by_player": {
+  "1": [],
+  "2": [
+   {
+    "span": [
+     45,
+     55
+    ],
+    "len": 11,
+    "disp_m": 0.49,
+    "speed_mps": 1.33,
+    "net_cross": false,
+    "xy_start": [
+     0.6,
+     -2.58
+    ],
+    "xy_end": [
+     1.07,
+     -2.68
+    ]
+   },
+   {
+    "span": [
+     112,
+     118
+    ],
+    "len": 7,
+    "disp_m": 0.03,
+    "speed_mps": 0.11,
+    "net_cross": false,
+    "xy_start": [
+     1.89,
+     -2.53
+    ],
+    "xy_end": [
+     1.86,
+     -2.53
+    ]
+   }
+  ],
+  "3": [
+   {
+    "span": [
+     173,
+     180
+    ],
+    "len": 8,
+    "disp_m": 0.1,
+    "speed_mps": 0.37,
+    "net_cross": false,
+    "xy_start": [
+     -1.5,
+     6.19
+    ],
+    "xy_end": [
+     -1.6,
+     6.21
+    ]
+   },
+   {
+    "span": [
+     186,
+     212
+    ],
+    "len": 27,
+    "disp_m": 0.39,
+    "speed_mps": 0.44,
+    "net_cross": false,
+    "xy_start": [
+     -1.69,
+     6.23
+    ],
+    "xy_end": [
+     -2.08,
+     6.22
+    ]
+   },
+   {
+    "span": [
+     247,
+     270
+    ],
+    "len": 24,
+    "disp_m": 0.34,
+    "speed_mps": 0.42,
+    "net_cross": false,
+    "xy_start": [
+     -2.39,
+     6.02
+    ],
+    "xy_end": [
+     -2.19,
+     5.76
+    ]
+   },
+   {
+    "span": [
+     272,
+     276
+    ],
+    "len": 5,
+    "disp_m": 0.1,
+    "speed_mps": 0.6,
+    "net_cross": false,
+    "xy_start": [
+     -2.15,
+     5.73
+    ],
+    "xy_end": [
+     -2.07,
+     5.67
+    ]
+   },
+   {
+    "span": [
+     278,
+     291
+    ],
+    "len": 14,
+    "disp_m": 0.37,
+    "speed_mps": 0.8,
+    "net_cross": false,
+    "xy_start": [
+     -2.03,
+     5.64
+    ],
+    "xy_end": [
+     -1.71,
+     5.44
+    ]
+   }
+  ],
+  "4": [
+   {
+    "span": [
+     266,
+     289
+    ],
+    "len": 24,
+    "disp_m": 0.28,
+    "speed_mps": 0.35,
+    "net_cross": false,
+    "xy_start": [
+     1.47,
+     5.88
+    ],
+    "xy_end": [
+     1.48,
+     5.6
+    ]
+   }
+  ]
+ },
+ "contact_overlap_table": [
+  {
+   "contact_frame": 5,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 9.01,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 3
+  },
+  {
+   "contact_frame": 13,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 8.11,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 2
+  },
+  {
+   "contact_frame": 14,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 8.71,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 2
+  },
+  {
+   "contact_frame": 21,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 10.9,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 3
+  },
+  {
+   "contact_frame": 36,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 15.73,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 3
+  },
+  {
+   "contact_frame": 44,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 4.49,
+   "overlaps_synthetic": [
+    {
+     "player": 2,
+     "span": [
+      45,
+      55
+     ],
+     "len": 11
+    }
+   ],
+   "real_players_at_frame": 2
+  },
+  {
+   "contact_frame": 49,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 2.41,
+   "overlaps_synthetic": [
+    {
+     "player": 2,
+     "span": [
+      45,
+      55
+     ],
+     "len": 11
+    }
+   ],
+   "real_players_at_frame": 0
+  },
+  {
+   "contact_frame": 60,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 3.37,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 63,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 8.33,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 70,
+   "status": "too_close_to_call",
+   "hitter_band": "too_close_to_call",
+   "raw_wrist_residual_m": 0.65,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 78,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 11.17,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 80,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 10.17,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 84,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 5.65,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 98,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 11.12,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 100,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 12.22,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 112,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 10.24,
+   "overlaps_synthetic": [
+    {
+     "player": 2,
+     "span": [
+      112,
+      118
+     ],
+     "len": 7
+    }
+   ],
+   "real_players_at_frame": 3
+  },
+  {
+   "contact_frame": 116,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 9.79,
+   "overlaps_synthetic": [
+    {
+     "player": 2,
+     "span": [
+      112,
+      118
+     ],
+     "len": 7
+    }
+   ],
+   "real_players_at_frame": 3
+  },
+  {
+   "contact_frame": 118,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 9.87,
+   "overlaps_synthetic": [
+    {
+     "player": 2,
+     "span": [
+      112,
+      118
+     ],
+     "len": 7
+    }
+   ],
+   "real_players_at_frame": 3
+  },
+  {
+   "contact_frame": 126,
+   "status": "too_close_to_call",
+   "hitter_band": "too_close_to_call",
+   "raw_wrist_residual_m": 1.01,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 128,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 1.6,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 136,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 3.72,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 139,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 9.14,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 144,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 2.33,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  },
+  {
+   "contact_frame": 148,
+   "status": "unsupported",
+   "hitter_band": "unsupported",
+   "raw_wrist_residual_m": 8.85,
+   "overlaps_synthetic": [],
+   "real_players_at_frame": 4
+  }
+ ],
+ "n_contacts": 24,
+ "n_overlapping": 5,
+ "n_contacts_with_missing_real_player": 10,
+ "NEW_FINDING_stale_world_xy": {
+  "claim": "tracks.json world_xy is piecewise-CONSTANT: held stale over long spans (e.g. p2 frozen 137f f163-299 while bbox moves 82px), no per-frame provenance marker; distinct-value counts below",
+  "per_player": {
+   "1": {
+    "frames": 290,
+    "distinct_world_xy": 94
+   },
+   "2": {
+    "frames": 300,
+    "distinct_world_xy": 31
+   },
+   "3": {
+    "frames": 273,
+    "distinct_world_xy": 184
+   },
+   "4": {
+    "frames": 244,
+    "distinct_world_xy": 90
+   }
+  },
+  "impact": "does NOT explain the contact refusals (those use BODY wrists), but is the same trust-contract family as P0-I: a held/estimated value exported indistinguishable from measured. Route to trkL selection lane + Track C."
+ }
+}
