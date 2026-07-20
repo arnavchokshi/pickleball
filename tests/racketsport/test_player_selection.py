@@ -725,20 +725,17 @@ def test_no_enrollment_is_typed_partial_and_removes_wolverine_bridge_end_to_end(
     assert report["status"] == "preview_selection_partial_no_enrollment"
     assert report["selection_mode"] == "partial_unbound_real_only"
     assert report["enrollment"]["slot_count"] == 0
-    assert len(selected["players"]) == 2
-    assert all(
-        player["side"] == "unbound" and player["role"] == "abstention"
-        for player in selected["players"]
-    )
+    assert selected["players"] == []
+    assert len(selected["unbound_observations"]) == 2
     output_frames = [
         frame["frame_idx"]
-        for player in selected["players"]
-        for frame in player["frames"]
+        for observation in selected["unbound_observations"]
+        for frame in observation["frames"]
     ]
     assert output_frames == [44, 87]
     assert all(
-        not ({44, 87} <= {frame["frame_idx"] for frame in player["frames"]})
-        for player in selected["players"]
+        not ({44, 87} <= {frame["frame_idx"] for frame in observation["frames"]})
+        for observation in selected["unbound_observations"]
     )
     assert not set(range(45, 87)) & set(output_frames)
     assert report["output_counts"]["synthetic_frames_removed"] == 42
@@ -751,7 +748,9 @@ def test_no_enrollment_is_typed_partial_and_removes_wolverine_bridge_end_to_end(
         set(decision.get("evidence_classes", ())) <= {"appearance", "geometry"}
         for decision in report["decisions"]
     )
-    Tracks.model_validate(selected)
+    canonical_tracks = dict(selected)
+    del canonical_tracks["unbound_observations"]
+    Tracks.model_validate(canonical_tracks)
 
 
 def test_one_raw_uid_is_joined_once_and_exports_only_raw_geometry() -> None:
@@ -809,7 +808,11 @@ def test_one_raw_uid_is_joined_once_and_exports_only_raw_geometry() -> None:
         calibration=_identity_calibration(),
         enabled=True,
     )
-    frames = [frame for player in selected["players"] for frame in player["frames"]]
+    frames = [
+        frame
+        for observation in selected["unbound_observations"]
+        for frame in observation["frames"]
+    ]
     assert len(frames) == 1
     assert frames[0]["bbox"] == raw_bbox
     assert frames[0]["world_xy"] == pytest.approx([1.0, 2.0])
@@ -867,8 +870,11 @@ def test_missing_enrollment_centroid_returns_typed_partial() -> None:
     )
     assert report["status"] == "preview_selection_partial_no_enrollment"
     assert report["enrollment"]["slot_count"] == 0
-    assert sum(len(player["frames"]) for player in selected["players"]) == 120
-    assert all(player["side"] == "unbound" for player in selected["players"])
+    assert selected["players"] == []
+    assert sum(
+        len(observation["frames"])
+        for observation in selected["unbound_observations"]
+    ) == 120
 
 
 def test_defer_band_real_fragment_survives_unbound_and_role_motion_do_not_double_count() -> (
@@ -911,13 +917,57 @@ def test_defer_band_real_fragment_survives_unbound_and_role_motion_do_not_double
     assert decision["fusion_score"] == pytest.approx(0.9428571428571428)
     assert set(decision["evidence_classes"]) <= {"appearance", "geometry"}
     assert "role" not in decision["evidence_classes"]
-    unbound = [player for player in selected["players"] if player["side"] == "unbound"]
+    unbound = selected["unbound_observations"]
     assert len(unbound) == 1
-    assert unbound[0]["role"] == "abstention"
+    assert unbound[0]["selection_state"] == "unbound_abstention"
     assert [frame["frame_idx"] for frame in unbound[0]["frames"]] == [40, 41, 42]
-    assert decision["output_player_ids"] == [unbound[0]["id"]]
+    assert decision["output_unbound_observation_ids"] == [
+        unbound[0]["observation_id"]
+    ]
     assert positions[1] == (-1.5, -3.0)
     assert embeddings[1] == (1.0, 0.0)
+
+
+def test_enabled_export_claims_only_bound_slots_and_preserves_unbound_observations() -> (
+    None
+):
+    records, _positions, _embeddings = _four_slot_records()
+    records.append(
+        {
+            "frame": 40,
+            "source": 50,
+            "xy": (0.0, -2.5),
+            "embedding": None,
+        }
+    )
+    raw_pool, embedding_payload = _raw_selection_inputs(records)
+    selected, report = select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload=raw_pool,
+        embedding_payload=embedding_payload,
+        calibration=_identity_calibration(),
+        enabled=True,
+    )
+
+    bound_rows = [
+        row for row in report["tracks"] if row["selection_state"] == "bound_slot"
+    ]
+    assert len(selected["players"]) == len(bound_rows) == 4
+    assert len(selected["players"]) <= 4
+    assert all(player["side"] != "unbound" for player in selected["players"])
+
+    observations = selected["unbound_observations"]
+    assert len(observations) == 1
+    observation = observations[0]
+    assert observation["selection_state"] == "unbound_abstention"
+    assert observation["abstention_reasons"][0] == "not_bound_to_claimed_slot"
+    assert observation["raw_detection_uids"] == ["raw:40:0"]
+    assert [frame["frame_idx"] for frame in observation["frames"]] == [40]
+    assert observation["frames"][0] not in [
+        frame for player in selected["players"] for frame in player["frames"]
+    ]
+    assert report["output_counts"]["players"] == 4
+    assert report["output_counts"]["unbound_observations"] == 1
 
 
 def test_wolverine_f44_f87_refusal_separates_final_bound_ids() -> None:
@@ -999,10 +1049,11 @@ def test_continuous_same_tracker_appearance_switch_splits_final_output() -> None
         enabled=True,
     )
     assert report["status"] == "preview_selection_partial_no_enrollment"
-    assert len(selected["players"]) == 2
+    assert selected["players"] == []
+    assert len(selected["unbound_observations"]) == 2
     assert [
-        [frame["frame_idx"] for frame in player["frames"]]
-        for player in selected["players"]
+        [frame["frame_idx"] for frame in observation["frames"]]
+        for observation in selected["unbound_observations"]
     ] == [[0], [1]]
     fragment_decisions = [
         decision
@@ -1048,13 +1099,14 @@ def test_enrollment_ownership_is_limited_to_registered_window_during_identity_sw
         if str(decision.get("fragment_id", "")).startswith("pool-1-1-0-32:residual-")
     )
     assert switched["action"] == "leave_unbound"
-    assert switched["output_player_ids"]
+    assert switched["output_unbound_observation_ids"]
     switched_output = next(
-        player
-        for player in selected["players"]
-        if player["id"] == switched["output_player_ids"][0]
+        observation
+        for observation in selected["unbound_observations"]
+        if observation["observation_id"]
+        == switched["output_unbound_observation_ids"][0]
     )
-    assert switched_output["side"] == "unbound"
+    assert switched_output["selection_state"] == "unbound_abstention"
     assert [frame["frame_idx"] for frame in switched_output["frames"]] == [
         30,
         31,
@@ -1224,7 +1276,7 @@ def test_ambiguous_real_gap_observation_is_preserved_and_vetoes_synthesis() -> N
         if (player["side"], player["role"]) == ("near", "left")
     )
     assert not {31, 32, 33} & {frame["frame_idx"] for frame in slot_one["frames"]}
-    unbound = [player for player in selected["players"] if player["side"] == "unbound"]
+    unbound = selected["unbound_observations"]
     assert len(unbound) == 1
     assert [frame["frame_idx"] for frame in unbound[0]["frames"]] == [32]
     assert unbound[0]["frames"][0]["interpolated"] is False
@@ -1413,9 +1465,8 @@ def test_end_to_end_drop_requires_two_independent_evidence_classes() -> None:
     assert unbound_decision["evidence_classes"] == ["appearance"]
     assert unbound_report["output_counts"]["dropped_real_detections"] == 0
     assert any(
-        player["side"] == "unbound"
-        and [frame["frame_idx"] for frame in player["frames"]] == [100]
-        for player in unbound_selected["players"]
+        [frame["frame_idx"] for frame in observation["frames"]] == [100]
+        for observation in unbound_selected["unbound_observations"]
     )
     schema = json.loads(
         (ROOT / "docs/racketsport/player_selection_report_schema.json").read_text(
@@ -1469,9 +1520,8 @@ def test_identity_accept_off_court_motion_inconsistent_fragment_remains_unbound(
     assert decision["evidence_classes"] == ["geometry"]
     assert report["output_counts"]["dropped_real_detections"] == 0
     assert any(
-        player["side"] == "unbound"
-        and [frame["frame_idx"] for frame in player["frames"]] == [31]
-        for player in selected["players"]
+        [frame["frame_idx"] for frame in observation["frames"]] == [31]
+        for observation in selected["unbound_observations"]
     )
 
 
@@ -1519,9 +1569,8 @@ def test_fragment_drop_requires_reject_for_every_real_detection() -> None:
     assert decision["evidence_classes"] == ["geometry"]
     assert report["output_counts"]["dropped_real_detections"] == 0
     assert any(
-        player["side"] == "unbound"
-        and [frame["frame_idx"] for frame in player["frames"]] == [31, 32]
-        for player in selected["players"]
+        [frame["frame_idx"] for frame in observation["frames"]] == [31, 32]
+        for observation in selected["unbound_observations"]
     )
 
 
@@ -1565,10 +1614,9 @@ def test_fragment_centroid_reject_cannot_destroy_one_accepted_detection() -> Non
     assert decision["evidence_classes"] == ["geometry"]
     assert report["output_counts"]["dropped_real_detections"] == 0
     assert any(
-        player["side"] == "unbound"
-        and [frame["frame_idx"] for frame in player["frames"]]
+        [frame["frame_idx"] for frame in observation["frames"]]
         == list(range(40, 50))
-        for player in selected["players"]
+        for observation in selected["unbound_observations"]
     )
 
 
@@ -1756,6 +1804,14 @@ def test_enabled_cli_validates_tracks_and_publishes_interpolated_true(
         for record in records
         if not (int(record["source"]) == 1 and int(record["frame"]) in {40, 41, 42})
     ]
+    records.append(
+        {
+            "frame": 50,
+            "source": 50,
+            "xy": (0.0, -2.5),
+            "embedding": None,
+        }
+    )
     raw_pool, embeddings = _raw_selection_inputs(records)
     tracks_path = tmp_path / "tracks.json"
     raw_path = tmp_path / "raw.json"
@@ -1798,7 +1854,16 @@ def test_enabled_cli_validates_tracks_and_publishes_interpolated_true(
     )
     assert completed.returncode == 0, completed.stderr
     payload = json.loads(output_path.read_text(encoding="utf-8"))
-    validated = Tracks.model_validate(payload)
+    assert len(payload["players"]) == 4
+    assert len(payload["unbound_observations"]) == 1
+    assert payload["unbound_observations"][0]["selection_state"] == (
+        "unbound_abstention"
+    )
+    assert payload["unbound_observations"][0]["abstention_reasons"]
+    assert payload["unbound_observations"][0]["raw_detection_uids"] == ["raw:50:0"]
+    canonical_tracks = dict(payload)
+    del canonical_tracks["unbound_observations"]
+    validated = Tracks.model_validate(canonical_tracks)
     assert isinstance(payload["fps"], float)
     assert isinstance(payload["rally_spans"][0]["t0"], float)
     assert isinstance(payload["rally_spans"][0]["t1"], float)

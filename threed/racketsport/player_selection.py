@@ -780,37 +780,47 @@ def select_players_payload(
     }
 
     if slots:
-        output_players, binding_decisions, track_rows, selection_counts = (
-            _select_slot_players(
-                slots,
-                pool_fragments=pool_fragments,
-                real_pool=real_pool,
-                stitch_vetoes=stitch_vetoes,
-                fps=fps,
-                config=cfg,
-            )
+        (
+            output_players,
+            unbound_observations,
+            binding_decisions,
+            track_rows,
+            selection_counts,
+        ) = _select_slot_players(
+            slots,
+            pool_fragments=pool_fragments,
+            real_pool=real_pool,
+            stitch_vetoes=stitch_vetoes,
+            fps=fps,
+            config=cfg,
         )
         report["decisions"].extend(binding_decisions)
         report["tracks"] = track_rows
         if selection_counts["unbound_real_detections"]:
             report["status"] = "preview_selection_partial_with_abstentions"
     else:
-        output_players, fallback_decisions, track_rows, selection_counts = (
-            _select_without_enrollment(
-                pool_fragments,
-                fps=fps,
-                config=cfg,
-            )
+        (
+            unbound_observations,
+            fallback_decisions,
+            track_rows,
+            selection_counts,
+        ) = _select_without_enrollment(
+            pool_fragments,
+            fps=fps,
+            config=cfg,
         )
+        output_players = []
         report["decisions"].extend(fallback_decisions)
         report["tracks"] = track_rows
         report["status"] = "preview_selection_partial_no_enrollment"
         report["selection_mode"] = "partial_unbound_real_only"
 
     output["players"] = output_players
+    output["unbound_observations"] = unbound_observations
     input_track_frames = report["input_counts"]["track_frames"]
     report["output_counts"] = {
         "players": len(output_players),
+        "unbound_observations": len(unbound_observations),
         "track_frames": sum(len(player["frames"]) for player in output_players),
         "interpolated_frames": selection_counts["interpolated_frames"],
         "synthetic_frames_removed": max(0, input_track_frames - association_join_count),
@@ -1246,14 +1256,18 @@ def _select_without_enrollment(
                 ],
             }
         )
-    players, track_rows = _unbound_players(
+    unbound_observations, track_rows = _unbound_observations(
         pool_fragments,
         excluded_uids=set(),
-        start_player_id=1,
+        abstention_reasons_by_fragment={
+            str(decision["fragment_id"]): list(decision["reasons"])
+            for decision in decisions
+            if decision["action"] == "leave_unbound"
+        },
         fps=fps,
     )
     return (
-        players,
+        unbound_observations,
         decisions,
         track_rows,
         {
@@ -1276,7 +1290,11 @@ def _select_slot_players(
     fps: float,
     config: PlayerSelectionConfig,
 ) -> tuple[
-    list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], dict[str, int]
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    dict[str, int],
 ]:
     """Bind/re-bind real pool fragments to slots, then micro-fill only accepted identity gaps."""
 
@@ -1722,24 +1740,29 @@ def _select_slot_players(
         )
 
     residual_unbound = _residual_fragments(unbound_fragments, excluded_uids=used_uids)
-    unbound_players, unbound_track_rows = _unbound_players(
+    unbound_observations, unbound_track_rows = _unbound_observations(
         residual_unbound,
         excluded_uids=set(),
-        start_player_id=max(slot.slot_id for slot in slots) + 1,
+        abstention_reasons_by_fragment={
+            str(decision["fragment_id"]): list(decision["reasons"])
+            for decision in decisions
+            if decision["action"] == "leave_unbound"
+        },
         fps=fps,
     )
     unbound_output_id = {
-        row["source_fragment_id"]: row["player_id"] for row in unbound_track_rows
+        row["source_fragment_id"]: row["unbound_observation_id"]
+        for row in unbound_track_rows
     }
     for decision in decisions:
         if decision.get("action") == "leave_unbound":
             output_ids = [
-                player_id
-                for fragment_id, player_id in unbound_output_id.items()
+                observation_id
+                for fragment_id, observation_id in unbound_output_id.items()
                 if fragment_id == decision.get("fragment_id")
                 or str(fragment_id).startswith(f"{decision.get('fragment_id')}:")
             ]
-            decision["output_player_ids"] = output_ids
+            decision["output_unbound_observation_ids"] = output_ids
 
     dropped_uids = {
         _required_raw_uid(detection)
@@ -1761,7 +1784,8 @@ def _select_slot_players(
 
     track_rows.extend(unbound_track_rows)
     return (
-        slot_players + unbound_players,
+        slot_players,
+        unbound_observations,
         decisions,
         track_rows,
         {
@@ -1995,16 +2019,16 @@ def _residual_fragments(
     return residual
 
 
-def _unbound_players(
+def _unbound_observations(
     fragments: Sequence[TrackFragment],
     *,
     excluded_uids: set[str],
-    start_player_id: int,
+    abstention_reasons_by_fragment: Mapping[str, Sequence[str]],
     fps: float,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    players: list[dict[str, Any]] = []
+    observations: list[dict[str, Any]] = []
     track_rows: list[dict[str, Any]] = []
-    player_id = start_player_id
+    observation_id = 1
     for fragment in sorted(
         fragments,
         key=lambda item: (item.start_frame, item.end_frame, item.fragment_id),
@@ -2017,28 +2041,44 @@ def _unbound_players(
         if not detections:
             continue
         raw_detection_uids = [_required_raw_uid(detection) for detection in detections]
-        player = {
-            "id": player_id,
-            "side": "unbound",
-            "role": "abstention",
-            "side_source": "player_selection_abstention",
-            "role_source": "player_selection_abstention",
+        parent_fragment_id, decision_reasons = max(
+            (
+                (source_fragment_id, reasons)
+                for source_fragment_id, reasons in abstention_reasons_by_fragment.items()
+                if fragment.fragment_id == source_fragment_id
+                or fragment.fragment_id.startswith(f"{source_fragment_id}:")
+            ),
+            key=lambda item: len(item[0]),
+            default=("", ()),
+        )
+        if not parent_fragment_id:
+            raise ValueError(
+                f"unbound fragment {fragment.fragment_id} has no abstention decision"
+            )
+        abstention_reasons = ["not_bound_to_claimed_slot", *decision_reasons]
+        observation = {
+            "observation_id": observation_id,
+            "selection_state": "unbound_abstention",
+            "source_fragment_id": fragment.fragment_id,
+            "abstention_reasons": abstention_reasons,
+            "raw_detection_uids": raw_detection_uids,
             "frames": [
                 _detection_payload(detection, fps=fps) for detection in detections
             ],
         }
-        players.append(player)
+        observations.append(observation)
         track_rows.append(
             {
-                "player_id": player_id,
+                "unbound_observation_id": observation_id,
                 "selection_state": "unbound_abstention",
                 "source_fragment_id": fragment.fragment_id,
+                "abstention_reasons": abstention_reasons,
                 "raw_detection_uids": raw_detection_uids,
                 "output_frame_count": len(detections),
             }
         )
-        player_id += 1
-    return players, track_rows
+        observation_id += 1
+    return observations, track_rows
 
 
 def _fragment_role(fragment: TrackFragment) -> tuple[str, str]:
@@ -2112,6 +2152,7 @@ def _base_report(config: PlayerSelectionConfig, *, status: str) -> dict[str, Any
         },
         "output_counts": {
             "players": 0,
+            "unbound_observations": 0,
             "track_frames": 0,
             "interpolated_frames": 0,
             "synthetic_frames_removed": 0,

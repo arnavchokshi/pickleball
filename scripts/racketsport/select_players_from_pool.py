@@ -116,10 +116,19 @@ def main() -> int:
                 enabled=True,
                 config=config,
             )
-            validated = Tracks.model_validate(selected)
+            unbound_observations = selected.get("unbound_observations")
+            if not isinstance(unbound_observations, list):
+                raise ValueError(
+                    "enabled selection must emit an unbound_observations list"
+                )
+            canonical_tracks_input = dict(selected)
+            del canonical_tracks_input["unbound_observations"]
+            validated = Tracks.model_validate(canonical_tracks_input)
+            canonical_output = validated.model_dump(mode="json")
+            canonical_output["unbound_observations"] = unbound_observations
             selected_text = (
                 json.dumps(
-                    validated.model_dump(mode="json"),
+                    canonical_output,
                     allow_nan=False,
                     indent=2,
                     sort_keys=True,

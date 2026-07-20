@@ -1,0 +1,7 @@
+# ultra_review_export_20260720 — fast focused review: unbound-export separation (4-file diff)
+
+REVIEW-ONLY, gpt-5.6-sol ultra, TIGHT SCOPE (this is a small surgical diff — be thorough but do not re-review the whole selection layer, which passed review3). Changes under review (runs/lanes/trkL_unbound_export_fix_20260720/report.json "changes"): player_selection.py:782/1742/2022 (players = bound slots only; unbound_observations additive key with reasons+UIDs+frames), select_players_from_pool.py:119 (key survives canonical serialization), player_selection_report_schema.json:60, test_player_selection.py:931.
+
+VERIFY: (1) enabled-path players can NEVER contain an unbound fragment (trace all paths); (2) unbound_observations preserves the full frame payloads + UIDs + reasons (no silent data loss vs the old players-list dump); (3) OFF-path byte-identity holds (the additive key must NOT appear when selection is off); (4) strict Tracks-schema consumers: the lane says the shared strict model forbids unknown top-level keys and was out of fence — confirm the CLI's handling (field-stripped scoring projection) is sound and no consumer crashes on the new key; state whether the shared-schema additive authorization should happen (recommendation only); (5) the new regression tests actually pin the separation.
+
+OUTPUT: verdict COMMIT_OK / COMMIT_WITH_FIXES (exact) / DO_NOT_COMMIT + file:line evidence. One-line recommendation. Do NOT relitigate the Wolverine binding-quality gap (known, recorded, out of scope).

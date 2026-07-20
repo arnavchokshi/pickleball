@@ -55,6 +55,50 @@
         "geometry_all_slots_temporal_overlap_or_speed_above_7_0_m_s"
       ],
       "type": "string"
+    },
+    "boundTrack": {
+      "additionalProperties": false,
+      "properties": {
+        "output_frame_count": {"minimum": 0, "type": "integer"},
+        "player_id": {"type": "integer"},
+        "raw_detection_uids": {
+          "items": {"minLength": 1, "type": "string"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "selection_state": {"const": "bound_slot", "type": "string"},
+        "slot_id": {"type": "integer"}
+      },
+      "required": [
+        "player_id", "selection_state", "slot_id", "raw_detection_uids",
+        "output_frame_count"
+      ],
+      "type": "object"
+    },
+    "unboundTrack": {
+      "additionalProperties": false,
+      "properties": {
+        "abstention_reasons": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array"
+        },
+        "output_frame_count": {"minimum": 1, "type": "integer"},
+        "raw_detection_uids": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "selection_state": {"const": "unbound_abstention", "type": "string"},
+        "source_fragment_id": {"minLength": 1, "type": "string"},
+        "unbound_observation_id": {"minimum": 1, "type": "integer"}
+      },
+      "required": [
+        "unbound_observation_id", "selection_state", "source_fragment_id",
+        "abstention_reasons", "raw_detection_uids", "output_frame_count"
+      ],
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -86,6 +130,7 @@
               "interpolated_frames": {"const": 0},
               "recovered_real_detections": {"const": 0},
               "synthetic_frames_removed": {"const": 0},
+              "unbound_observations": {"const": 0},
               "unbound_real_detections": {"const": 0}
             }
           },
@@ -139,6 +184,7 @@
             "properties": {
               "dropped_real_detections": {"const": 0},
               "interpolated_frames": {"const": 0},
+              "players": {"const": 0},
               "recovered_real_detections": {"const": 0}
             }
           },
@@ -167,7 +213,10 @@
               "status": {"const": "enrolled"}
             }
           },
-          "selection_mode": {"const": "enrolled_four_slot"}
+          "selection_mode": {"const": "enrolled_four_slot"},
+          "output_counts": {
+            "properties": {"players": {"const": 4}}
+          }
         }
       }
     },
@@ -179,7 +228,10 @@
       "then": {
         "properties": {
           "output_counts": {
-            "properties": {"unbound_real_detections": {"const": 0}}
+            "properties": {
+              "unbound_observations": {"const": 0},
+              "unbound_real_detections": {"const": 0}
+            }
           }
         }
       }
@@ -194,7 +246,10 @@
       "then": {
         "properties": {
           "output_counts": {
-            "properties": {"unbound_real_detections": {"minimum": 1}}
+            "properties": {
+              "unbound_observations": {"minimum": 1},
+              "unbound_real_detections": {"minimum": 1}
+            }
           }
         }
       }
@@ -271,10 +326,11 @@
         "recovered_real_detections": {"minimum": 0, "type": "integer"},
         "synthetic_frames_removed": {"minimum": 0, "type": "integer"},
         "track_frames": {"minimum": 0, "type": "integer"},
+        "unbound_observations": {"minimum": 0, "type": "integer"},
         "unbound_real_detections": {"minimum": 0, "type": "integer"}
       },
       "required": [
-        "players", "track_frames", "interpolated_frames",
+        "players", "unbound_observations", "track_frames", "interpolated_frames",
         "synthetic_frames_removed", "unbound_real_detections",
         "dropped_real_detections", "recovered_real_detections"
       ],
@@ -310,7 +366,15 @@
       ],
       "type": "string"
     },
-    "tracks": {"items": {"type": "object"}, "type": "array"}
+    "tracks": {
+      "items": {
+        "oneOf": [
+          {"$ref": "#/$defs/boundTrack"},
+          {"$ref": "#/$defs/unboundTrack"}
+        ]
+      },
+      "type": "array"
+    }
   },
   "required": [
     "schema_version", "artifact_type", "status", "VERIFIED", "preview_only",
