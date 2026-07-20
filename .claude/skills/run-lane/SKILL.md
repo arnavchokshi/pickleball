@@ -84,6 +84,15 @@ probe-verified 2026-07-19):
   facts + options + tradeoffs, never conclusions-only); Fable rules on its output. Strategy is never
   decided at `high`.
 State the chosen tier + one-line justification in the lane row.**
+
+**REVIEW-EVERYTHING MANDATE (owner directive 2026-07-20, standing): gpt-5.6-sol at `ultra` effort is
+the SMARTEST reviewer available and MUST review essentially everything before Fable rules. Every
+landed implementation lane, every substantive artifact/result, and every gate-adjacent change gets a
+gpt-5.6-sol `ultra` adversarial REVIEW pass (correctness, does-it-match-spec, hidden bugs,
+gate-gaming, honesty of claims) BEFORE Fable commits or rules adopt/reject. Sonnet may still do
+mechanical/noisy legwork (test runs, attribution, data pulls), but the DECIDING review is
+gpt-5.6-sol ultra. Do not accept a lane on its own self-report or on test-green alone — route it
+through an ultra review first. Only trivial coordination edits (docs, ledger, task board) skip it.**
 The harness notifies on process exit — read `report.json` and rule. Do NOT set up Monitor/done-marker
 watchers (they false-fire; manual §10). Prefer big self-iterating lanes over many small round-trips.
 
