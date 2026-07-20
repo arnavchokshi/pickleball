@@ -227,6 +227,24 @@
       ]
     },
     {
+      "id": "rfdetr_large_2026",
+      "stage": "person_detect",
+      "use": "Non-default RF-DETR-L preview candidate for the frozen GPU reproduction gate",
+      "source": "https://storage.googleapis.com/rfdetr/rf-detr-large-2026.pth",
+      "license": "Apache-2.0",
+      "commercial_posture": "ok",
+      "status": "available_on_h100",
+      "local_path": "/home/arnavchokshi/pickleball_git/models/checkpoints/rf-detr-large-2026.pth",
+      "sha256": "0f4e20e19a99c0f8a62b5685f57f6c8b5c371c59081feda6752a0561a79ccf38",
+      "fallbacks": ["yolo26m"],
+      "notes": [
+        "Checkpoint identity and 135,954,129-byte size were pinned by runs/lanes/trk_detbench_20260716/report.json after rfdetr 1.8.3 download on the H100.",
+        "Pending preview operating point is RF-DETR-L native 704, COCO person class id 1, confidence floor 0.18; no imgsz analog or threshold sweep is permitted.",
+        "Install the runtime dependency without a repo-level version pin using `python -m pip install rfdetr`, then re-bake and record the GPU fleet snapshot before production reproduction.",
+        "YOLO26m remains the default. RF-DETR may be selected explicitly for its frozen reproduction, and missing RF-DETR assets fail loudly rather than falling back."
+      ]
+    },
+    {
       "id": "rtmw_l_384",
       "stage": "2d_pose",
       "use": "Retired RTMW whole-body pose candidate; replaced by Fast SAM-3D-Body",

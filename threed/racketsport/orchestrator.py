@@ -13,12 +13,12 @@ import warnings
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Any, Literal, Mapping, Protocol, Sequence
+from typing import Any, Callable, Iterable, Literal, Mapping, Protocol, Sequence
 
 from scripts.racketsport.track import build_tracks
 
 from .ball_stage_runner import BallStageRunner
-from .best_stack import body_array_native_default, body_detector_fov_defaults
+from .best_stack import body_array_native_default, body_detector_fov_defaults, load_best_stack_manifest
 from .body_compute import (
     DEFAULT_BODY_SKELETON_STRIDE,
     TIER2_BODY_JOINTS_REPRESENTATION,
@@ -92,9 +92,14 @@ from .worldhmr import assemble_body_monolith_payloads, build_body_artifacts_from
 
 
 YOLO26M_MODEL_ID = "yolo26m"
+RFDETR_LARGE_MODEL_ID = "rfdetr_large_2026"
+PERSON_DETECTOR_STACK_KEY = "tracking.person_detector"
+RFDETR_PERSON_DETECTOR_CANDIDATE_STACK_KEY = "tracking.person_detector_rfdetr_large_2026"
+PERSON_DETECTOR_KILL_SWITCH_ENV = "RACKETSPORT_PERSON_DETECTOR"
 DEFAULT_MODEL_MANIFEST = Path("models/MANIFEST.json")
 DEFAULT_BODY_MODEL_MANIFEST = DEFAULT_BODY_MANIFEST_PATH
 DEFAULT_BOTSORT_REID_CONFIG = Path("configs/racketsport/botsort_reid.yaml")
+DEFAULT_BOTSORT_NO_REID_LOOSE_CONFIG = Path("configs/racketsport/botsort_no_reid_loose.yaml")
 DEFAULT_BODY_DETECTOR_NAME, DEFAULT_BODY_FOV_NAME = body_detector_fov_defaults()
 DEFAULT_BODY_ARRAY_NATIVE = body_array_native_default()
 DEFAULT_BODY_MAX_ROOT_SPEED_MPS = 8.0
@@ -115,6 +120,36 @@ SAM3D_UPSTREAM_ENV_WHITELIST = frozenset(
         "MHR_NO_CORRECTIVES",
     }
 )
+
+
+@dataclass(frozen=True)
+class PersonDetectorSelection:
+    """Fully resolved person-detector operating point used by identity and runtime."""
+
+    model_id: str
+    conf_floor: float
+    person_class_id: int
+    native_input_size: int
+    tracker_config_path: Path
+    stack_entry_key: str
+    stack_entry_status: str
+    stack_revision: int
+    override_source: str
+    tracker_config_source: str = "best_stack"
+
+    def identity_payload(self) -> dict[str, Any]:
+        return {
+            "model_id": self.model_id,
+            "conf_floor": self.conf_floor,
+            "person_class_id": self.person_class_id,
+            "native_input_size": self.native_input_size,
+            "tracker_config": self.tracker_config_path.as_posix(),
+            "stack_entry_key": self.stack_entry_key,
+            "stack_entry_status": self.stack_entry_status,
+            "stack_revision": self.stack_revision,
+            "override_source": self.override_source,
+            "tracker_config_source": self.tracker_config_source,
+        }
 
 
 def _env_flag_enabled(name: str) -> bool:
@@ -579,22 +614,34 @@ class RealYOLO26BoTSORTReIDTrackingRunner:
         video_path: str | Path | None = None,
         imgsz: int = 1536,
         conf: float = 0.05,
+        person_class_id: int = 0,
         iou: float = 0.6,
         max_step_m: float = 2.0,
         max_players: int = 4,
         court_margin_m: float = 0.0,
         id_strategy: str = "auto",
+        detector_selection: PersonDetectorSelection | None = None,
     ) -> None:
         self.manifest_path = Path(manifest_path)
         self.tracker_config_path = Path(tracker_config_path)
         self.video_path = Path(video_path) if video_path is not None else None
         self.imgsz = imgsz
         self.conf = conf
+        self.person_class_id = person_class_id
         self.iou = iou
         self.max_step_m = max_step_m
         self.max_players = max_players
         self.court_margin_m = court_margin_m
         self.id_strategy = id_strategy
+        self.detector_selection = detector_selection
+        _validate_detector_selection_matches_runtime(
+            detector_selection,
+            model_id=YOLO26M_MODEL_ID,
+            conf_floor=self.conf,
+            person_class_id=self.person_class_id,
+            native_input_size=self.imgsz,
+            tracker_config_path=self.tracker_config_path,
+        )
 
     def run(self, context: StageContext) -> StageRun:
         calibration = validate_artifact_file("court_calibration", context.run_dir / "court_calibration.json")
@@ -616,7 +663,7 @@ class RealYOLO26BoTSORTReIDTrackingRunner:
         results = model.track(
             source=str(video_path),
             tracker=str(tracker_config),
-            classes=[0],
+            classes=[self.person_class_id],
             conf=self.conf,
             iou=self.iou,
             imgsz=self.imgsz,
@@ -663,11 +710,37 @@ class RealYOLO26BoTSORTReIDTrackingRunner:
             "source_video": str(video_path),
             "imgsz": self.imgsz,
             "conf": self.conf,
+            "person_class_id": self.person_class_id,
             "iou": self.iou,
             "max_frames": context.max_frames,
             "max_players": self.max_players,
             "court_margin_m": self.court_margin_m,
             "id_strategy": self.id_strategy,
+            "detector_selection": (
+                self.detector_selection.identity_payload()
+                if self.detector_selection is not None
+                else {
+                    "model_id": YOLO26M_MODEL_ID,
+                    "conf_floor": self.conf,
+                    "person_class_id": self.person_class_id,
+                    "native_input_size": self.imgsz,
+                    "tracker_config": str(tracker_config),
+                    "override_source": "direct_runner_arguments",
+                }
+            ),
+            "detector": {
+                "model_id": YOLO26M_MODEL_ID,
+                "api": "ultralytics.YOLO.track",
+                "conf_floor": self.conf,
+                "person_class_id": self.person_class_id,
+                "native_input_size_requested": self.imgsz,
+                "checkpoint_sha256": checkpoint_entry.sha256,
+            },
+            "tracker": {
+                "api": "ultralytics_model_track",
+                "config": str(tracker_config),
+                "with_reid": True,
+            },
             "counts": tracking_counts,
         }
         _write_json_artifact(context.run_dir / "raw_tracked_detections.json", raw_detections_payload)
@@ -687,12 +760,220 @@ class RealYOLO26BoTSORTReIDTrackingRunner:
             ),
             metrics={
                 **tracking_counts,
-                "checkpoint_sha256_verified": checkpoint.name,
+                "checkpoint_sha256_verified": checkpoint_entry.sha256,
                 "tracker_config": str(tracker_config),
                 "source_video": str(video_path),
                 "imgsz": self.imgsz,
                 "conf": self.conf,
+                "person_class_id": self.person_class_id,
                 "iou": self.iou,
+            },
+        )
+
+
+class _RFDetrTrackerBoxes:
+    """Minimal Ultralytics Boxes-compatible detection view used by BoT-SORT."""
+
+    def __init__(self, xyxy: Any, conf: Any, cls: Any) -> None:
+        import numpy as np
+
+        self._xyxy = np.asarray(xyxy, dtype=np.float32).reshape(-1, 4)
+        self.conf = np.asarray(conf, dtype=np.float32).reshape(-1)
+        self.cls = np.asarray(cls, dtype=np.float32).reshape(-1)
+
+    def __len__(self) -> int:
+        return len(self.conf)
+
+    def __getitem__(self, mask: Any) -> "_RFDetrTrackerBoxes":
+        return _RFDetrTrackerBoxes(self._xyxy[mask], self.conf[mask], self.cls[mask])
+
+    @property
+    def xyxy(self) -> Any:
+        return self._xyxy
+
+    @property
+    def xywh(self) -> Any:
+        import numpy as np
+
+        if not len(self._xyxy):
+            return np.zeros((0, 4), dtype=np.float32)
+        x1, y1, x2, y2 = self._xyxy.T
+        return np.stack(((x1 + x2) / 2.0, (y1 + y2) / 2.0, x2 - x1, y2 - y1), axis=1)
+
+
+class RealRFDETRBoTSORTTrackingRunner:
+    """RF-DETR-L frame detections fed through the frozen loose-pool BoT-SORT API."""
+
+    stage = "tracking"
+    real_model = True
+    source_mode = "rfdetr_large_2026_botsort_no_reid_loose"
+
+    def __init__(
+        self,
+        *,
+        manifest_path: str | Path = DEFAULT_MODEL_MANIFEST,
+        tracker_config_path: str | Path = DEFAULT_BOTSORT_NO_REID_LOOSE_CONFIG,
+        video_path: str | Path | None = None,
+        conf: float = 0.18,
+        person_class_id: int = 1,
+        native_input_size: int = 704,
+        max_step_m: float = 2.0,
+        max_players: int = 4,
+        court_margin_m: float = 0.0,
+        id_strategy: str = "auto",
+        detector_selection: PersonDetectorSelection | None = None,
+        detector_factory: Callable[[Path, int], Any] | None = None,
+        tracker_factory: Callable[[Path, str | None], Any] | None = None,
+        frame_iterator: Callable[[Path, int | None], Iterable[Any]] | None = None,
+    ) -> None:
+        if conf != 0.18:
+            raise ValueError("RF-DETR-L production conf floor is frozen at 0.18; threshold shopping is forbidden")
+        if person_class_id != 1:
+            raise ValueError("RF-DETR-L production person class id is frozen at 1")
+        if native_input_size != 704:
+            raise ValueError("RF-DETR-L production native input size is frozen at 704")
+        self.manifest_path = Path(manifest_path)
+        self.tracker_config_path = Path(tracker_config_path)
+        self.video_path = Path(video_path) if video_path is not None else None
+        self.conf = conf
+        self.person_class_id = person_class_id
+        self.native_input_size = native_input_size
+        self.max_step_m = max_step_m
+        self.max_players = max_players
+        self.court_margin_m = court_margin_m
+        self.id_strategy = id_strategy
+        self.detector_selection = detector_selection
+        _validate_detector_selection_matches_runtime(
+            detector_selection,
+            model_id=RFDETR_LARGE_MODEL_ID,
+            conf_floor=self.conf,
+            person_class_id=self.person_class_id,
+            native_input_size=self.native_input_size,
+            tracker_config_path=self.tracker_config_path,
+        )
+        self._detector_factory = detector_factory or _load_rfdetr_large
+        self._tracker_factory = tracker_factory or _build_rfdetr_botsort
+        self._frame_iterator = frame_iterator or _iter_tracking_video_frames
+
+    def run(self, context: StageContext) -> StageRun:
+        calibration = validate_artifact_file("court_calibration", context.run_dir / "court_calibration.json")
+        if not isinstance(calibration, CourtCalibration):
+            raise ValueError("court_calibration.json did not validate as CourtCalibration")
+
+        tracker_config = _verified_botsort_no_reid_config(self.tracker_config_path)
+        video_path = _tracking_video_path(context, explicit=self.video_path)
+        fps = _tracking_fps(context.inputs_dir, video_path=video_path)
+        checkpoint_entry = verify_model_checkpoint(self.manifest_path, RFDETR_LARGE_MODEL_ID)
+        checkpoint = Path(str(checkpoint_entry.local_path))
+        detector = self._detector_factory(checkpoint, self.native_input_size)
+        loaded_native_input_size = _verified_rfdetr_model_resolution(
+            detector,
+            expected=self.native_input_size,
+        )
+        tracker = self._tracker_factory(tracker_config, context.device)
+        runtime_package_version = _runtime_package_version("rfdetr")
+
+        raw_detections_payload, raw_counts = _rfdetr_tracked_detection_payload(
+            detector=detector,
+            tracker=tracker,
+            frames=self._frame_iterator(video_path, context.max_frames),
+            fps=fps,
+            conf_floor=self.conf,
+            person_class_id=self.person_class_id,
+        )
+        scale_x, scale_y, scale_counts = _detection_bbox_scale(
+            calibration,
+            video_path,
+            source_size=_payload_source_size(raw_detections_payload),
+        )
+        detections_payload = scale_detection_payload_bboxes(raw_detections_payload, scale_x=scale_x, scale_y=scale_y)
+        tracks, counts = build_tracks(
+            detections_payload,
+            calibration,
+            max_step_m=self.max_step_m,
+            max_players=self.max_players,
+            court_margin_m=self.court_margin_m,
+            id_strategy=self.id_strategy,  # type: ignore[arg-type]
+        )
+        if counts["accepted"] <= 0 or not tracks.players:
+            raise ValueError(f"real tracking failed: no accepted on-court tracked person boxes; counts={counts | raw_counts}")
+
+        tracking_counts = {**counts, **raw_counts, **scale_counts}
+        metrics_payload = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_person_tracker_candidate",
+            "clip": context.clip,
+            "source_mode": self.source_mode,
+            "model": str(checkpoint),
+            "tracker_config": str(tracker_config),
+            "source_video": str(video_path),
+            "conf": self.conf,
+            "max_frames": context.max_frames,
+            "max_players": self.max_players,
+            "court_margin_m": self.court_margin_m,
+            "id_strategy": self.id_strategy,
+            "detector_selection": (
+                self.detector_selection.identity_payload()
+                if self.detector_selection is not None
+                else {
+                    "model_id": RFDETR_LARGE_MODEL_ID,
+                    "conf_floor": self.conf,
+                    "person_class_id": self.person_class_id,
+                    "native_input_size": loaded_native_input_size,
+                    "tracker_config": str(tracker_config),
+                    "override_source": "direct_runner_arguments",
+                }
+            ),
+            "detector": {
+                "model_id": RFDETR_LARGE_MODEL_ID,
+                "api": "rfdetr.RFDETRLarge.predict",
+                "conf_floor": self.conf,
+                "person_class_id": self.person_class_id,
+                "native_input_size_requested": self.native_input_size,
+                "native_input_size_loaded": loaded_native_input_size,
+                "checkpoint_sha256": checkpoint_entry.sha256,
+                "runtime_package": "rfdetr",
+                "runtime_package_version": runtime_package_version,
+            },
+            "tracker": {
+                "api": "per_frame_update",
+                "config": str(tracker_config),
+                "with_reid": False,
+            },
+            "operating_point": {
+                "branch": "2b_ship_for_demo_at_0.18",
+                "trust_band": "preview",
+                "do_not_promote": True,
+                "score_faithful_environment": "gpu_class_only",
+                "local_cpu_score_faithful": False,
+            },
+            "counts": tracking_counts,
+        }
+        _write_json_artifact(context.run_dir / "raw_tracked_detections.json", raw_detections_payload)
+        _write_json_artifact(context.run_dir / "tracked_detections.json", detections_payload)
+        _write_json_artifact(context.run_dir / "metrics.json", metrics_payload)
+        _write_json_artifact(context.run_dir / "tracks.json", tracks)
+        return StageRun(
+            stage=self.stage,
+            status="ran",
+            real_model=self.real_model,
+            source_mode=self.source_mode,
+            produced_artifacts=("raw_tracked_detections.json", "tracked_detections.json", "metrics.json", "tracks.json"),
+            notes=(
+                "invoked manifest-pinned RF-DETR-L at native 704 with frozen conf floor 0.18",
+                "fed class-id-1 person detections through botsort_no_reid_loose per-frame update()",
+                "exported the unchanged raw/source-pixel and calibration-scaled pool contract",
+                "preview only; both GPU production rows must reproduce before any separate default flip is eligible",
+            ),
+            metrics={
+                **tracking_counts,
+                "checkpoint_sha256_verified": checkpoint_entry.sha256,
+                "tracker_config": str(tracker_config),
+                "source_video": str(video_path),
+                "conf": self.conf,
+                "person_class_id": self.person_class_id,
+                "native_input_size": loaded_native_input_size,
+                "runtime_package_version": runtime_package_version,
             },
         )
 
@@ -2516,6 +2797,7 @@ def _dedupe_strings(values: Sequence[str]) -> list[str]:
 def _default_runners(
     *,
     tracking_mode: Literal["real", "precomputed", "precomputed_tracks"],
+    person_detector: str | PersonDetectorSelection | None,
     tracking_video: str | Path | None,
     manifest_path: str | Path,
     tracker_config_path: str | Path,
@@ -2533,14 +2815,38 @@ def _default_runners(
     elif tracking_mode == "precomputed_tracks":
         tracking_runner = PrecomputedTracksRunner()
     elif tracking_mode == "real":
-        tracking_runner = RealYOLO26BoTSORTReIDTrackingRunner(
-            manifest_path=manifest_path,
-            tracker_config_path=tracker_config_path,
-            video_path=tracking_video,
-            max_players=max_players,
-            court_margin_m=court_margin_m,
-            id_strategy=id_strategy,
+        selection = resolve_person_detector_selection(
+            person_detector,
+            yolo_tracker_config_path=tracker_config_path,
         )
+        if selection.model_id == RFDETR_LARGE_MODEL_ID:
+            tracking_runner = RealRFDETRBoTSORTTrackingRunner(
+                manifest_path=manifest_path,
+                tracker_config_path=selection.tracker_config_path,
+                video_path=tracking_video,
+                conf=selection.conf_floor,
+                person_class_id=selection.person_class_id,
+                native_input_size=selection.native_input_size,
+                detector_selection=selection,
+                max_players=max_players,
+                court_margin_m=court_margin_m,
+                id_strategy=id_strategy,
+            )
+        elif selection.model_id == YOLO26M_MODEL_ID:
+            tracking_runner = RealYOLO26BoTSORTReIDTrackingRunner(
+                manifest_path=manifest_path,
+                tracker_config_path=selection.tracker_config_path,
+                video_path=tracking_video,
+                imgsz=selection.native_input_size,
+                conf=selection.conf_floor,
+                person_class_id=selection.person_class_id,
+                detector_selection=selection,
+                max_players=max_players,
+                court_margin_m=court_margin_m,
+                id_strategy=id_strategy,
+            )
+        else:  # defensive: resolver rejects unknown selections
+            raise ValueError(f"unsupported person detector selection: {selection.model_id}")
     else:
         raise ValueError(f"unknown tracking_mode: {tracking_mode}")
     return {
@@ -2564,6 +2870,7 @@ def run_pipeline(
     device: str | None = None,
     max_frames: int | None = None,
     tracking_mode: Literal["real", "precomputed", "precomputed_tracks"] = "real",
+    person_detector: str | PersonDetectorSelection | None = None,
     tracking_video: str | Path | None = None,
     manifest_path: str | Path = DEFAULT_MODEL_MANIFEST,
     tracker_config_path: str | Path = DEFAULT_BOTSORT_REID_CONFIG,
@@ -2622,6 +2929,7 @@ def run_pipeline(
     )
     registry = _default_runners(
         tracking_mode=tracking_mode,
+        person_detector=person_detector,
         tracking_video=tracking_video,
         manifest_path=manifest_path,
         tracker_config_path=tracker_config_path,
@@ -2968,17 +3276,399 @@ def _existing_file(path: Path | None) -> Path | None:
 
 
 def _verified_botsort_reid_config(path: Path) -> Path:
-    if not path.is_file():
-        raise FileNotFoundError(f"missing BoT-SORT ReID tracker config: {path}")
-    text = path.read_text(encoding="utf-8")
-    required = {
-        "tracker_type: botsort": "BoT-SORT tracker_type",
-        "with_reid: True": "with_reid enabled",
-    }
-    for needle, label in required.items():
-        if needle not in text:
-            raise ValueError(f"tracker config {path} does not declare {label}")
+    payload = _load_tracker_config(path, label="BoT-SORT ReID")
+    if payload.get("tracker_type") != "botsort":
+        raise ValueError(f"tracker config {path} does not select tracker_type=botsort")
+    if payload.get("with_reid") is not True:
+        raise ValueError(f"tracker config {path} does not enable with_reid")
     return path
+
+
+def _verified_botsort_no_reid_config(path: Path) -> Path:
+    payload = _load_tracker_config(path, label="BoT-SORT no-ReID")
+    if payload.get("tracker_type") != "botsort":
+        raise ValueError(f"tracker config {path} does not select tracker_type=botsort")
+    if payload.get("with_reid") is not False:
+        raise ValueError(f"tracker config {path} does not disable with_reid")
+    return path
+
+
+def _load_tracker_config(path: Path, *, label: str) -> Mapping[str, Any]:
+    """Parse tracker YAML once and reject ambiguous duplicate keys."""
+
+    if not path.is_file():
+        raise FileNotFoundError(f"missing {label} tracker config: {path}")
+    try:
+        import yaml
+    except ImportError as exc:
+        raise RuntimeError("PyYAML is required to validate BoT-SORT tracker configs") from exc
+
+    class _UniqueKeySafeLoader(yaml.SafeLoader):
+        pass
+
+    def _construct_unique_mapping(loader: Any, node: Any, deep: bool = False) -> dict[Any, Any]:
+        mapping: dict[Any, Any] = {}
+        for key_node, value_node in node.value:
+            key = loader.construct_object(key_node, deep=deep)
+            if key in mapping:
+                raise ValueError(f"tracker config {path} contains duplicate key {key!r}")
+            mapping[key] = loader.construct_object(value_node, deep=deep)
+        return mapping
+
+    _UniqueKeySafeLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG,
+        _construct_unique_mapping,
+    )
+    try:
+        payload = yaml.load(path.read_text(encoding="utf-8"), Loader=_UniqueKeySafeLoader)
+    except yaml.YAMLError as exc:
+        raise ValueError(f"tracker config {path} is invalid YAML: {exc}") from exc
+    if not isinstance(payload, Mapping):
+        raise ValueError(f"tracker config {path} must contain a YAML mapping")
+    return payload
+
+
+def _validate_detector_selection_matches_runtime(
+    selection: PersonDetectorSelection | None,
+    *,
+    model_id: str,
+    conf_floor: float,
+    person_class_id: int,
+    native_input_size: int,
+    tracker_config_path: Path,
+) -> None:
+    if selection is None:
+        return
+    mismatches: list[str] = []
+    if selection.model_id != model_id:
+        mismatches.append(f"model_id={selection.model_id!r} (runtime {model_id!r})")
+    if selection.conf_floor != conf_floor:
+        mismatches.append(f"conf_floor={selection.conf_floor!r} (runtime {conf_floor!r})")
+    if selection.person_class_id != person_class_id:
+        mismatches.append(
+            f"person_class_id={selection.person_class_id!r} "
+            f"(runtime {person_class_id!r})"
+        )
+    if selection.native_input_size != native_input_size:
+        mismatches.append(
+            f"native_input_size={selection.native_input_size!r} "
+            f"(runtime {native_input_size!r})"
+        )
+    if selection.tracker_config_path.resolve() != tracker_config_path.resolve():
+        mismatches.append(
+            f"tracker_config={selection.tracker_config_path} "
+            f"(runtime {tracker_config_path})"
+        )
+    if mismatches:
+        raise ValueError(
+            "person-detector selection provenance does not match runtime: "
+            + "; ".join(mismatches)
+        )
+
+
+def resolve_person_detector_selection(
+    explicit: str | PersonDetectorSelection | None,
+    *,
+    yolo_tracker_config_path: str | Path | None = None,
+) -> PersonDetectorSelection:
+    """Resolve one complete detector operating point before identity or reuse."""
+
+    if isinstance(explicit, PersonDetectorSelection):
+        return explicit
+
+    manifest = load_best_stack_manifest()
+    selected = explicit
+    override_source = "explicit_argument" if explicit is not None else "best_stack_default"
+    if selected is None:
+        selected = os.environ.get(PERSON_DETECTOR_KILL_SWITCH_ENV) or None
+        if selected is not None:
+            override_source = f"environment:{PERSON_DETECTOR_KILL_SWITCH_ENV}"
+
+    default_entry = manifest.entry(PERSON_DETECTOR_STACK_KEY)
+    if default_entry.status != "WIRED_DEFAULT":
+        raise ValueError(
+            f"best_stack {PERSON_DETECTOR_STACK_KEY} must be WIRED_DEFAULT, got {default_entry.status}"
+        )
+    default_selection = _person_detector_selection_from_stack_entry(
+        manifest_path=manifest.path,
+        manifest_revision=manifest.revision,
+        entry=default_entry,
+        expected_model_id=YOLO26M_MODEL_ID,
+        override_source=override_source,
+    )
+    if selected is None:
+        resolved = default_selection
+    elif selected == default_selection.model_id:
+        resolved = default_selection
+    elif selected == RFDETR_LARGE_MODEL_ID:
+        candidate_entry = manifest.entry(RFDETR_PERSON_DETECTOR_CANDIDATE_STACK_KEY)
+        if candidate_entry.status != "PENDING":
+            raise ValueError(
+                f"best_stack {RFDETR_PERSON_DETECTOR_CANDIDATE_STACK_KEY} must remain PENDING "
+                f"until the GPU gate passes, got {candidate_entry.status}"
+            )
+        resolved = _person_detector_selection_from_stack_entry(
+            manifest_path=manifest.path,
+            manifest_revision=manifest.revision,
+            entry=candidate_entry,
+            expected_model_id=RFDETR_LARGE_MODEL_ID,
+            override_source=override_source,
+        )
+    else:
+        raise ValueError(
+            f"unsupported person detector {selected!r}; expected "
+            f"{RFDETR_LARGE_MODEL_ID!r} or {YOLO26M_MODEL_ID!r}"
+        )
+
+    if resolved.model_id == YOLO26M_MODEL_ID and yolo_tracker_config_path is not None:
+        tracker_path = Path(yolo_tracker_config_path).expanduser().resolve()
+        _verified_botsort_reid_config(tracker_path)
+        resolved = replace(
+            resolved,
+            tracker_config_path=tracker_path,
+            tracker_config_source="run_pipeline_argument",
+        )
+    return resolved
+
+
+def _person_detector_selection_from_stack_entry(
+    *,
+    manifest_path: Path,
+    manifest_revision: int,
+    entry: Any,
+    expected_model_id: str,
+    override_source: str,
+) -> PersonDetectorSelection:
+    value = entry.value
+    if not isinstance(value, Mapping):
+        raise ValueError(f"best_stack {entry.key}.value must be an object")
+
+    required_fields = {
+        "model_id",
+        "conf_floor",
+        "person_class_id",
+        "native_input_size",
+        "tracker_config",
+        "kill_switch_env",
+    }
+    missing = sorted(required_fields - set(value))
+    if missing:
+        raise ValueError(f"best_stack {entry.key}.value missing fields: {missing}")
+    model_id = value["model_id"]
+    conf_floor = value["conf_floor"]
+    person_class_id = value["person_class_id"]
+    native_input_size = value["native_input_size"]
+    tracker_config = value["tracker_config"]
+    if model_id not in {RFDETR_LARGE_MODEL_ID, YOLO26M_MODEL_ID}:
+        raise ValueError(f"best_stack {entry.key}.value.model_id is unsupported: {model_id!r}")
+    if model_id != expected_model_id:
+        raise ValueError(
+            f"best_stack {entry.key}.value.model_id must equal "
+            f"{expected_model_id!r}, got {model_id!r}"
+        )
+    if (
+        not isinstance(conf_floor, int | float)
+        or isinstance(conf_floor, bool)
+        or not 0.0 < float(conf_floor) <= 1.0
+    ):
+        raise ValueError(f"best_stack {entry.key}.value.conf_floor must be in (0, 1]")
+    if not isinstance(person_class_id, int) or isinstance(person_class_id, bool) or person_class_id < 0:
+        raise ValueError(f"best_stack {entry.key}.value.person_class_id must be a non-negative integer")
+    if not isinstance(native_input_size, int) or isinstance(native_input_size, bool) or native_input_size <= 0:
+        raise ValueError(f"best_stack {entry.key}.value.native_input_size must be a positive integer")
+    if not isinstance(tracker_config, str) or not tracker_config:
+        raise ValueError(f"best_stack {entry.key}.value.tracker_config must be a non-empty path")
+    if value["kill_switch_env"] != PERSON_DETECTOR_KILL_SWITCH_ENV:
+        raise ValueError(
+            f"best_stack {entry.key}.value.kill_switch_env must equal "
+            f"{PERSON_DETECTOR_KILL_SWITCH_ENV!r}"
+        )
+
+    tracker_path = Path(tracker_config).expanduser()
+    if not tracker_path.is_absolute():
+        tracker_path = manifest_path.resolve().parents[2] / tracker_path
+    tracker_path = tracker_path.resolve()
+    if model_id == RFDETR_LARGE_MODEL_ID:
+        _verified_botsort_no_reid_config(tracker_path)
+    else:
+        _verified_botsort_reid_config(tracker_path)
+    return PersonDetectorSelection(
+        model_id=str(model_id),
+        conf_floor=float(conf_floor),
+        person_class_id=person_class_id,
+        native_input_size=native_input_size,
+        tracker_config_path=tracker_path,
+        stack_entry_key=entry.key,
+        stack_entry_status=entry.status,
+        stack_revision=manifest_revision,
+        override_source=override_source,
+    )
+
+
+def _load_rfdetr_large(checkpoint: Path, native_input_size: int) -> Any:
+    try:
+        from rfdetr import RFDETRLarge
+    except ImportError as exc:
+        raise RuntimeError(
+            "rfdetr is required for real RF-DETR-L tracking; install the unpinned runtime dependency "
+            "with `python -m pip install rfdetr` and re-bake the GPU fleet snapshot"
+        ) from exc
+    detector = RFDETRLarge(
+        pretrain_weights=str(checkpoint),
+        resolution=native_input_size,
+    )
+    _verified_rfdetr_model_resolution(detector, expected=native_input_size)
+    return detector
+
+
+def _verified_rfdetr_model_resolution(detector: Any, *, expected: int) -> int:
+    model_config = getattr(detector, "model_config", None)
+    loaded = getattr(model_config, "resolution", None)
+    if not isinstance(loaded, int) or isinstance(loaded, bool):
+        raise ValueError("loaded RF-DETR model does not expose integer model_config.resolution")
+    if loaded != expected:
+        raise ValueError(f"loaded RF-DETR resolution mismatch: expected {expected}, got {loaded}")
+    return loaded
+
+
+def _runtime_package_version(distribution: str) -> str | None:
+    try:
+        from importlib.metadata import PackageNotFoundError, version
+
+        return version(distribution)
+    except PackageNotFoundError:
+        return None
+
+
+def _build_rfdetr_botsort(tracker_config: Path, device: str | None) -> Any:
+    try:
+        from ultralytics.trackers.bot_sort import BOTSORT
+        from ultralytics.utils import YAML, IterableSimpleNamespace
+    except ImportError as exc:
+        raise RuntimeError("ultralytics is required for RF-DETR-L BoT-SORT tracking") from exc
+    config = IterableSimpleNamespace(**YAML.load(str(tracker_config)))
+    if device is not None:
+        config.device = device
+    return BOTSORT(args=config)
+
+
+def _iter_tracking_video_frames(video_path: Path, max_frames: int | None) -> Iterable[Any]:
+    try:
+        import cv2  # type: ignore[import-not-found]
+    except ImportError as exc:
+        raise RuntimeError("cv2 is required to decode frames for RF-DETR-L tracking") from exc
+    capture = cv2.VideoCapture(str(video_path))
+    if not capture.isOpened():
+        capture.release()
+        raise ValueError(f"could not open tracking video: {video_path}")
+    try:
+        frame_index = 0
+        while max_frames is None or frame_index < max_frames:
+            ok, frame = capture.read()
+            if not ok:
+                break
+            yield frame
+            frame_index += 1
+    finally:
+        capture.release()
+
+
+def _rfdetr_tracked_detection_payload(
+    *,
+    detector: Any,
+    tracker: Any,
+    frames: Iterable[Any],
+    fps: float,
+    conf_floor: float,
+    person_class_id: int,
+) -> tuple[dict[str, Any], dict[str, int]]:
+    import numpy as np
+
+    counts = {
+        "tracker_frames": 0,
+        "tracker_boxes": 0,
+        "tracked_person_boxes": 0,
+        "detector_boxes": 0,
+        "detector_person_boxes": 0,
+        "detector_wrong_class_boxes": 0,
+        "detector_below_conf_boxes": 0,
+        "detector_person_boxes_after_conf": 0,
+    }
+    frame_payloads: list[dict[str, Any]] = []
+    source_size: tuple[int, int] | None = None
+    for frame_index, frame in enumerate(frames):
+        shape = getattr(frame, "shape", None)
+        if not isinstance(shape, tuple) or len(shape) < 2:
+            raise ValueError("RF-DETR frame did not expose an image shape")
+        height, width = int(shape[0]), int(shape[1])
+        if width <= 0 or height <= 0:
+            raise ValueError("RF-DETR frame has invalid dimensions")
+        if source_size is None:
+            source_size = (width, height)
+        elif source_size != (width, height):
+            raise ValueError(f"tracking source size changed across frames: {source_size} then {(width, height)}")
+
+        try:
+            from PIL import Image
+        except ImportError as exc:
+            raise RuntimeError("Pillow is required for RF-DETR-L tracking") from exc
+        rgb = frame[:, :, ::-1]
+        prediction = detector.predict(Image.fromarray(rgb), threshold=conf_floor)
+        xyxy = np.asarray(getattr(prediction, "xyxy", []), dtype=np.float32).reshape(-1, 4)
+        confidence = np.asarray(getattr(prediction, "confidence", []), dtype=np.float32).reshape(-1)
+        class_ids = np.asarray(getattr(prediction, "class_id", []), dtype=np.int64).reshape(-1)
+        if len(xyxy) != len(confidence) or len(xyxy) != len(class_ids):
+            raise ValueError("RF-DETR prediction arrays have inconsistent lengths")
+        counts["detector_boxes"] += len(xyxy)
+        person_mask = class_ids == person_class_id
+        counts["detector_person_boxes"] += int(person_mask.sum())
+        counts["detector_wrong_class_boxes"] += int((~person_mask).sum())
+        below_conf_mask = person_mask & (confidence < conf_floor)
+        counts["detector_below_conf_boxes"] += int(below_conf_mask.sum())
+        keep = person_mask & (confidence >= conf_floor)
+        boxes_kept = xyxy[keep]
+        confidence_kept = confidence[keep]
+        counts["detector_person_boxes_after_conf"] += len(confidence_kept)
+
+        tracker_boxes = _RFDetrTrackerBoxes(
+            boxes_kept,
+            confidence_kept,
+            np.zeros(len(confidence_kept), dtype=np.float32),
+        )
+        tracked_rows = tracker.update(tracker_boxes, frame)
+        detections: list[dict[str, Any]] = []
+        for row in tracked_rows:
+            values = row.tolist() if hasattr(row, "tolist") else list(row)
+            if len(values) < 8:
+                raise ValueError("BoT-SORT update row must contain xyxy, track id, score, class, and source index")
+            x1, y1, x2, y2, track_id, score, _tracker_class, _source_index = values[:8]
+            detections.append(
+                {
+                    "bbox": [float(x1), float(y1), float(x2), float(y2)],
+                    "conf": float(score),
+                    "class": "person",
+                    "track_id": int(track_id),
+                }
+            )
+        counts["tracker_frames"] += 1
+        counts["tracker_boxes"] += len(detections)
+        counts["tracked_person_boxes"] += len(detections)
+        frame_payloads.append({"frame": frame_index, "detections": detections})
+
+    if not frame_payloads or source_size is None:
+        raise ValueError("real RF-DETR tracking produced no frames")
+    source_width, source_height = source_size
+    counts["tracker_source_width"] = source_width
+    counts["tracker_source_height"] = source_height
+    return (
+        {
+            "fps": fps,
+            "source_width": source_width,
+            "source_height": source_height,
+            "frames": frame_payloads,
+        },
+        counts,
+    )
 
 
 def _tracking_video_path(context: StageContext, *, explicit: Path | None) -> Path:
@@ -3896,7 +4586,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-frames", type=int, default=None)
     parser.add_argument("--tracking-mode", choices=["real", "precomputed", "precomputed_tracks"], default="real")
     parser.add_argument("--tracking-video", type=Path, default=None, help="Source video for real tracking.")
-    parser.add_argument("--manifest", type=Path, default=DEFAULT_MODEL_MANIFEST, help="Model manifest with yolo26m checksum.")
+    parser.add_argument(
+        "--person-detector",
+        choices=(RFDETR_LARGE_MODEL_ID, YOLO26M_MODEL_ID),
+        default=None,
+        help=(
+            "Explicit person-detector selection. The no-flag best-stack default is yolo26m; "
+            "rfdetr_large_2026 is a gate-only PENDING candidate. The same override is "
+            f"available through {PERSON_DETECTOR_KILL_SWITCH_ENV}."
+        ),
+    )
+    parser.add_argument("--manifest", type=Path, default=DEFAULT_MODEL_MANIFEST, help="Model manifest for real tracking.")
     parser.add_argument("--tracker-config", type=Path, default=DEFAULT_BOTSORT_REID_CONFIG)
     parser.add_argument(
         "--ball-source",
@@ -3937,6 +4637,7 @@ def main(argv: list[str] | None = None) -> int:
         device=args.device,
         max_frames=args.max_frames,
         tracking_mode=args.tracking_mode,
+        person_detector=args.person_detector,
         tracking_video=args.tracking_video,
         manifest_path=args.manifest,
         tracker_config_path=args.tracker_config,

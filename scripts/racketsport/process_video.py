@@ -19,11 +19,12 @@ entrypoint (NORTH_STAR_ROADMAP.md's product goal). It chains, in order:
                       which validates schema + intrinsics.source and skips PnP
                       re-derivation (see that class's docstring for the
                       intrinsics.dist migration note).
-  3. tracking      -- BoT-SORT-ReID "loose pool" (YOLO26m + BoT-SORT via the
-                      existing spine), optionally refined by raw-pool global
+  3. tracking      -- detector-aware BoT-SORT loose pool via the existing spine
+                      (YOLO26m + ReID by default; explicitly gated RF-DETR-L +
+                      no-ReID candidate), optionally refined by raw-pool global
                       association (threed.racketsport.raw_pool_person_authority,
-                      the champion recipe cited in NORTH_STAR_ROADMAP.md), or reused
-                      from an already-computed --tracks artifact.
+                      the champion recipe cited in NORTH_STAR_ROADMAP.md), or
+                      reused from an already-computed --tracks artifact.
   4. placement     -- placement.json plus an in-place tracks.json world_xy rewrite
                       from bbox, native-2D foot keypoints, covariance fusion, and
                       offline smoothing. The original tracks artifact is backed up
@@ -686,6 +687,7 @@ class ProcessVideoPipeline:
         self.clip_dir.mkdir(parents=True, exist_ok=True)
         self._run_identity_store = RunIdentityStore(self.clip_dir)
         self._source_identity_cache: SourceIdentity | None = None
+        self._person_detector_selection_cache: orchestrator.PersonDetectorSelection | None = None
         self._active_reuse_decisions: dict[str, bool] = {}
         self.trust_bands: dict[str, dict[str, Any] | None] = {}
         self.stage_outcomes: list[StageOutcome] = []
@@ -800,6 +802,11 @@ class ProcessVideoPipeline:
         return self._source_identity_cache
 
     def _stage_identity_spec(self, name: str, fn: Callable[[], StageOutcome]) -> StageSpec:
+        detector_selection = (
+            self._resolved_person_detector_selection()
+            if name == "tracking"
+            else None
+        )
         resolved_stack = resolved_best_stack_config_from_options(self.options)
         config = {
             key: copy.deepcopy(resolved_stack[key])
@@ -810,11 +817,17 @@ class ProcessVideoPipeline:
 
         models: dict[str, Path] = {}
         if name == "tracking":
+            assert detector_selection is not None
             models = {
                 "model_manifest": self.options.manifest_path,
                 "reid_checkpoint": self.options.reid_model,
-                "tracker_config": self.options.tracker_config_path,
+                "tracker_config": detector_selection.tracker_config_path,
             }
+            checkpoint_path = self._selected_person_detector_checkpoint_path(
+                detector_selection
+            )
+            if checkpoint_path is not None:
+                models["person_detector_checkpoint"] = checkpoint_path
         elif name == "ball":
             models = {"wasb_checkpoint": self.options.wasb_checkpoint}
         elif name == "body":
@@ -850,6 +863,11 @@ class ProcessVideoPipeline:
                 "device": opts.device,
                 "raw_pool_reuse": opts.tracking_raw_pool_reuse is not None,
                 "reid_embeddings_reuse": opts.tracking_reid_embeddings_reuse is not None,
+                "person_detector": (
+                    self._resolved_person_detector_identity_payload()
+                    if name == "tracking"
+                    else None
+                ),
             },
             "rally_gating": {"enabled": opts.rally_gating, "pad_seconds": opts.rally_gating_pad_seconds},
             "ball": {
@@ -884,6 +902,85 @@ class ProcessVideoPipeline:
             "verify": {"enabled": opts.verify_viewer},
         }
         return {**common, **by_stage.get(name, {})}
+
+    def _resolved_person_detector_selection(
+        self,
+    ) -> orchestrator.PersonDetectorSelection:
+        if self._person_detector_selection_cache is None:
+            self._person_detector_selection_cache = (
+                orchestrator.resolve_person_detector_selection(
+                    None,
+                    yolo_tracker_config_path=self.options.tracker_config_path,
+                )
+            )
+        return self._person_detector_selection_cache
+
+    def _resolved_person_detector_identity_payload(self) -> dict[str, Any]:
+        selection = self._resolved_person_detector_selection()
+        payload = selection.identity_payload()
+        try:
+            manifest = _read_json(self.options.manifest_path)
+        except (OSError, json.JSONDecodeError):
+            payload["declared_checkpoint_sha256"] = None
+            return payload
+        models = manifest.get("models") if isinstance(manifest, Mapping) else None
+        selected_entry = next(
+            (
+                item
+                for item in models
+                if isinstance(item, Mapping)
+                and item.get("id") == selection.model_id
+            ),
+            None,
+        ) if isinstance(models, list) else None
+        payload["declared_checkpoint_sha256"] = (
+            selected_entry.get("sha256")
+            if isinstance(selected_entry, Mapping)
+            and isinstance(selected_entry.get("sha256"), str)
+            else None
+        )
+        return payload
+
+    def _selected_person_detector_checkpoint_path(
+        self,
+        selection: orchestrator.PersonDetectorSelection,
+    ) -> Path | None:
+        try:
+            manifest = _read_json(self.options.manifest_path)
+        except (OSError, json.JSONDecodeError):
+            return None
+        models = manifest.get("models") if isinstance(manifest, Mapping) else None
+        selected_entry = next(
+            (
+                item
+                for item in models
+                if isinstance(item, Mapping)
+                and item.get("id") == selection.model_id
+            ),
+            None,
+        ) if isinstance(models, list) else None
+        local_path = (
+            selected_entry.get("local_path")
+            if isinstance(selected_entry, Mapping)
+            else None
+        )
+        checkpoint = (
+            Path(local_path).expanduser()
+            if isinstance(local_path, str) and local_path
+            else None
+        )
+        repo_local_yolo = ROOT / "models" / "checkpoints" / "yolo26m.pt"
+        if (
+            selection.model_id == orchestrator.YOLO26M_MODEL_ID
+            and (checkpoint is None or not checkpoint.is_file())
+            and repo_local_yolo.is_file()
+        ):
+            return repo_local_yolo.resolve()
+        if checkpoint is None:
+            return None
+        if not checkpoint.is_absolute():
+            checkpoint = ROOT / checkpoint
+        return checkpoint.resolve()
 
     def _stage_explicit_inputs(self, name: str) -> dict[str, Path]:
         opts = self.options
@@ -955,8 +1052,10 @@ class ProcessVideoPipeline:
         values = [*outcome.artifacts]
         if name == "ingest":
             values.append(f"source{self.options.video.suffix.lower()}")
+        # BODY monoliths are rewritten by later BODY post-processing. Tracking
+        # tracks.json is intentionally *not* excluded: a detector selection may
+        # never reuse an out-of-band or wrong-detector tracks artifact.
         mutable_later = {
-            "tracking": {"tracks.json"},
             "body": {"smpl_motion.json", "skeleton3d.json"},
         }.get(name, set())
         artifacts: list[Path] = []
@@ -1726,13 +1825,21 @@ class ProcessVideoPipeline:
     def _stage_tracking(self) -> StageOutcome:
         target = self.clip_dir / "tracks.json"
         opts = self.options
+        detector_selection = self._resolved_person_detector_selection()
+        quarantine_notes = (
+            self._quarantine_stale_tracking_outputs()
+            if not self._identity_allows_reuse("tracking")
+            else []
+        )
 
         detector_v2_gate = self._detector_v2_correction_gate_before_tracking()
         if detector_v2_gate is not None:
+            detector_v2_gate.notes = [*quarantine_notes, *detector_v2_gate.notes]
             return detector_v2_gate
 
         court_gate = self._court_correction_gate_before_tracking()
         if court_gate is not None:
+            court_gate.notes = [*quarantine_notes, *court_gate.notes]
             return court_gate
 
         if (
@@ -1746,7 +1853,7 @@ class ProcessVideoPipeline:
                 stage="tracking",
                 status="skipped",
                 wall_seconds=0.0,
-                notes=["reusing existing valid tracks.json"],
+                notes=[*quarantine_notes, "reusing existing valid tracks.json"],
                 artifacts=["tracks.json"],
                 trust_badge=self.trust_bands["track"]["badge"],
             )
@@ -1760,7 +1867,10 @@ class ProcessVideoPipeline:
                 stage="tracking",
                 status="reused",
                 wall_seconds=0.0,
-                notes=[f"reused already-computed champion tracks.json from {opts.tracks_reuse} (resume/reuse path)"],
+                notes=[
+                    *quarantine_notes,
+                    f"reused already-computed champion tracks.json from {opts.tracks_reuse} (resume/reuse path)",
+                ],
                 artifacts=["tracks.json"],
                 trust_badge=self.trust_bands["track"]["badge"],
             )
@@ -1788,10 +1898,17 @@ class ProcessVideoPipeline:
                         copied_artifacts.append(raw_pool_name)
 
             notes = [
+                *quarantine_notes,
                 f"reused frozen loose tracking pool from {raw_pool_dir}; source directory is content-fingerprinted"
             ]
             if opts.global_association:
-                notes.extend(self._attempt_global_association())
+                try:
+                    notes.extend(self._attempt_global_association())
+                except Exception:
+                    self._quarantine_stale_tracking_outputs()
+                    raise
+                if (self.clip_dir / "global_association").is_dir():
+                    copied_artifacts.append("global_association")
             self.trust_bands["track"] = self._selected_track_trust_band(evidence_path=str(target))
             return StageOutcome(
                 stage="tracking",
@@ -1807,10 +1924,13 @@ class ProcessVideoPipeline:
                 stage="tracking",
                 status="blocked",
                 wall_seconds=0.0,
-                notes=["--no-gpu set and no --tracks reuse artifact given; skipping live BoT-SORT tracking"],
+                notes=[
+                    *quarantine_notes,
+                    "--no-gpu set and no --tracks reuse artifact given; skipping live BoT-SORT tracking",
+                ],
             )
 
-        # Step 1: BoT-SORT-ReID "loose pool" via the existing real spine.
+        # Step 1: detector-selected BoT-SORT loose pool via the existing real spine.
         manifest_path, manifest_notes = self._runtime_manifest_for_local_host()
         court_margin_m, court_margin_notes = self._tracking_court_margin()
         try:
@@ -1823,9 +1943,10 @@ class ProcessVideoPipeline:
                 device=opts.device,
                 max_frames=opts.max_frames,
                 tracking_mode="real",
+                person_detector=detector_selection,
                 tracking_video=self.clip_dir / f"source{opts.video.suffix.lower()}",
                 manifest_path=manifest_path,
-                tracker_config_path=opts.tracker_config_path,
+                tracker_config_path=detector_selection.tracker_config_path,
                 max_players=opts.max_players,
                 court_margin_m=court_margin_m,
                 # Task #45 S2: this clip_dir's calibration stage already ran (via
@@ -1836,52 +1957,157 @@ class ProcessVideoPipeline:
                 require_content_identity_for_reuse=True,
             )
         except (OSError, ModuleNotFoundError) as exc:
+            failed_notes = [
+                *quarantine_notes,
+                *self._quarantine_stale_tracking_outputs(),
+                f"live BoT-SORT tracking unavailable ({type(exc).__name__}: {exc}); no tracks produced",
+            ]
+            if detector_selection.model_id == orchestrator.RFDETR_LARGE_MODEL_ID:
+                return StageOutcome(
+                    stage="tracking",
+                    status="failed",
+                    wall_seconds=0.0,
+                    notes=failed_notes,
+                )
             raise ExpectedOptionalAbsence(
                 "degraded",
                 "tracking_runtime_unavailable",
-                f"live BoT-SORT tracking unavailable ({type(exc).__name__}: {exc}); no tracks produced",
+                "; ".join(failed_notes),
             ) from exc
         except RuntimeError as exc:
             if "ultralytics is required" not in str(exc):
+                self._quarantine_stale_tracking_outputs()
                 raise
+            failed_notes = [
+                *quarantine_notes,
+                *self._quarantine_stale_tracking_outputs(),
+                f"live BoT-SORT tracking unavailable ({type(exc).__name__}: {exc}); no tracks produced",
+            ]
+            if detector_selection.model_id == orchestrator.RFDETR_LARGE_MODEL_ID:
+                return StageOutcome(
+                    stage="tracking",
+                    status="failed",
+                    wall_seconds=0.0,
+                    notes=failed_notes,
+                )
             raise ExpectedOptionalAbsence(
                 "degraded",
                 "tracking_runtime_dependency_unavailable",
-                f"live BoT-SORT tracking unavailable ({type(exc).__name__}: {exc}); no tracks produced",
+                "; ".join(failed_notes),
             ) from exc
+        except Exception:
+            self._quarantine_stale_tracking_outputs()
+            raise
         if not _spine_stage_succeeded(result, stage="tracking"):
+            failure_notes = [
+                *quarantine_notes,
+                *self._quarantine_stale_tracking_outputs(),
+                f"live BoT-SORT tracking failed: {_spine_failure_detail(result)}",
+            ]
             return StageOutcome(
                 stage="tracking",
-                status="degraded",
+                status=(
+                    "failed"
+                    if detector_selection.model_id
+                    == orchestrator.RFDETR_LARGE_MODEL_ID
+                    else "degraded"
+                ),
                 wall_seconds=0.0,
-                notes=[f"live BoT-SORT tracking failed: {_spine_failure_detail(result)}"],
+                notes=failure_notes,
             )
 
+        source_mode = _spine_stage_source_mode(result, stage="tracking")
+        expected_source_mode = (
+            "rfdetr_large_2026_botsort_no_reid_loose"
+            if detector_selection.model_id
+            == orchestrator.RFDETR_LARGE_MODEL_ID
+            else "yolo26m_botsort_reid"
+        )
+        if source_mode is not None and source_mode != expected_source_mode:
+            self._quarantine_stale_tracking_outputs()
+            raise _HardStageFailure(
+                "tracking source_mode did not match the resolved detector: "
+                f"expected {expected_source_mode!r}, got {source_mode!r}"
+            )
         notes = [
-            "ran BoT-SORT-ReID loose-pool tracking (YOLO26m + BoT-SORT via threed.racketsport.orchestrator)",
+            *quarantine_notes,
+            "ran real loose-pool tracking via threed.racketsport.orchestrator "
+            f"(returned source_mode={source_mode!r})",
             *court_margin_notes,
             *manifest_notes,
         ]
 
-        # Step 2: raw-pool global association refinement (the champion recipe).
-        if opts.global_association:
-            refined = self._attempt_global_association()
-            notes.extend(refined)
+        try:
+            # Step 2: raw-pool global association refinement (the champion recipe).
+            if opts.global_association:
+                refined = self._attempt_global_association()
+                notes.extend(refined)
 
-        artifacts = ["tracks.json"]
-        for raw_pool_name in ("raw_tracked_detections.json", "tracked_detections.json", "metrics.json"):
-            if (self.clip_dir / raw_pool_name).is_file():
-                artifacts.append(raw_pool_name)
+            artifacts = ["tracks.json"]
+            for raw_pool_name in ("raw_tracked_detections.json", "tracked_detections.json", "metrics.json"):
+                if (self.clip_dir / raw_pool_name).is_file():
+                    artifacts.append(raw_pool_name)
+            if (self.clip_dir / "global_association").is_dir():
+                artifacts.append("global_association")
 
-        self.trust_bands["track"] = self._selected_track_trust_band(evidence_path=str(target))
-        return StageOutcome(
-            stage="tracking",
-            status="ran",
-            wall_seconds=0.0,
-            notes=notes,
-            artifacts=artifacts,
-            trust_badge=self.trust_bands["track"]["badge"],
+            self.trust_bands["track"] = self._selected_track_trust_band(evidence_path=str(target))
+            return StageOutcome(
+                stage="tracking",
+                status="ran",
+                wall_seconds=0.0,
+                notes=notes,
+                artifacts=artifacts,
+                trust_badge=self.trust_bands["track"]["badge"],
+                metrics={
+                    "source_mode": source_mode,
+                    "person_detector": detector_selection.identity_payload(),
+                },
+            )
+        except Exception:
+            # A successful detector pass followed by association/provenance
+            # failure is still a failed tracking generation. Never leave its
+            # partial files selectable or score-discoverable.
+            self._quarantine_stale_tracking_outputs()
+            raise
+
+    def _quarantine_stale_tracking_outputs(self) -> list[str]:
+        stale_names = (
+            "tracks.json",
+            "raw_tracked_detections.json",
+            "tracked_detections.json",
+            "metrics.json",
+            "global_association",
         )
+        stale_paths = [
+            self.clip_dir / name
+            for name in stale_names
+            if (self.clip_dir / name).exists()
+        ]
+        if not stale_paths:
+            return []
+        quarantine_dir = (
+            self._run_identity_store.store_dir
+            / "quarantine"
+            / "tracking"
+            / f"{time.time_ns()}-{os.getpid()}"
+        )
+        quarantine_dir.mkdir(parents=True, exist_ok=False)
+        for path in stale_paths:
+            suffix = ".quarantined" if path.is_file() else ".quarantined_dir"
+            destination = quarantine_dir / f"{path.name}{suffix}"
+            os.replace(path, destination)
+            if destination.is_dir():
+                for discovered in destination.rglob("tracks.json"):
+                    os.replace(
+                        discovered,
+                        discovered.with_name("tracks.json.quarantined"),
+                    )
+        relative = quarantine_dir.relative_to(self.clip_dir)
+        return [
+            "quarantined stale tracking outputs under non-score-discoverable names "
+            "before detector-specific rebuild: "
+            f"{relative.as_posix()}"
+        ]
 
     def _tracking_court_margin(self) -> tuple[float, list[str]]:
         if not (self.clip_dir / "auto_court_corners_preview.json").is_file():
@@ -6823,6 +7049,25 @@ def _spine_stage_succeeded(result: Mapping[str, Any], *, stage: str) -> bool:
     if not matching:
         return False
     return matching[-1].get("status") not in {"fail", "blocked"}
+
+
+def _spine_stage_source_mode(
+    result: Mapping[str, Any],
+    *,
+    stage: str,
+) -> str | None:
+    stages = result.get("stages")
+    if not isinstance(stages, list):
+        return None
+    matching = [
+        item
+        for item in stages
+        if isinstance(item, Mapping) and item.get("stage") == stage
+    ]
+    if not matching:
+        return None
+    source_mode = matching[-1].get("source_mode")
+    return source_mode if isinstance(source_mode, str) and source_mode else None
 
 
 def _spine_failure_detail(summary: Mapping[str, Any]) -> str:

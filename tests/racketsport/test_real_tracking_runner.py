@@ -186,7 +186,9 @@ def test_real_tracking_runner_invokes_manifest_yolo26m_with_botsort_reid(monkeyp
         "metrics.json",
         "tracks.json",
     )
-    assert result.metrics["checkpoint_sha256_verified"] == checkpoint.name
+    assert result.metrics["checkpoint_sha256_verified"] == hashlib.sha256(
+        checkpoint.read_bytes()
+    ).hexdigest()
     assert calls["model_path"] == str(checkpoint)
     track_kwargs = calls["track_kwargs"]
     assert isinstance(track_kwargs, dict)
@@ -409,6 +411,7 @@ def test_h100_real_tracking_runner_smoke_from_env(tmp_path: Path) -> None:
         run_dir=tmp_path / "trk1_h100_real",
         stage="tracking",
         tracking_mode="real",
+        person_detector="yolo26m",
         tracking_video=video,
         manifest_path=manifest,
         max_frames=int(os.environ.get("TRK1_H100_MAX_FRAMES", "90")),

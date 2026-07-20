@@ -136,7 +136,19 @@ only moves `frames` ahead of the four overlapped BALL/event stages:
    currently after calibration; the target DAG splits media checks before
    calibration from court-visibility checks after it.
 4. **tracking** - run or reuse person tracks, optionally with raw-pool global
-   association.
+   association. The no-flag real-tracking detector remains YOLO26m at imgsz
+   1536, COCO person class id 0, confidence floor 0.05, and
+   `botsort_reid.yaml`. RF-DETR-L is implemented but `PENDING` and non-default:
+   native 704, person class id 1, confidence floor 0.18, then the unchanged
+   `botsort_no_reid_loose.yaml` per-frame `update()` pool and downstream OSNet
+   association. `RACKETSPORT_PERSON_DETECTOR=rfdetr_large_2026` is reserved for
+   the manager's frozen GPU reproduction; missing RF-DETR weights or runtime
+   dependencies fail loudly and never trigger an automatic fallback. GPU hosts
+   need the unpinned runtime install `python -m pip install rfdetr`; re-bake and
+   record the fleet snapshot after installing it. RF-DETR cannot become the
+   no-flag default until both frozen rows pass
+   `runs/lanes/trk_rfdetr_integrate_20260717/VM_REPRO_PLAN.md`. `VERIFIED=0`
+   remains binding.
 5. **camera_motion** - optional/auto preview camera-motion compensation before
    placement homography projection.
 6. **placement** - project tracks into court/world placement when inputs exist.
@@ -209,6 +221,7 @@ not simulate that target by leaving stale artifacts in the clip directory.
 | `--force` | Requests bounded regeneration/cleanup. Exact content identity remains authoritative; `--force` does not make mismatched artifacts current or prove correctness. |
 | `--max-frames` | Cap frames for smoke runs only. Do not use capped runs as promotion evidence. |
 | `--device` | Device hint for tracking/ReID/pose code that supports it, e.g. `cuda:0`, `mps`, or `cpu`. |
+| `RACKETSPORT_PERSON_DETECTOR={yolo26m,rfdetr_large_2026}` | Explicit detector override for the real tracking runner. Unset selects the YOLO26m `tracking.person_detector` default; RF-DETR is gate-only while its separate best-stack entry is `PENDING`. Invalid values and missing selected assets fail loudly. |
 | `--no-global-association` | Skip raw-pool global association after loose-pool tracking. |
 | `--global-association-profile` | Explicit internal-val tuning profile. Defaults are not universal proof. |
 | `--reid-model` | OSNet ReID checkpoint used by global association. Treat path changes as a new run condition. |
