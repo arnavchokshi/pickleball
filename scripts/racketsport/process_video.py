@@ -272,6 +272,19 @@ REPLAY_POINT_MAX_SPAN_SECONDS = 1.5
 AUTO_COURT_PREVIEW_TRACKING_MARGIN_M = 1000.0
 AUTO_COURT_PREVIEW_DEMO_MESH_MAX_FRAMES = 12
 COURT_CORRECTION_TASK_NAME = "court_correction_task.json"
+COURT_LINE_POOL_RAW_FRAMES_NAME = "court_line_evidence_pool_raw_frames.json"
+COURT_LINE_POOLED_NAME = "court_line_evidence_pooled.json"
+# Pooling is an opt-in CAL seam.  Preserve the exact pre-wire callable
+# identities when it is disabled so existing default-OFF generations remain
+# reusable instead of being invalidated solely by unreachable opt-in code.
+COURT_LINE_POOL_DEFAULT_OFF_CALLABLE_SHA256 = {
+    "calibration": "281507274520a14594d51ccb99f3a36ecb29723118d705149cc9ff18ad4f2d7a",
+    "input_quality": "f84d3efc926da3736f0af1c1c16e9723fc1b2c6f1164ccc4ce73d6d7b4913c15",
+}
+COURT_LINE_POOL_REVIEWED_POST_WIRE_CALLABLE_SHA256 = {
+    "calibration": "2e6e3780ac6e687c41670d920c7ca85e9c1a37d9f835f9d8872c9212ce2456ed",
+    "input_quality": "495792a87b8bb66ada5dd750b526e4a71c1947741934e9eef709cd85c111fad6",
+}
 COURT_DETECTOR_V2_PROPOSAL_NAME = "court_detector_v2_proposals.json"
 COURT_PROPOSALS_NAME = "court_proposals.json"
 COURT_CORRECTION_BLOCKED_DOWNSTREAM = [
@@ -610,6 +623,7 @@ class PipelineOptions:
     court_calibration: Path | None = None
     allow_auto_court_corners_preview: bool = False
     court_proposals_preview: bool = False
+    court_line_evidence_pooling: bool = False
     input_quality_mode: str = DEFAULT_INPUT_QUALITY_MODE
 
     tracks_reuse: Path | None = None
@@ -839,10 +853,29 @@ class ProcessVideoPipeline:
             callable_source = inspect.getsource(callable_object)
         except (OSError, TypeError):
             callable_source = repr(callable_object)
+        callable_sha256 = hashlib.sha256(
+            callable_source.encode("utf-8")
+        ).hexdigest()
+        expected_stage_callable = getattr(
+            ProcessVideoPipeline,
+            f"_stage_{name}",
+            None,
+        )
+        if (
+            not self.options.court_line_evidence_pooling
+            and callable_object is expected_stage_callable
+            and name in COURT_LINE_POOL_DEFAULT_OFF_CALLABLE_SHA256
+            and name in COURT_LINE_POOL_REVIEWED_POST_WIRE_CALLABLE_SHA256
+            and callable_sha256
+            == COURT_LINE_POOL_REVIEWED_POST_WIRE_CALLABLE_SHA256[name]
+        ):
+            callable_sha256 = (
+                COURT_LINE_POOL_DEFAULT_OFF_CALLABLE_SHA256[name]
+            )
         return StageSpec(
             name=name,
             dependencies=RUN_IDENTITY_DEPENDENCIES.get(name, ()),
-            code={"callable_sha256": hashlib.sha256(callable_source.encode("utf-8")).hexdigest()},
+            code={"callable_sha256": callable_sha256},
             config=config,
             models=models,
             explicit_inputs=explicit_inputs,
@@ -855,6 +888,15 @@ class ProcessVideoPipeline:
             "calibration": {
                 "allow_auto_court_corners_preview": opts.allow_auto_court_corners_preview,
                 "court_proposals_preview": opts.court_proposals_preview,
+                **(
+                    {
+                        "court_line_evidence_pooling": (
+                            _court_line_evidence_pooling_identity()
+                        )
+                    }
+                    if opts.court_line_evidence_pooling
+                    else {}
+                ),
             },
             "tracking": {
                 "global_association": opts.global_association,
@@ -1553,20 +1595,42 @@ class ProcessVideoPipeline:
 
     def _stage_calibration(self) -> StageOutcome:
         target = self.clip_dir / "court_calibration.json"
+        pooled_paths = (
+            self.clip_dir / COURT_LINE_POOL_RAW_FRAMES_NAME,
+            self.clip_dir / COURT_LINE_POOLED_NAME,
+        )
+        pooling_artifacts_present = (
+            all(path.is_file() for path in pooled_paths)
+            if self.options.court_line_evidence_pooling
+            else False
+        )
         if (
             target.is_file()
             and not self.options.force
             and self._identity_allows_reuse("calibration")
             and _valid_artifact("court_calibration", target)
+            and (
+                pooling_artifacts_present
+                if self.options.court_line_evidence_pooling
+                else True
+            )
         ):
             payload = _read_json(target)
             self._set_court_trust_band(payload, target)
+            artifacts = ["court_calibration.json"]
+            if self.options.court_line_evidence_pooling:
+                artifacts.extend(
+                    [
+                        COURT_LINE_POOL_RAW_FRAMES_NAME,
+                        COURT_LINE_POOLED_NAME,
+                    ]
+                )
             return StageOutcome(
                 stage="calibration",
                 status="skipped",
                 wall_seconds=0.0,
                 notes=["reusing existing valid court_calibration.json"],
-                artifacts=["court_calibration.json"],
+                artifacts=artifacts,
                 trust_badge=self.trust_bands["court"]["badge"] if self.trust_bands.get("court") else None,
             )
 
@@ -1646,17 +1710,31 @@ class ProcessVideoPipeline:
             raise _HardStageFailure(f"calibration spine failed: {_spine_failure_detail(result)}")
 
         payload = _read_json(target)
+        pooling_notes, pooling_artifacts, pooling_metrics = (
+            self._maybe_pool_court_line_evidence(payload)
+        )
         self._set_court_trust_band(payload, target)
         return StageOutcome(
             stage="calibration",
             status="ran",
             wall_seconds=0.0,
-            notes=[source_note, "ran calibration through threed.racketsport.orchestrator (real 4-corner PnP solve)"],
-            artifacts=["court_calibration.json", "court_zones.json", "net_plane.json", "court_line_evidence.json"],
+            notes=[
+                source_note,
+                "ran calibration through threed.racketsport.orchestrator (real 4-corner PnP solve)",
+                *pooling_notes,
+            ],
+            artifacts=[
+                "court_calibration.json",
+                "court_zones.json",
+                "net_plane.json",
+                "court_line_evidence.json",
+                *pooling_artifacts,
+            ],
             trust_badge=self.trust_bands["court"]["badge"] if self.trust_bands.get("court") else None,
             metrics={
                 "reprojection_median_px": payload.get("reprojection_error_px", {}).get("median"),
                 "reprojection_p95_px": payload.get("reprojection_error_px", {}).get("p95"),
+                **pooling_metrics,
             },
         )
 
@@ -1707,6 +1785,9 @@ class ProcessVideoPipeline:
             )
 
         payload = _read_json(target)
+        pooling_notes, pooling_artifacts, pooling_metrics = (
+            self._maybe_pool_court_line_evidence(payload)
+        )
         self._set_court_trust_band(payload, target)
 
         auto_discovered = opts.court_calibration is None
@@ -1733,15 +1814,309 @@ class ProcessVideoPipeline:
             stage="calibration",
             status="ran",
             wall_seconds=0.0,
-            notes=notes,
-            artifacts=["court_calibration.json", "court_zones.json", "net_plane.json", "court_line_evidence.json"],
+            notes=[*notes, *pooling_notes],
+            artifacts=[
+                "court_calibration.json",
+                "court_zones.json",
+                "net_plane.json",
+                "court_line_evidence.json",
+                *pooling_artifacts,
+            ],
             trust_badge=self.trust_bands["court"]["badge"] if self.trust_bands.get("court") else None,
             metrics={
                 "reprojection_median_px": payload.get("reprojection_error_px", {}).get("median"),
                 "reprojection_p95_px": payload.get("reprojection_error_px", {}).get("p95"),
                 "intrinsics_source": intrinsics.get("source"),
                 "intrinsics_dist_nonzero": dist_nonzero,
+                **pooling_metrics,
             },
+        )
+
+    def _maybe_pool_court_line_evidence(
+        self,
+        calibration_payload: Mapping[str, Any],
+    ) -> tuple[list[str], list[str], dict[str, Any]]:
+        """Run the proven opt-in pool and add only selector-accepted evidence."""
+
+        if not self.options.court_line_evidence_pooling:
+            return [], [], {}
+        if self.options.sport != "pickleball":
+            raise _HardStageFailure(
+                "--court-line-evidence-pooling currently supports pickleball only"
+            )
+
+        from threed.racketsport.court_line_robustness import (
+            PROVEN_POOL_SAMPLE_COUNT,
+            canonical_json_bytes,
+            combine_pooled_static_court_line_evidence,
+            run_proven_court_line_pool_from_video,
+        )
+
+        calibration_path = self.clip_dir / "court_calibration.json"
+        baseline_path = self.clip_dir / "court_line_evidence.json"
+        raw_frames_path = self.clip_dir / COURT_LINE_POOL_RAW_FRAMES_NAME
+        pooled_path = self.clip_dir / COURT_LINE_POOLED_NAME
+        if not baseline_path.is_file():
+            raise _HardStageFailure(
+                "court-line pooling requires court_line_evidence.json from calibration"
+            )
+
+        calibration_sha_before = _content_hash(calibration_path)
+        baseline_bytes = baseline_path.read_bytes()
+        baseline_sha = hashlib.sha256(baseline_bytes).hexdigest()
+        baseline_payload = _read_json(baseline_path)
+        baseline_observations = {
+            "line_observations": baseline_payload.get("line_observations", []),
+            "keypoint_observations": baseline_payload.get(
+                "keypoint_observations", []
+            ),
+            "net_observations": baseline_payload.get("net_observations", []),
+        }
+        baseline_observations_sha = hashlib.sha256(
+            canonical_json_bytes(baseline_observations)
+        ).hexdigest()
+
+        result = run_proven_court_line_pool_from_video(
+            self.options.video,
+            calibration_payload,
+        )
+        if baseline_path.read_bytes() != baseline_bytes:
+            raise _HardStageFailure(
+                "raw court_line_evidence.json changed during pooling"
+            )
+        _write_json(raw_frames_path, result.raw_evidence_artifact())
+        raw_frames_sha = _content_hash(raw_frames_path)
+        if raw_frames_sha is None:
+            raise _HardStageFailure(
+                "court-line pooling did not emit immutable raw frame evidence"
+            )
+
+        readiness = combine_pooled_static_court_line_evidence(
+            baseline_payload,
+            result.pooled_evidence,
+            seed_calibration=calibration_payload,
+            config=result.config,
+        )
+        pooled_payload = result.pooled_evidence.as_dict()
+        pooled_payload["config"] = result.config.as_dict()
+        provenance = dict(pooled_payload.get("provenance") or {})
+        provenance.update(
+            {
+                "source": "pooled_static",
+                "sample_count_requested": PROVEN_POOL_SAMPLE_COUNT,
+                "sample_count_actual": len(result.raw_frame_evidence),
+                "sampled_frame_indexes": [
+                    int(frame.frame_index)
+                    for frame in result.raw_frame_evidence
+                ],
+                "baseline_court_line_evidence": {
+                    "path": baseline_path.name,
+                    "bytes_sha256_before_pooling": baseline_sha,
+                    "observations_sha256": baseline_observations_sha,
+                    "mutation_policy": (
+                        "court_line_evidence.json remains byte-identical; "
+                        "additive effective evidence lives only in this pooled "
+                        "artifact"
+                    ),
+                },
+                "raw_frame_evidence": {
+                    "path": raw_frames_path.name,
+                    "bytes_sha256": raw_frames_sha,
+                },
+                "calibration": {
+                    "path": calibration_path.name,
+                    "bytes_sha256": calibration_sha_before,
+                    "refinement_consumed": False,
+                },
+            }
+        )
+        pooled_payload["provenance"] = provenance
+        pooled_payload["readiness"] = readiness.as_dict()
+        _write_json(pooled_path, pooled_payload)
+
+        if baseline_path.read_bytes() != baseline_bytes:
+            raise _HardStageFailure(
+                "pooling attempted to overwrite raw court_line_evidence.json"
+            )
+
+        if _content_hash(calibration_path) != calibration_sha_before:
+            raise _HardStageFailure(
+                "court-line evidence pooling changed court_calibration.json"
+            )
+
+        pooled_lines = {
+            line.line_id: line for line in result.pooled_evidence.lines
+        }
+        far_line = pooled_lines.get("far_centerline")
+        far_support = (
+            len(
+                set(far_line.contributing_frame_indexes)
+                | set(far_line.heldout_frame_indexes)
+            )
+            if far_line is not None
+            else 0
+        )
+        notes = [
+            (
+                "court-line evidence pooling accepted at the unchanged evidence "
+                "bar; added pooled_static lines "
+                f"{[line.line_id for line in readiness.added_line_observations]}"
+            )
+            if readiness.status == "accepted"
+            else (
+                "court-line evidence pooling abstained/not-ready; raw evidence "
+                "remains authoritative; reasons="
+                f"{list(readiness.rejection_reasons)}"
+            ),
+            (
+                "court calibration solve unchanged; T14 candidate refinement "
+                "was not consumed"
+            ),
+        ]
+        return (
+            notes,
+            [COURT_LINE_POOL_RAW_FRAMES_NAME, COURT_LINE_POOLED_NAME],
+            {
+                "court_line_pooling": {
+                    "status": readiness.status,
+                    "pool_status": result.pooled_evidence.status,
+                    "static_consistency": (
+                        result.pooled_evidence.static_consistency.status
+                        if result.pooled_evidence.static_consistency is not None
+                        else "missing"
+                    ),
+                    "sample_count": len(result.raw_frame_evidence),
+                    "sample_count_requested": PROVEN_POOL_SAMPLE_COUNT,
+                    "added_line_ids": [
+                        line.line_id
+                        for line in readiness.added_line_observations
+                    ],
+                    "effective_auto_calibration_ready": (
+                        readiness.effective_evidence.aggregate.auto_calibration_ready
+                    ),
+                    "far_centerline_support_frames": far_support,
+                    "far_centerline_geometry_fit_p90_px": (
+                        far_line.geometry_fit_p90_px
+                        if far_line is not None
+                        else None
+                    ),
+                }
+            },
+        )
+
+    def _court_line_evidence_for_readiness(
+        self,
+    ) -> tuple[Any, Path]:
+        """Resolve additive pooled evidence without mutating the raw artifact."""
+
+        baseline_path = self.clip_dir / "court_line_evidence.json"
+        baseline_payload = _read_optional_json(baseline_path)
+        if not self.options.court_line_evidence_pooling:
+            return baseline_payload, baseline_path
+        if not isinstance(baseline_payload, Mapping):
+            raise _HardStageFailure(
+                "pooled court-line readiness requires raw court_line_evidence.json"
+            )
+
+        pooled_path = self.clip_dir / COURT_LINE_POOLED_NAME
+        pooled_payload = _read_optional_json(pooled_path)
+        if not isinstance(pooled_payload, Mapping):
+            raise _HardStageFailure(
+                "pooled court-line readiness artifact is missing or invalid"
+            )
+        provenance = pooled_payload.get("provenance")
+        baseline_provenance = (
+            provenance.get("baseline_court_line_evidence")
+            if isinstance(provenance, Mapping)
+            else None
+        )
+        calibration_provenance = (
+            provenance.get("calibration")
+            if isinstance(provenance, Mapping)
+            else None
+        )
+        raw_provenance = (
+            provenance.get("raw_frame_evidence")
+            if isinstance(provenance, Mapping)
+            else None
+        )
+        if (
+            not isinstance(provenance, Mapping)
+            or provenance.get("source") != "pooled_static"
+            or not isinstance(baseline_provenance, Mapping)
+            or baseline_provenance.get("bytes_sha256_before_pooling")
+            != hashlib.sha256(baseline_path.read_bytes()).hexdigest()
+        ):
+            raise _HardStageFailure(
+                "pooled court-line readiness baseline hash mismatch"
+            )
+        calibration_path = self.clip_dir / "court_calibration.json"
+        if (
+            not isinstance(calibration_provenance, Mapping)
+            or calibration_provenance.get("bytes_sha256")
+            != _content_hash(calibration_path)
+            or calibration_provenance.get("refinement_consumed") is not False
+        ):
+            raise _HardStageFailure(
+                "pooled court-line readiness calibration provenance mismatch"
+            )
+        if (
+            not isinstance(raw_provenance, Mapping)
+            or raw_provenance.get("path")
+            != COURT_LINE_POOL_RAW_FRAMES_NAME
+            or raw_provenance.get("bytes_sha256")
+            != _content_hash(
+                self.clip_dir / COURT_LINE_POOL_RAW_FRAMES_NAME
+            )
+        ):
+            raise _HardStageFailure(
+                "pooled court-line readiness raw evidence provenance mismatch"
+            )
+
+        readiness = pooled_payload.get("readiness")
+        if not isinstance(readiness, Mapping):
+            raise _HardStageFailure(
+                "pooled court-line readiness payload is missing"
+            )
+
+        from threed.racketsport.court_line_robustness import (
+            canonical_json_bytes,
+            combine_pooled_static_court_line_evidence,
+            load_pooled_court_line_evidence_artifact,
+            proven_court_line_pool_config,
+        )
+
+        calibration_payload = _read_optional_json(calibration_path)
+        if not isinstance(calibration_payload, Mapping):
+            raise _HardStageFailure(
+                "pooled court-line readiness requires court calibration"
+            )
+        try:
+            serialized_pool = load_pooled_court_line_evidence_artifact(
+                pooled_payload
+            )
+            recomputed = combine_pooled_static_court_line_evidence(
+                baseline_payload,
+                serialized_pool,
+                seed_calibration=calibration_payload,
+                config=proven_court_line_pool_config(),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise _HardStageFailure(
+                f"pooled court-line readiness failed typed validation: {exc}"
+            ) from exc
+        if canonical_json_bytes(readiness) != canonical_json_bytes(
+            recomputed.as_dict()
+        ):
+            raise _HardStageFailure(
+                "pooled court-line readiness does not match recomputation at "
+                "the unchanged selector/aggregate bar"
+            )
+        if not recomputed.added_line_observations:
+            return baseline_payload, baseline_path
+        return (
+            recomputed.effective_evidence.model_dump(mode="json"),
+            pooled_path,
         )
 
     # ------------------------------------------------------------------
@@ -1780,11 +2155,17 @@ class ProcessVideoPipeline:
             )
 
         config = _input_quality_config_for_mode(mode)
+        readiness_override = None
+        if self.options.court_line_evidence_pooling:
+            readiness_override, _readiness_path = (
+                self._court_line_evidence_for_readiness()
+            )
         report = _build_input_quality_report(
             video=self.options.video,
             clip=self.options.clip,
             calibration_path=self.clip_dir / "court_calibration.json",
             court_line_evidence_path=self.clip_dir / "court_line_evidence.json",
+            court_line_evidence_override=readiness_override,
             mode=mode,
             config=config,
         )
@@ -2123,7 +2504,10 @@ class ProcessVideoPipeline:
         calibration = _read_optional_json(calibration_path)
         if not isinstance(calibration, Mapping):
             return None
-        evidence = _read_optional_json(evidence_path)
+        if self.options.court_line_evidence_pooling:
+            evidence, evidence_path = self._court_line_evidence_for_readiness()
+        else:
+            evidence = _read_optional_json(evidence_path)
         if not _court_calibration_needs_correction(calibration, evidence):
             return None
 
@@ -6190,6 +6574,70 @@ def _placement_honesty_notes(summary: Mapping[str, Any]) -> list[str]:
     return notes
 
 
+def _court_line_evidence_pooling_identity() -> dict[str, Any]:
+    """Identity for the opt-in CAL artifact; absent entirely when default-OFF."""
+
+    from threed.racketsport import (
+        court_auto_evidence,
+        court_calibration,
+        court_keypoint_net,
+        court_line_evidence,
+        court_line_keypoints,
+        court_line_robustness,
+        court_proposal_optimizer,
+        court_templates,
+        schemas,
+    )
+
+    config = court_line_robustness.proven_court_line_pool_config()
+    implementation_path = Path(court_line_robustness.__file__).resolve()
+    dependency_modules = {
+        "court_auto_evidence": court_auto_evidence,
+        "court_calibration": court_calibration,
+        "court_keypoint_net": court_keypoint_net,
+        "court_line_evidence": court_line_evidence,
+        "court_line_keypoints": court_line_keypoints,
+        "court_proposal_optimizer": court_proposal_optimizer,
+        "court_templates": court_templates,
+        "schemas": schemas,
+    }
+    return {
+        "enabled": True,
+        "sample_count": court_line_robustness.PROVEN_POOL_SAMPLE_COUNT,
+        "config": config.as_dict(),
+        "implementation_sha256": hashlib.sha256(
+            implementation_path.read_bytes()
+        ).hexdigest(),
+        "process_video_sha256": hashlib.sha256(
+            Path(__file__).resolve().read_bytes()
+        ).hexdigest(),
+        "process_seam_sha256": {
+            name: hashlib.sha256(
+                inspect.getsource(callable_object).encode("utf-8")
+            ).hexdigest()
+            for name, callable_object in {
+                "pool": ProcessVideoPipeline._maybe_pool_court_line_evidence,
+                "readiness": (
+                    ProcessVideoPipeline._court_line_evidence_for_readiness
+                ),
+                "pretracking_gate": (
+                    ProcessVideoPipeline._court_correction_gate_before_tracking
+                ),
+                "input_quality": _build_input_quality_report,
+            }.items()
+        },
+        "dependency_sha256": {
+            name: hashlib.sha256(
+                Path(module.__file__).resolve().read_bytes()
+            ).hexdigest()
+            for name, module in dependency_modules.items()
+        },
+        "static_consistency_implementation": (
+            court_line_robustness.STATIC_CONSISTENCY_IMPLEMENTATION
+        ),
+    }
+
+
 def _auto_discover_court_calibration(video: Path) -> Path | None:
     """Look for the eval_clips/ball/<clip>/labels/court_calibration_metric15pt.json
     convention next to the video's own directory, e.g. for
@@ -7105,6 +7553,7 @@ def _build_input_quality_report(
     clip: str,
     calibration_path: Path,
     court_line_evidence_path: Path,
+    court_line_evidence_override: Mapping[str, Any] | None = None,
     mode: str,
     config: Mapping[str, Any],
 ) -> dict[str, Any]:
@@ -7117,7 +7566,11 @@ def _build_input_quality_report(
 
     timing = _video_timing_probe(video)
     calibration = _read_optional_json(calibration_path)
-    court_line_evidence = _read_optional_json(court_line_evidence_path)
+    court_line_evidence = (
+        court_line_evidence_override
+        if court_line_evidence_override is not None
+        else _read_optional_json(court_line_evidence_path)
+    )
     video_quality = _probe_video_quality_samples(video, timing=timing, sampling=sampling)
     court_metrics = _court_visibility_angle_metrics(
         calibration,
@@ -7947,6 +8400,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         court_calibration=Path(args.court_calibration).expanduser().resolve() if args.court_calibration else None,
         allow_auto_court_corners_preview=args.allow_auto_court_corners_preview,
         court_proposals_preview=args.court_proposals_preview,
+        court_line_evidence_pooling=bool(args.court_line_evidence_pooling),
         input_quality_mode=str(args.input_quality_mode),
         tracks_reuse=Path(args.tracks).expanduser().resolve() if args.tracks else None,
         tracking_raw_pool_reuse=Path(args.tracking_raw_pool).expanduser().resolve()
@@ -8043,6 +8497,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         help=(
             "If no trusted calibration seed is supplied, write fail-closed court_proposals.json and a "
             "court correction task. Proposal preview does not satisfy calibration."
+        ),
+    )
+    parser.add_argument(
+        "--court-line-evidence-pooling",
+        action="store_true",
+        help=(
+            "Opt in to the proven 96-frame static-camera court-line pool. "
+            "Writes separate immutable raw/pooled evidence, admits only "
+            "pooled_static lines that pass the unchanged readiness bar, and "
+            "abstains on camera drift. Default is OFF."
         ),
     )
     parser.add_argument(

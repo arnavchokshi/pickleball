@@ -1,0 +1,254 @@
+{
+  "aggregate": {
+    "accepted_line_ids": [
+      "far_nvz",
+      "left_sideline",
+      "near_baseline",
+      "near_centerline",
+      "near_nvz",
+      "net",
+      "right_sideline"
+    ],
+    "auto_calibration_ready": false,
+    "mean_residual_px": 3.920641934795361,
+    "missing_required_line_ids": [
+      "far_centerline"
+    ],
+    "missing_required_net_ids": [],
+    "p95_residual_px": 10.253094225879789,
+    "reasons": [
+      "missing_far_centerline"
+    ],
+    "rejected_line_ids": [],
+    "temporal_stability_px": 10.253094225879789
+  },
+  "keypoint_observations": [],
+  "line_observations": [
+    {
+      "confidence": 0.7875078395738996,
+      "frame_indexes": [
+        1861,
+        3722,
+        5584,
+        7445,
+        9306,
+        11167
+      ],
+      "image_segment": [
+        [
+          771.1666666666666,
+          262.0
+        ],
+        [
+          1039.1666666666667,
+          257.5
+        ]
+      ],
+      "line_id": "far_nvz",
+      "residual_px": {
+        "mean": 7.4414204072303205,
+        "p95": 10.253094225879789
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.7680814724808179
+    },
+    {
+      "confidence": 0.9228825493450199,
+      "frame_indexes": [
+        0,
+        1861,
+        3722,
+        5584,
+        7445,
+        9306,
+        11167
+      ],
+      "image_segment": [
+        [
+          589.4285714285714,
+          474.42857142857144
+        ],
+        [
+          760.4285714285714,
+          263.0
+        ]
+      ],
+      "line_id": "left_sideline",
+      "residual_px": {
+        "mean": 1.768493694029745,
+        "p95": 3.057633793102326
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.7728133008823044
+    },
+    {
+      "confidence": 0.8540639745469952,
+      "frame_indexes": [
+        0,
+        1861,
+        3722,
+        5584,
+        7445,
+        9306,
+        11167
+      ],
+      "image_segment": [
+        [
+          536.7142857142857,
+          481.0
+        ],
+        [
+          1042.0,
+          463.57142857142856
+        ]
+      ],
+      "line_id": "near_baseline",
+      "residual_px": {
+        "mean": 1.6916216614966275,
+        "p95": 2.3465660363453082
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.49917671247220313
+    },
+    {
+      "confidence": 0.7647558941766712,
+      "frame_indexes": [
+        0,
+        1861,
+        5584,
+        9306,
+        11167
+      ],
+      "image_segment": [
+        [
+          951.8,
+          325.0
+        ],
+        [
+          981.6,
+          448.6
+        ]
+      ],
+      "line_id": "near_centerline",
+      "residual_px": {
+        "mean": 3.4608674293442547,
+        "p95": 5.711044274054352
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.2544029716614612
+    },
+    {
+      "confidence": 0.8346845339331876,
+      "frame_indexes": [
+        0,
+        1861,
+        3722,
+        5584,
+        7445,
+        9306,
+        11167
+      ],
+      "image_segment": [
+        [
+          808.5714285714286,
+          313.2857142857143
+        ],
+        [
+          1027.857142857143,
+          309.7142857142857
+        ]
+      ],
+      "line_id": "near_nvz",
+      "residual_px": {
+        "mean": 1.3918407880356582,
+        "p95": 4.597590745217577
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.47772293948554584
+    },
+    {
+      "confidence": 0.6751391584498075,
+      "frame_indexes": [
+        7445
+      ],
+      "image_segment": [
+        [
+          773.0,
+          287.0
+        ],
+        [
+          915.0,
+          285.0
+        ]
+      ],
+      "line_id": "net",
+      "residual_px": {
+        "mean": 6.8517402906217395,
+        "p95": 7.486749885185583
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.33595615059725537
+    },
+    {
+      "confidence": 0.8483129331938211,
+      "frame_indexes": [
+        0,
+        1861,
+        3722,
+        5584,
+        7445,
+        9306,
+        11167
+      ],
+      "image_segment": [
+        [
+          1140.142857142857,
+          279.85714285714283
+        ],
+        [
+          1361.4285714285713,
+          446.57142857142856
+        ]
+      ],
+      "line_id": "right_sideline",
+      "residual_px": {
+        "mean": 2.0379139879052537,
+        "p95": 3.3095433097983857
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.5176259087165825
+    }
+  ],
+  "net_observations": [
+    {
+      "confidence": 0.66627874371053,
+      "frame_indexes": [
+        9306,
+        11167
+      ],
+      "image_points": [
+        [
+          660.5,
+          243.5
+        ],
+        [
+          749.7022657562013,
+          241.99235607172616
+        ],
+        [
+          838.0,
+          240.5
+        ]
+      ],
+      "net_id": "top_net",
+      "residual_px": {
+        "mean": 6.721237219699291,
+        "p95": 7.783548565024564
+      },
+      "source": "auto_hough_net_top_video"
+    }
+  ],
+  "schema_version": 1,
+  "source": "auto_hough_template_video",
+  "sport": "pickleball"
+}

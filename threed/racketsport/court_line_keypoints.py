@@ -24,6 +24,52 @@ class DetectedCourtKeypoints:
 
 
 @dataclass(frozen=True)
+class DetectedCourtLineCandidate:
+    """One additive raw line candidate for the opt-in hardening path."""
+
+    candidate_id: str
+    endpoints: Segment
+    support_length_px: float
+    source_segment_count: int
+    angle_deg: float
+    provider: str
+    preprocessing: str = "raw"
+    source_candidate_ids: tuple[str, ...] = ()
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "candidate_id": self.candidate_id,
+            "endpoints": [[float(value) for value in point] for point in self.endpoints],
+            "support_length_px": float(self.support_length_px),
+            "source_segment_count": int(self.source_segment_count),
+            "angle_deg": float(self.angle_deg),
+            "provider": self.provider,
+            "preprocessing": self.preprocessing,
+            "source_candidate_ids": list(self.source_candidate_ids),
+        }
+
+
+@dataclass(frozen=True)
+class DetectedCourtLineCandidates:
+    """Additive candidate evidence; legacy keypoint output stays unchanged."""
+
+    candidates: tuple[DetectedCourtLineCandidate, ...]
+    raw_segment_count: int
+    merged_line_count: int
+    image_size: tuple[int, int]
+    provider: str
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "candidates": [candidate.as_dict() for candidate in self.candidates],
+            "raw_segment_count": int(self.raw_segment_count),
+            "merged_line_count": int(self.merged_line_count),
+            "image_size": [int(self.image_size[0]), int(self.image_size[1])],
+            "provider": self.provider,
+        }
+
+
+@dataclass(frozen=True)
 class _Line:
     a: float
     b: float
@@ -185,6 +231,277 @@ def detect_court_keypoints_from_image(
         merged_line_count=len(merged_lines),
         confidence=confidence,
     )
+
+
+def detect_court_line_candidates_from_image(
+    image: Any,
+    *,
+    cv2_module: Any | None = None,
+    white_threshold: int = 200,
+    provider: str = "legacy_hough",
+    seed_calibration: Any | None = None,
+    preprocessing: str = "raw",
+) -> DetectedCourtLineCandidates:
+    """Expose deterministic raw candidates without changing the legacy detector.
+
+    This is the only seam used by ``court_line_robustness``.  Nothing in the
+    current runtime calls it, so the historical keypoint path remains
+    structurally default-off and byte-identical.
+    """
+
+    cv2 = cv2_module or _cv2()
+    if image is None or not hasattr(image, "shape") or len(image.shape) < 2:
+        raise ValueError("image must be an OpenCV-style array")
+    height, width = image.shape[:2]
+    if width <= 0 or height <= 0:
+        raise ValueError("image must have positive dimensions")
+    if preprocessing != "raw":
+        raise ValueError(
+            "shadow-compensated line candidates are unavailable until a "
+            "measured failing stratum artifact and source-image hash are "
+            "bound to the detector input"
+        )
+
+    if provider == "hybrid_paired_hough":
+        legacy = detect_court_line_candidates_from_image(
+            image,
+            cv2_module=cv2,
+            white_threshold=white_threshold,
+            provider="legacy_hough",
+            seed_calibration=seed_calibration,
+            preprocessing="raw",
+        )
+        paired = detect_court_line_candidates_from_image(
+            image,
+            cv2_module=cv2,
+            white_threshold=white_threshold,
+            provider="classical_paired_edges",
+            seed_calibration=seed_calibration,
+            preprocessing=preprocessing,
+        )
+        combined = _dedupe_additive_line_candidates(
+            (*legacy.candidates, *paired.candidates),
+            max_angle_delta_deg=1.5,
+            max_normal_distance_px=2.0,
+        )
+        candidates = tuple(
+            DetectedCourtLineCandidate(
+                candidate_id=f"hybrid_paired_hough:{index:04d}",
+                endpoints=candidate.endpoints,
+                support_length_px=candidate.support_length_px,
+                source_segment_count=candidate.source_segment_count,
+                angle_deg=candidate.angle_deg,
+                provider=candidate.provider,
+                preprocessing=candidate.preprocessing,
+                source_candidate_ids=candidate.source_candidate_ids,
+            )
+            for index, candidate in enumerate(combined)
+        )
+        return DetectedCourtLineCandidates(
+            candidates=candidates,
+            raw_segment_count=legacy.raw_segment_count + paired.raw_segment_count,
+            merged_line_count=len(candidates),
+            image_size=(int(width), int(height)),
+            provider=provider,
+        )
+    if provider == "legacy_hough":
+        if preprocessing != "raw":
+            raise ValueError("legacy_hough does not silently apply shadow preprocessing")
+        mask = _white_line_mask(image, cv2_module=cv2, white_threshold=white_threshold)
+        raw_segments = _detect_hough_segments(mask, cv2_module=cv2)
+        groups = _merge_segments(raw_segments)
+        rows = [
+            (
+                group.segment,
+                group.support_length_px,
+                group.source_segment_count,
+                group.line.angle_deg,
+            )
+            for group in groups
+        ]
+    elif provider == "classical_paired_edges":
+        from .court_line_bank import detect_paint_centerline_candidates
+
+        paint = detect_paint_centerline_candidates(
+            image,
+            seed_calibration=seed_calibration,
+            provider="classical_paired_edges",
+            preprocessing=preprocessing,
+            min_support_length_px=max(24.0, min(width, height) * 0.045),
+        )
+        raw_segments = [candidate.endpoints for candidate in paint]
+        rows = [
+            (
+                candidate.endpoints,
+                candidate.support_length_px,
+                len(candidate.sampled_points),
+                candidate.angle_deg,
+            )
+            for candidate in paint
+        ]
+    else:
+        raise ValueError(f"unsupported line candidate provider: {provider}")
+
+    normalized = sorted(
+        rows,
+        key=lambda row: (
+            -round(float(row[1]), 9),
+            round(float(row[0][0][0]), 9),
+            round(float(row[0][0][1]), 9),
+            round(float(row[0][1][0]), 9),
+            round(float(row[0][1][1]), 9),
+        ),
+    )
+    candidates = tuple(
+        DetectedCourtLineCandidate(
+            candidate_id=f"{provider}:{index:04d}",
+            endpoints=(
+                (float(endpoints[0][0]), float(endpoints[0][1])),
+                (float(endpoints[1][0]), float(endpoints[1][1])),
+            ),
+            support_length_px=float(support),
+            source_segment_count=int(source_count),
+            angle_deg=float(angle),
+            provider=provider,
+            preprocessing=preprocessing,
+            source_candidate_ids=(f"{provider}:{index:04d}",),
+        )
+        for index, (endpoints, support, source_count, angle) in enumerate(normalized)
+    )
+    return DetectedCourtLineCandidates(
+        candidates=candidates,
+        raw_segment_count=len(raw_segments),
+        merged_line_count=len(candidates),
+        image_size=(int(width), int(height)),
+        provider=provider,
+    )
+
+
+def _dedupe_additive_line_candidates(
+    candidates: Sequence[DetectedCourtLineCandidate],
+    *,
+    max_angle_delta_deg: float,
+    max_normal_distance_px: float,
+) -> list[DetectedCourtLineCandidate]:
+    """Cluster cross-provider copies of one physical line deterministically."""
+
+    ordered = sorted(
+        candidates,
+        key=lambda candidate: (
+            -round(float(candidate.support_length_px), 9),
+            candidate.provider,
+            candidate.candidate_id,
+        ),
+    )
+    selected: list[DetectedCourtLineCandidate] = []
+    for candidate in ordered:
+        candidate_line = _line_from_segment(candidate.endpoints)
+        duplicate_index: int | None = None
+        for index, existing in enumerate(selected):
+            existing_line = _line_from_segment(existing.endpoints)
+            existing_providers = set(existing.provider.split("+"))
+            candidate_providers = set(candidate.provider.split("+"))
+            if (
+                existing_providers.isdisjoint(candidate_providers)
+                and _angle_delta(candidate_line.angle_deg, existing_line.angle_deg)
+                <= max_angle_delta_deg
+                and _segments_corroborate_same_extent(
+                    candidate.endpoints,
+                    existing.endpoints,
+                    max_normal_distance_px=max_normal_distance_px,
+                )
+            ):
+                duplicate_index = index
+                break
+        if duplicate_index is None:
+            source_ids = candidate.source_candidate_ids or (candidate.candidate_id,)
+            selected.append(
+                DetectedCourtLineCandidate(
+                    candidate_id=candidate.candidate_id,
+                    endpoints=candidate.endpoints,
+                    support_length_px=candidate.support_length_px,
+                    source_segment_count=candidate.source_segment_count,
+                    angle_deg=candidate.angle_deg,
+                    provider=candidate.provider,
+                    preprocessing=candidate.preprocessing,
+                    source_candidate_ids=tuple(sorted(set(source_ids))),
+                )
+            )
+            continue
+        existing = selected[duplicate_index]
+        providers = sorted(set(existing.provider.split("+")) | set(candidate.provider.split("+")))
+        preprocessors = sorted(
+            set(existing.preprocessing.split("+")) | set(candidate.preprocessing.split("+"))
+        )
+        source_ids = (
+            set(existing.source_candidate_ids or (existing.candidate_id,))
+            | set(candidate.source_candidate_ids or (candidate.candidate_id,))
+        )
+        selected[duplicate_index] = DetectedCourtLineCandidate(
+            candidate_id=existing.candidate_id,
+            endpoints=existing.endpoints,
+            # Cross-provider agreement is corroboration, not twice the pixel
+            # support.  Preserve the best physical extent without double count.
+            support_length_px=max(existing.support_length_px, candidate.support_length_px),
+            source_segment_count=existing.source_segment_count + candidate.source_segment_count,
+            angle_deg=existing.angle_deg,
+            provider="+".join(providers),
+            preprocessing="+".join(preprocessors),
+            source_candidate_ids=tuple(sorted(source_ids)),
+        )
+    return sorted(
+        selected,
+        key=lambda candidate: (
+            -round(float(candidate.support_length_px), 9),
+            candidate.provider,
+            candidate.candidate_id,
+        ),
+    )
+
+
+def _segments_corroborate_same_extent(
+    first: Segment,
+    second: Segment,
+    *,
+    max_normal_distance_px: float,
+) -> bool:
+    """Require cross-provider candidates to share both paint and extent."""
+
+    first_line = _line_from_segment(first)
+    second_line = _line_from_segment(second)
+    symmetric_distances = [
+        abs(first_line.a * point[0] + first_line.b * point[1] + first_line.c)
+        for point in second
+    ]
+    symmetric_distances.extend(
+        abs(second_line.a * point[0] + second_line.b * point[1] + second_line.c)
+        for point in first
+    )
+    if sorted(symmetric_distances)[len(symmetric_distances) // 2] > max_normal_distance_px:
+        return False
+
+    origin = first[0]
+    length = _segment_length(first)
+    if length <= 1e-9:
+        return False
+    direction = (
+        (first[1][0] - origin[0]) / length,
+        (first[1][1] - origin[1]) / length,
+    )
+
+    def projected_interval(segment: Segment) -> tuple[float, float]:
+        values = [
+            (point[0] - origin[0]) * direction[0]
+            + (point[1] - origin[1]) * direction[1]
+            for point in segment
+        ]
+        return min(values), max(values)
+
+    first_low, first_high = projected_interval(first)
+    second_low, second_high = projected_interval(second)
+    overlap = max(0.0, min(first_high, second_high) - max(first_low, second_low))
+    shorter = min(first_high - first_low, second_high - second_low)
+    return shorter > 1e-9 and overlap / shorter >= 0.25
 
 
 def _try_semantic_line_keypoints(

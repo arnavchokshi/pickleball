@@ -1,0 +1,121 @@
+{
+  "T_world_court": null,
+  "capture_quality": {
+    "grade": "poor",
+    "reasons": [
+      "process_video_auto_court_corners_preview",
+      "manual_taps_seeded_from_unverified_detector",
+      "estimated_intrinsics",
+      "corrected_unverified"
+    ]
+  },
+  "coordinate_contract": null,
+  "coordinate_frame": null,
+  "extrinsics": {
+    "R": [
+      [
+        0.9986514900074768,
+        -0.04757888696210158,
+        -0.02077139911739746
+      ],
+      [
+        -0.03364704297967139,
+        -0.28848178699148797,
+        -0.9568940040949792
+      ],
+      [
+        0.03953578131984754,
+        0.9563025191275225,
+        -0.28969365527360774
+      ]
+    ],
+    "camera_height_m": 5.02950645961848,
+    "t": [
+      -0.1708373220456709,
+      -2.572813114315729,
+      25.8720351520495
+    ]
+  },
+  "gsd_model": null,
+  "homography": [
+    [
+      66.25433996633657,
+      68.2752446496333,
+      939.0178635027642
+    ],
+    [
+      -0.4947683113364043,
+      7.347999762147264,
+      276.9581172196054
+    ],
+    [
+      0.003453342312511383,
+      0.0762157236948083,
+      1.0
+    ]
+  ],
+  "image_pts": [
+    [
+      583.7101897107628,
+      479.0811850357819
+    ],
+    [
+      1367.7638311103492,
+      452.8494786347164
+    ],
+    [
+      1050.7293193722576,
+      213.40907554095205
+    ],
+    [
+      796.3106906548888,
+      218.41305601243184
+    ]
+  ],
+  "image_size": [
+    1920,
+    1080
+  ],
+  "intrinsics": {
+    "cx": 960.0,
+    "cy": 540.0,
+    "dist": [],
+    "fx": 2304.0,
+    "fy": 2304.0,
+    "source": "estimated_from_declared_court_corners"
+  },
+  "metric_confidence": null,
+  "per_keypoint_residual_px": null,
+  "provenance": null,
+  "reprojection_error_px": {
+    "median": 0.0,
+    "p95": 0.0
+  },
+  "schema_version": 1,
+  "solved_over_frames": null,
+  "source": null,
+  "sport": "pickleball",
+  "trust_band": null,
+  "world_pts": [
+    [
+      -3.048,
+      -6.7056000000000004,
+      0.0
+    ],
+    [
+      3.048,
+      -6.7056000000000004,
+      0.0
+    ],
+    [
+      3.048,
+      6.7056000000000004,
+      0.0
+    ],
+    [
+      -3.048,
+      6.7056000000000004,
+      0.0
+    ]
+  ]
+}
