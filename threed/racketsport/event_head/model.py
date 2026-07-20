@@ -64,12 +64,16 @@ class EventHead(nn.Module):
 
 
 def masked_cross_entropy(
-    logits: torch.Tensor, targets: torch.Tensor, validity_mask: torch.Tensor
+    logits: torch.Tensor, targets: torch.Tensor, validity_mask: torch.Tensor,
+    class_weights: torch.Tensor | None = None,
 ) -> torch.Tensor:
     """Cross entropy that removes invalid source/class columns from the loss.
 
     ``validity_mask`` is [B,C]. Background must remain valid. A BOUNCE-only
     source uses [1,0,1], while a HIT-only source uses [1,1,0].
+
+    ``class_weights`` is optional and ordered background, HIT, BOUNCE. When
+    omitted, the calculation remains the original unweighted implementation.
     """
 
     if logits.ndim != 3 or targets.shape != logits.shape[:2]:
@@ -80,12 +84,25 @@ def masked_cross_entropy(
         raise ValueError("background must be valid for every sample")
     valid_target = validity_mask.gather(1, targets).bool()
     masked_logits = logits.masked_fill(~validity_mask[:, None, :], -1e4)
-    losses = nn.functional.cross_entropy(
-        masked_logits.flatten(0, 1), targets.flatten(), reduction="none"
-    ).reshape_as(targets)
     if not bool(valid_target.any()):
         raise ValueError("batch contains no loss-valid targets")
-    return losses[valid_target].mean()
+    if class_weights is None:
+        losses = nn.functional.cross_entropy(
+            masked_logits.flatten(0, 1), targets.flatten(), reduction="none"
+        ).reshape_as(targets)
+        return losses[valid_target].mean()
+
+    weights = torch.as_tensor(class_weights, dtype=logits.dtype, device=logits.device)
+    if weights.shape != (logits.shape[2],):
+        raise ValueError(f"class_weights must contain {logits.shape[2]} entries")
+    if not bool(torch.isfinite(weights).all()) or not bool((weights > 0).all()):
+        raise ValueError("class_weights must be finite and strictly positive")
+    flat_valid = valid_target.flatten()
+    return nn.functional.cross_entropy(
+        masked_logits.flatten(0, 1)[flat_valid],
+        targets.flatten()[flat_valid],
+        weight=weights,
+    )
 
 
 def checkpoint_payload(model: EventHead, **metadata: object) -> dict[str, object]:

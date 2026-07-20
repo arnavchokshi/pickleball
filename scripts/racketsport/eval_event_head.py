@@ -29,10 +29,29 @@ PROTECTED_LABELS = ROOT / "runs/lanes/event_bootstrap_20260713/spot_check_tier_a
 PROTECTED_ANSWERS = ROOT / "runs/lanes/event_bootstrap_20260713/owner_spot_check_results_20260715.json"
 
 
-def _predict(model: torch.nn.Module, frames: torch.Tensor, *, threshold: float) -> list[Event]:
+def _predict(
+    model: torch.nn.Module, frames: torch.Tensor, *, threshold: float,
+) -> tuple[list[Event], dict[str, Any]]:
     with torch.no_grad():
         logits = model(frames.unsqueeze(0))[0]
-    return peak_pick(logits, threshold=threshold)
+    probabilities = logits.softmax(-1)
+    finite = torch.isfinite(probabilities)
+    max_probability_by_class: dict[str, float | None] = {}
+    for class_id, name in enumerate(("background", "HIT", "BOUNCE")):
+        finite_values = probabilities[:, class_id][finite[:, class_id]]
+        max_probability_by_class[name] = (
+            float(finite_values.max().cpu()) if finite_values.numel() else None
+        )
+    positive_maxima = [
+        value for name, value in max_probability_by_class.items()
+        if name != "background" and value is not None
+    ]
+    diagnostics = {
+        "max_probability_by_class": max_probability_by_class,
+        "max_positive_class_probability": max(positive_maxima) if positive_maxima else None,
+        "nonfinite_probability_count": int((~finite).sum().cpu()),
+    }
+    return peak_pick(logits, threshold=threshold), diagnostics
 
 
 def _checkpoint_window_frames(payload: dict[str, Any]) -> int:
@@ -112,10 +131,11 @@ def eval_public(
             spec.video_path, list(range(spec.start_frame, spec.start_frame + spec.num_frames)),
             image_size=image_size,
         )
-        predictions = _predict(model, frames, threshold=threshold)
+        predictions, diagnostics = _predict(model, frames, threshold=threshold)
         ground_truth = [Event(frame, class_id) for frame, class_id in spec.events]
         clips.append({"source": spec.source, "video": str(spec.video_path), "fps": spec.fps,
-                      "predictions": predictions, "ground_truth": ground_truth})
+                      "predictions": predictions, "ground_truth": ground_truth,
+                      "diagnostics": diagnostics})
     return {
         "mode": "public_heldout_slice", "clip_count": len(clips),
         "window_frames": window_frames,
@@ -127,6 +147,7 @@ def eval_public(
             "source": clip["source"], "video": clip["video"], "fps": clip["fps"],
             "prediction_count": len(clip["predictions"]), "gt_count": len(clip["ground_truth"]),
             "tolerance_ms": {"1": 1000.0 / clip["fps"], "2": 2000.0 / clip["fps"]},
+            **clip["diagnostics"],
         } for clip in clips],
     }
 
@@ -152,10 +173,10 @@ def eval_protected(model: torch.nn.Module, *, image_size: int, threshold: float)
         start = max(0, round((anchor_s - 1.0) * fps))
         end = min(total, round((anchor_s + 1.0) * fps) + 1)
         frames = decode_video_frames(video, list(range(start, end)), image_size=image_size)
-        predictions = _predict(model, frames, threshold=threshold)
+        predictions, diagnostics = _predict(model, frames, threshold=threshold)
         decision = answer["decision"]
         summary = {"label_id": label["label_id"], "decision": decision,
-                   "prediction_count": len(predictions)}
+                   "prediction_count": len(predictions), **diagnostics}
         if decision in {"paddle", "ground"}:
             corrected_s = anchor_s + float(answer.get("dt", 0.0))
             gt = Event(round(corrected_s * fps) - start, HIT if decision == "paddle" else BOUNCE)

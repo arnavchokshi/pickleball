@@ -11,6 +11,7 @@ import random
 import subprocess
 import sys
 import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -166,10 +167,24 @@ def _validate_full_training_manifest(manifest: dict[str, Any]) -> None:
 
 def _validation_metrics(model: EventHead, loader: DataLoader, *, device: torch.device) -> dict[str, Any]:
     totals = {"HIT": {"tp": 0, "fp": 0, "fn": 0}, "BOUNCE": {"tp": 0, "fp": 0, "fn": 0}}
+    max_positive_class_probability = 0.0
     model.eval()
     with torch.no_grad():
         for batch in loader:
             logits = model(batch["frames"].to(device))
+            probabilities = logits.softmax(-1)
+            positive_probabilities = probabilities[..., 1:]
+            valid_positive = (
+                batch["validity_mask"][:, None, 1:].to(device)
+                .expand_as(positive_probabilities)
+            )
+            finite_positive = positive_probabilities[
+                torch.isfinite(positive_probabilities) & valid_positive
+            ]
+            if finite_positive.numel():
+                max_positive_class_probability = max(
+                    max_positive_class_probability, float(finite_positive.max().cpu()),
+                )
             targets = batch["targets"]
             for sample_index in range(logits.shape[0]):
                 predictions = peak_pick(logits[sample_index].cpu(), threshold=0.5, nms_radius=2)
@@ -190,12 +205,90 @@ def _validation_metrics(model: EventHead, loader: DataLoader, *, device: torch.d
     fp = sum(value["fp"] for value in totals.values())
     fn = sum(value["fn"] for value in totals.values())
     f1 = (2 * tp / (2 * tp + fp + fn)) if 2 * tp + fp + fn else 0.0
-    return {"tolerance_frames": 2, "f1": f1, "tp": tp, "fp": fp, "fn": fn, "per_class": totals}
+    return {
+        "tolerance_frames": 2, "f1": f1, "tp": tp, "fp": fp, "fn": fn,
+        "per_class": totals,
+        "max_positive_class_probability": max_positive_class_probability,
+    }
+
+
+def _validation_is_better(
+    validation: dict[str, Any], *, best_val_f1: float,
+    best_val_max_positive_class_probability: float,
+) -> bool:
+    """Use confidence only to break ties during an all-zero-F1 phase."""
+
+    candidate_f1 = float(validation["f1"])
+    if candidate_f1 > best_val_f1:
+        return True
+    if candidate_f1 != 0.0 or best_val_f1 != 0.0:
+        return False
+    return (
+        float(validation["max_positive_class_probability"])
+        > best_val_max_positive_class_probability
+    )
+
+
+@dataclass
+class _TrainingState:
+    model: EventHead
+    optimizer: torch.optim.Optimizer
+    start_step: int
+    best_val_f1: float
+    best_val_max_positive_class_probability: float
+    resume_mode: str
+    optimizer_state_restored: bool
+
+
+def _initialize_training_state(
+    *, device: torch.device, device_name: str, weights: str, lr: float,
+    init_checkpoint: Path | None, init_checkpoint_model_only: Path | None,
+) -> _TrainingState:
+    if init_checkpoint is not None and init_checkpoint_model_only is not None:
+        raise ValueError("--init-checkpoint and --init-checkpoint-model-only are mutually exclusive")
+    selected_checkpoint = init_checkpoint or init_checkpoint_model_only
+    if selected_checkpoint is None:
+        model, initial_payload = EventHead(weights=weights), {}
+        model.to(device)
+        resume_mode = "fresh"
+    else:
+        model, initial_payload = load_checkpoint(selected_checkpoint, device=device_name)
+        resume_mode = "model_only" if init_checkpoint_model_only is not None else "full_state"
+
+    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
+    optimizer_state_restored = False
+    if resume_mode == "full_state" and "optimizer_state_dict" in initial_payload:
+        optimizer.load_state_dict(initial_payload["optimizer_state_dict"])
+        for state in optimizer.state.values():
+            for key, value in state.items():
+                if isinstance(value, torch.Tensor):
+                    state[key] = value.to(device)
+        optimizer_state_restored = True
+
+    start_step = int(initial_payload.get("completed_steps", 0))
+    if resume_mode == "model_only":
+        best_val_f1 = -1.0
+        best_val_max_positive_class_probability = 0.0
+    else:
+        best_val_f1 = float(initial_payload.get("best_val_f1", -1.0))
+        best_val_max_positive_class_probability = float(
+            initial_payload.get("best_val_max_positive_class_probability", 0.0)
+        )
+    return _TrainingState(
+        model=model,
+        optimizer=optimizer,
+        start_step=start_step,
+        best_val_f1=best_val_f1,
+        best_val_max_positive_class_probability=best_val_max_positive_class_probability,
+        resume_mode=resume_mode,
+        optimizer_state_restored=optimizer_state_restored,
+    )
 
 
 def _save_full_checkpoint(
     path: Path, *, model: EventHead, optimizer: torch.optim.Optimizer, completed_steps: int,
-    best_val_f1: float, config: dict[str, Any], data_manifest_path: Path,
+    best_val_f1: float, best_val_max_positive_class_probability: float,
+    config: dict[str, Any], data_manifest_path: Path,
     data_manifest_sha256: str, elapsed_s: float, checkpoint_role: str,
 ) -> None:
     torch.save(checkpoint_payload(
@@ -206,6 +299,7 @@ def _save_full_checkpoint(
         image_size=config["image_size"], window_frames=config["window_frames"],
         completed_steps=completed_steps, optimizer_steps=completed_steps,
         optimizer_state_dict=optimizer.state_dict(), best_val_f1=best_val_f1,
+        best_val_max_positive_class_probability=best_val_max_positive_class_probability,
         data_manifest=str(data_manifest_path), data_manifest_sha256=data_manifest_sha256,
         pretrain_data=str(data_manifest_path), seed=config["seed"], config=config,
         elapsed_s=elapsed_s, checkpoint_role=checkpoint_role,
@@ -217,7 +311,8 @@ def run_full(
     image_size: int, window_frames: int, batch_size: int, lr: float, val_every: int,
     seed: int, max_wall_minutes: float | None, init_checkpoint: Path | None,
     limit_clips: int | None, stride_frames: int = 32, num_workers: int = 4,
-    prefetch_factor: int = 2,
+    prefetch_factor: int = 2, class_weights: list[float] | tuple[float, ...] | None = None,
+    init_checkpoint_model_only: Path | None = None,
 ) -> dict[str, Any]:
     if steps < 1 or image_size < 16 or window_frames < 1 or batch_size < 1 or lr <= 0 or val_every < 1:
         raise ValueError("full mode requires positive steps/window-frames/batch-size/lr/val-every and image-size >=16")
@@ -227,6 +322,11 @@ def run_full(
         raise ValueError("--stride-frames and --prefetch-factor must be positive; --num-workers must be >=0")
     if max_wall_minutes is not None and max_wall_minutes <= 0:
         raise ValueError("--max-wall-minutes must be >0")
+    if class_weights is not None and (
+        len(class_weights) != 3
+        or any(not math.isfinite(value) or value <= 0 for value in class_weights)
+    ):
+        raise ValueError("--class-weights requires three finite positive values")
     device = _validated_device(device_name)
     _seed_everything(seed)
     torch.set_num_threads(min(4, torch.get_num_threads()))
@@ -257,22 +357,23 @@ def run_full(
     val_loader = DataLoader(
         val_dataset, batch_size=batch_size, shuffle=False, **loader_workers,
     )
-    if init_checkpoint is not None:
-        model, initial_payload = load_checkpoint(init_checkpoint, device=device_name)
-    else:
-        model, initial_payload = EventHead(weights=weights), {}
-        model.to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr)
-    start_step = int(initial_payload.get("completed_steps", 0))
-    if "optimizer_state_dict" in initial_payload:
-        optimizer.load_state_dict(initial_payload["optimizer_state_dict"])
-        for state in optimizer.state.values():
-            for key, value in state.items():
-                if isinstance(value, torch.Tensor):
-                    state[key] = value.to(device)
+    training_state = _initialize_training_state(
+        device=device, device_name=device_name, weights=weights, lr=lr,
+        init_checkpoint=init_checkpoint,
+        init_checkpoint_model_only=init_checkpoint_model_only,
+    )
+    model, optimizer = training_state.model, training_state.optimizer
+    start_step = training_state.start_step
     if start_step >= steps:
         raise ValueError(f"checkpoint already completed {start_step} steps, not less than --steps {steps}")
-    best_val_f1 = float(initial_payload.get("best_val_f1", -1.0))
+    best_val_f1 = training_state.best_val_f1
+    best_val_max_positive_class_probability = (
+        training_state.best_val_max_positive_class_probability
+    )
+    loss_class_weights = (
+        torch.tensor(class_weights, dtype=torch.float32, device=device)
+        if class_weights is not None else None
+    )
     config = {
         "device": device_name, "weights": weights, "steps": steps, "image_size": image_size,
         "window_frames": window_frames, "batch_size": batch_size, "lr": lr,
@@ -280,6 +381,7 @@ def run_full(
         "limit_clips": limit_clips, "stride_frames": stride_frames,
         "num_workers": num_workers,
         "prefetch_factor": prefetch_factor if num_workers > 0 else None,
+        "class_weights": list(class_weights) if class_weights is not None else None,
     }
     out.mkdir(parents=True, exist_ok=True)
     manifest_sha = hashlib.sha256(raw_manifest).hexdigest()
@@ -304,6 +406,7 @@ def run_full(
         loss = masked_cross_entropy(
             model(batch["frames"].to(device)), batch["targets"].to(device),
             batch["validity_mask"].to(device),
+            class_weights=loss_class_weights,
         )
         if not bool(torch.isfinite(loss)):
             raise RuntimeError(f"non-finite full-train loss at step {completed_steps + 1}: {loss.item()}")
@@ -318,37 +421,58 @@ def run_full(
             validation = {"step": completed_steps, **_validation_metrics(model, val_loader, device=device)}
             validations.append(validation)
             elapsed = time.monotonic() - started
-            if validation["f1"] > best_val_f1:
+            if _validation_is_better(
+                validation, best_val_f1=best_val_f1,
+                best_val_max_positive_class_probability=best_val_max_positive_class_probability,
+            ):
                 best_val_f1 = float(validation["f1"])
+                best_val_max_positive_class_probability = float(
+                    validation["max_positive_class_probability"]
+                )
                 _save_full_checkpoint(
                     best_path, model=model, optimizer=optimizer, completed_steps=completed_steps,
-                    best_val_f1=best_val_f1, config=config, data_manifest_path=manifest_path,
-                    data_manifest_sha256=manifest_sha, elapsed_s=elapsed, checkpoint_role="best_by_val_f1",
+                    best_val_f1=best_val_f1,
+                    best_val_max_positive_class_probability=best_val_max_positive_class_probability,
+                    config=config, data_manifest_path=manifest_path,
+                    data_manifest_sha256=manifest_sha, elapsed_s=elapsed,
+                    checkpoint_role="best_by_val_f1_then_zero_f1_max_probability",
                 )
             _save_full_checkpoint(
                 last_path, model=model, optimizer=optimizer, completed_steps=completed_steps,
-                best_val_f1=best_val_f1, config=config, data_manifest_path=manifest_path,
+                best_val_f1=best_val_f1,
+                best_val_max_positive_class_probability=best_val_max_positive_class_probability,
+                config=config, data_manifest_path=manifest_path,
                 data_manifest_sha256=manifest_sha, elapsed_s=elapsed, checkpoint_role="last",
             )
     elapsed = time.monotonic() - started
     # A wall cap may fire between validations; always preserve the exact latest state.
     _save_full_checkpoint(
         last_path, model=model, optimizer=optimizer, completed_steps=completed_steps,
-        best_val_f1=best_val_f1, config=config, data_manifest_path=manifest_path,
+        best_val_f1=best_val_f1,
+        best_val_max_positive_class_probability=best_val_max_positive_class_probability,
+        config=config, data_manifest_path=manifest_path,
         data_manifest_sha256=manifest_sha, elapsed_s=elapsed, checkpoint_role="last",
     )
     if not best_path.is_file():
         validation = {"step": completed_steps, **_validation_metrics(model, val_loader, device=device)}
         validations.append(validation)
         best_val_f1 = float(validation["f1"])
+        best_val_max_positive_class_probability = float(
+            validation["max_positive_class_probability"]
+        )
         _save_full_checkpoint(
             best_path, model=model, optimizer=optimizer, completed_steps=completed_steps,
-            best_val_f1=best_val_f1, config=config, data_manifest_path=manifest_path,
-            data_manifest_sha256=manifest_sha, elapsed_s=elapsed, checkpoint_role="best_by_val_f1",
+            best_val_f1=best_val_f1,
+            best_val_max_positive_class_probability=best_val_max_positive_class_probability,
+            config=config, data_manifest_path=manifest_path,
+            data_manifest_sha256=manifest_sha, elapsed_s=elapsed,
+            checkpoint_role="best_by_val_f1_then_zero_f1_max_probability",
         )
         _save_full_checkpoint(
             last_path, model=model, optimizer=optimizer, completed_steps=completed_steps,
-            best_val_f1=best_val_f1, config=config, data_manifest_path=manifest_path,
+            best_val_f1=best_val_f1,
+            best_val_max_positive_class_probability=best_val_max_positive_class_probability,
+            config=config, data_manifest_path=manifest_path,
             data_manifest_sha256=manifest_sha, elapsed_s=elapsed, checkpoint_role="last",
         )
     report = {
@@ -363,9 +487,15 @@ def run_full(
         "start_step": start_step, "completed_steps": completed_steps, "target_steps": steps,
         "losses": losses, "all_losses_finite": all(math.isfinite(value) for value in losses),
         "validations": validations, "best_val_f1": best_val_f1,
+        "best_val_max_positive_class_probability": best_val_max_positive_class_probability,
         "best_checkpoint": str(best_path), "last_checkpoint": str(last_path),
         "elapsed_s": elapsed, "steps_per_s": (completed_steps - start_step) / elapsed if elapsed else 0.0,
         "init_checkpoint": str(init_checkpoint) if init_checkpoint else None,
+        "init_checkpoint_model_only": (
+            str(init_checkpoint_model_only) if init_checkpoint_model_only else None
+        ),
+        "resume_mode": training_state.resume_mode,
+        "optimizer_state_restored": training_state.optimizer_state_restored,
         "decode_policy": "on_the_fly_no_frame_cache",
         "dataloader": {
             "num_workers": num_workers,
@@ -393,7 +523,17 @@ def main() -> int:
     parser.add_argument("--val-every", type=int, default=100)
     parser.add_argument("--seed", type=int, default=20260716)
     parser.add_argument("--max-wall-minutes", type=float)
-    parser.add_argument("--init-checkpoint", type=Path)
+    resume = parser.add_mutually_exclusive_group()
+    resume.add_argument("--init-checkpoint", type=Path)
+    resume.add_argument(
+        "--init-checkpoint-model-only", type=Path,
+        help="Load model weights and step provenance but reset Adam and best-selection state",
+    )
+    parser.add_argument(
+        "--class-weights", type=float, nargs=3,
+        metavar=("BACKGROUND", "HIT", "BOUNCE"),
+        help="Optional CE weights in background,HIT,BOUNCE order; recommended: 1 5 5",
+    )
     parser.add_argument("--limit-clips", type=int)
     parser.add_argument("--stride-frames", type=int, default=32)
     parser.add_argument("--num-workers", type=int, default=4)
@@ -421,6 +561,8 @@ def main() -> int:
                 max_wall_minutes=args.max_wall_minutes, init_checkpoint=args.init_checkpoint,
                 limit_clips=args.limit_clips, stride_frames=args.stride_frames,
                 num_workers=args.num_workers, prefetch_factor=args.prefetch_factor,
+                class_weights=args.class_weights,
+                init_checkpoint_model_only=args.init_checkpoint_model_only,
             )
         except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
             parser.exit(3, f"event-head full train failed: {exc}\n")
