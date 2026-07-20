@@ -1,0 +1,597 @@
+{
+  "results_schema_version": 2,
+  "session_id": "event_labels_20260715",
+  "page_generator_version": "event_review_page_v1_20260715",
+  "coords": "normalized to displayed video, origin top-left",
+  "dt": "seconds in SOURCE time relative to the labeled anchor PTS",
+  "answers": {
+    "1": {
+      "label_id": "els20260715_001",
+      "decision": "ground",
+      "x": 0.4479,
+      "y": 0.5585,
+      "dt": -0.0667
+    },
+    "2": {
+      "label_id": "els20260715_002",
+      "decision": "paddle",
+      "x": 0.1354,
+      "y": 0.5585,
+      "dt": 0
+    },
+    "3": {
+      "label_id": "els20260715_003",
+      "decision": "none"
+    },
+    "4": {
+      "label_id": "els20260715_004",
+      "decision": "ground",
+      "x": 0.4422,
+      "y": 0.7017,
+      "dt": 0.2085
+    },
+    "5": {
+      "label_id": "els20260715_005",
+      "decision": "none"
+    },
+    "6": {
+      "label_id": "els20260715_006",
+      "decision": "none"
+    },
+    "7": {
+      "label_id": "els20260715_007",
+      "decision": "paddle",
+      "x": 0.5767,
+      "y": 0.5023,
+      "dt": 0.3667
+    },
+    "8": {
+      "label_id": "els20260715_008",
+      "decision": "paddle",
+      "x": 0.4659,
+      "y": 0.6223,
+      "dt": 0
+    },
+    "9": {
+      "label_id": "els20260715_009",
+      "decision": "none"
+    },
+    "10": {
+      "label_id": "els20260715_010",
+      "decision": "ground",
+      "x": 0.6241,
+      "y": 0.6824,
+      "dt": 0.5666
+    },
+    "11": {
+      "label_id": "els20260715_011",
+      "decision": "none"
+    },
+    "12": {
+      "label_id": "els20260715_012",
+      "decision": "paddle",
+      "x": 0.3703,
+      "y": 0.4752,
+      "dt": -0.1333
+    },
+    "13": {
+      "label_id": "els20260715_013",
+      "decision": "none"
+    },
+    "14": {
+      "label_id": "els20260715_014",
+      "decision": "paddle",
+      "x": 0.3504,
+      "y": 0.4965,
+      "dt": -0.3333
+    },
+    "15": {
+      "label_id": "els20260715_015",
+      "decision": "none"
+    },
+    "16": {
+      "label_id": "els20260715_016",
+      "decision": "paddle",
+      "x": 0.7301,
+      "y": 0.5836,
+      "dt": -0.1667
+    },
+    "17": {
+      "label_id": "els20260715_017",
+      "decision": "none"
+    },
+    "18": {
+      "label_id": "els20260715_018",
+      "decision": "none"
+    },
+    "19": {
+      "label_id": "els20260715_019",
+      "decision": "paddle",
+      "x": 0.7831,
+      "y": 0.6165,
+      "dt": 0.4
+    },
+    "20": {
+      "label_id": "els20260715_020",
+      "decision": "none"
+    },
+    "21": {
+      "label_id": "els20260715_021",
+      "decision": "paddle",
+      "x": 0.5559,
+      "y": 0.7017,
+      "dt": -0.5667
+    },
+    "22": {
+      "label_id": "els20260715_022",
+      "decision": "paddle",
+      "x": 0.5483,
+      "y": 0.5256,
+      "dt": 0.0667
+    },
+    "23": {
+      "label_id": "els20260715_023",
+      "decision": "none"
+    },
+    "24": {
+      "label_id": "els20260715_024",
+      "decision": "none"
+    },
+    "25": {
+      "label_id": "els20260715_025",
+      "decision": "paddle",
+      "x": 0.4422,
+      "y": 0.5507,
+      "dt": -0.2783
+    },
+    "26": {
+      "label_id": "els20260715_026",
+      "decision": "ground",
+      "x": 0.7102,
+      "y": 0.5198,
+      "dt": -0.5999
+    },
+    "27": {
+      "label_id": "els20260715_027",
+      "decision": "ground",
+      "x": 0.5729,
+      "y": 0.5643,
+      "dt": -0.2667
+    },
+    "28": {
+      "label_id": "els20260715_028",
+      "decision": "none"
+    },
+    "29": {
+      "label_id": "els20260715_029",
+      "decision": "none"
+    },
+    "30": {
+      "label_id": "els20260715_030",
+      "decision": "paddle",
+      "x": 0.5606,
+      "y": 0.423,
+      "dt": -0.2
+    },
+    "31": {
+      "label_id": "els20260715_031",
+      "decision": "paddle",
+      "x": 0.3428,
+      "y": 0.481,
+      "dt": 0.0333
+    },
+    "32": {
+      "label_id": "els20260715_032",
+      "decision": "ground",
+      "x": 0.4138,
+      "y": 0.5836,
+      "dt": 0.3
+    },
+    "33": {
+      "label_id": "els20260715_033",
+      "decision": "paddle",
+      "x": 0.4839,
+      "y": 0.6649,
+      "dt": 0.2085
+    },
+    "34": {
+      "label_id": "els20260715_034",
+      "decision": "none"
+    },
+    "35": {
+      "label_id": "els20260715_035",
+      "decision": "paddle",
+      "x": 0.1837,
+      "y": 0.5101,
+      "dt": -0.5333
+    },
+    "36": {
+      "label_id": "els20260715_036",
+      "decision": "paddle",
+      "x": 0.5748,
+      "y": 0.5352,
+      "dt": -0.2333
+    },
+    "37": {
+      "label_id": "els20260715_037",
+      "decision": "none"
+    },
+    "38": {
+      "label_id": "els20260715_038",
+      "decision": "none"
+    },
+    "39": {
+      "label_id": "els20260715_039",
+      "decision": "paddle",
+      "x": 0.7263,
+      "y": 0.632,
+      "dt": 0.3
+    },
+    "40": {
+      "label_id": "els20260715_040",
+      "decision": "ground",
+      "x": 0.9081,
+      "y": 0.6611,
+      "dt": 0.2333
+    },
+    "41": {
+      "label_id": "els20260715_041",
+      "decision": "none"
+    },
+    "42": {
+      "label_id": "els20260715_042",
+      "decision": "paddle",
+      "x": 0.3021,
+      "y": 0.4268,
+      "dt": -0.3
+    },
+    "43": {
+      "label_id": "els20260715_043",
+      "decision": "none"
+    },
+    "44": {
+      "label_id": "els20260715_044",
+      "decision": "ground",
+      "x": 0.4754,
+      "y": 0.5759,
+      "dt": -0.1
+    },
+    "45": {
+      "label_id": "els20260715_045",
+      "decision": "ground",
+      "x": 0.4489,
+      "y": 0.4965,
+      "dt": 0.1667
+    },
+    "46": {
+      "label_id": "els20260715_046",
+      "decision": "none"
+    },
+    "47": {
+      "label_id": "els20260715_047",
+      "decision": "none"
+    },
+    "48": {
+      "label_id": "els20260715_048",
+      "decision": "none"
+    },
+    "49": {
+      "label_id": "els20260715_049",
+      "decision": "ground",
+      "x": 0.5294,
+      "y": 0.6707,
+      "dt": -0.3333
+    },
+    "50": {
+      "label_id": "els20260715_050",
+      "decision": "paddle",
+      "x": 0.7027,
+      "y": 0.5701,
+      "dt": -0.1667
+    },
+    "51": {
+      "label_id": "els20260715_051",
+      "decision": "paddle",
+      "x": 0.2784,
+      "y": 0.5081,
+      "dt": -0.2667
+    },
+    "52": {
+      "label_id": "els20260715_052",
+      "decision": "paddle",
+      "x": 0.4536,
+      "y": 0.543,
+      "dt": 0.2333
+    },
+    "53": {
+      "label_id": "els20260715_053",
+      "decision": "paddle",
+      "x": 0.447,
+      "y": 0.5159,
+      "dt": -0.2333
+    },
+    "54": {
+      "label_id": "els20260715_054",
+      "decision": "paddle",
+      "x": 0.3646,
+      "y": 0.4346,
+      "dt": -0.0667
+    },
+    "55": {
+      "label_id": "els20260715_055",
+      "decision": "ground",
+      "x": 0.1515,
+      "y": 0.6011,
+      "dt": 0
+    },
+    "56": {
+      "label_id": "els20260715_056",
+      "decision": "paddle",
+      "x": 0.4489,
+      "y": 0.512,
+      "dt": 0.5942
+    },
+    "57": {
+      "label_id": "els20260715_057",
+      "decision": "none"
+    },
+    "58": {
+      "label_id": "els20260715_058",
+      "decision": "none"
+    },
+    "59": {
+      "label_id": "els20260715_059",
+      "decision": "none"
+    },
+    "60": {
+      "label_id": "els20260715_060",
+      "decision": "none"
+    },
+    "61": {
+      "label_id": "els20260715_061",
+      "decision": "paddle",
+      "x": 0.6269,
+      "y": 0.4288,
+      "dt": -0.5
+    },
+    "62": {
+      "label_id": "els20260715_062",
+      "decision": "none"
+    },
+    "63": {
+      "label_id": "els20260715_063",
+      "decision": "paddle",
+      "x": 0.2585,
+      "y": 0.4888,
+      "dt": -0.1667
+    },
+    "64": {
+      "label_id": "els20260715_064",
+      "decision": "none"
+    },
+    "65": {
+      "label_id": "els20260715_065",
+      "decision": "ground",
+      "x": 0.4138,
+      "y": 0.5623,
+      "dt": 0.1667
+    },
+    "66": {
+      "label_id": "els20260715_066",
+      "decision": "none"
+    },
+    "67": {
+      "label_id": "els20260715_067",
+      "decision": "paddle",
+      "x": 0.7917,
+      "y": 0.6262,
+      "dt": -0.5917
+    },
+    "68": {
+      "label_id": "els20260715_068",
+      "decision": "paddle",
+      "x": 0.5076,
+      "y": 0.6649,
+      "dt": -0.0834
+    },
+    "69": {
+      "label_id": "els20260715_069",
+      "decision": "paddle",
+      "x": 0.4555,
+      "y": 0.634,
+      "dt": 0.0667
+    },
+    "70": {
+      "label_id": "els20260715_070",
+      "decision": "ground",
+      "x": 0.3239,
+      "y": 0.9185,
+      "dt": 0.0834
+    },
+    "71": {
+      "label_id": "els20260715_071",
+      "decision": "paddle",
+      "x": 0.7292,
+      "y": 0.6262,
+      "dt": 0.5
+    },
+    "72": {
+      "label_id": "els20260715_072",
+      "decision": "none"
+    },
+    "73": {
+      "label_id": "els20260715_073",
+      "decision": "none"
+    },
+    "74": {
+      "label_id": "els20260715_074",
+      "decision": "paddle",
+      "x": 0.7093,
+      "y": 0.5256,
+      "dt": 0.0834
+    },
+    "75": {
+      "label_id": "els20260715_075",
+      "decision": "ground",
+      "x": 0.4233,
+      "y": 0.5681,
+      "dt": 0.0333
+    },
+    "76": {
+      "label_id": "els20260715_076",
+      "decision": "ground",
+      "x": 0.7301,
+      "y": 0.7346,
+      "dt": 0.1333
+    },
+    "77": {
+      "label_id": "els20260715_077",
+      "decision": "none"
+    },
+    "78": {
+      "label_id": "els20260715_078",
+      "decision": "paddle",
+      "x": 0.5502,
+      "y": 0.4191,
+      "dt": 0
+    },
+    "79": {
+      "label_id": "els20260715_079",
+      "decision": "paddle",
+      "x": 0.4593,
+      "y": 0.5527,
+      "dt": 0.2
+    },
+    "80": {
+      "label_id": "els20260715_080",
+      "decision": "other",
+      "x": 0.4366,
+      "y": 0.5139,
+      "dt": 0.1333
+    },
+    "81": {
+      "label_id": "els20260715_081",
+      "decision": "none"
+    },
+    "82": {
+      "label_id": "els20260715_082",
+      "decision": "ground",
+      "x": 0.4337,
+      "y": 0.5565,
+      "dt": -0.2
+    },
+    "83": {
+      "label_id": "els20260715_083",
+      "decision": "none"
+    },
+    "84": {
+      "label_id": "els20260715_084",
+      "decision": "none"
+    },
+    "85": {
+      "label_id": "els20260715_085",
+      "decision": "ground",
+      "x": 0.4782,
+      "y": 0.7056,
+      "dt": 0.2333
+    },
+    "86": {
+      "label_id": "els20260715_086",
+      "decision": "paddle",
+      "x": 0.2727,
+      "y": 0.5817,
+      "dt": -0.0667
+    },
+    "87": {
+      "label_id": "els20260715_087",
+      "decision": "ground",
+      "x": 0.6591,
+      "y": 0.5507,
+      "dt": 0.5
+    },
+    "88": {
+      "label_id": "els20260715_088",
+      "decision": "none"
+    },
+    "89": {
+      "label_id": "els20260715_089",
+      "decision": "paddle",
+      "x": 0.4006,
+      "y": 0.4597,
+      "dt": -0.4667
+    },
+    "90": {
+      "label_id": "els20260715_090",
+      "decision": "paddle",
+      "x": 0.4422,
+      "y": 0.3959,
+      "dt": -0.4667
+    },
+    "91": {
+      "label_id": "els20260715_091",
+      "decision": "none"
+    },
+    "92": {
+      "label_id": "els20260715_092",
+      "decision": "none"
+    },
+    "93": {
+      "label_id": "els20260715_093",
+      "decision": "none"
+    },
+    "94": {
+      "label_id": "els20260715_094",
+      "decision": "none"
+    },
+    "95": {
+      "label_id": "els20260715_095",
+      "decision": "paddle",
+      "x": 0.1193,
+      "y": 0.6011,
+      "dt": -0.3667
+    },
+    "96": {
+      "label_id": "els20260715_096",
+      "decision": "ground",
+      "x": 0.571,
+      "y": 0.5469,
+      "dt": 0
+    },
+    "97": {
+      "label_id": "els20260715_097",
+      "decision": "paddle",
+      "x": 0.447,
+      "y": 0.4927,
+      "dt": -0.1333
+    },
+    "98": {
+      "label_id": "els20260715_098",
+      "decision": "ground",
+      "x": 0.5407,
+      "y": 0.572,
+      "dt": 0.2
+    },
+    "99": {
+      "label_id": "els20260715_099",
+      "decision": "none"
+    },
+    "100": {
+      "label_id": "els20260715_100",
+      "decision": "none"
+    },
+    "101": {
+      "label_id": "els20260715_101",
+      "decision": "paddle",
+      "x": 0.5975,
+      "y": 0.3591,
+      "dt": 0.1667
+    },
+    "102": {
+      "label_id": "els20260715_102",
+      "decision": "ground",
+      "x": 0.4479,
+      "y": 0.5488,
+      "dt": -0.0333
+    }
+  }
+}

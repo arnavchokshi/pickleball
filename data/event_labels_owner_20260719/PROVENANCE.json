@@ -1,0 +1,15 @@
+{
+ "banked_utc": "2026-07-20T06:40:00Z",
+ "source_file": "owner Downloads export, event_labels_20260715 pack (Track E label-supply channel)",
+ "sha256": "54538919adc87c94eb7a7885131bdff89b1680da30a846ab284cd21c585fbc11",
+ "session_id": "event_labels_20260715",
+ "results_schema_version": 2,
+ "n_answered": 102,
+ "n_typed_events": 60,
+ "n_hard_negatives": 42,
+ "n_with_coords": 46,
+ "n_with_dt": 57,
+ "intended_use": "TRAINING-candidate for the pickleball event-head fine-tune. NOT eval.",
+ "mandatory_pre_train_check": "verify ZERO clip/time overlap with the PROTECTED 50-row eval seed before any training use; the protected seed remains eval-only forever",
+ "superseded_partial_export": "results.json 23:12 (71 rows) \u2014 strict subset, owner may delete from Downloads"
+}
