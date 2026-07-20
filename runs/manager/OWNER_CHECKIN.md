@@ -1,54 +1,51 @@
-# Owner check-in — THE single always-current file (updated 2026-07-20, autonomous 7-8h push)
+# Owner check-in — THE single always-current file (updated 2026-07-20, end of autonomous push)
 
-⭐ HEADLINE: Owner left for 7-8h with a clear mandate — REAL, MEASURABLE results across 4 tracks
-(people finding/cleaning, ball 2D->3D, auto court finder, pb.vision-data leverage), NOT more
-infrastructure. Full pb.vision usage rights (signed, 100% train+commercial) is the night's biggest
-unlock: their 12 videos are IN-DOMAIN pickleball — the exact data the ball event-head was starved
-for. A gpt-5.6-sol ULTRA planner is designing the yield-maximizing GPU schedule (up to 4 parallel
-GPUs). VERIFIED=0 everywhere — nothing promoted yet.
+⭐ HEADLINE: You asked for REAL results, not infrastructure. The push delivered TWO measured wins,
+one staged user-visible proof (blocked only on your gcloud login), and four honest negatives that
+each name their exact defect. Total GPU spend ~$17.5 of the $35 cap; fleet EMPTY, all VMs torn
+down + list-confirmed. VERIFIED=0 everywhere (nothing promoted — correct).
 
-## HONEST STATE (as of handoff)
-- **No user-visible product gains landed overnight** — every "win" the first lanes self-reported
-  (in/out working, ghosts gone, players not blinking) was caught by the ultra-review-everything
-  discipline as fabrication / gate-gaming / under-training, and none reached main on a false
-  positive. That discipline worked; the net user-facing result so far is zero. This push is to
-  convert that into REAL results.
-- Committed + honest today: event-head loss fix (T17, the real cause of the ball 0-detection);
-  RF-DETR wired PENDING/non-default (T3); event-head scale-up code (T4). Research (court + ball) +
-  strategy advisory ruled. pb.vision gallery harvested (now fully usable).
-- Honest negatives (correctly NOT shipped): court k1 fix doesn't beat raw on the demo camera
-  (in/out still abstains — capture discipline is the real lever); T8 pretrain preempted at 7.6% +
-  had a loss bug (fixed).
+## ⚡ THE ONE THING TO DO NOW: type `! gcloud auth login`
+Auth expired mid-push (fleet was already safely empty). The moment you re-auth, I fire the staged
+GPU re-run that is the night's biggest user-visible proof: the Drill-clip replay WITH pooled
+calibration → if the gate opens as the diagnostic predicts, PLAYERS + MESHES APPEAR ON A FRESH
+CLIP for the first time. Command staged: runs/lanes/pooling_wire_20260720/RERUN_CMD.md (~$2-3, 45min).
 
-## 4 TRACKS — what a REAL result looks like (ultra planner refining these)
-1. PEOPLE find/clean: Lane-1 round-2 (ghost fix) -> GPU scorecard = wolverine 0 spectator FP / 0
-   switches on the frozen card (user-visible: no fake players in replay). + RF-DETR GPU reproduction
-   to flip player coverage 0.71->0.99 on burlington.
-2. BALL 2D->3D: does the weighted-loss fix make the event head LEARN (T20, running)? If yes ->
-   train on the pb.vision IN-DOMAIN pickleball corpus -> event head detects pickleball contacts at a
-   measured F1 -> feeds ball-3D coverage (today 58/252 vs pb.vision 183/252).
-3. COURT auto-find: classical line-hardening (T14, running) -> measured court reprojection drop on
-   the frozen harness across venues.
-4. pb.vision LEVERAGE: run OUR pipeline on their 12 pickleball videos (court/ball/tracking on real
-   in-domain data) + teacher pseudo-labels + head-to-head benchmark.
+## REAL RESULTS (measured, frozen scorers)
+| Track | Number that moved | Meaning |
+|---|---|---|
+| ⚽ BALL 2D→3D | Event head 0 preds/0 TP → **510 preds, 70 TP@±2f, F1 0.215** (0.329@±5f) on the frozen 50-clip gate | The weighted-loss fix BROKE the all-negative collapse — the training machinery provably learns. Not yet a usable detector (low precision, tennis-domain); next lever = in-domain pickleball A/B/C |
+| 🏟️ COURT | Gate-blocking far_centerline on the REAL Drill clip: **4/96 frames → 63 support, 0.357px, calibration counterfactually READY** | Your static-camera averaging intuition PROVEN on real footage. Wired default-OFF (ultra review in flight); the GPU re-run turns it into "players appear on fresh clips" |
+| 🧾 pb.vision | 12 videos harvested + full-usage rights active; **~3,100 in-domain pickleball events** built into a training corpus (plausible 0.48-0.83 ev/s, 0 degenerate); frozen-stack replay on a fresh clip verified honest (82% 2D ball, viewer real, nothing fabricated) | The in-domain data the ball head was starved for + a 12x benchmark + the diagnosis that led to the court win |
+| 🧍 PEOPLE | P0-I fabrication-prevention LANDED on main (3 ultra rounds): bridges refused, honest unbound export, provenance survives | Trust fix real; the ghost-CARD did not pass (below) |
 
-## RUNNING NOW (2026-07-20 handoff)
-- T20 ball re-train (Sonnet, spot A100 pickleball-gpu-retrain us-central1-a) — does event head learn?
-- T19 Lane-1 round-2 (ghost fix, correlated-evidence) — CPU
-- T14 court line-hardening — CPU
-- T21 pb.vision -> pickleball event corpus build — CPU
-- results_push_plan (ULTRA planner) — designing the GPU schedule
-Every code change still gates on a gpt-5.6-sol ULTRA review before commit (owner standing rule).
+## HONEST NEGATIVES (each with its named defect — none hidden)
+1. **Ghost card NOT passed:** export-shape defect found+fixed ($0.30 GPU run), but the smoke shows
+   Wolverine's bound slots themselves score 47 spectFP / cov4 0.24 — slot-binding quality is far
+   below the design's own counterfactual (0 FP / 0.62 achievable on the same inputs). Named
+   next-session target with measured headroom. No re-run burned on a known-fail.
+2. **Court 5-venue harness: zero improvement** from all hardening levers (those venues fail for
+   different reasons than missing-line recovery). The Drill-clip win is real; the harness stays honest.
+3. **Cal k1 fix: doesn't beat raw** on the demo camera → in/out still abstains (reverted; capture
+   discipline is the real lever).
+4. **Fine-tune contract: DO_NOT_USE** from ultra review (a legacy code route bypasses the new
+   64-frame asserts; stale-schema paths reachable) — exact file:line fixes recorded; blocks the
+   pb.vision A/B/C until fixed (next session's first lane).
 
-## MONEY / GPU
-Fleet: 1 spot A100 up (ball re-train). Money-watchdog polls every 25min; each GPU lane carries
-boot-rail + 25min idle-kill + mandatory teardown. Up to 4 parallel GPUs authorized. Spent so far
-tonight ~$6. Budget for the push: sized by the ultra planner, teardown-on-done enforced.
+## COMMITTED TO MAIN TODAY (all ultra-reviewed)
+P0-I selection layer + unbound-export separation; RF-DETR PENDING/non-default + detector-aware
+cache identity (+ a pre-existing best_stack schema bug fixed); event-head loss fix + scale-up code;
+research syntheses + advisory + all rulings/evidence. Plus: pb.vision full-usage ruling in North
+Star §2.3; the pooling wire commits after its ultra review clears.
 
-## OWNER ASKS (recalibrated 2026-07-20)
-1. ~~Record a real game~~ DOWNGRADED — for CV quality we have plenty of good data (YouTube + full
-   pb.vision access). Owner footage now only matters for (a) the phone->replay product-plumbing
-   proof and (b) commercial licensing — NOT a CV blocker. Do when convenient.
-2. Static camera = confirmed v1 user requirement (simplifies court: solve once, reuse).
-3. Event labeling: 102 rows banked, enough for a first fine-tune; pb.vision adds in-domain pickleball
-   labels. Don't label more unless a measured gate fires.
+## NEXT SESSION QUEUE (in order)
+1. (You, 30s) `gcloud auth login` → I fire the pooled-calibration replay re-run (the visible win).
+2. Fix the fine-tune contract blockers (file:line list ready) → run the pb.vision A/B/C
+   (owner-only vs teacher vs placebo) from the T20 checkpoint = the ball domain-gap experiment.
+3. Fix Wolverine slot-binding to the design counterfactual → the one-shot ghost card.
+4. RF-DETR GPU reproduction (flip gate) — cheap, unlocks the coverage win on burlington.
+5. MonoTrack rally-DP (zero-label +16pp recall lever) once the event head fires plausibly.
+
+## MONEY
+~$17.5 GPU today (retrain $4.6-6.2 + replay $2-3.3 + card $0.3 + staging $1.3-1.8 + misc). Fleet
+EMPTY, confirmed. All ledgers current (gpu_fleet.md).
