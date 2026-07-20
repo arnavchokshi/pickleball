@@ -20,9 +20,7 @@ selection card eval ~$0.5, RF-DETR repro ~$1-3) fire as each code lane lands. VE
    better classical line-detection + capture-discipline UX, NOT more corner labels — so 88–91 drop
    off the critical path. Do them only if you feel like it; they're now frozen eval fuel, not a
    calibration lever.
-3. **2-min form (still worth it):** CoachAI Badminton Track-1 (free frame-precise event data):
-   https://forms.gle/znfgo4Bvp3t9h8wk9
-4. *(standing, #1 overall)* Record one real pickleball game on the product phone — still the single
+3. *(standing, #1 overall)* Record one real pickleball game on the product phone — still the single
    biggest unlock (we own ZERO pickleball footage); parked per your note you can't record now. It
    outranks any further old-pack labeling.
 

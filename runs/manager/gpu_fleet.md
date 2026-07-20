@@ -183,3 +183,51 @@ is now standard for Track F lanes.
   spend limit before writing any scorecard. VM left TERMINATED (spot stop). Manager DELETED it 2026-07-14,
   disks list-confirmed 0. No head-to-head result produced — re-run per runs/HANDOFF_20260714.md.
   FLEET NOW EMPTY.
+
+## 2026-07-19 event_head_corpus leg
+
+- pickleball-gpu-evhead (a2-highgpu-1g, 1x A100-SXM4-40GB, SPOT, instance-termination-action=STOP,
+  labels fable-lane=event_head_corpus/fable-fleet=pickleball/owner=arnavchokshi, us-central1-a,
+  image pytorch-2-9-cu129-ubuntu-2204-nvidia-580/deeplearning-platform-release, 200GB pd-balanced) —
+  created 2026-07-20T05:48:24Z after reuse-start of pickleball-a100-fleet1 hit
+  ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS (stockout) in asia-southeast1-a; ladder then hit stockout
+  again in asia-southeast1-b before winning on rung 3 (us-central1-a, first attempt). $/hr est
+  $1.1-1.5 (A100-40 spot band per SCALE_UP_SPEC cost table). Rail: `sudo shutdown -P +300` armed
+  05:59:22Z, verified via /run/systemd/shutdown/scheduled (poweroff, wall message "lane rail:
+  event_head_corpus staging, 5h wall", scheduled 2026-07-20T10:59:22Z) — still armed at staging
+  close (07:01:28Z check). nvidia-smi: A100-SXM4-40GB, driver 580.159.03, CUDA 13.0. Disk 194G/168G
+  free at boot (14%), 154G free at staging close. VM HEAD == Mac HEAD (1770d9d46) at clone time (repo
+  cloned fresh, no prior mirror; Mac HEAD had advanced 24a4d4257->1770d9d46 via unrelated concurrent
+  activity during this lane, not caused by this lane).
+- STAGING-DONE. jhong93/spot: re-probed all 28 (6-day-stale probe) -> 27 LIVE / 1 DEAD (634UMLDrVzc,
+  usopen_2015_mens_final_federer_djokovic, was LIVE 07-13, now removed). Fetched the 21 live+unstaged
+  videos via yt-dlp `-S "res:360,vcodec:h264"` (0 retries needed, 0 failures) = 11,468,405,092 bytes
+  (~10.7GB). OpenTTGames: fetched the 10 unstaged games (game_1/2/3/5 train + test_1/3/4/5/6/7) — no
+  yt-dlp resolution ladder exists for these (direct lab.osai.ai HTTP files, not YouTube), so fetched
+  full-res (31.2GB combined, HEAD-checked, bandwidth-probed ~24MB/s / 190Mbps) then ffmpeg-transcoded
+  to <=360p h264 (scale=-2:360, libx264 veryfast crf23) and deleted the raw intermediate per-file =
+  120,055,747 bytes (~114MB) final. All 31 fetched files (21+10) decode-verified true (cv2 open + 10
+  frames) on first attempt, 0 failures, 0 retries triggered. GOTCHA: first OpenTT fetch script hung
+  the `while read < file` loop after 1 item — `ffmpeg` without `-nostdin`/`</dev/null` on inherited
+  fd0 silently consumed the loop's remaining input lines; fixed with `-nostdin` + explicit `</dev/null`
+  on curl/ffmpeg/python3, relaunched for the remaining 9 games. Total staged this lane: 31 files,
+  11,588,460,839 bytes (~10.8GiB). Total lane wall (VM create to staging close): ~73 min ->
+  cost-so-far est **$1.3-1.8** (well under the $5 staging cap; math: 1.22h * $1.1-1.5/hr).
+  Manifest `staged_media_manifest.json` written VM-side (~/vm_staging/), copied to
+  `runs/lanes/event_head_corpus_20260719/vm_staging/staged_media_manifest.json`, two-sided sha256
+  MATCH (96c2c1484430c9fc09489229689a6b4ac8afc0a377ae314193b14b2ead429432). VM LEFT RUNNING (rail
+  armed, training dispatch follows within the 5h window) — not deleted, not stopped.
+- Non-fleet note (report-only, no action taken): `body4d-waker-ctrl` (us-central1-a, unlabeled,
+  RUNNING, cost-center=body4d;role=wake-controller;workload=wp23) machine type **e2-micro** (2 shared
+  vCPU, 1024MB) — est **~$0.008-0.01/hr** on-demand (e2-micro list price), i.e. negligible run cost;
+  flagging per lane instructions for the owner to label/decide, untouched otherwise.
+
+## 2026-07-20 body4d-waker-ctrl DELETED (owner-authorized)
+- `body4d-waker-ctrl` (e2-micro, us-central1-a, non-fleet, cost-center=body4d/role=wake-controller/
+  workload=wp23, RUNNING since 2026-06-14) DELETED 2026-07-20 per owner ("idk what the body4k waker
+  is u can get rid of that"). Confirmed orphaned: every repo reference historical (late-June
+  body_unblock runs + archived docs); nothing current depends on it; ~5 weeks idle at ~$0.01/hr.
+  gcloud delete exit 0; list-confirmed gone. Fleet now: pickleball-gpu-evhead RUNNING (active
+  event_head_corpus training VM) + pickleball-a100-fleet1 TERMINATED (historical coldstart, stopped
+  spot — ~200GB disk still incurs small standing cost; flag to owner as optional cleanup, NOT
+  deleted without explicit go).
