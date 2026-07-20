@@ -28,6 +28,8 @@ IMAGE_SIZE = 224
 IMAGENET_MEAN = torch.tensor((0.485, 0.456, 0.406))[:, None, None]
 IMAGENET_STD = torch.tensor((0.229, 0.224, 0.225))[:, None, None]
 EXPECTED_UNIVERSE = {"jhong93_spot": 33_791, "openttgames": 4_271, "shuttleset": 36_484}
+DEFAULT_WINDOW_STRIDE = 32
+SPLIT_RATIOS = {"train": 0.70, "val": 0.15, "test": 0.15}
 _CLIP_RE = re.compile(r"^(?P<base>.+)_(?P<start>\d+)_(?P<end>\d+)$")
 
 
@@ -142,8 +144,50 @@ class EventWindowDataset(Dataset[dict[str, Any]]):
 
 
 def _find_pilot_video(pilot_dir: Path, base: str) -> Path | None:
-    matches = sorted(p for p in pilot_dir.glob(f"{base}.*") if p.is_file())
+    matches = sorted(
+        p for p in pilot_dir.glob(f"{base}.*")
+        if p.is_file() and not p.name.startswith("._")
+    )
     return matches[0] if matches else None
+
+
+def _split_counts(group_count: int) -> dict[str, int]:
+    """Allocate exact parent counts with deterministic largest remainders."""
+
+    raw = {split: group_count * ratio for split, ratio in SPLIT_RATIOS.items()}
+    counts = {split: int(value) for split, value in raw.items()}
+    remaining = group_count - sum(counts.values())
+    split_order = list(SPLIT_RATIOS)
+    order = sorted(
+        SPLIT_RATIOS,
+        key=lambda split: (-(raw[split] - counts[split]), split_order.index(split)),
+    )
+    for split in order[:remaining]:
+        counts[split] += 1
+    return counts
+
+
+def _rebalance_parent_splits(rows: list[dict[str, Any]], *, seed: int) -> None:
+    """Assign approximately 70/15/15 splits without splitting a parent video."""
+
+    for source in sorted({str(row["source"]) for row in rows}):
+        parents = sorted({str(row["source_video"]) for row in rows if row["source"] == source})
+        parents.sort(
+            key=lambda parent: (
+                hashlib.sha256(f"{seed}:{parent}".encode()).hexdigest(),
+                parent,
+            )
+        )
+        counts = _split_counts(len(parents))
+        assignment: dict[str, str] = {}
+        offset = 0
+        for split in ("train", "val", "test"):
+            for parent in parents[offset:offset + counts[split]]:
+                assignment[parent] = split
+            offset += counts[split]
+        for row in rows:
+            if row["source"] == source:
+                row["split"] = assignment[str(row["source_video"])]
 
 
 def load_jhong_rows(root: Path, *, seed: int) -> list[dict[str, Any]]:
@@ -182,26 +226,6 @@ def load_jhong_rows(root: Path, *, seed: int) -> list[dict[str, Any]]:
                 "license_id": "BSD-3-Clause-labels; broadcast-pixels-uncleared",
                 "license_posture": "RD_ONLY",
             })
-    # The upstream clip-level train/val files straddle some parent broadcasts.
-    # Preserve upstream identity in canonical_split, keep every canonical test
-    # parent in test, and deterministically group train/val parents from seed.
-    # This is the minimum reconciliation that makes actual splits leak-free.
-    grouped: dict[str, set[str]] = {}
-    for row in rows:
-        grouped.setdefault(row["source_video"], set()).add(row["canonical_split"])
-    assigned: dict[str, str] = {}
-    for group, splits in grouped.items():
-        if "test" in splits:
-            assigned[group] = "test"
-        elif splits == {"val"}:
-            assigned[group] = "val"
-        elif splits == {"train"}:
-            assigned[group] = "train"
-        else:
-            bucket = int(hashlib.sha256(f"{seed}:{group}".encode()).hexdigest()[:8], 16) % 5
-            assigned[group] = "val" if bucket == 0 else "train"
-    for row in rows:
-        row["split"] = assigned[row["source_video"]]
     return rows
 
 
@@ -220,6 +244,8 @@ def load_opentt_rows(root: Path) -> list[dict[str, Any]]:
     extended = root / "extended_openttgames" / "data" / "raw" / "game_data"
     rows: list[dict[str, Any]] = []
     for event_path in sorted((base / "markup" / "extracted").glob("*/events_markup.json")):
+        if any(part.startswith("._") for part in event_path.parts):
+            continue
         name = event_path.parent.name
         split = "train" if name.startswith("game_") else "test"
         video_path = base / "videos" / f"{name}.mp4"
@@ -263,6 +289,8 @@ def load_shuttleset_rows(root: Path, *, seed: int) -> list[dict[str, Any]]:
     set_root = root / "coachai_shuttleset" / "ShuttleSet" / "set"
     rows: list[dict[str, Any]] = []
     for csv_path in sorted(set_root.glob("*/*.csv")):
+        if csv_path.name.startswith("._") or csv_path.parent.name.startswith("._"):
+            continue
         with csv_path.open(encoding="utf-8-sig", newline="") as handle:
             events = [row for row in csv.DictReader(handle) if row.get("frame_num", "").strip()]
         group = csv_path.parent.name
@@ -291,6 +319,7 @@ def load_shuttleset_rows(root: Path, *, seed: int) -> list[dict[str, Any]]:
 
 def build_public_manifest(public_root: Path, *, seed: int = 20260716) -> dict[str, Any]:
     rows = load_jhong_rows(public_root, seed=seed) + load_opentt_rows(public_root) + load_shuttleset_rows(public_root, seed=seed)
+    _rebalance_parent_splits(rows, seed=seed)
     totals: dict[str, dict[str, int]] = {}
     for source in EXPECTED_UNIVERSE:
         source_rows = [row for row in rows if row["source"] == source]
@@ -317,6 +346,11 @@ def build_public_manifest(public_root: Path, *, seed: int = 20260716) -> dict[st
         "artifact_type": "event_head_public_dataset_manifest",
         "verified": False,
         "seed": seed,
+        "config": {
+            "split_unit": "source_parent_video",
+            "split_ratios": SPLIT_RATIOS,
+            "window_stride_frames": DEFAULT_WINDOW_STRIDE,
+        },
         "classes": {"0": "background", "1": "HIT", "2": "BOUNCE"},
         "image_size": IMAGE_SIZE,
         "decode_policy": "on_the_fly_no_frame_cache",
@@ -326,8 +360,52 @@ def build_public_manifest(public_root: Path, *, seed: int = 20260716) -> dict[st
 
 
 def manifest_windows(
-    manifest: dict[str, Any], *, split: str, limit: int, window_frames: int
+    manifest: dict[str, Any], *, split: str, limit: int, window_frames: int,
+    stride_frames: int = DEFAULT_WINDOW_STRIDE,
 ) -> list[WindowSpec]:
+    if limit < 1 or window_frames < 1 or stride_frames < 1:
+        raise DatasetFormatError("limit, window_frames, and stride_frames must be positive")
+    windows: list[WindowSpec] = []
+    included_rows = 0
+    for row in manifest["rows"]:
+        if row["split"] != split or not row["media_present"] or not row["events"]:
+            continue
+        if included_rows >= limit:
+            break
+        included_rows += 1
+        row_frames = int(row["num_frames"])
+        tail_start = max(0, row_frames - window_frames)
+        local_starts = list(range(0, tail_start + 1, stride_frames))
+        if not local_starts or local_starts[-1] != tail_start:
+            local_starts.append(tail_start)
+        for local_start in local_starts:
+            source_start = int(row["source_start_frame"]) + local_start
+            local_events = tuple(
+                (int(item["frame"]) - local_start, HIT if item["class"] == "HIT" else BOUNCE)
+                for item in row["events"]
+                if local_start <= int(item["frame"]) < local_start + window_frames
+            )
+            windows.append(WindowSpec(
+                video_path=Path(row["video_path"]), start_frame=source_start,
+                num_frames=window_frames, fps=float(row["fps"]), events=local_events,
+                validity_mask=tuple(row["loss_validity_mask"]), source=row["source"],
+                license_posture=row["license_posture"],
+            ))
+    return windows
+
+
+def manifest_event_centered_windows(
+    manifest: dict[str, Any], *, split: str, limit: int, window_frames: int,
+) -> list[WindowSpec]:
+    """Build the frozen held-out protocol: one first-event-centered window per row.
+
+    Training uses :func:`manifest_windows` and its sliding coverage. This
+    separate evaluator preserves the 2026-07-16 checkpoint's preregistered
+    public-eval sample while allowing its context length to match training.
+    """
+
+    if limit < 1 or window_frames < 1:
+        raise DatasetFormatError("limit and window_frames must be positive")
     windows: list[WindowSpec] = []
     for row in manifest["rows"]:
         if row["split"] != split or not row["media_present"] or not row["events"]:
@@ -335,14 +413,14 @@ def manifest_windows(
         event = row["events"][0]
         center = int(event["frame"])
         local_start = max(0, center - window_frames // 2)
-        source_start = int(row["source_start_frame"]) + local_start
         local_events = tuple(
             (int(item["frame"]) - local_start, HIT if item["class"] == "HIT" else BOUNCE)
             for item in row["events"]
             if local_start <= int(item["frame"]) < local_start + window_frames
         )
         windows.append(WindowSpec(
-            video_path=Path(row["video_path"]), start_frame=source_start,
+            video_path=Path(row["video_path"]),
+            start_frame=int(row["source_start_frame"]) + local_start,
             num_frames=window_frames, fps=float(row["fps"]), events=local_events,
             validity_mask=tuple(row["loss_validity_mask"]), source=row["source"],
             license_posture=row["license_posture"],

@@ -1,0 +1,72 @@
+{
+  "artifact_type": "event_head_corpus_local_code_evidence",
+  "verified": false,
+  "authority": "preview_code_leg_only",
+  "builder_inventory_events": {
+    "jhong93_spot": 33791,
+    "openttgames": 4271,
+    "shuttleset": 36484
+  },
+  "determinism": {
+    "byte_identical": true,
+    "manifest_sha256": "7b4c3430a02ac0e18a0cc81eb790c971dd8a92e25b46700b9f5ae33f1e98f0ac",
+    "outputs": [
+      "runs/lanes/event_head_corpus_20260719/manifest_a.json",
+      "runs/lanes/event_head_corpus_20260719/manifest_b.json"
+    ]
+  },
+  "parent_video_splits": {
+    "jhong93_spot": {"train": 20, "val": 4, "test": 4},
+    "openttgames": {"train": 8, "val": 2, "test": 2},
+    "shuttleset": {"train": 31, "val": 7, "test": 6}
+  },
+  "current_media_present_rows_after_rebalance": {
+    "train": 514,
+    "val": 128,
+    "test": 1
+  },
+  "sliding_windows_stride32_window64": {
+    "frozen_prechange_226_train_rows": {
+      "rows": 226,
+      "windows": 4392,
+      "multiplier": 19.43362831858407
+    },
+    "current_rebalanced_manifest": {
+      "train": 5646,
+      "val": 1390,
+      "test": 1972
+    }
+  },
+  "matched_window_fixed_cli": {
+    "checkpoint_train_window_frames": 64,
+    "clips": 16,
+    "threshold": 0.5,
+    "tolerance_frames": 2,
+    "hit": {"tp": 6, "fp": 0, "fn": 21},
+    "bounce": {"tp": 3, "fp": 0, "fn": 12},
+    "combined": {"tp": 9, "fp": 0, "fn": 33},
+    "artifact": "runs/lanes/event_head_corpus_20260719/matched_window64_fixed_cli.json"
+  },
+  "train_inference_tensor_parity": {
+    "equal": true,
+    "shape": [64, 3, 224, 224],
+    "dtype": "torch.float32",
+    "image_size": 224,
+    "window_frames": 64,
+    "start_frame": 15948,
+    "video": "data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4",
+    "training_path": "EventWindowDataset.__getitem__",
+    "inference_path": "decode_video_frames",
+    "tensor_sha256": "00d81f3b356621e70c33d2b4e1c9140034757e6ca8b3dbb19b6984ea1b379538"
+  },
+  "gpu_leg": {
+    "attempted": false,
+    "reason": "Network and GPU execution are outside the local code lane and sandbox.",
+    "handoff": "runs/lanes/event_head_corpus_20260719/VM_RUN_PLAN.md"
+  },
+  "best_stack_delta": {
+    "choice": "c",
+    "change": "none",
+    "reason": "A checkpoint and any PENDING manifest entry belong to the manager GPU leg."
+  }
+}

@@ -4,7 +4,7 @@ import json
 import subprocess
 from pathlib import Path
 
-from scripts.racketsport.train_event_head import run_full
+from scripts.racketsport.train_event_head import _git_head, run_full
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,7 +32,7 @@ def _tiny_public_manifest(path: Path) -> Path:
     row = {
         "source": "synthetic_fixture", "video": "tiny", "source_video": "tiny",
         "video_path": str(video), "media_present": True, "fps": 10.0,
-        "source_start_frame": 0, "num_frames": 12,
+        "source_start_frame": 0, "num_frames": 10,
         "event_counts": {"HIT": 1, "BOUNCE": 1, "background": 0},
         "inventory_event_count": 2,
         "events": [{"frame": 2, "class": "HIT"}, {"frame": 8, "class": "BOUNCE"}],
@@ -55,6 +55,7 @@ def test_full_train_writes_provenance_best_and_last_checkpoints(tmp_path: Path) 
             "--device", "cpu", "--out", str(out), "--steps", "2", "--image-size", "32",
             "--window-frames", "3", "--batch-size", "1", "--lr", "0.001",
             "--val-every", "1", "--seed", "17", "--limit-clips", "1",
+            "--num-workers", "0", "--prefetch-factor", "2",
         ],
         cwd=ROOT, capture_output=True, text=True, check=False,
     )
@@ -67,6 +68,8 @@ def test_full_train_writes_provenance_best_and_last_checkpoints(tmp_path: Path) 
     assert report["seed"] == 17
     assert len(report["data_manifest_sha256"]) == 64
     assert report["config"]["limit_clips"] == 1
+    assert report["config"]["stride_frames"] == 32
+    assert report["dataloader"] == {"num_workers": 0, "prefetch_factor": None}
     assert report["completed_steps"] == 2
     assert report["steps_per_s"] > 0
     assert report["validations"][0]["tolerance_frames"] == 2
@@ -98,7 +101,7 @@ def test_full_train_wall_stop_is_honest_and_resumable(tmp_path: Path) -> None:
         manifest_path=manifest_path, device_name="cpu", out=partial_out, weights="none",
         steps=2, image_size=32, window_frames=3, batch_size=1, lr=0.001,
         val_every=1, seed=23, max_wall_minutes=1e-12, init_checkpoint=None,
-        limit_clips=1,
+        limit_clips=1, num_workers=0,
     )
     assert partial["status"] == "partial_wall_stop"
     assert partial["honest_partial"] is True
@@ -110,9 +113,13 @@ def test_full_train_wall_stop_is_honest_and_resumable(tmp_path: Path) -> None:
         manifest_path=manifest_path, device_name="cpu", out=tmp_path / "resumed",
         weights="none", steps=1, image_size=32, window_frames=3, batch_size=1,
         lr=0.001, val_every=1, seed=23, max_wall_minutes=None,
-        init_checkpoint=last_checkpoint, limit_clips=1,
+        init_checkpoint=last_checkpoint, limit_clips=1, num_workers=0,
     )
     assert resumed["status"] == "complete"
     assert resumed["start_step"] == 0
     assert resumed["completed_steps"] == 1
     assert resumed["init_checkpoint"] == str(last_checkpoint)
+
+
+def test_git_head_is_safe_for_mirror_without_git_metadata(tmp_path: Path) -> None:
+    assert _git_head(tmp_path) == "unavailable:no_git_metadata"

@@ -31,8 +31,16 @@ from threed.racketsport.event_head.model import (
 )
 
 
-def _git_head() -> str:
-    return subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
+def _git_head(root: Path = ROOT) -> str:
+    """Return source provenance without requiring a shipped mirror to contain .git."""
+
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=root, text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except (FileNotFoundError, subprocess.CalledProcessError, OSError):
+        return "unavailable:no_git_metadata"
 
 
 def _smoke_windows(manifest: dict[str, object], window_frames: int) -> list:
@@ -119,9 +127,13 @@ def _validated_device(name: str) -> torch.device:
 
 def _manifest_windows(
     manifest: dict[str, Any], *, split: str, window_frames: int, limit_clips: int | None,
+    stride_frames: int,
 ) -> list:
     limit = limit_clips if limit_clips is not None else max(1, len(manifest.get("rows", [])))
-    windows = manifest_windows(manifest, split=split, limit=limit, window_frames=window_frames)
+    windows = manifest_windows(
+        manifest, split=split, limit=limit, window_frames=window_frames,
+        stride_frames=stride_frames,
+    )
     if not windows:
         raise RuntimeError(f"manifest has no media-present event windows in split={split!r}")
     return windows
@@ -204,12 +216,15 @@ def run_full(
     *, manifest_path: Path, device_name: str, out: Path, weights: str, steps: int,
     image_size: int, window_frames: int, batch_size: int, lr: float, val_every: int,
     seed: int, max_wall_minutes: float | None, init_checkpoint: Path | None,
-    limit_clips: int | None,
+    limit_clips: int | None, stride_frames: int = 32, num_workers: int = 4,
+    prefetch_factor: int = 2,
 ) -> dict[str, Any]:
     if steps < 1 or image_size < 16 or window_frames < 1 or batch_size < 1 or lr <= 0 or val_every < 1:
         raise ValueError("full mode requires positive steps/window-frames/batch-size/lr/val-every and image-size >=16")
     if limit_clips is not None and limit_clips < 1:
         raise ValueError("--limit-clips must be >=1")
+    if stride_frames < 1 or num_workers < 0 or prefetch_factor < 1:
+        raise ValueError("--stride-frames and --prefetch-factor must be positive; --num-workers must be >=0")
     if max_wall_minutes is not None and max_wall_minutes <= 0:
         raise ValueError("--max-wall-minutes must be >0")
     device = _validated_device(device_name)
@@ -222,15 +237,26 @@ def run_full(
     _validate_full_training_manifest(manifest)
     train_windows = _manifest_windows(
         manifest, split="train", window_frames=window_frames, limit_clips=limit_clips,
+        stride_frames=stride_frames,
     )
     val_windows = _manifest_windows(
         manifest, split="val", window_frames=window_frames, limit_clips=limit_clips,
+        stride_frames=stride_frames,
     )
     train_dataset = EventWindowDataset(train_windows, image_size=image_size)
     val_dataset = EventWindowDataset(val_windows, image_size=image_size)
     generator = torch.Generator().manual_seed(seed)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, generator=generator)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    loader_workers = {
+        "num_workers": num_workers,
+        **({"prefetch_factor": prefetch_factor} if num_workers > 0 else {}),
+    }
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, generator=generator,
+        **loader_workers,
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, **loader_workers,
+    )
     if init_checkpoint is not None:
         model, initial_payload = load_checkpoint(init_checkpoint, device=device_name)
     else:
@@ -251,7 +277,9 @@ def run_full(
         "device": device_name, "weights": weights, "steps": steps, "image_size": image_size,
         "window_frames": window_frames, "batch_size": batch_size, "lr": lr,
         "val_every": val_every, "seed": seed, "max_wall_minutes": max_wall_minutes,
-        "limit_clips": limit_clips,
+        "limit_clips": limit_clips, "stride_frames": stride_frames,
+        "num_workers": num_workers,
+        "prefetch_factor": prefetch_factor if num_workers > 0 else None,
     }
     out.mkdir(parents=True, exist_ok=True)
     manifest_sha = hashlib.sha256(raw_manifest).hexdigest()
@@ -339,6 +367,10 @@ def run_full(
         "elapsed_s": elapsed, "steps_per_s": (completed_steps - start_step) / elapsed if elapsed else 0.0,
         "init_checkpoint": str(init_checkpoint) if init_checkpoint else None,
         "decode_policy": "on_the_fly_no_frame_cache",
+        "dataloader": {
+            "num_workers": num_workers,
+            "prefetch_factor": prefetch_factor if num_workers > 0 else None,
+        },
     }
     (out / "train_manifest.json").write_text(json.dumps(report, indent=2, sort_keys=True) + "\n")
     return report
@@ -363,6 +395,9 @@ def main() -> int:
     parser.add_argument("--max-wall-minutes", type=float)
     parser.add_argument("--init-checkpoint", type=Path)
     parser.add_argument("--limit-clips", type=int)
+    parser.add_argument("--stride-frames", type=int, default=32)
+    parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--prefetch-factor", type=int, default=2)
     args = parser.parse_args()
     if args.smoke:
         out = args.out or ROOT / "runs/lanes/event_head_scaffold_20260716/train"
@@ -384,7 +419,8 @@ def main() -> int:
                 window_frames=args.window_frames, batch_size=args.batch_size, lr=args.lr,
                 val_every=args.val_every, seed=args.seed,
                 max_wall_minutes=args.max_wall_minutes, init_checkpoint=args.init_checkpoint,
-                limit_clips=args.limit_clips,
+                limit_clips=args.limit_clips, stride_frames=args.stride_frames,
+                num_workers=args.num_workers, prefetch_factor=args.prefetch_factor,
             )
         except (RuntimeError, ValueError, FileNotFoundError, json.JSONDecodeError) as exc:
             parser.exit(3, f"event-head full train failed: {exc}\n")

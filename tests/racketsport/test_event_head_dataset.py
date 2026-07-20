@@ -7,10 +7,12 @@ from pathlib import Path
 import torch
 
 from threed.racketsport.event_head.datasets import (
+    BOUNCE,
     EXPECTED_UNIVERSE,
     EventWindowDataset,
     build_public_manifest,
     decode_video_frames,
+    load_shuttleset_rows,
     manifest_windows,
     parse_jhong_clip_name,
 )
@@ -57,3 +59,41 @@ def test_split_assignment_is_source_video_disjoint() -> None:
     for row in manifest["rows"]:
         groups.setdefault((row["source"], row["source_video"]), set()).add(row["split"])
     assert all(len(splits) == 1 for splits in groups.values())
+    by_source: dict[str, dict[str, int]] = {}
+    for (source, _), splits in groups.items():
+        split = next(iter(splits))
+        by_source.setdefault(source, {"train": 0, "val": 0, "test": 0})[split] += 1
+    assert by_source == {
+        "jhong93_spot": {"train": 20, "val": 4, "test": 4},
+        "openttgames": {"train": 8, "val": 2, "test": 2},
+        "shuttleset": {"train": 31, "val": 7, "test": 6},
+    }
+
+
+def test_manifest_windows_slide_over_full_row_and_union_labels() -> None:
+    row = {
+        "split": "train", "media_present": True,
+        "video_path": "/tmp/source.mp4", "source_start_frame": 100,
+        "num_frames": 100, "fps": 30.0,
+        "events": [{"frame": 10, "class": "HIT"}, {"frame": 70, "class": "BOUNCE"}],
+        "loss_validity_mask": [True, True, False], "source": "fixture",
+        "license_posture": "RD_ONLY",
+    }
+    windows = manifest_windows(
+        {"rows": [row]}, split="train", limit=1, window_frames=64, stride_frames=32,
+    )
+    assert [window.start_frame for window in windows] == [100, 132, 136]
+    assert windows[0].events == ((10, 1),)
+    assert windows[1].events == ((38, BOUNCE),)
+    assert windows[2].events == ((34, BOUNCE),)
+    assert all(window.validity_mask == (True, True, False) for window in windows)
+
+
+def test_shuttleset_glob_ignores_appledouble_sidecars(tmp_path: Path) -> None:
+    set_dir = tmp_path / "coachai_shuttleset/ShuttleSet/set/match"
+    set_dir.mkdir(parents=True)
+    (set_dir / "valid.csv").write_text("frame_num,type\n12,hit\n")
+    (set_dir / "._valid.csv").write_bytes(b"\x00\xffnot-csv")
+    rows = load_shuttleset_rows(tmp_path, seed=7)
+    assert len(rows) == 1
+    assert rows[0]["inventory_event_count"] == 1

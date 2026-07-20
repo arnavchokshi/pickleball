@@ -1,0 +1,265 @@
+{
+  "artifact_type": "event_head_eval_metrics",
+  "checkpoint": "runs/lanes/event_head_pretrain_20260716/checkpoints/best_event_head.pt",
+  "checkpoint_train_window_frames": 64,
+  "clip_count": 16,
+  "clip_summaries": [
+    {
+      "fps": 25.0,
+      "gt_count": 3,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 25.0,
+      "gt_count": 3,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 25.0,
+      "gt_count": 2,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 25.0,
+      "gt_count": 2,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 25.0,
+      "gt_count": 3,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 1,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2021_womens_semifinal_raducanu_sakkari.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "prediction_count": 2,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2021_womens_semifinal_raducanu_sakkari.mp4"
+    },
+    {
+      "fps": 25.0,
+      "gt_count": 3,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 25.0,
+      "gt_count": 2,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2021_womens_semifinal_raducanu_sakkari.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "prediction_count": 2,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2021_womens_semifinal_raducanu_sakkari.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2021_womens_semifinal_raducanu_sakkari.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "prediction_count": 2,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2021_womens_semifinal_raducanu_sakkari.mp4"
+    },
+    {
+      "fps": 25.0,
+      "gt_count": 3,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 25.0,
+      "gt_count": 3,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    },
+    {
+      "fps": 25.0,
+      "gt_count": 3,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 40.0,
+        "2": 80.0
+      },
+      "video": "/Users/arnavchokshi/Desktop/pickleball/data/event_public_20260713/jhong93_spot/videos_pilot/wimbledon_2019_womens_round1_gauff_williams.mp4"
+    }
+  ],
+  "mode": "public_heldout_slice",
+  "protocol_reference": "third_party/spot@edec4201 util/eval.py; type-aware extension",
+  "schema_version": 1,
+  "sources": [
+    "jhong93_spot"
+  ],
+  "threshold": 0.5,
+  "tolerance_sweep": [
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.2222222222222222,
+          "fn": 13,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": 0.0,
+          "precision": 0.6666666666666666,
+          "recall": 0.13333333333333333,
+          "tp": 2
+        },
+        "HIT": {
+          "f1": 0.3636363636363636,
+          "fn": 21,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": 22.244444444444444,
+          "precision": 1.0,
+          "recall": 0.2222222222222222,
+          "tp": 6
+        }
+      },
+      "tolerance_frames": 1
+    },
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.33333333333333337,
+          "fn": 12,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": 22.244444444444444,
+          "precision": 1.0,
+          "recall": 0.2,
+          "tp": 3
+        },
+        "HIT": {
+          "f1": 0.3636363636363636,
+          "fn": 21,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": 22.244444444444444,
+          "precision": 1.0,
+          "recall": 0.2222222222222222,
+          "tp": 6
+        }
+      },
+      "tolerance_frames": 2
+    },
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.33333333333333337,
+          "fn": 12,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": 22.244444444444444,
+          "precision": 1.0,
+          "recall": 0.2,
+          "tp": 3
+        },
+        "HIT": {
+          "f1": 0.3636363636363636,
+          "fn": 21,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": 22.244444444444444,
+          "precision": 1.0,
+          "recall": 0.2222222222222222,
+          "tp": 6
+        }
+      },
+      "tolerance_frames": 5
+    }
+  ],
+  "verified": false,
+  "window_frames": 64,
+  "window_policy": "first_event_centered_frozen_eval_protocol"
+}

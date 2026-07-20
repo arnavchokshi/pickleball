@@ -19,7 +19,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from threed.racketsport.event_head.datasets import (
-    BOUNCE, HIT, build_public_manifest, decode_video_frames, manifest_windows,
+    BOUNCE, HIT, build_public_manifest, decode_video_frames,
+    manifest_event_centered_windows,
 )
 from threed.racketsport.event_head.matcher import Event, event_metrics, greedy_match, peak_pick
 from threed.racketsport.event_head.model import load_checkpoint
@@ -32,6 +33,34 @@ def _predict(model: torch.nn.Module, frames: torch.Tensor, *, threshold: float) 
     with torch.no_grad():
         logits = model(frames.unsqueeze(0))[0]
     return peak_pick(logits, threshold=threshold)
+
+
+def _checkpoint_window_frames(payload: dict[str, Any]) -> int:
+    """Read the training context stamped into the checkpoint/train manifest."""
+
+    config = payload.get("config") or {}
+    configured = config.get("window_frames")
+    top_level = payload.get("window_frames")
+    if configured is None and top_level is None:
+        raise ValueError("checkpoint has no config.window_frames training provenance")
+    if configured is not None and top_level is not None and int(configured) != int(top_level):
+        raise ValueError(
+            "checkpoint window provenance disagrees: "
+            f"config.window_frames={configured} vs window_frames={top_level}"
+        )
+    value = int(configured if configured is not None else top_level)
+    if value < 1:
+        raise ValueError(f"checkpoint window_frames must be positive, got {value}")
+    return value
+
+
+def _resolve_window_frames(payload: dict[str, Any], requested: int | None) -> int:
+    trained = _checkpoint_window_frames(payload)
+    if requested is not None and requested != trained:
+        raise ValueError(
+            f"eval window mismatch: requested {requested}, checkpoint trained with {trained}"
+        )
+    return trained
 
 
 def _aggregate_clip_metrics(clips: list[dict[str, Any]], tolerance: int) -> dict[str, Any]:
@@ -62,19 +91,21 @@ def _aggregate_clip_metrics(clips: list[dict[str, Any]], tolerance: int) -> dict
     return {"tolerance_frames": tolerance, "per_class": output}
 
 
-def eval_public(model: torch.nn.Module, *, image_size: int, threshold: float) -> dict[str, Any]:
-    manifest = build_public_manifest(ROOT / "data/event_public_20260713")
+def eval_public(
+    model: torch.nn.Module, *, image_size: int, threshold: float,
+    window_frames: int, max_clips: int, manifest: dict[str, Any],
+) -> dict[str, Any]:
     candidates = (
-        manifest_windows(manifest, split="val", limit=4000, window_frames=15)
-        + manifest_windows(manifest, split="test", limit=4000, window_frames=15)
+        manifest_event_centered_windows(
+            manifest, split="val", limit=4000, window_frames=window_frames,
+        )
+        + manifest_event_centered_windows(
+            manifest, split="test", limit=4000, window_frames=window_frames,
+        )
     )
-    jhong = [item for item in candidates if item.source == "jhong93_spot"]
-    selected = [next(item for item in jhong if any(class_id == HIT for _, class_id in item.events)),
-                next(item for item in jhong if any(class_id == BOUNCE for _, class_id in item.events))]
-    opentt = [item for item in candidates if item.source == "openttgames"]
-    selected += [next(item for item in opentt if any(class_id == BOUNCE for _, class_id in item.events))]
-    if len(selected) < 3:
-        raise RuntimeError("public eval requires 2 jhong93 val/test clips and OpenTT test_2")
+    selected = [item for item in candidates if item.events][:max_clips]
+    if not selected:
+        raise RuntimeError("public eval requires at least one media-present val/test event window")
     clips: list[dict[str, Any]] = []
     for spec in selected:
         frames = decode_video_frames(
@@ -87,8 +118,10 @@ def eval_public(model: torch.nn.Module, *, image_size: int, threshold: float) ->
                       "predictions": predictions, "ground_truth": ground_truth})
     return {
         "mode": "public_heldout_slice", "clip_count": len(clips),
-        "sources": [clip["source"] for clip in clips],
-        "tolerance_sweep": [_aggregate_clip_metrics(clips, tolerance) for tolerance in (1, 2)],
+        "window_frames": window_frames,
+        "window_policy": "first_event_centered_frozen_eval_protocol",
+        "sources": sorted({clip["source"] for clip in clips}),
+        "tolerance_sweep": [_aggregate_clip_metrics(clips, tolerance) for tolerance in (1, 2, 5)],
         "protocol_reference": "third_party/spot@edec4201 util/eval.py; type-aware extension",
         "clip_summaries": [{
             "source": clip["source"], "video": clip["video"], "fps": clip["fps"],
@@ -153,18 +186,36 @@ def main() -> int:
     parser.add_argument("--mode", choices=("public", "protected-seed"), required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--threshold", type=float, default=0.5)
+    parser.add_argument("--window-frames", type=int)
+    parser.add_argument("--max-clips", type=int, default=50)
+    parser.add_argument(
+        "--manifest", type=Path,
+        help="Frozen public manifest; defaults to rebuilding the current public corpus",
+    )
     args = parser.parse_args()
     if args.out.suffix != ".json":
         parser.error("evaluation output must be a .json metrics artifact; training artifacts are forbidden")
     try:
         model, payload = load_checkpoint(args.checkpoint)
         image_size = int(payload.get("image_size", 224))
-        metrics = (eval_public(model, image_size=image_size, threshold=args.threshold)
+        window_frames = _resolve_window_frames(payload, args.window_frames)
+        if args.max_clips < 1:
+            raise ValueError("--max-clips must be positive")
+        manifest = (
+            json.loads(args.manifest.read_text()) if args.manifest is not None
+            else build_public_manifest(ROOT / "data/event_public_20260713")
+        )
+        metrics = (eval_public(
+                       model, image_size=image_size, threshold=args.threshold,
+                       window_frames=window_frames, max_clips=args.max_clips,
+                       manifest=manifest,
+                   )
                    if args.mode == "public" else
                    eval_protected(model, image_size=image_size, threshold=args.threshold))
         result = {
             "schema_version": 1, "artifact_type": "event_head_eval_metrics",
             "verified": False, "checkpoint": str(args.checkpoint), "threshold": args.threshold,
+            "checkpoint_train_window_frames": window_frames,
             **metrics,
         }
         if args.mode == "protected-seed":
