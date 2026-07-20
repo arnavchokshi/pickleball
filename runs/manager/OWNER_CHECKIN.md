@@ -11,21 +11,27 @@ positions in 300 frames) — both routed into the live lanes. GPU legs (event-he
 selection card eval ~$0.5, RF-DETR repro ~$1-3) fire as each code lane lands. VERIFIED=0 unchanged.
 
 ## Do these (easiest first — CVAT is ALREADY RUNNING, no setup needed)
-1. **EVENT LABELS — biggest lever you can pull today:** open
-   `~/Desktop/event_labels_20260715/START_HERE.html` in your browser and label. ~50 rows ≈ 20 min
-   (proven). Every batch directly feeds the pickleball fine-tune that closes the tennis→pickleball
-   domain gap (the event head's failure is DATA, not architecture). Do as many batches as you can.
-2. **Court diversity, ~1h total:** open http://localhost:8080 → tasks **88, 89, 90, 91**
-   (4 shards × 25 frames, 28 new venues) per `cvat_upload/court_diversity_20260712/OWNER_GUIDE.md`.
-   Attacks the proven court-diversity wall.
-3. **Ball task 87** (350-frame uniform audit) — same CVAT, finish whenever; ingest is committed.
-4. **2-min form:** CoachAI Badminton Track-1 access (free frame-precise event data):
+0. **Keep this Mac plugged in, lid OPEN, all night.** The ONLY hard requirement — caffeinate is
+   armed but lid-close sleep still kills lanes. The whole overnight board depends on it.
+1. **STOP labeling events — 102 is enough.** Your 102 rows are banked; the first pickleball
+   fine-tune runs on them tonight. Advisory ruling: only label more IF the fine-tune's measured
+   G_val gate fires (I'll tell you). Do not open the events page again for now.
+2. **Court tasks 88–91 are now OPTIONAL / deprioritized.** Advisory D1: the fastest court win is
+   better classical line-detection + capture-discipline UX, NOT more corner labels — so 88–91 drop
+   off the critical path. Do them only if you feel like it; they're now frozen eval fuel, not a
+   calibration lever.
+3. **2-min form (still worth it):** CoachAI Badminton Track-1 (free frame-precise event data):
    https://forms.gle/znfgo4Bvp3t9h8wk9
-5. **Keep this Mac plugged in with the lid OPEN.** caffeinate is armed but lid-close sleep still
-   kills lanes (it has twice). 4 lanes + tonight's GPU legs depend on it.
-6. *(standing, whenever you next can)* Record one real pickleball game on the product phone —
-   still the #1 unlock overall (we own ZERO pickleball footage); parked per your note that you
-   can't record right now.
+4. *(standing, #1 overall)* Record one real pickleball game on the product phone — still the single
+   biggest unlock (we own ZERO pickleball footage); parked per your note you can't record now. It
+   outranks any further old-pack labeling.
+
+⚠️ **Honest correction from earlier tonight:** I over-sold the pb.vision-gallery pseudo-label idea
+("multiply your 70 labels without touching CVAT"). The governance review (advisory D3) ruled it
+OUT: their terms restrict this use, and training on their gallery would wreck our head-to-head
+benchmark. The 12-video gallery is still a big win — as a 12× COMPARE-ONLY benchmark (~490 rallies)
+and proof their system tracks no player pose (our wrist advantage is unique) — just not as training
+data. Pseudo-labels, if ever, come from public/owned footage + our own models, never theirs.
 
 ## Best results so far (accuracy + time; ALL internal/protocol-caveated, none promotion-gated)
 | Capability | Best accuracy | Best time | Note (evidence under runs/) |

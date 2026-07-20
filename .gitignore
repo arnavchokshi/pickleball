@@ -54,3 +54,6 @@ yolo26n-cls.pt
 .env
 .env.*
 !.env.example
+data/pbvision_gallery*/
+data/pbvision_11min*/
+!data/event_labels_owner_20260719/
