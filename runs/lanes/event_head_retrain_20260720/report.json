@@ -1,0 +1,70 @@
+{
+  "objective": "Does the T17 class-weighted event-head loss fix (commit 5adaf396c, on main) let the model escape all-negative collapse and produce nonzero event detections?",
+  "verdict": "WEIGHTED_LOSS_WORKS",
+  "vm": {
+    "name": "pickleball-gpu-retrain",
+    "zone": "us-central1-a",
+    "machine_type": "a2-highgpu-1g",
+    "gpu": "NVIDIA A100-SXM4-40GB",
+    "provisioning_model": "SPOT",
+    "instance_termination_action": "STOP",
+    "created_utc": "2026-07-20T15:22:30Z",
+    "deleted_utc": "2026-07-20T19:30:41Z",
+    "zone_ladder_attempts": ["asia-southeast1-a (STOCKOUT)", "asia-southeast1-b (STOCKOUT)", "us-central1-a (SUCCESS, 1st attempt of rung 2)"]
+  },
+  "head_sha": "c373ce7f3aa6f89c0655a5196b0e02e0187fbc97",
+  "head_sha_includes_5adaf396c": true,
+  "manifest_sha_matches": true,
+  "manifest_sha": "e53954ef9ca7336b1d694586185288e7112aa4b56690abc24df13087a922ce84",
+  "manifest_reproduction_note": "Byte-identical reproduction required staging all 40 candidate videos (28 jhong93 + 12 OpenTT), decode-verifying all 40, then EXCLUDING 9 specific videos (7 jhong93: usopen_2015_mens_final_federer_djokovic, usopen_2019_womens_osaka_gauff, usopen_2019_womens_round1_williams_sharapova, usopen_2020_womens_quarterfinal_osaka_rogers, usopen_2021_womens_semifinal_raducanu_sakkari, wimbledon_2019_womens_final_halep_williams, wimbledon_2019_womens_round1_gauff_williams; 2 OpenTT: game_4, test_2) to match the frozen corpus's own historical media_present pattern (jhong93 2603/3445 rows present, OpenTT 10/12 present) -- with all 40 present the build is functionally equivalent (same totals/rows/windows) but NOT byte-identical to the target SHA.",
+  "val_f1_trajectory_internal_training_metric": [
+    {"step": 10000, "f1": 0.0, "tp": 0, "fp": 0, "max_positive_class_probability": 0.11019179224967957},
+    {"step": 11000, "f1": 0.0, "tp": 0, "fp": 0, "max_positive_class_probability": 0.11981546133756638},
+    {"step": 12000, "f1": 0.0, "tp": 0, "fp": 0, "max_positive_class_probability": 0.14259569346904755},
+    {"step": 13000, "f1": 0.0, "tp": 0, "fp": 0, "max_positive_class_probability": 0.14444200694561005},
+    {"step": 14000, "f1": 0.0, "tp": 0, "fp": 0, "max_positive_class_probability": 0.10055000334978104},
+    {"step": 15000, "f1": 0.0, "tp": 0, "fp": 1, "max_positive_class_probability": 0.5093768239021301},
+    {"step": 16000, "f1": 0.0009382329945269742, "tp": 3, "fp": 6, "max_positive_class_probability": 0.585695743560791},
+    {"step": 16918, "f1": 0.0, "tp": 0, "fp": 0, "max_positive_class_probability": 0.46549445390701294}
+  ],
+  "val_f1_trajectory_note": "This is the training script's own internal validation metric (fixed tolerance_frames=2, apparently a ~0.5 decision threshold on positive-class probability -- TP only appears at steps where max_prob crosses ~0.5). It is non-monotonic and the FINAL checkpoint (step 16918) falls just below that internal threshold (max_prob 0.465), so tp=0/f1=0 there. This is NOT the preregistered gate; see step16918_eval below (threshold 0.05) for the actual answer, which is unambiguous.",
+  "step9000_eval": {
+    "checkpoint": "runs/vm_out/train/last_event_head.pt (pre-fix baseline, unweighted CE)",
+    "clip_count": 50,
+    "threshold": 0.05,
+    "total_predictions": 0,
+    "total_gt": 141,
+    "tp_by_tolerance": {"1": 0, "2": 0, "5": 0},
+    "fp_by_tolerance": {"1": 0, "2": 0, "5": 0},
+    "f1_by_tolerance": {"1": 0.0, "2": 0.0, "5": 0.0},
+    "max_positive_class_probability": {"mean": 0.024801, "max": 0.030845, "min": 0.017293}
+  },
+  "step16918_eval": {
+    "checkpoint": "runs/vm_out/train_lossfix/last_event_head.pt (post-fix, class-weights 1.0/5.0/5.0, total step 16918)",
+    "clip_count": 50,
+    "threshold": 0.05,
+    "total_predictions": 510,
+    "total_gt": 141,
+    "tp_by_tolerance": {"1": 44, "2": 70, "5": 107},
+    "fp_by_tolerance": {"1": 466, "2": 440, "5": 403},
+    "f1_by_tolerance": {"1": 0.135177, "2": 0.215054, "5": 0.328725},
+    "max_positive_class_probability": {"mean": 0.136531, "max": 0.356625, "min": 0.077016}
+  },
+  "preregistered_kill_applied": "TP is clearly nonzero (44/70/107 across tolerances) AND max-probs clearly rising (mean 0.025 -> 0.137, ~5.5x; max 0.031 -> 0.357, ~11.6x) versus the step-9000 baseline on the identical frozen 50-clip public gate at the identical threshold 0.05. Kill condition (TP==0 AND max-probs flat) does NOT hold -> WEIGHTED_LOSS_WORKS per the recipe's own preregistered rule.",
+  "honest_caveats": [
+    "Precision is very low at threshold 0.05 (FP >> TP; e.g. 466 FP vs 44 TP at tolerance 1) -- the fix escapes collapse, it does not yet produce a usable detector. No promotion is implied or claimed.",
+    "The internal training-validation trajectory is non-monotonic and the exact final checkpoint (step 16918) sits below that metric's own apparent ~0.5 threshold, so it alone would look like a null result; the discrepancy versus the threshold-0.05 gate is explained (different, much lower threshold) but is worth the next lane's attention if this checkpoint is used for anything beyond this yes/no question.",
+    "VM_RUN_PLAN.md has two stale/wrong sections found and worked around in this lane: (1) OpenTT section 3 assumes videos are embedded in the markup zip; the real video files are separate direct-fetch .mp4 URLs at the same lab.osai.ai path -- the zip contains only markup+segmentation masks. (2) unzip is not preinstalled on the pytorch-2-9-cu129-ubuntu-2204-nvidia-580 image, needed anyway once the URL was fixed to inspect the zip's real contents.",
+    "The checked-in scripts/fleet/lane_vm_startup.sh is a bare P0-1 scaffold with no shutdown rail or idle watchdog despite the dispatch instructions describing it as arming one; this lane worked around it with a locally-amended startup script (not committed) that prepends the VM_RUN_PLAN.md-mandated rail + watchdog.",
+    "One transient yt-dlp 403 on a single jhong93 video mid-batch aborted the first staging attempt (script used set -e with no per-video retry); fixed with a resumable retry script; the retry succeeded on its first attempt, so the 403 was transient, not a persistent block.",
+    "VERIFIED=0 remains binding; this is a bounded resume experiment per RETRAIN_RECIPE.md's own framing, not a promotion. No best_stack.json change."
+  ],
+  "teardown_confirmed": true,
+  "teardown_evidence": "gcloud compute instances delete pickleball-gpu-retrain --zone=us-central1-a exit 0; gcloud compute instances list --filter=labels.fable-lane=event_head_retrain returns empty; gcloud compute disks list has no pickleball-gpu-retrain disk; only pre-existing unrelated pickleball-a100-fleet1 (TERMINATED, untouched) remains under fable-fleet=pickleball.",
+  "wall_min": 248,
+  "training_wall_min": 146.6,
+  "cost_est_usd": "4.55-6.20",
+  "artifacts_pulled": "runs/lanes/event_head_retrain_20260720/vm_pull/ (eval_step9000_threshold_0.05.json, eval_step16918_threshold_0.05.json, train_lossfix/{last_event_head.pt,best_event_head.pt,train_manifest.json}, train_lossfix.log, eval_step9000.log, eval_step16918.log, manifest_a.json, LOCAL_SHA256SUMS.txt, PULL_SHA256SUMS_retrain.txt -- 9 artifacts, two-sided sha256 all match)",
+  "blockers": [],
+  "no_commits_made": true
+}

@@ -1,0 +1,54 @@
+{
+  "far_centerline_baseline_accept_count": 4,
+  "pooled_recovered": true,
+  "support_frames": 63,
+  "residual_px": 0.35691255314973347,
+  "would_pass_gate": true,
+  "reason_if_not": null,
+  "evidence_jpegs": [
+    "runs/lanes/farline_diag_20260720/evidence_frames/far_centerline_frame_000235_annotated.jpg",
+    "runs/lanes/farline_diag_20260720/evidence_frames/far_centerline_frame_005055_annotated.jpg",
+    "runs/lanes/farline_diag_20260720/evidence_frames/far_centerline_frame_011167_annotated.jpg"
+  ],
+  "verdict": "RECOVERED",
+  "sample_count": 96,
+  "baseline_acceptance_counts": {
+    "far_baseline": 28,
+    "far_centerline": 4,
+    "far_nvz": 79,
+    "left_sideline": 96,
+    "near_baseline": 95,
+    "near_centerline": 51,
+    "near_nvz": 96,
+    "net": 14,
+    "right_sideline": 96,
+    "top_net": 22
+  },
+  "pooled_support": {
+    "fit_frames": 51,
+    "heldout_frames": 12,
+    "fit_sample_locations": 41,
+    "heldout_sample_locations": 41,
+    "temporal_dispersion_mad_px": 0.028854108112857296,
+    "geometry_fit_p90_px": 0.35691255314973347,
+    "seed_residual_mean_px": 1.4836927729405047,
+    "seed_residual_p95_px": 1.7024501954781615,
+    "visible_fraction": 0.9176961733413403
+  },
+  "would_be_gate_aggregate": {
+    "auto_calibration_ready": true,
+    "missing_required_line_ids": [],
+    "missing_required_net_ids": [],
+    "mean_residual_px": 3.6498698057003773,
+    "p95_residual_px": 10.253094225879789,
+    "reasons": []
+  },
+  "baseline_reproduction_caveat": {
+    "pulled_production_artifact_far_centerline_accept_count": 0,
+    "pulled_production_sample_count": 7,
+    "current_local_same_indexes_far_centerline_accept_count": 1,
+    "current_local_96_frame_far_centerline_accept_count": 4,
+    "conclusion": "The pulled production failure is real, but its exact zero-count did not reproduce under the current local decoder/runtime."
+  },
+  "scope": "Sixth real-world clip, preview/research only; T14 remains default-off and unwired; frozen five-venue verdict unchanged; VERIFIED=0."
+}
