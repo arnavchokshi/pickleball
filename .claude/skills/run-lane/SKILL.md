@@ -70,9 +70,17 @@ codex exec \
   > "$ROOT/runs/lanes/$LANE/log.txt" 2>&1
 ```
 run_in_background: true; absolute paths ALWAYS; add `-c tools.web_search=true` for research lanes.
-**MODEL DEFAULT (owner directive 2026-07-09): every Codex dispatch uses `gpt-5.6-sol`, reasoning effort `high`,
-normal speed (no priority/speed override). Pin the model explicitly — never rely on the CLI default. Deviate
-(e.g. xhigh) only for a deliberate, stated reason in the lane row.**
+**MODEL POLICY (owner directive 2026-07-19, supersedes 2026-07-09): every Codex dispatch uses `gpt-5.6-sol`
+ONLY — pin the model explicitly on every dispatch, never rely on the CLI default, never any other model.
+Reasoning effort is TIERED BY DIFFICULTY:
+- `high` = the default for spec-complete implementation/mechanical lanes;
+- `xhigh` ("ultra") = REQUIRED when the problem is genuinely hard (novel design, ambiguous root-cause,
+  gate-adjacent correctness, anything where a wrong approach is expensive to unwind);
+- NEXT-STEP / APPROACH DECISIONS: whenever the manager is deciding what to do next or choosing between
+  approaches, Fable does the thinking AND dispatches a `gpt-5.6-sol` `xhigh` advisory lane (structured
+  facts + options + tradeoffs, never conclusions-only); Fable rules on its output. Strategy is never
+  decided at `high`.
+State the chosen tier + one-line justification in the lane row.**
 The harness notifies on process exit — read `report.json` and rule. Do NOT set up Monitor/done-marker
 watchers (they false-fire; manual §10). Prefer big self-iterating lanes over many small round-trips.
 
