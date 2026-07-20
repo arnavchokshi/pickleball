@@ -69,6 +69,7 @@ RELATED_TEST_OVERRIDES = {
     "run_mobile_person_yolo_replay": "test_mobile_person_yolo_replay.py",
     "run_totnet_ball": "test_totnet_runner_runtime.py",
     "run_yolo26_teacher": "test_yolo26_teacher_filters.py",
+    "select_players_from_pool": "test_player_selection.py",
     "smoke_models": "test_smoke_models.py",
     "summarize_decode_benchmarks": "test_decode_benchmark_summary.py",
     "track": "test_track_cli.py",
@@ -96,6 +97,7 @@ SCHEMA_OVERRIDES = {
     "build_variant_comparison": "eval0_index_schema.json",
     "list_scaffold_tools": "scaffold_tool_index_schema.json",
     "report_one_world_metrics": "one_world_v1_metrics_schema.json",
+    "select_players_from_pool": "player_selection_report_schema.json",
     "summarize_eval_runs": "eval_summary_schema.json",
     "validate_ball_audio_dataset": "ball_audio_dataset_schema.json",
     "validate_one_world_v1": "one_world_v1_validation_schema.json",
@@ -134,6 +136,7 @@ TASK_HINTS = {
     "render_calibration_overlay": ("CAL", "CAL-2"),
     "report_testclip_coverage": ("DATA", "DATA-1"),
     "report_one_world_metrics": ("EVAL", "NS-04.5"),
+    "select_players_from_pool": ("TRK", "P0-I"),
     "smoke_models": ("ENV", "ENV-2"),
     "smoke_mujoco_mjx": ("ENV", "ENV-1"),
     "summarize_decode_benchmarks": ("EVAL", "EVAL-0"),
@@ -149,6 +152,10 @@ TASK_HINTS = {
     "validate_reference_ranges": ("COACH", "P6-3"),
     "validate_shot_dataset": ("DATA", "DATA-5"),
     "validate_testclips": ("DATA", "DATA-1"),
+}
+
+CATEGORY_OVERRIDES = {
+    "select_players_from_pool": "tracking",
 }
 
 
@@ -239,6 +246,8 @@ def _tool_entry(path: Path, *, root: Path, tests_root: Path, schemas_root: Path)
 
 def _category(stem: str) -> str:
     normalized = stem.replace("-", "_")
+    if normalized in CATEGORY_OVERRIDES:
+        return CATEGORY_OVERRIDES[normalized]
     if (
         normalized in {"doctor", "gpu_train_lock", "gpu_cold_start", "setup_env"}
         or normalized.startswith("install_")

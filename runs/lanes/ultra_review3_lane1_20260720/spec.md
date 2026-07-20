@@ -1,0 +1,11 @@
+# ultra_review3_lane1_20260720 — final commit gate for the P0-I selection layer (round-2 verification)
+
+REVIEW-ONLY, gpt-5.6-sol ultra. DO NOT EDIT. Round-2 (runs/lanes/trkL_selection_fix2_20260720, report.json) claims to fix the 2 findings that blocked commit in the joint re-review (runs/lanes/ultra_review2_20260720 — Lane 1 section). Verify BOTH are truly fixed AND the 6 previously-resolved findings did not regress. Verdict decides commit + the GPU ghost scorecard (the night's #1 real-win candidate).
+
+## VERIFY (live working tree: threed/racketsport/player_selection.py, scripts/racketsport/select_players_from_pool.py, docs/racketsport/player_selection_report_schema.json, tests/racketsport/test_player_selection.py, threed/racketsport/schemas/__init__.py):
+1. **Correlated-evidence fix:** all world_xy-derived signals (court_presence/persistence/temporal_motion) now count as ONE evidence class; destructive DROP requires independent APPEARANCE agreement; an appearance-ACCEPT/DEFER real detection can NOT be dropped on geometry alone (stays unbound). Check the actual drop-authorization code path + the new test (identity-ACCEPT + off-court + motion-inconsistent ⇒ UNBOUND). Run the Wolverine diagnostic if the lane's artifacts allow: geometry-only drops of appearance-accepted fragments must be 0.
+2. **Drop-reason honesty:** drop reasons name the DESTROYING evidence (constrained vocabulary in the schema + tested), never positive facts like identity_accept.
+3. **No regressions:** f44<->f87 stitch still REFUSED; selection-OFF still byte-identical; unbound-preserved-in-output; no-enrollment no-bypass; raw-UID one-to-one; Layer C invoked; interpolated survives export; enrollment ownership. Spot-check each (they were verified in round-2's review — confirm the round-2 edits didn't break them).
+4. **VM handoff claim** (round-1 finding 8 residual): repaired or honestly retracted?
+
+## OUTPUT: verdict COMMIT_OK / COMMIT_WITH_FIXES (exact must-fix) / DO_NOT_COMMIT; per-item resolved/unresolved with file:line; one-line recommendation. If COMMIT_OK, also sanity-check runs/lanes/trkL_selection_impl_20260719/VM_EVAL_PLAN.md is executable as the GPU scorecard recipe (env-fidelity gate -> selection arm both clips -> pre-registered acceptance table) and flag any blocker for the card run.

@@ -5,7 +5,15 @@ import math
 from pathlib import Path
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 
 def _finite_number(value: Any) -> float:
@@ -606,6 +614,17 @@ class TrackFrame(BaseModel):
     bbox: tuple[FiniteFloat, FiniteFloat, FiniteFloat, FiniteFloat]
     world_xy: Vector2
     conf: FiniteFloat = Field(ge=0.0, le=1.0)
+    interpolated: bool = Field(
+        default=False,
+        strict=True,
+    )
+
+    @model_serializer(mode="wrap")
+    def _serialize_interpolation_provenance(self, handler: Any) -> dict[str, Any]:
+        payload = handler(self)
+        if not self.interpolated:
+            payload.pop("interpolated", None)
+        return payload
 
     @field_validator("bbox")
     @classmethod

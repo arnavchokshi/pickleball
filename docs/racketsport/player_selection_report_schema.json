@@ -1,0 +1,323 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "decision": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {"action": {"const": "drop"}},
+            "required": ["action"]
+          },
+          "then": {
+            "properties": {
+              "evidence_classes": {
+                "const": ["appearance", "geometry"],
+                "type": "array"
+              },
+              "reasons": {
+                "allOf": [
+                  {
+                    "contains": {
+                      "const": "appearance_all_detections_all_slots_at_or_above_identity_reject_distance_0_42"
+                    },
+                    "maxContains": 1,
+                    "minContains": 1
+                  },
+                  {
+                    "contains": {
+                      "enum": [
+                        "geometry_court_presence_below_selection_score_min_0_5",
+                        "geometry_detection_persistence_below_selection_score_min_0_5",
+                        "geometry_all_slots_temporal_overlap_or_speed_above_7_0_m_s"
+                      ]
+                    },
+                    "minContains": 1
+                  }
+                ],
+                "items": {"$ref": "#/$defs/dropTriggerReason"},
+                "maxItems": 4,
+                "minItems": 2,
+                "type": "array",
+                "uniqueItems": true
+              }
+            },
+            "required": ["evidence_classes", "reasons"]
+          }
+        }
+      ],
+      "type": "object"
+    },
+    "dropTriggerReason": {
+      "enum": [
+        "appearance_all_detections_all_slots_at_or_above_identity_reject_distance_0_42",
+        "geometry_court_presence_below_selection_score_min_0_5",
+        "geometry_detection_persistence_below_selection_score_min_0_5",
+        "geometry_all_slots_temporal_overlap_or_speed_above_7_0_m_s"
+      ],
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {"status": {"const": "disabled_noop"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "decisions": {"maxItems": 0},
+          "enrollment": {
+            "properties": {
+              "slot_count": {"const": 0},
+              "slots": {"maxItems": 0},
+              "status": {"const": "not_run"}
+            }
+          },
+          "input_counts": {
+            "properties": {
+              "association_frames_joined_to_raw": {"const": 0},
+              "raw_pool_real_detections": {"const": 0}
+            }
+          },
+          "output_counts": {
+            "properties": {
+              "dropped_real_detections": {"const": 0},
+              "interpolated_frames": {"const": 0},
+              "recovered_real_detections": {"const": 0},
+              "synthetic_frames_removed": {"const": 0},
+              "unbound_real_detections": {"const": 0}
+            }
+          },
+          "selection_mode": {"const": "disabled"},
+          "source_attestations": {
+            "properties": {
+              "promote_trk": {"const": null},
+              "source_only": {"const": null},
+              "status": {"const": "not_applicable_disabled"},
+              "uses_cvat_labels": {"const": null}
+            }
+          },
+          "source_only": {"const": null},
+          "tracks": {"maxItems": 0}
+        }
+      },
+      "else": {
+        "properties": {
+          "selection_mode": {
+            "enum": ["enrolled_four_slot", "partial_unbound_real_only"]
+          },
+          "source_attestations": {
+            "properties": {
+              "promote_trk": {"const": false},
+              "source_only": {"const": true},
+              "status": {"const": "explicitly_attested"},
+              "uses_cvat_labels": {"const": false}
+            }
+          },
+          "source_only": {"const": true}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {"const": "preview_selection_partial_no_enrollment"}
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "enrollment": {
+            "properties": {
+              "slot_count": {"const": 0},
+              "slots": {"maxItems": 0},
+              "status": {"const": "no_valid_exact_four_window"}
+            }
+          },
+          "output_counts": {
+            "properties": {
+              "dropped_real_detections": {"const": 0},
+              "interpolated_frames": {"const": 0},
+              "recovered_real_detections": {"const": 0}
+            }
+          },
+          "selection_mode": {"const": "partial_unbound_real_only"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "preview_selection_complete",
+              "preview_selection_partial_with_abstentions"
+            ]
+          }
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "enrollment": {
+            "properties": {
+              "slot_count": {"const": 4},
+              "slots": {"maxItems": 4, "minItems": 4},
+              "status": {"const": "enrolled"}
+            }
+          },
+          "selection_mode": {"const": "enrolled_four_slot"}
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"status": {"const": "preview_selection_complete"}},
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "output_counts": {
+            "properties": {"unbound_real_detections": {"const": 0}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {"const": "preview_selection_partial_with_abstentions"}
+        },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "output_counts": {
+            "properties": {"unbound_real_detections": {"minimum": 1}}
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "VERIFIED": {"const": 0, "type": "integer"},
+    "artifact_type": {"const": "racketsport_player_selection_report", "type": "string"},
+    "config": {
+      "additionalProperties": false,
+      "properties": {
+        "court_ema_half_life_s": {"const": 2.0, "type": "number"},
+        "court_weight": {"const": 0.4, "type": "number"},
+        "enrollment_court_presence_min": {"const": 0.8, "type": "number"},
+        "enrollment_max_pairwise_iou": {"const": 0.2, "type": "number"},
+        "enrollment_min_window_s": {"const": 1.0, "type": "number"},
+        "expected_players": {"const": 4, "type": "integer"},
+        "identity_accept_distance": {"const": 0.35, "type": "number"},
+        "identity_reject_distance": {"const": 0.42, "type": "number"},
+        "identity_weight": {"const": 0.4, "type": "number"},
+        "max_displacement_m": {"const": 2.5, "type": "number"},
+        "max_micro_fill_frames": {"const": 12, "type": "integer"},
+        "persistence_weight": {"const": 0.2, "type": "number"},
+        "raw_match_bbox_delta_px": {"type": "number"},
+        "raw_match_iou_min": {"type": "number"},
+        "recovery_max_speed_m_s": {"const": 7.0, "type": "number"},
+        "selection_score_min": {"const": 0.5, "type": "number"},
+        "sigma_court_m": {"const": 0.5, "type": "number"},
+        "sport": {"enum": ["pickleball", "tennis"], "type": "string"}
+      },
+      "required": [
+        "expected_players", "sigma_court_m", "court_ema_half_life_s",
+        "identity_accept_distance", "identity_reject_distance", "max_displacement_m",
+        "max_micro_fill_frames", "court_weight", "identity_weight", "persistence_weight",
+        "selection_score_min", "enrollment_court_presence_min", "enrollment_max_pairwise_iou",
+        "enrollment_min_window_s", "recovery_max_speed_m_s", "raw_match_bbox_delta_px",
+        "raw_match_iou_min", "sport"
+      ],
+      "type": "object"
+    },
+    "decisions": {"items": {"$ref": "#/$defs/decision"}, "type": "array"},
+    "enrollment": {
+      "additionalProperties": false,
+      "properties": {
+        "slot_count": {"minimum": 0, "type": "integer"},
+        "slots": {"items": {"type": "object"}, "type": "array"},
+        "status": {"type": "string"}
+      },
+      "required": ["status", "slot_count", "slots"],
+      "type": "object"
+    },
+    "input_counts": {
+      "additionalProperties": false,
+      "properties": {
+        "association_frames_joined_to_raw": {"minimum": 0, "type": "integer"},
+        "players": {"minimum": 0, "type": "integer"},
+        "raw_pool_real_detections": {"minimum": 0, "type": "integer"},
+        "track_frames": {"minimum": 0, "type": "integer"}
+      },
+      "required": [
+        "players", "track_frames", "raw_pool_real_detections",
+        "association_frames_joined_to_raw"
+      ],
+      "type": "object"
+    },
+    "not_a_promotion": {"const": true, "type": "boolean"},
+    "not_for_training": {"const": true, "type": "boolean"},
+    "output_counts": {
+      "additionalProperties": false,
+      "properties": {
+        "dropped_real_detections": {"minimum": 0, "type": "integer"},
+        "interpolated_frames": {"minimum": 0, "type": "integer"},
+        "players": {"minimum": 0, "type": "integer"},
+        "recovered_real_detections": {"minimum": 0, "type": "integer"},
+        "synthetic_frames_removed": {"minimum": 0, "type": "integer"},
+        "track_frames": {"minimum": 0, "type": "integer"},
+        "unbound_real_detections": {"minimum": 0, "type": "integer"}
+      },
+      "required": [
+        "players", "track_frames", "interpolated_frames",
+        "synthetic_frames_removed", "unbound_real_detections",
+        "dropped_real_detections", "recovered_real_detections"
+      ],
+      "type": "object"
+    },
+    "preview_only": {"const": true, "type": "boolean"},
+    "schema_version": {"const": 1, "type": "integer"},
+    "selection_mode": {
+      "enum": ["disabled", "enrolled_four_slot", "partial_unbound_real_only"],
+      "type": "string"
+    },
+    "source_attestations": {
+      "additionalProperties": false,
+      "properties": {
+        "promote_trk": {"type": ["boolean", "null"]},
+        "source_only": {"type": ["boolean", "null"]},
+        "status": {
+          "enum": ["not_applicable_disabled", "explicitly_attested"],
+          "type": "string"
+        },
+        "uses_cvat_labels": {"type": ["boolean", "null"]}
+      },
+      "required": ["status", "source_only", "uses_cvat_labels", "promote_trk"],
+      "type": "object"
+    },
+    "source_only": {"type": ["boolean", "null"]},
+    "status": {
+      "enum": [
+        "disabled_noop",
+        "preview_selection_complete",
+        "preview_selection_partial_with_abstentions",
+        "preview_selection_partial_no_enrollment"
+      ],
+      "type": "string"
+    },
+    "tracks": {"items": {"type": "object"}, "type": "array"}
+  },
+  "required": [
+    "schema_version", "artifact_type", "status", "VERIFIED", "preview_only",
+    "source_only", "source_attestations", "selection_mode",
+    "not_for_training", "not_a_promotion",
+    "config", "input_counts", "output_counts", "enrollment", "tracks", "decisions"
+  ],
+  "title": "PlayerSelectionReport",
+  "type": "object"
+}

@@ -1,0 +1,96 @@
+{
+ "objective_result": "PARTIAL",
+ "acceptance": [
+  {
+   "metric": "Identity-ACCEPT plus off-court and motion-inconsistent fragment",
+   "baseline": "Geometry could authorize DROP despite appearance ACCEPT",
+   "after": "UNBOUND; regression test passes",
+   "target": "Must remain UNBOUND",
+   "verdict": "PASS"
+  },
+  {
+   "metric": "Wolverine geometry-only drops with appearance ACCEPT/DEFER",
+   "baseline": "19 fragments / 779 raw UIDs",
+   "after": "0 fragments / 0 raw UIDs",
+   "target": "0",
+   "verdict": "PASS"
+  },
+  {
+   "metric": "Independent evidence on remaining Wolverine drops",
+   "baseline": "19 of 22 dropped fragments lacked appearance disagreement",
+   "after": "3 of 3 dropped fragments / 4 of 4 UIDs have per-detection OSNet REJECT plus geometry",
+   "target": "Every destructive DROP has appearance and geometry evidence",
+   "verdict": "PASS"
+  },
+  {
+   "metric": "Dishonest positive drop reasons",
+   "baseline": "779 dropped detections carried positive facts such as identity_accept",
+   "after": "0; all drop reasons use the four-token negative trigger vocabulary",
+   "target": "0 positive/non-trigger drop reasons; schema-enforced vocabulary",
+   "verdict": "PASS"
+  },
+  {
+   "metric": "f44\u2194f87 bridge",
+   "baseline": "Refused after round 1",
+   "after": "Still refused; owners remain separate IDs 6 and 4 with no intervening bridge frames",
+   "target": "Refused",
+   "verdict": "PASS"
+  },
+  {
+   "metric": "Selection-OFF output",
+   "baseline": "Round-1 golden behavior",
+   "after": "Byte-identical; input and output SHA-256 both 0d892aa03301d168ae9a9da69d2c67c2e86f16c7fd40b763e1099df944880266",
+   "target": "Byte-identical",
+   "verdict": "PASS"
+  },
+  {
+   "metric": "Focused and adjacent suite",
+   "baseline": null,
+   "after": "112 passed, 0 failed",
+   "target": "0 failures",
+   "verdict": "PASS"
+  },
+  {
+   "metric": "Wide racketsport suite",
+   "baseline": "3885 passed, 28 failed, 24 skipped in saved pre-round2 run",
+   "after": "3871 passed, 27 failed, 25 skipped; no player-selection failure",
+   "target": "0 failures",
+   "verdict": "FAIL"
+  },
+  {
+   "metric": "VM handoff honesty",
+   "baseline": "Claim referenced an unprovisioned feeder",
+   "after": "Dependency-packaged static dry-run passed; GPU execution explicitly NO-ATTEMPT and VERIFIED=0",
+   "target": "Dependency-complete handoff or honest retraction",
+   "verdict": "PASS"
+  }
+ ],
+ "changes": [
+  "threed/racketsport/player_selection.py:163 \u2014 collapsed all world_xy-derived signals into one geometry class and defined the negative drop-trigger vocabulary.",
+  "threed/racketsport/player_selection.py:326 \u2014 requires every real constituent detection to reject every enrolled slot before appearance can authorize destruction; missing, DEFER, or ACCEPT appearance prevents DROP.",
+  "threed/racketsport/player_selection.py:1442 \u2014 gated the sole real-detection DROP path on appearance plus geometry and emits only actual negative triggers.",
+  "docs/racketsport/player_selection_report_schema.json:10 \u2014 DROP decisions require ordered appearance/geometry evidence, one appearance trigger, and at least one geometry trigger.",
+  "docs/racketsport/player_selection_report_schema.json:50 \u2014 constrained reasons to the four registered negative trigger strings.",
+  "tests/racketsport/test_player_selection.py:1440 \u2014 added the required identity-ACCEPT/off-court/motion-inconsistent UNBOUND regression.",
+  "tests/racketsport/test_player_selection.py:1528 \u2014 added per-detection adversarial coverage preventing a fragment centroid REJECT from hiding an accepted detection; missing-embedding and schema-mutation cases are also covered.",
+  "runs/lanes/trkL_selection_impl_20260719/VM_EVAL_PLAN.md:3 \u2014 retracted executed/PASS implications, packaged feeders, schemas and inputs, and added dependency/import/syntax preflights."
+ ],
+ "full_suite": {
+  "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q",
+  "passed": 3871,
+  "failed": 27,
+  "skipped": 25,
+  "failures_all_preexisting": false,
+  "failure_notes": "No Lane-1 test failed. Eighteen court-fixture/statistic nodes exactly matched the saved pre-round2 failures: test_compare_img1605_partial_labels_rejects_current_bad_proposal; test_hough_or_distance_mask_selector_scores_candidate_combination; test_hough_or_refined_regulation_selector_uses_guarded_refinement_when_it_improves_median; test_hough_lsd_regulation_selector_scores_and_improves_mean_floor_error; test_temporal_hough_lsd_line_adapter_uses_available_frame_sequence; test_temporal_persistent_line_adapter_reports_frame_support; test_temporal_hough_lsd_regulation_scores_without_claiming_verified; test_hough_regulation_temporal_selector_improves_deployable_mean; test_summary_reports_floor_visible_p95_tail_metrics_after_geometry_guard; test_balanced_temporal_selector_reduces_tail_risk_without_losing_median_gain; test_persistent_tail_selector_uses_temporal_persistence_when_it_reduces_risk; test_reviewed_oracle_selector_reports_candidate_pool_upper_bound; test_temporal_reviewed_oracle_reports_candidate_pool_upper_bound; test_build_report_includes_img1605_partial_visible_gate; test_img1605_progress_builds_partial_visible_label_payload; test_visible_floor_homography_infers_img1605_occluded_corner; test_visible_floor_homography_requires_four_floor_points; test_evaluate_overlapping_court_calibration_cli_writes_report. Eight sandbox socket-bind failures also matched baseline: test_court_keypoint_post_save_rejects_missing_or_wrong_token; test_court_keypoint_post_save_accepts_correct_token; test_court_keypoint_served_page_embeds_save_token_not_placeholder; test_review_input_post_save_rejects_missing_or_wrong_token; test_review_input_post_save_accepts_correct_token; test_review_input_served_pages_embed_save_token_not_placeholder; test_serve_and_client_round_trip_succeeds; test_worker_idle_timeout_self_exits_and_removes_socket. The remaining test_dead_code_audit_has_no_unknown_python_source_surfaces was not in the saved baseline, so all failures are not claimed pre-existing; it passed immediately in isolation (1 passed in 99.70s), and the direct audit passed with 594 sources and 0 unknown surfaces."
+ },
+ "honest_issues": [
+  "VERIFIED=0 remains binding until the requested GPT-5.6-sol ULTRA re-review; the Wolverine run is diagnostic evidence, not promotion proof.",
+  "The wide suite remains red, so objective_result cannot be PASS despite both requested selection findings passing their focused and Wolverine gates.",
+  "The VM handoff passed only a local static dependency dry-run; no GPU VM was provisioned or evaluated.",
+  "The required storage audit remains red on unrelated repository state: 78 missing allowlisted untracked artifacts and 7 generated-artifact paths, with 0 unknown large tracked or untracked files.",
+  "No commit, branch, or push was made. Work remains on main; final scoped hashes were unchanged across the wide run."
+ ],
+ "next": "Submit this frozen diff, Wolverine report, hashes, and test attribution to GPT-5.6-sol ULTRA; do not commit unless that re-review passes.",
+ "session_id": null,
+ "verified": 0
+}
