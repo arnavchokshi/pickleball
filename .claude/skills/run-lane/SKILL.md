@@ -34,6 +34,14 @@ provision/assign the VM FIRST (gpu-fleet-provision skill) and record it in `runs
   provenance-check before acceptance. Round-3 resumes encode an explicit fallback so the thread
   ends decidable in one round-trip.
 
+## CROSS-SIGNAL MANDATE (owner core thesis 2026-07-20: EVERYTHING HELPS EVERYTHING)
+Every lane spec AND report carries a CROSS-SIGNAL row: which other systems' signals this lane
+CONSUMES (wrist/skeleton windows, ball-near-person proximity, court calibration, audio-bounded,
+rally structure, event anchors) and which consumers it FEEDS (North Star §3.1 reuse contract).
+A detector/estimator lane that doesn't consider conditioning on existing signals before asking for
+more data/params is mis-designed — the fused-signal moat is the product strategy. Fusion rules
+stand: no single signal decides irreversibly; raw immutable; provenance carried.
+
 ## The spec (write to `runs/lanes/<lane>_<date>/spec.md`)
 1. **HARD RULES block:** no branches/commits (owner joint-commit rule); read NORTH_STAR + BUILD_CHECKLIST
    last note; 4 protected clips EVAL-ONLY (Burlington/Wolverine internal-val OK; Outdoor/Indoor labels
