@@ -1,0 +1,609 @@
+diff --git a/tests/racketsport/test_player_selection.py b/tests/racketsport/test_player_selection.py
+index c7477119f..999df4e93 100644
+--- a/tests/racketsport/test_player_selection.py
++++ b/tests/racketsport/test_player_selection.py
+@@ -1181,6 +1181,255 @@ def test_one_to_one_assignment_scales_for_crowded_same_start_pool() -> None:
+     assert all(candidate.registered_owner_continuity for candidate in chosen.values())
+ 
+ 
++def test_registered_owner_rebind_uses_appearance_and_court_not_static_role_or_speed() -> (
++    None
++):
++    slot = SelectionSlot(
++        1,
++        "near",
++        "left",
++        (1.0, 0.0),
++        (90,),
++        ("seed",),
++        1.0,
++    )
++    registered = _fragment(
++        "seed",
++        10,
++        90,
++        90,
++        (-1.5, -3.0),
++        (1.0, 0.0),
++    )
++    owner_reentry = _fragment(
++        "owner-reentry",
++        10,
++        100,
++        104,
++        (1.5, -3.0),
++        _vector_at_cosine_distance(0.10),
++    )
++    same_role_spectator = _fragment(
++        "same-role-spectator",
++        50,
++        200,
++        204,
++        (-6.0, -3.0),
++        _vector_at_cosine_distance(0.10),
++    )
++    owner_sources = {1: frozenset({10})}
++    owner_candidate = player_selection_module._binding_candidates(
++        owner_reentry,
++        slots=(slot,),
++        assignments={1: (registered,)},
++        stitch_vetoes=set(),
++        fps=30.0,
++        config=PlayerSelectionConfig(),
++        owner_source_ids_by_slot=owner_sources,
++    )[0]
++    spectator_candidate = player_selection_module._binding_candidates(
++        same_role_spectator,
++        slots=(slot,),
++        assignments={1: (registered,)},
++        stitch_vetoes=set(),
++        fps=30.0,
++        config=PlayerSelectionConfig(),
++        owner_source_ids_by_slot=owner_sources,
++    )[0]
++
++    assert owner_candidate.registered_owner_continuity
++    assert owner_candidate.open_set is OpenSetDecision.ACCEPT
++    assert not owner_candidate.role_consistent
++    assert not owner_candidate.temporal_motion_consistent
++    assert owner_candidate.feasible
++    assert not spectator_candidate.registered_owner_continuity
++    assert spectator_candidate.role_consistent
++    assert spectator_candidate.temporal_motion_consistent
++    assert spectator_candidate.fusion_score >= PlayerSelectionConfig().selection_score_min
++    assert not spectator_candidate.feasible
++
++
++def test_registered_owner_wins_same_frame_rebind_from_static_role_spectator() -> None:
++    records, positions, embeddings = _four_slot_records()
++    records.extend(
++        [
++            {
++                "frame": 40,
++                "source": 1,
++                "xy": positions[2],
++                "embedding": embeddings[1],
++            },
++            {
++                "frame": 40,
++                "source": 50,
++                "xy": positions[1],
++                "embedding": embeddings[1],
++            },
++        ]
++    )
++    raw_pool, embedding_payload = _raw_selection_inputs(records)
++    selected, report = select_players_payload(
++        _empty_tracks(),
++        raw_pool_payload=raw_pool,
++        embedding_payload=embedding_payload,
++        calibration=_identity_calibration(),
++        enabled=True,
++    )
++
++    near_left = next(
++        player
++        for player in selected["players"]
++        if (player["side"], player["role"]) == ("near", "left")
++    )
++    frame_40 = next(
++        frame for frame in near_left["frames"] if frame["frame_idx"] == 40
++    )
++    assert frame_40["world_xy"] == pytest.approx(list(positions[2]))
++    owner_decision = next(
++        decision
++        for decision in report["decisions"]
++        if str(decision.get("fragment_id", "")).startswith("pool-1-2-")
++    )
++    assert owner_decision["action"] == "rebind"
++    assert owner_decision["registered_owner_continuity"] is True
++    assert owner_decision["role_consistent"] is False
++    spectator_decision = next(
++        decision
++        for decision in report["decisions"]
++        if str(decision.get("fragment_id", "")).startswith("pool-50-")
++    )
++    assert spectator_decision["action"] == "leave_unbound"
++    assert any(
++        [frame["frame_idx"] for frame in observation["frames"]] == [40]
++        for observation in selected["unbound_observations"]
++    )
++
++
++def test_temporal_binding_uses_only_nearest_predecessor_and_successor() -> None:
++    stale_bad_anchor = _fragment(
++        "stale-bad-anchor",
++        1,
++        0,
++        0,
++        (100.0, -3.0),
++        (1.0, 0.0),
++    )
++    nearest_predecessor = _fragment(
++        "nearest-predecessor",
++        1,
++        90,
++        90,
++        (0.0, -3.0),
++        (1.0, 0.0),
++    )
++    candidate = _fragment(
++        "candidate",
++        1,
++        100,
++        100,
++        (0.0, -3.0),
++        (1.0, 0.0),
++    )
++    nearest_successor = _fragment(
++        "nearest-successor",
++        1,
++        110,
++        110,
++        (0.0, -3.0),
++        (1.0, 0.0),
++    )
++    stale_bad_successor = _fragment(
++        "stale-bad-successor",
++        1,
++        200,
++        200,
++        (100.0, -3.0),
++        (1.0, 0.0),
++    )
++
++    assert player_selection_module._fragment_inside_slot_motion_envelope(
++        candidate,
++        (
++            stale_bad_anchor,
++            nearest_predecessor,
++            nearest_successor,
++            stale_bad_successor,
++        ),
++        fps=30.0,
++        max_speed_m_s=7.0,
++    )
++
++
++def test_layer_c_reserves_enrolled_source_from_recovery_into_another_slot() -> None:
++    records, positions, embeddings = _four_slot_records(end_frame=30)
++    positions[1] = (-0.2, -3.0)
++    positions[2] = (0.2, -3.0)
++    for record in records:
++        source = int(record["source"])
++        if source in {1, 2}:
++            record["xy"] = positions[source]
++    records.extend(
++        [
++            {
++                "frame": 34,
++                "source": 1,
++                "xy": positions[1],
++                "embedding": embeddings[1],
++            },
++            {
++                "frame": 32,
++                "source": 2,
++                "xy": positions[2],
++                "embedding": embeddings[1],
++            },
++        ]
++    )
++    raw_pool, embedding_payload = _raw_selection_inputs(records)
++    selected, report = select_players_payload(
++        _empty_tracks(),
++        raw_pool_payload=raw_pool,
++        embedding_payload=embedding_payload,
++        calibration=_identity_calibration(),
++        enabled=True,
++    )
++
++    assert not any(
++        decision["action"] == "recover_real" and decision.get("frame_idx") == 32
++        for decision in report["decisions"]
++    )
++    assert any(
++        [frame["frame_idx"] for frame in observation["frames"]] == [32]
++        for observation in selected["unbound_observations"]
++    )
++
++
++def test_layer_c_prefers_enrolled_source_over_closer_generic_accept() -> None:
++    slot = SelectionSlot(1, "near", "left", (1.0, 0.0), (0,), ("seed",), 1.0)
++    last = _detection(0, 10, (-0.2, -3.0), (1.0, 0.0))
++    enrolled_source = _detection(
++        1,
++        10,
++        (-0.2, -3.0),
++        _vector_at_cosine_distance(0.30),
++    )
++    generic = _detection(
++        1,
++        50,
++        (-0.2, -3.0),
++        _vector_at_cosine_distance(0.10),
++    )
++
++    recovered = recover_identity_conditioned_pool(
++        slot,
++        last_detection=last,
++        pool=(generic, enrolled_source),
++        fps=30.0,
++        preferred_source_track_ids=(10,),
++    )
++
++    assert recovered == (enrolled_source,)
++
++
+ def test_layer_c_recovery_runs_end_to_end_and_consumes_uid_once() -> None:
+     records, positions, embeddings = _four_slot_records(end_frame=30)
+     records.append(
+diff --git a/threed/racketsport/player_selection.py b/threed/racketsport/player_selection.py
+index 8a842c7a8..63fd31c45 100644
+--- a/threed/racketsport/player_selection.py
++++ b/threed/racketsport/player_selection.py
+@@ -616,6 +616,7 @@ def recover_identity_conditioned_pool(
+     fps: float,
+     occupied_frames: Iterable[int] = (),
+     next_detection: SelectionDetection | None = None,
++    preferred_source_track_ids: Iterable[int] = (),
+     config: PlayerSelectionConfig | None = None,
+ ) -> tuple[SelectionDetection, ...]:
+     """Recover measured detections one frame at a time; never create geometry."""
+@@ -624,6 +625,7 @@ def recover_identity_conditioned_pool(
+     if fps <= 0.0:
+         raise ValueError("fps must be positive")
+     occupied = set(occupied_frames)
++    preferred_sources = frozenset(preferred_source_track_ids)
+     recovered: list[SelectionDetection] = []
+     anchor = last_detection
+     by_frame: dict[int, list[SelectionDetection]] = defaultdict(list)
+@@ -641,7 +643,7 @@ def recover_identity_conditioned_pool(
+     for frame_idx in sorted(by_frame):
+         if frame_idx in occupied:
+             continue
+-        feasible: list[tuple[float, float, str, SelectionDetection]] = []
++        feasible: list[tuple[int, float, float, str, SelectionDetection]] = []
+         for detection in by_frame[frame_idx]:
+             dt_s = (detection.frame_idx - anchor.frame_idx) / fps
+             if (
+@@ -663,6 +665,7 @@ def recover_identity_conditioned_pool(
+                 continue
+             feasible.append(
+                 (
++                    0 if detection.source_track_id in preferred_sources else 1,
+                     float("inf") if distance is None else distance,
+                     -detection.conf,
+                     detection.raw_detection_uid or "",
+@@ -672,8 +675,9 @@ def recover_identity_conditioned_pool(
+         if not feasible:
+             continue
+         detection = min(
+-            feasible, key=lambda row: (row[0], row[1], row[2], row[3].source_track_id)
+-        )[3]
++            feasible,
++            key=lambda row: (row[0], row[1], row[2], row[3], row[4].source_track_id),
++        )[4]
+         recovered.append(detection)
+         occupied.add(detection.frame_idx)
+         anchor = detection
+@@ -1315,6 +1319,22 @@ def _select_slot_players(
+     assignments: dict[int, list[TrackFragment]] = {slot.slot_id: [] for slot in slots}
+     decisions: list[dict[str, Any]] = []
+     fragment_by_id = {fragment.fragment_id: fragment for fragment in pool_fragments}
++    owner_source_ids_by_slot = {
++        slot.slot_id: frozenset(
++            fragment_by_id[fragment_id].source_track_id
++            for fragment_id in slot.source_fragment_ids
++        )
++        for slot in slots
++    }
++    owner_slots_by_source: dict[int, set[int]] = defaultdict(set)
++    for slot_id, source_track_ids in owner_source_ids_by_slot.items():
++        for source_track_id in source_track_ids:
++            owner_slots_by_source[source_track_id].add(slot_id)
++    owner_slot_by_source = {
++        source_track_id: next(iter(slot_ids))
++        for source_track_id, slot_ids in owner_slots_by_source.items()
++        if len(slot_ids) == 1
++    }
+     assigned_fragment_ids: set[str] = set()
+     enrollment_owned_uids: set[str] = set()
+     for slot in sorted(slots, key=lambda item: item.slot_id):
+@@ -1405,6 +1425,7 @@ def _select_slot_players(
+             excluded_uids=enrollment_owned_uids,
+         )
+     )
++
+     by_start: dict[int, list[TrackFragment]] = defaultdict(list)
+     for fragment in remaining:
+         by_start[fragment.start_frame].append(fragment)
+@@ -1413,6 +1434,42 @@ def _select_slot_players(
+             by_start[start_frame],
+             key=lambda item: (item.end_frame, item.fragment_id),
+         )
++        # Enrollment is the only point where a slot acquires an identity owner.
++        # Within each chronological batch, bind ACCEPTed, court-supported owner
++        # fragments before generic competitors.  Processing batches in time order
++        # avoids letting a later owner fragment poison an earlier valid re-entry.
++        owner_chosen: dict[str, _SlotCandidate] = {}
++        owner_slots_used: set[int] = set()
++        for fragment in batch:
++            owner_slot_id = owner_slot_by_source.get(fragment.source_track_id)
++            if owner_slot_id is None or owner_slot_id in owner_slots_used:
++                continue
++            owner_candidates = _binding_candidates(
++                fragment,
++                slots=slots,
++                assignments=assignments,
++                stitch_vetoes=stitch_vetoes,
++                fps=fps,
++                config=config,
++                owner_source_ids_by_slot=owner_source_ids_by_slot,
++            )
++            owner_candidate = next(
++                candidate
++                for candidate in owner_candidates
++                if candidate.slot_id == owner_slot_id
++            )
++            if not owner_candidate.feasible:
++                continue
++            owner_chosen[fragment.fragment_id] = owner_candidate
++            owner_slots_used.add(owner_slot_id)
++            assignments[owner_slot_id].append(fragment)
++            assigned_fragment_ids.add(fragment.fragment_id)
++
++        generic_batch = [
++            fragment
++            for fragment in batch
++            if fragment.fragment_id not in owner_chosen
++        ]
+         candidates_by_fragment = {
+             fragment.fragment_id: _binding_candidates(
+                 fragment,
+@@ -1421,13 +1478,21 @@ def _select_slot_players(
+                 stitch_vetoes=stitch_vetoes,
+                 fps=fps,
+                 config=config,
++                owner_source_ids_by_slot=owner_source_ids_by_slot,
+             )
+-            for fragment in batch
++            for fragment in generic_batch
++        }
++        chosen = {
++            **owner_chosen,
++            **_choose_one_to_one_bindings(generic_batch, candidates_by_fragment),
+         }
+-        chosen = _choose_one_to_one_bindings(batch, candidates_by_fragment)
+         for fragment in batch:
+             evidence = presence_evidence(fragment.detections, fps=fps, config=config)
+-            candidates = candidates_by_fragment[fragment.fragment_id]
++            candidates = (
++                [owner_chosen[fragment.fragment_id]]
++                if fragment.fragment_id in owner_chosen
++                else candidates_by_fragment[fragment.fragment_id]
++            )
+             selected_candidate = chosen.get(fragment.fragment_id)
+             destructive_evidence: dict[str, bool] = {}
+             drop_trigger_reasons: tuple[str, ...] = ()
+@@ -1442,8 +1507,9 @@ def _select_slot_players(
+                 ),
+             )
+             if selected_candidate is not None:
+-                assignments[selected_candidate.slot_id].append(fragment)
+-                assigned_fragment_ids.add(fragment.fragment_id)
++                if fragment.fragment_id not in owner_chosen:
++                    assignments[selected_candidate.slot_id].append(fragment)
++                    assigned_fragment_ids.add(fragment.fragment_id)
+                 action = "rebind"
+                 output_slot_id: int | None = selected_candidate.slot_id
+                 chosen_candidate = selected_candidate
+@@ -1483,6 +1549,9 @@ def _select_slot_players(
+                     "role_consistent": chosen_candidate.role_consistent,
+                     "motion_envelope_consistent": chosen_candidate.temporal_motion_consistent,
+                     "stitch_vetoed": chosen_candidate.stitch_vetoed,
++                    "registered_owner_continuity": (
++                        chosen_candidate.registered_owner_continuity
++                    ),
+                     "evidence_classes": (
+                         []
+                         if selected_candidate is not None
+@@ -1495,6 +1564,23 @@ def _select_slot_players(
+                     "reasons": (
+                         list(drop_trigger_reasons)
+                         if action == "drop"
++                        else [
++                            "registered_enrollment_source_owner",
++                            "identity_accept",
++                            "same_net_side",
++                            "court_presence_at_or_above_0_5",
++                            "fusion_at_or_above_0_5",
++                            "owner_priority_before_generic_binding",
++                            (
++                                "temporal_motion_advisory_pass"
++                                if chosen_candidate.temporal_motion_consistent
++                                else (
++                                    "temporal_motion_disagreement_preserved_without_fill"
++                                )
++                            ),
++                        ]
++                        if selected_candidate is not None
++                        and chosen_candidate.registered_owner_continuity
+                         else [
+                             reason
+                             for reason, applies in (
+@@ -1582,11 +1668,35 @@ def _select_slot_players(
+                 uid = _required_raw_uid(detection)
+                 if uid not in unbound_uids or uid in used_uids:
+                     continue
+-                accepted_slot_id = _uniquely_accepts_slot(
+-                    detection,
+-                    slots=slots,
+-                    config=config,
++                if (
++                    frame_court_evidence(detection.world_xy, config)
++                    < config.selection_score_min
++                ):
++                    continue
++                source_owner_slot_id = owner_slot_by_source.get(
++                    detection.source_track_id
+                 )
++                if source_owner_slot_id is not None:
++                    if source_owner_slot_id != slot.slot_id:
++                        continue
++                    accepted_slot_id = (
++                        slot.slot_id
++                        if open_set_decision(
++                            cosine_distance(
++                                slot.embedding_centroid,
++                                detection.embedding,
++                            ),
++                            config,
++                        )
++                        is OpenSetDecision.ACCEPT
++                        else None
++                    )
++                else:
++                    accepted_slot_id = _uniquely_accepts_slot(
++                        detection,
++                        slots=slots,
++                        config=config,
++                    )
+                 if accepted_slot_id == slot.slot_id:
+                     candidate_pool.append(detection)
+             recovered = recover_identity_conditioned_pool(
+@@ -1596,6 +1706,7 @@ def _select_slot_players(
+                 pool=candidate_pool,
+                 fps=fps,
+                 occupied_frames=measured_by_slot[slot.slot_id],
++                preferred_source_track_ids=owner_source_ids_by_slot[slot.slot_id],
+                 config=config,
+             )
+             for detection in recovered:
+@@ -1805,6 +1916,7 @@ def _binding_candidates(
+     stitch_vetoes: set[tuple[str, str]],
+     fps: float,
+     config: PlayerSelectionConfig,
++    owner_source_ids_by_slot: Mapping[int, frozenset[int]] | None = None,
+ ) -> list[_SlotCandidate]:
+     evidence = presence_evidence(fragment.detections, fps=fps, config=config)
+     role = _fragment_role(fragment)
+@@ -1831,17 +1943,36 @@ def _binding_candidates(
+             for assigned in assignments[slot.slot_id]
+         )
+         role_consistent = role == (slot.side, slot.role)
+-        registered_owner_continuity = any(
+-            fragment.fragment_id.startswith(f"{source_fragment_id}:residual-")
+-            for source_fragment_id in slot.source_fragment_ids
++        registered_owner_continuity = (
++            fragment.source_track_id
++            in (owner_source_ids_by_slot or {}).get(slot.slot_id, frozenset())
++            or any(
++                fragment.fragment_id.startswith(f"{source_fragment_id}:residual-")
++                for source_fragment_id in slot.source_fragment_ids
++            )
+         )
+-        feasible = (
++        common_feasible = (
+             centroid is not None
+             and open_set is OpenSetDecision.ACCEPT
+-            and role_consistent
+-            and temporal_motion_consistent
+-            and not stitch_vetoed
+             and score >= config.selection_score_min
++            and evidence.court_presence >= config.selection_score_min
++        )
++        frame_overlap = _fragment_overlaps_assignments(
++            fragment,
++            assignments[slot.slot_id],
++        )
++        feasible = common_feasible and (
++            (
++                registered_owner_continuity
++                and role[0] == slot.side
++                and not frame_overlap
++            )
++            or (
++                not registered_owner_continuity
++                and role_consistent
++                and temporal_motion_consistent
++                and not stitch_vetoed
++            )
+         )
+         candidates.append(
+             _SlotCandidate(
+@@ -2095,14 +2226,27 @@ def _fragment_inside_slot_motion_envelope(
+ ) -> bool:
+     if not assigned:
+         return True
++    if _fragment_overlaps_assignments(fragment, assigned):
++        return False
++    predecessors = [
++        other for other in assigned if other.end_frame < fragment.start_frame
++    ]
++    successors = [
++        other for other in assigned if fragment.end_frame < other.start_frame
++    ]
+     comparisons: list[tuple[SelectionDetection, SelectionDetection]] = []
+-    for other in assigned:
+-        if other.end_frame < fragment.start_frame:
+-            comparisons.append((other.detections[-1], fragment.detections[0]))
+-        elif fragment.end_frame < other.start_frame:
+-            comparisons.append((fragment.detections[-1], other.detections[0]))
+-        else:
+-            return False
++    if predecessors:
++        predecessor = max(
++            predecessors,
++            key=lambda item: (item.end_frame, item.fragment_id),
++        )
++        comparisons.append((predecessor.detections[-1], fragment.detections[0]))
++    if successors:
++        successor = min(
++            successors,
++            key=lambda item: (item.start_frame, item.fragment_id),
++        )
++        comparisons.append((fragment.detections[-1], successor.detections[0]))
+     return all(
+         (right.frame_idx - left.frame_idx) / fps > 0.0
+         and _point_distance(left.world_xy, right.world_xy)
+@@ -2111,6 +2255,19 @@ def _fragment_inside_slot_motion_envelope(
+     )
+ 
+ 
++def _fragment_overlaps_assignments(
++    fragment: TrackFragment,
++    assigned: Sequence[TrackFragment],
++) -> bool:
++    return any(
++        not (
++            other.end_frame < fragment.start_frame
++            or fragment.end_frame < other.start_frame
++        )
++        for other in assigned
++    )
++
++
+ def _detection_payload(detection: SelectionDetection, *, fps: float) -> dict[str, Any]:
+     if detection.interpolated and detection.raw_detection_uid is not None:
+         raise ValueError("interpolated geometry cannot claim a raw detection UID")
