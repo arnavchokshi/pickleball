@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 from pathlib import Path
 import sys
 
@@ -32,6 +34,10 @@ from threed.racketsport.audio_onsets_v2 import (  # noqa: E402
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build review-only v2 audio pop onsets from WAV or video.")
     parser.add_argument("--input", type=Path, required=True, help="Input WAV or video file.")
+    parser.add_argument(
+        "--frame-times", type=Path, required=True,
+        help="PTS JSON bound to the same input media; its exact bytes are SHA-256 recorded.",
+    )
     parser.add_argument("--out", type=Path, required=True, help="Output audio_onsets_v2.json path.")
     parser.add_argument("--clip", help="Optional clip id to store in the review artifact.")
     parser.add_argument("--frame-rate", type=float, help="Optional frame rate for nearest-frame onset metadata.")
@@ -50,6 +56,9 @@ def main() -> int:
     parser.add_argument("--duration-s", type=float, help="Optional video audio duration to analyze.")
     args = parser.parse_args()
 
+    media_sha256 = _sha256_file(args.input)
+    pts_source = _load_pts_source(args.frame_times, media_sha256=media_sha256)
+
     common = {
         "analysis_sample_rate_hz": args.analysis_sample_rate_hz,
         "bandpass_low_hz": args.bandpass_low_hz,
@@ -64,6 +73,8 @@ def main() -> int:
         "min_hfc_evidence": args.min_hfc_evidence,
         "clip": args.clip,
         "frame_rate": args.frame_rate,
+        "media_sha256": media_sha256,
+        "pts_source": pts_source,
     }
     if args.input.suffix.lower() == ".wav":
         payload = build_audio_onsets_v2_from_wav(args.input, **common)
@@ -77,6 +88,31 @@ def main() -> int:
     write_audio_onsets_v2(args.out, payload)
     print(f"wrote {args.out} ({payload['status']}, onsets={payload['summary']['onset_count']})")
     return 0
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _load_pts_source(path: Path, *, media_sha256: str) -> dict[str, str]:
+    raw = path.read_bytes()
+    payload = json.loads(raw)
+    if not isinstance(payload, dict):
+        raise ValueError("frame-times artifact must contain an object")
+    declared_media_sha256 = payload.get(
+        "source_video_sha256", payload.get("media_sha256")
+    )
+    if declared_media_sha256 != media_sha256:
+        raise ValueError("frame-times artifact is not SHA-bound to the input media")
+    return {
+        "path": str(path),
+        "sha256": hashlib.sha256(raw).hexdigest(),
+        "source_video_sha256": media_sha256,
+    }
 
 
 if __name__ == "__main__":

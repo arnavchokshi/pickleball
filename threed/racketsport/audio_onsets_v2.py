@@ -59,6 +59,8 @@ def build_audio_onsets_v2_from_wav(
     source_to_microphone_distance_m: float | None = None,
     distance_uncertainty_m: float = 0.0,
     speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
+    media_sha256: str | None = None,
+    pts_source: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build v2 review-only onset cues from a PCM WAV file."""
 
@@ -85,6 +87,8 @@ def build_audio_onsets_v2_from_wav(
         source_to_microphone_distance_m=source_to_microphone_distance_m,
         distance_uncertainty_m=distance_uncertainty_m,
         speed_of_sound_mps=speed_of_sound_mps,
+        media_sha256=media_sha256,
+        pts_source=pts_source,
     )
 
 
@@ -109,6 +113,8 @@ def build_audio_onsets_v2_from_video(
     source_to_microphone_distance_m: float | None = None,
     distance_uncertainty_m: float = 0.0,
     speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
+    media_sha256: str | None = None,
+    pts_source: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build v2 onset cues from a video's first audio stream, or a blocker."""
 
@@ -151,6 +157,8 @@ def build_audio_onsets_v2_from_video(
             source_to_microphone_distance_m=source_to_microphone_distance_m,
             distance_uncertainty_m=distance_uncertainty_m,
             speed_of_sound_mps=speed_of_sound_mps,
+            media_sha256=media_sha256,
+            pts_source=pts_source,
         )
 
     samples = _decode_video_audio_mono(
@@ -188,6 +196,8 @@ def build_audio_onsets_v2_from_video(
         source_to_microphone_distance_m=source_to_microphone_distance_m,
         distance_uncertainty_m=distance_uncertainty_m,
         speed_of_sound_mps=speed_of_sound_mps,
+        media_sha256=media_sha256,
+        pts_source=pts_source,
     )
 
 
@@ -215,6 +225,8 @@ def build_audio_onsets_v2_from_samples(
     source_to_microphone_distance_m: float | None = None,
     distance_uncertainty_m: float = 0.0,
     speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
+    media_sha256: str | None = None,
+    pts_source: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build v2 onset cues from mono floating-point samples in [-1, 1]."""
 
@@ -297,6 +309,8 @@ def build_audio_onsets_v2_from_samples(
         source_to_microphone_distance_m=source_to_microphone_distance_m,
         distance_uncertainty_m=distance_uncertainty_m,
         speed_of_sound_mps=speed_of_sound_mps,
+        media_sha256=media_sha256,
+        pts_source=pts_source,
     )
 
 
@@ -423,6 +437,8 @@ def _artifact(
     source_to_microphone_distance_m: float | None = None,
     distance_uncertainty_m: float = 0.0,
     speed_of_sound_mps: float = DEFAULT_SPEED_OF_SOUND_MPS,
+    media_sha256: str | None = None,
+    pts_source: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     ordered_onsets, timing = finalize_audio_onset_timing(
         onsets,
@@ -431,6 +447,10 @@ def _artifact(
         speed_of_sound_mps=speed_of_sound_mps,
     )
     enriched_onsets = _attach_nearest_frames(ordered_onsets, frame_rate=frame_rate)
+    identity = _dependency_identity_fields(
+        media_sha256=media_sha256,
+        pts_source=pts_source,
+    )
     return {
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
@@ -440,6 +460,7 @@ def _artifact(
         **({"frame_rate": float(frame_rate)} if frame_rate is not None else {}),
         "source": source,
         "source_path": str(source_path),
+        **identity,
         "sample_rate_hz": sample_rate_hz,
         "not_gate_verified": True,
         "trusted_for_contact": False,
@@ -455,6 +476,31 @@ def _artifact(
         "timing": timing,
         "onsets": enriched_onsets,
     }
+
+
+def _dependency_identity_fields(
+    *, media_sha256: str | None, pts_source: Mapping[str, Any] | None
+) -> dict[str, Any]:
+    """Return additive media/PTS identities for SHA-bound downstream consumers."""
+
+    identity: dict[str, Any] = {}
+    if media_sha256 is not None:
+        if not isinstance(media_sha256, str) or len(media_sha256) != 64:
+            raise ValueError("media_sha256 must be a 64-character SHA-256 digest")
+        identity.update({
+            "media_sha256": media_sha256,
+            "source_video_sha256": media_sha256,
+        })
+    if pts_source is not None:
+        pts_identity = dict(pts_source)
+        pts_sha256 = pts_identity.get("sha256")
+        if not isinstance(pts_sha256, str) or len(pts_sha256) != 64:
+            raise ValueError("pts_source.sha256 must be a 64-character SHA-256 digest")
+        identity.update({
+            "pts_source": pts_identity,
+            "frame_times_sha256": pts_sha256,
+        })
+    return identity
 
 
 def _attach_nearest_frames(onsets: list[dict[str, Any]], *, frame_rate: float | None) -> list[dict[str, Any]]:

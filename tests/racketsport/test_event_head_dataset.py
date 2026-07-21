@@ -4,17 +4,22 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
 import torch
+import torch.nn.functional as F
 
 from threed.racketsport.event_head.datasets import (
     BOUNCE,
+    DatasetFormatError,
     EXPECTED_UNIVERSE,
     EventWindowDataset,
+    WindowSpec,
     build_public_manifest,
     decode_video_frames,
     load_shuttleset_rows,
     manifest_windows,
     parse_jhong_clip_name,
+    validate_current_manifest,
 )
 
 
@@ -87,6 +92,113 @@ def test_manifest_windows_slide_over_full_row_and_union_labels() -> None:
     assert windows[1].events == ((38, BOUNCE),)
     assert windows[2].events == ((34, BOUNCE),)
     assert all(window.validity_mask == (True, True, False) for window in windows)
+
+
+def test_schema_v2_unknown_mask_reaches_frame_loss_mask_not_background() -> None:
+    video = ROOT / "tests/racketsport/fixtures/event_head/tiny.avi"
+    row = {
+        "source": "synthetic_teacher",
+        "source_video": "fixture",
+        "video_path": str(video),
+        "media_present": True,
+        "split": "train",
+        "fps": 10.0,
+        "source_start_frame": 0,
+        "num_frames": 3,
+        "events": [{"frame": 2, "class": "HIT"}],
+        "loss_validity_mask": [True, True, True],
+        "unknown_frame_mask": [False, True, False],
+        "license_posture": "TEST_ONLY",
+    }
+    manifest = {
+        "schema_version": 2,
+        "artifact_type": "event_head_synthetic_teacher_dataset_manifest",
+        "classes": {"0": "background", "1": "HIT", "2": "BOUNCE"},
+        "rows": [row],
+    }
+
+    validate_current_manifest(manifest)
+    window = manifest_windows(
+        manifest, split="train", limit=1, window_frames=3, stride_frames=3
+    )[0]
+    sample = EventWindowDataset([window], image_size=16)[0]
+
+    assert sample["targets"].tolist() == [0, 0, 1]
+    assert sample["frame_loss_mask"].tolist() == [True, False, True]
+    assert window.unknown_frame_mask == (False, True, False)
+
+    logits = torch.zeros((1, 3, 3), requires_grad=True)
+    per_frame = F.cross_entropy(
+        logits.flatten(0, 1), sample["targets"], reduction="none"
+    )
+    per_frame[sample["frame_loss_mask"]].mean().backward()
+    assert torch.count_nonzero(logits.grad[0, 1]).item() == 0
+    assert torch.count_nonzero(logits.grad[0, 0]).item() > 0
+
+
+def test_schema_v1_without_unknown_mask_remains_additively_compatible() -> None:
+    video = ROOT / "tests/racketsport/fixtures/event_head/tiny.avi"
+    manifest = {
+        "schema_version": 1,
+        "artifact_type": "event_head_synthetic_owner_dataset_manifest",
+        "classes": {"0": "background", "1": "HIT", "2": "BOUNCE"},
+        "rows": [{
+            "source": "owner",
+            "source_video": "fixture",
+            "video_path": str(video),
+            "media_present": True,
+            "split": "train",
+            "fps": 10.0,
+            "source_start_frame": 0,
+            "num_frames": 3,
+            "events": [],
+            "loss_validity_mask": [True, True, True],
+            "license_posture": "TEST_ONLY",
+        }],
+    }
+
+    validate_current_manifest(manifest)
+    sample = EventWindowDataset([
+        WindowSpec(
+            video_path=video,
+            start_frame=0,
+            num_frames=3,
+            fps=10.0,
+            events=(),
+            validity_mask=(True, True, True),
+            source="owner",
+            license_posture="TEST_ONLY",
+        )
+    ], image_size=16)[0]
+    assert sample["frame_loss_mask"].tolist() == [True, True, True]
+
+
+def test_schema_v2_requires_one_boolean_unknown_entry_per_frame() -> None:
+    base_row = {
+        "source": "synthetic_teacher",
+        "source_video": "fixture",
+        "video_path": "/tmp/fixture.mp4",
+        "media_present": True,
+        "split": "train",
+        "fps": 30.0,
+        "source_start_frame": 0,
+        "num_frames": 3,
+        "events": [],
+        "loss_validity_mask": [True, True, True],
+        "license_posture": "TEST_ONLY",
+    }
+    manifest = {
+        "schema_version": 2,
+        "artifact_type": "event_head_synthetic_teacher_dataset_manifest",
+        "classes": {"0": "background", "1": "HIT", "2": "BOUNCE"},
+        "rows": [base_row],
+    }
+    with pytest.raises(DatasetFormatError, match="requires unknown_frame_mask"):
+        validate_current_manifest(manifest)
+
+    base_row["unknown_frame_mask"] = [False, True]
+    with pytest.raises(DatasetFormatError, match="one bool per source frame"):
+        validate_current_manifest(manifest)
 
 
 def test_shuttleset_glob_ignores_appledouble_sidecars(tmp_path: Path) -> None:

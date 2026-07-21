@@ -1,0 +1,13 @@
+# w1a_abc_traintruth_20260721 — A/B/C blockers 1+2+5: protected leak, pseudo-loss, executable gate
+
+Codex gpt-5.6-sol xhigh. From the launch gate (runs/lanes/ultra_review_abc_gate_20260720/log.txt) fix EXACTLY:
+1. PROTECTED-WINDOW LEAK: build_owner_event_manifest.py:111 asserts center-distance 0.75s; must assert NO protected-seed event falls inside ANY 64-frame training window (window-overlap exclusion). The 2 identified leaking windows (els20260715_004 train [861,925) w/ protected 911; els20260715_052 [1104,1168) w/ protected 1162) must be excluded/trimmed; rebuild runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json; add the overlap test using the protected seed file (READ-only, eval-only — reading its frame indexes for exclusion is the intended protective use).
+2. PSEUDO-LOSS NORMALIZATION: finetune_event_head.py:454/:491 caps scalar pseudo weights BEFORE class/frame weighting → measured 83.3% pseudo influence at nominal 1:1. Fix: cap the EFFECTIVE (post class/frame-weighted) aggregate pseudo loss at the human aggregate per batch. Add an adversarial test reproducing the 83.3% case and asserting <=50% post-fix.
+3. EXECUTABLE DECISION GATE: new scripts/racketsport/abc_decision_gate.py computing from the three arms x seeds eval jsons: median(B−A) macro-F1@±2 >= +0.10, all seeds non-negative, B>C, per-class regression <=0.03, negFP <=2/22, full-video rate 0.3-1.0/s → verdict JSON. Also: equal-step guarantee (finetune_event_head.py:897 wall-exit must not produce unequal-step arms — assert final step count parity or fail the arm). Unit-test the gate with synthetic arm results.
+## HARD RULES
+- NO commits/branches/pushes (manager commits after ultra review). VERIFIED=0. Honest reporting; misses are misses.
+- **NO JUDGE PEEKING (new standing rule after a judge-contamination catch): develop against fixtures/synthetic cases ONLY. You may NOT run any GT scorer / frozen gate / protected eval during development. ONE final scored run happens later, by the manager, on frozen code. A log showing peek-tweak-rescore = automatic rejection.**
+- Focused tests + wide suite (MPLBACKEND=Agg), real exit codes, attribute failures. Artifacts under YOUR lane dir.
+- CROSS-SIGNAL ROW required in your report (what you consume/feed — North Star §3.1).
+- Concurrent file-disjoint lanes are live — touch ONLY your fenced files.
+FENCE: scripts/racketsport/build_owner_event_manifest.py, scripts/racketsport/finetune_event_head.py, NEW abc_decision_gate.py, their tests, runs/lanes/ball_event_abc_20260720/inputs/ (rebuild), lane dir. NOT: datasets.py, build_pbvision_event_corpus.py (w1b owns), player_selection (w2a), lane_vm_startup/coaching (w3a).

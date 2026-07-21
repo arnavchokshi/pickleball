@@ -31,6 +31,12 @@ EXPECTED_UNIVERSE = {"jhong93_spot": 33_791, "openttgames": 4_271, "shuttleset":
 DEFAULT_WINDOW_STRIDE = 32
 SPLIT_RATIOS = {"train": 0.70, "val": 0.15, "test": 0.15}
 _CLIP_RE = re.compile(r"^(?P<base>.+)_(?P<start>\d+)_(?P<end>\d+)$")
+CURRENT_MANIFEST_CLASSES = {"0": "background", "1": "HIT", "2": "BOUNCE"}
+CURRENT_ROW_FIELDS = frozenset({
+    "source", "source_video", "video_path", "media_present", "split", "fps",
+    "source_start_frame", "num_frames", "events", "loss_validity_mask",
+    "license_posture",
+})
 
 
 class DatasetFormatError(ValueError):
@@ -47,6 +53,84 @@ class WindowSpec:
     validity_mask: tuple[bool, bool, bool]
     source: str
     license_posture: str
+    unknown_frame_mask: tuple[bool, ...] = ()
+
+
+def validate_current_manifest(manifest: dict[str, Any]) -> None:
+    """Validate the shared event-head manifest/row contract without decoding media."""
+
+    artifact_type = str(manifest.get("artifact_type", ""))
+    schema_version = manifest.get("schema_version")
+    if (
+        schema_version not in {1, 2}
+        or not artifact_type.startswith("event_head_")
+        or not artifact_type.endswith("dataset_manifest")
+        or manifest.get("classes") != CURRENT_MANIFEST_CLASSES
+        or not isinstance(manifest.get("rows"), list)
+    ):
+        raise DatasetFormatError("manifest does not use the current event-head dataset schema")
+    for index, row in enumerate(manifest["rows"]):
+        if not isinstance(row, dict):
+            raise DatasetFormatError(f"row {index} must be an object")
+        missing = sorted(CURRENT_ROW_FIELDS - set(row))
+        if missing:
+            raise DatasetFormatError(f"row {index} is missing current-schema fields: {missing}")
+        if not isinstance(row["media_present"], bool):
+            raise DatasetFormatError(f"row {index} media_present must be boolean")
+        if row["split"] not in {"train", "val", "test"}:
+            raise DatasetFormatError(f"row {index} has invalid split {row['split']!r}")
+        mask = row["loss_validity_mask"]
+        if (
+            not isinstance(mask, list) or len(mask) != len(CLASS_NAMES)
+            or not all(isinstance(value, bool) for value in mask) or not mask[BACKGROUND]
+        ):
+            raise DatasetFormatError(f"row {index} has invalid loss_validity_mask")
+        if not isinstance(row["events"], list):
+            raise DatasetFormatError(f"row {index} events must be an array")
+        if not row["media_present"]:
+            if row["video_path"] is not None:
+                raise DatasetFormatError(f"row {index} absent media must have video_path=null")
+            # Schema-v1 public inventories historically carry absent-media rows
+            # with fps/num_frames=null. Preserve that contract while requiring
+            # schema v2 to be fully frame-addressable for its per-frame mask.
+            if schema_version == 1:
+                continue
+        elif not isinstance(row["video_path"], str) or not row["video_path"]:
+            raise DatasetFormatError(f"row {index} media-present video_path must be nonempty")
+        try:
+            fps = float(row["fps"])
+            source_start_frame = int(row["source_start_frame"])
+            num_frames = int(row["num_frames"])
+        except (TypeError, ValueError) as exc:
+            raise DatasetFormatError(f"row {index} has invalid frame metadata") from exc
+        if not np.isfinite(fps) or fps <= 0 or source_start_frame < 0 or num_frames < 1:
+            raise DatasetFormatError(f"row {index} has invalid frame metadata")
+        unknown = row.get("unknown_frame_mask")
+        if schema_version == 2 and unknown is None:
+            raise DatasetFormatError(f"row {index} schema v2 requires unknown_frame_mask")
+        if unknown is not None and (
+            not isinstance(unknown, list)
+            or len(unknown) != num_frames
+            or not all(isinstance(value, bool) for value in unknown)
+        ):
+            raise DatasetFormatError(
+                f"row {index} unknown_frame_mask must be one bool per source frame"
+            )
+        seen: set[tuple[int, str]] = set()
+        for event_index, event in enumerate(row["events"]):
+            if not isinstance(event, dict) or event.get("class") not in {"HIT", "BOUNCE"}:
+                raise DatasetFormatError(
+                    f"row {index} event {event_index} must be HIT or BOUNCE"
+                )
+            frame = event.get("frame")
+            if isinstance(frame, bool) or not isinstance(frame, int) or not 0 <= frame < num_frames:
+                raise DatasetFormatError(
+                    f"row {index} event {event_index} frame is outside num_frames"
+                )
+            key = (frame, str(event["class"]))
+            if key in seen:
+                raise DatasetFormatError(f"row {index} contains duplicate event {key}")
+            seen.add(key)
 
 
 def sha256_file(path: Path) -> str:
@@ -128,6 +212,8 @@ class EventWindowDataset(Dataset[dict[str, Any]]):
 
     def __getitem__(self, index: int) -> dict[str, Any]:
         spec = self.windows[index]
+        if spec.unknown_frame_mask and len(spec.unknown_frame_mask) != spec.num_frames:
+            raise DatasetFormatError("window unknown_frame_mask length mismatch")
         absolute = range(spec.start_frame, spec.start_frame + spec.num_frames)
         frames = decode_video_frames(spec.video_path, list(absolute), image_size=self.image_size)
         targets = torch.zeros(spec.num_frames, dtype=torch.long)
@@ -138,6 +224,10 @@ class EventWindowDataset(Dataset[dict[str, Any]]):
             "frames": frames,
             "targets": targets,
             "validity_mask": torch.tensor(spec.validity_mask, dtype=torch.bool),
+            "frame_loss_mask": ~torch.tensor(
+                spec.unknown_frame_mask or (False,) * spec.num_frames,
+                dtype=torch.bool,
+            ),
             "source": spec.source,
             "license_posture": spec.license_posture,
         }
@@ -390,6 +480,11 @@ def manifest_windows(
                 num_frames=window_frames, fps=float(row["fps"]), events=local_events,
                 validity_mask=tuple(row["loss_validity_mask"]), source=row["source"],
                 license_posture=row["license_posture"],
+                unknown_frame_mask=tuple(
+                    row.get("unknown_frame_mask", [False] * row_frames)[
+                        local_start:local_start + window_frames
+                    ]
+                ),
             ))
     return windows
 
@@ -424,6 +519,11 @@ def manifest_event_centered_windows(
             num_frames=window_frames, fps=float(row["fps"]), events=local_events,
             validity_mask=tuple(row["loss_validity_mask"]), source=row["source"],
             license_posture=row["license_posture"],
+            unknown_frame_mask=tuple(
+                row.get("unknown_frame_mask", [False] * int(row["num_frames"]))[
+                    local_start:local_start + window_frames
+                ]
+            ),
         ))
         if len(windows) >= limit:
             break

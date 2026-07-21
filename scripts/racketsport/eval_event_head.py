@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
-"""Evaluate an unpromoted event-head checkpoint on public or protected data."""
+"""Evaluate an unpromoted event-head checkpoint on public, owner-val, or protected data."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 from collections import defaultdict
 from pathlib import Path
 from statistics import mean
-from typing import Any
+from typing import Any, Mapping, Sequence
 
 import cv2
 import torch
@@ -20,20 +21,26 @@ if str(ROOT) not in sys.path:
 
 from threed.racketsport.event_head.datasets import (
     BOUNCE, HIT, build_public_manifest, decode_video_frames,
-    manifest_event_centered_windows,
+    manifest_event_centered_windows, preprocess_rgb, validate_current_manifest,
 )
 from threed.racketsport.event_head.matcher import Event, event_metrics, greedy_match, peak_pick
 from threed.racketsport.event_head.model import load_checkpoint
 
 PROTECTED_LABELS = ROOT / "runs/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json"
 PROTECTED_ANSWERS = ROOT / "runs/lanes/event_bootstrap_20260713/owner_spot_check_results_20260715.json"
+DEFAULT_OWNER_MANIFEST = (
+    ROOT / "runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json"
+)
+EXPECTED_OWNER_SELECTION_ROWS = 41
+EXPECTED_OWNER_NEGATIVE_ROWS = 22
 
 
 def _predict(
     model: torch.nn.Module, frames: torch.Tensor, *, threshold: float,
 ) -> tuple[list[Event], dict[str, Any]]:
     with torch.no_grad():
-        logits = model(frames.unsqueeze(0))[0]
+        device = next(model.parameters()).device
+        logits = model(frames.unsqueeze(0).to(device))[0]
     probabilities = logits.softmax(-1)
     finite = torch.isfinite(probabilities)
     max_probability_by_class: dict[str, float | None] = {}
@@ -201,14 +208,255 @@ def eval_protected(model: torch.nn.Module, *, image_size: int, threshold: float)
     }
 
 
+def _nearest_rank_percentile(values: Sequence[float], percentile: float) -> float:
+    if not values:
+        raise ValueError("percentile requires at least one value")
+    if not 0.0 < percentile <= 1.0:
+        raise ValueError("percentile must be in (0,1]")
+    ordered = sorted(float(value) for value in values)
+    return ordered[max(0, math.ceil(percentile * len(ordered)) - 1)]
+
+
+def owner_val_metrics_from_predictions(
+    manifest: dict[str, Any],
+    predictions_by_row: Mapping[str, Sequence[Event]],
+    *,
+    arm: str,
+    seed: int,
+    completed_steps: int,
+    target_steps: int,
+    full_video_event_count: int,
+    full_video_duration_s: float,
+) -> dict[str, Any]:
+    """Aggregate the frozen owner-41 gate fields from deterministic predictions."""
+
+    validate_current_manifest(manifest)
+    rows = [row for row in manifest["rows"] if row["split"] == "val"]
+    if len(rows) != EXPECTED_OWNER_SELECTION_ROWS:
+        raise ValueError(
+            f"owner-val requires exactly {EXPECTED_OWNER_SELECTION_ROWS} val rows, "
+            f"got {len(rows)}"
+        )
+    if str(arm).upper() not in {"A", "B", "C"}:
+        raise ValueError("owner-val arm must be A, B, or C")
+    if isinstance(seed, bool) or seed < 0:
+        raise ValueError("owner-val seed must be a nonnegative integer")
+    if completed_steps < 0 or target_steps < 1:
+        raise ValueError("owner-val step counts are invalid")
+    if full_video_event_count < 0 or not math.isfinite(full_video_duration_s) or full_video_duration_s <= 0.0:
+        raise ValueError("owner-val full-video rate inputs are invalid")
+
+    row_ids = [str(row.get("label_id", row.get("video"))) for row in rows]
+    if len(set(row_ids)) != len(row_ids) or set(predictions_by_row) != set(row_ids):
+        raise ValueError("owner-val predictions must cover each val row exactly once")
+
+    clips: list[dict[str, Any]] = []
+    row_summaries: list[dict[str, Any]] = []
+    negative_false_positives = 0
+    negative_rows = 0
+    timing_errors_frames: list[float] = []
+    for row_id, row in zip(row_ids, rows, strict=True):
+        predictions = list(predictions_by_row[row_id])
+        ground_truth = [
+            Event(int(item["frame"]), HIT if item["class"] == "HIT" else BOUNCE)
+            for item in row["events"]
+        ]
+        clip = {
+            "fps": float(row["fps"]),
+            "predictions": predictions,
+            "ground_truth": ground_truth,
+        }
+        clips.append(clip)
+        is_negative = not ground_truth
+        if is_negative:
+            negative_rows += 1
+            negative_false_positives += int(bool(predictions))
+        for class_id in (HIT, BOUNCE):
+            matched = greedy_match(
+                [event for event in predictions if event.class_id == class_id],
+                [event for event in ground_truth if event.class_id == class_id],
+                tolerance_frames=2,
+            )
+            timing_errors_frames.extend(
+                abs(pred.frame - gt.frame) for pred, gt in matched["pairs"]
+            )
+        row_summaries.append({
+            "row_id": row_id,
+            "negative": is_negative,
+            "prediction_count": len(predictions),
+            "ground_truth_count": len(ground_truth),
+        })
+    if negative_rows != EXPECTED_OWNER_NEGATIVE_ROWS:
+        raise ValueError(
+            f"owner-val requires exactly {EXPECTED_OWNER_NEGATIVE_ROWS} negative rows, "
+            f"got {negative_rows}"
+        )
+
+    tolerance_sweep = [
+        _aggregate_clip_metrics(clips, tolerance) for tolerance in (1, 2)
+    ]
+    tolerance_two = tolerance_sweep[-1]["per_class"]
+    timing_p90 = (
+        _nearest_rank_percentile(timing_errors_frames, 0.90)
+        if timing_errors_frames
+        else float(manifest.get("config", {}).get("window_frames", 64))
+    )
+    rate = full_video_event_count / full_video_duration_s
+    return {
+        "artifact_type": "event_head_abc_arm_eval",
+        "mode": "owner_validation_41",
+        "selection_scope": "owner_validation_41",
+        "selection_rows": len(rows),
+        "protected_50_touched": False,
+        "arm": str(arm).upper(),
+        "seed": int(seed),
+        "completed_steps": int(completed_steps),
+        "target_steps": int(target_steps),
+        "negative_rows": negative_rows,
+        "negative_false_positives": negative_false_positives,
+        "timing_error_p90_frames": timing_p90,
+        "timing_error_p90_policy": "nearest_rank_absolute_error_at_tolerance_2; no_matches=window_frames",
+        "full_video_events_per_second": rate,
+        "full_video_event_count": full_video_event_count,
+        "full_video_duration_s": full_video_duration_s,
+        "macro_f1_at_2": mean(
+            float(tolerance_two[name]["f1"]) for name in ("HIT", "BOUNCE")
+        ),
+        "tolerance_sweep": tolerance_sweep,
+        "row_summaries": row_summaries,
+    }
+
+
+def _predict_full_video_rate(
+    model: torch.nn.Module,
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    image_size: int,
+    threshold: float,
+    window_frames: int,
+) -> tuple[int, float, list[dict[str, Any]]]:
+    """Cover each distinct owner-val source video once in fixed non-overlapping windows."""
+
+    sources: dict[str, Path] = {}
+    for row in rows:
+        source_video = str(row["source_video"])
+        video_path = Path(str(row["video_path"]))
+        previous = sources.setdefault(source_video, video_path)
+        if previous != video_path:
+            raise ValueError(f"owner-val source {source_video} maps to multiple media paths")
+
+    total_events = 0
+    total_duration_s = 0.0
+    summaries: list[dict[str, Any]] = []
+    for source_video, video_path in sorted(sources.items()):
+        capture = cv2.VideoCapture(str(video_path))
+        if not capture.isOpened():
+            raise FileNotFoundError(f"cannot open owner-val full video: {video_path}")
+        fps = float(capture.get(cv2.CAP_PROP_FPS))
+        if not math.isfinite(fps) or fps <= 0.0:
+            capture.release()
+            raise ValueError(f"owner-val full video has invalid FPS: {video_path}")
+        processed = 0
+        event_count = 0
+        batch: list[torch.Tensor] = []
+        try:
+            while True:
+                ok, frame_bgr = capture.read()
+                if not ok:
+                    break
+                batch.append(preprocess_rgb(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB), image_size))
+                processed += 1
+                if len(batch) == window_frames:
+                    predictions, _ = _predict(model, torch.stack(batch), threshold=threshold)
+                    event_count += len(predictions)
+                    batch.clear()
+            if batch:
+                predictions, _ = _predict(model, torch.stack(batch), threshold=threshold)
+                event_count += len(predictions)
+        finally:
+            capture.release()
+        if processed == 0:
+            raise ValueError(f"owner-val full video decoded zero frames: {video_path}")
+        duration_s = processed / fps
+        total_events += event_count
+        total_duration_s += duration_s
+        summaries.append({
+            "source_video": source_video,
+            "video_path": str(video_path),
+            "frames": processed,
+            "fps": fps,
+            "duration_s": duration_s,
+            "event_count": event_count,
+            "events_per_second": event_count / duration_s,
+            "window_policy": "non_overlapping_checkpoint_windows_covering_every_frame_once",
+        })
+    return total_events, total_duration_s, summaries
+
+
+def eval_owner_val(
+    model: torch.nn.Module,
+    *,
+    image_size: int,
+    threshold: float,
+    window_frames: int,
+    manifest: dict[str, Any],
+    arm: str,
+    seed: int,
+    completed_steps: int,
+    target_steps: int,
+) -> dict[str, Any]:
+    validate_current_manifest(manifest)
+    rows = [row for row in manifest["rows"] if row["split"] == "val"]
+    predictions_by_row: dict[str, list[Event]] = {}
+    diagnostics_by_row: dict[str, dict[str, Any]] = {}
+    for row in rows:
+        if int(row["num_frames"]) != window_frames:
+            raise ValueError("owner-val row context must match checkpoint window_frames")
+        row_id = str(row.get("label_id", row.get("video")))
+        absolute_frames = range(
+            int(row["source_start_frame"]),
+            int(row["source_start_frame"]) + int(row["num_frames"]),
+        )
+        frames = decode_video_frames(
+            Path(row["video_path"]), list(absolute_frames), image_size=image_size
+        )
+        predictions, diagnostics = _predict(model, frames, threshold=threshold)
+        predictions_by_row[row_id] = predictions
+        diagnostics_by_row[row_id] = diagnostics
+    full_count, full_duration_s, full_summaries = _predict_full_video_rate(
+        model,
+        rows,
+        image_size=image_size,
+        threshold=threshold,
+        window_frames=window_frames,
+    )
+    metrics = owner_val_metrics_from_predictions(
+        manifest,
+        predictions_by_row,
+        arm=arm,
+        seed=seed,
+        completed_steps=completed_steps,
+        target_steps=target_steps,
+        full_video_event_count=full_count,
+        full_video_duration_s=full_duration_s,
+    )
+    metrics["full_video_summaries"] = full_summaries
+    for summary in metrics["row_summaries"]:
+        summary.update(diagnostics_by_row[summary["row_id"]])
+    return metrics
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkpoint", type=Path, required=True)
-    parser.add_argument("--mode", choices=("public", "protected-seed"), required=True)
+    parser.add_argument("--mode", choices=("public", "owner-val", "protected-seed"), required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--threshold", type=float, default=0.5)
     parser.add_argument("--window-frames", type=int)
     parser.add_argument("--max-clips", type=int, default=50)
+    parser.add_argument("--device", choices=("cpu", "cuda", "mps"), default="cpu")
+    parser.add_argument("--arm", choices=("A", "B", "C"))
+    parser.add_argument("--seed", type=int)
     parser.add_argument(
         "--manifest", type=Path,
         help="Frozen public manifest; defaults to rebuilding the current public corpus",
@@ -217,22 +465,51 @@ def main() -> int:
     if args.out.suffix != ".json":
         parser.error("evaluation output must be a .json metrics artifact; training artifacts are forbidden")
     try:
-        model, payload = load_checkpoint(args.checkpoint)
+        model, payload = load_checkpoint(args.checkpoint, device=args.device)
         image_size = int(payload.get("image_size", 224))
         window_frames = _resolve_window_frames(payload, args.window_frames)
         if args.max_clips < 1:
             raise ValueError("--max-clips must be positive")
-        manifest = (
-            json.loads(args.manifest.read_text()) if args.manifest is not None
-            else build_public_manifest(ROOT / "data/event_public_20260713")
-        )
-        metrics = (eval_public(
-                       model, image_size=image_size, threshold=args.threshold,
-                       window_frames=window_frames, max_clips=args.max_clips,
-                       manifest=manifest,
-                   )
-                   if args.mode == "public" else
-                   eval_protected(model, image_size=image_size, threshold=args.threshold))
+        if args.mode == "public":
+            manifest = (
+                json.loads(args.manifest.read_text()) if args.manifest is not None
+                else build_public_manifest(ROOT / "data/event_public_20260713")
+            )
+            metrics = eval_public(
+                model, image_size=image_size, threshold=args.threshold,
+                window_frames=window_frames, max_clips=args.max_clips,
+                manifest=manifest,
+            )
+        elif args.mode == "owner-val":
+            if args.arm is None or args.seed is None:
+                raise ValueError("owner-val requires --arm and --seed")
+            manifest_path = args.manifest or DEFAULT_OWNER_MANIFEST
+            manifest = json.loads(manifest_path.read_text())
+            config = payload.get("config")
+            if not isinstance(config, Mapping):
+                raise ValueError("owner-val checkpoint lacks fine-tune config")
+            completed_steps = int(payload.get("completed_steps", -1))
+            target_steps = int(config.get("steps", -1))
+            checkpoint_seed = int(config.get("seed", -1))
+            if checkpoint_seed != args.seed:
+                raise ValueError(
+                    f"owner-val --seed={args.seed} disagrees with checkpoint seed={checkpoint_seed}"
+                )
+            metrics = eval_owner_val(
+                model,
+                image_size=image_size,
+                threshold=args.threshold,
+                window_frames=window_frames,
+                manifest=manifest,
+                arm=args.arm,
+                seed=args.seed,
+                completed_steps=completed_steps,
+                target_steps=target_steps,
+            )
+        else:
+            metrics = eval_protected(
+                model, image_size=image_size, threshold=args.threshold
+            )
         result = {
             "schema_version": 1, "artifact_type": "event_head_eval_metrics",
             "verified": False, "checkpoint": str(args.checkpoint), "threshold": args.threshold,

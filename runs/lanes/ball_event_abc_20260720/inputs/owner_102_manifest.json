@@ -1,0 +1,4136 @@
+{
+  "artifact_type": "event_head_owner_reviewed_dataset_manifest",
+  "classes": {
+    "0": "background",
+    "1": "HIT",
+    "2": "BOUNCE"
+  },
+  "config": {
+    "protected_exclusion_policy": "no_protected_frame_in_half_open_training_window",
+    "split_unit": "original_source_video_id",
+    "train_source_groups": [
+      "73VurrTKCZ8",
+      "Ezz6HDNHlnk",
+      "_L0HVmAlCQI",
+      "wBu8bC4OfUY"
+    ],
+    "validation_source_groups": [
+      "HyUqT7zFiwk",
+      "zwCtH_i1_S4"
+    ],
+    "window_frames": 64
+  },
+  "decode_policy": "on_the_fly_no_frame_cache",
+  "ground_truth": true,
+  "image_size": 224,
+  "inputs": {
+    "protected_inventory_sha256": "b7f2386d91ba4564e52de1e87eb7907990f539e79e503587aeff380806ee4e60",
+    "results": "data/event_labels_owner_20260719/results_batch1_102rows.json",
+    "results_sha256": "54538919adc87c94eb7a7885131bdff89b1680da30a846ab284cd21c585fbc11",
+    "session_manifest": "runs/lanes/owner_event_labels_20260715/session_manifest.json",
+    "session_manifest_sha256": "5843b9b1f387d31ef65d165fdb8d158449256ff423aec48679e8abba70bce6b2"
+  },
+  "license_posture": "OWNER_REVIEWED_INTERNAL",
+  "protected_seed_check": {
+    "adjusted_training_windows": 2,
+    "checked_training_windows": 61,
+    "identity_fields": [
+      "video_sha256",
+      "clip_id",
+      "resolved_video_path"
+    ],
+    "interval_semantics": "[source_start_frame, source_start_frame + num_frames)",
+    "overlap_rows": 0,
+    "policy": "no_protected_frame_in_half_open_training_window",
+    "status": "pass",
+    "window_frames": 64
+  },
+  "rows": [
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_001",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": -0.0667,
+        "x": 0.4479,
+        "y": 0.5585
+      },
+      "review_anchor_pts_s": 79.599966667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 79.666666667,
+      "source_start_frame": 2356,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_001",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 23.976023976,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_002",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.0,
+        "x": 0.1354,
+        "y": 0.5585
+      },
+      "review_anchor_pts_s": 56.389666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 56.389666667,
+      "source_start_frame": 1320,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_002",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0002.mp4",
+      "video_sha256": "6ed769d5464d89fee54e29603605cdcac53c3ade29aa1b306f4b1eca50228650"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_003",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 843.966666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 843.966666667,
+      "source_start_frame": 25287,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_003",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0002",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 46
+        }
+      ],
+      "fps": 23.976023976,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_004",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.2085,
+        "x": 0.4422,
+        "y": 0.7017
+      },
+      "review_anchor_pts_s": 37.2455,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 37.037,
+      "source_start_frame": 847,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_004",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0002.mp4",
+      "video_sha256": "6ed769d5464d89fee54e29603605cdcac53c3ade29aa1b306f4b1eca50228650"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0004",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_005",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 215.137614679,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 215.137614679,
+      "source_start_frame": 5126,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_005",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.mp4",
+      "video_sha256": "05fe6312108825bdd51a812dac6dd5a2450f2ee1e20aca62197569b233e906a2"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_006",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 800.033333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 800.033333333,
+      "source_start_frame": 23969,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_006",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_007",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.3667,
+        "x": 0.5767,
+        "y": 0.5023
+      },
+      "review_anchor_pts_s": 42.9667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 42.6,
+      "source_start_frame": 1257,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_007",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0004",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 23.976023976,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_008",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.0,
+        "x": 0.4659,
+        "y": 0.6223
+      },
+      "review_anchor_pts_s": 231.231,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 231.231,
+      "source_start_frame": 5512,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_008",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.mp4",
+      "video_sha256": "05fe6312108825bdd51a812dac6dd5a2450f2ee1e20aca62197569b233e906a2"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_009",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 120.933333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 120.933333333,
+      "source_start_frame": 3596,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_009",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_010",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.5666,
+        "x": 0.6241,
+        "y": 0.6824
+      },
+      "review_anchor_pts_s": 25.933266667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 25.366666667,
+      "source_start_frame": 746,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_010",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+      "video_sha256": "2423295f4ce8c3f222d1e0357d16293e190cce162ef3ea773d133110fb9a14a4"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0003",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_011",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 26.766666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 26.766666667,
+      "source_start_frame": 771,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_011",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0003.mp4",
+      "video_sha256": "dc5c93403b610f252a57e1a06ec0c0af5bd76803c20602c0a204700b0b51cee1"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_012",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.1333,
+        "x": 0.3703,
+        "y": 0.4752
+      },
+      "review_anchor_pts_s": 51.533366667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 51.666666667,
+      "source_start_frame": 1514,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_012",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_013",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 209.4,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 209.4,
+      "source_start_frame": 6250,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_013",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0008",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_014",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.3333,
+        "x": 0.3504,
+        "y": 0.4965
+      },
+      "review_anchor_pts_s": 54.233366667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 54.566666667,
+      "source_start_frame": 1595,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_014",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0008.mp4",
+      "video_sha256": "64930671feec04de10423d1e6430c7ee758cf05b4ee44665912bf0e999aa16d2"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0003",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_015",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 4.796458333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 4.796458333,
+      "source_start_frame": 83,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_015",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0003.mp4",
+      "video_sha256": "1f045df5c99ec40614522c350a5ce8fbf671809a99d08d4eab52f2443cf315c2"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_016",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.1667,
+        "x": 0.7301,
+        "y": 0.5836
+      },
+      "review_anchor_pts_s": 29.866633333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 30.033333333,
+      "source_start_frame": 864,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_016",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+      "video_sha256": "2423295f4ce8c3f222d1e0357d16293e190cce162ef3ea773d133110fb9a14a4"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0006",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_017",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 150.733916667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 150.733916667,
+      "source_start_frame": 3582,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_017",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0006.mp4",
+      "video_sha256": "4f30bc394415f9e7d4de6cf0cc20e493646c266eb83c998f562a0b830e35a355"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0005",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_018",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 8.75875,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 8.75875,
+      "source_start_frame": 178,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_018",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0005.mp4",
+      "video_sha256": "e622b1646920f43639d4c076e5e7cc5a10484d83526d5478c18c3836b221819d"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_019",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.4,
+        "x": 0.7831,
+        "y": 0.6165
+      },
+      "review_anchor_pts_s": 804.3,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 803.9,
+      "source_start_frame": 24097,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_019",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_020",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 546.333333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 546.333333333,
+      "source_start_frame": 16358,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_020",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_021",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.5667,
+        "x": 0.5559,
+        "y": 0.7017
+      },
+      "review_anchor_pts_s": 60.466633333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 61.033333333,
+      "source_start_frame": 1782,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_021",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_022",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.0667,
+        "x": 0.5483,
+        "y": 0.5256
+      },
+      "review_anchor_pts_s": 245.733366667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 245.666666667,
+      "source_start_frame": 7340,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_022",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0009",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_023",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 21.2,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 21.2,
+      "source_start_frame": 604,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_023",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0009.mp4",
+      "video_sha256": "767e9bfe079543a6ccfd9502ee51ab9bcd3d751281e694144aa9f1e77a09a09e"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0003",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_024",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 1.0,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 1.0,
+      "source_start_frame": 0,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_024",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0003.mp4",
+      "video_sha256": "3fe77ab6d48850c330583d7145e98bc5366b295a88afd6eeb0d1684a45fed6a9"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_025",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.2783,
+        "x": 0.4422,
+        "y": 0.5507
+      },
+      "review_anchor_pts_s": 542.255033333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 542.533333333,
+      "source_start_frame": 16236,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_025",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_026",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": -0.5999,
+        "x": 0.7102,
+        "y": 0.5198
+      },
+      "review_anchor_pts_s": 3.233433333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 3.833333333,
+      "source_start_frame": 65,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_026",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+      "video_sha256": "2423295f4ce8c3f222d1e0357d16293e190cce162ef3ea773d133110fb9a14a4"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_027",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": -0.2667,
+        "x": 0.5729,
+        "y": 0.5643
+      },
+      "review_anchor_pts_s": 103.799966667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 104.066666667,
+      "source_start_frame": 3082,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_027",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_028",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 123.185988324,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 123.185988324,
+      "source_start_frame": 2922,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_028",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0002.mp4",
+      "video_sha256": "6ed769d5464d89fee54e29603605cdcac53c3ade29aa1b306f4b1eca50228650"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_029",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 209.466666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 209.466666667,
+      "source_start_frame": 6252,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_029",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_030",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.2,
+        "x": 0.5606,
+        "y": 0.423
+      },
+      "review_anchor_pts_s": 10.3,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 10.5,
+      "source_start_frame": 277,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_030",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0002.mp4",
+      "video_sha256": "8270775518e623a0301dc771394816bd7ebbbe14f42228dd40f7ee2b9c4ef29d"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_031",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.0333,
+        "x": 0.3428,
+        "y": 0.481
+      },
+      "review_anchor_pts_s": 384.766633333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 384.733333333,
+      "source_start_frame": 11511,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_031",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0006",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_032",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.3,
+        "x": 0.4138,
+        "y": 0.5836
+      },
+      "review_anchor_pts_s": 6.366666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 6.066666667,
+      "source_start_frame": 159,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_032",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0006.mp4",
+      "video_sha256": "0cdad235b9435865a1733cba98ac752dd9e15787e8841092f2a75f30c6838cae"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0004",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 23.976023976,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_033",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.2085,
+        "x": 0.4839,
+        "y": 0.6649
+      },
+      "review_anchor_pts_s": 74.449333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 74.240833333,
+      "source_start_frame": 1753,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_033",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.mp4",
+      "video_sha256": "05fe6312108825bdd51a812dac6dd5a2450f2ee1e20aca62197569b233e906a2"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0004",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_034",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 215.882333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 215.882333333,
+      "source_start_frame": 5144,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_034",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.mp4",
+      "video_sha256": "05fe6312108825bdd51a812dac6dd5a2450f2ee1e20aca62197569b233e906a2"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_035",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.5333,
+        "x": 0.1837,
+        "y": 0.5101
+      },
+      "review_anchor_pts_s": 24.6667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 25.2,
+      "source_start_frame": 708,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_035",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+      "video_sha256": "2423295f4ce8c3f222d1e0357d16293e190cce162ef3ea773d133110fb9a14a4"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_036",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.2333,
+        "x": 0.5748,
+        "y": 0.5352
+      },
+      "review_anchor_pts_s": 190.0667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 190.3,
+      "source_start_frame": 5670,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_036",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_037",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 95.0,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 95.0,
+      "source_start_frame": 2818,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_037",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0008",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_038",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 57.057,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 57.057,
+      "source_start_frame": 1336,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_038",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0008.mp4",
+      "video_sha256": "88e095ca7260226f65d9b24ba2257590ba558a28c777d380daba94390e163c9a"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_039",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.3,
+        "x": 0.7263,
+        "y": 0.632
+      },
+      "review_anchor_pts_s": 876.5,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 876.2,
+      "source_start_frame": 26263,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_039",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_040",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.2333,
+        "x": 0.9081,
+        "y": 0.6611
+      },
+      "review_anchor_pts_s": 78.699966667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 78.466666667,
+      "source_start_frame": 2329,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_040",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_041",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 42.1,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 42.1,
+      "source_start_frame": 1231,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_041",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0008",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_042",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.3,
+        "x": 0.3021,
+        "y": 0.4268
+      },
+      "review_anchor_pts_s": 49.866666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 50.166666667,
+      "source_start_frame": 1464,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_042",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0008.mp4",
+      "video_sha256": "64930671feec04de10423d1e6430c7ee758cf05b4ee44665912bf0e999aa16d2"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_043",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 176.5,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 176.5,
+      "source_start_frame": 5263,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_043",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_044",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": -0.1,
+        "x": 0.4754,
+        "y": 0.5759
+      },
+      "review_anchor_pts_s": 38.833333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 38.933333333,
+      "source_start_frame": 1133,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_044",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0001.mp4",
+      "video_sha256": "ab45db7a7b6c6c37d1f0cafb0d2cfeaf7d8b0f874cc068ff2d2ea23dfdd553ae"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0011",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_045",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.1667,
+        "x": 0.4489,
+        "y": 0.4965
+      },
+      "review_anchor_pts_s": 43.733366667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 43.566666667,
+      "source_start_frame": 1280,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_045",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0011.mp4",
+      "video_sha256": "075259cc011ff425078413d28455f39ee1de9c6f8e749986a974229f100fa916"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_046",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 963.266666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 963.266666667,
+      "source_start_frame": 28866,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_046",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_047",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 97.166666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 97.166666667,
+      "source_start_frame": 2883,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_047",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_048",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 266.1,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 266.1,
+      "source_start_frame": 7951,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_048",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0005",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_049",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": -0.3333,
+        "x": 0.5294,
+        "y": 0.6707
+      },
+      "review_anchor_pts_s": 5.133366667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 5.466666667,
+      "source_start_frame": 122,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_049",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0005.mp4",
+      "video_sha256": "2738583ba81790b4a39b042deab385e1533f9e8c4e6545e57959c3940fc0431a"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_050",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.1667,
+        "x": 0.7027,
+        "y": 0.5701
+      },
+      "review_anchor_pts_s": 213.5333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 213.7,
+      "source_start_frame": 6374,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_050",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_051",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.2667,
+        "x": 0.2784,
+        "y": 0.5081
+      },
+      "review_anchor_pts_s": 72.799966667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 73.066666667,
+      "source_start_frame": 2152,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_051",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0002.mp4",
+      "video_sha256": "aea9c5e89c26bb11e1f08ad2bd2c9fe953494ce530adf8b50500d926dd8eec24"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0007",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 38
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_052",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.2333,
+        "x": 0.4536,
+        "y": 0.543
+      },
+      "review_anchor_pts_s": 37.866633333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 37.633333333,
+      "source_start_frame": 1098,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_052",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0007.mp4",
+      "video_sha256": "bb39439492055d874a38632a338153c4dc43e0ee827a1dc6bf9ca287f674634b"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_053",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.2333,
+        "x": 0.447,
+        "y": 0.5159
+      },
+      "review_anchor_pts_s": 25.700033333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 25.933333333,
+      "source_start_frame": 739,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_053",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_054",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.0667,
+        "x": 0.3646,
+        "y": 0.4346
+      },
+      "review_anchor_pts_s": 301.199966667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 301.266666667,
+      "source_start_frame": 9004,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_054",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0008",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_055",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.0,
+        "x": 0.1515,
+        "y": 0.6011
+      },
+      "review_anchor_pts_s": 19.866666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 19.866666667,
+      "source_start_frame": 564,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_055",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0008.mp4",
+      "video_sha256": "64930671feec04de10423d1e6430c7ee758cf05b4ee44665912bf0e999aa16d2"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0010",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_056",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.5942,
+        "x": 0.4489,
+        "y": 0.512
+      },
+      "review_anchor_pts_s": 2.9942,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 2.4,
+      "source_start_frame": 58,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_056",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0010.mp4",
+      "video_sha256": "0ba24c485e290f2be39fa85eb5388af19d268a73593b0587d4dc034ce02e41e5"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0017",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_057",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 7.366666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 7.366666667,
+      "source_start_frame": 189,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_057",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0017.mp4",
+      "video_sha256": "71d3bc332e69707ad082e7ad440f0aa27b4ab992fa63a033308a7a02f49544c8"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_058",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 48.933333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 48.933333333,
+      "source_start_frame": 1436,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_058",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_059",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 284.6,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 284.6,
+      "source_start_frame": 8506,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_059",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_060",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 86.133333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 86.133333333,
+      "source_start_frame": 2552,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_060",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+      "video_sha256": "2423295f4ce8c3f222d1e0357d16293e190cce162ef3ea773d133110fb9a14a4"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_061",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.5,
+        "x": 0.6269,
+        "y": 0.4288
+      },
+      "review_anchor_pts_s": 44.0,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 44.5,
+      "source_start_frame": 1288,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_061",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+      "video_sha256": "2423295f4ce8c3f222d1e0357d16293e190cce162ef3ea773d133110fb9a14a4"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_062",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 266.0,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 266.0,
+      "source_start_frame": 7948,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_062",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_063",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.1667,
+        "x": 0.2585,
+        "y": 0.4888
+      },
+      "review_anchor_pts_s": 67.399966667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 67.566666667,
+      "source_start_frame": 1990,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_063",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_064",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 76.159416667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 76.159416667,
+      "source_start_frame": 1794,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_064",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0002.mp4",
+      "video_sha256": "6ed769d5464d89fee54e29603605cdcac53c3ade29aa1b306f4b1eca50228650"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0006",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_065",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.1667,
+        "x": 0.4138,
+        "y": 0.5623
+      },
+      "review_anchor_pts_s": 18.6667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 18.5,
+      "source_start_frame": 528,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_065",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0006.mp4",
+      "video_sha256": "0cdad235b9435865a1733cba98ac752dd9e15787e8841092f2a75f30c6838cae"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_066",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 79.866666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 79.866666667,
+      "source_start_frame": 2364,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_066",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_067",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.5917,
+        "x": 0.7917,
+        "y": 0.6262
+      },
+      "review_anchor_pts_s": 804.241633333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 804.833333333,
+      "source_start_frame": 24095,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_067",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0006",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 23.976023976,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_068",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.0834,
+        "x": 0.5076,
+        "y": 0.6649
+      },
+      "review_anchor_pts_s": 50.083405671,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 50.166805671,
+      "source_start_frame": 1169,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_068",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0006.mp4",
+      "video_sha256": "4f30bc394415f9e7d4de6cf0cc20e493646c266eb83c998f562a0b830e35a355"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_069",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.0667,
+        "x": 0.4555,
+        "y": 0.634
+      },
+      "review_anchor_pts_s": 907.5667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 907.5,
+      "source_start_frame": 27195,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_069",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0006",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 23.976023976,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_070",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.0834,
+        "x": 0.3239,
+        "y": 0.9185
+      },
+      "review_anchor_pts_s": 114.614483333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 114.531083333,
+      "source_start_frame": 2716,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_070",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0006.mp4",
+      "video_sha256": "4f30bc394415f9e7d4de6cf0cc20e493646c266eb83c998f562a0b830e35a355"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_071",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.5,
+        "x": 0.7292,
+        "y": 0.6262
+      },
+      "review_anchor_pts_s": 474.7,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 474.2,
+      "source_start_frame": 14209,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_071",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_072",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 114.066666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 114.066666667,
+      "source_start_frame": 3390,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_072",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_073",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 207.933333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 207.933333333,
+      "source_start_frame": 6206,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_073",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0004",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 23.976023976,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_074",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.0834,
+        "x": 0.7093,
+        "y": 0.5256
+      },
+      "review_anchor_pts_s": 191.733191667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 191.649791667,
+      "source_start_frame": 4565,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_074",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.mp4",
+      "video_sha256": "05fe6312108825bdd51a812dac6dd5a2450f2ee1e20aca62197569b233e906a2"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_075",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.0333,
+        "x": 0.4233,
+        "y": 0.5681
+      },
+      "review_anchor_pts_s": 151.6333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 151.6,
+      "source_start_frame": 4517,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_075",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_076",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.1333,
+        "x": 0.7301,
+        "y": 0.7346
+      },
+      "review_anchor_pts_s": 426.1333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 426.0,
+      "source_start_frame": 12752,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_076",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0006",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_077",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 2.544208333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 2.544208333,
+      "source_start_frame": 29,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_077",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0006.mp4",
+      "video_sha256": "4f30bc394415f9e7d4de6cf0cc20e493646c266eb83c998f562a0b830e35a355"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_078",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.0,
+        "x": 0.5502,
+        "y": 0.4191
+      },
+      "review_anchor_pts_s": 10.3,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 10.3,
+      "source_start_frame": 277,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_078",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0002.mp4",
+      "video_sha256": "8270775518e623a0301dc771394816bd7ebbbe14f42228dd40f7ee2b9c4ef29d"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_079",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.2,
+        "x": 0.4593,
+        "y": 0.5527
+      },
+      "review_anchor_pts_s": 909.266666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 909.066666667,
+      "source_start_frame": 27246,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_079",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "73VurrTKCZ8_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_080",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "other",
+        "dt": 0.1333,
+        "x": 0.4366,
+        "y": 0.5139
+      },
+      "review_anchor_pts_s": 77.166633333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 77.033333333,
+      "source_start_frame": 2283,
+      "source_video": "73VurrTKCZ8",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "out_of_taxonomy_background",
+      "video": "els20260715_080",
+      "video_path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.mp4",
+      "video_sha256": "2423295f4ce8c3f222d1e0357d16293e190cce162ef3ea773d133110fb9a14a4"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_081",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 55.4,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 55.4,
+      "source_start_frame": 1630,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_081",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0002.mp4",
+      "video_sha256": "aea9c5e89c26bb11e1f08ad2bd2c9fe953494ce530adf8b50500d926dd8eec24"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_082",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": -0.2,
+        "x": 0.4337,
+        "y": 0.5565
+      },
+      "review_anchor_pts_s": 41.0,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 41.2,
+      "source_start_frame": 1198,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_082",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0001.mp4",
+      "video_sha256": "ab45db7a7b6c6c37d1f0cafb0d2cfeaf7d8b0f874cc068ff2d2ea23dfdd553ae"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_083",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 353.4,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 353.4,
+      "source_start_frame": 10570,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_083",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_084",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 287.933333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 287.933333333,
+      "source_start_frame": 8606,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_084",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_085",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.2333,
+        "x": 0.4782,
+        "y": 0.7056
+      },
+      "review_anchor_pts_s": 691.3333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 691.1,
+      "source_start_frame": 20708,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_085",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_086",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.0667,
+        "x": 0.2727,
+        "y": 0.5817
+      },
+      "review_anchor_pts_s": 108.166633333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 108.233333333,
+      "source_start_frame": 3213,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_086",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_087",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.5,
+        "x": 0.6591,
+        "y": 0.5507
+      },
+      "review_anchor_pts_s": 390.333333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 389.833333333,
+      "source_start_frame": 11678,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_087",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_088",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 229.7,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 229.7,
+      "source_start_frame": 6859,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_088",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_089",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.4667,
+        "x": 0.4006,
+        "y": 0.4597
+      },
+      "review_anchor_pts_s": 179.399966667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 179.866666667,
+      "source_start_frame": 5350,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_089",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_090",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.4667,
+        "x": 0.4422,
+        "y": 0.3959
+      },
+      "review_anchor_pts_s": 358.799966667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 359.266666667,
+      "source_start_frame": 10732,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_090",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_091",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 420.2,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 420.2,
+      "source_start_frame": 12574,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_091",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_092",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 129.6,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 129.6,
+      "source_start_frame": 3856,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_092",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "Ezz6HDNHlnk_rally_0004",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 23.976023976,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_093",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 249.541284404,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 249.541284404,
+      "source_start_frame": 5951,
+      "source_video": "Ezz6HDNHlnk",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_093",
+      "video_path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.mp4",
+      "video_sha256": "05fe6312108825bdd51a812dac6dd5a2450f2ee1e20aca62197569b233e906a2"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_094",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 149.6,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 149.6,
+      "source_start_frame": 4456,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_094",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "HyUqT7zFiwk_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_095",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.3667,
+        "x": 0.1193,
+        "y": 0.6011
+      },
+      "review_anchor_pts_s": 200.866633333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 201.233333333,
+      "source_start_frame": 5994,
+      "source_video": "HyUqT7zFiwk",
+      "split": "val",
+      "stratum": "uniform_random",
+      "target_mapping": "HIT",
+      "video": "els20260715_095",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "video_sha256": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0001",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_096",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.0,
+        "x": 0.571,
+        "y": 0.5469
+      },
+      "review_anchor_pts_s": 222.966666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 222.966666667,
+      "source_start_frame": 6657,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_096",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.mp4",
+      "video_sha256": "2e33a1007163d337b3d00ecf3b3c3fa5996793648d0e917a1c754efbc530eb0c"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_097",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": -0.1333,
+        "x": 0.447,
+        "y": 0.4927
+      },
+      "review_anchor_pts_s": 355.7667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 355.9,
+      "source_start_frame": 10641,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "HIT",
+      "video": "els20260715_097",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0014",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_098",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": 0.2,
+        "x": 0.5407,
+        "y": 0.572
+      },
+      "review_anchor_pts_s": 24.3,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 24.1,
+      "source_start_frame": 697,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_098",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0014.mp4",
+      "video_sha256": "7125d71ccfdee033c5b8c0684e6bc5ef5eb10935d05d4417a8fbcde76511cfbe"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0019",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_099",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 10.966666667,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 10.966666667,
+      "source_start_frame": 297,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_099",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0019.mp4",
+      "video_sha256": "756064522f2fabb773a3d6ad3db0f3a463585808d83971a00ed90e3c6b36ffe0"
+    },
+    {
+      "clip_id": "zwCtH_i1_S4_rally_0001",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 0,
+        "background": 1
+      },
+      "events": [],
+      "fps": 30.0,
+      "inventory_event_count": 0,
+      "label_id": "els20260715_100",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "none"
+      },
+      "review_anchor_pts_s": 55.933333333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 55.933333333,
+      "source_start_frame": 1646,
+      "source_video": "zwCtH_i1_S4",
+      "split": "val",
+      "stratum": "audio_onset",
+      "target_mapping": "hard_negative_background",
+      "video": "els20260715_100",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "video_sha256": "7a66de6134a583d67faa3b0a1269abb461caaed14b4a327d1f316b5249cd86f1"
+    },
+    {
+      "clip_id": "wBu8bC4OfUY_rally_0002",
+      "event_counts": {
+        "BOUNCE": 0,
+        "HIT": 1,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "HIT",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_101",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "paddle",
+        "dt": 0.1667,
+        "x": 0.5975,
+        "y": 0.3591
+      },
+      "review_anchor_pts_s": 47.800033333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 47.633333333,
+      "source_start_frame": 1402,
+      "source_video": "wBu8bC4OfUY",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "HIT",
+      "video": "els20260715_101",
+      "video_path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0002.mp4",
+      "video_sha256": "aea9c5e89c26bb11e1f08ad2bd2c9fe953494ce530adf8b50500d926dd8eec24"
+    },
+    {
+      "clip_id": "_L0HVmAlCQI_rally_0009",
+      "event_counts": {
+        "BOUNCE": 1,
+        "HIT": 0,
+        "background": 0
+      },
+      "events": [
+        {
+          "class": "BOUNCE",
+          "frame": 32
+        }
+      ],
+      "fps": 30.0,
+      "inventory_event_count": 1,
+      "label_id": "els20260715_102",
+      "license_id": "OWNER_REVIEWED_HARVEST_INTERNAL",
+      "license_posture": "OWNER_REVIEWED_INTERNAL",
+      "loss_validity_mask": [
+        true,
+        true,
+        true
+      ],
+      "media_present": true,
+      "num_frames": 64,
+      "review": {
+        "decision": "ground",
+        "dt": -0.0333,
+        "x": 0.4479,
+        "y": 0.5488
+      },
+      "review_anchor_pts_s": 19.300033333,
+      "source": "owner_reviewed",
+      "source_anchor_pts_s": 19.333333333,
+      "source_start_frame": 547,
+      "source_video": "_L0HVmAlCQI",
+      "split": "train",
+      "stratum": "track_discontinuity",
+      "target_mapping": "BOUNCE",
+      "video": "els20260715_102",
+      "video_path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0009.mp4",
+      "video_sha256": "767e9bfe079543a6ccfd9502ee51ab9bcd3d751281e694144aa9f1e77a09a09e"
+    }
+  ],
+  "schema_version": 1,
+  "session_id": "event_labels_20260715",
+  "teacher_derived": false,
+  "totals": {
+    "BOUNCE": 21,
+    "HIT": 38,
+    "answers_with_coordinates": 60,
+    "answers_with_dt": 60,
+    "decision_counts": {
+      "ground": 21,
+      "none": 42,
+      "other": 1,
+      "paddle": 38
+    },
+    "hard_negative_answers": 42,
+    "legacy_provenance_counts": {
+      "coordinates": 46,
+      "dt": 57,
+      "status": "stale_summary_not_used; raw answers contain x/y/dt on all 60 typed answers"
+    },
+    "out_of_taxonomy_answers": 1,
+    "rows": 102,
+    "split_decision_counts": {
+      "train": {
+        "ground": 17,
+        "none": 20,
+        "other": 1,
+        "paddle": 23
+      },
+      "val": {
+        "ground": 4,
+        "none": 22,
+        "paddle": 15
+      }
+    },
+    "target_events": 59,
+    "train_rows": 61,
+    "typed_answers": 60,
+    "val_rows": 41
+  },
+  "verified": false
+}

@@ -6,6 +6,7 @@ BALL accuracy gates and are not trusted without audio and wrist-velocity cues.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 from pathlib import Path
@@ -132,6 +133,8 @@ def build_ball_inflections_from_ball_track(
     min_speed_px_per_s: float = DEFAULT_MIN_SPEED_PX_PER_S,
     max_neighbor_gap_s: float = DEFAULT_MAX_NEIGHBOR_GAP_S,
     min_candidate_separation_s: float = DEFAULT_IMAGE_MIN_CANDIDATE_SEPARATION_S,
+    media_sha256: str | None = None,
+    pts_source: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build ball-inflection cues from visible image-space ball-track motion."""
 
@@ -206,6 +209,10 @@ def build_ball_inflections_from_ball_track(
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
         "source": "ball_track_image_motion",
+        **_dependency_identity_fields(
+            media_sha256=media_sha256,
+            pts_source=pts_source,
+        ),
         "world_frame": "image_xy",
         "not_gate_verified": True,
         "requires_additional_cues": ["wrist_velocity_peaks"],
@@ -231,17 +238,59 @@ def build_ball_inflections_from_ball_track_file(
     max_neighbor_gap_s: float = DEFAULT_MAX_NEIGHBOR_GAP_S,
     min_candidate_separation_s: float = DEFAULT_IMAGE_MIN_CANDIDATE_SEPARATION_S,
 ) -> dict[str, Any]:
-    payload = _read_json(Path(ball_track_path))
+    ball_track_path = Path(ball_track_path)
+    ball_track_raw = ball_track_path.read_bytes()
+    payload = _read_json(ball_track_path)
     if not isinstance(payload, Mapping):
         raise ValueError("ball_track.json must contain an object")
-    return build_ball_inflections_from_ball_track(
+    media_sha256: str | None = None
+    pts_source: dict[str, Any] | None = None
+    if frame_times_path is not None:
+        media_sha256 = payload.get(
+            "source_video_sha256", payload.get("media_sha256")
+        )
+        if not isinstance(media_sha256, str) or len(media_sha256) != 64:
+            raise ValueError(
+                "ball_track.json must declare media_sha256/source_video_sha256 "
+                "when frame-times identity is requested"
+            )
+        frame_times_path = Path(frame_times_path)
+        frame_times_raw = frame_times_path.read_bytes()
+        frame_times_payload = _read_json(frame_times_path)
+        if not isinstance(frame_times_payload, Mapping):
+            raise ValueError("frame_times.json must contain an object")
+        declared_media_sha256 = frame_times_payload.get(
+            "source_video_sha256", frame_times_payload.get("media_sha256")
+        )
+        if declared_media_sha256 != media_sha256:
+            raise ValueError("frame_times.json is not SHA-bound to ball_track media")
+        frame_times_sha256 = hashlib.sha256(frame_times_raw).hexdigest()
+        declared_pts_sha256 = payload.get("frame_times_sha256")
+        if (
+            declared_pts_sha256 is not None
+            and declared_pts_sha256 != frame_times_sha256
+        ):
+            raise ValueError("ball_track.json declares the wrong frame-times SHA-256")
+        pts_source = {
+            "path": str(frame_times_path),
+            "sha256": frame_times_sha256,
+            "source_video_sha256": media_sha256,
+        }
+    result = build_ball_inflections_from_ball_track(
         payload,
         frame_times=frame_times_path,
         min_turn_degrees=min_turn_degrees,
         min_speed_px_per_s=min_speed_px_per_s,
         max_neighbor_gap_s=max_neighbor_gap_s,
         min_candidate_separation_s=min_candidate_separation_s,
+        media_sha256=media_sha256,
+        pts_source=pts_source,
     )
+    result["ball_track_source"] = {
+        "path": str(ball_track_path),
+        "sha256": hashlib.sha256(ball_track_raw).hexdigest(),
+    }
+    return result
 
 
 def write_ball_inflections(path: str | Path, payload: Mapping[str, Any]) -> None:
@@ -340,6 +389,29 @@ def _optional_positive_fps(value: Any) -> float | None:
         return None
     fps = _require_finite(value, "fps")
     return fps if fps > 0.0 else None
+
+
+def _dependency_identity_fields(
+    *, media_sha256: str | None, pts_source: Mapping[str, Any] | None
+) -> dict[str, Any]:
+    identity: dict[str, Any] = {}
+    if media_sha256 is not None:
+        if not isinstance(media_sha256, str) or len(media_sha256) != 64:
+            raise ValueError("media_sha256 must be a 64-character SHA-256 digest")
+        identity.update({
+            "media_sha256": media_sha256,
+            "source_video_sha256": media_sha256,
+        })
+    if pts_source is not None:
+        pts_identity = dict(pts_source)
+        pts_sha256 = pts_identity.get("sha256")
+        if not isinstance(pts_sha256, str) or len(pts_sha256) != 64:
+            raise ValueError("pts_source.sha256 must be a 64-character SHA-256 digest")
+        identity.update({
+            "pts_source": pts_identity,
+            "frame_times_sha256": pts_sha256,
+        })
+    return identity
 
 
 def _candidate_confidence(
