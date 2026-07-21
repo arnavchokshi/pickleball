@@ -227,6 +227,7 @@ def test_registered_defaults_are_frozen_values() -> None:
     assert cfg.max_micro_fill_frames == 12
     assert cfg.fusion_weights == (0.4, 0.4, 0.2)
     assert cfg.selection_score_min == 0.5
+    assert cfg.recovery_max_speed_m_s == 7.0
     with pytest.raises(Exception):
         cfg.identity_accept_distance = 0.36  # type: ignore[misc]
 
@@ -542,6 +543,8 @@ def test_selection_off_cli_is_byte_identical(tmp_path: Path) -> None:
     )
     assert completed.returncode == 0, completed.stderr
     assert output.read_bytes() == original
+    assert not (tmp_path / "out.scoring_projection.json").exists()
+    assert not (tmp_path / "out.scoring_projection.json.sha256").exists()
 
 
 def test_report_schema_accepts_disabled_report() -> None:
@@ -575,6 +578,7 @@ def test_cli_help_exposes_explicit_default_off_switch() -> None:
     assert completed.returncode == 0
     assert "--enable-selection" in completed.stdout
     assert "--raw-pool" in completed.stdout
+    assert "--scoring-projection" in completed.stdout
 
 
 def test_track_frame_interpolated_is_additive_and_survives_tracks_round_trip() -> None:
@@ -1181,6 +1185,503 @@ def test_one_to_one_assignment_scales_for_crowded_same_start_pool() -> None:
     assert all(candidate.registered_owner_continuity for candidate in chosen.values())
 
 
+def test_boundary_player_binds_by_registered_soft_fusion_below_half_court_score() -> (
+    None
+):
+    records, positions, embeddings = _four_slot_records()
+    boundary_xy = (-3.45, positions[1][1])
+    records.append(
+        {
+            "frame": 60,
+            "source": 1,
+            "xy": boundary_xy,
+            "embedding": embeddings[1],
+        }
+    )
+    raw_pool, embedding_payload = _raw_selection_inputs(records)
+
+    selected, report = select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload=raw_pool,
+        embedding_payload=embedding_payload,
+        calibration=_identity_calibration(),
+        enabled=True,
+    )
+
+    decision = next(
+        row
+        for row in report["decisions"]
+        if row.get("action") == "rebind"
+        and str(row.get("fragment_id", "")).startswith("pool-1-2-")
+    )
+    assert decision["court_presence"] < 0.5
+    assert decision["fusion_score"] >= PlayerSelectionConfig().selection_score_min
+    assert decision["registered_owner_continuity"] is True
+    assert "fusion_at_or_above_0_5" in decision["reasons"]
+    assert not any("court_presence_at_or_above_0_5" in reason for reason in decision["reasons"])
+    near_left = next(
+        player
+        for player in selected["players"]
+        if (player["side"], player["role"]) == ("near", "left")
+    )
+    assert next(
+        frame for frame in near_left["frames"] if frame["frame_idx"] == 60
+    )["world_xy"] == pytest.approx(list(boundary_xy))
+
+
+def test_source_id_reuse_follows_appearance_instead_of_enrollment_owner() -> None:
+    records, positions, embeddings = _four_slot_records()
+    records.append(
+        {
+            "frame": 60,
+            "source": 1,
+            "xy": positions[4],
+            "embedding": embeddings[4],
+        }
+    )
+    raw_pool, embedding_payload = _raw_selection_inputs(records)
+
+    selected, report = select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload=raw_pool,
+        embedding_payload=embedding_payload,
+        calibration=_identity_calibration(),
+        enabled=True,
+    )
+
+    assert any(
+        decision["action"] == "stitch_refused"
+        and decision.get("source_track_id") == 1
+        for decision in report["decisions"]
+    )
+    rebind = next(
+        decision
+        for decision in report["decisions"]
+        if decision.get("action") == "rebind"
+        and str(decision.get("fragment_id", "")).startswith("pool-1-2-")
+    )
+    assert rebind["slot_id"] == 4
+    assert rebind["registered_owner_continuity"] is False
+    assert rebind["open_set"] == OpenSetDecision.ACCEPT.value
+    far_right = next(
+        player
+        for player in selected["players"]
+        if (player["side"], player["role"]) == ("far", "right")
+    )
+    assert next(
+        frame for frame in far_right["frames"] if frame["frame_idx"] == 60
+    )["world_xy"] == pytest.approx(list(positions[4]))
+
+
+def test_registered_owner_never_bypasses_generic_stitch_veto() -> None:
+    slot = SelectionSlot(
+        1,
+        "near",
+        "left",
+        (1.0, 0.0),
+        (0,),
+        ("arbitrary-owner-seed",),
+        1.0,
+    )
+    registered = _fragment(
+        "arbitrary-owner-seed",
+        77,
+        0,
+        0,
+        (-1.5, -3.0),
+        (1.0, 0.0),
+    )
+    reentry = _fragment(
+        "arbitrary-owner-reentry",
+        77,
+        30,
+        30,
+        (-1.5, -3.0),
+        (1.0, 0.0),
+    )
+
+    candidate = player_selection_module._binding_candidates(
+        reentry,
+        slots=(slot,),
+        assignments={1: (registered,)},
+        stitch_vetoes={(registered.fragment_id, reentry.fragment_id)},
+        fps=30.0,
+        config=PlayerSelectionConfig(),
+        owner_source_ids_by_slot={1: frozenset({77})},
+    )[0]
+
+    assert candidate.registered_owner_continuity
+    assert candidate.open_set is OpenSetDecision.ACCEPT
+    assert candidate.role_consistent
+    assert candidate.temporal_motion_consistent
+    assert candidate.fusion_score >= PlayerSelectionConfig().selection_score_min
+    assert candidate.stitch_vetoed
+    assert not candidate.feasible
+    incident_candidate = player_selection_module._binding_candidates(
+        reentry,
+        slots=(slot,),
+        assignments={1: (registered,)},
+        stitch_vetoes={("unassigned-veto-counterpart", reentry.fragment_id)},
+        fps=30.0,
+        config=PlayerSelectionConfig(),
+        owner_source_ids_by_slot={1: frozenset({77})},
+    )[0]
+    assert incident_candidate.registered_owner_continuity
+    assert incident_candidate.stitch_vetoed
+    assert not incident_candidate.feasible
+
+
+def test_layer_c_cannot_recover_uid_vetoed_for_same_owner_slot() -> None:
+    def measured(
+        frame_idx: int,
+        uid: str,
+    ) -> SelectionDetection:
+        return SelectionDetection(
+            frame_idx=frame_idx,
+            source_track_id=77,
+            bbox=(0.0, 0.0, 1.0, 2.0),
+            world_xy=(-1.5, -3.0),
+            conf=0.9,
+            embedding=(1.0, 0.0),
+            raw_detection_uid=uid,
+        )
+
+    seed_detection = measured(0, "raw:0:0")
+    vetoed_detection = measured(1, "raw:1:0")
+    future_detection = measured(2, "raw:2:0")
+    seed = TrackFragment("arbitrary-seed", 77, (seed_detection,))
+    vetoed = TrackFragment("arbitrary-vetoed", 77, (vetoed_detection,))
+    future = TrackFragment("arbitrary-future", 77, (future_detection,))
+    slot = SelectionSlot(
+        1,
+        "near",
+        "left",
+        (1.0, 0.0),
+        (0,),
+        (seed.fragment_id,),
+        1.0,
+    )
+
+    players, unbound, decisions, _tracks, _counts = (
+        player_selection_module._select_slot_players(
+            (slot,),
+            pool_fragments=(seed, vetoed, future),
+            real_pool=(seed_detection, vetoed_detection, future_detection),
+            stitch_vetoes={(seed.fragment_id, vetoed.fragment_id)},
+            fps=30.0,
+            config=PlayerSelectionConfig(),
+        )
+    )
+
+    assert [frame["frame_idx"] for frame in players[0]["frames"]] == [0, 2]
+    assert not any(
+        decision.get("action") == "recover_real"
+        and decision.get("raw_detection_uid") == vetoed_detection.raw_detection_uid
+        for decision in decisions
+    )
+    assert len(unbound) == 1
+    assert unbound[0]["raw_detection_uids"] == [vetoed_detection.raw_detection_uid]
+    veto_decision = next(
+        decision
+        for decision in decisions
+        if decision.get("fragment_id") == vetoed.fragment_id
+    )
+    assert veto_decision["action"] == "leave_unbound"
+    assert veto_decision["stitch_vetoed"] is True
+
+
+def test_layer_c_recomputes_veto_against_later_final_assignment() -> None:
+    def measured(
+        frame_idx: int,
+        source_track_id: int,
+        xy: tuple[float, float],
+        embedding: tuple[float, float],
+        uid: str,
+    ) -> SelectionDetection:
+        return SelectionDetection(
+            frame_idx=frame_idx,
+            source_track_id=source_track_id,
+            bbox=(xy[0], 0.0, xy[0] + 1.0, 2.0),
+            world_xy=xy,
+            conf=0.9,
+            embedding=embedding,
+            raw_detection_uid=uid,
+        )
+
+    positive_accept = _vector_at_cosine_distance(0.30)
+    negative_accept = (positive_accept[0], -positive_accept[1])
+    seed_detection = measured(0, 77, (0.1, 0.1), (1.0, 0.0), "raw:0:0")
+    early_detection = measured(
+        1,
+        50,
+        (-0.01, -0.01),
+        positive_accept,
+        "raw:1:0",
+    )
+    future_detection = measured(
+        2,
+        50,
+        (0.1, 0.01),
+        negative_accept,
+        "raw:2:0",
+    )
+    seed = TrackFragment("reverse-seed", 77, (seed_detection,))
+    early_vetoed = TrackFragment("reverse-early-vetoed", 50, (early_detection,))
+    future_counterpart = TrackFragment(
+        "reverse-future-counterpart", 50, (future_detection,)
+    )
+    slot = SelectionSlot(
+        1,
+        "far",
+        "right",
+        (1.0, 0.0),
+        (0,),
+        (seed.fragment_id,),
+        1.0,
+    )
+    stitch_decisions, stitch_vetoes = player_selection_module._fragment_stitch_audit(
+        (seed, early_vetoed, future_counterpart),
+        real_by_frame={
+            0: (seed_detection,),
+            1: (early_detection,),
+            2: (future_detection,),
+        },
+        config=PlayerSelectionConfig(),
+    )
+    generated_veto = next(
+        decision
+        for decision in stitch_decisions
+        if decision.get("left_fragment_id") == early_vetoed.fragment_id
+        and decision.get("right_fragment_id") == future_counterpart.fragment_id
+    )
+    assert generated_veto["action"] == "stitch_refused"
+    assert generated_veto["open_set"] == OpenSetDecision.REJECT.value
+    assert generated_veto["net_crossing"] is True
+
+    players, unbound, decisions, _tracks, _counts = (
+        player_selection_module._select_slot_players(
+            (slot,),
+            pool_fragments=(seed, early_vetoed, future_counterpart),
+            real_pool=(seed_detection, early_detection, future_detection),
+            stitch_vetoes=stitch_vetoes,
+            fps=30.0,
+            config=PlayerSelectionConfig(),
+        )
+    )
+
+    assert [frame["frame_idx"] for frame in players[0]["frames"]] == [0, 2]
+    assert not any(
+        decision.get("action") == "recover_real"
+        and decision.get("raw_detection_uid") == early_detection.raw_detection_uid
+        for decision in decisions
+    )
+    assert len(unbound) == 1
+    assert unbound[0]["raw_detection_uids"] == [early_detection.raw_detection_uid]
+    early_decision = next(
+        decision
+        for decision in decisions
+        if decision.get("fragment_id") == early_vetoed.fragment_id
+    )
+    assert early_decision["action"] == "leave_unbound"
+    assert early_decision["stitch_vetoed"] is False
+    assert any(
+        decision.get("fragment_id") == future_counterpart.fragment_id
+        and decision.get("action") == "rebind"
+        for decision in decisions
+    )
+
+
+def test_layer_c_never_recovers_both_unbound_endpoints_of_generated_veto() -> None:
+    def measured(
+        frame_idx: int,
+        source_track_id: int,
+        x: float,
+        embedding: tuple[float, float],
+        uid: str,
+    ) -> SelectionDetection:
+        return SelectionDetection(
+            frame_idx=frame_idx,
+            source_track_id=source_track_id,
+            bbox=(x, 0.0, x + 1.0, 2.0),
+            world_xy=(x, -3.0),
+            conf=0.9,
+            embedding=embedding,
+            raw_detection_uid=uid,
+        )
+
+    positive_accept = _vector_at_cosine_distance(0.30)
+    negative_accept = (positive_accept[0], -positive_accept[1])
+    seed_detection = measured(0, 77, 0.1, (1.0, 0.0), "raw:0:0")
+    left_detection = measured(1, 50, -0.1, positive_accept, "raw:1:0")
+    right_detection = measured(13, 50, -2.65, negative_accept, "raw:13:0")
+    future_detection = measured(25, 77, 0.1, (1.0, 0.0), "raw:25:0")
+    seed = TrackFragment("pair-seed", 77, (seed_detection,))
+    left = TrackFragment("pair-left-unbound", 50, (left_detection,))
+    right = TrackFragment("pair-right-unbound", 50, (right_detection,))
+    future = TrackFragment("pair-future", 77, (future_detection,))
+    slot = SelectionSlot(
+        1,
+        "near",
+        "right",
+        (1.0, 0.0),
+        (0,),
+        (seed.fragment_id,),
+        1.0,
+    )
+    stitch_decisions, stitch_vetoes = player_selection_module._fragment_stitch_audit(
+        (seed, left, right, future),
+        real_by_frame={
+            0: (seed_detection,),
+            1: (left_detection,),
+            13: (right_detection,),
+            25: (future_detection,),
+        },
+        config=PlayerSelectionConfig(),
+    )
+    generated_veto = next(
+        decision
+        for decision in stitch_decisions
+        if decision.get("left_fragment_id") == left.fragment_id
+        and decision.get("right_fragment_id") == right.fragment_id
+    )
+    assert generated_veto["action"] == "stitch_refused"
+    assert generated_veto["open_set"] == OpenSetDecision.REJECT.value
+    assert generated_veto["displacement_m"] > 2.5
+
+    players, unbound, decisions, _tracks, _counts = (
+        player_selection_module._select_slot_players(
+            (slot,),
+            pool_fragments=(seed, left, right, future),
+            real_pool=(
+                seed_detection,
+                left_detection,
+                right_detection,
+                future_detection,
+            ),
+            stitch_vetoes=stitch_vetoes,
+            fps=30.0,
+            config=PlayerSelectionConfig(),
+        )
+    )
+
+    assert [frame["frame_idx"] for frame in players[0]["frames"]] == [0, 25]
+    assert not any(decision.get("action") == "recover_real" for decision in decisions)
+    assert {uid for observation in unbound for uid in observation["raw_detection_uids"]} == {
+        left_detection.raw_detection_uid,
+        right_detection.raw_detection_uid,
+    }
+    assert any(decision.get("action") == "micro_fill_refused" for decision in decisions)
+
+
+def test_registered_owner_wins_same_frame_binding_without_hard_court_gate() -> None:
+    records, positions, embeddings = _four_slot_records()
+    records.extend(
+        [
+            {
+                "frame": 40,
+                "source": 1,
+                "xy": positions[2],
+                "embedding": embeddings[1],
+            },
+            {
+                "frame": 40,
+                "source": 50,
+                "xy": (-6.0, -3.0),
+                "embedding": embeddings[1],
+            },
+        ]
+    )
+    raw_pool, embedding_payload = _raw_selection_inputs(records)
+
+    selected, report = select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload=raw_pool,
+        embedding_payload=embedding_payload,
+        calibration=_identity_calibration(),
+        enabled=True,
+    )
+
+    near_left = next(
+        player
+        for player in selected["players"]
+        if (player["side"], player["role"]) == ("near", "left")
+    )
+    assert next(
+        frame for frame in near_left["frames"] if frame["frame_idx"] == 40
+    )["world_xy"] == pytest.approx(list(positions[2]))
+    owner_decision = next(
+        decision
+        for decision in report["decisions"]
+        if str(decision.get("fragment_id", "")).startswith("pool-1-2-")
+    )
+    assert owner_decision["action"] == "rebind"
+    assert owner_decision["registered_owner_continuity"] is True
+    assert owner_decision["role_consistent"] is False
+    spectator_decision = next(
+        decision
+        for decision in report["decisions"]
+        if str(decision.get("fragment_id", "")).startswith("pool-50-")
+    )
+    assert spectator_decision["action"] == "leave_unbound"
+
+
+def test_temporal_binding_compares_only_nearest_predecessor_and_successor() -> None:
+    stale_bad_predecessor = _fragment(
+        "stale-bad-predecessor", 1, 0, 0, (100.0, -3.0), (1.0, 0.0)
+    )
+    nearest_predecessor = _fragment(
+        "nearest-predecessor", 1, 90, 90, (0.0, -3.0), (1.0, 0.0)
+    )
+    candidate = _fragment(
+        "candidate", 1, 100, 100, (0.0, -3.0), (1.0, 0.0)
+    )
+    nearest_successor = _fragment(
+        "nearest-successor", 1, 110, 110, (0.0, -3.0), (1.0, 0.0)
+    )
+    stale_bad_successor = _fragment(
+        "stale-bad-successor", 1, 200, 200, (100.0, -3.0), (1.0, 0.0)
+    )
+
+    assert player_selection_module._fragment_inside_slot_motion_envelope(
+        candidate,
+        (
+            stale_bad_predecessor,
+            nearest_predecessor,
+            nearest_successor,
+            stale_bad_successor,
+        ),
+        fps=30.0,
+        max_speed_m_s=7.0,
+    )
+
+
+def test_layer_c_prefers_appearance_accepted_owner_hint_over_generic_accept() -> None:
+    slot = SelectionSlot(1, "near", "left", (1.0, 0.0), (0,), ("seed",), 1.0)
+    last = _detection(0, 10, (-0.2, -3.0), (1.0, 0.0))
+    owner_hint = _detection(
+        1,
+        10,
+        (-0.2, -3.0),
+        _vector_at_cosine_distance(0.30),
+    )
+    generic = _detection(
+        1,
+        50,
+        (-0.2, -3.0),
+        _vector_at_cosine_distance(0.10),
+    )
+
+    recovered = recover_identity_conditioned_pool(
+        slot,
+        last_detection=last,
+        pool=(generic, owner_hint),
+        fps=30.0,
+        preferred_source_track_ids=(10,),
+    )
+
+    assert recovered == (owner_hint,)
+
+
 def test_layer_c_recovery_runs_end_to_end_and_consumes_uid_once() -> None:
     records, positions, embeddings = _four_slot_records(end_frame=30)
     records.append(
@@ -1370,7 +1871,7 @@ def test_real_observation_bound_to_other_slot_still_vetoes_synthesis() -> None:
     assert refused["ambiguous_raw_detection_uids"] == ["raw:32:0"]
 
 
-def test_end_to_end_drop_requires_two_independent_evidence_classes() -> None:
+def test_end_to_end_drop_requires_appearance_plus_persistence_or_motion() -> None:
     positions = {
         1: (-1.5, -3.0),
         2: (1.5, -3.0),
@@ -1399,7 +1900,7 @@ def test_end_to_end_drop_requires_two_independent_evidence_classes() -> None:
         enrollment_records
         + [
             {
-                "frame": 100,
+                "frame": 31,
                 "source": 50,
                 "xy": (6.0, -3.0),
                 "embedding": unknown_embedding,
@@ -1423,7 +1924,7 @@ def test_end_to_end_drop_requires_two_independent_evidence_classes() -> None:
     assert drop_decision["evidence_classes"] == ["appearance", "geometry"]
     assert drop_decision["reasons"] == [
         "appearance_all_detections_all_slots_at_or_above_identity_reject_distance_0_42",
-        "geometry_court_presence_below_selection_score_min_0_5",
+        "geometry_all_slots_temporal_overlap_or_speed_above_7_0_m_s",
     ]
     assert not {
         "identity_accept",
@@ -1432,7 +1933,7 @@ def test_end_to_end_drop_requires_two_independent_evidence_classes() -> None:
     } & set(drop_decision["reasons"])
     assert dropped_report["output_counts"]["dropped_real_detections"] == 1
     assert not any(
-        frame["frame_idx"] == 100
+        frame["frame_idx"] == 31
         for player in dropped_selected["players"]
         for frame in player["frames"]
     )
@@ -1486,6 +1987,67 @@ def test_end_to_end_drop_requires_two_independent_evidence_classes() -> None:
     dishonest_drop["reasons"] = ["identity_reject", "fusion_at_or_above_0_5"]
     with pytest.raises(AssertionError):
         assert_matches_json_schema(dishonest_report, schema)
+
+
+def test_appearance_reject_low_court_with_adequate_persistence_motion_stays_unbound() -> (
+    None
+):
+    positions = {
+        1: (-1.5, -3.0),
+        2: (1.5, -3.0),
+        3: (-1.5, 3.0),
+        4: (1.5, 3.0),
+    }
+    embeddings = {
+        1: (1.0, 0.0, 0.0, 0.0, 0.0),
+        2: (0.0, 1.0, 0.0, 0.0, 0.0),
+        3: (0.0, 0.0, 1.0, 0.0, 0.0),
+        4: (0.0, 0.0, 0.0, 1.0, 0.0),
+    }
+    records = [
+        {
+            "frame": frame_idx,
+            "source": source,
+            "xy": positions[source],
+            "embedding": embeddings[source],
+        }
+        for frame_idx in range(30)
+        for source in sorted(positions)
+    ]
+    records.append(
+        {
+            "frame": 100,
+            "source": 50,
+            "xy": (6.0, -3.0),
+            "embedding": (0.0, 0.0, 0.0, 0.0, 1.0),
+        }
+    )
+    raw_pool, embedding_payload = _raw_selection_inputs(records, feature_dim=5)
+
+    selected, report = select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload=raw_pool,
+        embedding_payload=embedding_payload,
+        calibration=_identity_calibration(),
+        enabled=True,
+    )
+
+    decision = next(
+        row
+        for row in report["decisions"]
+        if str(row.get("fragment_id", "")).startswith("pool-50-")
+    )
+    assert decision["open_set"] == OpenSetDecision.REJECT.value
+    assert decision["court_presence"] < 0.5
+    assert decision["persistence"] >= PlayerSelectionConfig().selection_score_min
+    assert decision["motion_envelope_consistent"] is True
+    assert decision["action"] == "leave_unbound"
+    assert decision["evidence_classes"] == ["appearance"]
+    assert report["output_counts"]["dropped_real_detections"] == 0
+    assert any(
+        [frame["frame_idx"] for frame in observation["frames"]] == [100]
+        for observation in selected["unbound_observations"]
+    )
 
 
 def test_identity_accept_off_court_motion_inconsistent_fragment_remains_unbound() -> (
@@ -1793,6 +2355,7 @@ def test_selection_off_cli_golden_preserves_crlf_and_source_sha(tmp_path: Path) 
     assert hashlib.sha256(source.read_bytes()).hexdigest() == source_sha
     assert output.read_bytes() == golden
     assert hashlib.sha256(output.read_bytes()).hexdigest() == source_sha
+    assert not (tmp_path / "tracks.output.scoring_projection.json").exists()
 
 
 def test_enabled_cli_validates_tracks_and_publishes_interpolated_true(
@@ -1882,6 +2445,66 @@ def test_enabled_cli_validates_tracks_and_publishes_interpolated_true(
         )
         == 3
     )
+    projection_path = tmp_path / "selected.scoring_projection.json"
+    projection_sha_path = tmp_path / "selected.scoring_projection.json.sha256"
+    projection_bytes = projection_path.read_bytes()
+    projection = json.loads(projection_bytes)
+    assert "unbound_observations" not in projection
+    expected_projection = json.loads(json.dumps(payload))
+    del expected_projection["unbound_observations"]
+    for player in expected_projection["players"]:
+        player["frames"] = [
+            {key: value for key, value in frame.items() if key != "interpolated"}
+            for frame in player["frames"]
+            if frame.get("interpolated") is not True
+        ]
+    assert projection == expected_projection
+    assert not any(
+        "interpolated" in frame
+        for player in projection["players"]
+        for frame in player["frames"]
+    )
+    Tracks.model_validate(projection)
+    projection_sha = hashlib.sha256(projection_bytes).hexdigest()
+    assert projection_sha_path.read_text(encoding="utf-8") == f"{projection_sha}\n"
+    assert f"scoring_projection_sha256={projection_sha}" in completed.stdout
+
+
+def test_cli_rejects_scoring_projection_collision_before_writing(
+    tmp_path: Path,
+) -> None:
+    tracks = tmp_path / "tracks.json"
+    output = tmp_path / "selected.json"
+    report = tmp_path / "report.json"
+    tracks.write_text(
+        '{"schema_version":1,"fps":30,"players":[],"rally_spans":[]}\n',
+        encoding="utf-8",
+    )
+    output.write_bytes(b"existing output\n")
+    before_output = output.read_bytes()
+    completed = subprocess.run(
+        [
+            sys.executable,
+            str(ROOT / "scripts/racketsport/select_players_from_pool.py"),
+            "--tracks",
+            str(tracks),
+            "--out-tracks",
+            str(output),
+            "--report",
+            str(report),
+            "--scoring-projection",
+            str(output),
+            "--enable-selection",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert completed.returncode == 1
+    assert "pairwise-distinct" in completed.stderr
+    assert output.read_bytes() == before_output
+    assert not report.exists()
 
 
 @pytest.mark.parametrize("collision_target", ["tracks", "out_tracks"])
@@ -2083,4 +2706,49 @@ def test_output_pair_failure_rolls_back_both_destinations_and_cleans_temps(
         )
     assert tracks.read_bytes() == b"old tracks\n"
     assert report.read_bytes() == b"old report\n"
+    assert list(tmp_path.glob(".*.tmp")) == []
+
+
+@pytest.mark.parametrize(
+    "failure_destination",
+    ["projection", "projection_sha256", "report", "tracks"],
+)
+def test_enabled_output_bundle_failure_restores_every_destination(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failure_destination: str,
+) -> None:
+    destinations = {
+        "projection": tmp_path / "projection.json",
+        "projection_sha256": tmp_path / "projection.json.sha256",
+        "report": tmp_path / "report.json",
+        "tracks": tmp_path / "tracks.json",
+    }
+    for name, destination in destinations.items():
+        destination.write_text(f"old {name}\n", encoding="utf-8")
+    real_replace = os.replace
+    failed = False
+
+    def fail_selected_replace_once(source: object, destination: object) -> None:
+        nonlocal failed
+        target = Path(destination)  # type: ignore[arg-type]
+        if not failed and target == destinations[failure_destination]:
+            failed = True
+            raise OSError(f"simulated {failure_destination} replace failure")
+        real_replace(source, destination)
+
+    monkeypatch.setattr(selection_cli.os, "replace", fail_selected_replace_once)
+    with pytest.raises(OSError, match=f"simulated {failure_destination} replace failure"):
+        selection_cli._stage_and_publish_enabled_outputs(
+            tracks_text="new tracks\n",
+            tracks_destination=destinations["tracks"],
+            report_text="new report\n",
+            report_destination=destinations["report"],
+            projection_text="new projection\n",
+            projection_destination=destinations["projection"],
+            projection_sha256_text="new projection sha256\n",
+            projection_sha256_destination=destinations["projection_sha256"],
+        )
+    for name, destination in destinations.items():
+        assert destination.read_text(encoding="utf-8") == f"old {name}\n"
     assert list(tmp_path.glob(".*.tmp")) == []

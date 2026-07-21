@@ -26,7 +26,6 @@
                   {
                     "contains": {
                       "enum": [
-                        "geometry_court_presence_below_selection_score_min_0_5",
                         "geometry_detection_persistence_below_selection_score_min_0_5",
                         "geometry_all_slots_temporal_overlap_or_speed_above_7_0_m_s"
                       ]
@@ -35,7 +34,7 @@
                   }
                 ],
                 "items": {"$ref": "#/$defs/dropTriggerReason"},
-                "maxItems": 4,
+                "maxItems": 3,
                 "minItems": 2,
                 "type": "array",
                 "uniqueItems": true
@@ -50,7 +49,6 @@
     "dropTriggerReason": {
       "enum": [
         "appearance_all_detections_all_slots_at_or_above_identity_reject_distance_0_42",
-        "geometry_court_presence_below_selection_score_min_0_5",
         "geometry_detection_persistence_below_selection_score_min_0_5",
         "geometry_all_slots_temporal_overlap_or_speed_above_7_0_m_s"
       ],

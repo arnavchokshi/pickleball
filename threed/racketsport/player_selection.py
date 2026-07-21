@@ -164,7 +164,6 @@ _DESTRUCTIVE_EVIDENCE_CLASSES = frozenset({"appearance", "geometry"})
 
 DROP_TRIGGER_REASON_VOCABULARY = (
     "appearance_all_detections_all_slots_at_or_above_identity_reject_distance_0_42",
-    "geometry_court_presence_below_selection_score_min_0_5",
     "geometry_detection_persistence_below_selection_score_min_0_5",
     "geometry_all_slots_temporal_overlap_or_speed_above_7_0_m_s",
 )
@@ -344,27 +343,18 @@ def _destructive_drop_evidence(
         )
         for detection in fragment.detections
     )
-    court_presence_rejected = (
-        presence.court_presence < config.selection_score_min
-    )
     persistence_rejected = presence.persistence < config.selection_score_min
     temporal_motion_rejected = all(
         not candidate.temporal_motion_consistent for candidate in candidates
     )
-    geometry_rejected = (
-        court_presence_rejected
-        or persistence_rejected
-        or temporal_motion_rejected
-    )
+    geometry_rejected = persistence_rejected or temporal_motion_rejected
     reasons: list[str] = []
     if appearance_rejected:
         reasons.append(DROP_TRIGGER_REASON_VOCABULARY[0])
-    if court_presence_rejected:
-        reasons.append(DROP_TRIGGER_REASON_VOCABULARY[1])
     if persistence_rejected:
-        reasons.append(DROP_TRIGGER_REASON_VOCABULARY[2])
+        reasons.append(DROP_TRIGGER_REASON_VOCABULARY[1])
     if temporal_motion_rejected:
-        reasons.append(DROP_TRIGGER_REASON_VOCABULARY[3])
+        reasons.append(DROP_TRIGGER_REASON_VOCABULARY[2])
     return (
         {
             "appearance": appearance_rejected,
@@ -616,6 +606,7 @@ def recover_identity_conditioned_pool(
     fps: float,
     occupied_frames: Iterable[int] = (),
     next_detection: SelectionDetection | None = None,
+    preferred_source_track_ids: Iterable[int] = (),
     config: PlayerSelectionConfig | None = None,
 ) -> tuple[SelectionDetection, ...]:
     """Recover measured detections one frame at a time; never create geometry."""
@@ -624,6 +615,7 @@ def recover_identity_conditioned_pool(
     if fps <= 0.0:
         raise ValueError("fps must be positive")
     occupied = set(occupied_frames)
+    preferred_sources = frozenset(preferred_source_track_ids)
     recovered: list[SelectionDetection] = []
     anchor = last_detection
     by_frame: dict[int, list[SelectionDetection]] = defaultdict(list)
@@ -641,7 +633,7 @@ def recover_identity_conditioned_pool(
     for frame_idx in sorted(by_frame):
         if frame_idx in occupied:
             continue
-        feasible: list[tuple[float, float, str, SelectionDetection]] = []
+        feasible: list[tuple[int, float, float, str, SelectionDetection]] = []
         for detection in by_frame[frame_idx]:
             dt_s = (detection.frame_idx - anchor.frame_idx) / fps
             if (
@@ -663,6 +655,7 @@ def recover_identity_conditioned_pool(
                 continue
             feasible.append(
                 (
+                    0 if detection.source_track_id in preferred_sources else 1,
                     float("inf") if distance is None else distance,
                     -detection.conf,
                     detection.raw_detection_uid or "",
@@ -672,8 +665,9 @@ def recover_identity_conditioned_pool(
         if not feasible:
             continue
         detection = min(
-            feasible, key=lambda row: (row[0], row[1], row[2], row[3].source_track_id)
-        )[3]
+            feasible,
+            key=lambda row: (row[0], row[1], row[2], row[3], row[4].source_track_id),
+        )[4]
         recovered.append(detection)
         occupied.add(detection.frame_idx)
         anchor = detection
@@ -1315,6 +1309,22 @@ def _select_slot_players(
     assignments: dict[int, list[TrackFragment]] = {slot.slot_id: [] for slot in slots}
     decisions: list[dict[str, Any]] = []
     fragment_by_id = {fragment.fragment_id: fragment for fragment in pool_fragments}
+    owner_source_ids_by_slot = {
+        slot.slot_id: frozenset(
+            fragment_by_id[fragment_id].source_track_id
+            for fragment_id in slot.source_fragment_ids
+        )
+        for slot in slots
+    }
+    owner_slots_by_source: dict[int, set[int]] = defaultdict(set)
+    for slot_id, source_track_ids in owner_source_ids_by_slot.items():
+        for source_track_id in source_track_ids:
+            owner_slots_by_source[source_track_id].add(slot_id)
+    owner_slot_by_source = {
+        source_track_id: next(iter(slot_ids))
+        for source_track_id, slot_ids in owner_slots_by_source.items()
+        if len(slot_ids) == 1
+    }
     assigned_fragment_ids: set[str] = set()
     enrollment_owned_uids: set[str] = set()
     for slot in sorted(slots, key=lambda item: item.slot_id):
@@ -1413,6 +1423,41 @@ def _select_slot_players(
             by_start[start_frame],
             key=lambda item: (item.end_frame, item.fragment_id),
         )
+        # Enrollment supplies a source-ID continuity hint, not identity authority.
+        # Resolve appearance-accepted owner hints first in each chronological batch;
+        # infeasible hints fall through to the ordinary one-to-one assignment.
+        owner_chosen: dict[str, _SlotCandidate] = {}
+        owner_slots_used: set[int] = set()
+        for fragment in batch:
+            owner_slot_id = owner_slot_by_source.get(fragment.source_track_id)
+            if owner_slot_id is None or owner_slot_id in owner_slots_used:
+                continue
+            owner_candidates = _binding_candidates(
+                fragment,
+                slots=slots,
+                assignments=assignments,
+                stitch_vetoes=stitch_vetoes,
+                fps=fps,
+                config=config,
+                owner_source_ids_by_slot=owner_source_ids_by_slot,
+            )
+            owner_candidate = next(
+                candidate
+                for candidate in owner_candidates
+                if candidate.slot_id == owner_slot_id
+            )
+            if not owner_candidate.feasible:
+                continue
+            owner_chosen[fragment.fragment_id] = owner_candidate
+            owner_slots_used.add(owner_slot_id)
+            assignments[owner_slot_id].append(fragment)
+            assigned_fragment_ids.add(fragment.fragment_id)
+
+        generic_batch = [
+            fragment
+            for fragment in batch
+            if fragment.fragment_id not in owner_chosen
+        ]
         candidates_by_fragment = {
             fragment.fragment_id: _binding_candidates(
                 fragment,
@@ -1421,13 +1466,21 @@ def _select_slot_players(
                 stitch_vetoes=stitch_vetoes,
                 fps=fps,
                 config=config,
+                owner_source_ids_by_slot=owner_source_ids_by_slot,
             )
-            for fragment in batch
+            for fragment in generic_batch
         }
-        chosen = _choose_one_to_one_bindings(batch, candidates_by_fragment)
+        chosen = {
+            **owner_chosen,
+            **_choose_one_to_one_bindings(generic_batch, candidates_by_fragment),
+        }
         for fragment in batch:
             evidence = presence_evidence(fragment.detections, fps=fps, config=config)
-            candidates = candidates_by_fragment[fragment.fragment_id]
+            candidates = (
+                [owner_chosen[fragment.fragment_id]]
+                if fragment.fragment_id in owner_chosen
+                else candidates_by_fragment[fragment.fragment_id]
+            )
             selected_candidate = chosen.get(fragment.fragment_id)
             destructive_evidence: dict[str, bool] = {}
             drop_trigger_reasons: tuple[str, ...] = ()
@@ -1442,8 +1495,9 @@ def _select_slot_players(
                 ),
             )
             if selected_candidate is not None:
-                assignments[selected_candidate.slot_id].append(fragment)
-                assigned_fragment_ids.add(fragment.fragment_id)
+                if fragment.fragment_id not in owner_chosen:
+                    assignments[selected_candidate.slot_id].append(fragment)
+                    assigned_fragment_ids.add(fragment.fragment_id)
                 action = "rebind"
                 output_slot_id: int | None = selected_candidate.slot_id
                 chosen_candidate = selected_candidate
@@ -1483,6 +1537,9 @@ def _select_slot_players(
                     "role_consistent": chosen_candidate.role_consistent,
                     "motion_envelope_consistent": chosen_candidate.temporal_motion_consistent,
                     "stitch_vetoed": chosen_candidate.stitch_vetoed,
+                    "registered_owner_continuity": (
+                        chosen_candidate.registered_owner_continuity
+                    ),
                     "evidence_classes": (
                         []
                         if selected_candidate is not None
@@ -1495,6 +1552,21 @@ def _select_slot_players(
                     "reasons": (
                         list(drop_trigger_reasons)
                         if action == "drop"
+                        else [
+                            "registered_enrollment_source_hint",
+                            "identity_accept",
+                            "same_net_side",
+                            "fusion_at_or_above_0_5",
+                            "stitch_veto_absent",
+                            "owner_priority_before_generic_binding",
+                            (
+                                "temporal_motion_advisory_pass"
+                                if chosen_candidate.temporal_motion_consistent
+                                else "temporal_motion_disagreement_preserved_without_fill"
+                            ),
+                        ]
+                        if selected_candidate is not None
+                        and chosen_candidate.registered_owner_continuity
                         else [
                             reason
                             for reason, applies in (
@@ -1541,6 +1613,67 @@ def _select_slot_players(
                 }
             )
 
+    # Binding is chronological, so a veto counterpart may be assigned after an
+    # earlier fragment was left unbound. Recompute against final assignments in
+    # both edge directions. If both unbound endpoints appearance-accept the same
+    # slot, abstain on both rather than let Layer C merge a vetoed pair.
+    layer_c_accepted_fragment_ids_by_slot = {
+        slot.slot_id: {
+            fragment.fragment_id
+            for fragment in unbound_fragments
+            if any(
+                _uniquely_accepts_slot(
+                    detection,
+                    slots=slots,
+                    config=config,
+                )
+                == slot.slot_id
+                for detection in fragment.detections
+            )
+        }
+        for slot in slots
+    }
+    stitch_blocked_fragment_ids_by_slot: dict[int, set[str]] = {
+        slot.slot_id: set() for slot in slots
+    }
+    for slot in slots:
+        blocked = stitch_blocked_fragment_ids_by_slot[slot.slot_id]
+        for fragment in unbound_fragments:
+            if _fragment_stitch_vetoed_for_assignments(
+                fragment,
+                assignments[slot.slot_id],
+                stitch_vetoes,
+            ) or (
+                fragment.source_track_id in owner_source_ids_by_slot[slot.slot_id]
+                and _fragment_is_incoming_stitch_veto(fragment, stitch_vetoes)
+            ):
+                blocked.add(fragment.fragment_id)
+        accepted = layer_c_accepted_fragment_ids_by_slot[slot.slot_id]
+        for left_fragment_id, right_fragment_id in stitch_vetoes:
+            left_matches = {
+                fragment_id
+                for fragment_id in accepted
+                if _fragment_id_is_or_residual(fragment_id, left_fragment_id)
+            }
+            right_matches = {
+                fragment_id
+                for fragment_id in accepted
+                if _fragment_id_is_or_residual(fragment_id, right_fragment_id)
+            }
+            if left_matches and right_matches:
+                blocked.update(left_matches)
+                blocked.update(right_matches)
+    stitch_vetoed_uids_by_slot: dict[int, set[str]] = {
+        slot.slot_id: {
+            _required_raw_uid(detection)
+            for fragment in unbound_fragments
+            if fragment.fragment_id
+            in stitch_blocked_fragment_ids_by_slot[slot.slot_id]
+            for detection in fragment.detections
+        }
+        for slot in slots
+    }
+
     measured_by_slot: dict[int, dict[int, SelectionDetection]] = {
         slot.slot_id: {} for slot in slots
     }
@@ -1582,6 +1715,8 @@ def _select_slot_players(
                 uid = _required_raw_uid(detection)
                 if uid not in unbound_uids or uid in used_uids:
                     continue
+                if uid in stitch_vetoed_uids_by_slot[slot.slot_id]:
+                    continue
                 accepted_slot_id = _uniquely_accepts_slot(
                     detection,
                     slots=slots,
@@ -1596,6 +1731,7 @@ def _select_slot_players(
                 pool=candidate_pool,
                 fps=fps,
                 occupied_frames=measured_by_slot[slot.slot_id],
+                preferred_source_track_ids=owner_source_ids_by_slot[slot.slot_id],
                 config=config,
             )
             for detection in recovered:
@@ -1805,6 +1941,7 @@ def _binding_candidates(
     stitch_vetoes: set[tuple[str, str]],
     fps: float,
     config: PlayerSelectionConfig,
+    owner_source_ids_by_slot: Mapping[int, frozenset[int]] | None = None,
 ) -> list[_SlotCandidate]:
     evidence = presence_evidence(fragment.detections, fps=fps, config=config)
     role = _fragment_role(fragment)
@@ -1825,23 +1962,47 @@ def _binding_candidates(
             fps=fps,
             max_speed_m_s=config.recovery_max_speed_m_s,
         )
-        stitch_vetoed = any(
-            (assigned.fragment_id, fragment.fragment_id) in stitch_vetoes
-            or (fragment.fragment_id, assigned.fragment_id) in stitch_vetoes
-            for assigned in assignments[slot.slot_id]
-        )
         role_consistent = role == (slot.side, slot.role)
-        registered_owner_continuity = any(
-            fragment.fragment_id.startswith(f"{source_fragment_id}:residual-")
-            for source_fragment_id in slot.source_fragment_ids
+        registered_owner_continuity = (
+            fragment.source_track_id
+            in (owner_source_ids_by_slot or {}).get(slot.slot_id, frozenset())
+            or any(
+                fragment.fragment_id.startswith(f"{source_fragment_id}:residual-")
+                for source_fragment_id in slot.source_fragment_ids
+            )
         )
-        feasible = (
+        stitch_vetoed = (
+            _fragment_stitch_vetoed_for_assignments(
+                fragment,
+                assignments[slot.slot_id],
+                stitch_vetoes,
+            )
+            or (
+                registered_owner_continuity
+                and _fragment_is_incoming_stitch_veto(fragment, stitch_vetoes)
+            )
+        )
+        common_feasible = (
             centroid is not None
             and open_set is OpenSetDecision.ACCEPT
-            and role_consistent
-            and temporal_motion_consistent
             and not stitch_vetoed
             and score >= config.selection_score_min
+        )
+        frame_overlap = _fragment_overlaps_assignments(
+            fragment,
+            assignments[slot.slot_id],
+        )
+        feasible = common_feasible and (
+            (
+                registered_owner_continuity
+                and role[0] == slot.side
+                and not frame_overlap
+            )
+            or (
+                not registered_owner_continuity
+                and role_consistent
+                and temporal_motion_consistent
+            )
         )
         candidates.append(
             _SlotCandidate(
@@ -2095,19 +2256,94 @@ def _fragment_inside_slot_motion_envelope(
 ) -> bool:
     if not assigned:
         return True
+    if _fragment_overlaps_assignments(fragment, assigned):
+        return False
+    predecessors = [
+        other for other in assigned if other.end_frame < fragment.start_frame
+    ]
+    successors = [
+        other for other in assigned if fragment.end_frame < other.start_frame
+    ]
     comparisons: list[tuple[SelectionDetection, SelectionDetection]] = []
-    for other in assigned:
-        if other.end_frame < fragment.start_frame:
-            comparisons.append((other.detections[-1], fragment.detections[0]))
-        elif fragment.end_frame < other.start_frame:
-            comparisons.append((fragment.detections[-1], other.detections[0]))
-        else:
-            return False
+    if predecessors:
+        predecessor = max(
+            predecessors,
+            key=lambda item: (item.end_frame, item.fragment_id),
+        )
+        comparisons.append((predecessor.detections[-1], fragment.detections[0]))
+    if successors:
+        successor = min(
+            successors,
+            key=lambda item: (item.start_frame, item.fragment_id),
+        )
+        comparisons.append((fragment.detections[-1], successor.detections[0]))
     return all(
         (right.frame_idx - left.frame_idx) / fps > 0.0
         and _point_distance(left.world_xy, right.world_xy)
         <= max_speed_m_s * ((right.frame_idx - left.frame_idx) / fps)
         for left, right in comparisons
+    )
+
+
+def _fragment_stitch_vetoed_for_assignments(
+    fragment: TrackFragment,
+    assigned: Sequence[TrackFragment],
+    stitch_vetoes: set[tuple[str, str]],
+) -> bool:
+    return any(
+        _fragment_pair_has_stitch_veto(
+            fragment.fragment_id,
+            other.fragment_id,
+            stitch_vetoes,
+        )
+        for other in assigned
+    )
+
+
+def _fragment_is_incoming_stitch_veto(
+    fragment: TrackFragment,
+    stitch_vetoes: set[tuple[str, str]],
+) -> bool:
+    return any(
+        _fragment_id_is_or_residual(fragment.fragment_id, right_fragment_id)
+        for _left_fragment_id, right_fragment_id in stitch_vetoes
+    )
+
+
+def _fragment_pair_has_stitch_veto(
+    left_fragment_id: str,
+    right_fragment_id: str,
+    stitch_vetoes: set[tuple[str, str]],
+) -> bool:
+    return any(
+        (
+            _fragment_id_is_or_residual(left_fragment_id, registered_left)
+            and _fragment_id_is_or_residual(right_fragment_id, registered_right)
+        )
+        or (
+            _fragment_id_is_or_residual(left_fragment_id, registered_right)
+            and _fragment_id_is_or_residual(right_fragment_id, registered_left)
+        )
+        for registered_left, registered_right in stitch_vetoes
+    )
+
+
+def _fragment_id_is_or_residual(fragment_id: str, registered_id: str) -> bool:
+    return fragment_id == registered_id or fragment_id.startswith(
+        f"{registered_id}:residual-"
+    )
+
+
+def _fragment_overlaps_assignments(
+    fragment: TrackFragment,
+    assigned: Sequence[TrackFragment],
+) -> bool:
+    return any(
+        not (
+            other.end_frame < fragment.start_frame
+            or fragment.end_frame < other.start_frame
+        )
+        for other in assigned
     )
 
 

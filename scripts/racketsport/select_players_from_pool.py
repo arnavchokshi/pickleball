@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import copy
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -11,7 +13,7 @@ import shutil
 import sys
 import tempfile
 import unicodedata
-from typing import Any
+from typing import Any, Sequence
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
@@ -52,6 +54,15 @@ def main() -> int:
     parser.add_argument("--out-tracks", type=Path, required=True)
     parser.add_argument("--report", type=Path, required=True)
     parser.add_argument(
+        "--scoring-projection",
+        type=Path,
+        help=(
+            "Field-stripped measured-only Tracks input for later scoring. "
+            "Enabled selection defaults to <out-tracks stem>.scoring_projection.json; "
+            "a sibling .sha256 file hashes the exact emitted bytes."
+        ),
+    )
+    parser.add_argument(
         "--enable-selection",
         action="store_true",
         help="Enable preview selection. Omit for a byte-identical tracks.json no-op.",
@@ -59,6 +70,20 @@ def main() -> int:
     args = parser.parse_args()
 
     try:
+        if args.scoring_projection is not None and not args.enable_selection:
+            raise ValueError("--scoring-projection requires --enable-selection")
+        scoring_projection = (
+            args.scoring_projection
+            if args.scoring_projection is not None
+            else _default_scoring_projection_path(args.out_tracks)
+            if args.enable_selection
+            else None
+        )
+        scoring_projection_sha256 = (
+            Path(f"{scoring_projection}.sha256")
+            if scoring_projection is not None
+            else None
+        )
         _require_pairwise_distinct_paths(
             {
                 "--tracks": args.tracks,
@@ -67,6 +92,8 @@ def main() -> int:
                 "--calibration": args.calibration,
                 "--out-tracks": args.out_tracks,
                 "--report": args.report,
+                "--scoring-projection": scoring_projection,
+                "--scoring-projection-sha256": scoring_projection_sha256,
             }
         )
         tracks_payload = _read_object(args.tracks)
@@ -126,6 +153,9 @@ def main() -> int:
             validated = Tracks.model_validate(canonical_tracks_input)
             canonical_output = validated.model_dump(mode="json")
             canonical_output["unbound_observations"] = unbound_observations
+            scoring_projection_payload = _field_stripped_scoring_projection(
+                canonical_output
+            )
             selected_text = (
                 json.dumps(
                     canonical_output,
@@ -135,6 +165,18 @@ def main() -> int:
                 )
                 + "\n"
             )
+            scoring_projection_text = (
+                json.dumps(
+                    scoring_projection_payload,
+                    allow_nan=False,
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n"
+            )
+            scoring_projection_digest = hashlib.sha256(
+                scoring_projection_text.encode("utf-8")
+            ).hexdigest()
             report_text = (
                 json.dumps(
                     report,
@@ -144,11 +186,17 @@ def main() -> int:
                 )
                 + "\n"
             )
-            _stage_and_publish_report(
-                staged_tracks=_stage_text(args.out_tracks, selected_text),
+            assert scoring_projection is not None
+            assert scoring_projection_sha256 is not None
+            _stage_and_publish_enabled_outputs(
+                tracks_text=selected_text,
                 tracks_destination=args.out_tracks,
                 report_text=report_text,
                 report_destination=args.report,
+                projection_text=scoring_projection_text,
+                projection_destination=scoring_projection,
+                projection_sha256_text=f"{scoring_projection_digest}\n",
+                projection_sha256_destination=scoring_projection_sha256,
             )
     except Exception as exc:
         print(f"player selection failed: {exc}", file=sys.stderr)
@@ -156,6 +204,12 @@ def main() -> int:
 
     print(args.out_tracks)
     print(args.report)
+    if args.enable_selection:
+        assert scoring_projection is not None
+        assert scoring_projection_sha256 is not None
+        print(scoring_projection)
+        print(scoring_projection_sha256)
+        print(f"scoring_projection_sha256={scoring_projection_digest}")
     return 0
 
 
@@ -166,6 +220,40 @@ def _read_object(path: Path | None) -> dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{path} must contain a JSON object")
     return payload
+
+
+def _default_scoring_projection_path(output: Path) -> Path:
+    suffix = output.suffix or ".json"
+    return output.with_name(f"{output.stem}.scoring_projection{suffix}")
+
+
+def _field_stripped_scoring_projection(
+    authoritative_output: dict[str, Any],
+) -> dict[str, Any]:
+    """Build the exact measured-only legacy Tracks input; never retain synthesis."""
+
+    projection = copy.deepcopy(authoritative_output)
+    projection.pop("unbound_observations", None)
+    players = projection.get("players")
+    if not isinstance(players, list):
+        raise ValueError("authoritative selection output must contain a players list")
+    for player in players:
+        if not isinstance(player, dict) or not isinstance(player.get("frames"), list):
+            raise ValueError("authoritative selection players must contain frame lists")
+        measured_frames: list[dict[str, Any]] = []
+        for frame in player["frames"]:
+            if not isinstance(frame, dict):
+                raise ValueError("authoritative selection frames must be objects")
+            if frame.get("interpolated") is True:
+                continue
+            measured = dict(frame)
+            measured.pop("interpolated", None)
+            measured_frames.append(measured)
+        player["frames"] = measured_frames
+    # Validate the field-stripped payload without reserializing it through the
+    # model, which would reintroduce optional default fields.
+    Tracks.model_validate(projection)
+    return projection
 
 
 def _require_pairwise_distinct_paths(paths: dict[str, Path | None]) -> None:
@@ -252,38 +340,52 @@ def _publish_output_pair(
 ) -> None:
     """Publish the report first, tracks last, and roll back report on failure."""
 
-    report_existed = report_destination.exists()
-    report_backup: Path | None = None
-    report_published = False
+    _publish_output_bundle(
+        (
+            (staged_report, report_destination),
+            (staged_tracks, tracks_destination),
+        )
+    )
+
+
+def _publish_output_bundle(
+    outputs: Sequence[tuple[Path, Path]],
+) -> None:
+    """Publish a staged bundle in order and restore every destination on failure."""
+
+    if not outputs:
+        raise ValueError("output bundle cannot be empty")
+    backups: dict[Path, Path] = {}
+    published: list[Path] = []
     try:
-        if report_existed:
-            report_backup = _stage_copy(report_destination, report_destination)
-        os.replace(staged_report, report_destination)
-        report_published = True
-        os.replace(staged_tracks, tracks_destination)
+        for _staged, destination in outputs:
+            if destination.exists():
+                backups[destination] = _stage_copy(destination, destination)
+        for staged, destination in outputs:
+            os.replace(staged, destination)
+            published.append(destination)
     except BaseException as publish_error:
-        rollback_error: BaseException | None = None
-        if report_published:
+        rollback_errors: list[BaseException] = []
+        for destination in reversed(published):
+            backup = backups.pop(destination, None)
             try:
-                if report_existed:
-                    assert report_backup is not None
-                    os.replace(report_backup, report_destination)
-                    report_backup = None
+                if backup is not None:
+                    os.replace(backup, destination)
                 else:
-                    report_destination.unlink(missing_ok=True)
+                    destination.unlink(missing_ok=True)
             except BaseException as exc:
-                rollback_error = exc
-        staged_report.unlink(missing_ok=True)
-        staged_tracks.unlink(missing_ok=True)
-        if report_backup is not None:
-            report_backup.unlink(missing_ok=True)
-        if rollback_error is not None:
+                rollback_errors.append(exc)
+        for staged, _destination in outputs:
+            staged.unlink(missing_ok=True)
+        for backup in backups.values():
+            backup.unlink(missing_ok=True)
+        if rollback_errors:
             raise RuntimeError(
-                "tracks publication failed and report rollback also failed"
+                "output publication failed and one or more destinations could not be restored"
             ) from publish_error
         raise
-    if report_backup is not None:
-        report_backup.unlink(missing_ok=True)
+    for backup in backups.values():
+        backup.unlink(missing_ok=True)
 
 
 def _stage_and_publish_report(
@@ -304,6 +406,35 @@ def _stage_and_publish_report(
         staged_report=staged_report,
         report_destination=report_destination,
     )
+
+
+def _stage_and_publish_enabled_outputs(
+    *,
+    tracks_text: str,
+    tracks_destination: Path,
+    report_text: str,
+    report_destination: Path,
+    projection_text: str,
+    projection_destination: Path,
+    projection_sha256_text: str,
+    projection_sha256_destination: Path,
+) -> None:
+    output_texts = (
+        (projection_destination, projection_text),
+        (projection_sha256_destination, projection_sha256_text),
+        (report_destination, report_text),
+        # The authoritative full output is the final publication/commit point.
+        (tracks_destination, tracks_text),
+    )
+    staged_outputs: list[tuple[Path, Path]] = []
+    try:
+        for destination, content in output_texts:
+            staged_outputs.append((_stage_text(destination, content), destination))
+    except BaseException:
+        for staged, _destination in staged_outputs:
+            staged.unlink(missing_ok=True)
+        raise
+    _publish_output_bundle(staged_outputs)
 
 
 if __name__ == "__main__":

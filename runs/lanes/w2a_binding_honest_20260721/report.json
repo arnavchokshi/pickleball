@@ -1,0 +1,100 @@
+{
+  "objective_result": "PARTIAL",
+  "acceptance": [
+    {
+      "metric": "Registered soft fusion and court-soft destructive path",
+      "baseline": "The preserved patch added an unregistered positive court_presence >= 0.5 bind gate; w2a still retained court_presence < 0.5 as a destructive geometry trigger.",
+      "after": "Registered 0.4/0.4/0.2 fusion with S >= 0.5 is restored, and court presence is absent from the destructive evidence and drop-reason vocabulary.",
+      "target": "No hard court-presence boundary on binding or destructive paths.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Owner-rebind stitch-veto invariant",
+      "baseline": "Enrollment source ownership could override stitch veto outside the f44/f87 case.",
+      "after": "Owner source IDs are priority/reservation hints: the owner prepass reserves slots first, while appearance, fusion, and residual-aware veto checks cover owner binding and Layer C.",
+      "target": "No owner rebind across stitch veto without independent appearance provenance; test beyond f44/f87.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Required regressions",
+      "baseline": "Boundary-player, source-ID-reuse, general owner-veto, explicit 7.0 m/s default, and court-soft destructive-path regressions were missing.",
+      "after": "All required regressions pass, including appearance REJECT plus court_presence < 0.5 with adequate persistence/motion remaining UNBOUND.",
+      "target": "Cover every review-demanded binding and destructive-path regression.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Exact scoring projection and SHA-256",
+      "baseline": "The prior lane did not archive/hash the exact stripped scoring input.",
+      "after": "Fixture evidence was regenerated; projection SHA-256 remains 20ea9be75f0a5c8892181611d45953b206e1a99c03236e9b76a02b57d9a11f46 and every SHA256SUMS entry verifies.",
+      "target": "Archive/hash the exact later-scoring projection beside the full output.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Fixture-only execution and disclosure",
+      "baseline": "The prior round inspected frozen-GT cov4 0.6767, changed owner binding, then rescored to 0.7800.",
+      "after": "No scorer, protected evaluation, frozen gate, or holdout scoring was executed. A judge-facing regression source was inspected but not run, and Wolverine/Burlington remain disclosed as reproduction-only.",
+      "target": "No scorer/protected evaluation execution and explicit contamination disclosure without denying source inspection.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Focused suite",
+      "baseline": "83 passed before the court-soft correction.",
+      "after": "84 passed, 0 failed, 0 skipped in 4.51s; exit 0.",
+      "target": "All focused player-selection tests green with MPLBACKEND=Agg.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Cross-signal reporting",
+      "baseline": "No report for this lane.",
+      "after": "REPORT.md includes the required TRK consumes/feeds/invariant row from North Star section 3.1.",
+      "target": "Include the required cross-signal row.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Fence and repository actions",
+      "baseline": "Dirty concurrent main worktree.",
+      "after": "The original w2a work stayed inside its fence; w2b additionally touched only the explicitly requested schema and lane artifacts. No commit, branch, or push was created.",
+      "target": "Respect the requested file scope and remain uncommitted on main.",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Historical wide racketsport suite",
+      "baseline": null,
+      "after": "3983 passed, 30 failed, 23 skipped in 3074.44s; exit 1. This w2a result was not rerun by w2b.",
+      "target": "Full blast-radius suite green.",
+      "verdict": "FAIL"
+    }
+  ],
+  "changes": [
+    "threed/racketsport/player_selection.py:165 - remove court presence from destructive drop reasons; persistence and temporal motion remain geometry evidence.",
+    "threed/racketsport/player_selection.py:1436 - make owner continuity an appearance-gated priority/reservation hint that cannot bypass stitch veto.",
+    "threed/racketsport/player_selection.py:1626 - recompute veto blocks against final assignments and prevent same-slot Layer-C recovery of veto endpoints.",
+    "threed/racketsport/player_selection.py:1963 - restore registered soft fusion without a positive hard court-presence gate.",
+    "docs/racketsport/player_selection_report_schema.json:28 - remove the court-presence destructive reason from the schema vocabulary.",
+    "scripts/racketsport/select_players_from_pool.py:57 - add scoring-projection output and exact SHA-256 sidecar.",
+    "tests/racketsport/test_player_selection.py:1874 - require appearance plus persistence/motion for drops and add the biting low-court UNBOUND regression.",
+    "tests/racketsport/test_player_selection.py:2439 - verify projection transformation, exact digest, collisions, and rollback.",
+    "runs/lanes/w2a_binding_honest_20260721/cli_fixture_evidence/evidence_manifest.json:1 - regenerate synthetic full output/projection evidence and hashes.",
+    "runs/lanes/w2a_binding_honest_20260721/REPORT.md:17 - disclose judge-facing source inspection and correct owner source IDs to priority/reservation hints."
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q --tb=short --ignore=tests/racketsport/test_person_track_gt_scoring.py --ignore=tests/racketsport/test_wolverine_burlington_prereg_regression.py --junitxml=runs/lanes/w2a_binding_honest_20260721/wide_suite.junit.xml",
+    "passed": 3983,
+    "failed": 30,
+    "skipped": 23,
+    "failures_all_preexisting": false,
+    "failure_notes": "Historical w2a exit 1; not rerun by w2b. Failures outside the fence: 18 court/data expectation failures, 8 sandbox-denied socket tests, 1 scaffold-index mismatch, 2 lane-VM startup expectation failures, and 1 storage-policy failure from an unrelated large untracked MP4. Not every failure was proven on clean HEAD."
+  },
+  "honest_issues": [
+    "VERIFIED=0 remains binding; this is not an accuracy or promotion result.",
+    "The 20260720 round was scorer-guided, so Wolverine/Burlington cannot serve as independent evidence.",
+    "The historical w2a full suite is red and the 30 failures were not all proven pre-existing at clean HEAD; w2b was instructed not to rerun it.",
+    "A judge-facing regression source was inspected during w2a, although no judge module, scorer, frozen gate, protected evaluation, or holdout scoring was executed.",
+    "The conservative incoming-veto rule can leave a returning true owner unbound even with exact appearance acceptance, trading recall for identity safety.",
+    "Synthetic projection evidence proves routing, stripping, deterministic bytes, and digest integrity only.",
+    "Four-output publication rolls back caught exceptions but is not process-crash atomic and does not preserve filesystem metadata during rollback.",
+    "No commit, branch, or push was created."
+  ],
+  "next": "Freeze code/config/scorer hashes and preregister one fresh Indoor evaluation plus thresholds in heldout_eval_ledger. Outdoor may run once only as a disclosed historical benchmark; obtain another untouched holdout if two fresh clips are required.",
+  "session_id": null
+}
