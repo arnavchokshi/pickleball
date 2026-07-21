@@ -1,16 +1,58 @@
 #!/usr/bin/env bash
 # Fleet VM startup (FABLE_OPERATING_MANUAL §12) — runs on every boot of a fable-lane VM.
 # STATUS: SCAFFOLD — flesh out in the P0-1 GPU cold-start lane; keep steps idempotent.
+# CUDA COMPUTE MODE POLICY:
+#   - Pipeline VMs default to DEFAULT. process_video.py and its BODY-local child
+#     process need separate CUDA contexts on the same single-GPU VM.
+#   - EXCLUSIVE_PROCESS is opt-in only for an explicitly declared training lane
+#     guaranteed to use one CUDA context. Set FABLE_ROLE=training (or GCE
+#     fable-role=training) together with FABLE_CUDA_COMPUTE_MODE=EXCLUSIVE_PROCESS
+#     (or GCE fable-cuda-compute-mode=EXCLUSIVE_PROCESS).
+#   - Do not opt a pipeline/BODY-local VM into EXCLUSIVE_PROCESS.
 set -euo pipefail
-# 1. One lane per GPU, fail-loud on contention:
-nvidia-smi -c EXCLUSIVE_PROCESS || true
-# 2. Preemption watcher (belt-and-suspenders alongside the GCE shutdown-script hook):
+
+# 1. Arm the preemption watcher before any bounded metadata lookup.
 ( while sleep 5; do
     if curl -s -H 'Metadata-Flavor: Google' \
       http://metadata.google.internal/computeMetadata/v1/instance/preempted | grep -q TRUE; then
       touch /tmp/PREEMPTED; break
     fi
   done ) & disown
+
+metadata_attribute() {
+  curl -s -f --connect-timeout 1 --max-time 2 -H 'Metadata-Flavor: Google' \
+    "http://metadata.google.internal/computeMetadata/v1/instance/attributes/$1" 2>/dev/null
+}
+
+# 2. Select CUDA context policy for this lane. Environment wins over metadata;
+#    absent configuration means the pipeline-safe DEFAULT mode.
+CUDA_COMPUTE_MODE_METADATA=""
+if [ -z "${FABLE_CUDA_COMPUTE_MODE:-}" ]; then
+  CUDA_COMPUTE_MODE_METADATA="$(metadata_attribute fable-cuda-compute-mode || true)"
+fi
+CUDA_COMPUTE_MODE="${FABLE_CUDA_COMPUTE_MODE:-${CUDA_COMPUTE_MODE_METADATA:-DEFAULT}}"
+FABLE_ROLE_METADATA=""
+if [ -z "${FABLE_ROLE:-}" ]; then
+  FABLE_ROLE_METADATA="$(metadata_attribute fable-role || true)"
+fi
+LANE_FABLE_ROLE="${FABLE_ROLE:-${FABLE_ROLE_METADATA:-}}"
+case "$CUDA_COMPUTE_MODE" in
+  DEFAULT|EXCLUSIVE_PROCESS)
+    ;;
+  *)
+    echo "lane_vm_startup: unsupported CUDA compute mode: $CUDA_COMPUTE_MODE" >&2
+    exit 64
+    ;;
+esac
+if [ "$CUDA_COMPUTE_MODE" = "EXCLUSIVE_PROCESS" ] && [ "$LANE_FABLE_ROLE" != "training" ]; then
+  echo "lane_vm_startup: EXCLUSIVE_PROCESS requires explicit fable-role=training" >&2
+  exit 64
+fi
+echo "lane_vm_startup: CUDA compute mode $CUDA_COMPUTE_MODE"
+if ! nvidia-smi -c "$CUDA_COMPUTE_MODE"; then
+  echo "lane_vm_startup: failed to set CUDA compute mode $CUDA_COMPUTE_MODE" >&2
+  exit 1
+fi
 # 3. Code + weights: git clone/pull the repo (it is pushed) + restore vendor pins per
 #    third_party/VENDOR_PINS.md + pull weights per models/MANIFEST.json (see RESET_HANDOFF §7 /
 #    scripts/racketsport/gpu_cold_start.sh — proven 258s).
@@ -20,12 +62,11 @@ echo "lane_vm_startup: scaffold complete (extend in P0-1 lane)"
 # 4. INFRA-2 pull-worker install hook (product-infra plan §INFRA-2 / §3).
 #    INERT on every VM except one booted with GCE metadata
 #    `fable-role=pickleball-worker` — training/eval fleet VMs are untouched
-#    by construction (the curl below is guarded with `|| true` so a missing
-#    metadata attribute on a normal lane VM never trips `set -e` here).
+#    by construction. The bounded role lookup above leaves a missing role empty,
+#    so a normal lane VM never trips `set -e` here.
 #    Idempotent: safe to re-run on every boot.
 # ---------------------------------------------------------------------------
-WORKER_FABLE_ROLE="$(curl -s -f -H 'Metadata-Flavor: Google' \
-  'http://metadata.google.internal/computeMetadata/v1/instance/attributes/fable-role' 2>/dev/null || true)"
+WORKER_FABLE_ROLE="$LANE_FABLE_ROLE"
 if [ "$WORKER_FABLE_ROLE" = "pickleball-worker" ]; then
   echo "lane_vm_startup: fable-role=pickleball-worker — installing pull-worker"
 

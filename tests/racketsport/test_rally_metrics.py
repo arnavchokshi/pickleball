@@ -1,11 +1,16 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 
-from threed.racketsport.rally_metrics import build_rally_metrics
+from threed.racketsport.coaching_fact_audit import audit_coaching_facts
+from threed.racketsport.rally_metrics import build_rally_metrics, read_virtual_world_tracks
+
+
+POOLING_WIRE_TRACKS_FIXTURE = Path("tests/racketsport/fixtures/pooling_wire_tracks_world_xy_excerpt.json")
 
 
 def test_rally_metrics_split_rallies_zone_fractions_and_contact_trust(tmp_path: Path) -> None:
@@ -146,7 +151,7 @@ def test_interpolated_or_predicted_frame_caps_position_metric_trust(tmp_path: Pa
     assert metrics["zone_occupancy"]["trust"] == "estimated"
 
 
-def test_missing_track_world_xy_fails_closed_with_exact_field_path(tmp_path: Path) -> None:
+def test_missing_track_world_xy_returns_typed_degradation(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     _write_run(
         run_dir,
@@ -155,8 +160,85 @@ def test_missing_track_world_xy_fails_closed_with_exact_field_path(tmp_path: Pat
         rally_spans=[{"id": "r0", "t0": 0.0, "t1": 0.1}],
     )
 
-    with pytest.raises(ValueError, match=r"players\[bad\]\.frames\[0\]\.track_world_xy"):
-        build_rally_metrics(run_dir)
+    result = build_rally_metrics(run_dir)
+
+    assert result["status"] == "degraded"
+    assert result["degradation"]["outcome_type"] == "missing_player_positions"
+    assert result["degradation"]["reason"] == "missing_player_positions"
+    assert result["degradation"]["evidence_provenance"] == "missing"
+    assert result["degradation"]["authority"] == "degraded"
+    assert result["player_count"] == 0
+    assert result["rallies"] == []
+    assert result["coaching_card_facts"]["status"] == "degraded"
+
+
+@pytest.mark.parametrize("players_state", ["absent", "empty"])
+def test_absent_or_empty_players_returns_typed_degradation(
+    tmp_path: Path,
+    players_state: str,
+) -> None:
+    run_dir = tmp_path / players_state
+    _write_run(run_dir, fps=10.0, players=[], rally_spans=None)
+    if players_state == "absent":
+        world_path = run_dir / "virtual_world.json"
+        world = json.loads(world_path.read_text(encoding="utf-8"))
+        world.pop("players")
+        world_path.write_text(json.dumps(world, indent=2), encoding="utf-8")
+
+    result = build_rally_metrics(run_dir)
+
+    assert result["status"] == "degraded"
+    assert result["degradation"]["reason"] == "missing_player_positions"
+    assert result["player_count"] == 0
+    assert result["rallies"] == []
+
+
+def test_pulled_tracks_fixture_reads_exported_world_xy_and_frame_idx() -> None:
+    world = read_virtual_world_tracks(POOLING_WIRE_TRACKS_FIXTURE)
+
+    assert world.fps == 60.0
+    assert len(world.players) == 4
+    assert world.players[0].frames[0].frame_index == 3059
+    assert world.players[0].frames[0].track_world_xy == pytest.approx(
+        (1.6180606719876225, -6.735806105238495)
+    )
+    assert world.players[3].frames[1].frame_index == 1
+
+
+def test_builder_prefers_tracks_world_xy_over_virtual_world_no_data_placeholders(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    _write_run(
+        run_dir,
+        fps=60.0,
+        players=[
+            {
+                "id": player_id,
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "trust_band": {
+                            "gate_id": "world_no_data_placeholder",
+                            "gate_status": "no_data",
+                        },
+                    }
+                ],
+            }
+            for player_id in range(1, 5)
+        ],
+        rally_spans=None,
+    )
+    shutil.copyfile(POOLING_WIRE_TRACKS_FIXTURE, run_dir / "tracks.json")
+
+    result = build_rally_metrics(run_dir)
+
+    assert result["inputs"]["player_positions"] == str(run_dir / "tracks.json")
+    assert result["player_count"] == 4
+    movement = next(
+        fact for fact in result["coaching_card_facts"]["audited_facts"] if fact["fact_type"] == "movement"
+    )
+    assert movement["source_artifacts"][0]["source_id"] == "tracks"
+    assert movement["evidence_locator"]["source_id"] == "tracks"
+    assert audit_coaching_facts(result["coaching_card_facts"])["verdict"] == "pass"
 
 
 def _write_run(

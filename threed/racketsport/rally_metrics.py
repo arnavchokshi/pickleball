@@ -46,6 +46,7 @@ class WorldTrackData:
     fps: float
     ball_frame_count: int | None
     players: tuple[PlayerTrack, ...]
+    source_id: str
 
 
 @dataclass(frozen=True)
@@ -62,6 +63,7 @@ class _FrameBuilder:
     frame_index: int
     t: float | None = None
     track_world_xy: list[float] = field(default_factory=list)
+    world_xy: list[float] = field(default_factory=list)
     trust_tokens: list[str] = field(default_factory=list)
 
 
@@ -79,7 +81,21 @@ def build_rally_metrics(run_dir: Path | str) -> dict[str, Any]:
     if not run_path.is_dir():
         raise NotADirectoryError(f"run dir is not a directory: {run_path}")
 
-    world = read_virtual_world_tracks(run_path / "virtual_world.json")
+    tracks_path = run_path / "tracks.json"
+    player_positions_path = tracks_path if tracks_path.is_file() else run_path / "virtual_world.json"
+    if not player_positions_path.is_file():
+        return _missing_player_positions_result(run_path, player_positions_path, fps=30.0)
+    world = read_virtual_world_tracks(player_positions_path)
+    players_with_positions = tuple(player for player in world.players if player.frames)
+    if not players_with_positions:
+        return _missing_player_positions_result(run_path, player_positions_path, fps=world.fps)
+    if len(players_with_positions) != len(world.players):
+        world = WorldTrackData(
+            fps=world.fps,
+            ball_frame_count=world.ball_frame_count,
+            players=players_with_positions,
+            source_id=world.source_id,
+        )
     court_zones = _load_court_zones(run_path / "court_zones.json")
     spans, rally_scope = _load_rally_spans(run_path / "rally_spans.json", world=world)
     contacts = _load_contact_events(run_path / "contact_windows.json")
@@ -111,6 +127,8 @@ def build_rally_metrics(run_dir: Path | str) -> dict[str, Any]:
         },
         "inputs": {
             "virtual_world": str(run_path / "virtual_world.json"),
+            "player_positions": str(player_positions_path),
+            "tracks": str(tracks_path) if tracks_path.is_file() else None,
             "rally_spans": str(run_path / "rally_spans.json") if (run_path / "rally_spans.json").exists() else None,
             "court_zones": str(run_path / "court_zones.json"),
             "contact_windows": str(run_path / "contact_windows.json") if (run_path / "contact_windows.json").exists() else None,
@@ -122,6 +140,33 @@ def build_rally_metrics(run_dir: Path | str) -> dict[str, Any]:
         "player_count": len(world.players),
         "rallies": rally_payloads,
         "coaching_card_facts": facts,
+    }
+
+
+def _missing_player_positions_result(run_path: Path, player_positions_path: Path, *, fps: float) -> dict[str, Any]:
+    degradation = {
+        "outcome_type": "missing_player_positions",
+        "reason": "missing_player_positions",
+        "evidence_provenance": "missing",
+        "authority": "degraded",
+        "source": str(player_positions_path),
+    }
+    return {
+        "schema_version": 1,
+        "artifact_type": ARTIFACT_TYPE,
+        "status": "degraded",
+        "source_run_dir": str(run_path),
+        "rally_scope": "unavailable",
+        "degradation": degradation,
+        "fps": fps,
+        "player_count": 0,
+        "rallies": [],
+        "coaching_card_facts": {
+            "status": "degraded",
+            "degradation": dict(degradation),
+            "facts": [],
+            "audited_facts": [],
+        },
     }
 
 
@@ -171,6 +216,8 @@ def _read_virtual_world_tracks_stream(path: Path) -> WorldTrackData:
                 current_frame = None
             elif current_frame is not None and prefix == "players.item.frames.item.t" and event == "number":
                 current_frame.t = float(value)
+            elif current_frame is not None and prefix == "players.item.frames.item.frame_idx" and event == "number":
+                current_frame.frame_index = int(value)
             elif (
                 current_frame is not None
                 and prefix == "players.item.frames.item.track_world_xy.item"
@@ -178,6 +225,13 @@ def _read_virtual_world_tracks_stream(path: Path) -> WorldTrackData:
             ):
                 if len(current_frame.track_world_xy) < 2:
                     current_frame.track_world_xy.append(float(value))
+            elif (
+                current_frame is not None
+                and prefix == "players.item.frames.item.world_xy.item"
+                and event == "number"
+            ):
+                if len(current_frame.world_xy) < 2:
+                    current_frame.world_xy.append(float(value))
             elif current_frame is not None and _is_frame_trust_prefix(prefix) and event in {
                 "string",
                 "number",
@@ -187,7 +241,12 @@ def _read_virtual_world_tracks_stream(path: Path) -> WorldTrackData:
 
     if ball_frame_count is None and ball_frame_counter:
         ball_frame_count = ball_frame_counter
-    return WorldTrackData(fps=fps, ball_frame_count=ball_frame_count, players=tuple(players))
+    return WorldTrackData(
+        fps=fps,
+        ball_frame_count=ball_frame_count,
+        players=tuple(players),
+        source_id=_player_position_source_id(path),
+    )
 
 
 def _read_virtual_world_tracks_small_json(path: Path) -> WorldTrackData:
@@ -204,23 +263,38 @@ def _read_virtual_world_tracks_small_json(path: Path) -> WorldTrackData:
             if not isinstance(frame, Mapping):
                 continue
             frame_builder = _FrameBuilder(frame_index=index)
+            if frame.get("frame_idx") is not None:
+                frame_builder.frame_index = int(frame["frame_idx"])
             if frame.get("t") is not None:
                 frame_builder.t = float(frame["t"])
-            xy = frame.get("track_world_xy")
-            if isinstance(xy, Sequence) and len(xy) >= 2:
-                frame_builder.track_world_xy = [float(xy[0]), float(xy[1])]
+            world_xy = frame.get("world_xy")
+            if isinstance(world_xy, Sequence) and len(world_xy) >= 2:
+                frame_builder.world_xy = [float(world_xy[0]), float(world_xy[1])]
+            track_world_xy = frame.get("track_world_xy")
+            if isinstance(track_world_xy, Sequence) and len(track_world_xy) >= 2:
+                frame_builder.track_world_xy = [float(track_world_xy[0]), float(track_world_xy[1])]
             frame_builder.trust_tokens.extend(_trust_tokens_from_mapping(frame))
             builder.frames.append(frame_builder)
         players.append(_finalize_player(builder))
-    return WorldTrackData(fps=fps, ball_frame_count=ball_frame_count, players=tuple(players))
+    return WorldTrackData(
+        fps=fps,
+        ball_frame_count=ball_frame_count,
+        players=tuple(players),
+        source_id=_player_position_source_id(path),
+    )
+
+
+def _player_position_source_id(path: Path) -> str:
+    return "tracks" if path.name == "tracks.json" else "virtual_world"
 
 
 def _finalize_player(builder: _PlayerBuilder) -> PlayerTrack:
     player_id = builder.player_id if builder.player_id is not None else str(builder.ordinal)
     frames: list[PlayerFrame] = []
     for frame in builder.frames:
-        if len(frame.track_world_xy) < 2:
-            raise ValueError(f"missing required field players[{player_id}].frames[{frame.frame_index}].track_world_xy")
+        position_world_xy = frame.world_xy if len(frame.world_xy) >= 2 else frame.track_world_xy
+        if len(position_world_xy) < 2:
+            continue
         if frame.t is None:
             raise ValueError(f"missing required field players[{player_id}].frames[{frame.frame_index}].t")
         frames.append(
@@ -228,7 +302,7 @@ def _finalize_player(builder: _PlayerBuilder) -> PlayerTrack:
                 player_id=player_id,
                 frame_index=frame.frame_index,
                 t=frame.t,
-                track_world_xy=(frame.track_world_xy[0], frame.track_world_xy[1]),
+                track_world_xy=(position_world_xy[0], position_world_xy[1]),
                 estimated_input=_tokens_are_estimated(frame.trust_tokens),
             )
         )
@@ -596,7 +670,7 @@ def _coaching_card_facts(
         rally_source_id = (
             "rally_spans"
             if span.scope == "rally_spans" and "rally_spans" in source_by_id
-            else "virtual_world"
+            else world.source_id
         )
         rally_source_pointer = f"/spans/{span_index}" if rally_source_id == "rally_spans" else "/players"
         rally_frame_start = max(0, int(round(span.t0 * world.fps)))
@@ -638,7 +712,7 @@ def _coaching_card_facts(
                 continue
             metrics = player_payload["metrics"]
             world_pointer = f"/players/{player_index}/frames"
-            common_sources = [source_by_id["virtual_world"], source_by_id["court_zones"]]
+            common_sources = [source_by_id[world.source_id], source_by_id["court_zones"]]
             common_kwargs = {
                 "rally_id": span.rally_id,
                 "entity_type": "player",
@@ -740,6 +814,7 @@ def _coaching_card_facts(
 def _facts_source_artifacts(run_path: Path) -> list[dict[str, Any]]:
     paths = {
         "virtual_world": run_path / "virtual_world.json",
+        "tracks": run_path / "tracks.json",
         "court_zones": run_path / "court_zones.json",
         "rally_spans": run_path / "rally_spans.json",
         "contact_windows": run_path / "contact_windows.json",
