@@ -1,0 +1,173 @@
+{
+  "artifact_type": "racketsport_pipeline_run",
+  "clip": "indoor_doubles_fwuks_0500_long_mid_baseline",
+  "inputs_dir": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline",
+  "readiness": {
+    "artifact_type": "racketsport_pipeline_artifact_readiness",
+    "artifact_validation_errors": [],
+    "missing_artifacts": [],
+    "requested_stage": "tracking",
+    "required_artifacts": [
+      "court_calibration.json",
+      "court_zones.json",
+      "net_plane.json",
+      "court_line_evidence.json",
+      "tracks.json"
+    ],
+    "run_dir": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline",
+    "schema_version": 1,
+    "semantic_blockers": [
+      "calibration:court_line_evidence_not_ready",
+      "calibration:court_line_evidence_missing_required_line_far_centerline"
+    ],
+    "stage_order": [
+      "calibration",
+      "tracking",
+      "pose",
+      "body",
+      "physics",
+      "ball_events",
+      "racket",
+      "metrics",
+      "shot_drill",
+      "copy",
+      "replay",
+      "e2e"
+    ],
+    "stages": [
+      {
+        "artifact_validation_errors": [],
+        "blocked_by": [],
+        "depends_on": [],
+        "missing_artifacts": [],
+        "phase": "phase1",
+        "present_artifacts": [
+          "court_calibration.json",
+          "court_zones.json",
+          "net_plane.json",
+          "court_line_evidence.json"
+        ],
+        "required_artifacts": [
+          "court_calibration.json",
+          "court_zones.json",
+          "net_plane.json",
+          "court_line_evidence.json"
+        ],
+        "semantic_blockers": [
+          "court_line_evidence_not_ready",
+          "court_line_evidence_missing_required_line_far_centerline"
+        ],
+        "stage": "calibration",
+        "status": "blocked"
+      },
+      {
+        "artifact_validation_errors": [],
+        "blocked_by": [
+          "calibration"
+        ],
+        "depends_on": [
+          "calibration"
+        ],
+        "missing_artifacts": [],
+        "phase": "phase2",
+        "present_artifacts": [
+          "tracks.json"
+        ],
+        "required_artifacts": [
+          "tracks.json"
+        ],
+        "semantic_blockers": [],
+        "stage": "tracking",
+        "status": "blocked"
+      }
+    ],
+    "status": "not_ready"
+  },
+  "requested_stage": "tracking",
+  "review_artifacts": {
+    "notes": [],
+    "produced_artifacts": [
+      "frame_compute_plan.json",
+      "body_compute_execution.json",
+      "virtual_world.json"
+    ],
+    "reused_artifacts": []
+  },
+  "run_dir": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline",
+  "schema_version": 1,
+  "stages": [
+    {
+      "metrics": {},
+      "notes": [
+        "calibration artifacts already valid on disk for this run and reuse_existing_stage_artifacts=True was requested by the caller; treating this completed stage's artifacts as authoritative instead of re-deriving/re-validating it again (Task #45 S2) -- re-derivation was skipped, the registered ManualCalibrationRunner runner for 'calibration' was not invoked"
+      ],
+      "produced_artifacts": [
+        "court_calibration.json",
+        "court_zones.json",
+        "net_plane.json",
+        "court_line_evidence.json"
+      ],
+      "real_model": false,
+      "source_mode": "reused_existing_run_artifacts",
+      "stage": "calibration",
+      "status": "ran",
+      "wall_seconds": 0.0013357609999502529
+    },
+    {
+      "metrics": {
+        "accepted": 1567,
+        "accepted_before_player_cap": 2224,
+        "bbox_scale_status": "identity",
+        "bbox_scale_x": 1.0,
+        "bbox_scale_y": 1.0,
+        "calibration_height": 1080,
+        "calibration_width": 1920,
+        "candidate_players": 14,
+        "checkpoint_sha256_verified": "401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7",
+        "conf": 0.05,
+        "court_margin_m": 0.0,
+        "extra_player_frames_dropped": 657,
+        "extra_players_dropped": 10,
+        "id_strategy": "raw_track",
+        "imgsz": 1536,
+        "implausible_step": 2,
+        "iou": 0.6,
+        "max_players": 4,
+        "non_person": 0,
+        "output_players": 4,
+        "outside_court": 19890,
+        "person_class_id": 0,
+        "requested_id_strategy": "auto",
+        "role_lock_max_speed_mps": 90.0,
+        "source_height": 1080,
+        "source_video": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",
+        "source_width": 1920,
+        "tracked_person_boxes": 22116,
+        "tracker_boxes": 22116,
+        "tracker_config": "/home/arnavchokshi/holdout_eval_20260721/repo/configs/racketsport/botsort_reid.yaml",
+        "tracker_frames": 900,
+        "tracker_non_person": 0,
+        "tracker_source_height": 1080,
+        "tracker_source_width": 1920,
+        "untracked_person_boxes": 0
+      },
+      "notes": [
+        "invoked manifest yolo26m checkpoint through Ultralytics model.track with BoT-SORT ReID enabled",
+        "uses Ultralytics ReID model=auto appearance encoder; not a precomputed detections adapter",
+        "exported raw/source-pixel and calibration-scaled detection pools for raw-pool global association"
+      ],
+      "produced_artifacts": [
+        "raw_tracked_detections.json",
+        "tracked_detections.json",
+        "metrics.json",
+        "tracks.json"
+      ],
+      "real_model": true,
+      "source_mode": "yolo26m_botsort_reid",
+      "stage": "tracking",
+      "status": "ran",
+      "wall_seconds": 144.955030362
+    }
+  ],
+  "status": "blocked"
+}

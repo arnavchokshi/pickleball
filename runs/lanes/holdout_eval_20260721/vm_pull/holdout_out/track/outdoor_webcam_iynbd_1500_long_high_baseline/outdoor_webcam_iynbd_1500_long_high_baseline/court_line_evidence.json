@@ -1,0 +1,291 @@
+{
+  "aggregate": {
+    "accepted_line_ids": [
+      "far_baseline",
+      "far_centerline",
+      "far_nvz",
+      "left_sideline",
+      "near_baseline",
+      "near_centerline",
+      "near_nvz",
+      "net",
+      "right_sideline"
+    ],
+    "auto_calibration_ready": false,
+    "mean_residual_px": 2.9410346874119235,
+    "missing_required_line_ids": [],
+    "missing_required_net_ids": [
+      "top_net"
+    ],
+    "p95_residual_px": 10.530255969062043,
+    "reasons": [
+      "missing_top_net"
+    ],
+    "rejected_line_ids": [],
+    "temporal_stability_px": 10.530255969062043
+  },
+  "keypoint_observations": [],
+  "line_observations": [
+    {
+      "confidence": 0.784104384727022,
+      "frame_indexes": [
+        0,
+        192,
+        383,
+        575,
+        767,
+        958,
+        1150
+      ],
+      "image_segment": [
+        [
+          906.1428571428571,
+          322.0
+        ],
+        [
+          1121.7142857142858,
+          321.85714285714283
+        ]
+      ],
+      "line_id": "far_baseline",
+      "residual_px": {
+        "mean": 3.2355233389213964,
+        "p95": 3.5333990551010377
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.385838902870307
+    },
+    {
+      "confidence": 0.8003975428164146,
+      "frame_indexes": [
+        0,
+        192,
+        575,
+        767,
+        958,
+        1150
+      ],
+      "image_segment": [
+        [
+          955.0,
+          340.1666666666667
+        ],
+        [
+          955.0,
+          391.6666666666667
+        ]
+      ],
+      "line_id": "far_centerline",
+      "residual_px": {
+        "mean": 0.6566838459003632,
+        "p95": 0.8340218688644114
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.6627256996625808
+    },
+    {
+      "confidence": 0.7241416446692299,
+      "frame_indexes": [
+        0,
+        192,
+        767,
+        1150
+      ],
+      "image_segment": [
+        [
+          810.5,
+          408.0
+        ],
+        [
+          1064.5,
+          408.0
+        ]
+      ],
+      "line_id": "far_nvz",
+      "residual_px": {
+        "mean": 5.639722716171858,
+        "p95": 6.696522860179012
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.38053645809255876
+    },
+    {
+      "confidence": 0.9093996614709009,
+      "frame_indexes": [
+        0,
+        192,
+        383,
+        575,
+        767,
+        958,
+        1150
+      ],
+      "image_segment": [
+        [
+          443.57142857142856,
+          698.0
+        ],
+        [
+          636.4285714285714,
+          386.85714285714283
+        ]
+      ],
+      "line_id": "left_sideline",
+      "residual_px": {
+        "mean": 2.3536448482700436,
+        "p95": 10.530255969062043
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.7884891649301622
+    },
+    {
+      "confidence": 0.771561860164228,
+      "frame_indexes": [
+        0,
+        192,
+        383,
+        575,
+        767,
+        958,
+        1150
+      ],
+      "image_segment": [
+        [
+          698.5714285714286,
+          709.0
+        ],
+        [
+          1089.857142857143,
+          709.0
+        ]
+      ],
+      "line_id": "near_baseline",
+      "residual_px": {
+        "mean": 3.6845105444376576,
+        "p95": 3.9965286008839214
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.37354589829518947
+    },
+    {
+      "confidence": 0.9593296138313994,
+      "frame_indexes": [
+        0,
+        192,
+        383,
+        575,
+        767,
+        958,
+        1150
+      ],
+      "image_segment": [
+        [
+          961.0,
+          699.2857142857143
+        ],
+        [
+          961.0,
+          520.7142857142857
+        ]
+      ],
+      "line_id": "near_centerline",
+      "residual_px": {
+        "mean": 2.254369694268965,
+        "p95": 3.9154569026716315
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.9198872814391093
+    },
+    {
+      "confidence": 0.7687868438573459,
+      "frame_indexes": [
+        0,
+        192,
+        383,
+        575,
+        767,
+        958,
+        1150
+      ],
+      "image_segment": [
+        [
+          893.0,
+          519.2857142857143
+        ],
+        [
+          1233.142857142857,
+          519.2857142857143
+        ]
+      ],
+      "line_id": "near_nvz",
+      "residual_px": {
+        "mean": 4.429336136742088,
+        "p95": 5.104634728324304
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.4208208320344529
+    },
+    {
+      "confidence": 0.82701574069691,
+      "frame_indexes": [
+        0,
+        192,
+        383,
+        575,
+        767,
+        958,
+        1150
+      ],
+      "image_segment": [
+        [
+          584.8571428571429,
+          453.57142857142856
+        ],
+        [
+          950.7142857142857,
+          453.57142857142856
+        ]
+      ],
+      "line_id": "net",
+      "residual_px": {
+        "mean": 0.8422453479825245,
+        "p95": 3.576591688791238
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.4390682454594766
+    },
+    {
+      "confidence": 0.9122404330624693,
+      "frame_indexes": [
+        0,
+        192,
+        383,
+        575,
+        767,
+        958,
+        1150
+      ],
+      "image_segment": [
+        [
+          1271.5714285714287,
+          369.57142857142856
+        ],
+        [
+          1474.857142857143,
+          695.2857142857143
+        ]
+      ],
+      "line_id": "right_sideline",
+      "residual_px": {
+        "mean": 3.373275714012419,
+        "p95": 5.254933909297023
+      },
+      "source": "auto_hough_template_video",
+      "visible_fraction": 0.8281723407225312
+    }
+  ],
+  "net_observations": [],
+  "schema_version": 1,
+  "source": "auto_hough_template_video",
+  "sport": "pickleball"
+}

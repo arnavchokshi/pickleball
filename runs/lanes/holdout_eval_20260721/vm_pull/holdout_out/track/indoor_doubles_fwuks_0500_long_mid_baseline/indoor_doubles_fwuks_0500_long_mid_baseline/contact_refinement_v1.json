@@ -1,0 +1,80 @@
+{
+  "artifact_type": "racketsport_contact_provenance_v1",
+  "audio": {
+    "reason": "no_audio_stream",
+    "source": null,
+    "status": "absent",
+    "timing": [],
+    "timing_policy": "raw_and_corrected_preserved_no_destructive_correction"
+  },
+  "contact_artifact": {
+    "path": null,
+    "sha256": null,
+    "status": "missing"
+  },
+  "dependencies": {
+    "audio": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/audio_onsets_v2.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "ball_candidates": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/ball_candidates.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "ball_inflections_coarse": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/ball_inflections.json",
+      "sha256": "db48e383abb90b1d9ce48f398a5275a3d8821e7759dca4a7e7462118e2702737",
+      "status": "present"
+    },
+    "ball_track": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/ball_track.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "calibration": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration.json",
+      "sha256": "9381c1ca44b0c8fafb850db866f4d2043e65275430628cf7f35434ecf440f3f6",
+      "status": "present"
+    },
+    "frame_times": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/frame_times.json",
+      "sha256": "42bcba560daee207bb452c33835b011902a062bb203536b2e1d6f08660843f99",
+      "status": "present"
+    },
+    "skeleton3d": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/skeleton3d.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "timebase_contract": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/timebase_contract.json",
+      "sha256": "ef81401a49336ba4f621120037dc7043620232b8dd2d1ffd0247c4aeb8fde88d",
+      "status": "present"
+    },
+    "tracks_fps_source": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+      "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+      "status": "present"
+    },
+    "wrist_velocity_peaks_coarse": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/wrist_velocity_peaks.json",
+      "sha256": "9a3e31138187890dda5a2dede8afb703ea89cd4628a44d132ddb2872bc784bdd",
+      "status": "present"
+    }
+  },
+  "provenance": {
+    "raw_proposals_immutable": true,
+    "refinement_version": "coarse_v1",
+    "reuse_refusal_reason": null
+  },
+  "raw_proposals": {
+    "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/contact_windows.json",
+    "sha256": "93d8a183b77f95f66133c93017cc7b838b2d30ce28a6b95d4dc4ce644535ad23",
+    "status": "present"
+  },
+  "reason": "missing_sam3d_skeleton3d",
+  "schema_version": 1,
+  "status": "absent"
+}

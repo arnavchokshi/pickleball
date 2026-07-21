@@ -1,0 +1,10 @@
+/home/arnavchokshi/coldstart_20260706/body_runtime/Fast-SAM-3D-Body/sam_3d_body/models/heads/mhr_head.py:51: UserWarning: Momentum is not enabled
+  warnings.warn("Momentum is not enabled")
+/home/arnavchokshi/coldstart_20260706/repo/.venv/lib/python3.10/site-packages/rfdetr/models/weights.py:259: FutureWarning: target=True is deprecated since `v0.8`; use `TargetMode.ARGS_REMAP` instead. Will be removed in `v1.0`.
+  def load_pretrain_weights(
+[2026-07-21 10:31:01] [WARNING] rf-detr - Using a different number of positional encodings than DINOv2, which means we're not loading DINOv2 backbone weights. This is not a problem if finetuning a pretrained RF-DETR model.
+[2026-07-21 10:31:01] [WARNING] rf-detr - Using patch size 16 instead of 14, which means we're not loading DINOv2 backbone weights. This is not a problem if finetuning a pretrained RF-DETR model.
+[2026-07-21 10:31:02] [WARNING] rf-detr - load_pretrain_weights: checkpoint lacks args.num_queries / args.group_detr; falling back to flat slice. With group_detr=13 this may scramble per-group query structure if the checkpoint was trained with group_detr > 1.
+[2026-07-21 10:31:02] [WARNING] rf-detr - Pretrained weights at '/home/arnavchokshi/pickleball_git/models/checkpoints/rf-detr-large-2026.pth' loaded only partially — this typically produces lower accuracy. 1 model parameter(s) not in checkpoint (left at random init): [_kp_active_mask]. Check that the model configuration (encoder, hidden_dim, out_feature_indexes, projector_scale, ...) matches the architecture the checkpoint was trained with.
+[2026-07-21 10:31:02] [WARNING] rf-detr - Model is not optimized for inference. Latency may be higher than expected. For full GPU throughput (e.g. ~8x on T4 via FP16 Tensor Cores), call model.optimize_for_inference(dtype=torch.float16).
+UserWarning: Cython evaluation (very fast so highly recommended) is unavailable, now use python evaluation.

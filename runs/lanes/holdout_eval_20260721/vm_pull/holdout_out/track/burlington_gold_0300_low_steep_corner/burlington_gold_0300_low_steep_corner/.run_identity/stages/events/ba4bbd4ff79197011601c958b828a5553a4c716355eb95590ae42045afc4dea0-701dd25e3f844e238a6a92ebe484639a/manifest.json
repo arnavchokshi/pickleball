@@ -1,0 +1,287 @@
+{
+  "artifact_type": "racketsport_stage_identity",
+  "external_artifacts": [
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "3176602754f415fa5e0238e628d79678135c5d78b0e318dce38c7548767d7263",
+        "size": 790
+      },
+      "path": "wrist_velocity_peaks.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "ff7a1b55a1feb8a66de60c379852812b5ddbe1cf3bba215100b21cdcc1151305",
+        "size": 125
+      },
+      "path": "ball_inflections.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "93d8a183b77f95f66133c93017cc7b838b2d30ce28a6b95d4dc4ce644535ad23",
+        "size": 42
+      },
+      "path": "contact_windows.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "be576c53735a1391a6f458c6832f2bfcfec6e5b34dbd3a02684e6c7f600ed095",
+        "size": 4029
+      },
+      "path": "contact_dependencies_v1.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "89c04eb8c6067f26a22daf5f0197addedd32c3b32fce4560acfd4af7168dcd34",
+        "size": 1093808
+      },
+      "path": "frame_compute_plan.json"
+    }
+  ],
+  "fingerprint": "ba4bbd4ff79197011601c958b828a5553a4c716355eb95590ae42045afc4dea0",
+  "identity": {
+    "code": {
+      "callable_sha256": "0e1b87ceef5021a5b6aca97a6398af7b698db8bb33ef366e593203819d2e396e"
+    },
+    "config": {
+      "ball_proximity_m": 1.5,
+      "high_confidence_swing_floor": 0.6,
+      "skip_audio": true,
+      "sport": "pickleball"
+    },
+    "explicit_inputs": {
+      "ball_candidates": {
+        "kind": "missing",
+        "sha256": null,
+        "size": 0
+      },
+      "ball_track": {
+        "kind": "missing",
+        "sha256": null,
+        "size": 0
+      },
+      "calibration": {
+        "kind": "file",
+        "sha256": "7507a3b474a9c4f115901935c9db9055c1a703c75aaceb5addc485aa03b6eb94",
+        "size": 6908
+      },
+      "frame_times": {
+        "kind": "file",
+        "sha256": "6f53d66741aa146e37407dc91e70f3455e734173e548b922ed11a9705629fd97",
+        "size": 34253
+      },
+      "skeleton3d": {
+        "kind": "missing",
+        "sha256": null,
+        "size": 0
+      },
+      "timebase_contract": {
+        "kind": "file",
+        "sha256": "f31aa25be2045f7692307cb301684f4ba617a3982af9f3cc9af25de212c692a1",
+        "size": 258828
+      },
+      "tracks_fps_source": {
+        "kind": "file",
+        "sha256": "f72288f83fb3b7a65695f9c85f45431a0859740b87a8e21a5c57166f6495696c",
+        "size": 904810
+      }
+    },
+    "models": {},
+    "schema_version": 1,
+    "source": {
+      "sha256": "fc329b53a8d522046779a45fba4e695ee953421e1187070a4ce9a36239cb1aaa",
+      "size": 3066813,
+      "timing": {
+        "duration_s": 10.01,
+        "fps": 59.94005994,
+        "frame_count": 600,
+        "height": 1080,
+        "width": 1920
+      }
+    },
+    "stage": "events",
+    "upstream": {
+      "ball": {
+        "artifact_digest": "5d3f8451be53e8ff2887f90acbd678d491fbc86a5cc802b66ac1a6e1e16dd0ea",
+        "fingerprint": "a07026e4a55bb9491203b8c9029e8b36e0be74baea13ac6c9ab4bcbd7e132afb"
+      },
+      "tracking": {
+        "artifact_digest": "4da3c309630ce61e875a27feb9a98dcda67d01c720b65d32a51b738307a9df2f",
+        "fingerprint": "f44e51c4a1bf0a9045e3bcabff2d5c0d3a58808946d846cf4a04bff976b03ea5"
+      }
+    }
+  },
+  "managed_artifacts": [],
+  "metadata": {
+    "outcome": {
+      "artifacts": [
+        "wrist_velocity_peaks.json",
+        "ball_inflections.json",
+        "contact_windows.json",
+        "contact_dependencies_v1.json",
+        "frame_compute_plan.json"
+      ],
+      "metrics": {
+        "ball_aware_trigger_source_counts": {
+          "events": 0,
+          "proximity": 0,
+          "swing": 0,
+          "uniform_fill": 600
+        },
+        "contact_cues": {
+          "audio": "missing",
+          "audio_onset_count": 0,
+          "ball_inflection_candidate_count": 0,
+          "ball_inflections": "missing",
+          "event_count": 0,
+          "event_source_counts": {},
+          "missing": [
+            "wrist",
+            "ball_inflections",
+            "audio",
+            "reviewed_contacts"
+          ],
+          "reviewed_contacts": "missing",
+          "wrist": "missing",
+          "wrist_candidate_count": 0
+        },
+        "contact_event_count": 0,
+        "mesh_budget_policy": "byte_budget",
+        "mesh_byte_budget_mib": 300.0,
+        "mesh_coverage_mode": "ball_aware",
+        "reuse_refusal_reason": "contact_dependency_hashes_missing",
+        "selected_estimated_mesh_bytes": 210848000
+      },
+      "notes": [
+        "SAM-3D skeleton unavailable before BODY; wrist_velocity_peaks.json is blocked, not pose-derived",
+        "no ball_track.json available; ball_inflections.json has zero candidates (wrist cues only)",
+        "audio disabled by --skip-audio; explicit reason audio_disabled_by_flag recorded",
+        "fused contact_windows.json; cues used: wrist=missing, ball_inflections=missing, audio=missing, reviewed_contacts=missing, missing=wrist,ball_inflections,audio,reviewed_contacts",
+        "wrote frame_compute_plan.json (deep_mesh_windows authoritative: MESH only at contact windows, 600 frames, JOINTS everywhere else)",
+        "ball_aware mesh scheduling: no events_selected.json found (looked at /home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/events_selected.json); ball_aware_contact trigger unavailable this run",
+        "ball_aware mesh scheduling: no ball_track_arc_solved.json found (looked at /home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/ball_track_arc_solved.json); ball_proximity trigger unavailable this run"
+      ],
+      "stage": "events",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.429
+    },
+    "pipeline_state": {
+      "camera_motion_auto": {
+        "decode_orientation_consequential_mismatch": false,
+        "decode_orientation_mismatch": false,
+        "decode_orientation_mismatch_reason": null,
+        "decode_orientation_untrusted": false,
+        "enabled": false,
+        "forced": "auto",
+        "probe_wall_seconds": 1.037377,
+        "sampled_frame_count": 4,
+        "score": 0.372484,
+        "threshold": 2.5
+      },
+      "camera_motion_auto_decision_made": true,
+      "input_quality_report": {
+        "artifact_type": "racketsport_input_quality",
+        "band": "degraded_input",
+        "clip": "burlington_gold_0300_low_steep_corner",
+        "metrics": {
+          "court_visibility_angle": {
+            "available": true,
+            "below_acceptance": true,
+            "camera_height_m": 1.325928,
+            "court_corner_count": 4,
+            "full_court_corner_visibility_fraction": 1.0,
+            "image_size": [
+              1920,
+              1080
+            ],
+            "missing_required_court_line_count": 2,
+            "source": "court_calibration.json+court_line_evidence.json",
+            "visible_corner_count": 4
+          },
+          "duration_s": 10.01,
+          "fps": 59.94006,
+          "frame_count": 600,
+          "resolution": {
+            "height_px": 1080,
+            "width_px": 1920
+          },
+          "video_quality": {
+            "blur_laplacian_var": 196.647001,
+            "luminance_max": 0.441294,
+            "luminance_mean": 0.440047,
+            "luminance_min": 0.43588,
+            "sampled_frame_count": 5,
+            "sampled_frame_indexes": [
+              0,
+              60,
+              120,
+              180,
+              240
+            ]
+          }
+        },
+        "mode": "advisory",
+        "policy": {
+          "advisory_continues_downstream": true,
+          "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+          "strict_fail_closes": false
+        },
+        "rejection_reasons": [
+          "court_not_fully_visible_low_angle"
+        ],
+        "sampling": {
+          "sample_cadence_s": 1.0,
+          "sample_frame_count": 5
+        },
+        "schema_version": 1,
+        "status": "below_acceptance",
+        "strict": false,
+        "thresholds": {
+          "max_duration_s": 900.0,
+          "max_luminance_mean": 0.98,
+          "max_missing_required_court_lines": 0,
+          "min_blur_laplacian_var": 25.0,
+          "min_camera_height_m": 1.0,
+          "min_duration_s": 1.0,
+          "min_fps": 30.0,
+          "min_full_court_corner_visibility_fraction": 1.0,
+          "min_height_px": 360,
+          "min_luminance_mean": 0.02,
+          "min_width_px": 640
+        },
+        "video": "/home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/burlington_gold_0300_low_steep_corner/source.mp4",
+        "warning_reasons": []
+      },
+      "trust_bands": {
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=warn, metric_confidence=low, reasons=reprojection_high, single_view_planar_full_calibration, distortion_model=k1_k2_calibrate_camera_seeded, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        },
+        "track": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/tracks.json",
+          "gate_id": "trk_idf1_gate",
+          "gate_status": "owner_directed_stack_selection_preview",
+          "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+          "stage": "TRK"
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "stage": "events"
+}

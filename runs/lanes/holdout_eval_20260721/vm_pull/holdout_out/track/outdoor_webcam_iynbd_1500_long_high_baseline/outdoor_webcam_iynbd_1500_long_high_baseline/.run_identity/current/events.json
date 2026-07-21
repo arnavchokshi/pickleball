@@ -1,0 +1,7 @@
+{
+  "fingerprint": "c1788beeb5dae7b5b708e348d555ec69cdc1a792a069a0a350bb2870d42470f0",
+  "generation": "stages/events/c1788beeb5dae7b5b708e348d555ec69cdc1a792a069a0a350bb2870d42470f0-2cf1ef1b43194bd89d58d23d2c2705ed",
+  "manifest_sha256": "30a3e58809cea47331ebb589d5a82dc05f084028d0162ee49c3d9d6cdd43f2c9",
+  "schema_version": 1,
+  "stage": "events"
+}

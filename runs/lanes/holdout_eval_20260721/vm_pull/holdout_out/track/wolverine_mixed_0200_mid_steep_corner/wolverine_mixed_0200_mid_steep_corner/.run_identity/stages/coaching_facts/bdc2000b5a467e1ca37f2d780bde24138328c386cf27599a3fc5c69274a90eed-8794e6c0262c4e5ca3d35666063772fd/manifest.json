@@ -1,0 +1,198 @@
+{
+  "artifact_type": "racketsport_stage_identity",
+  "external_artifacts": [
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "67dc8fb83b0216c4490d01ccdfbf05680ebde9ca7247a063f5332d026958e7fe",
+        "size": 69251
+      },
+      "path": "rally_metrics.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "a5ab00ab1b9b21659eb3e22790f6f8fd857ae040e3397c228208b07ed12eb44c",
+        "size": 55259
+      },
+      "path": "coaching_card_facts.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "4f46478874a41e542dbc78071185bf2973af095b4890e44aa73a4f32f0f458f4",
+        "size": 200
+      },
+      "path": "coaching_fact_audit.json"
+    }
+  ],
+  "fingerprint": "bdc2000b5a467e1ca37f2d780bde24138328c386cf27599a3fc5c69274a90eed",
+  "identity": {
+    "code": {
+      "callable_sha256": "c8185bd5c339a271766dab4e70a7e3c0720e76da5f8fc05195c28a9d1b5eff4d"
+    },
+    "config": {
+      "sport": "pickleball"
+    },
+    "explicit_inputs": {},
+    "models": {},
+    "schema_version": 1,
+    "source": {
+      "sha256": "7f6c33b7cfd94a063405b68708d37d968cc1850e7435aa875f5b30f0afb6cb4b",
+      "size": 2153064,
+      "timing": {
+        "duration_s": 10.0,
+        "fps": 30.0,
+        "frame_count": 300,
+        "height": 1080,
+        "width": 1920
+      }
+    },
+    "stage": "coaching_facts",
+    "upstream": {
+      "match_stats": {
+        "artifact_digest": "5d3f8451be53e8ff2887f90acbd678d491fbc86a5cc802b66ac1a6e1e16dd0ea",
+        "fingerprint": "4bfbc986a453c03cc9d98791f90e0def0320b44a69121df67fed760e9f48f8ab"
+      },
+      "world": {
+        "artifact_digest": "eddc11315fa7a5698e56b9a8da09f47c7bdd9b2c10c70855a51edaca4260e27b",
+        "fingerprint": "ec3c2d0fe5189d27ce3078e5a4dbd803f583e00e1b992983e342fcb9ccca0dd2"
+      }
+    }
+  },
+  "managed_artifacts": [],
+  "metadata": {
+    "outcome": {
+      "artifacts": [
+        "rally_metrics.json",
+        "coaching_card_facts.json",
+        "coaching_fact_audit.json"
+      ],
+      "metrics": {
+        "audit_verdict": "pass",
+        "fact_count": 11,
+        "rally_count": 1,
+        "rally_scope": "clip_fallback"
+      },
+      "notes": [
+        "built deterministic rally_metrics.json and coaching_card_facts.json; zero-fabrication audit passed",
+        "no language generation ran; facts remain evidence-linked preview inputs"
+      ],
+      "stage": "coaching_facts",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.667
+    },
+    "pipeline_state": {
+      "camera_motion_auto": {
+        "decode_orientation_consequential_mismatch": false,
+        "decode_orientation_mismatch": false,
+        "decode_orientation_mismatch_reason": null,
+        "decode_orientation_untrusted": false,
+        "enabled": false,
+        "forced": "auto",
+        "probe_wall_seconds": 1.066822,
+        "sampled_frame_count": 4,
+        "score": 0.174641,
+        "threshold": 2.5
+      },
+      "camera_motion_auto_decision_made": true,
+      "input_quality_report": {
+        "artifact_type": "racketsport_input_quality",
+        "band": "degraded_input",
+        "clip": "wolverine_mixed_0200_mid_steep_corner",
+        "metrics": {
+          "court_visibility_angle": {
+            "available": true,
+            "below_acceptance": true,
+            "camera_height_m": 1.733697,
+            "court_corner_count": 4,
+            "full_court_corner_visibility_fraction": 1.0,
+            "image_size": [
+              1920,
+              1080
+            ],
+            "missing_required_court_line_count": 1,
+            "source": "court_calibration.json+court_line_evidence.json",
+            "visible_corner_count": 4
+          },
+          "duration_s": 10.0,
+          "fps": 30.0,
+          "frame_count": 300,
+          "resolution": {
+            "height_px": 1080,
+            "width_px": 1920
+          },
+          "video_quality": {
+            "blur_laplacian_var": 432.287907,
+            "luminance_max": 0.421131,
+            "luminance_mean": 0.417536,
+            "luminance_min": 0.4084,
+            "sampled_frame_count": 5,
+            "sampled_frame_indexes": [
+              0,
+              30,
+              60,
+              90,
+              120
+            ]
+          }
+        },
+        "mode": "advisory",
+        "policy": {
+          "advisory_continues_downstream": true,
+          "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+          "strict_fail_closes": false
+        },
+        "rejection_reasons": [
+          "court_not_fully_visible_low_angle"
+        ],
+        "sampling": {
+          "sample_cadence_s": 1.0,
+          "sample_frame_count": 5
+        },
+        "schema_version": 1,
+        "status": "below_acceptance",
+        "strict": false,
+        "thresholds": {
+          "max_duration_s": 900.0,
+          "max_luminance_mean": 0.98,
+          "max_missing_required_court_lines": 0,
+          "min_blur_laplacian_var": 25.0,
+          "min_camera_height_m": 1.0,
+          "min_duration_s": 1.0,
+          "min_fps": 30.0,
+          "min_full_court_corner_visibility_fraction": 1.0,
+          "min_height_px": 360,
+          "min_luminance_mean": 0.02,
+          "min_width_px": 640
+        },
+        "video": "/home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4",
+        "warning_reasons": []
+      },
+      "trust_bands": {
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=warn, metric_confidence=low, reasons=reprojection_high, single_view_planar_full_calibration, distortion_model=zero_distortion_grid_search_focal, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        },
+        "track": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/tracks.json",
+          "gate_id": "trk_idf1_gate",
+          "gate_status": "owner_directed_stack_selection_preview",
+          "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+          "stage": "TRK"
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "stage": "coaching_facts"
+}

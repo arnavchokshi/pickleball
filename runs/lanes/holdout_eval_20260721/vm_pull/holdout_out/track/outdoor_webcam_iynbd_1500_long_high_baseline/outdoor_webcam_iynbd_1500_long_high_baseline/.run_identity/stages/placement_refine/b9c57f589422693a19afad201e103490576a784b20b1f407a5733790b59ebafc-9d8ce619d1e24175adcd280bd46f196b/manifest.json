@@ -1,0 +1,161 @@
+{
+  "artifact_type": "racketsport_stage_identity",
+  "external_artifacts": [],
+  "fingerprint": "b9c57f589422693a19afad201e103490576a784b20b1f407a5733790b59ebafc",
+  "identity": {
+    "code": {
+      "callable_sha256": "44d2253316a48b1064339b06317200d31ea7da124c35a7a336a75951ad2bc157"
+    },
+    "config": {
+      "sport": "pickleball"
+    },
+    "explicit_inputs": {},
+    "models": {},
+    "schema_version": 1,
+    "source": {
+      "sha256": "8b0265f5dc3bf3e3b5b5a1423bf7e58ac7972481dc163b8398dcb2f20bf070c9",
+      "size": 2745873,
+      "timing": {
+        "duration_s": 19.183333333,
+        "fps": 60.0,
+        "frame_count": 1151,
+        "height": 1080,
+        "width": 1920
+      }
+    },
+    "stage": "placement_refine",
+    "upstream": {
+      "body": {
+        "status": "missing"
+      },
+      "placement": {
+        "artifact_digest": "684a26cd91f6016cbc39658f646fbdd6fa47e934a9877eaa2e6913afe3099d4d",
+        "fingerprint": "c23836e42cad94b913edee981adc242e17669a168a6f41fb270117daef8b8566"
+      }
+    }
+  },
+  "managed_artifacts": [],
+  "metadata": {
+    "outcome": {
+      "artifacts": [],
+      "metrics": {
+        "same_pass_track_rewrite_disabled": true
+      },
+      "notes": [
+        "same-pass post-BODY placement_refine is disabled by R3; SAM3D foot pixels may only feed a second pass before a fresh BODY run, never an in-place tracks.json rewrite before world build"
+      ],
+      "stage": "placement_refine",
+      "status": "skipped",
+      "trust_badge": null,
+      "wall_seconds": 0.001
+    },
+    "pipeline_state": {
+      "camera_motion_auto": {
+        "decode_orientation_consequential_mismatch": false,
+        "decode_orientation_mismatch": false,
+        "decode_orientation_mismatch_reason": null,
+        "decode_orientation_untrusted": false,
+        "enabled": false,
+        "forced": "auto",
+        "probe_wall_seconds": 0.906937,
+        "sampled_frame_count": 4,
+        "score": 0.384904,
+        "threshold": 2.5
+      },
+      "camera_motion_auto_decision_made": true,
+      "input_quality_report": {
+        "artifact_type": "racketsport_input_quality",
+        "band": "degraded_input",
+        "clip": "outdoor_webcam_iynbd_1500_long_high_baseline",
+        "metrics": {
+          "court_visibility_angle": {
+            "available": true,
+            "below_acceptance": true,
+            "camera_height_m": 4.680527,
+            "court_corner_count": 4,
+            "full_court_corner_visibility_fraction": 1.0,
+            "image_size": [
+              1920,
+              1080
+            ],
+            "missing_required_court_line_count": 1,
+            "source": "court_calibration.json+court_line_evidence.json",
+            "visible_corner_count": 4
+          },
+          "duration_s": 19.183333,
+          "fps": 60.0,
+          "frame_count": 1151,
+          "resolution": {
+            "height_px": 1080,
+            "width_px": 1920
+          },
+          "video_quality": {
+            "blur_laplacian_var": 359.695149,
+            "luminance_max": 0.404639,
+            "luminance_mean": 0.404437,
+            "luminance_min": 0.404004,
+            "sampled_frame_count": 5,
+            "sampled_frame_indexes": [
+              0,
+              60,
+              120,
+              180,
+              240
+            ]
+          }
+        },
+        "mode": "advisory",
+        "policy": {
+          "advisory_continues_downstream": true,
+          "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+          "strict_fail_closes": false
+        },
+        "rejection_reasons": [
+          "court_not_fully_visible_low_angle"
+        ],
+        "sampling": {
+          "sample_cadence_s": 1.0,
+          "sample_frame_count": 5
+        },
+        "schema_version": 1,
+        "status": "below_acceptance",
+        "strict": false,
+        "thresholds": {
+          "max_duration_s": 900.0,
+          "max_luminance_mean": 0.98,
+          "max_missing_required_court_lines": 0,
+          "min_blur_laplacian_var": 25.0,
+          "min_camera_height_m": 1.0,
+          "min_duration_s": 1.0,
+          "min_fps": 30.0,
+          "min_full_court_corner_visibility_fraction": 1.0,
+          "min_height_px": 360,
+          "min_luminance_mean": 0.02,
+          "min_width_px": 640
+        },
+        "video": "/home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/source.mp4",
+        "warning_reasons": []
+      },
+      "trust_bands": {
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=good, metric_confidence=med, reasons=single_view_planar_full_calibration, distortion_model=zero_distortion_grid_search_focal, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        },
+        "track": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/tracks.json",
+          "gate_id": "trk_idf1_gate",
+          "gate_status": "owner_directed_stack_selection_preview",
+          "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+          "stage": "TRK"
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "stage": "placement_refine"
+}

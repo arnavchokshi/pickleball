@@ -1,0 +1,240 @@
+{
+  "artifact_type": "racketsport_stage_identity",
+  "external_artifacts": [
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "81e89139ffc417b937ea0277c0bf8eeb42f7bd4f3aa0fe2b152562159a09c886",
+        "size": 3956
+      },
+      "path": "contact_refinement_v1.json"
+    }
+  ],
+  "fingerprint": "fbf5e5c6314a74bf9b6fb7fb8b6f2449c6f7b080921c69c981e9ea60808f84d5",
+  "identity": {
+    "code": {
+      "callable_sha256": "884a03302ff6851620cec90467cf28d677f5d81ec3cb8ec5e841984991c509ba"
+    },
+    "config": {
+      "sport": "pickleball"
+    },
+    "explicit_inputs": {
+      "audio": {
+        "kind": "missing",
+        "sha256": null,
+        "size": 0
+      },
+      "ball_candidates": {
+        "kind": "missing",
+        "sha256": null,
+        "size": 0
+      },
+      "ball_inflections_coarse": {
+        "kind": "file",
+        "sha256": "db48e383abb90b1d9ce48f398a5275a3d8821e7759dca4a7e7462118e2702737",
+        "size": 125
+      },
+      "ball_track": {
+        "kind": "missing",
+        "sha256": null,
+        "size": 0
+      },
+      "calibration": {
+        "kind": "file",
+        "sha256": "9381c1ca44b0c8fafb850db866f4d2043e65275430628cf7f35434ecf440f3f6",
+        "size": 6893
+      },
+      "frame_times": {
+        "kind": "file",
+        "sha256": "42bcba560daee207bb452c33835b011902a062bb203536b2e1d6f08660843f99",
+        "size": 51643
+      },
+      "paddle": {
+        "kind": "missing",
+        "sha256": null,
+        "size": 0
+      },
+      "raw_contact_windows": {
+        "kind": "file",
+        "sha256": "93d8a183b77f95f66133c93017cc7b838b2d30ce28a6b95d4dc4ce644535ad23",
+        "size": 42
+      },
+      "skeleton3d": {
+        "kind": "missing",
+        "sha256": null,
+        "size": 0
+      },
+      "timebase_contract": {
+        "kind": "file",
+        "sha256": "ef81401a49336ba4f621120037dc7043620232b8dd2d1ffd0247c4aeb8fde88d",
+        "size": 389242
+      },
+      "tracks_fps_source": {
+        "kind": "file",
+        "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+        "size": 1094295
+      },
+      "wrist_velocity_peaks_coarse": {
+        "kind": "file",
+        "sha256": "9a3e31138187890dda5a2dede8afb703ea89cd4628a44d132ddb2872bc784bdd",
+        "size": 802
+      }
+    },
+    "models": {},
+    "schema_version": 1,
+    "source": {
+      "sha256": "22955134f7bf9bdc9392bdde868173fbc6ec9afa4d7a8c58f3e7e0ed33d4e0f1",
+      "size": 8937736,
+      "timing": {
+        "duration_s": 30.03,
+        "fps": 29.97002997,
+        "frame_count": 900,
+        "height": 1080,
+        "width": 1920
+      }
+    },
+    "stage": "events_refined",
+    "upstream": {
+      "events": {
+        "artifact_digest": "28c1fb17e5ae22bc79807fa8701a907a0c9f8e2c31936df16f554cf258edad84",
+        "fingerprint": "6d5a4d12d052af07d63152639ece962f26b91c036ce60493281ca44843b55556"
+      },
+      "grounding_refine": {
+        "artifact_digest": "5d3f8451be53e8ff2887f90acbd678d491fbc86a5cc802b66ac1a6e1e16dd0ea",
+        "fingerprint": "eb1293e81efe661418fa4bf88167e010ab88ce31506e497b37d0f627c60bf307"
+      },
+      "paddle_pose": {
+        "artifact_digest": "5d3f8451be53e8ff2887f90acbd678d491fbc86a5cc802b66ac1a6e1e16dd0ea",
+        "fingerprint": "399e19e861f2f30f651eb77520b5284981955cbd145b2ceed525f12216a97d13"
+      }
+    }
+  },
+  "managed_artifacts": [],
+  "metadata": {
+    "outcome": {
+      "artifacts": [
+        "contact_refinement_v1.json"
+      ],
+      "metrics": {
+        "reason": "missing_sam3d_skeleton3d"
+      },
+      "notes": [
+        "post-BODY event refinement absent: missing_sam3d_skeleton3d"
+      ],
+      "stage": "events_refined",
+      "status": "skipped",
+      "trust_badge": null,
+      "wall_seconds": 0.014
+    },
+    "pipeline_state": {
+      "camera_motion_auto": {
+        "decode_orientation_consequential_mismatch": false,
+        "decode_orientation_mismatch": false,
+        "decode_orientation_mismatch_reason": null,
+        "decode_orientation_untrusted": false,
+        "enabled": false,
+        "forced": "auto",
+        "probe_wall_seconds": 1.79224,
+        "sampled_frame_count": 4,
+        "score": 0.073682,
+        "threshold": 2.5
+      },
+      "camera_motion_auto_decision_made": true,
+      "input_quality_report": {
+        "artifact_type": "racketsport_input_quality",
+        "band": "degraded_input",
+        "clip": "indoor_doubles_fwuks_0500_long_mid_baseline",
+        "metrics": {
+          "court_visibility_angle": {
+            "available": true,
+            "below_acceptance": true,
+            "camera_height_m": 1.603989,
+            "court_corner_count": 4,
+            "full_court_corner_visibility_fraction": 1.0,
+            "image_size": [
+              1920,
+              1080
+            ],
+            "missing_required_court_line_count": 1,
+            "source": "court_calibration.json+court_line_evidence.json",
+            "visible_corner_count": 4
+          },
+          "duration_s": 30.03,
+          "fps": 29.97003,
+          "frame_count": 900,
+          "resolution": {
+            "height_px": 1080,
+            "width_px": 1920
+          },
+          "video_quality": {
+            "blur_laplacian_var": 907.514474,
+            "luminance_max": 0.695746,
+            "luminance_mean": 0.695568,
+            "luminance_min": 0.69523,
+            "sampled_frame_count": 5,
+            "sampled_frame_indexes": [
+              0,
+              30,
+              60,
+              90,
+              120
+            ]
+          }
+        },
+        "mode": "advisory",
+        "policy": {
+          "advisory_continues_downstream": true,
+          "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+          "strict_fail_closes": false
+        },
+        "rejection_reasons": [
+          "court_not_fully_visible_low_angle",
+          "fps_below_floor"
+        ],
+        "sampling": {
+          "sample_cadence_s": 1.0,
+          "sample_frame_count": 5
+        },
+        "schema_version": 1,
+        "status": "below_acceptance",
+        "strict": false,
+        "thresholds": {
+          "max_duration_s": 900.0,
+          "max_luminance_mean": 0.98,
+          "max_missing_required_court_lines": 0,
+          "min_blur_laplacian_var": 25.0,
+          "min_camera_height_m": 1.0,
+          "min_duration_s": 1.0,
+          "min_fps": 30.0,
+          "min_full_court_corner_visibility_fraction": 1.0,
+          "min_height_px": 360,
+          "min_luminance_mean": 0.02,
+          "min_width_px": 640
+        },
+        "video": "/home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",
+        "warning_reasons": []
+      },
+      "trust_bands": {
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=good, metric_confidence=med, reasons=single_view_planar_full_calibration, distortion_model=k1_k2_calibrate_camera_seeded, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        },
+        "track": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+          "gate_id": "trk_idf1_gate",
+          "gate_status": "owner_directed_stack_selection_preview",
+          "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+          "stage": "TRK"
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "stage": "events_refined"
+}

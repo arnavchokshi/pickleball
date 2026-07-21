@@ -1,0 +1,175 @@
+{
+  "artifact_type": "racketsport_pipeline_run",
+  "clip": "burlington_gold_0300_low_steep_corner",
+  "inputs_dir": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner",
+  "readiness": {
+    "artifact_type": "racketsport_pipeline_artifact_readiness",
+    "artifact_validation_errors": [],
+    "missing_artifacts": [],
+    "requested_stage": "tracking",
+    "required_artifacts": [
+      "court_calibration.json",
+      "court_zones.json",
+      "net_plane.json",
+      "court_line_evidence.json",
+      "tracks.json"
+    ],
+    "run_dir": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner",
+    "schema_version": 1,
+    "semantic_blockers": [
+      "calibration:court_line_evidence_retired_for_court_calibration"
+    ],
+    "stage_order": [
+      "calibration",
+      "tracking",
+      "pose",
+      "body",
+      "physics",
+      "ball_events",
+      "racket",
+      "metrics",
+      "shot_drill",
+      "copy",
+      "replay",
+      "e2e"
+    ],
+    "stages": [
+      {
+        "artifact_validation_errors": [],
+        "blocked_by": [],
+        "depends_on": [],
+        "missing_artifacts": [],
+        "phase": "phase1",
+        "present_artifacts": [
+          "court_calibration.json",
+          "court_zones.json",
+          "net_plane.json",
+          "court_line_evidence.json"
+        ],
+        "required_artifacts": [
+          "court_calibration.json",
+          "court_zones.json",
+          "net_plane.json",
+          "court_line_evidence.json"
+        ],
+        "semantic_blockers": [
+          "court_line_evidence_retired_for_court_calibration"
+        ],
+        "stage": "calibration",
+        "status": "blocked"
+      },
+      {
+        "artifact_validation_errors": [],
+        "blocked_by": [
+          "calibration"
+        ],
+        "depends_on": [
+          "calibration"
+        ],
+        "missing_artifacts": [],
+        "phase": "phase2",
+        "present_artifacts": [
+          "tracks.json"
+        ],
+        "required_artifacts": [
+          "tracks.json"
+        ],
+        "semantic_blockers": [],
+        "stage": "tracking",
+        "status": "blocked"
+      }
+    ],
+    "status": "not_ready"
+  },
+  "requested_stage": "tracking",
+  "review_artifacts": {
+    "notes": [],
+    "produced_artifacts": [
+      "frame_compute_plan.json",
+      "body_compute_execution.json",
+      "virtual_world.json"
+    ],
+    "reused_artifacts": []
+  },
+  "run_dir": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner",
+  "schema_version": 1,
+  "stages": [
+    {
+      "metrics": {},
+      "notes": [
+        "calibration artifacts already valid on disk for this run and reuse_existing_stage_artifacts=True was requested by the caller; treating this completed stage's artifacts as authoritative instead of re-deriving/re-validating it again (Task #45 S2) -- re-derivation was skipped, the registered ManualCalibrationRunner runner for 'calibration' was not invoked"
+      ],
+      "produced_artifacts": [
+        "court_calibration.json",
+        "court_zones.json",
+        "net_plane.json",
+        "court_line_evidence.json"
+      ],
+      "real_model": false,
+      "source_mode": "reused_existing_run_artifacts",
+      "stage": "calibration",
+      "status": "ran",
+      "wall_seconds": 0.0011990120001428295
+    },
+    {
+      "metrics": {
+        "accepted": 1795,
+        "accepted_before_player_cap": 2230,
+        "bbox_scale_status": "identity",
+        "bbox_scale_x": 1.0,
+        "bbox_scale_y": 1.0,
+        "calibration_height": 1080,
+        "calibration_width": 1920,
+        "candidate_players": 8,
+        "checkpoint_sha256_verified": "0f4e20e19a99c0f8a62b5685f57f6c8b5c371c59081feda6752a0561a79ccf38",
+        "conf": 0.18,
+        "court_margin_m": 0.0,
+        "detector_below_conf_boxes": 0,
+        "detector_boxes": 32200,
+        "detector_person_boxes": 11688,
+        "detector_person_boxes_after_conf": 11688,
+        "detector_wrong_class_boxes": 20512,
+        "extra_player_frames_dropped": 435,
+        "extra_players_dropped": 4,
+        "id_strategy": "raw_track",
+        "implausible_step": 1,
+        "max_players": 4,
+        "native_input_size": 704,
+        "non_person": 0,
+        "output_players": 4,
+        "outside_court": 8546,
+        "person_class_id": 1,
+        "requested_id_strategy": "auto",
+        "role_lock_max_speed_mps": 90.0,
+        "runtime_package_version": "1.8.3",
+        "source_height": 1080,
+        "source_video": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/source.mp4",
+        "source_width": 1920,
+        "tracked_person_boxes": 10777,
+        "tracker_boxes": 10777,
+        "tracker_config": "/home/arnavchokshi/holdout_eval_20260721/repo/configs/racketsport/botsort_no_reid_loose.yaml",
+        "tracker_frames": 600,
+        "tracker_source_height": 1080,
+        "tracker_source_width": 1920
+      },
+      "notes": [
+        "invoked manifest-pinned RF-DETR-L at native 704 with frozen conf floor 0.18",
+        "fed class-id-1 person detections through botsort_no_reid_loose per-frame update()",
+        "exported the unchanged raw/source-pixel and calibration-scaled pool contract",
+        "preview only; both GPU production rows must reproduce before any separate default flip is eligible"
+      ],
+      "produced_artifacts": [
+        "raw_tracked_detections.json",
+        "tracked_detections.json",
+        "metrics.json",
+        "tracks.json"
+      ],
+      "real_model": true,
+      "source_mode": "rfdetr_large_2026_botsort_no_reid_loose",
+      "stage": "tracking",
+      "status": "ran",
+      "wall_seconds": 78.08315717400001
+    }
+  ],
+  "status": "blocked"
+}

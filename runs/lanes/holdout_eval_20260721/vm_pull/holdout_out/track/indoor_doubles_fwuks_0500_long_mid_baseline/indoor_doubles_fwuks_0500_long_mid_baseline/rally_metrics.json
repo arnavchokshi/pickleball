@@ -1,0 +1,2309 @@
+{
+  "artifact_type": "rally_metrics",
+  "coaching_card_facts": {
+    "artifact_type": "coaching_card_facts",
+    "audited_facts": [
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 0.044444,
+          "frames_total": 900,
+          "frames_used": 40
+        },
+        "entity": {
+          "id": "3",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/2/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/2/frames"
+        },
+        "fact_id": "ns051.178ba5e5173ab17da260",
+        "fact_type": "recovery",
+        "interval": {
+          "frame_end_exclusive": 264,
+          "frame_start": 224,
+          "pts_end_s": 8.775433,
+          "pts_start_s": 7.474133
+        },
+        "metric": "return_to_kitchen_line_s",
+        "numeric_lineage": [
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/value",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "3",
+        "rally_id": "clip",
+        "rule": {
+          "id": "descriptive_return_to_kitchen",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "s",
+        "value": 1.3013
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 1.0,
+          "frames_total": 900,
+          "frames_used": 900
+        },
+        "entity": {
+          "id": "1",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/0/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/0/frames"
+        },
+        "fact_id": "ns051.28dccefeb45eb96a1979",
+        "fact_type": "positioning",
+        "interval": {
+          "frame_end_exclusive": 900,
+          "frame_start": 0,
+          "pts_end_s": 29.996633,
+          "pts_start_s": 0.0
+        },
+        "metric": "dominant_zone_fraction",
+        "numeric_lineage": [
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/value/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "1",
+        "rally_id": "clip",
+        "rule": {
+          "id": "dominant_court_zone",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "fraction",
+        "value": {
+          "fraction": 0.521111,
+          "zone": "transition"
+        }
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 0.662222,
+          "frames_total": 900,
+          "frames_used": 596
+        },
+        "entity": {
+          "id": "3",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/2/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/2/frames"
+        },
+        "fact_id": "ns051.3b6152c1bfa2b3cbed0e",
+        "fact_type": "movement",
+        "interval": {
+          "frame_end_exclusive": 900,
+          "frame_start": 186,
+          "pts_end_s": 29.996633,
+          "pts_start_s": 6.2062
+        },
+        "metric": "distance_covered_m",
+        "numeric_lineage": [
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/value",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "3",
+        "rally_id": "clip",
+        "rule": {
+          "id": "gap_aware_distance",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "m",
+        "value": 22.079849
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 0.777778,
+          "frames_total": 900,
+          "frames_used": 700
+        },
+        "entity": {
+          "id": "4",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/3/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/3/frames"
+        },
+        "fact_id": "ns051.426d2ea40c208fb0fc76",
+        "fact_type": "movement",
+        "interval": {
+          "frame_end_exclusive": 900,
+          "frame_start": 2,
+          "pts_end_s": 29.996633,
+          "pts_start_s": 0.066733
+        },
+        "metric": "distance_covered_m",
+        "numeric_lineage": [
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/value",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "4",
+        "rally_id": "clip",
+        "rule": {
+          "id": "gap_aware_distance",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "m",
+        "value": 30.66043
+      },
+      {
+        "coordinate_space": "not_applicable",
+        "coverage": {
+          "fraction": 1.0,
+          "frames_total": 900,
+          "frames_used": 900
+        },
+        "entity": {
+          "id": "clip",
+          "type": "rally"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players"
+        },
+        "fact_id": "ns051.4a860ce13b77c7f46e25",
+        "fact_type": "rally",
+        "interval": {
+          "frame_end_exclusive": 900,
+          "frame_start": 0,
+          "pts_end_s": 30.03,
+          "pts_start_s": 0.0
+        },
+        "metric": "rally_duration_s",
+        "numeric_lineage": [
+          {
+            "formula_id": "pts_interval_difference_v1",
+            "output_pointer": "/value",
+            "source_ids": [
+              "tracks"
+            ],
+            "source_json_pointers": [
+              "/players"
+            ]
+          },
+          {
+            "formula_id": "pts_interval_difference_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks"
+            ],
+            "source_json_pointers": [
+              "/players"
+            ]
+          },
+          {
+            "formula_id": "pts_interval_difference_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks"
+            ],
+            "source_json_pointers": [
+              "/players"
+            ]
+          },
+          {
+            "formula_id": "pts_interval_difference_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks"
+            ],
+            "source_json_pointers": [
+              "/players"
+            ]
+          },
+          {
+            "formula_id": "pts_interval_difference_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks"
+            ],
+            "source_json_pointers": [
+              "/players"
+            ]
+          },
+          {
+            "formula_id": "pts_interval_difference_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks"
+            ],
+            "source_json_pointers": [
+              "/players"
+            ]
+          },
+          {
+            "formula_id": "pts_interval_difference_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks"
+            ],
+            "source_json_pointers": [
+              "/players"
+            ]
+          },
+          {
+            "formula_id": "pts_interval_difference_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks"
+            ],
+            "source_json_pointers": [
+              "/players"
+            ]
+          }
+        ],
+        "player_id": null,
+        "rally_id": "clip",
+        "rule": {
+          "id": "rally_duration",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "s",
+        "value": 30.03
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 0.79,
+          "frames_total": 900,
+          "frames_used": 711
+        },
+        "entity": {
+          "id": "2",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/1/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/1/frames"
+        },
+        "fact_id": "ns051.5672c2d1f3655ebc5265",
+        "fact_type": "positioning",
+        "interval": {
+          "frame_end_exclusive": 900,
+          "frame_start": 0,
+          "pts_end_s": 29.996633,
+          "pts_start_s": 0.0
+        },
+        "metric": "dominant_zone_fraction",
+        "numeric_lineage": [
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/value/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "2",
+        "rally_id": "clip",
+        "rule": {
+          "id": "dominant_court_zone",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "fraction",
+        "value": {
+          "fraction": 0.680731,
+          "zone": "transition"
+        }
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 0.011111,
+          "frames_total": 900,
+          "frames_used": 10
+        },
+        "entity": {
+          "id": "1",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/0/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/0/frames"
+        },
+        "fact_id": "ns051.783d0807a74d656ecb15",
+        "fact_type": "recovery",
+        "interval": {
+          "frame_end_exclusive": 10,
+          "frame_start": 0,
+          "pts_end_s": 0.3003,
+          "pts_start_s": 0.0
+        },
+        "metric": "return_to_kitchen_line_s",
+        "numeric_lineage": [
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/value",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "1",
+        "rally_id": "clip",
+        "rule": {
+          "id": "descriptive_return_to_kitchen",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "s",
+        "value": 0.3003
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 0.018889,
+          "frames_total": 900,
+          "frames_used": 17
+        },
+        "entity": {
+          "id": "4",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/3/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/3/frames"
+        },
+        "fact_id": "ns051.7961565c5f19d80de4ed",
+        "fact_type": "recovery",
+        "interval": {
+          "frame_end_exclusive": 156,
+          "frame_start": 139,
+          "pts_end_s": 5.171833,
+          "pts_start_s": 4.637967
+        },
+        "metric": "return_to_kitchen_line_s",
+        "numeric_lineage": [
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/value",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "outside_to_near_kitchen_transition_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "4",
+        "rally_id": "clip",
+        "rule": {
+          "id": "descriptive_return_to_kitchen",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "s",
+        "value": 0.533867
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 0.777778,
+          "frames_total": 900,
+          "frames_used": 700
+        },
+        "entity": {
+          "id": "4",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/3/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/3/frames"
+        },
+        "fact_id": "ns051.89557cd589212de11806",
+        "fact_type": "positioning",
+        "interval": {
+          "frame_end_exclusive": 900,
+          "frame_start": 2,
+          "pts_end_s": 29.996633,
+          "pts_start_s": 0.066733
+        },
+        "metric": "dominant_zone_fraction",
+        "numeric_lineage": [
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/value/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/3/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "4",
+        "rally_id": "clip",
+        "rule": {
+          "id": "dominant_court_zone",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "fraction",
+        "value": {
+          "fraction": 0.398571,
+          "zone": "transition"
+        }
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 0.662222,
+          "frames_total": 900,
+          "frames_used": 596
+        },
+        "entity": {
+          "id": "3",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/2/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/2/frames"
+        },
+        "fact_id": "ns051.a16a2f1d7345a4577eda",
+        "fact_type": "positioning",
+        "interval": {
+          "frame_end_exclusive": 900,
+          "frame_start": 186,
+          "pts_end_s": 29.996633,
+          "pts_start_s": 6.2062
+        },
+        "metric": "dominant_zone_fraction",
+        "numeric_lineage": [
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/value/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "dominant_zone_fraction_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/2/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "3",
+        "rally_id": "clip",
+        "rule": {
+          "id": "dominant_court_zone",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "fraction",
+        "value": {
+          "fraction": 0.494966,
+          "zone": "transition"
+        }
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 1.0,
+          "frames_total": 900,
+          "frames_used": 900
+        },
+        "entity": {
+          "id": "1",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/0/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/0/frames"
+        },
+        "fact_id": "ns051.c2f4d4c90e162e190375",
+        "fact_type": "movement",
+        "interval": {
+          "frame_end_exclusive": 900,
+          "frame_start": 0,
+          "pts_end_s": 29.996633,
+          "pts_start_s": 0.0
+        },
+        "metric": "distance_covered_m",
+        "numeric_lineage": [
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/value",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/0/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "1",
+        "rally_id": "clip",
+        "rule": {
+          "id": "gap_aware_distance",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "m",
+        "value": 29.31008
+      },
+      {
+        "coordinate_space": "court_Z0_xy_m",
+        "coverage": {
+          "fraction": 0.79,
+          "frames_total": 900,
+          "frames_used": 711
+        },
+        "entity": {
+          "id": "2",
+          "type": "player"
+        },
+        "evidence_locator": {
+          "json_pointer": "/players/1/frames",
+          "source_id": "tracks",
+          "uri": "file:///home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json#/players/1/frames"
+        },
+        "fact_id": "ns051.e4fbb648eda6f6895d9e",
+        "fact_type": "movement",
+        "interval": {
+          "frame_end_exclusive": 900,
+          "frame_start": 0,
+          "pts_end_s": 29.996633,
+          "pts_start_s": 0.0
+        },
+        "metric": "distance_covered_m",
+        "numeric_lineage": [
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/value",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/frame_start",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/frame_end_exclusive",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/pts_start_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/interval/pts_end_s",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/frames_used",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/frames_total",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          },
+          {
+            "formula_id": "euclidean_valid_segments_sum_v1",
+            "output_pointer": "/coverage/fraction",
+            "source_ids": [
+              "tracks",
+              "court_zones"
+            ],
+            "source_json_pointers": [
+              "/players/1/frames",
+              "/zones"
+            ]
+          }
+        ],
+        "player_id": "2",
+        "rally_id": "clip",
+        "rule": {
+          "id": "gap_aware_distance",
+          "version": "ns051.1"
+        },
+        "source_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+            "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+            "source_id": "tracks"
+          },
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+            "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+            "source_id": "court_zones"
+          }
+        ],
+        "time_space": "source_video_pts_s",
+        "trust": {
+          "authority_band": "preview",
+          "gate_id": "NS-05.1",
+          "gate_status": "unpassed",
+          "provenance_band": "model_estimated"
+        },
+        "unit": "m",
+        "value": 26.917137
+      }
+    ],
+    "build_order": "coaching_facts_before_manifest",
+    "compatibility": {
+      "authoritative_field": "audited_facts",
+      "facts_field": "legacy_v1_projection",
+      "user_facing": false
+    },
+    "facts": [
+      {
+        "coverage_fraction": 1.0,
+        "frames_total": 900,
+        "frames_used": 900,
+        "metric": "kitchen_proximity_s",
+        "player_id": "1",
+        "rally_id": "clip",
+        "rally_scope": "clip_fallback",
+        "trust": "ok",
+        "unit": "s",
+        "value": 1.3013
+      },
+      {
+        "coverage_fraction": 0.79,
+        "frames_total": 900,
+        "frames_used": 711,
+        "metric": "distance_covered_m",
+        "player_id": "2",
+        "rally_id": "clip",
+        "rally_scope": "clip_fallback",
+        "trust": "estimated",
+        "unit": "m",
+        "value": 26.917137
+      },
+      {
+        "coverage_fraction": 0.6622222222222223,
+        "frames_total": 900,
+        "frames_used": 596,
+        "metric": "kitchen_proximity_s",
+        "player_id": "3",
+        "rally_id": "clip",
+        "rally_scope": "clip_fallback",
+        "trust": "estimated",
+        "unit": "s",
+        "value": 13.680333
+      },
+      {
+        "coverage_fraction": 0.7777777777777778,
+        "frames_total": 900,
+        "frames_used": 700,
+        "metric": "kitchen_proximity_s",
+        "player_id": "4",
+        "rally_id": "clip",
+        "rally_scope": "clip_fallback",
+        "trust": "estimated",
+        "unit": "s",
+        "value": 11.7117
+      }
+    ],
+    "omissions": [
+      {
+        "fact_type": "shot",
+        "missing_artifacts": [
+          "shot_classification.json",
+          "shot_eval.json"
+        ],
+        "observed_artifacts": [],
+        "reason_code": "required_artifact_missing",
+        "required_artifacts": [
+          "shot_classification.json",
+          "shot_eval.json"
+        ],
+        "required_gate_ids": [
+          "shot_macro_f1_0_65",
+          "shot_top2_accuracy_0_85"
+        ],
+        "status": "absent"
+      },
+      {
+        "fact_type": "landing",
+        "missing_artifacts": [
+          "ball_arc_solved.json",
+          "contact_windows_refined_v1.json"
+        ],
+        "observed_artifacts": [
+          {
+            "artifact_type": "unspecified_json",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration.json",
+            "sha256": "9381c1ca44b0c8fafb850db866f4d2043e65275430628cf7f35434ecf440f3f6",
+            "source_id": "court_calibration"
+          }
+        ],
+        "reason_code": "required_artifact_missing",
+        "required_artifacts": [
+          "ball_arc_solved.json",
+          "court_calibration.json",
+          "contact_windows_refined_v1.json"
+        ],
+        "required_gate_ids": [
+          "BALL",
+          "CAL",
+          "event"
+        ],
+        "status": "absent"
+      },
+      {
+        "fact_type": "contact",
+        "missing_artifacts": [
+          "contact_windows_refined_v1.json",
+          "body_full_clip_gate.json"
+        ],
+        "observed_artifacts": [
+          {
+            "artifact_type": "racketsport_contact_provenance_v1",
+            "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/contact_refinement_v1.json",
+            "sha256": "81e89139ffc417b937ea0277c0bf8eeb42f7bd4f3aa0fe2b152562159a09c886",
+            "source_id": "contact_refinement_v1"
+          }
+        ],
+        "reason_code": "required_artifact_missing",
+        "required_artifacts": [
+          "contact_windows_refined_v1.json",
+          "body_full_clip_gate.json",
+          "contact_refinement_v1.json"
+        ],
+        "required_gate_ids": [
+          "BODY",
+          "contact"
+        ],
+        "status": "absent"
+      }
+    ],
+    "priority_rule": [
+      "contact_count_when_present",
+      "kitchen_proximity_when_positive",
+      "distance_covered_when_positive",
+      "p95_speed_when_positive",
+      "dominant_zone_occupancy"
+    ],
+    "rally_scope": "clip_fallback",
+    "schema_version": 2,
+    "source_artifacts": [
+      {
+        "artifact_type": "racketsport_virtual_world",
+        "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/virtual_world.json",
+        "sha256": "a79d126ebcdca208d202aa7fd6fd749a7b9ba2aa7f1b6766390a23d47102df58",
+        "source_id": "virtual_world"
+      },
+      {
+        "artifact_type": "unspecified_json",
+        "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+        "sha256": "80cb199fbb40f212df3ee0d86976e9ab5774a324c7ab2b2d5727fd8e92dc245a",
+        "source_id": "tracks"
+      },
+      {
+        "artifact_type": "unspecified_json",
+        "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+        "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+        "source_id": "court_zones"
+      },
+      {
+        "artifact_type": "unspecified_json",
+        "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/contact_windows.json",
+        "sha256": "93d8a183b77f95f66133c93017cc7b838b2d30ce28a6b95d4dc4ce644535ad23",
+        "source_id": "contact_windows"
+      }
+    ],
+    "source_run_dir": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline"
+  },
+  "fps": 29.97002997002997,
+  "inputs": {
+    "contact_windows": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/contact_windows.json",
+    "court_zones": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_zones.json",
+    "foot_contact_phases": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/foot_contact_phases.json",
+    "player_positions": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+    "rally_spans": null,
+    "tracks": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+    "virtual_world": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/virtual_world.json"
+  },
+  "player_count": 4,
+  "policy": {
+    "gap_aware_speed": true,
+    "max_integrated_gap_s": 0.050050000000000004,
+    "pose_biomechanics_used": false,
+    "position_based_only": true,
+    "protected_eval_labels_read": false
+  },
+  "rallies": [
+    {
+      "id": "clip",
+      "notes": [
+        "rally_spans absent or degenerate; metrics computed over the whole clip"
+      ],
+      "players": [
+        {
+          "coverage_fraction": 1.0,
+          "frames_total": 900,
+          "frames_used": 900,
+          "metrics": {
+            "avg_speed_mps": {
+              "coverage_fraction": 1.0,
+              "frames_total": 900,
+              "frames_used": 900,
+              "trust": "ok",
+              "unit": "mps",
+              "value": 0.977112
+            },
+            "contact_count": {
+              "coverage_fraction": 1.0,
+              "frames_total": 900,
+              "frames_used": 900,
+              "trust": "ok",
+              "unit": "count",
+              "value": 0
+            },
+            "contact_positions_world": {
+              "coverage_fraction": 1.0,
+              "frames_total": 900,
+              "frames_used": 900,
+              "trust": "ok",
+              "unit": "m",
+              "value": []
+            },
+            "distance_covered_m": {
+              "coverage_fraction": 1.0,
+              "frames_total": 900,
+              "frames_used": 900,
+              "trust": "ok",
+              "unit": "m",
+              "value": 29.31008
+            },
+            "kitchen_proximity_s": {
+              "coverage_fraction": 1.0,
+              "frames_total": 900,
+              "frames_used": 900,
+              "trust": "ok",
+              "unit": "s",
+              "value": 1.3013
+            },
+            "p95_speed_mps": {
+              "coverage_fraction": 1.0,
+              "frames_total": 900,
+              "frames_used": 900,
+              "trust": "ok",
+              "unit": "mps",
+              "value": 2.997003
+            },
+            "zone_occupancy": {
+              "coverage_fraction": 1.0,
+              "frames_total": 900,
+              "frames_used": 900,
+              "trust": "ok",
+              "unit": "fraction",
+              "value": {
+                "baseline": 0.06888888888888889,
+                "kitchen": 0.0,
+                "out_of_court": 0.41,
+                "transition": 0.5211111111111111
+              }
+            }
+          },
+          "player_id": "1"
+        },
+        {
+          "coverage_fraction": 0.79,
+          "frames_total": 900,
+          "frames_used": 711,
+          "metrics": {
+            "avg_speed_mps": {
+              "coverage_fraction": 0.79,
+              "frames_total": 900,
+              "frames_used": 711,
+              "trust": "estimated",
+              "unit": "mps",
+              "value": 1.13781
+            },
+            "contact_count": {
+              "coverage_fraction": 0.79,
+              "frames_total": 900,
+              "frames_used": 711,
+              "trust": "estimated",
+              "unit": "count",
+              "value": 0
+            },
+            "contact_positions_world": {
+              "coverage_fraction": 0.79,
+              "frames_total": 900,
+              "frames_used": 711,
+              "trust": "estimated",
+              "unit": "m",
+              "value": []
+            },
+            "distance_covered_m": {
+              "coverage_fraction": 0.79,
+              "frames_total": 900,
+              "frames_used": 711,
+              "trust": "estimated",
+              "unit": "m",
+              "value": 26.917137
+            },
+            "kitchen_proximity_s": {
+              "coverage_fraction": 0.79,
+              "frames_total": 900,
+              "frames_used": 711,
+              "trust": "estimated",
+              "unit": "s",
+              "value": 0.0
+            },
+            "p95_speed_mps": {
+              "coverage_fraction": 0.79,
+              "frames_total": 900,
+              "frames_used": 711,
+              "trust": "estimated",
+              "unit": "mps",
+              "value": 2.997003
+            },
+            "zone_occupancy": {
+              "coverage_fraction": 0.79,
+              "frames_total": 900,
+              "frames_used": 711,
+              "trust": "estimated",
+              "unit": "fraction",
+              "value": {
+                "baseline": 0.090014064697609,
+                "kitchen": 0.0,
+                "out_of_court": 0.22925457102672292,
+                "transition": 0.680731364275668
+              }
+            }
+          },
+          "player_id": "2"
+        },
+        {
+          "coverage_fraction": 0.6622222222222223,
+          "frames_total": 900,
+          "frames_used": 596,
+          "metrics": {
+            "avg_speed_mps": {
+              "coverage_fraction": 0.6622222222222223,
+              "frames_total": 900,
+              "frames_used": 596,
+              "trust": "estimated",
+              "unit": "mps",
+              "value": 1.121583
+            },
+            "contact_count": {
+              "coverage_fraction": 0.6622222222222223,
+              "frames_total": 900,
+              "frames_used": 596,
+              "trust": "estimated",
+              "unit": "count",
+              "value": 0
+            },
+            "contact_positions_world": {
+              "coverage_fraction": 0.6622222222222223,
+              "frames_total": 900,
+              "frames_used": 596,
+              "trust": "estimated",
+              "unit": "m",
+              "value": []
+            },
+            "distance_covered_m": {
+              "coverage_fraction": 0.6622222222222223,
+              "frames_total": 900,
+              "frames_used": 596,
+              "trust": "estimated",
+              "unit": "m",
+              "value": 22.079849
+            },
+            "kitchen_proximity_s": {
+              "coverage_fraction": 0.6622222222222223,
+              "frames_total": 900,
+              "frames_used": 596,
+              "trust": "estimated",
+              "unit": "s",
+              "value": 13.680333
+            },
+            "p95_speed_mps": {
+              "coverage_fraction": 0.6622222222222223,
+              "frames_total": 900,
+              "frames_used": 596,
+              "trust": "estimated",
+              "unit": "mps",
+              "value": 2.997003
+            },
+            "zone_occupancy": {
+              "coverage_fraction": 0.6622222222222223,
+              "frames_total": 900,
+              "frames_used": 596,
+              "trust": "estimated",
+              "unit": "fraction",
+              "value": {
+                "baseline": 0.028523489932885907,
+                "kitchen": 0.46812080536912754,
+                "out_of_court": 0.008389261744966443,
+                "transition": 0.4949664429530201
+              }
+            }
+          },
+          "player_id": "3"
+        },
+        {
+          "coverage_fraction": 0.7777777777777778,
+          "frames_total": 900,
+          "frames_used": 700,
+          "metrics": {
+            "avg_speed_mps": {
+              "coverage_fraction": 0.7777777777777778,
+              "frames_total": 900,
+              "frames_used": 700,
+              "trust": "estimated",
+              "unit": "mps",
+              "value": 1.327882
+            },
+            "contact_count": {
+              "coverage_fraction": 0.7777777777777778,
+              "frames_total": 900,
+              "frames_used": 700,
+              "trust": "estimated",
+              "unit": "count",
+              "value": 0
+            },
+            "contact_positions_world": {
+              "coverage_fraction": 0.7777777777777778,
+              "frames_total": 900,
+              "frames_used": 700,
+              "trust": "estimated",
+              "unit": "m",
+              "value": []
+            },
+            "distance_covered_m": {
+              "coverage_fraction": 0.7777777777777778,
+              "frames_total": 900,
+              "frames_used": 700,
+              "trust": "estimated",
+              "unit": "m",
+              "value": 30.66043
+            },
+            "kitchen_proximity_s": {
+              "coverage_fraction": 0.7777777777777778,
+              "frames_total": 900,
+              "frames_used": 700,
+              "trust": "estimated",
+              "unit": "s",
+              "value": 11.7117
+            },
+            "p95_speed_mps": {
+              "coverage_fraction": 0.7777777777777778,
+              "frames_total": 900,
+              "frames_used": 700,
+              "trust": "estimated",
+              "unit": "mps",
+              "value": 2.997003
+            },
+            "zone_occupancy": {
+              "coverage_fraction": 0.7777777777777778,
+              "frames_total": 900,
+              "frames_used": 700,
+              "trust": "estimated",
+              "unit": "fraction",
+              "value": {
+                "baseline": 0.15857142857142856,
+                "kitchen": 0.25857142857142856,
+                "out_of_court": 0.18428571428571427,
+                "transition": 0.3985714285714286
+              }
+            }
+          },
+          "player_id": "4"
+        }
+      ],
+      "rally_scope": "clip_fallback",
+      "t0": 0.0,
+      "t1": 30.03
+    }
+  ],
+  "rally_scope": "clip_fallback",
+  "schema_version": 1,
+  "source_run_dir": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline"
+}

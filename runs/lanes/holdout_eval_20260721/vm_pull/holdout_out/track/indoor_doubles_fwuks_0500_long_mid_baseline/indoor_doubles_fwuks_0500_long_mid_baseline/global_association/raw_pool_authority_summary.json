@@ -1,0 +1,1024 @@
+{
+  "artifact_type": "racketsport_raw_pool_person_authority_run",
+  "calibration_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration.json",
+  "candidate": "botsort_loose_pool_raw",
+  "clip_id": "indoor_doubles_fwuks_0500_long_mid_baseline",
+  "config": {
+    "appearance_weight": 1.0,
+    "backfill_iou_threshold": 0.25,
+    "backfill_max_cost": 2.5,
+    "cardinality_backfill": false,
+    "court_margin_m": 1.0,
+    "crop_padding_px": 8,
+    "drop_outside_court": true,
+    "embedding_split_eps": 0.35,
+    "embedding_split_min_samples": 1,
+    "expected_players": 4,
+    "implausible_motion_speed_threshold_m_s": 10.0,
+    "iou_threshold": 0.5,
+    "local_switch_split_distance_m": Infinity,
+    "local_switch_split_embedding_distance": Infinity,
+    "local_switch_split_max_gap_frames": 0,
+    "max_embedding_bbox_delta_px": 2.5,
+    "max_fragment_speed_m_s": 12.0,
+    "max_fragments_for_global": 400,
+    "max_gap_fill_frames": 48,
+    "max_gap_fill_speed_m_s": 7.0,
+    "max_merge_cost": 2.0,
+    "max_merge_gap_frames": 240,
+    "max_merge_speed_m_s": 9.0,
+    "min_conf": 0.0,
+    "motion_weight": 1.0,
+    "post_association_court_margin_m": null,
+    "reid_backend": "osnet",
+    "reid_batch_size": 64,
+    "reid_device": "cuda:0",
+    "reid_half": null,
+    "reid_model_name": "osnet_x1_0",
+    "sample_stride_frames": 1,
+    "side_prior_weight": 0.25,
+    "split_gap_frames": 24,
+    "sport": "pickleball"
+  },
+  "cov4_proxy": {
+    "artifact_type": "racketsport_source_only_cov4_proxy",
+    "cov4_proxy": 0.383333,
+    "denominator_frame_count": 900,
+    "denominator_source": "raw_pool_frame_count",
+    "exact_expected_player_frames": 345,
+    "expected_players": 4,
+    "first_frame": 0,
+    "last_frame": 899,
+    "not_gt": true,
+    "notes": [
+      "Source-only proxy: counts frames where the output tracks contain exactly expected_players IDs.",
+      "This is not GT coverage, IDF1, or a promotion gate; it does not know whether the boxes match real players."
+    ],
+    "observed_frame_count": 900,
+    "observed_frame_span": 900,
+    "output_player_count_histogram": {
+      "1": 4,
+      "2": 130,
+      "3": 421,
+      "4": 345
+    },
+    "schema_version": 1,
+    "source_only": true,
+    "uses_cvat_labels": false,
+    "value": 0.383333
+  },
+  "detection_limited_ceiling": {
+    "artifact_type": "racketsport_raw_pool_four_player_ceiling",
+    "court_margin_m": 1.0,
+    "expected_players": 4,
+    "four_player_detection_ceiling": 0.484444,
+    "frames_with_sufficient_on_court_detections": 436,
+    "notes": [
+      "Counts frames where the raw pool contains at least `expected_players` on-court, mutually non-overlapping person boxes (greedy NMS by confidence). This is a source-only upper bound on association-stage coverage: no association/selection logic and no ground truth are involved."
+    ],
+    "on_court_count_histogram": {
+      "1": 4,
+      "2": 148,
+      "3": 312,
+      "4": 436
+    },
+    "overlap_iou_threshold": 0.3,
+    "pool_frame_count": 900,
+    "schema_version": 1,
+    "source_only": true,
+    "uses_cvat_labels": false
+  },
+  "embedding_bbox_scale": 1.0,
+  "embedding_export": {
+    "detection_count": 22116,
+    "feature_dim": 512,
+    "feature_extractor": "torchreid_osnet_x1_0",
+    "feature_type": "osnet_reid_embedding",
+    "source_only": true,
+    "uses_cvat_labels": false
+  },
+  "embedding_export_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/global_association/reid_embeddings.json",
+  "embedding_source_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/raw_tracked_detections.json",
+  "four_player_detection_ceiling": {
+    "court_margin_m": 1.0,
+    "denominator_frame_count": 900,
+    "expected_players": 4,
+    "frames_with_sufficient_on_court_detections": 436,
+    "not_gt": true,
+    "notes": [
+      "Source-only raw-pool detection ceiling. This does not use GT and does not prove association or identity quality."
+    ],
+    "overlap_iou_threshold": 0.3,
+    "source_only": true,
+    "uses_cvat_labels": false,
+    "value": 0.484444
+  },
+  "geometry_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracked_detections.json",
+  "global_association": {
+    "cardinality_backfilled_detection_count": 0,
+    "court_filter_skipped_reason": "",
+    "court_rejected_detection_count": 19131,
+    "dropped_fragment_count": 6,
+    "embedding_split_count": 0,
+    "fragment_count": 27,
+    "gap_fill_skipped_overlap_count": 3,
+    "input_detection_count": 22116,
+    "merged_fragment_count": 22,
+    "output_player_count": 4,
+    "post_association_court_rejected_frame_count": 0,
+    "selected_fragment_count": 21,
+    "source_only": true,
+    "status": "ok",
+    "synthetic_frame_count": 105,
+    "uses_cvat_labels": false
+  },
+  "ground_truth_scored": false,
+  "implausible_motion_diagnostic": {
+    "artifact_type": "racketsport_implausible_motion_diagnostic",
+    "implausible_motion_player_count": 2,
+    "implausible_motion_player_ids": [
+      3,
+      4
+    ],
+    "implausible_motion_span_count": 15,
+    "implausible_motion_spans": [
+      {
+        "end_frame": 225,
+        "end_t": 7.5075,
+        "max_speed_m_s": 21.556798,
+        "max_step": {
+          "distance_m": 3.596393,
+          "dt_s": 0.166833,
+          "from_frame": 219,
+          "from_t": 7.3073,
+          "from_world_xy": [
+            3.525146,
+            6.83725
+          ],
+          "speed_m_s": 21.556798,
+          "to_frame": 224,
+          "to_t": 7.474133,
+          "to_world_xy": [
+            2.392245,
+            3.423956
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 219,
+        "start_t": 7.3073,
+        "step_count": 2
+      },
+      {
+        "end_frame": 236,
+        "end_t": 7.874533,
+        "max_speed_m_s": 23.877645,
+        "max_step": {
+          "distance_m": 0.796717,
+          "dt_s": 0.033367,
+          "from_frame": 234,
+          "from_t": 7.8078,
+          "from_world_xy": [
+            1.824568,
+            1.736402
+          ],
+          "speed_m_s": 23.877645,
+          "to_frame": 235,
+          "to_t": 7.841167,
+          "to_world_xy": [
+            1.613274,
+            0.968214
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 233,
+        "start_t": 7.774433,
+        "step_count": 3
+      },
+      {
+        "end_frame": 445,
+        "end_t": 14.848167,
+        "max_speed_m_s": 32.173833,
+        "max_step": {
+          "distance_m": 1.073534,
+          "dt_s": 0.033367,
+          "from_frame": 443,
+          "from_t": 14.781433,
+          "from_world_xy": [
+            1.719983,
+            6.031582
+          ],
+          "speed_m_s": 32.173833,
+          "to_frame": 444,
+          "to_t": 14.8148,
+          "to_world_xy": [
+            1.62749,
+            4.962041
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 443,
+        "start_t": 14.781433,
+        "step_count": 2
+      },
+      {
+        "end_frame": 579,
+        "end_t": 19.3193,
+        "max_speed_m_s": 151.698117,
+        "max_step": {
+          "distance_m": 5.06166,
+          "dt_s": 0.033367,
+          "from_frame": 571,
+          "from_t": 19.052367,
+          "from_world_xy": [
+            1.90471,
+            2.010809
+          ],
+          "speed_m_s": 151.698117,
+          "to_frame": 572,
+          "to_t": 19.085733,
+          "to_world_xy": [
+            2.701753,
+            7.009322
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 571,
+        "start_t": 19.052367,
+        "step_count": 4
+      },
+      {
+        "end_frame": 594,
+        "end_t": 19.8198,
+        "max_speed_m_s": 151.233644,
+        "max_step": {
+          "distance_m": 5.046163,
+          "dt_s": 0.033367,
+          "from_frame": 593,
+          "from_t": 19.786433,
+          "from_world_xy": [
+            1.853624,
+            2.05052
+          ],
+          "speed_m_s": 151.233644,
+          "to_frame": 594,
+          "to_t": 19.8198,
+          "to_world_xy": [
+            2.622136,
+            7.037819
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 593,
+        "start_t": 19.786433,
+        "step_count": 1
+      },
+      {
+        "end_frame": 612,
+        "end_t": 20.4204,
+        "max_speed_m_s": 43.770742,
+        "max_step": {
+          "distance_m": 1.460484,
+          "dt_s": 0.033367,
+          "from_frame": 610,
+          "from_t": 20.353667,
+          "from_world_xy": [
+            2.269436,
+            4.20287
+          ],
+          "speed_m_s": 43.770742,
+          "to_frame": 611,
+          "to_t": 20.387033,
+          "to_world_xy": [
+            2.04973,
+            2.759007
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 610,
+        "start_t": 20.353667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 740,
+        "end_t": 24.691333,
+        "max_speed_m_s": 34.286664,
+        "max_step": {
+          "distance_m": 1.144032,
+          "dt_s": 0.033367,
+          "from_frame": 737,
+          "from_t": 24.591233,
+          "from_world_xy": [
+            1.67208,
+            2.036168
+          ],
+          "speed_m_s": 34.286664,
+          "to_frame": 738,
+          "to_t": 24.6246,
+          "to_world_xy": [
+            1.823633,
+            3.170116
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 737,
+        "start_t": 24.591233,
+        "step_count": 3
+      },
+      {
+        "end_frame": 746,
+        "end_t": 24.891533,
+        "max_speed_m_s": 147.169852,
+        "max_step": {
+          "distance_m": 4.910567,
+          "dt_s": 0.033367,
+          "from_frame": 743,
+          "from_t": 24.791433,
+          "from_world_xy": [
+            1.685646,
+            2.246567
+          ],
+          "speed_m_s": 147.169852,
+          "to_frame": 744,
+          "to_t": 24.8248,
+          "to_world_xy": [
+            2.363533,
+            7.110119
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 743,
+        "start_t": 24.791433,
+        "step_count": 3
+      },
+      {
+        "end_frame": 757,
+        "end_t": 25.258567,
+        "max_speed_m_s": 62.889655,
+        "max_step": {
+          "distance_m": 2.098418,
+          "dt_s": 0.033367,
+          "from_frame": 755,
+          "from_t": 25.191833,
+          "from_world_xy": [
+            2.031312,
+            4.735057
+          ],
+          "speed_m_s": 62.889655,
+          "to_frame": 756,
+          "to_t": 25.2252,
+          "to_world_xy": [
+            1.73991,
+            2.65697
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 751,
+        "start_t": 25.058367,
+        "step_count": 3
+      },
+      {
+        "end_frame": 199,
+        "end_t": 6.639967,
+        "max_speed_m_s": 24.038685,
+        "max_step": {
+          "distance_m": 4.812545,
+          "dt_s": 0.2002,
+          "from_frame": 193,
+          "from_t": 6.439767,
+          "from_world_xy": [
+            3.21061,
+            1.809851
+          ],
+          "speed_m_s": 24.038685,
+          "to_frame": 199,
+          "to_t": 6.639967,
+          "to_world_xy": [
+            2.086884,
+            -2.86966
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 193,
+        "start_t": 6.439767,
+        "step_count": 1
+      },
+      {
+        "end_frame": 202,
+        "end_t": 6.740067,
+        "max_speed_m_s": 76.848957,
+        "max_step": {
+          "distance_m": 5.128387,
+          "dt_s": 0.066733,
+          "from_frame": 200,
+          "from_t": 6.673333,
+          "from_world_xy": [
+            2.122794,
+            -3.047482
+          ],
+          "speed_m_s": 76.848957,
+          "to_frame": 202,
+          "to_t": 6.740067,
+          "to_world_xy": [
+            3.10755,
+            1.98547
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 200,
+        "start_t": 6.673333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 232,
+        "end_t": 7.741067,
+        "max_speed_m_s": 25.136586,
+        "max_step": {
+          "distance_m": 1.677448,
+          "dt_s": 0.066733,
+          "from_frame": 218,
+          "from_t": 7.273933,
+          "from_world_xy": [
+            2.563284,
+            2.194881
+          ],
+          "speed_m_s": 25.136586,
+          "to_frame": 220,
+          "to_t": 7.340667,
+          "to_world_xy": [
+            2.813302,
+            3.853592
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 218,
+        "start_t": 7.273933,
+        "step_count": 6
+      },
+      {
+        "end_frame": 389,
+        "end_t": 12.979633,
+        "max_speed_m_s": 41.357589,
+        "max_step": {
+          "distance_m": 1.379965,
+          "dt_s": 0.033367,
+          "from_frame": 387,
+          "from_t": 12.9129,
+          "from_world_xy": [
+            -3.230114,
+            5.429856
+          ],
+          "speed_m_s": 41.357589,
+          "to_frame": 388,
+          "to_t": 12.946267,
+          "to_world_xy": [
+            -2.962023,
+            4.076183
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 387,
+        "start_t": 12.9129,
+        "step_count": 2
+      },
+      {
+        "end_frame": 774,
+        "end_t": 25.8258,
+        "max_speed_m_s": 35.814737,
+        "max_step": {
+          "distance_m": 1.195018,
+          "dt_s": 0.033367,
+          "from_frame": 772,
+          "from_t": 25.759067,
+          "from_world_xy": [
+            -2.301198,
+            7.583749
+          ],
+          "speed_m_s": 35.814737,
+          "to_frame": 773,
+          "to_t": 25.792433,
+          "to_world_xy": [
+            -2.126068,
+            6.401633
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 772,
+        "start_t": 25.759067,
+        "step_count": 2
+      },
+      {
+        "end_frame": 835,
+        "end_t": 27.861167,
+        "max_speed_m_s": 43.572988,
+        "max_step": {
+          "distance_m": 1.453885,
+          "dt_s": 0.033367,
+          "from_frame": 833,
+          "from_t": 27.794433,
+          "from_world_xy": [
+            -0.781853,
+            4.009997
+          ],
+          "speed_m_s": 43.572988,
+          "to_frame": 834,
+          "to_t": 27.8278,
+          "to_world_xy": [
+            -0.712715,
+            2.557756
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 824,
+        "start_t": 27.494133,
+        "step_count": 6
+      }
+    ],
+    "implausible_motion_step_count": 41,
+    "implausible_motion_worst_offender": {
+      "end_frame": 579,
+      "end_t": 19.3193,
+      "max_speed_m_s": 151.698117,
+      "max_step": {
+        "distance_m": 5.06166,
+        "dt_s": 0.033367,
+        "from_frame": 571,
+        "from_t": 19.052367,
+        "from_world_xy": [
+          1.90471,
+          2.010809
+        ],
+        "speed_m_s": 151.698117,
+        "to_frame": 572,
+        "to_t": 19.085733,
+        "to_world_xy": [
+          2.701753,
+          7.009322
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 571,
+      "start_t": 19.052367,
+      "step_count": 4
+    },
+    "not_gt": true,
+    "notes": [
+      "Diagnostic-only world_xy speed gate. It flags output-track motion that should not feed foot-lock or replay as physically trustworthy.",
+      "No smoothing, holding, deletion, or identity repair is applied by this diagnostic."
+    ],
+    "schema_version": 1,
+    "source_only": true,
+    "speed_threshold_m_s": 10.0,
+    "uses_cvat_labels": false
+  },
+  "implausible_motion_player_count": 2,
+  "implausible_motion_span_count": 15,
+  "implausible_motion_spans": [
+    {
+      "end_frame": 225,
+      "end_t": 7.5075,
+      "max_speed_m_s": 21.556798,
+      "max_step": {
+        "distance_m": 3.596393,
+        "dt_s": 0.166833,
+        "from_frame": 219,
+        "from_t": 7.3073,
+        "from_world_xy": [
+          3.525146,
+          6.83725
+        ],
+        "speed_m_s": 21.556798,
+        "to_frame": 224,
+        "to_t": 7.474133,
+        "to_world_xy": [
+          2.392245,
+          3.423956
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 219,
+      "start_t": 7.3073,
+      "step_count": 2
+    },
+    {
+      "end_frame": 236,
+      "end_t": 7.874533,
+      "max_speed_m_s": 23.877645,
+      "max_step": {
+        "distance_m": 0.796717,
+        "dt_s": 0.033367,
+        "from_frame": 234,
+        "from_t": 7.8078,
+        "from_world_xy": [
+          1.824568,
+          1.736402
+        ],
+        "speed_m_s": 23.877645,
+        "to_frame": 235,
+        "to_t": 7.841167,
+        "to_world_xy": [
+          1.613274,
+          0.968214
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 233,
+      "start_t": 7.774433,
+      "step_count": 3
+    },
+    {
+      "end_frame": 445,
+      "end_t": 14.848167,
+      "max_speed_m_s": 32.173833,
+      "max_step": {
+        "distance_m": 1.073534,
+        "dt_s": 0.033367,
+        "from_frame": 443,
+        "from_t": 14.781433,
+        "from_world_xy": [
+          1.719983,
+          6.031582
+        ],
+        "speed_m_s": 32.173833,
+        "to_frame": 444,
+        "to_t": 14.8148,
+        "to_world_xy": [
+          1.62749,
+          4.962041
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 443,
+      "start_t": 14.781433,
+      "step_count": 2
+    },
+    {
+      "end_frame": 579,
+      "end_t": 19.3193,
+      "max_speed_m_s": 151.698117,
+      "max_step": {
+        "distance_m": 5.06166,
+        "dt_s": 0.033367,
+        "from_frame": 571,
+        "from_t": 19.052367,
+        "from_world_xy": [
+          1.90471,
+          2.010809
+        ],
+        "speed_m_s": 151.698117,
+        "to_frame": 572,
+        "to_t": 19.085733,
+        "to_world_xy": [
+          2.701753,
+          7.009322
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 571,
+      "start_t": 19.052367,
+      "step_count": 4
+    },
+    {
+      "end_frame": 594,
+      "end_t": 19.8198,
+      "max_speed_m_s": 151.233644,
+      "max_step": {
+        "distance_m": 5.046163,
+        "dt_s": 0.033367,
+        "from_frame": 593,
+        "from_t": 19.786433,
+        "from_world_xy": [
+          1.853624,
+          2.05052
+        ],
+        "speed_m_s": 151.233644,
+        "to_frame": 594,
+        "to_t": 19.8198,
+        "to_world_xy": [
+          2.622136,
+          7.037819
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 593,
+      "start_t": 19.786433,
+      "step_count": 1
+    },
+    {
+      "end_frame": 612,
+      "end_t": 20.4204,
+      "max_speed_m_s": 43.770742,
+      "max_step": {
+        "distance_m": 1.460484,
+        "dt_s": 0.033367,
+        "from_frame": 610,
+        "from_t": 20.353667,
+        "from_world_xy": [
+          2.269436,
+          4.20287
+        ],
+        "speed_m_s": 43.770742,
+        "to_frame": 611,
+        "to_t": 20.387033,
+        "to_world_xy": [
+          2.04973,
+          2.759007
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 610,
+      "start_t": 20.353667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 740,
+      "end_t": 24.691333,
+      "max_speed_m_s": 34.286664,
+      "max_step": {
+        "distance_m": 1.144032,
+        "dt_s": 0.033367,
+        "from_frame": 737,
+        "from_t": 24.591233,
+        "from_world_xy": [
+          1.67208,
+          2.036168
+        ],
+        "speed_m_s": 34.286664,
+        "to_frame": 738,
+        "to_t": 24.6246,
+        "to_world_xy": [
+          1.823633,
+          3.170116
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 737,
+      "start_t": 24.591233,
+      "step_count": 3
+    },
+    {
+      "end_frame": 746,
+      "end_t": 24.891533,
+      "max_speed_m_s": 147.169852,
+      "max_step": {
+        "distance_m": 4.910567,
+        "dt_s": 0.033367,
+        "from_frame": 743,
+        "from_t": 24.791433,
+        "from_world_xy": [
+          1.685646,
+          2.246567
+        ],
+        "speed_m_s": 147.169852,
+        "to_frame": 744,
+        "to_t": 24.8248,
+        "to_world_xy": [
+          2.363533,
+          7.110119
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 743,
+      "start_t": 24.791433,
+      "step_count": 3
+    },
+    {
+      "end_frame": 757,
+      "end_t": 25.258567,
+      "max_speed_m_s": 62.889655,
+      "max_step": {
+        "distance_m": 2.098418,
+        "dt_s": 0.033367,
+        "from_frame": 755,
+        "from_t": 25.191833,
+        "from_world_xy": [
+          2.031312,
+          4.735057
+        ],
+        "speed_m_s": 62.889655,
+        "to_frame": 756,
+        "to_t": 25.2252,
+        "to_world_xy": [
+          1.73991,
+          2.65697
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 751,
+      "start_t": 25.058367,
+      "step_count": 3
+    },
+    {
+      "end_frame": 199,
+      "end_t": 6.639967,
+      "max_speed_m_s": 24.038685,
+      "max_step": {
+        "distance_m": 4.812545,
+        "dt_s": 0.2002,
+        "from_frame": 193,
+        "from_t": 6.439767,
+        "from_world_xy": [
+          3.21061,
+          1.809851
+        ],
+        "speed_m_s": 24.038685,
+        "to_frame": 199,
+        "to_t": 6.639967,
+        "to_world_xy": [
+          2.086884,
+          -2.86966
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 193,
+      "start_t": 6.439767,
+      "step_count": 1
+    },
+    {
+      "end_frame": 202,
+      "end_t": 6.740067,
+      "max_speed_m_s": 76.848957,
+      "max_step": {
+        "distance_m": 5.128387,
+        "dt_s": 0.066733,
+        "from_frame": 200,
+        "from_t": 6.673333,
+        "from_world_xy": [
+          2.122794,
+          -3.047482
+        ],
+        "speed_m_s": 76.848957,
+        "to_frame": 202,
+        "to_t": 6.740067,
+        "to_world_xy": [
+          3.10755,
+          1.98547
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 200,
+      "start_t": 6.673333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 232,
+      "end_t": 7.741067,
+      "max_speed_m_s": 25.136586,
+      "max_step": {
+        "distance_m": 1.677448,
+        "dt_s": 0.066733,
+        "from_frame": 218,
+        "from_t": 7.273933,
+        "from_world_xy": [
+          2.563284,
+          2.194881
+        ],
+        "speed_m_s": 25.136586,
+        "to_frame": 220,
+        "to_t": 7.340667,
+        "to_world_xy": [
+          2.813302,
+          3.853592
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 218,
+      "start_t": 7.273933,
+      "step_count": 6
+    },
+    {
+      "end_frame": 389,
+      "end_t": 12.979633,
+      "max_speed_m_s": 41.357589,
+      "max_step": {
+        "distance_m": 1.379965,
+        "dt_s": 0.033367,
+        "from_frame": 387,
+        "from_t": 12.9129,
+        "from_world_xy": [
+          -3.230114,
+          5.429856
+        ],
+        "speed_m_s": 41.357589,
+        "to_frame": 388,
+        "to_t": 12.946267,
+        "to_world_xy": [
+          -2.962023,
+          4.076183
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 387,
+      "start_t": 12.9129,
+      "step_count": 2
+    },
+    {
+      "end_frame": 774,
+      "end_t": 25.8258,
+      "max_speed_m_s": 35.814737,
+      "max_step": {
+        "distance_m": 1.195018,
+        "dt_s": 0.033367,
+        "from_frame": 772,
+        "from_t": 25.759067,
+        "from_world_xy": [
+          -2.301198,
+          7.583749
+        ],
+        "speed_m_s": 35.814737,
+        "to_frame": 773,
+        "to_t": 25.792433,
+        "to_world_xy": [
+          -2.126068,
+          6.401633
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 772,
+      "start_t": 25.759067,
+      "step_count": 2
+    },
+    {
+      "end_frame": 835,
+      "end_t": 27.861167,
+      "max_speed_m_s": 43.572988,
+      "max_step": {
+        "distance_m": 1.453885,
+        "dt_s": 0.033367,
+        "from_frame": 833,
+        "from_t": 27.794433,
+        "from_world_xy": [
+          -0.781853,
+          4.009997
+        ],
+        "speed_m_s": 43.572988,
+        "to_frame": 834,
+        "to_t": 27.8278,
+        "to_world_xy": [
+          -0.712715,
+          2.557756
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 824,
+      "start_t": 27.494133,
+      "step_count": 6
+    }
+  ],
+  "implausible_motion_speed_threshold_m_s": 10.0,
+  "implausible_motion_step_count": 41,
+  "implausible_motion_worst_offender": {
+    "end_frame": 579,
+    "end_t": 19.3193,
+    "max_speed_m_s": 151.698117,
+    "max_step": {
+      "distance_m": 5.06166,
+      "dt_s": 0.033367,
+      "from_frame": 571,
+      "from_t": 19.052367,
+      "from_world_xy": [
+        1.90471,
+        2.010809
+      ],
+      "speed_m_s": 151.698117,
+      "to_frame": 572,
+      "to_t": 19.085733,
+      "to_world_xy": [
+        2.701753,
+        7.009322
+      ]
+    },
+    "player_id": 3,
+    "start_frame": 571,
+    "start_t": 19.052367,
+    "step_count": 4
+  },
+  "raw_pool_dir": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline",
+  "reid_checkpoint_provenance": {
+    "artifact_type": "racketsport_reid_checkpoint_training_provenance",
+    "dataset_manifest_path": null,
+    "has_local_training_provenance": false,
+    "held_out_val_clip_ids": [],
+    "notes": [
+      "No training_summary.json found near this checkpoint; treated as a stock/upstream ReID weight with no local fine-tune provenance."
+    ],
+    "schema_version": 1,
+    "trained_on_clip_ids": [],
+    "training_summary_path": null,
+    "weights_path": "/home/arnavchokshi/holdout_eval_20260721/repo/models/checkpoints/osnet_x1_0_market1501.pt",
+    "weights_sha256": "2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154"
+  },
+  "reused_embedding_export": false,
+  "schema_version": 1,
+  "score": null,
+  "score_bbox_scale_x": 1.0,
+  "score_bbox_scale_y": 1.0,
+  "score_image_height": 1080.0,
+  "score_image_width": 1920.0,
+  "score_path": null,
+  "source_only": true,
+  "status": "ok",
+  "summary_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/global_association/raw_pool_authority_summary.json",
+  "tracks_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/global_association/tracks.json",
+  "uses_cvat_labels_for_candidate": false,
+  "wall_time_s": 72.272405
+}

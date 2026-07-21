@@ -1,0 +1,5439 @@
+{
+  "artifact_type": "racketsport_timebase_decode_evidence",
+  "capture_id": "burlington_gold_0300_low_steep_corner",
+  "clip_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/source.mp4",
+  "count_consistency": {
+    "all_source_frames_accounted": true,
+    "canonical_accounted_frame_count": 600,
+    "ffprobe_reported_frame_count": 600,
+    "legacy_difference_explanation": null,
+    "legacy_frame_count": 600,
+    "non_monotonic_frame_indices": [],
+    "stream_frame_count": 600,
+    "unavailable_frame_indices": []
+  },
+  "legacy_compatibility": {
+    "artifact": "frame_times.json",
+    "derived_method": "legacy_rebase_to_first_table_pts_round9",
+    "values_unchanged": true
+  },
+  "raw_pts_authority": true,
+  "raw_pts_observations": [
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 0,
+      "pts_ticks": 0,
+      "source_timestamp_decimal": "0.000000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 1,
+      "pts_ticks": 1001,
+      "source_timestamp_decimal": "0.016683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 2,
+      "pts_ticks": 2002,
+      "source_timestamp_decimal": "0.033367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 3,
+      "pts_ticks": 3003,
+      "source_timestamp_decimal": "0.050050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 4,
+      "pts_ticks": 4004,
+      "source_timestamp_decimal": "0.066733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 5,
+      "pts_ticks": 5005,
+      "source_timestamp_decimal": "0.083417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 6,
+      "pts_ticks": 6006,
+      "source_timestamp_decimal": "0.100100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 7,
+      "pts_ticks": 7007,
+      "source_timestamp_decimal": "0.116783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 8,
+      "pts_ticks": 8008,
+      "source_timestamp_decimal": "0.133467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 9,
+      "pts_ticks": 9009,
+      "source_timestamp_decimal": "0.150150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 10,
+      "pts_ticks": 10010,
+      "source_timestamp_decimal": "0.166833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 11,
+      "pts_ticks": 11011,
+      "source_timestamp_decimal": "0.183517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 12,
+      "pts_ticks": 12012,
+      "source_timestamp_decimal": "0.200200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 13,
+      "pts_ticks": 13013,
+      "source_timestamp_decimal": "0.216883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 14,
+      "pts_ticks": 14014,
+      "source_timestamp_decimal": "0.233567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 15,
+      "pts_ticks": 15015,
+      "source_timestamp_decimal": "0.250250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 16,
+      "pts_ticks": 16016,
+      "source_timestamp_decimal": "0.266933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 17,
+      "pts_ticks": 17017,
+      "source_timestamp_decimal": "0.283617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 18,
+      "pts_ticks": 18018,
+      "source_timestamp_decimal": "0.300300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 19,
+      "pts_ticks": 19019,
+      "source_timestamp_decimal": "0.316983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 20,
+      "pts_ticks": 20020,
+      "source_timestamp_decimal": "0.333667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 21,
+      "pts_ticks": 21021,
+      "source_timestamp_decimal": "0.350350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 22,
+      "pts_ticks": 22022,
+      "source_timestamp_decimal": "0.367033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 23,
+      "pts_ticks": 23023,
+      "source_timestamp_decimal": "0.383717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 24,
+      "pts_ticks": 24024,
+      "source_timestamp_decimal": "0.400400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 25,
+      "pts_ticks": 25025,
+      "source_timestamp_decimal": "0.417083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 26,
+      "pts_ticks": 26026,
+      "source_timestamp_decimal": "0.433767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 27,
+      "pts_ticks": 27027,
+      "source_timestamp_decimal": "0.450450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 28,
+      "pts_ticks": 28028,
+      "source_timestamp_decimal": "0.467133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 29,
+      "pts_ticks": 29029,
+      "source_timestamp_decimal": "0.483817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 30,
+      "pts_ticks": 30030,
+      "source_timestamp_decimal": "0.500500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 31,
+      "pts_ticks": 31031,
+      "source_timestamp_decimal": "0.517183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 32,
+      "pts_ticks": 32032,
+      "source_timestamp_decimal": "0.533867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 33,
+      "pts_ticks": 33033,
+      "source_timestamp_decimal": "0.550550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 34,
+      "pts_ticks": 34034,
+      "source_timestamp_decimal": "0.567233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 35,
+      "pts_ticks": 35035,
+      "source_timestamp_decimal": "0.583917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 36,
+      "pts_ticks": 36036,
+      "source_timestamp_decimal": "0.600600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 37,
+      "pts_ticks": 37037,
+      "source_timestamp_decimal": "0.617283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 38,
+      "pts_ticks": 38038,
+      "source_timestamp_decimal": "0.633967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 39,
+      "pts_ticks": 39039,
+      "source_timestamp_decimal": "0.650650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 40,
+      "pts_ticks": 40040,
+      "source_timestamp_decimal": "0.667333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 41,
+      "pts_ticks": 41041,
+      "source_timestamp_decimal": "0.684017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 42,
+      "pts_ticks": 42042,
+      "source_timestamp_decimal": "0.700700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 43,
+      "pts_ticks": 43043,
+      "source_timestamp_decimal": "0.717383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 44,
+      "pts_ticks": 44044,
+      "source_timestamp_decimal": "0.734067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 45,
+      "pts_ticks": 45045,
+      "source_timestamp_decimal": "0.750750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 46,
+      "pts_ticks": 46046,
+      "source_timestamp_decimal": "0.767433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 47,
+      "pts_ticks": 47047,
+      "source_timestamp_decimal": "0.784117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 48,
+      "pts_ticks": 48048,
+      "source_timestamp_decimal": "0.800800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 49,
+      "pts_ticks": 49049,
+      "source_timestamp_decimal": "0.817483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 50,
+      "pts_ticks": 50050,
+      "source_timestamp_decimal": "0.834167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 51,
+      "pts_ticks": 51051,
+      "source_timestamp_decimal": "0.850850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 52,
+      "pts_ticks": 52052,
+      "source_timestamp_decimal": "0.867533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 53,
+      "pts_ticks": 53053,
+      "source_timestamp_decimal": "0.884217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 54,
+      "pts_ticks": 54054,
+      "source_timestamp_decimal": "0.900900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 55,
+      "pts_ticks": 55055,
+      "source_timestamp_decimal": "0.917583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 56,
+      "pts_ticks": 56056,
+      "source_timestamp_decimal": "0.934267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 57,
+      "pts_ticks": 57057,
+      "source_timestamp_decimal": "0.950950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 58,
+      "pts_ticks": 58058,
+      "source_timestamp_decimal": "0.967633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 59,
+      "pts_ticks": 59059,
+      "source_timestamp_decimal": "0.984317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 60,
+      "pts_ticks": 60060,
+      "source_timestamp_decimal": "1.001000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 61,
+      "pts_ticks": 61061,
+      "source_timestamp_decimal": "1.017683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 62,
+      "pts_ticks": 62062,
+      "source_timestamp_decimal": "1.034367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 63,
+      "pts_ticks": 63063,
+      "source_timestamp_decimal": "1.051050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 64,
+      "pts_ticks": 64064,
+      "source_timestamp_decimal": "1.067733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 65,
+      "pts_ticks": 65065,
+      "source_timestamp_decimal": "1.084417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 66,
+      "pts_ticks": 66066,
+      "source_timestamp_decimal": "1.101100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 67,
+      "pts_ticks": 67067,
+      "source_timestamp_decimal": "1.117783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 68,
+      "pts_ticks": 68068,
+      "source_timestamp_decimal": "1.134467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 69,
+      "pts_ticks": 69069,
+      "source_timestamp_decimal": "1.151150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 70,
+      "pts_ticks": 70070,
+      "source_timestamp_decimal": "1.167833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 71,
+      "pts_ticks": 71071,
+      "source_timestamp_decimal": "1.184517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 72,
+      "pts_ticks": 72072,
+      "source_timestamp_decimal": "1.201200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 73,
+      "pts_ticks": 73073,
+      "source_timestamp_decimal": "1.217883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 74,
+      "pts_ticks": 74074,
+      "source_timestamp_decimal": "1.234567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 75,
+      "pts_ticks": 75075,
+      "source_timestamp_decimal": "1.251250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 76,
+      "pts_ticks": 76076,
+      "source_timestamp_decimal": "1.267933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 77,
+      "pts_ticks": 77077,
+      "source_timestamp_decimal": "1.284617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 78,
+      "pts_ticks": 78078,
+      "source_timestamp_decimal": "1.301300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 79,
+      "pts_ticks": 79079,
+      "source_timestamp_decimal": "1.317983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 80,
+      "pts_ticks": 80080,
+      "source_timestamp_decimal": "1.334667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 81,
+      "pts_ticks": 81081,
+      "source_timestamp_decimal": "1.351350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 82,
+      "pts_ticks": 82082,
+      "source_timestamp_decimal": "1.368033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 83,
+      "pts_ticks": 83083,
+      "source_timestamp_decimal": "1.384717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 84,
+      "pts_ticks": 84084,
+      "source_timestamp_decimal": "1.401400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 85,
+      "pts_ticks": 85085,
+      "source_timestamp_decimal": "1.418083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 86,
+      "pts_ticks": 86086,
+      "source_timestamp_decimal": "1.434767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 87,
+      "pts_ticks": 87087,
+      "source_timestamp_decimal": "1.451450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 88,
+      "pts_ticks": 88088,
+      "source_timestamp_decimal": "1.468133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 89,
+      "pts_ticks": 89089,
+      "source_timestamp_decimal": "1.484817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 90,
+      "pts_ticks": 90090,
+      "source_timestamp_decimal": "1.501500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 91,
+      "pts_ticks": 91091,
+      "source_timestamp_decimal": "1.518183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 92,
+      "pts_ticks": 92092,
+      "source_timestamp_decimal": "1.534867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 93,
+      "pts_ticks": 93093,
+      "source_timestamp_decimal": "1.551550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 94,
+      "pts_ticks": 94094,
+      "source_timestamp_decimal": "1.568233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 95,
+      "pts_ticks": 95095,
+      "source_timestamp_decimal": "1.584917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 96,
+      "pts_ticks": 96096,
+      "source_timestamp_decimal": "1.601600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 97,
+      "pts_ticks": 97097,
+      "source_timestamp_decimal": "1.618283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 98,
+      "pts_ticks": 98098,
+      "source_timestamp_decimal": "1.634967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 99,
+      "pts_ticks": 99099,
+      "source_timestamp_decimal": "1.651650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 100,
+      "pts_ticks": 100100,
+      "source_timestamp_decimal": "1.668333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 101,
+      "pts_ticks": 101101,
+      "source_timestamp_decimal": "1.685017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 102,
+      "pts_ticks": 102102,
+      "source_timestamp_decimal": "1.701700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 103,
+      "pts_ticks": 103103,
+      "source_timestamp_decimal": "1.718383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 104,
+      "pts_ticks": 104104,
+      "source_timestamp_decimal": "1.735067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 105,
+      "pts_ticks": 105105,
+      "source_timestamp_decimal": "1.751750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 106,
+      "pts_ticks": 106106,
+      "source_timestamp_decimal": "1.768433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 107,
+      "pts_ticks": 107107,
+      "source_timestamp_decimal": "1.785117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 108,
+      "pts_ticks": 108108,
+      "source_timestamp_decimal": "1.801800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 109,
+      "pts_ticks": 109109,
+      "source_timestamp_decimal": "1.818483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 110,
+      "pts_ticks": 110110,
+      "source_timestamp_decimal": "1.835167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 111,
+      "pts_ticks": 111111,
+      "source_timestamp_decimal": "1.851850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 112,
+      "pts_ticks": 112112,
+      "source_timestamp_decimal": "1.868533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 113,
+      "pts_ticks": 113113,
+      "source_timestamp_decimal": "1.885217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 114,
+      "pts_ticks": 114114,
+      "source_timestamp_decimal": "1.901900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 115,
+      "pts_ticks": 115115,
+      "source_timestamp_decimal": "1.918583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 116,
+      "pts_ticks": 116116,
+      "source_timestamp_decimal": "1.935267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 117,
+      "pts_ticks": 117117,
+      "source_timestamp_decimal": "1.951950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 118,
+      "pts_ticks": 118118,
+      "source_timestamp_decimal": "1.968633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 119,
+      "pts_ticks": 119119,
+      "source_timestamp_decimal": "1.985317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 120,
+      "pts_ticks": 120120,
+      "source_timestamp_decimal": "2.002000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 121,
+      "pts_ticks": 121121,
+      "source_timestamp_decimal": "2.018683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 122,
+      "pts_ticks": 122122,
+      "source_timestamp_decimal": "2.035367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 123,
+      "pts_ticks": 123123,
+      "source_timestamp_decimal": "2.052050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 124,
+      "pts_ticks": 124124,
+      "source_timestamp_decimal": "2.068733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 125,
+      "pts_ticks": 125125,
+      "source_timestamp_decimal": "2.085417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 126,
+      "pts_ticks": 126126,
+      "source_timestamp_decimal": "2.102100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 127,
+      "pts_ticks": 127127,
+      "source_timestamp_decimal": "2.118783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 128,
+      "pts_ticks": 128128,
+      "source_timestamp_decimal": "2.135467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 129,
+      "pts_ticks": 129129,
+      "source_timestamp_decimal": "2.152150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 130,
+      "pts_ticks": 130130,
+      "source_timestamp_decimal": "2.168833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 131,
+      "pts_ticks": 131131,
+      "source_timestamp_decimal": "2.185517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 132,
+      "pts_ticks": 132132,
+      "source_timestamp_decimal": "2.202200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 133,
+      "pts_ticks": 133133,
+      "source_timestamp_decimal": "2.218883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 134,
+      "pts_ticks": 134134,
+      "source_timestamp_decimal": "2.235567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 135,
+      "pts_ticks": 135135,
+      "source_timestamp_decimal": "2.252250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 136,
+      "pts_ticks": 136136,
+      "source_timestamp_decimal": "2.268933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 137,
+      "pts_ticks": 137137,
+      "source_timestamp_decimal": "2.285617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 138,
+      "pts_ticks": 138138,
+      "source_timestamp_decimal": "2.302300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 139,
+      "pts_ticks": 139139,
+      "source_timestamp_decimal": "2.318983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 140,
+      "pts_ticks": 140140,
+      "source_timestamp_decimal": "2.335667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 141,
+      "pts_ticks": 141141,
+      "source_timestamp_decimal": "2.352350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 142,
+      "pts_ticks": 142142,
+      "source_timestamp_decimal": "2.369033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 143,
+      "pts_ticks": 143143,
+      "source_timestamp_decimal": "2.385717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 144,
+      "pts_ticks": 144144,
+      "source_timestamp_decimal": "2.402400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 145,
+      "pts_ticks": 145145,
+      "source_timestamp_decimal": "2.419083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 146,
+      "pts_ticks": 146146,
+      "source_timestamp_decimal": "2.435767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 147,
+      "pts_ticks": 147147,
+      "source_timestamp_decimal": "2.452450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 148,
+      "pts_ticks": 148148,
+      "source_timestamp_decimal": "2.469133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 149,
+      "pts_ticks": 149149,
+      "source_timestamp_decimal": "2.485817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 150,
+      "pts_ticks": 150150,
+      "source_timestamp_decimal": "2.502500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 151,
+      "pts_ticks": 151151,
+      "source_timestamp_decimal": "2.519183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 152,
+      "pts_ticks": 152152,
+      "source_timestamp_decimal": "2.535867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 153,
+      "pts_ticks": 153153,
+      "source_timestamp_decimal": "2.552550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 154,
+      "pts_ticks": 154154,
+      "source_timestamp_decimal": "2.569233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 155,
+      "pts_ticks": 155155,
+      "source_timestamp_decimal": "2.585917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 156,
+      "pts_ticks": 156156,
+      "source_timestamp_decimal": "2.602600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 157,
+      "pts_ticks": 157157,
+      "source_timestamp_decimal": "2.619283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 158,
+      "pts_ticks": 158158,
+      "source_timestamp_decimal": "2.635967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 159,
+      "pts_ticks": 159159,
+      "source_timestamp_decimal": "2.652650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 160,
+      "pts_ticks": 160160,
+      "source_timestamp_decimal": "2.669333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 161,
+      "pts_ticks": 161161,
+      "source_timestamp_decimal": "2.686017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 162,
+      "pts_ticks": 162162,
+      "source_timestamp_decimal": "2.702700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 163,
+      "pts_ticks": 163163,
+      "source_timestamp_decimal": "2.719383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 164,
+      "pts_ticks": 164164,
+      "source_timestamp_decimal": "2.736067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 165,
+      "pts_ticks": 165165,
+      "source_timestamp_decimal": "2.752750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 166,
+      "pts_ticks": 166166,
+      "source_timestamp_decimal": "2.769433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 167,
+      "pts_ticks": 167167,
+      "source_timestamp_decimal": "2.786117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 168,
+      "pts_ticks": 168168,
+      "source_timestamp_decimal": "2.802800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 169,
+      "pts_ticks": 169169,
+      "source_timestamp_decimal": "2.819483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 170,
+      "pts_ticks": 170170,
+      "source_timestamp_decimal": "2.836167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 171,
+      "pts_ticks": 171171,
+      "source_timestamp_decimal": "2.852850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 172,
+      "pts_ticks": 172172,
+      "source_timestamp_decimal": "2.869533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 173,
+      "pts_ticks": 173173,
+      "source_timestamp_decimal": "2.886217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 174,
+      "pts_ticks": 174174,
+      "source_timestamp_decimal": "2.902900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 175,
+      "pts_ticks": 175175,
+      "source_timestamp_decimal": "2.919583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 176,
+      "pts_ticks": 176176,
+      "source_timestamp_decimal": "2.936267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 177,
+      "pts_ticks": 177177,
+      "source_timestamp_decimal": "2.952950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 178,
+      "pts_ticks": 178178,
+      "source_timestamp_decimal": "2.969633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 179,
+      "pts_ticks": 179179,
+      "source_timestamp_decimal": "2.986317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 180,
+      "pts_ticks": 180180,
+      "source_timestamp_decimal": "3.003000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 181,
+      "pts_ticks": 181181,
+      "source_timestamp_decimal": "3.019683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 182,
+      "pts_ticks": 182182,
+      "source_timestamp_decimal": "3.036367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 183,
+      "pts_ticks": 183183,
+      "source_timestamp_decimal": "3.053050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 184,
+      "pts_ticks": 184184,
+      "source_timestamp_decimal": "3.069733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 185,
+      "pts_ticks": 185185,
+      "source_timestamp_decimal": "3.086417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 186,
+      "pts_ticks": 186186,
+      "source_timestamp_decimal": "3.103100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 187,
+      "pts_ticks": 187187,
+      "source_timestamp_decimal": "3.119783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 188,
+      "pts_ticks": 188188,
+      "source_timestamp_decimal": "3.136467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 189,
+      "pts_ticks": 189189,
+      "source_timestamp_decimal": "3.153150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 190,
+      "pts_ticks": 190190,
+      "source_timestamp_decimal": "3.169833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 191,
+      "pts_ticks": 191191,
+      "source_timestamp_decimal": "3.186517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 192,
+      "pts_ticks": 192192,
+      "source_timestamp_decimal": "3.203200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 193,
+      "pts_ticks": 193193,
+      "source_timestamp_decimal": "3.219883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 194,
+      "pts_ticks": 194194,
+      "source_timestamp_decimal": "3.236567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 195,
+      "pts_ticks": 195195,
+      "source_timestamp_decimal": "3.253250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 196,
+      "pts_ticks": 196196,
+      "source_timestamp_decimal": "3.269933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 197,
+      "pts_ticks": 197197,
+      "source_timestamp_decimal": "3.286617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 198,
+      "pts_ticks": 198198,
+      "source_timestamp_decimal": "3.303300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 199,
+      "pts_ticks": 199199,
+      "source_timestamp_decimal": "3.319983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 200,
+      "pts_ticks": 200200,
+      "source_timestamp_decimal": "3.336667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 201,
+      "pts_ticks": 201201,
+      "source_timestamp_decimal": "3.353350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 202,
+      "pts_ticks": 202202,
+      "source_timestamp_decimal": "3.370033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 203,
+      "pts_ticks": 203203,
+      "source_timestamp_decimal": "3.386717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 204,
+      "pts_ticks": 204204,
+      "source_timestamp_decimal": "3.403400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 205,
+      "pts_ticks": 205205,
+      "source_timestamp_decimal": "3.420083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 206,
+      "pts_ticks": 206206,
+      "source_timestamp_decimal": "3.436767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 207,
+      "pts_ticks": 207207,
+      "source_timestamp_decimal": "3.453450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 208,
+      "pts_ticks": 208208,
+      "source_timestamp_decimal": "3.470133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 209,
+      "pts_ticks": 209209,
+      "source_timestamp_decimal": "3.486817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 210,
+      "pts_ticks": 210210,
+      "source_timestamp_decimal": "3.503500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 211,
+      "pts_ticks": 211211,
+      "source_timestamp_decimal": "3.520183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 212,
+      "pts_ticks": 212212,
+      "source_timestamp_decimal": "3.536867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 213,
+      "pts_ticks": 213213,
+      "source_timestamp_decimal": "3.553550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 214,
+      "pts_ticks": 214214,
+      "source_timestamp_decimal": "3.570233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 215,
+      "pts_ticks": 215215,
+      "source_timestamp_decimal": "3.586917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 216,
+      "pts_ticks": 216216,
+      "source_timestamp_decimal": "3.603600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 217,
+      "pts_ticks": 217217,
+      "source_timestamp_decimal": "3.620283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 218,
+      "pts_ticks": 218218,
+      "source_timestamp_decimal": "3.636967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 219,
+      "pts_ticks": 219219,
+      "source_timestamp_decimal": "3.653650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 220,
+      "pts_ticks": 220220,
+      "source_timestamp_decimal": "3.670333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 221,
+      "pts_ticks": 221221,
+      "source_timestamp_decimal": "3.687017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 222,
+      "pts_ticks": 222222,
+      "source_timestamp_decimal": "3.703700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 223,
+      "pts_ticks": 223223,
+      "source_timestamp_decimal": "3.720383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 224,
+      "pts_ticks": 224224,
+      "source_timestamp_decimal": "3.737067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 225,
+      "pts_ticks": 225225,
+      "source_timestamp_decimal": "3.753750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 226,
+      "pts_ticks": 226226,
+      "source_timestamp_decimal": "3.770433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 227,
+      "pts_ticks": 227227,
+      "source_timestamp_decimal": "3.787117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 228,
+      "pts_ticks": 228228,
+      "source_timestamp_decimal": "3.803800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 229,
+      "pts_ticks": 229229,
+      "source_timestamp_decimal": "3.820483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 230,
+      "pts_ticks": 230230,
+      "source_timestamp_decimal": "3.837167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 231,
+      "pts_ticks": 231231,
+      "source_timestamp_decimal": "3.853850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 232,
+      "pts_ticks": 232232,
+      "source_timestamp_decimal": "3.870533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 233,
+      "pts_ticks": 233233,
+      "source_timestamp_decimal": "3.887217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 234,
+      "pts_ticks": 234234,
+      "source_timestamp_decimal": "3.903900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 235,
+      "pts_ticks": 235235,
+      "source_timestamp_decimal": "3.920583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 236,
+      "pts_ticks": 236236,
+      "source_timestamp_decimal": "3.937267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 237,
+      "pts_ticks": 237237,
+      "source_timestamp_decimal": "3.953950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 238,
+      "pts_ticks": 238238,
+      "source_timestamp_decimal": "3.970633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 239,
+      "pts_ticks": 239239,
+      "source_timestamp_decimal": "3.987317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 240,
+      "pts_ticks": 240240,
+      "source_timestamp_decimal": "4.004000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 241,
+      "pts_ticks": 241241,
+      "source_timestamp_decimal": "4.020683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 242,
+      "pts_ticks": 242242,
+      "source_timestamp_decimal": "4.037367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 243,
+      "pts_ticks": 243243,
+      "source_timestamp_decimal": "4.054050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 244,
+      "pts_ticks": 244244,
+      "source_timestamp_decimal": "4.070733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 245,
+      "pts_ticks": 245245,
+      "source_timestamp_decimal": "4.087417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 246,
+      "pts_ticks": 246246,
+      "source_timestamp_decimal": "4.104100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 247,
+      "pts_ticks": 247247,
+      "source_timestamp_decimal": "4.120783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 248,
+      "pts_ticks": 248248,
+      "source_timestamp_decimal": "4.137467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 249,
+      "pts_ticks": 249249,
+      "source_timestamp_decimal": "4.154150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 250,
+      "pts_ticks": 250250,
+      "source_timestamp_decimal": "4.170833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 251,
+      "pts_ticks": 251251,
+      "source_timestamp_decimal": "4.187517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 252,
+      "pts_ticks": 252252,
+      "source_timestamp_decimal": "4.204200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 253,
+      "pts_ticks": 253253,
+      "source_timestamp_decimal": "4.220883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 254,
+      "pts_ticks": 254254,
+      "source_timestamp_decimal": "4.237567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 255,
+      "pts_ticks": 255255,
+      "source_timestamp_decimal": "4.254250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 256,
+      "pts_ticks": 256256,
+      "source_timestamp_decimal": "4.270933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 257,
+      "pts_ticks": 257257,
+      "source_timestamp_decimal": "4.287617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 258,
+      "pts_ticks": 258258,
+      "source_timestamp_decimal": "4.304300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 259,
+      "pts_ticks": 259259,
+      "source_timestamp_decimal": "4.320983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 260,
+      "pts_ticks": 260260,
+      "source_timestamp_decimal": "4.337667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 261,
+      "pts_ticks": 261261,
+      "source_timestamp_decimal": "4.354350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 262,
+      "pts_ticks": 262262,
+      "source_timestamp_decimal": "4.371033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 263,
+      "pts_ticks": 263263,
+      "source_timestamp_decimal": "4.387717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 264,
+      "pts_ticks": 264264,
+      "source_timestamp_decimal": "4.404400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 265,
+      "pts_ticks": 265265,
+      "source_timestamp_decimal": "4.421083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 266,
+      "pts_ticks": 266266,
+      "source_timestamp_decimal": "4.437767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 267,
+      "pts_ticks": 267267,
+      "source_timestamp_decimal": "4.454450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 268,
+      "pts_ticks": 268268,
+      "source_timestamp_decimal": "4.471133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 269,
+      "pts_ticks": 269269,
+      "source_timestamp_decimal": "4.487817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 270,
+      "pts_ticks": 270270,
+      "source_timestamp_decimal": "4.504500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 271,
+      "pts_ticks": 271271,
+      "source_timestamp_decimal": "4.521183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 272,
+      "pts_ticks": 272272,
+      "source_timestamp_decimal": "4.537867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 273,
+      "pts_ticks": 273273,
+      "source_timestamp_decimal": "4.554550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 274,
+      "pts_ticks": 274274,
+      "source_timestamp_decimal": "4.571233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 275,
+      "pts_ticks": 275275,
+      "source_timestamp_decimal": "4.587917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 276,
+      "pts_ticks": 276276,
+      "source_timestamp_decimal": "4.604600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 277,
+      "pts_ticks": 277277,
+      "source_timestamp_decimal": "4.621283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 278,
+      "pts_ticks": 278278,
+      "source_timestamp_decimal": "4.637967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 279,
+      "pts_ticks": 279279,
+      "source_timestamp_decimal": "4.654650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 280,
+      "pts_ticks": 280280,
+      "source_timestamp_decimal": "4.671333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 281,
+      "pts_ticks": 281281,
+      "source_timestamp_decimal": "4.688017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 282,
+      "pts_ticks": 282282,
+      "source_timestamp_decimal": "4.704700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 283,
+      "pts_ticks": 283283,
+      "source_timestamp_decimal": "4.721383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 284,
+      "pts_ticks": 284284,
+      "source_timestamp_decimal": "4.738067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 285,
+      "pts_ticks": 285285,
+      "source_timestamp_decimal": "4.754750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 286,
+      "pts_ticks": 286286,
+      "source_timestamp_decimal": "4.771433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 287,
+      "pts_ticks": 287287,
+      "source_timestamp_decimal": "4.788117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 288,
+      "pts_ticks": 288288,
+      "source_timestamp_decimal": "4.804800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 289,
+      "pts_ticks": 289289,
+      "source_timestamp_decimal": "4.821483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 290,
+      "pts_ticks": 290290,
+      "source_timestamp_decimal": "4.838167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 291,
+      "pts_ticks": 291291,
+      "source_timestamp_decimal": "4.854850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 292,
+      "pts_ticks": 292292,
+      "source_timestamp_decimal": "4.871533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 293,
+      "pts_ticks": 293293,
+      "source_timestamp_decimal": "4.888217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 294,
+      "pts_ticks": 294294,
+      "source_timestamp_decimal": "4.904900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 295,
+      "pts_ticks": 295295,
+      "source_timestamp_decimal": "4.921583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 296,
+      "pts_ticks": 296296,
+      "source_timestamp_decimal": "4.938267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 297,
+      "pts_ticks": 297297,
+      "source_timestamp_decimal": "4.954950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 298,
+      "pts_ticks": 298298,
+      "source_timestamp_decimal": "4.971633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 299,
+      "pts_ticks": 299299,
+      "source_timestamp_decimal": "4.988317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 300,
+      "pts_ticks": 300300,
+      "source_timestamp_decimal": "5.005000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 301,
+      "pts_ticks": 301301,
+      "source_timestamp_decimal": "5.021683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 302,
+      "pts_ticks": 302302,
+      "source_timestamp_decimal": "5.038367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 303,
+      "pts_ticks": 303303,
+      "source_timestamp_decimal": "5.055050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 304,
+      "pts_ticks": 304304,
+      "source_timestamp_decimal": "5.071733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 305,
+      "pts_ticks": 305305,
+      "source_timestamp_decimal": "5.088417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 306,
+      "pts_ticks": 306306,
+      "source_timestamp_decimal": "5.105100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 307,
+      "pts_ticks": 307307,
+      "source_timestamp_decimal": "5.121783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 308,
+      "pts_ticks": 308308,
+      "source_timestamp_decimal": "5.138467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 309,
+      "pts_ticks": 309309,
+      "source_timestamp_decimal": "5.155150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 310,
+      "pts_ticks": 310310,
+      "source_timestamp_decimal": "5.171833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 311,
+      "pts_ticks": 311311,
+      "source_timestamp_decimal": "5.188517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 312,
+      "pts_ticks": 312312,
+      "source_timestamp_decimal": "5.205200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 313,
+      "pts_ticks": 313313,
+      "source_timestamp_decimal": "5.221883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 314,
+      "pts_ticks": 314314,
+      "source_timestamp_decimal": "5.238567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 315,
+      "pts_ticks": 315315,
+      "source_timestamp_decimal": "5.255250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 316,
+      "pts_ticks": 316316,
+      "source_timestamp_decimal": "5.271933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 317,
+      "pts_ticks": 317317,
+      "source_timestamp_decimal": "5.288617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 318,
+      "pts_ticks": 318318,
+      "source_timestamp_decimal": "5.305300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 319,
+      "pts_ticks": 319319,
+      "source_timestamp_decimal": "5.321983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 320,
+      "pts_ticks": 320320,
+      "source_timestamp_decimal": "5.338667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 321,
+      "pts_ticks": 321321,
+      "source_timestamp_decimal": "5.355350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 322,
+      "pts_ticks": 322322,
+      "source_timestamp_decimal": "5.372033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 323,
+      "pts_ticks": 323323,
+      "source_timestamp_decimal": "5.388717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 324,
+      "pts_ticks": 324324,
+      "source_timestamp_decimal": "5.405400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 325,
+      "pts_ticks": 325325,
+      "source_timestamp_decimal": "5.422083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 326,
+      "pts_ticks": 326326,
+      "source_timestamp_decimal": "5.438767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 327,
+      "pts_ticks": 327327,
+      "source_timestamp_decimal": "5.455450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 328,
+      "pts_ticks": 328328,
+      "source_timestamp_decimal": "5.472133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 329,
+      "pts_ticks": 329329,
+      "source_timestamp_decimal": "5.488817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 330,
+      "pts_ticks": 330330,
+      "source_timestamp_decimal": "5.505500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 331,
+      "pts_ticks": 331331,
+      "source_timestamp_decimal": "5.522183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 332,
+      "pts_ticks": 332332,
+      "source_timestamp_decimal": "5.538867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 333,
+      "pts_ticks": 333333,
+      "source_timestamp_decimal": "5.555550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 334,
+      "pts_ticks": 334334,
+      "source_timestamp_decimal": "5.572233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 335,
+      "pts_ticks": 335335,
+      "source_timestamp_decimal": "5.588917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 336,
+      "pts_ticks": 336336,
+      "source_timestamp_decimal": "5.605600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 337,
+      "pts_ticks": 337337,
+      "source_timestamp_decimal": "5.622283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 338,
+      "pts_ticks": 338338,
+      "source_timestamp_decimal": "5.638967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 339,
+      "pts_ticks": 339339,
+      "source_timestamp_decimal": "5.655650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 340,
+      "pts_ticks": 340340,
+      "source_timestamp_decimal": "5.672333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 341,
+      "pts_ticks": 341341,
+      "source_timestamp_decimal": "5.689017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 342,
+      "pts_ticks": 342342,
+      "source_timestamp_decimal": "5.705700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 343,
+      "pts_ticks": 343343,
+      "source_timestamp_decimal": "5.722383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 344,
+      "pts_ticks": 344344,
+      "source_timestamp_decimal": "5.739067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 345,
+      "pts_ticks": 345345,
+      "source_timestamp_decimal": "5.755750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 346,
+      "pts_ticks": 346346,
+      "source_timestamp_decimal": "5.772433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 347,
+      "pts_ticks": 347347,
+      "source_timestamp_decimal": "5.789117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 348,
+      "pts_ticks": 348348,
+      "source_timestamp_decimal": "5.805800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 349,
+      "pts_ticks": 349349,
+      "source_timestamp_decimal": "5.822483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 350,
+      "pts_ticks": 350350,
+      "source_timestamp_decimal": "5.839167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 351,
+      "pts_ticks": 351351,
+      "source_timestamp_decimal": "5.855850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 352,
+      "pts_ticks": 352352,
+      "source_timestamp_decimal": "5.872533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 353,
+      "pts_ticks": 353353,
+      "source_timestamp_decimal": "5.889217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 354,
+      "pts_ticks": 354354,
+      "source_timestamp_decimal": "5.905900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 355,
+      "pts_ticks": 355355,
+      "source_timestamp_decimal": "5.922583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 356,
+      "pts_ticks": 356356,
+      "source_timestamp_decimal": "5.939267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 357,
+      "pts_ticks": 357357,
+      "source_timestamp_decimal": "5.955950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 358,
+      "pts_ticks": 358358,
+      "source_timestamp_decimal": "5.972633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 359,
+      "pts_ticks": 359359,
+      "source_timestamp_decimal": "5.989317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 360,
+      "pts_ticks": 360360,
+      "source_timestamp_decimal": "6.006000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 361,
+      "pts_ticks": 361361,
+      "source_timestamp_decimal": "6.022683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 362,
+      "pts_ticks": 362362,
+      "source_timestamp_decimal": "6.039367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 363,
+      "pts_ticks": 363363,
+      "source_timestamp_decimal": "6.056050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 364,
+      "pts_ticks": 364364,
+      "source_timestamp_decimal": "6.072733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 365,
+      "pts_ticks": 365365,
+      "source_timestamp_decimal": "6.089417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 366,
+      "pts_ticks": 366366,
+      "source_timestamp_decimal": "6.106100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 367,
+      "pts_ticks": 367367,
+      "source_timestamp_decimal": "6.122783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 368,
+      "pts_ticks": 368368,
+      "source_timestamp_decimal": "6.139467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 369,
+      "pts_ticks": 369369,
+      "source_timestamp_decimal": "6.156150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 370,
+      "pts_ticks": 370370,
+      "source_timestamp_decimal": "6.172833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 371,
+      "pts_ticks": 371371,
+      "source_timestamp_decimal": "6.189517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 372,
+      "pts_ticks": 372372,
+      "source_timestamp_decimal": "6.206200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 373,
+      "pts_ticks": 373373,
+      "source_timestamp_decimal": "6.222883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 374,
+      "pts_ticks": 374374,
+      "source_timestamp_decimal": "6.239567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 375,
+      "pts_ticks": 375375,
+      "source_timestamp_decimal": "6.256250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 376,
+      "pts_ticks": 376376,
+      "source_timestamp_decimal": "6.272933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 377,
+      "pts_ticks": 377377,
+      "source_timestamp_decimal": "6.289617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 378,
+      "pts_ticks": 378378,
+      "source_timestamp_decimal": "6.306300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 379,
+      "pts_ticks": 379379,
+      "source_timestamp_decimal": "6.322983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 380,
+      "pts_ticks": 380380,
+      "source_timestamp_decimal": "6.339667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 381,
+      "pts_ticks": 381381,
+      "source_timestamp_decimal": "6.356350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 382,
+      "pts_ticks": 382382,
+      "source_timestamp_decimal": "6.373033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 383,
+      "pts_ticks": 383383,
+      "source_timestamp_decimal": "6.389717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 384,
+      "pts_ticks": 384384,
+      "source_timestamp_decimal": "6.406400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 385,
+      "pts_ticks": 385385,
+      "source_timestamp_decimal": "6.423083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 386,
+      "pts_ticks": 386386,
+      "source_timestamp_decimal": "6.439767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 387,
+      "pts_ticks": 387387,
+      "source_timestamp_decimal": "6.456450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 388,
+      "pts_ticks": 388388,
+      "source_timestamp_decimal": "6.473133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 389,
+      "pts_ticks": 389389,
+      "source_timestamp_decimal": "6.489817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 390,
+      "pts_ticks": 390390,
+      "source_timestamp_decimal": "6.506500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 391,
+      "pts_ticks": 391391,
+      "source_timestamp_decimal": "6.523183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 392,
+      "pts_ticks": 392392,
+      "source_timestamp_decimal": "6.539867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 393,
+      "pts_ticks": 393393,
+      "source_timestamp_decimal": "6.556550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 394,
+      "pts_ticks": 394394,
+      "source_timestamp_decimal": "6.573233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 395,
+      "pts_ticks": 395395,
+      "source_timestamp_decimal": "6.589917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 396,
+      "pts_ticks": 396396,
+      "source_timestamp_decimal": "6.606600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 397,
+      "pts_ticks": 397397,
+      "source_timestamp_decimal": "6.623283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 398,
+      "pts_ticks": 398398,
+      "source_timestamp_decimal": "6.639967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 399,
+      "pts_ticks": 399399,
+      "source_timestamp_decimal": "6.656650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 400,
+      "pts_ticks": 400400,
+      "source_timestamp_decimal": "6.673333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 401,
+      "pts_ticks": 401401,
+      "source_timestamp_decimal": "6.690017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 402,
+      "pts_ticks": 402402,
+      "source_timestamp_decimal": "6.706700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 403,
+      "pts_ticks": 403403,
+      "source_timestamp_decimal": "6.723383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 404,
+      "pts_ticks": 404404,
+      "source_timestamp_decimal": "6.740067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 405,
+      "pts_ticks": 405405,
+      "source_timestamp_decimal": "6.756750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 406,
+      "pts_ticks": 406406,
+      "source_timestamp_decimal": "6.773433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 407,
+      "pts_ticks": 407407,
+      "source_timestamp_decimal": "6.790117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 408,
+      "pts_ticks": 408408,
+      "source_timestamp_decimal": "6.806800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 409,
+      "pts_ticks": 409409,
+      "source_timestamp_decimal": "6.823483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 410,
+      "pts_ticks": 410410,
+      "source_timestamp_decimal": "6.840167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 411,
+      "pts_ticks": 411411,
+      "source_timestamp_decimal": "6.856850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 412,
+      "pts_ticks": 412412,
+      "source_timestamp_decimal": "6.873533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 413,
+      "pts_ticks": 413413,
+      "source_timestamp_decimal": "6.890217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 414,
+      "pts_ticks": 414414,
+      "source_timestamp_decimal": "6.906900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 415,
+      "pts_ticks": 415415,
+      "source_timestamp_decimal": "6.923583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 416,
+      "pts_ticks": 416416,
+      "source_timestamp_decimal": "6.940267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 417,
+      "pts_ticks": 417417,
+      "source_timestamp_decimal": "6.956950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 418,
+      "pts_ticks": 418418,
+      "source_timestamp_decimal": "6.973633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 419,
+      "pts_ticks": 419419,
+      "source_timestamp_decimal": "6.990317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 420,
+      "pts_ticks": 420420,
+      "source_timestamp_decimal": "7.007000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 421,
+      "pts_ticks": 421421,
+      "source_timestamp_decimal": "7.023683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 422,
+      "pts_ticks": 422422,
+      "source_timestamp_decimal": "7.040367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 423,
+      "pts_ticks": 423423,
+      "source_timestamp_decimal": "7.057050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 424,
+      "pts_ticks": 424424,
+      "source_timestamp_decimal": "7.073733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 425,
+      "pts_ticks": 425425,
+      "source_timestamp_decimal": "7.090417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 426,
+      "pts_ticks": 426426,
+      "source_timestamp_decimal": "7.107100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 427,
+      "pts_ticks": 427427,
+      "source_timestamp_decimal": "7.123783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 428,
+      "pts_ticks": 428428,
+      "source_timestamp_decimal": "7.140467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 429,
+      "pts_ticks": 429429,
+      "source_timestamp_decimal": "7.157150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 430,
+      "pts_ticks": 430430,
+      "source_timestamp_decimal": "7.173833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 431,
+      "pts_ticks": 431431,
+      "source_timestamp_decimal": "7.190517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 432,
+      "pts_ticks": 432432,
+      "source_timestamp_decimal": "7.207200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 433,
+      "pts_ticks": 433433,
+      "source_timestamp_decimal": "7.223883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 434,
+      "pts_ticks": 434434,
+      "source_timestamp_decimal": "7.240567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 435,
+      "pts_ticks": 435435,
+      "source_timestamp_decimal": "7.257250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 436,
+      "pts_ticks": 436436,
+      "source_timestamp_decimal": "7.273933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 437,
+      "pts_ticks": 437437,
+      "source_timestamp_decimal": "7.290617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 438,
+      "pts_ticks": 438438,
+      "source_timestamp_decimal": "7.307300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 439,
+      "pts_ticks": 439439,
+      "source_timestamp_decimal": "7.323983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 440,
+      "pts_ticks": 440440,
+      "source_timestamp_decimal": "7.340667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 441,
+      "pts_ticks": 441441,
+      "source_timestamp_decimal": "7.357350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 442,
+      "pts_ticks": 442442,
+      "source_timestamp_decimal": "7.374033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 443,
+      "pts_ticks": 443443,
+      "source_timestamp_decimal": "7.390717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 444,
+      "pts_ticks": 444444,
+      "source_timestamp_decimal": "7.407400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 445,
+      "pts_ticks": 445445,
+      "source_timestamp_decimal": "7.424083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 446,
+      "pts_ticks": 446446,
+      "source_timestamp_decimal": "7.440767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 447,
+      "pts_ticks": 447447,
+      "source_timestamp_decimal": "7.457450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 448,
+      "pts_ticks": 448448,
+      "source_timestamp_decimal": "7.474133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 449,
+      "pts_ticks": 449449,
+      "source_timestamp_decimal": "7.490817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 450,
+      "pts_ticks": 450450,
+      "source_timestamp_decimal": "7.507500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 451,
+      "pts_ticks": 451451,
+      "source_timestamp_decimal": "7.524183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 452,
+      "pts_ticks": 452452,
+      "source_timestamp_decimal": "7.540867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 453,
+      "pts_ticks": 453453,
+      "source_timestamp_decimal": "7.557550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 454,
+      "pts_ticks": 454454,
+      "source_timestamp_decimal": "7.574233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 455,
+      "pts_ticks": 455455,
+      "source_timestamp_decimal": "7.590917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 456,
+      "pts_ticks": 456456,
+      "source_timestamp_decimal": "7.607600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 457,
+      "pts_ticks": 457457,
+      "source_timestamp_decimal": "7.624283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 458,
+      "pts_ticks": 458458,
+      "source_timestamp_decimal": "7.640967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 459,
+      "pts_ticks": 459459,
+      "source_timestamp_decimal": "7.657650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 460,
+      "pts_ticks": 460460,
+      "source_timestamp_decimal": "7.674333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 461,
+      "pts_ticks": 461461,
+      "source_timestamp_decimal": "7.691017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 462,
+      "pts_ticks": 462462,
+      "source_timestamp_decimal": "7.707700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 463,
+      "pts_ticks": 463463,
+      "source_timestamp_decimal": "7.724383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 464,
+      "pts_ticks": 464464,
+      "source_timestamp_decimal": "7.741067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 465,
+      "pts_ticks": 465465,
+      "source_timestamp_decimal": "7.757750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 466,
+      "pts_ticks": 466466,
+      "source_timestamp_decimal": "7.774433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 467,
+      "pts_ticks": 467467,
+      "source_timestamp_decimal": "7.791117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 468,
+      "pts_ticks": 468468,
+      "source_timestamp_decimal": "7.807800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 469,
+      "pts_ticks": 469469,
+      "source_timestamp_decimal": "7.824483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 470,
+      "pts_ticks": 470470,
+      "source_timestamp_decimal": "7.841167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 471,
+      "pts_ticks": 471471,
+      "source_timestamp_decimal": "7.857850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 472,
+      "pts_ticks": 472472,
+      "source_timestamp_decimal": "7.874533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 473,
+      "pts_ticks": 473473,
+      "source_timestamp_decimal": "7.891217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 474,
+      "pts_ticks": 474474,
+      "source_timestamp_decimal": "7.907900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 475,
+      "pts_ticks": 475475,
+      "source_timestamp_decimal": "7.924583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 476,
+      "pts_ticks": 476476,
+      "source_timestamp_decimal": "7.941267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 477,
+      "pts_ticks": 477477,
+      "source_timestamp_decimal": "7.957950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 478,
+      "pts_ticks": 478478,
+      "source_timestamp_decimal": "7.974633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 479,
+      "pts_ticks": 479479,
+      "source_timestamp_decimal": "7.991317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 480,
+      "pts_ticks": 480480,
+      "source_timestamp_decimal": "8.008000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 481,
+      "pts_ticks": 481481,
+      "source_timestamp_decimal": "8.024683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 482,
+      "pts_ticks": 482482,
+      "source_timestamp_decimal": "8.041367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 483,
+      "pts_ticks": 483483,
+      "source_timestamp_decimal": "8.058050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 484,
+      "pts_ticks": 484484,
+      "source_timestamp_decimal": "8.074733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 485,
+      "pts_ticks": 485485,
+      "source_timestamp_decimal": "8.091417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 486,
+      "pts_ticks": 486486,
+      "source_timestamp_decimal": "8.108100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 487,
+      "pts_ticks": 487487,
+      "source_timestamp_decimal": "8.124783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 488,
+      "pts_ticks": 488488,
+      "source_timestamp_decimal": "8.141467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 489,
+      "pts_ticks": 489489,
+      "source_timestamp_decimal": "8.158150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 490,
+      "pts_ticks": 490490,
+      "source_timestamp_decimal": "8.174833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 491,
+      "pts_ticks": 491491,
+      "source_timestamp_decimal": "8.191517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 492,
+      "pts_ticks": 492492,
+      "source_timestamp_decimal": "8.208200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 493,
+      "pts_ticks": 493493,
+      "source_timestamp_decimal": "8.224883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 494,
+      "pts_ticks": 494494,
+      "source_timestamp_decimal": "8.241567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 495,
+      "pts_ticks": 495495,
+      "source_timestamp_decimal": "8.258250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 496,
+      "pts_ticks": 496496,
+      "source_timestamp_decimal": "8.274933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 497,
+      "pts_ticks": 497497,
+      "source_timestamp_decimal": "8.291617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 498,
+      "pts_ticks": 498498,
+      "source_timestamp_decimal": "8.308300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 499,
+      "pts_ticks": 499499,
+      "source_timestamp_decimal": "8.324983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 500,
+      "pts_ticks": 500500,
+      "source_timestamp_decimal": "8.341667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 501,
+      "pts_ticks": 501501,
+      "source_timestamp_decimal": "8.358350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 502,
+      "pts_ticks": 502502,
+      "source_timestamp_decimal": "8.375033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 503,
+      "pts_ticks": 503503,
+      "source_timestamp_decimal": "8.391717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 504,
+      "pts_ticks": 504504,
+      "source_timestamp_decimal": "8.408400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 505,
+      "pts_ticks": 505505,
+      "source_timestamp_decimal": "8.425083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 506,
+      "pts_ticks": 506506,
+      "source_timestamp_decimal": "8.441767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 507,
+      "pts_ticks": 507507,
+      "source_timestamp_decimal": "8.458450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 508,
+      "pts_ticks": 508508,
+      "source_timestamp_decimal": "8.475133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 509,
+      "pts_ticks": 509509,
+      "source_timestamp_decimal": "8.491817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 510,
+      "pts_ticks": 510510,
+      "source_timestamp_decimal": "8.508500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 511,
+      "pts_ticks": 511511,
+      "source_timestamp_decimal": "8.525183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 512,
+      "pts_ticks": 512512,
+      "source_timestamp_decimal": "8.541867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 513,
+      "pts_ticks": 513513,
+      "source_timestamp_decimal": "8.558550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 514,
+      "pts_ticks": 514514,
+      "source_timestamp_decimal": "8.575233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 515,
+      "pts_ticks": 515515,
+      "source_timestamp_decimal": "8.591917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 516,
+      "pts_ticks": 516516,
+      "source_timestamp_decimal": "8.608600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 517,
+      "pts_ticks": 517517,
+      "source_timestamp_decimal": "8.625283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 518,
+      "pts_ticks": 518518,
+      "source_timestamp_decimal": "8.641967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 519,
+      "pts_ticks": 519519,
+      "source_timestamp_decimal": "8.658650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 520,
+      "pts_ticks": 520520,
+      "source_timestamp_decimal": "8.675333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 521,
+      "pts_ticks": 521521,
+      "source_timestamp_decimal": "8.692017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 522,
+      "pts_ticks": 522522,
+      "source_timestamp_decimal": "8.708700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 523,
+      "pts_ticks": 523523,
+      "source_timestamp_decimal": "8.725383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 524,
+      "pts_ticks": 524524,
+      "source_timestamp_decimal": "8.742067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 525,
+      "pts_ticks": 525525,
+      "source_timestamp_decimal": "8.758750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 526,
+      "pts_ticks": 526526,
+      "source_timestamp_decimal": "8.775433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 527,
+      "pts_ticks": 527527,
+      "source_timestamp_decimal": "8.792117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 528,
+      "pts_ticks": 528528,
+      "source_timestamp_decimal": "8.808800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 529,
+      "pts_ticks": 529529,
+      "source_timestamp_decimal": "8.825483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 530,
+      "pts_ticks": 530530,
+      "source_timestamp_decimal": "8.842167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 531,
+      "pts_ticks": 531531,
+      "source_timestamp_decimal": "8.858850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 532,
+      "pts_ticks": 532532,
+      "source_timestamp_decimal": "8.875533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 533,
+      "pts_ticks": 533533,
+      "source_timestamp_decimal": "8.892217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 534,
+      "pts_ticks": 534534,
+      "source_timestamp_decimal": "8.908900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 535,
+      "pts_ticks": 535535,
+      "source_timestamp_decimal": "8.925583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 536,
+      "pts_ticks": 536536,
+      "source_timestamp_decimal": "8.942267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 537,
+      "pts_ticks": 537537,
+      "source_timestamp_decimal": "8.958950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 538,
+      "pts_ticks": 538538,
+      "source_timestamp_decimal": "8.975633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 539,
+      "pts_ticks": 539539,
+      "source_timestamp_decimal": "8.992317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 540,
+      "pts_ticks": 540540,
+      "source_timestamp_decimal": "9.009000",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 541,
+      "pts_ticks": 541541,
+      "source_timestamp_decimal": "9.025683",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 542,
+      "pts_ticks": 542542,
+      "source_timestamp_decimal": "9.042367",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 543,
+      "pts_ticks": 543543,
+      "source_timestamp_decimal": "9.059050",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 544,
+      "pts_ticks": 544544,
+      "source_timestamp_decimal": "9.075733",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 545,
+      "pts_ticks": 545545,
+      "source_timestamp_decimal": "9.092417",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 546,
+      "pts_ticks": 546546,
+      "source_timestamp_decimal": "9.109100",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 547,
+      "pts_ticks": 547547,
+      "source_timestamp_decimal": "9.125783",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 548,
+      "pts_ticks": 548548,
+      "source_timestamp_decimal": "9.142467",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 549,
+      "pts_ticks": 549549,
+      "source_timestamp_decimal": "9.159150",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 550,
+      "pts_ticks": 550550,
+      "source_timestamp_decimal": "9.175833",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 551,
+      "pts_ticks": 551551,
+      "source_timestamp_decimal": "9.192517",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 552,
+      "pts_ticks": 552552,
+      "source_timestamp_decimal": "9.209200",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 553,
+      "pts_ticks": 553553,
+      "source_timestamp_decimal": "9.225883",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 554,
+      "pts_ticks": 554554,
+      "source_timestamp_decimal": "9.242567",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 555,
+      "pts_ticks": 555555,
+      "source_timestamp_decimal": "9.259250",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 556,
+      "pts_ticks": 556556,
+      "source_timestamp_decimal": "9.275933",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 557,
+      "pts_ticks": 557557,
+      "source_timestamp_decimal": "9.292617",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 558,
+      "pts_ticks": 558558,
+      "source_timestamp_decimal": "9.309300",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 559,
+      "pts_ticks": 559559,
+      "source_timestamp_decimal": "9.325983",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 560,
+      "pts_ticks": 560560,
+      "source_timestamp_decimal": "9.342667",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 561,
+      "pts_ticks": 561561,
+      "source_timestamp_decimal": "9.359350",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 562,
+      "pts_ticks": 562562,
+      "source_timestamp_decimal": "9.376033",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 563,
+      "pts_ticks": 563563,
+      "source_timestamp_decimal": "9.392717",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 564,
+      "pts_ticks": 564564,
+      "source_timestamp_decimal": "9.409400",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 565,
+      "pts_ticks": 565565,
+      "source_timestamp_decimal": "9.426083",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 566,
+      "pts_ticks": 566566,
+      "source_timestamp_decimal": "9.442767",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 567,
+      "pts_ticks": 567567,
+      "source_timestamp_decimal": "9.459450",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 568,
+      "pts_ticks": 568568,
+      "source_timestamp_decimal": "9.476133",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 569,
+      "pts_ticks": 569569,
+      "source_timestamp_decimal": "9.492817",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 570,
+      "pts_ticks": 570570,
+      "source_timestamp_decimal": "9.509500",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 571,
+      "pts_ticks": 571571,
+      "source_timestamp_decimal": "9.526183",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 572,
+      "pts_ticks": 572572,
+      "source_timestamp_decimal": "9.542867",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 573,
+      "pts_ticks": 573573,
+      "source_timestamp_decimal": "9.559550",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 574,
+      "pts_ticks": 574574,
+      "source_timestamp_decimal": "9.576233",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 575,
+      "pts_ticks": 575575,
+      "source_timestamp_decimal": "9.592917",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 576,
+      "pts_ticks": 576576,
+      "source_timestamp_decimal": "9.609600",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 577,
+      "pts_ticks": 577577,
+      "source_timestamp_decimal": "9.626283",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 578,
+      "pts_ticks": 578578,
+      "source_timestamp_decimal": "9.642967",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 579,
+      "pts_ticks": 579579,
+      "source_timestamp_decimal": "9.659650",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 580,
+      "pts_ticks": 580580,
+      "source_timestamp_decimal": "9.676333",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 581,
+      "pts_ticks": 581581,
+      "source_timestamp_decimal": "9.693017",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 582,
+      "pts_ticks": 582582,
+      "source_timestamp_decimal": "9.709700",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 583,
+      "pts_ticks": 583583,
+      "source_timestamp_decimal": "9.726383",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 584,
+      "pts_ticks": 584584,
+      "source_timestamp_decimal": "9.743067",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 585,
+      "pts_ticks": 585585,
+      "source_timestamp_decimal": "9.759750",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 586,
+      "pts_ticks": 586586,
+      "source_timestamp_decimal": "9.776433",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 587,
+      "pts_ticks": 587587,
+      "source_timestamp_decimal": "9.793117",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 588,
+      "pts_ticks": 588588,
+      "source_timestamp_decimal": "9.809800",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 589,
+      "pts_ticks": 589589,
+      "source_timestamp_decimal": "9.826483",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 590,
+      "pts_ticks": 590590,
+      "source_timestamp_decimal": "9.843167",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 591,
+      "pts_ticks": 591591,
+      "source_timestamp_decimal": "9.859850",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 592,
+      "pts_ticks": 592592,
+      "source_timestamp_decimal": "9.876533",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 593,
+      "pts_ticks": 593593,
+      "source_timestamp_decimal": "9.893217",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 594,
+      "pts_ticks": 594594,
+      "source_timestamp_decimal": "9.909900",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 595,
+      "pts_ticks": 595595,
+      "source_timestamp_decimal": "9.926583",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 596,
+      "pts_ticks": 596596,
+      "source_timestamp_decimal": "9.943267",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 597,
+      "pts_ticks": 597597,
+      "source_timestamp_decimal": "9.959950",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 598,
+      "pts_ticks": 598598,
+      "source_timestamp_decimal": "9.976633",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    },
+    {
+      "conversion_method": "ffprobe_integer_timestamp_times_stream_time_base",
+      "duration_ticks": null,
+      "frame_index": 599,
+      "pts_ticks": 599599,
+      "source_timestamp_decimal": "9.993317",
+      "timescale": 60000,
+      "timestamp_field": "best_effort_timestamp"
+    }
+  ],
+  "rolling_shutter_model_outcome": {
+    "missing_reason": "sidecar_unavailable",
+    "model": null,
+    "status": "missing"
+  },
+  "schema_version": 1,
+  "sensor_clock_mapping_outcome": {
+    "dual_clock_pair_count": 0,
+    "mapping": null,
+    "max_abs_residual_s": null,
+    "missing_reason": "sidecar_unavailable",
+    "sidecar_unavailable_reasons": [],
+    "status": "missing"
+  },
+  "timebase_contract_emitted": true,
+  "timing_declaration": "ffprobe_pts_with_explicit_availability"
+}

@@ -1,0 +1,7 @@
+{
+  "fingerprint": "fbf5e5c6314a74bf9b6fb7fb8b6f2449c6f7b080921c69c981e9ea60808f84d5",
+  "generation": "stages/events_refined/fbf5e5c6314a74bf9b6fb7fb8b6f2449c6f7b080921c69c981e9ea60808f84d5-6b4a8662dcc947a892d08e5a6f75cf93",
+  "manifest_sha256": "7b730c73c7b11b3ec0cfce62a30679b3c1bda7b8d0a00c9d586b0373e144efb7",
+  "schema_version": 1,
+  "stage": "events_refined"
+}

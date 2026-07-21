@@ -1,0 +1,4 @@
+/home/arnavchokshi/coldstart_20260706/body_runtime/Fast-SAM-3D-Body/sam_3d_body/models/heads/mhr_head.py:51: UserWarning: Momentum is not enabled
+  warnings.warn("Momentum is not enabled")
+/home/arnavchokshi/coldstart_20260706/repo/.venv/lib/python3.10/site-packages/torchreid/reid/metrics/rank.py:11: UserWarning: Cython evaluation (very fast so highly recommended) is unavailable, now use python evaluation.
+  warnings.warn(

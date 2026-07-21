@@ -1,0 +1,18 @@
+{
+  "court": {
+    "badge": "preview",
+    "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+    "gate_id": "court_calibration_pck5px_gate",
+    "gate_status": "metric15_unverified",
+    "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=warn, metric_confidence=low, reasons=reprojection_high, single_view_planar_full_calibration, distortion_model=zero_distortion_grid_search_focal, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+    "stage": "CAL"
+  },
+  "track": {
+    "badge": "preview",
+    "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/tracks.json",
+    "gate_id": "trk_idf1_gate",
+    "gate_status": "owner_directed_stack_selection_preview",
+    "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+    "stage": "TRK"
+  }
+}

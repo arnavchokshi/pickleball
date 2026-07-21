@@ -1,0 +1,7 @@
+{
+  "fingerprint": "4a448d53b4a2859a6b369c14947b3ab369e2c542304ce69ed6ec0f77af700445",
+  "generation": "stages/camera_motion/4a448d53b4a2859a6b369c14947b3ab369e2c542304ce69ed6ec0f77af700445-60fc014bbeb9437abc8607e3e069b699",
+  "manifest_sha256": "1e2a026c18680bb1c5056c9486fde58f4b87d062841056ea353021f711a5899e",
+  "schema_version": 1,
+  "stage": "camera_motion"
+}

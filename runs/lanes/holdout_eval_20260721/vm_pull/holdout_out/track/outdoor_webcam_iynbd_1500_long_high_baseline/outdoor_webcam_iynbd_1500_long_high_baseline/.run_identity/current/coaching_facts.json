@@ -1,0 +1,7 @@
+{
+  "fingerprint": "c7ff5c13f52175ec0e26c067d226d3c11be5e379925de00c1e2199e9ece96084",
+  "generation": "stages/coaching_facts/c7ff5c13f52175ec0e26c067d226d3c11be5e379925de00c1e2199e9ece96084-8af58729010f44638dc197c1809ced6e",
+  "manifest_sha256": "3b329f9c5252f8dbb7151293585610bd94fe0e33bd3503b93ff22f2ef1cb519d",
+  "schema_version": 1,
+  "stage": "coaching_facts"
+}

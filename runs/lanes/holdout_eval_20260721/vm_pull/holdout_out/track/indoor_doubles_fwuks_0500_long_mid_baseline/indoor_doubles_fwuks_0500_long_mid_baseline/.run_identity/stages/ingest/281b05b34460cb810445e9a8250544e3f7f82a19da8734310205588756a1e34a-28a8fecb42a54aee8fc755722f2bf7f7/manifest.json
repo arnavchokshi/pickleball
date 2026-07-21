@@ -1,0 +1,102 @@
+{
+  "artifact_type": "racketsport_stage_identity",
+  "external_artifacts": [
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "22955134f7bf9bdc9392bdde868173fbc6ec9afa4d7a8c58f3e7e0ed33d4e0f1",
+        "size": 8937736
+      },
+      "path": "source.mp4"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "42bcba560daee207bb452c33835b011902a062bb203536b2e1d6f08660843f99",
+        "size": 51643
+      },
+      "path": "frame_times.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "301aaa699f89f33f1eb42848d232af2f9e4b1b9778d2460a56d6c756a4cec718",
+        "size": 268133
+      },
+      "path": "timebase_decode_evidence.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "ef81401a49336ba4f621120037dc7043620232b8dd2d1ffd0247c4aeb8fde88d",
+        "size": 389242
+      },
+      "path": "timebase_contract.json"
+    }
+  ],
+  "fingerprint": "281b05b34460cb810445e9a8250544e3f7f82a19da8734310205588756a1e34a",
+  "identity": {
+    "code": {
+      "callable_sha256": "affe602f192b9158a49caa6469bff04eedd5d1fc78c8fa0c234c26097b6af14c"
+    },
+    "config": {
+      "sport": "pickleball"
+    },
+    "explicit_inputs": {},
+    "models": {},
+    "schema_version": 1,
+    "source": {
+      "sha256": "22955134f7bf9bdc9392bdde868173fbc6ec9afa4d7a8c58f3e7e0ed33d4e0f1",
+      "size": 8937736,
+      "timing": {
+        "duration_s": 30.03,
+        "fps": 29.97002997,
+        "frame_count": 900,
+        "height": 1080,
+        "width": 1920
+      }
+    },
+    "stage": "ingest",
+    "upstream": {}
+  },
+  "managed_artifacts": [],
+  "metadata": {
+    "outcome": {
+      "artifacts": [
+        "source.mp4",
+        "frame_times.json",
+        "timebase_decode_evidence.json",
+        "timebase_contract.json"
+      ],
+      "metrics": {},
+      "notes": [
+        "ingested /home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4 as source.mp4 (1920x1080 @ 29.970fps)",
+        "wrote frame_times.json from ffprobe PTS",
+        "wrote schema-valid timebase_contract.json with exact ffprobe PTS and explicit frame availability"
+      ],
+      "stage": "ingest",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 6.188
+    },
+    "pipeline_state": {
+      "camera_motion_auto": {
+        "enabled": false,
+        "forced": "auto",
+        "probe_wall_seconds": 0.0,
+        "sampled_frame_count": 0,
+        "score": null,
+        "threshold": 2.5
+      },
+      "camera_motion_auto_decision_made": false,
+      "input_quality_report": null,
+      "trust_bands": {}
+    }
+  },
+  "schema_version": 1,
+  "stage": "ingest"
+}

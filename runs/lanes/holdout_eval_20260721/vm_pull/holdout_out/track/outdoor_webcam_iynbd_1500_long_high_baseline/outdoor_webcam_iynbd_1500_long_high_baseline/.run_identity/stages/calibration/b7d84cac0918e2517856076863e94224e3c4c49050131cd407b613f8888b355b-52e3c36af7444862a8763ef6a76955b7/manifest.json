@@ -1,0 +1,121 @@
+{
+  "artifact_type": "racketsport_stage_identity",
+  "external_artifacts": [
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "a61373c11a7288b42604d2c6101f56231ab26194b43d062aa6e83d5c63bf5672",
+        "size": 6869
+      },
+      "path": "court_calibration.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+        "size": 1697
+      },
+      "path": "court_zones.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057",
+        "size": 354
+      },
+      "path": "net_plane.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "12caeacd3e9434c6c19dcc48fa4b37392fbb401b0b024c68e92c0c4ea8e1d431",
+        "size": 5856
+      },
+      "path": "court_line_evidence.json"
+    }
+  ],
+  "fingerprint": "b7d84cac0918e2517856076863e94224e3c4c49050131cd407b613f8888b355b",
+  "identity": {
+    "code": {
+      "callable_sha256": "281507274520a14594d51ccb99f3a36ecb29723118d705149cc9ff18ad4f2d7a"
+    },
+    "config": {
+      "allow_auto_court_corners_preview": false,
+      "court_proposals_preview": false,
+      "sport": "pickleball"
+    },
+    "explicit_inputs": {},
+    "models": {},
+    "schema_version": 1,
+    "source": {
+      "sha256": "8b0265f5dc3bf3e3b5b5a1423bf7e58ac7972481dc163b8398dcb2f20bf070c9",
+      "size": 2745873,
+      "timing": {
+        "duration_s": 19.183333333,
+        "fps": 60.0,
+        "frame_count": 1151,
+        "height": 1080,
+        "width": 1920
+      }
+    },
+    "stage": "calibration",
+    "upstream": {
+      "ingest": {
+        "artifact_digest": "bd5171c5b58e2f44b4b1139c73d5acafa9abfdf230125b2f74de4e965220e05d",
+        "fingerprint": "0067c269173f9d48d8a49ea30eae8454559f0fe8180a8303e5c1c4158a37654d"
+      }
+    }
+  },
+  "managed_artifacts": [],
+  "metadata": {
+    "outcome": {
+      "artifacts": [
+        "court_calibration.json",
+        "court_zones.json",
+        "net_plane.json",
+        "court_line_evidence.json"
+      ],
+      "metrics": {
+        "intrinsics_dist_nonzero": false,
+        "intrinsics_source": "metric_15pt_reviewed",
+        "reprojection_median_px": 4.7834997281882865,
+        "reprojection_p95_px": 12.276624313829716
+      },
+      "notes": [
+        "auto-discovered externally-provided court calibration from /home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_calibration_metric15pt.json (intrinsics.source='metric_15pt_reviewed'); schema + intrinsics.source validated (threed.racketsport.orchestrator.ExternalCalibrationRunner), PnP re-derivation from --court-corners/--capture-sidecar skipped"
+      ],
+      "stage": "calibration",
+      "status": "ran",
+      "trust_badge": "preview",
+      "wall_seconds": 2.187
+    },
+    "pipeline_state": {
+      "camera_motion_auto": {
+        "enabled": false,
+        "forced": "auto",
+        "probe_wall_seconds": 0.0,
+        "sampled_frame_count": 0,
+        "score": null,
+        "threshold": 2.5
+      },
+      "camera_motion_auto_decision_made": false,
+      "input_quality_report": null,
+      "trust_bands": {
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=good, metric_confidence=med, reasons=single_view_planar_full_calibration, distortion_model=zero_distortion_grid_search_focal, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "stage": "calibration"
+}

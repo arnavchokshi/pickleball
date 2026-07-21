@@ -1,0 +1,122 @@
+{
+  "artifact_type": "racketsport_stage_identity",
+  "external_artifacts": [
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "9381c1ca44b0c8fafb850db866f4d2043e65275430628cf7f35434ecf440f3f6",
+        "size": 6893
+      },
+      "path": "court_calibration.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "86e0314292d4da4c72986bfc79f8019b0331d4780f5134067d69c87c0c70d942",
+        "size": 1697
+      },
+      "path": "court_zones.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057",
+        "size": 354
+      },
+      "path": "net_plane.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "b0c31747f9613b6a1003ea0bcaa8fd8a9b3b75dc836b2b104d7fc7b2fcbbacaf",
+        "size": 5147
+      },
+      "path": "court_line_evidence.json"
+    }
+  ],
+  "fingerprint": "bd6be87c60dccae5744cf2931f4f9767ed34b63c591eddf856fbc1042c56acef",
+  "identity": {
+    "code": {
+      "callable_sha256": "281507274520a14594d51ccb99f3a36ecb29723118d705149cc9ff18ad4f2d7a"
+    },
+    "config": {
+      "allow_auto_court_corners_preview": false,
+      "court_proposals_preview": false,
+      "sport": "pickleball"
+    },
+    "explicit_inputs": {},
+    "models": {},
+    "schema_version": 1,
+    "source": {
+      "sha256": "22955134f7bf9bdc9392bdde868173fbc6ec9afa4d7a8c58f3e7e0ed33d4e0f1",
+      "size": 8937736,
+      "timing": {
+        "duration_s": 30.03,
+        "fps": 29.97002997,
+        "frame_count": 900,
+        "height": 1080,
+        "width": 1920
+      }
+    },
+    "stage": "calibration",
+    "upstream": {
+      "ingest": {
+        "artifact_digest": "809e5b3303750c0e0ebcba175aafe8bbed21e2c92bade43b602d4211ab049938",
+        "fingerprint": "281b05b34460cb810445e9a8250544e3f7f82a19da8734310205588756a1e34a"
+      }
+    }
+  },
+  "managed_artifacts": [],
+  "metadata": {
+    "outcome": {
+      "artifacts": [
+        "court_calibration.json",
+        "court_zones.json",
+        "net_plane.json",
+        "court_line_evidence.json"
+      ],
+      "metrics": {
+        "intrinsics_dist_nonzero": true,
+        "intrinsics_source": "metric_15pt_reviewed",
+        "reprojection_median_px": 3.719086939495673,
+        "reprojection_p95_px": 8.813794890651005
+      },
+      "notes": [
+        "auto-discovered externally-provided court calibration from /home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/labels/court_calibration_metric15pt.json (intrinsics.source='metric_15pt_reviewed'); schema + intrinsics.source validated (threed.racketsport.orchestrator.ExternalCalibrationRunner), PnP re-derivation from --court-corners/--capture-sidecar skipped",
+        "intrinsics.dist is nonzero ([-0.25552688757783326, 0.24351098535745186, 0.0, 0.0]): the tracking stage's court-plane footpoint projection (threed.racketsport.person_fast.build_tracks) and the world stage's ball/paddle grounding (threed.racketsport.virtual_world) both apply calibration.homography directly to raw pixels without undistorting first -- a known, documented gap from the metric-15pt migration notes (see threed/racketsport/court_calibration_metric15.py and runs/cal_metric_15pt_20260702T041729Z/); fixing those call sites is out of this migration's scope. BODY-mesh grounding/overlay consumers are affected too and are owned by another lane."
+      ],
+      "stage": "calibration",
+      "status": "ran",
+      "trust_badge": "preview",
+      "wall_seconds": 4.754
+    },
+    "pipeline_state": {
+      "camera_motion_auto": {
+        "enabled": false,
+        "forced": "auto",
+        "probe_wall_seconds": 0.0,
+        "sampled_frame_count": 0,
+        "score": null,
+        "threshold": 2.5
+      },
+      "camera_motion_auto_decision_made": false,
+      "input_quality_report": null,
+      "trust_bands": {
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=good, metric_confidence=med, reasons=single_view_planar_full_calibration, distortion_model=k1_k2_calibrate_camera_seeded, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "stage": "calibration"
+}

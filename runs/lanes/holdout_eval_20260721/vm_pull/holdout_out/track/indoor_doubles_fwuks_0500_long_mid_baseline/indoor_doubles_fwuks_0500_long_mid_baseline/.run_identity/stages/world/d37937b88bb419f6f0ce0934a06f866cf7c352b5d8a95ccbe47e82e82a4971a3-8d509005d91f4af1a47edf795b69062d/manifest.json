@@ -1,0 +1,279 @@
+{
+  "artifact_type": "racketsport_stage_identity",
+  "external_artifacts": [
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "a79d126ebcdca208d202aa7fd6fd749a7b9ba2aa7f1b6766390a23d47102df58",
+        "size": 3753700
+      },
+      "path": "virtual_world.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "ed2f597f64c59763ed1bb981095bb6300d49e889a4fe7964b68e1b884a06380d",
+        "size": 1388
+      },
+      "path": "trust_bands.json"
+    }
+  ],
+  "fingerprint": "d37937b88bb419f6f0ce0934a06f866cf7c352b5d8a95ccbe47e82e82a4971a3",
+  "identity": {
+    "code": {
+      "callable_sha256": "659ce8205fee1709003320c59cbe75bda088d7e3ccbaa3cf5394c46fe3b57e4c"
+    },
+    "config": {
+      "sport": "pickleball"
+    },
+    "explicit_inputs": {},
+    "models": {},
+    "schema_version": 1,
+    "source": {
+      "sha256": "22955134f7bf9bdc9392bdde868173fbc6ec9afa4d7a8c58f3e7e0ed33d4e0f1",
+      "size": 8937736,
+      "timing": {
+        "duration_s": 30.03,
+        "fps": 29.97002997,
+        "frame_count": 900,
+        "height": 1080,
+        "width": 1920
+      }
+    },
+    "stage": "world",
+    "upstream": {
+      "ball_arc_refined": {
+        "artifact_digest": "5d3f8451be53e8ff2887f90acbd678d491fbc86a5cc802b66ac1a6e1e16dd0ea",
+        "fingerprint": "79e61c5c87fa48362b7a7cc3a9a93f77378b21033c0427d54e8afef81b8280f3"
+      },
+      "ball_fill": {
+        "status": "missing"
+      },
+      "body": {
+        "status": "missing"
+      },
+      "calibration": {
+        "artifact_digest": "963623d354b6dd1c597a82e31b3bc9673b8e5794cd7a045a7b1150cb44e3d52a",
+        "fingerprint": "bd6be87c60dccae5744cf2931f4f9767ed34b63c591eddf856fbc1042c56acef"
+      },
+      "events_refined": {
+        "artifact_digest": "865d6c681d78fa1d4188d56a3b49f3ccaf92277da0cd90c19940c11749174b8b",
+        "fingerprint": "fbf5e5c6314a74bf9b6fb7fb8b6f2449c6f7b080921c69c981e9ea60808f84d5"
+      },
+      "grounding_refine": {
+        "artifact_digest": "5d3f8451be53e8ff2887f90acbd678d491fbc86a5cc802b66ac1a6e1e16dd0ea",
+        "fingerprint": "eb1293e81efe661418fa4bf88167e010ab88ce31506e497b37d0f627c60bf307"
+      },
+      "paddle_pose": {
+        "artifact_digest": "5d3f8451be53e8ff2887f90acbd678d491fbc86a5cc802b66ac1a6e1e16dd0ea",
+        "fingerprint": "399e19e861f2f30f651eb77520b5284981955cbd145b2ceed525f12216a97d13"
+      },
+      "placement_refine": {
+        "artifact_digest": "5d3f8451be53e8ff2887f90acbd678d491fbc86a5cc802b66ac1a6e1e16dd0ea",
+        "fingerprint": "f37cc7e8ed5ed5c312e0de511067b0bd83f15d4475507b721fb6ceb78f82acf0"
+      },
+      "tracking": {
+        "artifact_digest": "4724355861298bcdb82d2dc1cb0feaaaa2d304910326ae3aa16f53b6822a7d3d",
+        "fingerprint": "4f32eee073081efce45aa133faa5bfa6fa578636bcdfb28c7f1c1e1d0416a19f"
+      }
+    }
+  },
+  "managed_artifacts": [],
+  "metadata": {
+    "outcome": {
+      "artifacts": [
+        "virtual_world.json",
+        "trust_bands.json"
+      ],
+      "metrics": {
+        "ambiguous_paddle_frame_count": 0,
+        "approx_ball_frame_count": 0,
+        "ball_frame_count": 0,
+        "floor_contact_player_frame_count": 0,
+        "floor_placed_player_frame_count": 2907,
+        "joint_player_frame_count": 0,
+        "max_abs_floor_offset_m": 0.0,
+        "max_floor_penetration_m": 0.0,
+        "mesh_player_count": 0,
+        "mesh_player_frame_count": 0,
+        "paddle_frame_count": 0,
+        "paddle_player_count": 0,
+        "physics_modes": [],
+        "player_count": 4,
+        "temporal_coverage": {
+          "ball": {
+            "coverage_fraction": 0.0,
+            "frame_span": 0.0,
+            "max_t": null,
+            "min_t": null
+          },
+          "clip_frame_span": 30.03,
+          "clip_max_t": 29.996633,
+          "clip_min_t": 0.0,
+          "players": [
+            {
+              "coverage_fraction": 1.0,
+              "frame_span": 30.03,
+              "max_t": 29.996633,
+              "min_t": 0.0,
+              "no_data_frame_count": 0,
+              "observed_frame_count": 900,
+              "player_id": 1
+            },
+            {
+              "coverage_fraction": 1.0,
+              "frame_span": 30.03,
+              "max_t": 29.996633,
+              "min_t": 0.0,
+              "no_data_frame_count": 189,
+              "observed_frame_count": 711,
+              "player_id": 2
+            },
+            {
+              "coverage_fraction": 0.793333,
+              "frame_span": 23.8238,
+              "max_t": 29.996633,
+              "min_t": 6.2062,
+              "no_data_frame_count": 304,
+              "observed_frame_count": 596,
+              "player_id": 3
+            },
+            {
+              "coverage_fraction": 0.997778,
+              "frame_span": 29.963267,
+              "max_t": 29.996633,
+              "min_t": 0.066733,
+              "no_data_frame_count": 200,
+              "observed_frame_count": 700,
+              "player_id": 4
+            }
+          ]
+        },
+        "track_only_player_frame_count": 2907,
+        "warnings": [
+          "missing_mesh_vertices",
+          "missing_ball_track",
+          "missing_paddle_pose"
+        ]
+      },
+      "notes": [
+        "assembled virtual_world.json with per-entity trust bands (never invented; read from real upstream state)"
+      ],
+      "stage": "world",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.494
+    },
+    "pipeline_state": {
+      "camera_motion_auto": {
+        "decode_orientation_consequential_mismatch": false,
+        "decode_orientation_mismatch": false,
+        "decode_orientation_mismatch_reason": null,
+        "decode_orientation_untrusted": false,
+        "enabled": false,
+        "forced": "auto",
+        "probe_wall_seconds": 1.79224,
+        "sampled_frame_count": 4,
+        "score": 0.073682,
+        "threshold": 2.5
+      },
+      "camera_motion_auto_decision_made": true,
+      "input_quality_report": {
+        "artifact_type": "racketsport_input_quality",
+        "band": "degraded_input",
+        "clip": "indoor_doubles_fwuks_0500_long_mid_baseline",
+        "metrics": {
+          "court_visibility_angle": {
+            "available": true,
+            "below_acceptance": true,
+            "camera_height_m": 1.603989,
+            "court_corner_count": 4,
+            "full_court_corner_visibility_fraction": 1.0,
+            "image_size": [
+              1920,
+              1080
+            ],
+            "missing_required_court_line_count": 1,
+            "source": "court_calibration.json+court_line_evidence.json",
+            "visible_corner_count": 4
+          },
+          "duration_s": 30.03,
+          "fps": 29.97003,
+          "frame_count": 900,
+          "resolution": {
+            "height_px": 1080,
+            "width_px": 1920
+          },
+          "video_quality": {
+            "blur_laplacian_var": 907.514474,
+            "luminance_max": 0.695746,
+            "luminance_mean": 0.695568,
+            "luminance_min": 0.69523,
+            "sampled_frame_count": 5,
+            "sampled_frame_indexes": [
+              0,
+              30,
+              60,
+              90,
+              120
+            ]
+          }
+        },
+        "mode": "advisory",
+        "policy": {
+          "advisory_continues_downstream": true,
+          "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+          "strict_fail_closes": false
+        },
+        "rejection_reasons": [
+          "court_not_fully_visible_low_angle",
+          "fps_below_floor"
+        ],
+        "sampling": {
+          "sample_cadence_s": 1.0,
+          "sample_frame_count": 5
+        },
+        "schema_version": 1,
+        "status": "below_acceptance",
+        "strict": false,
+        "thresholds": {
+          "max_duration_s": 900.0,
+          "max_luminance_mean": 0.98,
+          "max_missing_required_court_lines": 0,
+          "min_blur_laplacian_var": 25.0,
+          "min_camera_height_m": 1.0,
+          "min_duration_s": 1.0,
+          "min_fps": 30.0,
+          "min_full_court_corner_visibility_fraction": 1.0,
+          "min_height_px": 360,
+          "min_luminance_mean": 0.02,
+          "min_width_px": 640
+        },
+        "video": "/home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",
+        "warning_reasons": []
+      },
+      "trust_bands": {
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=good, metric_confidence=med, reasons=single_view_planar_full_calibration, distortion_model=k1_k2_calibrate_camera_seeded, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        },
+        "track": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.json",
+          "gate_id": "trk_idf1_gate",
+          "gate_status": "owner_directed_stack_selection_preview",
+          "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+          "stage": "TRK"
+        }
+      }
+    }
+  },
+  "schema_version": 1,
+  "stage": "world"
+}

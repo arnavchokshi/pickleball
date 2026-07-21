@@ -318,3 +318,85 @@ Burlington/Wolverine are train/internal-val clips under this ledger's Purpose se
 | # | Stage | Date/time (UTC) | Session/agent | Candidate, provenance, frozen metrics/decision rule | Pre-committed? | Result | Run path |
 |---|---|---|---|---|---|---|---|
 | BALL-NS02-RESET-1 | DATA/BALL internal reviewed evaluation | 2026-07-09T22:29:18Z, before inference | Codex `ns02_evalreset_20260709` | **Candidates:** `official_tennis_control` sha256 `9d3912...b4bb`; `stage1_official` file/state sha256 `65604b...7c8a` / `8bc733...6030`; `seed_official` file/state sha256 `c48db3...fffc` / `b03eaf...d15`. All fixed at official preprocessing, visible threshold 0.5, top-K 5. **Corpus:** 1,750 reviewed INTERNAL rows, corpus-manifest md5 `0bb2fc592361f2e9246a71701617c3e5`; six SHA-bound recording groups; retain both 38 per-clip and six true-source reports. **Frozen gates:** F1@20 >=0.90, recall@20 >=0.75, hFP <=0.05, per-source worst-clip p95 <=20px, p99 <=40px, zero teleports (>160px/frame, gap <=3). Report full/random-reviewed/hard-disagreement/eligible-occluded and candidate-specific seen/unseen separately; do not score the new unlabeled random owner queue; never average away unseen/UNKNOWN. One shot retained pass/fail; no threshold shopping. **Provenance/licenses:** code/checkpoint/training details are frozen in `PREREGISTRATION.md` and `candidate_license_card.md`. Stage-1 and seed inherit BY-NC-SA-4.0 (24 used samples) and are promotion-ineligible; control upstream data license is incomplete. Fresh owner and HARVEST-1/HARVEST-2 remain untouched. Exact command: `REPO=/home/arnavchokshi/coldstart_20260706/repo DEVICE=cuda bash runs/lanes/ns02_evalreset_20260709/GPU_RESCORE_COMMANDS.sh`. | **YES. Status `PREREGISTERED-NOT-RUN`; this row and license card precede inference.** | **PREREGISTERED-NOT-RUN.** CPU-only lane ran no GPU inference/scoring and read no protected labels. BEST-STACK DELTA: none. | `runs/lanes/ns02_evalreset_20260709/` |
+
+## 2026-07-21 PREREGISTRATION — selection-layer ONE-SHOT holdout evaluation (manager, Fable)
+- Component: P0-I player-selection layer (commit 94d1027d0a828c37bfcec0c382b2f8450271b532; clean-clone evaluation, dirty=false on VM).
+- Pins: player_selection.py sha256 2dfdecf1da919112d702c19f4e084fb883122330d7e1c78a9711b2d3cda48bc2; select_players_from_pool.py b24dd6b831e538cf5243abc7ec6c38de858cab1b248984daf5d81d9091253ab7;
+  person_track_gt_scoring.py 0b3668413edd89e1939969dd7bf7fc78134a1b7143dd957cc20121174a35c143; best_stack.json 21df6d34cc951eb05cf7847eb1dbd4960227c204a10cb02f13f59e5f3da7545b. Config = PlayerSelectionConfig
+  defaults exactly (accept .35 / reject .42 / 2.5m / 12f / weights .4/.4/.2 / S .5 / enrollment
+  .8/.2/1.0s / recovery 7.0 m/s / raw-match 3px/.98) — asserted by the defaults regression test.
+- Judges: Indoor (indoor_doubles_fwuks_0500_long_mid_baseline) = FRESH holdout (TRK budget
+  previously unspent, ledger:203). Outdoor (outdoor_webcam_iynbd_1500_long_high_baseline) = ONE
+  disclosed HISTORICAL benchmark run (not fresh; prior TRK touches, ledger:129). Wolverine/
+  Burlington are EXCLUDED as accuracy judges for this component (contaminated by scorer-guided
+  development 2026-07-20 — reproduction-only).
+- Procedure (one run per clip, no tuning, no rescoring): VM clean-clone @ 94d1027d0a828c37bfcec0c382b2f8450271b532 → production
+  detector+association (best_stack defaults) generates pools → selection ON via
+  select_players_from_pool → field-stripped projection (sha256 recorded pre-scoring) → scorer once
+  (IoU 0.5, expected players 4, gate v2.1 conventions). Full-output + projection sha256 recorded
+  BEFORE scoring. Any infrastructure retry = new ledger row, byte-identical inputs retained.
+- Pre-registered per-clip gate: IDF1 >= 0.85, 0 switches, 0 true-spectator FP, 0 far-off-court FP,
+  cov4 >= 0.95, near-miss <= 0.10. Below-gate results are reported verbatim as misses (scoped
+  evidence). Promotion additionally requires the full NS-03.TRK gate on fresh clips — one Indoor
+  pass is necessary-not-sufficient; VERIFIED=0 regardless tonight.
+- Data classes: Indoor/Outdoor protected GT used for SCORING ONLY (never training/selection-fit).
+
+## 2026-07-21 RESULT — selection-layer ONE-SHOT holdout evaluation (references the 2026-07-21 preregistration row directly above; not edited)
+
+**Execution:** GPU lane `holdout_eval_20260721`, VM `pickleball-gpu-holdout` (A100-40GB SPOT,
+us-central1-a), clean clone verified at pin `94d1027d0a828c37bfcec0c382b2f8450271b532`
+(`git rev-parse HEAD` match, `git status --porcelain` empty). All 4 pinned file sha256s
+(player_selection.py, select_players_from_pool.py, person_track_gt_scoring.py, best_stack.json)
+verified against the preregistration before any run. Production tracking (best_stack defaults,
+yolo26m, no flags) generated pools for Indoor then Outdoor; `select_players_from_pool.py
+--enable-selection` produced the field-stripped scoring projection (sha256 recorded before
+scoring); `score_person_track_sources.py` (IoU 0.5, expected-players 4) scored each projection
+exactly once. Two infra bugs (RF-DETR manifest path portability gap; a lane-harness `--out`
+path-doubling bug that silently orphaned the first scoring attempt for all 4 clips before any
+valid score existed) were found and fixed pre-scoring; see `runs/manager/gpu_fleet.md`
+2026-07-21 close entry for detail. No threshold, config, or code was tuned.
+
+**Indoor (fresh holdout) — MISS on all 6 axes:**
+IDF1 0.5590082112 (bar >=0.85, FAIL) / id_switches 4 (bar 0, FAIL) /
+true_spectator_or_background_false_positives 395 (bar 0, FAIL) /
+far_off_court_false_positive_frames 750 (bar 0, FAIL) /
+four_player_coverage 0.4565537555 (bar >=0.95, FAIL) /
+near_miss_false_positive_rate 0.125 (bar <=0.10, FAIL).
+scoring_projection sha256 5ccde7eae4599b5fb7b4e437137c22bb194c011e116806fdc3c88209d95f0b90;
+out-tracks sha256 4f5fc64580ddc1dbc34906e5a6c23500686fb57b8623fe8e1247f74d79e3b3e1.
+
+**Outdoor (disclosed historical) — MISS on 5/6 axes:**
+IDF1 0.7561803199 (FAIL) / id_switches 1 (FAIL) /
+true_spectator_or_background_false_positives 0 (PASS) /
+far_off_court_false_positive_frames 41 (FAIL) /
+four_player_coverage 0.6037000974 (FAIL) / near_miss_false_positive_rate 0.1670201485 (FAIL).
+scoring_projection sha256 7bf40ee0001daa896916dc8c55bc1149bfce6f0984e4459b53d0013e10600080;
+out-tracks sha256 2f436a2185b3e99590454b06f6e91df89fd37760904874246925f105440a5012.
+
+**Verdict: selection layer stays `do_not_promote`; not one axis clears on either clip beyond the
+single true-spectator-FP pass on Outdoor.** This is with the 2026-07-20 unbound-export fix
+(commit 0784dfaa6, ancestor of this pin) already in place. No rescoring occurred; each number
+above is the single frozen scoring pass. Full artifacts: two-sided sha256 verified pull at
+`runs/lanes/holdout_eval_20260721/vm_pull/` (tarball sha256
+301e107ebca5f0ccc0c994a4057d3c344df12a747f13b44f22263f2890e3dae6).
+
+## 2026-07-21 RESULT — RF-DETR production-reproduction gate (trk_rfdetr_integrate_20260717 spec, same GPU lane)
+
+Reproduction target (frozen, `runs/lanes/trk_rfdetr_prod_20260716/vm_rerun/report.json`): burlington
+IDF1 0.922018 / cov4 0.993333 / 0 sw / 0 spectFP / 0 farFP; wolverine IDF1 0.803625 / cov4 0.723333
+/ 1 sw / 4 spectFP / 0 farFP. Reproduced (same GPU lane, real production entry,
+`RACKETSPORT_PERSON_DETECTOR=rfdetr_large_2026`, one run, no selection layer, no tuning):
+
+burlington: IDF1 0.9232693912 (delta +0.0012514, MISS) / cov4 0.9933333333 (delta +0.0000003,
+within tolerance) / switches 0 (exact) / spectFP 0 (exact) / farFP 0 (exact).
+wolverine: IDF1 0.8213219616 (delta +0.0176970, MISS) / cov4 0.8166666667 (delta +0.0933337,
+MISS) / switches 1 (exact) / spectFP 4 (exact) / farFP 0 (exact).
+
+**within_0.0001: FALSE.** Discrete count axes (switches/spectator-FP/far-off-court-FP) reproduced
+exactly on both clips; continuous axes (IDF1, and wolverine cov4 materially) did not. Honest
+attribution: the frozen card's variant P detector stage reused H100 detbench raw-detection dumps
+rather than fresh inference (disclosed in the source report as "not re-verified" for
+determinism-across-GPU-classes); this run performed genuinely fresh RF-DETR inference end-to-end
+on an A100 through the real production entry. **`rf_detr_production_reproduction_status` moves
+from `NO-ATTEMPT` to a real, dated, MISSED attempt; `rf_detr_default_flip_allowed` stays false; no
+best_stack change made by this lane.**

@@ -1,0 +1,7 @@
+{
+  "fingerprint": "e5df3886270ec476242a2b7359c43dc7758de836cec9b448b9f3e9f8fc78554a",
+  "generation": "stages/calibration/e5df3886270ec476242a2b7359c43dc7758de836cec9b448b9f3e9f8fc78554a-ce56d52d60ed4dd6b555aea44d9e8564",
+  "manifest_sha256": "c4b3b691fb538f5e0741b8e0fd70b49f1ec83a078c9116480286b7bd040bfc57",
+  "schema_version": 1,
+  "stage": "calibration"
+}

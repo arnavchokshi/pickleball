@@ -1,0 +1,80 @@
+{
+  "artifact_type": "racketsport_contact_provenance_v1",
+  "audio": {
+    "reason": "no_audio_stream",
+    "source": null,
+    "status": "absent",
+    "timing": [],
+    "timing_policy": "raw_and_corrected_preserved_no_destructive_correction"
+  },
+  "contact_artifact": {
+    "path": null,
+    "sha256": null,
+    "status": "missing"
+  },
+  "dependencies": {
+    "audio": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/audio_onsets_v2.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "ball_candidates": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/ball_candidates.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "ball_inflections_coarse": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/ball_inflections.json",
+      "sha256": "8558f950938f75573696dca2420aa03ff2fd980fbf7ee31d28a2b67dd8ef454b",
+      "status": "present"
+    },
+    "ball_track": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "calibration": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+      "sha256": "2303315bd85c17f6c3b27898718fd35eb31f327e30d52d731e5adf3b59f8113d",
+      "status": "present"
+    },
+    "frame_times": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/frame_times.json",
+      "sha256": "a4c77835c36eab369f8fc47a121c49d6db593623287a60876b33fa9b5f3202b0",
+      "status": "present"
+    },
+    "skeleton3d": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/skeleton3d.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "timebase_contract": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/timebase_contract.json",
+      "sha256": "56ee9167f0c7f087bcac89c2744e33b80567379a3cf26af72afb386742e2bcc7",
+      "status": "present"
+    },
+    "tracks_fps_source": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/tracks.json",
+      "sha256": "d9fa0abba22e6ae74b04e96c992950959b9dd7de1331868f2921983789a38ac1",
+      "status": "present"
+    },
+    "wrist_velocity_peaks_coarse": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/wrist_velocity_peaks.json",
+      "sha256": "133d81749c0ebc0aeac3fe0a61cebf4595df7f49451f0218f201ae560dd1857b",
+      "status": "present"
+    }
+  },
+  "provenance": {
+    "raw_proposals_immutable": true,
+    "refinement_version": "coarse_v1",
+    "reuse_refusal_reason": null
+  },
+  "raw_proposals": {
+    "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/contact_windows.json",
+    "sha256": "93d8a183b77f95f66133c93017cc7b838b2d30ce28a6b95d4dc4ce644535ad23",
+    "status": "present"
+  },
+  "reason": "missing_sam3d_skeleton3d",
+  "schema_version": 1,
+  "status": "absent"
+}

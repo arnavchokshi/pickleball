@@ -1,0 +1,82 @@
+WARNING ⚠️ 'source' is missing. Using 'source=/home/arnavchokshi/coldstart_20260706/body_runtime/body_venv/lib/python3.10/site-packages/ultralytics/assets'.
+PIPELINE SUMMARY
+status: partial
+clip: indoor_doubles_fwuks_0500_long_mid_baseline
+wall_seconds: 255.106
+clip_dir: /home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline
+stages:
+- ingest: ran (6.188s)
+    ingested /home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4 as source.mp4 (1920x1080 @ 29.970fps)
+    wrote frame_times.json from ffprobe PTS
+    wrote schema-valid timebase_contract.json with exact ffprobe PTS and explicit frame availability
+- calibration: ran [preview] (4.754s)
+    auto-discovered externally-provided court calibration from /home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/labels/court_calibration_metric15pt.json (intrinsics.source='metric_15pt_reviewed'); schema + intrinsics.source validated (threed.racketsport.orchestrator.ExternalCalibrationRunner), PnP re-derivation from --court-corners/--capture-sidecar skipped
+    intrinsics.dist is nonzero ([-0.25552688757783326, 0.24351098535745186, 0.0, 0.0]): the tracking stage's court-plane footpoint projection (threed.racketsport.person_fast.build_tracks) and the world stage's ball/paddle grounding (threed.racketsport.virtual_world) both apply calibration.homography directly to raw pixels without undistorting first -- a known, documented gap from the metric-15pt migration notes (see threed/racketsport/court_calibration_metric15.py and runs/cal_metric_15pt_20260702T041729Z/); fixing those call sites is out of this migration's scope. BODY-mesh grounding/overlay consumers are affected too and are owned by another lane.
+- input_quality: degraded (1.367s)
+    input_quality preflight below acceptance bar; band=degraded_input; reasons=court_not_fully_visible_low_angle, fps_below_floor
+    advisory mode continues downstream; use --input-quality-mode=strict to fail-close before heavy compute
+- tracking: ran [preview] (218.842s)
+    ran real loose-pool tracking via threed.racketsport.orchestrator (returned source_mode='yolo26m_botsort_reid')
+    runtime manifest override: yolo26m declared checkpoint /home/arnavchokshi/pickleball_git/models/checkpoints/yolo26m.pt was missing on this host; using repo-local /home/arnavchokshi/holdout_eval_20260721/repo/models/checkpoints/yolo26m.pt
+    refined tracks.json with raw-pool global association (profile=owner_directed_margin1p0_osnet, osnet ReID + motion, device=cuda:0, batch=64, embedding_reuse=False, out_dir=/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/global_association)
+- camera_motion: skipped [preview] (1.828s)
+    camera_motion AUTO probe classified clip as static; placement will use the default no-camera-motion path
+    motion_score=0.073682 threshold=2.5
+- placement: ran (2.675s)
+    rewrote tracks.json world_xy via foot-keypoint placement fusion
+    coverage_unchanged=True
+    source_counts(bbox=2383)
+    camera_motion=not_used source=auto_disabled frames_used=0 frames_uncompensated=0
+    side_recompute(player=1: side None->near, role None->left)
+    side_recompute(player=2: side None->near, role None->right)
+    side_recompute(player=3: side None->far, role None->right)
+    side_recompute(player=4: side None->far, role None->left)
+    placement_guards(centerline_gap_clamped_frames=0, divergence_snap_frames=880, fallback_transition_blends=673, gap_hold_frames=0, gap_interpolated_frames=500, native2d_dropped=0, native2d_reassigned=0, net_gap_clamped_frames=0, sam3d_dropped=0, sam3d_reassigned=0, written_speed_capped_frames=579)
+    foot_contact_phases=foot_contact_phases.json
+- ball: skipped (0.021s)
+    --skip-ball set
+- ball_arc: skipped (0.003s)
+    --no-ball-arc set
+- events: ran (1.01s)
+    SAM-3D skeleton unavailable before BODY; wrist_velocity_peaks.json is blocked, not pose-derived
+    no ball_track.json available; ball_inflections.json has zero candidates (wrist cues only)
+    audio disabled by --skip-audio; explicit reason audio_disabled_by_flag recorded
+    fused contact_windows.json; cues used: wrist=missing, ball_inflections=missing, audio=missing, reviewed_contacts=missing, missing=wrist,ball_inflections,audio,reviewed_contacts
+    wrote frame_compute_plan.json (deep_mesh_windows authoritative: MESH only at contact windows, 900 frames, JOINTS everywhere else)
+    ball_aware mesh scheduling: no events_selected.json found (looked at /home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/events_selected.json); ball_aware_contact trigger unavailable this run
+    ball_aware mesh scheduling: no ball_track_arc_solved.json found (looked at /home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/ball_track_arc_solved.json); ball_proximity trigger unavailable this run
+- ball_fill: blocked (0.003s)
+    requires ball_track.json; no render-only ball physics fill produced
+- frames: ran (13.816s)
+    bounded base BODY skeleton schedule: kept 450/900 tracked frame(s) with skeleton_stride=2 (the prior joints-everywhere base is now cadence-controlled; events/contact-dense mesh frames are unioned separately)
+    tier rule respected: unioned 900 deep_mesh_windows frame(s) from /home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/frame_compute_plan.json (already a subset of the tracked-frame set in the common case; explicit here for a resumed run whose events stage already wrote frame_compute_plan.json before this stage ran)
+    extracted 900 scheduled JPEG(s) into body_frames/ (58.56 MB) via ffmpeg (threed.racketsport.body_frame_materialization, the same extraction body_video_smoke.py already exercises)
+    frames-stage validation passed: current schedule set equals materialized BODY frame set
+- body: degraded (0.032s)
+    remote calibration seed: derived capture_sidecar.json corner taps from the external court_calibration.json's own image_pts/world_pts (remote's committed orchestrator re-derives calibration from manual taps; the local world keeps the trusted external calibration); remote BODY dispatch to  did not complete: --host missing: explicit remote host is required; fleet VM external IPs recycle on stop/start. Find the current host in runs/manager/gpu_fleet.md and pass it with --host (process_video.py: --remote-host).; remote SAM-3D BODY did not complete; no fallback pose skeleton was generated
+- placement_refine: skipped (0.001s)
+    same-pass post-BODY placement_refine is disabled by R3; SAM3D foot pixels may only feed a second pass before a fresh BODY run, never an in-place tracks.json rewrite before world build
+- grounding_refine: skipped (0.005s)
+    --no-grounding-refine set: keeping BODY/skeleton artifacts untouched
+- placement_trajectory_refine: skipped (0.022s)
+    placement_trajectory_refine typed skip: disabled by the existing best_stack body.placement_trajectory_refine entry and no explicit --placement-trajectory-refine flag was supplied
+- paddle_pose: skipped (0.003s)
+    --no-paddle-pose set: fused paddle estimator disabled before world assembly
+- events_refined: skipped (0.014s)
+    post-BODY event refinement absent: missing_sam3d_skeleton3d
+- ball_arc_refined: skipped (0.005s)
+    refined arc pass absent: no dependency-current post-BODY contact artifact
+- world: ran (0.494s)
+    assembled virtual_world.json with per-entity trust bands (never invented; read from real upstream state)
+- confidence_gate: skipped (0.003s)
+    --no-confidence-gate set: keeping raw virtual_world.json as the viewer world
+- match_stats: skipped (0.002s)
+    --no-match-stats set: BODY+COURT post-hoc stats consumer disabled
+- coaching_facts: ran (2.816s)
+    built deterministic rally_metrics.json and coaching_card_facts.json; zero-fabrication audit passed
+    no language generation ran; facts remain evidence-linked preview inputs
+- manifest: degraded (0.04s)
+    built replay_viewer_manifest.json with virtual_world.json as world URL
+    mesh_status=None
+    representation_status=body_missing
+    no replay_scene.json written: --no-scene-points set

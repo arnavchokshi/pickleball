@@ -1,0 +1,7 @@
+{
+  "fingerprint": "33f73315aedc6ad37c5a561df442b8fa1dca04b0d63cf6eb07c76537016566d7",
+  "generation": "stages/placement_trajectory_refine/33f73315aedc6ad37c5a561df442b8fa1dca04b0d63cf6eb07c76537016566d7-408de69359434e55a99b6fc4200e5f00",
+  "manifest_sha256": "dbe2678c6a9f61f911358ba4f0e805ce2091e8017846107286d73b57c112b938",
+  "schema_version": 1,
+  "stage": "placement_trajectory_refine"
+}

@@ -1,0 +1,7 @@
+{
+  "fingerprint": "433e08b02dbf814bf92ac2b7aac5de4614cf9bcbdaaaa8ce2a78565236fe595c",
+  "generation": "stages/confidence_gate/433e08b02dbf814bf92ac2b7aac5de4614cf9bcbdaaaa8ce2a78565236fe595c-8b80b83d52ec4e76acbddac00b61aad6",
+  "manifest_sha256": "3f14c02395d0eb480ec057bc33b06bc69877a6d4bf7684d4c05ded00af67c214",
+  "schema_version": 1,
+  "stage": "confidence_gate"
+}

@@ -1,0 +1,80 @@
+{
+  "artifact_type": "racketsport_contact_provenance_v1",
+  "audio": {
+    "reason": "audio_disabled_by_flag",
+    "source": null,
+    "status": "absent",
+    "timing": [],
+    "timing_policy": "raw_and_corrected_preserved_no_destructive_correction"
+  },
+  "contact_artifact": {
+    "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/contact_windows.json",
+    "sha256": "93d8a183b77f95f66133c93017cc7b838b2d30ce28a6b95d4dc4ce644535ad23",
+    "status": "present"
+  },
+  "dependencies": {
+    "audio": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/audio_onsets_v2.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "ball_candidates": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/ball_candidates.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "ball_inflections_coarse": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/ball_inflections.json",
+      "sha256": "ff7a1b55a1feb8a66de60c379852812b5ddbe1cf3bba215100b21cdcc1151305",
+      "status": "present"
+    },
+    "ball_track": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/ball_track.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "calibration": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/court_calibration.json",
+      "sha256": "7507a3b474a9c4f115901935c9db9055c1a703c75aaceb5addc485aa03b6eb94",
+      "status": "present"
+    },
+    "frame_times": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/frame_times.json",
+      "sha256": "6f53d66741aa146e37407dc91e70f3455e734173e548b922ed11a9705629fd97",
+      "status": "present"
+    },
+    "skeleton3d": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/skeleton3d.json",
+      "sha256": null,
+      "status": "missing"
+    },
+    "timebase_contract": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/timebase_contract.json",
+      "sha256": "f31aa25be2045f7692307cb301684f4ba617a3982af9f3cc9af25de212c692a1",
+      "status": "present"
+    },
+    "tracks_fps_source": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/tracks.json",
+      "sha256": "f72288f83fb3b7a65695f9c85f45431a0859740b87a8e21a5c57166f6495696c",
+      "status": "present"
+    },
+    "wrist_velocity_peaks_coarse": {
+      "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/wrist_velocity_peaks.json",
+      "sha256": "3176602754f415fa5e0238e628d79678135c5d78b0e318dce38c7548767d7263",
+      "status": "present"
+    }
+  },
+  "provenance": {
+    "raw_proposals_immutable": true,
+    "refinement_version": "coarse_v1",
+    "reuse_refusal_reason": null
+  },
+  "raw_proposals": {
+    "path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/contact_windows.json",
+    "sha256": "93d8a183b77f95f66133c93017cc7b838b2d30ce28a6b95d4dc4ce644535ad23",
+    "status": "present"
+  },
+  "reason": null,
+  "schema_version": 1,
+  "status": "coarse"
+}

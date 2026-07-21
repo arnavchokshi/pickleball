@@ -1,0 +1,7 @@
+{
+  "fingerprint": "809aec69ae5cf19ad42d619d9568c21f30084d8b213bd8b9fbb2e2bcb31a7585",
+  "generation": "stages/match_stats/809aec69ae5cf19ad42d619d9568c21f30084d8b213bd8b9fbb2e2bcb31a7585-6b2c28b668d148199cd53c1773ab57f5",
+  "manifest_sha256": "fbededb2a38b06a6ea6f0638548c4f622ab6c4b79d53781d53aa06d2b8faf3fa",
+  "schema_version": 1,
+  "stage": "match_stats"
+}

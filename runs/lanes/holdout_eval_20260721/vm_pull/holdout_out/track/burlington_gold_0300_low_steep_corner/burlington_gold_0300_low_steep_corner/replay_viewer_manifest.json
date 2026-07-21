@@ -1,0 +1,31 @@
+{
+  "annotation_sources": [],
+  "artifact_type": "racketsport_replay_viewer_manifest",
+  "auto_bounce_candidates_url": null,
+  "ball_arc_render_url": null,
+  "ball_arc_solved_url": null,
+  "ball_bounce_candidates_url": null,
+  "ball_flight_sanity_url": null,
+  "ball_inflections_url": "/@fs//home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/ball_inflections.json",
+  "body_mesh_index_url": null,
+  "body_mesh_url": null,
+  "clip": "burlington_gold_0300_low_steep_corner",
+  "coaching_card_facts_url": "/@fs//home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/coaching_card_facts.json",
+  "contact_windows_url": "/@fs//home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/contact_windows.json",
+  "label_overlays": [],
+  "mesh_status": null,
+  "notes": [
+    "Viewer evidence is review-only and does not promote BODY, PHYSICS, RKT, or E2E gates.",
+    "Vite /@fs URLs are intended for local review server use.",
+    "Vite allow root: /home/arnavchokshi/holdout_eval_20260721/repo",
+    "representation_status_json={\"status\":\"body_missing\"}",
+    "degraded_reasons_json=[{\"reasons\":[\"input_quality preflight below acceptance bar; band=degraded_input; reasons=court_not_fully_visible_low_angle\",\"advisory mode continues downstream; use --input-quality-mode=strict to fail-close before heavy compute\"],\"stage\":\"input_quality\",\"status\":\"degraded\"},{\"reasons\":[\"requires ball_track.json; no render-only ball physics fill produced\"],\"stage\":\"ball_fill\",\"status\":\"blocked\"},{\"reasons\":[\"remote calibration seed: derived capture_sidecar.json corner taps from the external court_calibration.json's own image_pts/world_pts (remote's committed orchestrator re-derives calibration from manual taps; the local world keeps the trusted external calibration); remote BODY dispatch to  did not complete: --host missing: explicit remote host is required; fleet VM external IPs recycle on stop/start. Find the current host in runs/manager/gpu_fleet.md and pass it with --host (process_video.py: --remote-host).; remote SAM-3D BODY did not complete; no fallback pose skeleton was generated\"],\"stage\":\"body\",\"status\":\"degraded\"}]"
+  ],
+  "physics_refinement_url": null,
+  "rally_spans_url": null,
+  "replay_scene_url": null,
+  "reviewed_bounces_url": null,
+  "schema_version": 1,
+  "video_url": "/@fs//home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/burlington_gold_0300_low_steep_corner/source.mp4",
+  "virtual_world_url": "/@fs//home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/virtual_world.json"
+}

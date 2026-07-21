@@ -1,0 +1,7 @@
+{
+  "fingerprint": "364081e60e148361b6ece10b0831fc095bb543edb4d87bb503492b000c28543a",
+  "generation": "stages/match_stats/364081e60e148361b6ece10b0831fc095bb543edb4d87bb503492b000c28543a-eb0c37b1b0ad41c6a17945d5bc775020",
+  "manifest_sha256": "faec489ddd50bfd3692c5ce12cccc61980d8ac626df550ee3cd3c7cfba12ab90",
+  "schema_version": 1,
+  "stage": "match_stats"
+}

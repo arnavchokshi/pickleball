@@ -1,0 +1,9 @@
+{
+  "artifact_type": "coaching_fact_zero_fabrication_audit",
+  "checked_fact_count": 12,
+  "checked_source_count": 4,
+  "issue_codes": [],
+  "issues": [],
+  "schema_version": 1,
+  "verdict": "pass"
+}

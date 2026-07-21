@@ -1,0 +1,67 @@
+{
+  "arkit_camera_pose": null,
+  "capture_quality": {
+    "grade": "warn",
+    "reasons": [
+      "process_video_remote_body_seed",
+      "derived_from_external_metric_calibration",
+      "remote_dependency_only_not_local_world_calibration",
+      "corrected_unverified"
+    ]
+  },
+  "court_plane": null,
+  "device_model": "process_video_remote_body_seed:external_calibration_corners",
+  "device_tier": "fallback",
+  "format": "hevc",
+  "fps": 30,
+  "gravity": [
+    0.0,
+    -1.0,
+    0.0
+  ],
+  "intrinsics": {
+    "cx": 960.0,
+    "cy": 540.0,
+    "dist": [
+      -0.25552688757783326,
+      0.24351098535745186,
+      0.0,
+      0.0
+    ],
+    "fx": 1074.208851740269,
+    "fy": 1074.208851740269,
+    "source": "estimated_from_declared_court_corners"
+  },
+  "lidar_depth_refs": [],
+  "locked": {
+    "exposure_s": 0.001,
+    "focus": 0.7,
+    "iso": 320,
+    "wb_locked": true
+  },
+  "manual_court_taps": [
+    [
+      44.75524475524475,
+      914.1608391608393
+    ],
+    [
+      1893.1468531468531,
+      905.2097902097901
+    ],
+    [
+      1152.4475524475524,
+      520.3146853146853
+    ],
+    [
+      763.0769230769231,
+      524.7902097902097
+    ]
+  ],
+  "ondevice_pose_track": null,
+  "orientation": "landscape",
+  "resolution": [
+    1920,
+    1080
+  ],
+  "schema_version": 1
+}

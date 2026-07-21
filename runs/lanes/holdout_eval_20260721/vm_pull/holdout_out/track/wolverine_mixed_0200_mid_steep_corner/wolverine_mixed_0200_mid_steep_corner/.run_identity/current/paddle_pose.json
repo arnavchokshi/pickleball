@@ -1,0 +1,7 @@
+{
+  "fingerprint": "15f91b348b2a149d640b1a3d6ee03a25641178cf41ceb3b0ce6b160e12a2c8f7",
+  "generation": "stages/paddle_pose/15f91b348b2a149d640b1a3d6ee03a25641178cf41ceb3b0ce6b160e12a2c8f7-46ae2832720f43d9b12828df3b96fe6c",
+  "manifest_sha256": "65d0b96afefd9eecc6353d477f69a1bef9839a997f858ab56821b240c7a26582",
+  "schema_version": 1,
+  "stage": "paddle_pose"
+}

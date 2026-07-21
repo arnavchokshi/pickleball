@@ -1,0 +1,617 @@
+{
+  "models": [
+    {
+      "commercial_posture": "research_ok_verify_commercial",
+      "fallbacks": [
+        "sat_hmr",
+        "nlf",
+        "hmr2"
+      ],
+      "id": "fast_sam_3d_body_dinov3",
+      "license": "SAM License",
+      "local_path": "/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/model.ckpt",
+      "notes": [
+        "A100 runtime has Fast-SAM-3D-Body repo at /home/arnavchokshi/body_runtime/Fast-SAM-3D-Body.",
+        "A100 checkpoint path /home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/model.ckpt matched sha256 b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf on 2026-07-01 UTC.",
+        "Legacy H100 container path was /workspace/checkpoints/body4d/sam-3d-body-dinov3/model.ckpt.",
+        "Fast-SAM-3D-Body environment is isolated at /opt/conda/envs/fast_sam_3d_body.",
+        "H100 smoke benchmark on 2026-06-26 PDT used /opt/fast-sam-3d-body/notebook/images/dancing.jpg, YOLO11n detector, MoGe2 FOV, mask inference disabled, one detected person.",
+        "H100 smoke benchmark measured n=5 warm runs after one warmup: average 326.91 ms, std 1.72 ms, min 324.68 ms, max 329.90 ms; peak allocated GPU memory 4718.04 MB. This is a single-image smoke result, not EVAL-0 variant approval on real test clips."
+      ],
+      "repo_commit": "808b53c7d9c26a7e511d31144f1e5efb058e15c9",
+      "sha256": "b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf",
+      "source": "https://github.com/yangtiming/Fast-SAM-3D-Body plus facebook/sam-3d-body-dinov3 checkpoint",
+      "stage": "3d_body_backbone",
+      "status": "available_on_h100",
+      "use": "Deep-tier per-frame body mesh backbone"
+    },
+    {
+      "commercial_posture": "research_ok_verify_commercial",
+      "fallbacks": [
+        "sat_hmr",
+        "nlf",
+        "hmr2"
+      ],
+      "id": "sam_3d_body_mhr_model",
+      "license": "SAM License",
+      "local_path": "/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt",
+      "repo_commit": "808b53c7d9c26a7e511d31144f1e5efb058e15c9",
+      "sha256": "352e271a6c42729c68554ceaea0c955e866970160c31e35506d782dc0f7377bc",
+      "source": "https://github.com/facebookresearch/sam-3d-body",
+      "stage": "3d_body_backbone",
+      "status": "available_on_h100",
+      "use": "MHR to SMPL mapping asset used by SAM-3D-Body/Fast-SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "research_ok_verify_checkpoint_terms",
+      "fallbacks": [
+        "fast_sam_3d_body_dinov3"
+      ],
+      "id": "sat_hmr_644_3dpw",
+      "license": "Apache-2.0 code; verify checkpoint/data terms before commercialization",
+      "local_path": "models/checkpoints/body4d/sat-hmr/weights/sat_hmr/sat_644_3dpw.pth",
+      "notes": [
+        "scripts/download_checkpoints.sh verifies this SHA locally.",
+        "Current repo runtime still needs SMPL model assets and dependency isolation before BODY can claim a local non-H100 SAT-HMR gate."
+      ],
+      "repo_commit": "920b1380e1d4967e47b1de1782408ac30f4f44da",
+      "sha256": "7e1b5e80a967c8f4e1e273156e5272b2a3413caf079c2bc0a038e90c6a0b6dec",
+      "source": "https://huggingface.co/ChiSu001/SAT-HMR/blob/main/weights/sat_hmr/sat_644_3dpw.pth",
+      "stage": "3d_body_backbone_fallback",
+      "status": "downloadable_local_checkpoint",
+      "use": "SAT-HMR fallback checkpoint intended to run without H100 once SMPL assets/runtime dependencies are present"
+    },
+    {
+      "commercial_posture": "unknown",
+      "fallbacks": [],
+      "id": "moge_2_vitl_normal",
+      "license": "See upstream MoGe license",
+      "local_path": "models/checkpoints/body4d/moge-2-vitl-normal/model.pt",
+      "notes": [
+        "Path repaired on 2026-07-08 to the repo-relative checkpoint location used by local resolution; absent files still fail verify_fast_sam_manifest_assets when fov_name is enabled.",
+        "Used by Fast-SAM-3D-Body FOV estimator path; license must be verified before commercialization."
+      ],
+      "sha256": "280741fd09bc3f403ccff9967784c2a391b52d2c0742ae3efdb21d9f90cc1a01",
+      "source": "https://github.com/microsoft/MoGe",
+      "stage": "camera_fov_depth_prior",
+      "status": "available_on_h100",
+      "use": "MoGe/FOV depth prior used by the existing body4d image"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "sam2_hiera_small",
+        "sam2_hiera_large"
+      ],
+      "id": "sam2_hiera_base_plus",
+      "license": "Apache-2.0",
+      "local_path": "/workspace/checkpoints/body4d/sam2_hiera_base_plus.pt",
+      "sha256": "d0bb7f236400a49669ffdd1be617959a8b1d1065081789d7bbff88eded3a8071",
+      "source": "https://github.com/facebookresearch/sam2",
+      "stage": "racket_segmentation",
+      "status": "available_on_h100",
+      "use": "SAM2 base-plus segmentation checkpoint for paddle/racket silhouette candidates"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "sam3_concept_tracker",
+        "dinox_detector"
+      ],
+      "fine_tuned_on_pickleball": false,
+      "id": "grounding_dino_tiny_paddle_detector",
+      "license": "Apache-2.0",
+      "local_path": "models/checkpoints/racket/grounding-dino-tiny/model.safetensors",
+      "notes": [
+        "Downloaded with huggingface_hub on 2026-07-01 into models/checkpoints/racket/grounding-dino-tiny.",
+        "Used only for real detector/mask gate-1 inference against reviewed CVAT paddle rectangles.",
+        "This is not DINO-X, not pickleball fine-tuned, and not evidence for true paddle corners or 6DoF pose."
+      ],
+      "repo_commit": "a2bb814dd30d776dcf7e30523b00659f4f141c71",
+      "sha256": "1a2412ef99bd74bcd3c2a246fa1e48581f8889a1300c9051974741314fc042f3",
+      "source": "https://huggingface.co/IDEA-Research/grounding-dino-tiny and https://github.com/IDEA-Research/GroundingDINO",
+      "stage": "racket_detection",
+      "status": "available_local",
+      "training_data": [
+        "official_grounding_dino_tiny_pretrained"
+      ],
+      "use": "Open-vocabulary paddle detector for RKT detector+mask gate 1"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "grounding_dino_tiny_paddle_detector",
+        "sam3_concept_tracker",
+        "dinox_detector"
+      ],
+      "fine_tuned_on_pickleball": false,
+      "id": "grounding_dino_base_paddle_detector_failed_probe",
+      "license": "Apache-2.0",
+      "local_path": "/home/arnavchokshi/.cache/huggingface/hub/models--IDEA-Research--grounding-dino-base/snapshots/12bdfa3120f3e7ec7b434d90674b3396eccf88eb/model.safetensors",
+      "notes": [
+        "Downloaded through Hugging Face cache on pickleball-a100-spot-ase1a during RKT detector gate diagnosis on 2026-07-01 UTC.",
+        "GroundingDINO-base + SAM2 tiny tiled 15-frame sample at box/text threshold 0.05 reached recall 0.8333 and failed the detector+mask gate.",
+        "This is not DINO-X, not pickleball fine-tuned, and must not be promoted."
+      ],
+      "repo_commit": "12bdfa3120f3e7ec7b434d90674b3396eccf88eb",
+      "sha256": "5548f844c928c4b6f411fa8cbcc2bfa8dbbba437cb1d513975519f93c2a9ed21",
+      "source": "https://huggingface.co/IDEA-Research/grounding-dino-base and https://github.com/IDEA-Research/GroundingDINO",
+      "stage": "racket_detection",
+      "status": "available_on_h100",
+      "training_data": [
+        "official_grounding_dino_base_pretrained"
+      ],
+      "use": "Failed open-vocabulary paddle detector probe for RKT detector+mask gate 1"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "sam2_hiera_base_plus"
+      ],
+      "fine_tuned_on_pickleball": false,
+      "id": "sam2_hiera_tiny_racket_masks",
+      "license": "Apache-2.0",
+      "local_path": "models/checkpoints/racket/sam2-hiera-tiny/sam2_hiera_tiny.pt",
+      "notes": [
+        "Downloaded with huggingface_hub on 2026-07-01 into models/checkpoints/racket/sam2-hiera-tiny.",
+        "Local PyTorch MPS failed on SAM2 bicubic upsample; CPU inference was verified for this checkpoint.",
+        "Used only for real box-prompted masks after detector inference; it is not true corner or 6DoF evidence."
+      ],
+      "repo_commit": "7c218beaf0bb87874785f32b582f640134fc1c09",
+      "sha256": "65b50056e05bcb13694174f51bb6da89c894b57b75ccdf0ba6352c597c5d1125",
+      "source": "https://huggingface.co/facebook/sam2-hiera-tiny and https://github.com/facebookresearch/sam2",
+      "stage": "racket_segmentation",
+      "status": "available_local",
+      "training_data": [
+        "official_sam2_hiera_tiny_pretrained"
+      ],
+      "use": "SAM2 tiny box-prompted mask checkpoint for RKT detector+mask gate 1"
+    },
+    {
+      "commercial_posture": "agpl_caveat",
+      "fallbacks": [
+        "grounding_dino_tiny_paddle_detector"
+      ],
+      "fine_tuned_on_pickleball": true,
+      "id": "yolo11n_paddle_cpu320_e2_failed_probe",
+      "license": "AGPL-3.0 via Ultralytics YOLO11 weights",
+      "local_path": "runs/detect/runs/cvat_imports/2026_06_30/racket_yolo_train/yolo11n_paddle_cpu320_e5/weights/best.pt",
+      "notes": [
+        "CPU training was stopped after two completed epochs because Outdoor validation recall stayed at 0.0024.",
+        "MPS training failed before producing weights with RuntimeError: view size is not compatible with input tensor's size and stride.",
+        "Detector-only 15-frame sample at conf=0.001 reached recall 0.4333 with 1152 detections; this checkpoint failed the RKT detector gate and must not be promoted."
+      ],
+      "sha256": "76b9e47ce128d1300ace493d3356bd305150d0256c61c50f778b3274dac8c5cc",
+      "source": "Locally fine-tuned from models/checkpoints/yolo11n.pt on runs/cvat_imports/2026_06_30/yolo_datasets/paddle",
+      "stage": "racket_detection",
+      "status": "available_local",
+      "training_data": [
+        "runs/cvat_imports/2026_06_30/yolo_datasets/paddle"
+      ],
+      "use": "Failed local paddle-detector training probe for RKT detector gate diagnosis"
+    },
+    {
+      "commercial_posture": "agpl_caveat",
+      "fallbacks": [
+        "grounding_dino_tiny_paddle_detector"
+      ],
+      "fine_tuned_on_pickleball": true,
+      "id": "yolo11n_paddle_a100_img960_e50_failed_probe",
+      "license": "AGPL-3.0 via Ultralytics YOLO11 weights",
+      "local_path": "/home/arnavchokshi/pickleball_git/runs/cvat_imports/2026_06_30/racket_yolo_train_gpu/yolo11n_paddle_img960_e50/weights/best.pt",
+      "notes": [
+        "A100 training early-stopped after 21 epochs; best validation metrics were P=0.645, R=0.321, mAP50=0.322, mAP50-95=0.0954.",
+        "YOLO+SAM2 15-frame sample at conf=0.001 reached recall 1.0 but precision 0.0201 with 1489 detections; this was smoke-only and not gate verification.",
+        "Full-manifest detector-only sweep over 1426 reviewed rows at conf=0.001 reached overall recall 0.9240 but failed per-viewpoint recall because Outdoor was 0.8259; this checkpoint failed the RKT detector gate and must not be promoted."
+      ],
+      "sha256": "7134203e168dbcaef802f26e092d20b14a45e91a757240887becd99741b4bdbe",
+      "source": "Fine-tuned from models/checkpoints/yolo11n.pt on runs/cvat_imports/2026_06_30/yolo_datasets/paddle using pickleball-a100-spot-ase1a",
+      "stage": "racket_detection",
+      "status": "available_on_h100",
+      "training_data": [
+        "runs/cvat_imports/2026_06_30/yolo_datasets/paddle"
+      ],
+      "use": "Failed A100 paddle-detector training probe for RKT detector+mask gate diagnosis"
+    },
+    {
+      "commercial_posture": "agpl_caveat",
+      "fallbacks": [
+        "yolo11n_paddle_a100_img960_e50_failed_probe",
+        "grounding_dino_tiny_paddle_detector"
+      ],
+      "fine_tuned_on_pickleball": true,
+      "id": "yolo26s_paddle_a100_img1280_e80_failed_probe",
+      "license": "AGPL-3.0 via Ultralytics YOLO26 weights",
+      "local_path": "/home/arnavchokshi/pickleball_git/runs/detect/runs/cvat_imports/2026_06_30/racket_yolo_train_gpu/yolo26s_paddle_img1280_e80/weights/best.pt",
+      "notes": [
+        "A100 training early-stopped after 21 epochs; best validation metrics were P=0.470, R=0.403, mAP50=0.356, mAP50-95=0.112.",
+        "Native Ultralytics validation at conf=0.001, imgsz=1280, batch=1, iou=0.25 on the 600-image validation split returned precision 0.4679 and recall 0.4010.",
+        "Batched full-manifest detector sweep attempts at imgsz=1280 failed with CUDA OOM at batch 16 and batch 4; no full-manifest pass was produced, and this checkpoint must not be promoted."
+      ],
+      "sha256": "3b6b97a41e4ec14bc61e5468ffc2a5065bef8ff65533cf5d6c82e64a7393f4d8",
+      "source": "Fine-tuned from models/checkpoints/yolo26s.pt on runs/cvat_imports/2026_06_30/yolo_datasets/paddle using pickleball-a100-spot-ase1a",
+      "stage": "racket_detection",
+      "status": "available_on_h100",
+      "training_data": [
+        "runs/cvat_imports/2026_06_30/yolo_datasets/paddle"
+      ],
+      "use": "Failed A100 high-resolution paddle-detector training probe for RKT detector gate diagnosis"
+    },
+    {
+      "commercial_posture": "unknown",
+      "fallbacks": [
+        "yolo26m",
+        "yolo11m"
+      ],
+      "id": "body4d_yolo_best_existing",
+      "license": "unknown",
+      "local_path": "/workspace/sam4dbody/weights/best.pt",
+      "notes": [
+        "Do not treat as the canonical YOLO26m detector until class names and training provenance are verified."
+      ],
+      "sha256": "e2e4e15f4281d6bb8723483b15a729b9a17b64851e2053a10aed98e4f318ff68",
+      "source": "Existing /workspace/sam4dbody/weights/best.pt",
+      "stage": "person_or_aux_detection",
+      "status": "available_on_h100",
+      "use": "Existing YOLO-family weights in the body4d image; exact training target needs verification before pickleball use"
+    },
+    {
+      "commercial_posture": "agpl_caveat",
+      "fallbacks": [
+        "yolo11m",
+        "rf_detr_l",
+        "rtmdet"
+      ],
+      "id": "yolo26m",
+      "license": "AGPL-3.0",
+      "local_path": "/home/arnavchokshi/holdout_eval_20260721/repo/models/checkpoints/yolo26m.pt",
+      "notes": [
+        "Downloaded through ultralytics YOLO('yolo26m.pt') on the H100 into /workspace/checkpoints/body4d/yolo26.",
+        "AGPL posture is accepted for research/personal use now; use an Apache detector fallback before commercialization if needed."
+      ],
+      "sha256": "401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7",
+      "source": "https://docs.ultralytics.com/models/yolo26/",
+      "stage": "person_detect",
+      "status": "available_on_h100",
+      "use": "Offline person detector candidate"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "yolo26m"
+      ],
+      "id": "rfdetr_large_2026",
+      "license": "Apache-2.0",
+      "local_path": "/home/arnavchokshi/pickleball_git/models/checkpoints/rf-detr-large-2026.pth",
+      "notes": [
+        "Checkpoint identity and 135,954,129-byte size were pinned by runs/lanes/trk_detbench_20260716/report.json after rfdetr 1.8.3 download on the H100.",
+        "Pending preview operating point is RF-DETR-L native 704, COCO person class id 1, confidence floor 0.18; no imgsz analog or threshold sweep is permitted.",
+        "Install the runtime dependency without a repo-level version pin using `python -m pip install rfdetr`, then re-bake and record the GPU fleet snapshot before production reproduction.",
+        "YOLO26m remains the default. RF-DETR may be selected explicitly for its frozen reproduction, and missing RF-DETR assets fail loudly rather than falling back."
+      ],
+      "sha256": "0f4e20e19a99c0f8a62b5685f57f6c8b5c371c59081feda6752a0561a79ccf38",
+      "source": "https://storage.googleapis.com/rfdetr/rf-detr-large-2026.pth",
+      "stage": "person_detect",
+      "status": "available_on_h100",
+      "use": "Non-default RF-DETR-L preview candidate for the frozen GPU reproduction gate"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "rtmw_l_384",
+      "license": "Apache-2.0",
+      "local_path": "/workspace/checkpoints/body4d/rtmw/rtmw-l_384x288.pth",
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ],
+      "sha256": "afa589fa16bf8b9bab0807c806538a43bead39ed0151b79f41adcf551e3bcfb0",
+      "source": "https://mmpose.readthedocs.io/ and https://download.openmmlab.com/mmpose/v1/projects/rtmw/rtmw-dw-x-l_simcc-cocktail14_270e-384x288-20231122.pth",
+      "stage": "2d_pose",
+      "status": "retired",
+      "use": "Retired RTMW whole-body pose candidate; replaced by Fast SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "rtmw_x_384",
+      "license": "Apache-2.0",
+      "local_path": "/workspace/checkpoints/body4d/mmpose/rtmw-x_384x288.pth",
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ],
+      "sha256": "f840f2044fe46cb3821b7cea86be83e1f6cba406ccd28f5475ac010412dcda95",
+      "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmw/rtmw-x_simcc-cocktail14_pt-ucoco_270e-384x288-f840f204_20231122.pth",
+      "stage": "2d_pose",
+      "status": "retired",
+      "use": "Retired RTMW whole-body pose candidate; replaced by Fast SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "rtmw3d_x",
+      "license": "Apache-2.0",
+      "local_path": "/home/arnavchokshi/checkpoints/body4d/mmpose/rtmw3d-x_8xb64_cocktail14-384x288-b0a0eab7_20240626.pth",
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates.",
+        "Kept only as historical checkpoint inventory; no production runner or fallback may load this model."
+      ],
+      "repo_commit": "759b39c13fea6ba094afc1fa932f51dc1b11cbf9",
+      "sha256": "b0a0eab7ca501e2c88028fe1cfd78b50c7130e220d39541da7f669e5de25e6ca",
+      "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose3d",
+      "stage": "retired_pose",
+      "status": "retired",
+      "use": "Retired RTMW3D pose source; replaced by Fast SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "motionbert_lift_smooth",
+      "license": "Apache-2.0",
+      "local_path": "/home/arnavchokshi/checkpoints/body4d/motionbert/FT_MB_lite_MB_ft_h36m_global_lite/best_epoch.bin",
+      "notes": [
+        "Official MotionBERT repository is Apache-2.0 and targets 3D pose estimation and motion representation.",
+        "A100 validation on pickleball-a100-spot-ase1a downloaded the official Hugging Face mirror checkpoint for FT_MB_lite_MB_ft_h36m_global_lite/best_epoch.bin.",
+        "Torch checkpoint smoke on 2026-07-01 loaded model_pos and first tensor module.temp_embed with shape (1, 243, 1, 256).",
+        "Config /home/arnavchokshi/research/MotionBERT/configs/pose3d/MB_ft_h36m_global_lite.yaml declares maxlen 243 and num_joints 17.",
+        "MotionBERT was tied to the retired legacy pose lane and is not a production SAM-3D-Body fallback.",
+        "A100 runtime smoke on 2026-07-01 loaded the checkpoint through MotionBERTTemporalRuntime and returned 17 refined body joints; it is not gate-bearing until cold-clip and labeled accuracy validation pass."
+      ],
+      "repo_commit": "705d3a95354db8bdb696b3492e47a3b5537174ff",
+      "sha256": "9811155371db4ca5d20f31a36a232d41012e12e1333882888a564d741861148f",
+      "source": "https://github.com/Walter0807/MotionBERT",
+      "stage": "lane_a_temporal_refine",
+      "status": "available_on_h100",
+      "use": "Temporal lift and smoothing candidate for Lane A body-17 windows before foot/hand One-Euro filtering"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "rtmpose_m_body26_384",
+      "license": "Apache-2.0",
+      "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-m_body26_384x288.pth",
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ],
+      "sha256": "89e6428b38901b5003d0f753619e94d269999e1f5a922349f9068430387863f2",
+      "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-body7_pt-body7-halpe26_700e-384x288-89e6428b_20230605.pth",
+      "stage": "2d_pose_per_crop",
+      "status": "retired",
+      "use": "Retired RTMPose per-crop candidate; replaced by Fast SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "rtmpose_l_body26_384",
+      "license": "Apache-2.0",
+      "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-l_body26_384x288.pth",
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ],
+      "sha256": "734182ce2409ba84e96ea2a6361aedb0eb40722f7ab52bb69331c73477d6a650",
+      "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-body7_pt-body7-halpe26_700e-384x288-734182ce_20230605.pth",
+      "stage": "2d_pose_per_crop",
+      "status": "retired",
+      "use": "Retired RTMPose per-crop candidate; replaced by Fast SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "rtmpose_x_body26_384",
+      "license": "Apache-2.0",
+      "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-x_body26_384x288.pth",
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ],
+      "sha256": "7fb6e239601082a06ca8442feb7a9774b8d77a1c37911b2ad0f27c1e84be4d21",
+      "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-x_simcc-body7_pt-body7-halpe26_700e-384x288-7fb6e239_20230606.pth",
+      "stage": "2d_pose_per_crop",
+      "status": "retired",
+      "use": "Retired RTMPose per-crop candidate; replaced by Fast SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "rtmpose_m_wholebody_256",
+      "license": "Apache-2.0",
+      "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-m_wholebody_256x192.pth",
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ],
+      "sha256": "3da02694cd6479d3b333ff42ebd0723f96bfa06adac1db1e2e815ed2e9e1b02d",
+      "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-m_simcc-coco-wholebody_pt-aic-coco_270e-256x192-cd5e845c_20230123.pth",
+      "stage": "2d_pose",
+      "status": "retired",
+      "use": "Retired RTMPose whole-body candidate; replaced by Fast SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "rtmpose_l_wholebody_384",
+      "license": "Apache-2.0",
+      "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-l_wholebody_384x288.pth",
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ],
+      "sha256": "13ce77ad08808333e2d4f850c632ac6068c837108e15f1c3902dcbcf30842db9",
+      "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-coco-wholebody_pt-aic-coco_270e-384x288-eaeb96c8_20230125.pth",
+      "stage": "2d_pose",
+      "status": "retired",
+      "use": "Retired RTMPose whole-body candidate; replaced by Fast SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [],
+      "id": "rtmpose_x_wholebody_384",
+      "license": "Apache-2.0",
+      "local_path": "/workspace/checkpoints/body4d/mmpose/rtmpose-x_wholebody_384x288.pth",
+      "notes": [
+        "Retired: Fast SAM-3D-Body is the SAM-3D-Body-only BODY path because it produced better pickleball-joint accuracy and optimized speed matched or beat RTMW-family candidates."
+      ],
+      "sha256": "401dfc904a12d2cbb44ba83c17cd2a45399fead4e29b6fd73137724cadc03419",
+      "source": "https://github.com/open-mmlab/mmpose/tree/main/projects/rtmpose and https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-x_simcc-coco-wholebody_pt-body7_270e-384x288-401dfc90_20230629.pth",
+      "stage": "2d_pose",
+      "status": "retired",
+      "use": "Retired RTMPose whole-body candidate; replaced by Fast SAM-3D-Body"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "manual_tap_track"
+      ],
+      "fine_tuned_on_pickleball": false,
+      "id": "tracknetv3",
+      "license": "MIT",
+      "local_path": "models/checkpoints/tracknetv3/TrackNet_best.pt",
+      "notes": [
+        "Downloaded from the official README's Google Drive checkpoint id 1CfzE87a0f6LhBp0kniSl1-89zaLCZ8cA and extracted on the H100.",
+        "Original downloaded zip sha256 is 8de68d34ea2457e368e22947f1309143d60a6a7f9ddccd31cd526d4c4571bcc4.",
+        "This is an official pretrained seed only; it is not pickleball-fine-tuned and has not passed BALL validation gates."
+      ],
+      "repo_commit": "77c123ad4dd449b7d275f16cc43f316ba5b54042",
+      "sha256": "df867641a02712b021f04548ff4b1208ddfdb47f629ab2094ceb978667e83b1a",
+      "source": "https://github.com/qaz812345/TrackNetV3",
+      "stage": "ball_tracking",
+      "status": "available_on_h100",
+      "training_data": [
+        "official_tracknetv3_badminton_pretrained"
+      ],
+      "use": "Ball detector/tracker pretrain before pickleball fine-tune"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "manual_tap_track"
+      ],
+      "fine_tuned_on_pickleball": false,
+      "id": "tracknetv3_inpaintnet",
+      "license": "MIT",
+      "local_path": "models/checkpoints/tracknetv3/InpaintNet_best.pt",
+      "notes": [
+        "Extracted from the same official TrackNetV3 checkpoint package as TrackNet_best.pt.",
+        "This is an official pretrained trajectory-rectification seed only; it is not pickleball-fine-tuned and has not passed BALL validation gates."
+      ],
+      "repo_commit": "77c123ad4dd449b7d275f16cc43f316ba5b54042",
+      "sha256": "5749b66b8002f3ad9e0af841604004706fc796df30599e6bf01952696009688c",
+      "source": "https://github.com/qaz812345/TrackNetV3",
+      "stage": "ball_tracking",
+      "status": "available_on_h100",
+      "training_data": [
+        "official_tracknetv3_inpaintnet_pretrained"
+      ],
+      "use": "TrackNetV3 trajectory rectification/inpainting companion checkpoint"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "tracknetv3"
+      ],
+      "fine_tuned_on_pickleball": false,
+      "id": "wasb_tennis_bmvc2023",
+      "license": "MIT",
+      "local_path": "models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+      "notes": [
+        "Downloaded with gdown from the official WASB-SBDT MODEL_ZOO tennis WASB link on 2026-07-01.",
+        "This is a pretrained verifier seed only; it is not a pickleball-fine-tuned checkpoint and has not passed BALL validation gates."
+      ],
+      "repo_commit": "923462cacdeb3353b84ddebdedb3f4b7a8553b0f",
+      "sha256": "9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb",
+      "source": "https://github.com/nttcom/WASB-SBDT/blob/main/MODEL_ZOO.md and https://drive.google.com/file/d/14AeyIOCQ2UaQmbZLNQJa1H_eSwxUXk7z/view?usp=drive_link",
+      "stage": "ball_tracking_verifier",
+      "status": "available_on_h100",
+      "training_data": [
+        "official_wasb_tennis_pretrained"
+      ],
+      "use": "WASB pretrained tennis checkpoint seed for the offline BALL verifier before pickleball fine-tuning"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "hmr2",
+        "fast_sam_3d_body_dinov3"
+      ],
+      "id": "sat_hmr",
+      "license": "Apache-2.0 per docs; verify upstream before use",
+      "local_path": "/workspace/checkpoints/body4d/sat-hmr/weights/sat_hmr/sat_644_3dpw.pth",
+      "notes": [
+        "Downloaded with huggingface_hub from official ChiSu001/SAT-HMR repo."
+      ],
+      "sha256": "7e1b5e80a967c8f4e1e273156e5272b2a3413caf079c2bc0a038e90c6a0b6dec",
+      "source": "https://huggingface.co/ChiSu001/SAT-HMR/blob/main/weights/sat_hmr/sat_644_3dpw.pth",
+      "stage": "fast_mesh_preview",
+      "status": "available_on_h100",
+      "use": "Fast-tier camera-space mesh and license-safe body fallback candidate"
+    },
+    {
+      "commercial_posture": "avoid",
+      "fallbacks": [
+        "sat_hmr",
+        "fast_sam_3d_body_dinov3"
+      ],
+      "id": "multihmr2_b",
+      "license": "Internal use only per upstream pyproject metadata; user-approved for personal testing only",
+      "local_path": "/workspace/checkpoints/body4d/multihmr2/multihmr2.pt",
+      "notes": [
+        "Fetched on the H100 for the current personal research/testing run; licensing is not treated as a blocker for this run.",
+        "Upstream README requires the checkpoint path to be named multihmr2.pt.",
+        "EVAL-0 must compare quality/throughput against SAT-HMR and Fast SAM-3D-Body before using it as a default."
+      ],
+      "sha256": "fd2d9ab7010a5f590a3db2480f5f476fd3ec6afbbde80babbec0d821ba9763d6",
+      "source": "https://github.com/naver/multi-hmr2 and https://download.europe.naverlabs.com/ComputerVision/MultiHMR/multihmr2.pt",
+      "stage": "fast_mesh_preview",
+      "status": "available_on_h100",
+      "use": "Server fast-tier multi-person mesh/tracking preview candidate"
+    },
+    {
+      "commercial_posture": "ok",
+      "fallbacks": [
+        "physpt",
+        "footlock_only"
+      ],
+      "id": "mujoco_mjx",
+      "license": "Apache-2.0",
+      "local_path": "/opt/conda/envs/racketsport_mjx",
+      "notes": [
+        "Installed in an isolated H100 conda env to avoid perturbing /opt/conda/envs/fast_sam_3d_body.",
+        "Install command is codified in scripts/racketsport/install_mujoco_mjx_env.sh.",
+        "H100 runtime smoke on 2026-06-26 PDT used scripts/racketsport/smoke_mujoco_mjx.py and passed with jax 0.10.2, mujoco 3.10.0, mujoco-mjx 3.10.0, warp-lang 1.13.0, and JAX device cuda:0.",
+        "This is runtime availability only; FOOT-2 still needs task-specific physics integration and validation."
+      ],
+      "source": "https://mujoco.readthedocs.io/en/stable/mjx.html and https://pypi.org/project/mujoco-mjx/",
+      "stage": "physics",
+      "status": "available_runtime_on_h100",
+      "use": "Declared MuJoCo/MJX runtime candidate for future physics refinement; current pipeline integration still requires FOOT-2 task-specific validation"
+    },
+    {
+      "commercial_posture": "research_ok_verify_checkpoint_terms",
+      "fallbacks": [],
+      "fine_tuned_on_pickleball": false,
+      "id": "osnet_x1_0_market1501",
+      "license": "deep-person-reid code is MIT (LICENSE file, Copyright (c) 2018 Kaiyang Zhou; the installed torchreid==0.2.5 pip package is a separate MIT-licensed repackaging). The repo does not state a separate license for the pretrained checkpoint weights themselves. Market-1501 is the academic person-Re-ID benchmark dataset the weights were trained on; MODEL_ZOO.md reports 94.2% rank-1 / 82.6% mAP, 2.2M params, 0.98 GFLOPs for this row. No explicit weight-specific license or dataset-terms statement was found in the deep-person-reid README or MODEL_ZOO.md.",
+      "local_path": "models/checkpoints/osnet_x1_0_market1501.pt",
+      "notes": [
+        "Restored on 2026-07-10 in lane runs/lanes/reid_restore_20260710/: best_stack.json entries.tracking.reid_model already pinned models/checkpoints/osnet_x1_0_market1501.pt, but the file was absent from disk, and the same-day fixp commit (0bdabbe67) made the tracking stage fail loud (best_stack_asset_missing) instead of silently falling back to loose-pool tracks.",
+        "Downloaded via `.venv/bin/python -m gdown 'https://drive.google.com/uc?id=1vduhq5DpN2q1g4fYEZfPI17MJeh9qyrA' -O models/checkpoints/osnet_x1_0_market1501.pt` (gdown 6.1.0); resulting file is 10,399,605 bytes and is a raw torch OrderedDict state_dict (no wrapper key), which threed/racketsport/person_reid_diagnostics.py:_extract_state_dict already handles via its all-string-keys fallback branch.",
+        "repo_commit above is deep-person-reid master HEAD as of 2026-07-10 (docs/MODEL_ZOO.md source-of-truth for the download link); it does not pin the checkpoint file itself, which predates this commit -- gdown surfaced the Google Drive file's own last-modified timestamp as local mtime 2021-03-31.",
+        "Loader-verified for real: threed/racketsport/person_reid_diagnostics.py:_make_osnet_embedder builds torchreid.models.build_model('osnet_x1_0', num_classes=1000, loss='softmax', pretrained=False), loads this checkpoint with torch.load(map_location='cpu', weights_only=False), then load_state_dict(..., strict=False) after shape-filtering (_matching_state_dict). Ran directly via `.venv/bin/python scripts/racketsport/run_raw_pool_person_authority.py` (which calls the identical threed/racketsport/raw_pool_person_authority.run_raw_pool_authority_candidate that scripts/racketsport/process_video.py:_attempt_global_association calls) against a 20-frame-trimmed copy of runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner's tracked_detections.json/raw_tracked_detections.json/court_calibration.json paired with the real local video eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4. Result: status ok, 150 real 512-dim L2-normalized OSNet embeddings extracted on cpu (runs/lanes/reid_restore_20260710/smoke_raw_pool/out/reid_embeddings.json), recorded model_sha256 matched this file's sha256, tracks.json produced.",
+        "Internal/private posture: owner-approved on 2026-07-13 for this project's private development and testing.",
+        "Commercial posture: re-verify the pretrained-checkpoint and Market-1501 dataset terms at NS-07.3 before monetized launch; research_ok_verify_checkpoint_terms remains binding for commercial use."
+      ],
+      "repo_commit": "f8cd150fdf77e8d9e1ed143b7f308c2c609ded50",
+      "sha256": "2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154",
+      "source": "https://github.com/KaiyangZhou/deep-person-reid/blob/master/docs/MODEL_ZOO.md (osnet_x1_0, Market1501, same-domain ReID row) via https://drive.google.com/uc?id=1vduhq5DpN2q1g4fYEZfPI17MJeh9qyrA -- this exact Google Drive file id is also the URL the installed torchreid==0.2.5 package's own reid_model_factory.py maps to the key 'osnet_x1_0_market1501.pt'",
+      "stage": "person_reid",
+      "status": "available_local",
+      "training_data": [
+        "official_osnet_x1_0_market1501_pretrained"
+      ],
+      "use": "OSNet x1.0 ReID embedding checkpoint backing tracking.reid_model in best_stack.json (raw-pool global association appearance features)"
+    }
+  ],
+  "notes": [
+    "ENV-2 partial inventory captured from the running H100 container on 2026-06-26 PDT.",
+    "available_on_h100 means the file was present and hashed on the current named GPU host/path in local_path; it does not prove phase acceptance.",
+    "Fast-SAM-3D-Body H100 smoke latency is recorded on the fast_sam_3d_body_dinov3 entry; EVAL-0 still requires real test clips, comparison artifacts, and the human approval gate before any variant is locked.",
+    "pending_download entries are next candidates for Codex to fetch or mirror without user input unless their upstream requires account-gated access."
+  ],
+  "schema_version": 1
+}

@@ -1,0 +1,523 @@
+{
+  "artifact_type": "racketsport_person_track_gt_scoring_report",
+  "input": {
+    "cvat_root": "/home/arnavchokshi/holdout_eval_20260721/repo/runs/cvat_imports/2026_06_30",
+    "expected_players": 4,
+    "runs_root": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/score_roots/eval2_rfdetr/wolverine_mixed_0200_mid_steep_corner",
+    "track_paths_discovered": 1
+  },
+  "iou_threshold": 0.5,
+  "promotion_policy": {
+    "four_player_coverage_threshold": 0.95,
+    "idf1_threshold": 0.85,
+    "requires_zero_id_switches": true,
+    "requires_zero_off_court_false_positive_frames": true,
+    "requires_zero_spectator_or_background_false_positives": true
+  },
+  "promotion_policy_v2": {
+    "four_player_coverage_threshold": 0.95,
+    "idf1_threshold": 0.85,
+    "near_miss_false_positive_rate_threshold": 0.1,
+    "requires_zero_id_switches": true,
+    "requires_zero_off_court_false_positive_frames": true,
+    "requires_zero_true_spectator_or_background_false_positives": true
+  },
+  "promotion_policy_v2_1": {
+    "four_player_coverage_threshold": 0.95,
+    "idf1_threshold": 0.85,
+    "near_miss_false_positive_rate_threshold": 0.1,
+    "off_court_apron_margin_m": 1.0,
+    "prospective_only": true,
+    "prospective_only_note": "Gate v2.1 was defined 2026-07-02; it applies to future scoring runs only and never retroactively changes a verdict already recorded in runs/manager/heldout_eval_ledger.md.",
+    "requires_zero_far_off_court_false_positive_frames": true,
+    "requires_zero_id_switches": true,
+    "requires_zero_true_spectator_or_background_false_positives": true
+  },
+  "required_clip_ids": [
+    "burlington_gold_0300_low_steep_corner",
+    "indoor_doubles_fwuks_0500_long_mid_baseline",
+    "outdoor_webcam_iynbd_1500_long_high_baseline",
+    "wolverine_mixed_0200_mid_steep_corner"
+  ],
+  "schema_version": 2,
+  "score_error_count": 0,
+  "score_errors": [],
+  "sources": [
+    {
+      "aggregate": {
+        "mean_effective_fps": null,
+        "mean_four_player_coverage": 0.8166666666666667,
+        "mean_hota": 0.818080750047246,
+        "mean_idf1": 0.8213219616204691,
+        "total_false_negatives": 194,
+        "total_id_switches": 1,
+        "total_off_court_false_positive_frames": 20,
+        "total_spectator_or_background_false_positives": 139,
+        "worst_four_player_coverage": 0.8166666666666667,
+        "worst_hota": 0.818080750047246,
+        "worst_idf1": 0.8213219616204691
+      },
+      "clip_count": 1,
+      "clips": [
+        "wolverine_mixed_0200_mid_steep_corner"
+      ],
+      "decision": {
+        "blockers": [
+          "missing_required_clips:burlington_gold_0300_low_steep_corner,indoor_doubles_fwuks_0500_long_mid_baseline,outdoor_webcam_iynbd_1500_long_high_baseline",
+          "wolverine_mixed_0200_mid_steep_corner:idf1_below_0.85",
+          "wolverine_mixed_0200_mid_steep_corner:id_switches_present",
+          "wolverine_mixed_0200_mid_steep_corner:spectator_or_background_false_positives_present",
+          "wolverine_mixed_0200_mid_steep_corner:off_court_false_positives_present",
+          "wolverine_mixed_0200_mid_steep_corner:four_player_coverage_below_0.95"
+        ],
+        "policy": {
+          "four_player_coverage_threshold": 0.95,
+          "idf1_threshold": 0.85,
+          "required_clip_ids": [
+            "burlington_gold_0300_low_steep_corner",
+            "indoor_doubles_fwuks_0500_long_mid_baseline",
+            "outdoor_webcam_iynbd_1500_long_high_baseline",
+            "wolverine_mixed_0200_mid_steep_corner"
+          ],
+          "requires_zero_id_switches": true,
+          "requires_zero_off_court_false_positive_frames": true,
+          "requires_zero_spectator_or_background_false_positives": true
+        },
+        "promote": false,
+        "status": "do_not_promote"
+      },
+      "decision_v2": {
+        "blockers": [
+          "missing_required_clips:burlington_gold_0300_low_steep_corner,indoor_doubles_fwuks_0500_long_mid_baseline,outdoor_webcam_iynbd_1500_long_high_baseline",
+          "wolverine_mixed_0200_mid_steep_corner:idf1_below_0.85",
+          "wolverine_mixed_0200_mid_steep_corner:id_switches_present",
+          "wolverine_mixed_0200_mid_steep_corner:true_spectator_or_background_false_positives_present",
+          "wolverine_mixed_0200_mid_steep_corner:off_court_false_positives_present",
+          "wolverine_mixed_0200_mid_steep_corner:four_player_coverage_below_0.95",
+          "wolverine_mixed_0200_mid_steep_corner:near_miss_false_positive_rate_above_0.10"
+        ],
+        "policy": {
+          "four_player_coverage_threshold": 0.95,
+          "idf1_threshold": 0.85,
+          "near_miss_false_positive_rate_threshold": 0.1,
+          "required_clip_ids": [
+            "burlington_gold_0300_low_steep_corner",
+            "indoor_doubles_fwuks_0500_long_mid_baseline",
+            "outdoor_webcam_iynbd_1500_long_high_baseline",
+            "wolverine_mixed_0200_mid_steep_corner"
+          ],
+          "requires_zero_id_switches": true,
+          "requires_zero_off_court_false_positive_frames": true,
+          "requires_zero_true_spectator_or_background_false_positives": true
+        },
+        "promote": false,
+        "status": "do_not_promote"
+      },
+      "decision_v2_1": {
+        "blockers": [
+          "missing_required_clips:burlington_gold_0300_low_steep_corner,indoor_doubles_fwuks_0500_long_mid_baseline,outdoor_webcam_iynbd_1500_long_high_baseline",
+          "wolverine_mixed_0200_mid_steep_corner:idf1_below_0.85",
+          "wolverine_mixed_0200_mid_steep_corner:id_switches_present",
+          "wolverine_mixed_0200_mid_steep_corner:true_spectator_or_background_false_positives_present",
+          "wolverine_mixed_0200_mid_steep_corner:four_player_coverage_below_0.95",
+          "wolverine_mixed_0200_mid_steep_corner:near_miss_false_positive_rate_above_0.10"
+        ],
+        "policy": {
+          "four_player_coverage_threshold": 0.95,
+          "idf1_threshold": 0.85,
+          "near_miss_false_positive_rate_threshold": 0.1,
+          "off_court_apron_margin_m": 1.0,
+          "required_clip_ids": [
+            "burlington_gold_0300_low_steep_corner",
+            "indoor_doubles_fwuks_0500_long_mid_baseline",
+            "outdoor_webcam_iynbd_1500_long_high_baseline",
+            "wolverine_mixed_0200_mid_steep_corner"
+          ],
+          "requires_zero_far_off_court_false_positive_frames": true,
+          "requires_zero_id_switches": true,
+          "requires_zero_true_spectator_or_background_false_positives": true
+        },
+        "promote": false,
+        "status": "do_not_promote"
+      },
+      "failure_analysis": {
+        "modes": [
+          {
+            "count": 194,
+            "denominator": 1200,
+            "description": "reviewed player boxes with no matching prediction",
+            "mode": "missing_gt_detections",
+            "rate": 0.16166666666666665
+          },
+          {
+            "count": 139,
+            "denominator": 1145,
+            "description": "predictions that did not match reviewed or ignored GT",
+            "mode": "spectator_or_background_false_positives",
+            "rate": 0.12139737991266375
+          },
+          {
+            "count": 55,
+            "denominator": 300,
+            "description": "GT frames without exactly the expected player count predicted",
+            "mode": "four_player_coverage_gap",
+            "rate": 0.18333333333333332
+          },
+          {
+            "count": 20,
+            "denominator": 1145,
+            "description": "unmatched predictions whose world point is outside the court template",
+            "mode": "off_court_false_positives",
+            "rate": 0.017467248908296942
+          },
+          {
+            "count": 1,
+            "denominator": 1200,
+            "description": "GT identities matched to a different predicted track id",
+            "mode": "id_switches",
+            "rate": 0.0008333333333333334
+          }
+        ],
+        "primary_failure_mode": "missing_gt_detections"
+      },
+      "failure_analysis_v2": {
+        "modes": [
+          {
+            "count": 194,
+            "denominator": 1200,
+            "description": "reviewed player boxes with no matching prediction",
+            "mode": "missing_gt_detections",
+            "rate": 0.16166666666666665
+          },
+          {
+            "count": 135,
+            "denominator": 1145,
+            "description": "predictions with 0 < IoU < iou_threshold against a real player (detector localization noise)",
+            "mode": "near_miss_localization",
+            "rate": 0.11790393013100436
+          },
+          {
+            "count": 55,
+            "denominator": 300,
+            "description": "GT frames without exactly the expected player count predicted",
+            "mode": "four_player_coverage_gap",
+            "rate": 0.18333333333333332
+          },
+          {
+            "count": 20,
+            "denominator": 1145,
+            "description": "unmatched predictions whose world point is outside the court template",
+            "mode": "off_court_false_positives",
+            "rate": 0.017467248908296942
+          },
+          {
+            "count": 4,
+            "denominator": 1145,
+            "description": "zero-IoU predictions on a full-GT-complement frame (real bystander/background)",
+            "mode": "true_spectator_or_background_false_positives",
+            "rate": 0.0034934497816593887
+          },
+          {
+            "count": 1,
+            "denominator": 1200,
+            "description": "GT identities matched to a different predicted track id",
+            "mode": "id_switches",
+            "rate": 0.0008333333333333334
+          }
+        ],
+        "primary_failure_mode": "missing_gt_detections"
+      },
+      "failure_analysis_v2_1": {
+        "modes": [
+          {
+            "count": 194,
+            "denominator": 1200,
+            "description": "reviewed player boxes with no matching prediction",
+            "mode": "missing_gt_detections",
+            "rate": 0.16166666666666665
+          },
+          {
+            "count": 135,
+            "denominator": 1145,
+            "description": "predictions with 0 < IoU < iou_threshold against a real player (detector localization noise)",
+            "mode": "near_miss_localization",
+            "rate": 0.11790393013100436
+          },
+          {
+            "count": 104,
+            "denominator": 1145,
+            "description": "predictions (matched or unmatched) whose world point is beyond the court lines but within 1.0m of them -- boundary-line play, diagnostic only, never gate-blocking under v2.1",
+            "mode": "apron_off_court_excursions",
+            "rate": 0.09082969432314411
+          },
+          {
+            "count": 55,
+            "denominator": 300,
+            "description": "GT frames without exactly the expected player count predicted",
+            "mode": "four_player_coverage_gap",
+            "rate": 0.18333333333333332
+          },
+          {
+            "count": 4,
+            "denominator": 1145,
+            "description": "zero-IoU predictions on a full-GT-complement frame (real bystander/background)",
+            "mode": "true_spectator_or_background_false_positives",
+            "rate": 0.0034934497816593887
+          },
+          {
+            "count": 1,
+            "denominator": 1200,
+            "description": "GT identities matched to a different predicted track id",
+            "mode": "id_switches",
+            "rate": 0.0008333333333333334
+          }
+        ],
+        "primary_failure_mode": "missing_gt_detections"
+      },
+      "rows": [
+        {
+          "apron_off_court_excursion_frame_count": 104,
+          "apron_off_court_excursion_matched_prediction_count": 84,
+          "apron_off_court_excursion_prediction_count": 104,
+          "apron_off_court_excursion_track_ids": [
+            1,
+            3
+          ],
+          "apron_off_court_excursion_unmatched_prediction_count": 20,
+          "artifact_type": "racketsport_person_track_gt_score",
+          "assa": 0.8907892009021279,
+          "bbox_scale_source": "identity",
+          "bbox_scale_x": 1.0,
+          "bbox_scale_y": 1.0,
+          "candidate": "canonical_tracks",
+          "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+          "deta": 0.7513069454817027,
+          "exact_four_player_frames": 245,
+          "expected_four_player_frames": 300,
+          "expected_players": 4,
+          "failure_modes": [
+            {
+              "count": 194,
+              "denominator": 1200,
+              "description": "reviewed player boxes with no matching prediction",
+              "mode": "missing_gt_detections",
+              "rate": 0.16166666666666665
+            },
+            {
+              "count": 139,
+              "denominator": 1145,
+              "description": "predictions that did not match reviewed or ignored GT",
+              "mode": "spectator_or_background_false_positives",
+              "rate": 0.12139737991266375
+            },
+            {
+              "count": 55,
+              "denominator": 300,
+              "description": "GT frames without exactly the expected player count predicted",
+              "mode": "four_player_coverage_gap",
+              "rate": 0.18333333333333332
+            },
+            {
+              "count": 20,
+              "denominator": 1145,
+              "description": "unmatched predictions whose world point is outside the court template",
+              "mode": "off_court_false_positives",
+              "rate": 0.017467248908296942
+            },
+            {
+              "count": 1,
+              "denominator": 1200,
+              "description": "GT identities matched to a different predicted track id",
+              "mode": "id_switches",
+              "rate": 0.0008333333333333334
+            }
+          ],
+          "failure_modes_v2": [
+            {
+              "count": 194,
+              "denominator": 1200,
+              "description": "reviewed player boxes with no matching prediction",
+              "mode": "missing_gt_detections",
+              "rate": 0.16166666666666665
+            },
+            {
+              "count": 135,
+              "denominator": 1145,
+              "description": "predictions with 0 < IoU < iou_threshold against a real player (detector localization noise)",
+              "mode": "near_miss_localization",
+              "rate": 0.11790393013100436
+            },
+            {
+              "count": 55,
+              "denominator": 300,
+              "description": "GT frames without exactly the expected player count predicted",
+              "mode": "four_player_coverage_gap",
+              "rate": 0.18333333333333332
+            },
+            {
+              "count": 20,
+              "denominator": 1145,
+              "description": "unmatched predictions whose world point is outside the court template",
+              "mode": "off_court_false_positives",
+              "rate": 0.017467248908296942
+            },
+            {
+              "count": 4,
+              "denominator": 1145,
+              "description": "zero-IoU predictions on a full-GT-complement frame (real bystander/background)",
+              "mode": "true_spectator_or_background_false_positives",
+              "rate": 0.0034934497816593887
+            },
+            {
+              "count": 1,
+              "denominator": 1200,
+              "description": "GT identities matched to a different predicted track id",
+              "mode": "id_switches",
+              "rate": 0.0008333333333333334
+            }
+          ],
+          "failure_modes_v2_1": [
+            {
+              "count": 194,
+              "denominator": 1200,
+              "description": "reviewed player boxes with no matching prediction",
+              "mode": "missing_gt_detections",
+              "rate": 0.16166666666666665
+            },
+            {
+              "count": 135,
+              "denominator": 1145,
+              "description": "predictions with 0 < IoU < iou_threshold against a real player (detector localization noise)",
+              "mode": "near_miss_localization",
+              "rate": 0.11790393013100436
+            },
+            {
+              "count": 104,
+              "denominator": 1145,
+              "description": "predictions (matched or unmatched) whose world point is beyond the court lines but within 1.0m of them -- boundary-line play, diagnostic only, never gate-blocking under v2.1",
+              "mode": "apron_off_court_excursions",
+              "rate": 0.09082969432314411
+            },
+            {
+              "count": 55,
+              "denominator": 300,
+              "description": "GT frames without exactly the expected player count predicted",
+              "mode": "four_player_coverage_gap",
+              "rate": 0.18333333333333332
+            },
+            {
+              "count": 4,
+              "denominator": 1145,
+              "description": "zero-IoU predictions on a full-GT-complement frame (real bystander/background)",
+              "mode": "true_spectator_or_background_false_positives",
+              "rate": 0.0034934497816593887
+            },
+            {
+              "count": 1,
+              "denominator": 1200,
+              "description": "GT identities matched to a different predicted track id",
+              "mode": "id_switches",
+              "rate": 0.0008333333333333334
+            }
+          ],
+          "false_negatives": 194,
+          "false_positive_decomposition_schema_version": 2,
+          "false_positive_frame_count": 101,
+          "false_positives": 139,
+          "far_off_court_false_positive_frames": 0,
+          "far_off_court_false_positive_track_ids": [],
+          "four_player_coverage": 0.8166666666666667,
+          "gt_detections": 1200,
+          "gt_frame_count": 300,
+          "hota": 0.818080750047246,
+          "hota_iou_threshold": 0.5,
+          "hota_matched_pair_count": 5,
+          "hota_single_threshold": true,
+          "id_switches": 1,
+          "identity_switch_event_count": 1,
+          "identity_switch_events": [
+            {
+              "frame_index": 58,
+              "frames_since_previous_match": 16,
+              "gt_track_id": 1,
+              "iou": 0.5960968366196102,
+              "new_pred_track_id": 1,
+              "previous_match_frame_index": 42,
+              "previous_pred_track_id": 4
+            }
+          ],
+          "identity_switch_transitions": [
+            {
+              "count": 1,
+              "first_frame_index": 58,
+              "gt_track_id": 1,
+              "last_frame_index": 58,
+              "new_pred_track_id": 1,
+              "previous_pred_track_id": 4
+            }
+          ],
+          "idf1": 0.8213219616204691,
+          "iou_threshold": 0.5,
+          "matches": 1006,
+          "mota": 0.7216666666666667,
+          "near_miss_false_positive_rate": 0.11790393013100436,
+          "near_miss_false_positives": 135,
+          "near_miss_localization": {
+            "count": 135,
+            "median_iou": 0.39842388963717607,
+            "p90_iou": 0.48209423281105424,
+            "rate": 0.11790393013100436,
+            "rate_denominator": 1145,
+            "rate_threshold_v2": 0.1
+          },
+          "no_gt_frame_false_positives": 0,
+          "off_court_apron_margin_m": 1.0,
+          "off_court_decomposition_schema_version": 1,
+          "off_court_false_positive_frames": 20,
+          "off_court_false_positive_track_ids": [
+            1,
+            3
+          ],
+          "outside_gt_prediction_count": 0,
+          "outside_gt_prediction_track_ids": [],
+          "outside_image_false_positives": 0,
+          "precision": 0.8786026200873363,
+          "pred_detections": 1145,
+          "primary_failure_mode": "missing_gt_detections",
+          "primary_failure_mode_v2": "missing_gt_detections",
+          "primary_failure_mode_v2_1": "missing_gt_detections",
+          "recall": 0.8383333333333334,
+          "schema_version": 1,
+          "spectator_or_background_false_positives": 139,
+          "temporal_coverage": {
+            "gt_detections_after_last_prediction": 0,
+            "gt_detections_without_predictions": 0,
+            "gt_frame_count": 300,
+            "gt_frame_range": {
+              "first": 0,
+              "last": 299
+            },
+            "gt_frames_after_last_prediction": 0,
+            "gt_frames_without_predictions": 0,
+            "prediction_frame_count": 300,
+            "prediction_frame_range": {
+              "first": 0,
+              "last": 299
+            }
+          },
+          "timing": {},
+          "track_count": 4,
+          "track_frame_count": 1145,
+          "track_source_id": "//home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/score_roots/eval2_rfdetr",
+          "tracks_fps": 30.0,
+          "tracks_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/score_roots/eval2_rfdetr/wolverine_mixed_0200_mid_steep_corner/wolverine_mixed_0200_mid_steep_corner/tracks.json",
+          "true_spectator_or_background_false_positives": 4
+        }
+      ],
+      "track_source_id": "//home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/score_roots/eval2_rfdetr"
+    }
+  ],
+  "status": "scored_existing_tracks_only",
+  "track_file_count": 1,
+  "track_source_count": 1
+}

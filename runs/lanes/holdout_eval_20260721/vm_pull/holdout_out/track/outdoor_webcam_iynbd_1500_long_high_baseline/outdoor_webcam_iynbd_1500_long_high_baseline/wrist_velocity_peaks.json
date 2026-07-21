@@ -1,0 +1,28 @@
+{
+  "artifact_type": "racketsport_wrist_velocity_peaks",
+  "blockers": [
+    "missing_sam3d_skeleton3d"
+  ],
+  "joint_mapping": {},
+  "not_gate_verified": true,
+  "peaks": [],
+  "schema_version": 1,
+  "source": "skeleton3d_world_joints",
+  "source_path": "/home/arnavchokshi/holdout_eval_20260721/repo/holdout_out/track/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/skeleton3d.json",
+  "source_provenance": {},
+  "status": "blocked",
+  "summary": {
+    "min_confidence": 0.25,
+    "min_separation_s": 0.1,
+    "min_speed_mps": 4.0,
+    "peak_count": 0,
+    "player_count": 0,
+    "raw_peak_count": 0,
+    "speed_smoothing_window_frames": 3,
+    "usable_sample_count": 0
+  },
+  "trusted_for_contact": false,
+  "warnings": [
+    "missing_sam3d_skeleton3d"
+  ]
+}

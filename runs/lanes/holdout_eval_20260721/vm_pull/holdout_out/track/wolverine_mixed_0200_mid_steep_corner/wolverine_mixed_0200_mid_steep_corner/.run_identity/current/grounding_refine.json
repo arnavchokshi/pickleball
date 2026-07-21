@@ -1,0 +1,7 @@
+{
+  "fingerprint": "95f6294fe57c4733516dc1f4de4ffc2398121119579b20d709757b9b72a30f43",
+  "generation": "stages/grounding_refine/95f6294fe57c4733516dc1f4de4ffc2398121119579b20d709757b9b72a30f43-8c4e32a2622b4e8288d1d61682ee86ff",
+  "manifest_sha256": "6aa2f08daa38f46cf5ec1e4868ffb7dd0a5092e1be9071aaae22246862985345",
+  "schema_version": 1,
+  "stage": "grounding_refine"
+}

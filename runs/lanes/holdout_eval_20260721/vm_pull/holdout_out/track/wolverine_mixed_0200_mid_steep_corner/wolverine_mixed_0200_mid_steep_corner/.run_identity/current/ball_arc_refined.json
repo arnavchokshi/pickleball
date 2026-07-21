@@ -1,0 +1,7 @@
+{
+  "fingerprint": "8405b2a57bc3cd714b8789bfb63719a830846eac65664c930365b331f5343eeb",
+  "generation": "stages/ball_arc_refined/8405b2a57bc3cd714b8789bfb63719a830846eac65664c930365b331f5343eeb-0d5341549b0f41518c9d2358ab75b934",
+  "manifest_sha256": "c177230dbaaa586f25e1d1d093f811267969d8140f5e88523f63668b9e4ee05e",
+  "schema_version": 1,
+  "stage": "ball_arc_refined"
+}

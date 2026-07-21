@@ -1,0 +1,102 @@
+{
+  "artifact_type": "racketsport_stage_identity",
+  "external_artifacts": [
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "fc329b53a8d522046779a45fba4e695ee953421e1187070a4ce9a36239cb1aaa",
+        "size": 3066813
+      },
+      "path": "source.mp4"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "6f53d66741aa146e37407dc91e70f3455e734173e548b922ed11a9705629fd97",
+        "size": 34253
+      },
+      "path": "frame_times.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "428bd08763432c96fefd46063c4678e676fc612987bf349b8ac1ec756f6efc60",
+        "size": 178715
+      },
+      "path": "timebase_decode_evidence.json"
+    },
+    {
+      "absolute": false,
+      "identity": {
+        "kind": "file",
+        "sha256": "f31aa25be2045f7692307cb301684f4ba617a3982af9f3cc9af25de212c692a1",
+        "size": 258828
+      },
+      "path": "timebase_contract.json"
+    }
+  ],
+  "fingerprint": "7f96f6e9a87b68e6abb9979a51ad26c55beb97460e687304c866b64558b34a54",
+  "identity": {
+    "code": {
+      "callable_sha256": "affe602f192b9158a49caa6469bff04eedd5d1fc78c8fa0c234c26097b6af14c"
+    },
+    "config": {
+      "sport": "pickleball"
+    },
+    "explicit_inputs": {},
+    "models": {},
+    "schema_version": 1,
+    "source": {
+      "sha256": "fc329b53a8d522046779a45fba4e695ee953421e1187070a4ce9a36239cb1aaa",
+      "size": 3066813,
+      "timing": {
+        "duration_s": 10.01,
+        "fps": 59.94005994,
+        "frame_count": 600,
+        "height": 1080,
+        "width": 1920
+      }
+    },
+    "stage": "ingest",
+    "upstream": {}
+  },
+  "managed_artifacts": [],
+  "metadata": {
+    "outcome": {
+      "artifacts": [
+        "source.mp4",
+        "frame_times.json",
+        "timebase_decode_evidence.json",
+        "timebase_contract.json"
+      ],
+      "metrics": {},
+      "notes": [
+        "ingested /home/arnavchokshi/holdout_eval_20260721/repo/eval_clips/ball/burlington_gold_0300_low_steep_corner/source.mp4 as source.mp4 (1920x1080 @ 59.940fps)",
+        "wrote frame_times.json from ffprobe PTS",
+        "wrote schema-valid timebase_contract.json with exact ffprobe PTS and explicit frame availability"
+      ],
+      "stage": "ingest",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 2.773
+    },
+    "pipeline_state": {
+      "camera_motion_auto": {
+        "enabled": false,
+        "forced": "auto",
+        "probe_wall_seconds": 0.0,
+        "sampled_frame_count": 0,
+        "score": null,
+        "threshold": 2.5
+      },
+      "camera_motion_auto_decision_made": false,
+      "input_quality_report": null,
+      "trust_bands": {}
+    }
+  },
+  "schema_version": 1,
+  "stage": "ingest"
+}
