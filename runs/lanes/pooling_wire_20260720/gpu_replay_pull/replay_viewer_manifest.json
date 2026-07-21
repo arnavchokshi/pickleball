@@ -1,0 +1,32 @@
+{
+  "annotation_sources": [],
+  "artifact_type": "racketsport_replay_viewer_manifest",
+  "auto_bounce_candidates_url": null,
+  "ball_arc_render_url": null,
+  "ball_arc_solved_url": null,
+  "ball_bounce_candidates_url": null,
+  "ball_flight_sanity_url": null,
+  "ball_inflections_url": "/@fs//home/arnavchokshi/coldstart_20260706/repo/runs/lanes/pooling_wire_20260720/gpu_replay/xkadsq9bli3h/ball_inflections.json",
+  "body_mesh_index_url": null,
+  "body_mesh_url": null,
+  "clip": "xkadsq9bli3h",
+  "coaching_card_facts_url": null,
+  "contact_windows_url": "/@fs//home/arnavchokshi/coldstart_20260706/repo/runs/lanes/pooling_wire_20260720/gpu_replay/xkadsq9bli3h/contact_windows.json",
+  "label_overlays": [],
+  "match_stats_url": "/@fs/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/pooling_wire_20260720/gpu_replay/xkadsq9bli3h/match_stats.json",
+  "mesh_status": null,
+  "notes": [
+    "Viewer evidence is review-only and does not promote BODY, PHYSICS, RKT, or E2E gates.",
+    "Vite /@fs URLs are intended for local review server use.",
+    "Vite allow root: /home/arnavchokshi/coldstart_20260706/repo",
+    "representation_status_json={\"status\":\"body_missing\"}",
+    "degraded_reasons_json=[{\"reasons\":[\"local BODY stage failed: body failed: FastSAM-3D-Body batch subprocess failed: FastSAM-3D-Body batch failed: could not import FastSAM-3D-Body notebook.utils.setup_sam_3d_body or direct sam_3d_body runtime (notebook_error=RuntimeError: CUDA error: CUDA-capable device(s) is/are busy or unavailable\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\n; direct_error=RuntimeError: CUDA error: CUDA-capable device(s) is/are busy or unavailable\\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1\\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\\n); degraded to skeleton-only\"],\"stage\":\"body\",\"status\":\"degraded\"},{\"reasons\":[\"paddle_pose fail-closed: missing skeleton3d.json from BODY/SAM-3D, so no racket_pose_estimate.json was emitted\"],\"stage\":\"paddle_pose\",\"status\":\"blocked\"},{\"reasons\":[\"coaching_fact_audit rejected: reason=builder_exception; ValueError: missing required field players[1].frames[0].track_world_xy\"],\"stage\":\"coaching_facts\",\"status\":\"degraded\"}]"
+  ],
+  "physics_refinement_url": null,
+  "rally_spans_url": null,
+  "replay_scene_url": null,
+  "reviewed_bounces_url": null,
+  "schema_version": 1,
+  "video_url": "/@fs//home/arnavchokshi/coldstart_20260706/repo/data/pbv_replay_20260720/xkadsq9bli3h/max.mp4",
+  "virtual_world_url": "/@fs//home/arnavchokshi/coldstart_20260706/repo/runs/lanes/pooling_wire_20260720/gpu_replay/xkadsq9bli3h/confidence_gated_world.json"
+}
