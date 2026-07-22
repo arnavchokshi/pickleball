@@ -528,3 +528,30 @@ cross-reference K's 24 refusal frames against L's bridge frame ranges (both arti
 CPU-only). If it holds, the ball-3D program REORDERS: fix the fabrication (and restore the stripped
 interpolated provenance) FIRST, then judge arc/contact quality — my taxonomy's 42/52
 anchor-semantics-structural verdict may be partly measuring a TRK defect, not a ball defect.)_
+
+## 2026-07-21T20:20Z — regroup Day-1 wave (Fable orchestrator)
+
+E0 CLOSED: `METHOD_INVALID_AUDIO_ONLY=292` (runs/lanes/abc_experiment_20260721/E0_VERDICT.md).
+Arm A recovered+verified (owner-41 macro-F1 0.0, 1000/1000 steps); B/C killed method-invalid;
+`pickleball-gpu-abc` STOPPED (disk kept, staged media/derivatives persist). Fleet ledger updated.
+
+| lane | model/effort | owns (exclusive) | state |
+|---|---|---|---|
+| abc_audiofix_20260721 | gpt-5.6-sol ultra (gate-adjacent causal experiment) | build_abc_arm_manifests.py + test_abc_arm_manifests.py | RUNNING pid 13788 |
+| ball_b0_split_20260721 | gpt-5.6-sol xhigh | build_ball_regroup_split.py + its test | RUNNING pid 13790 |
+| court_c0_ingest_20260721 | gpt-5.6-sol xhigh | ingest_cvat_court_images.py + its test | RUNNING pid 13792 |
+| person_p1_roboflow_20260721 | gpt-5.6-sol xhigh | export_roboflow_person_yolo_dataset.py + its test | RUNNING pid 13794 |
+| data_steward_ledger_20260721 | gpt-5.6-sol xhigh | runs/manager/data_ledger.json + DATA_LEDGER.md + audit_data_utilization.py + its test | RUNNING pid 13796 |
+
+Queue after slots free: R0 crop-match feasibility (local xkadsq9bli3h media), P0 pack builder
+(fixtures; compare-video media stays VM-side per HARD DISK RULE). E-track relaunch after
+abc_audiofix ultra-review: restart VM -> rebuild B/C manifests -> sequential B, C -> owner-41
+scoring -> abc_decision_gate E1 screen. Owner labeling task 87 in progress; B0/C0 poll
+cvat_upload/exports/ for arrivals.
+
+**2026-07-21 INCIDENT (laptop power-loss/reboot):** all 5 regroup Day-1 codex lanes died mid-flight
+(no report.json). Both VMs confirmed TERMINATED by main — no spend leak. All lanes RE-DISPATCHED
+from unchanged specs at 5-lane parity (new pids 3408/3410/3412/3414/3416); run-1 logs preserved as
+log_run1_killed_by_reboot.txt; substantial run-1 code survived on disk in each lane's owned files
+(audiofix's builder+test edits included) — re-runs resume from that state. Task-87 scratch export
+filed+md5-validated pre-incident; owner resumed court tasks 88-91.

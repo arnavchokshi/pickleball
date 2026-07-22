@@ -231,3 +231,344 @@ is now standard for Track F lanes.
   event_head_corpus training VM) + pickleball-a100-fleet1 TERMINATED (historical coldstart, stopped
   spot — ~200GB disk still incurs small standing cost; flag to owner as optional cleanup, NOT
   deleted without explicit go).
+
+## 2026-07-20 event_head_retrain lane — PROVISIONING
+
+- pickleball-gpu-retrain (a2-highgpu-1g, 1x A100-SXM4-40GB, SPOT, instance-termination-action=STOP,
+  labels fable-lane=event_head_retrain/fable-fleet=pickleball/owner=arnavchokshi, ladder
+  asia-southeast1-a/b -> us-central1-a/b/c/f, image pytorch-2-9-cu129-ubuntu-2204-nvidia-580/
+  deeplearning-platform-release, 200GB pd-balanced, startup-script scripts/fleet/lane_vm_startup.sh)
+  — attempt in progress. Mission: re-verify the T17 weighted-loss fix (commit 5adaf396c, on main)
+  escapes all-negative event-head collapse. $12 hard cap, 5h boot shutdown rail + 25min idle
+  watchdog armed via startup script. Reuses local runs/lanes/event_head_corpus_20260719/vm_pull/
+  train/last_event_head.pt (step-9000 seed) and manifest SHA
+  e53954ef9ca7336b1d694586185288e7112aa4b56690abc24df13087a922ce84 (re-staged fresh on this VM,
+  asserted byte-identical).
+- pickleball-gpu-retrain CREATED 2026-07-20 in us-central1-a (asia-southeast1-a and -b both hit
+  ZONE_RESOURCE_POOL_EXHAUSTED_WITH_DETAILS stockout first; us-central1-a won on first attempt of
+  rung 2). a2-highgpu-1g SPOT, external IP 34.9.63.251, image pytorch-2-9-cu129-ubuntu-2204-nvidia-580,
+  200GB pd-balanced. Startup script used a locally-amended copy of scripts/fleet/lane_vm_startup.sh
+  (the checked-in file is a bare P0-1 scaffold with no shutdown rail or idle watchdog) that prepends
+  the VM_RUN_PLAN.md-mandated `sudo shutdown -P +300` hard 5h wall rail (fail-closed on
+  /run/systemd/shutdown/scheduled) plus a 25-min idle watchdog polling for
+  train_event_head.py/eval_event_head.py/build_event_head_dataset.py/yt-dlp/ffmpeg/rsync activity,
+  then folds in the scaffold's compute-mode/preemption-watcher steps; local copy only, not committed.
+
+## 2026-07-20T16:13:54Z pbv_replay_20260720 lane — PROVISIONED
+
+| pickleball-gpu-replay | asia-southeast1-c | A100-80GB | a2-ultragpu-1g SPOT | RUNNING | pbv_replay_20260720 (GPU slot 2-of-4, drill-session pb.vision replay E2E) | spot band ~$1.5-2.5/hr | 2026-07-20T16:13:54Z | ladder: us-central1-a A100-80 stockout (attempt 1), asia-southeast1-c A100-80 SUCCESS (attempt 2); boot disk = source-snapshot pickleball-fleet-snap-20260709-w7close (200GB pd-balanced, pre-baked pipeline venv+ultralytics+ffmpeg+corpus); startup-script = locally-amended runs/lanes/pbv_replay_20260720/scripts/lane_vm_startup_railed.sh (boot-armed `shutdown -P +180` 3h hard wall + 25-min idle watchdog polling process_video.py/ffmpeg/curl/gdown/git/pip activity, NOT committed); mission = full production process_video.py E2E on pb.vision Drill Session clip xkadsq9bli3h (186.015s, compare-only hold-out, owner-signed full usage rights), ball_arc external 20-min hard cap enforced by manager log-polling (kill+rerun --no-ball-arc on breach), $8 cap. Concurrent with pickleball-gpu-retrain (event_head_retrain lane, us-central1-a, untouched, not this lane's resource). See runs/lanes/pbv_replay_20260720/. |
+
+## 2026-07-20 p0i_scorecard_20260720 lane — PROVISIONED
+
+| pickleball-gpu-p0icard | us-central1-a | A100-40GB | a2-highgpu-1g SPOT | RUNNING | p0i_scorecard_20260720 (GPU slot 3-of-4, P0-I selection-layer frozen 2-clip scorecard, commit 881280045) | spot band ~$1.1-1.5/hr | 2026-07-20 (created on first zone-ladder attempt, us-central1-a) | image pytorch-2-9-cu129-ubuntu-2204-nvidia-580/deeplearning-platform-release, 200GB pd-balanced boot; fresh git clone (NOT the coldstart snapshot) pinned to 881280045; cap $4/90min hard; startup-script = checked-in scripts/fleet/lane_vm_startup.sh (bare scaffold, no rail — manager arms `sudo shutdown -P +90` by hand post-boot per lane spec); mission = env-fidelity gate (variant-P burlington/wolverine reproduction to 1e-9) then the committed player-selection layer scored once, no tuning. Concurrent with pickleball-gpu-retrain (event_head_retrain, us-central1-a) and pickleball-gpu-replay (pbv_replay_20260720, asia-southeast1-c), both untouched. |
+
+## 2026-07-20T16:46Z p0i_scorecard_20260720 CLOSE — VM DELETED, fleet reconciled, ~$0.24-0.33
+
+- **DONE+DELETED**: `pickleball-gpu-p0icard` (us-central1-a, A100-40GB SXM4, a2-highgpu-1g SPOT)
+  created ~16:32Z, rail armed 16:33:49Z (`shutdown -P +90`), deleted 16:46:21Z. Wall **0.22h** ->
+  est **$0.24-0.33** (cap $4, well under). List-confirmed 0 instances + 0 disks named
+  pickleball-gpu-p0icard; fleet-wide list shows only pickleball-gpu-retrain (event_head_retrain,
+  untouched) + pickleball-gpu-replay (pbv_replay, untouched) + historical pickleball-a100-fleet1
+  TERMINATED.
+- **Mission: SCORED, RESULT = DECISIVE FAIL.** ENV-FIDELITY GATE (variant-P burlington/wolverine
+  through the unmodified production path) reproduced all 10 registered scalars at delta 0.000e+00
+  (byte-exact). Selection arm (committed P0-I layer, commit 8812800459361ee6a9e0781700d8d59e725ea9b7,
+  scored via the SAME frozen scorer, one shot, no tuning) **catastrophically regressed both clips**:
+  wolverine spectFP 4->651 (target 0), switches 1->22 (target 0), farFP 0->969 (target 0), IDF1
+  0.8036->0.4046, cov4 0.7233->0.0033; burlington spectFP 0->7783, switches 0->9, farFP 0->7868,
+  IDF1 0.9220->0.2878, cov4 0.9933->0.0. Selection-OFF byte-identical to env-fidelity tracks.json
+  confirmed both clips (sha256 match). interpolated:true markers present (burlington 13, wolverine
+  8) per spec. **Root cause found and pinned**: `threed/racketsport/player_selection.py:1764`
+  returns `slot_players + unbound_players` into the exported product `tracks.json` "players" list —
+  every raw-pool fragment the four-slot enrollment leaves unbound (`leave_unbound` decision, audit
+  `selection_state="unbound_abstention"`) is ALSO serialized as its own top-level scoreable player
+  instead of staying report-only metadata. Burlington exported 186 players (4 bound slots + 182
+  unbound fragments) against 4 GT players; wolverine exported 42 (4 bound + 38 unbound). The
+  distinguishing `selection_state` field exists in `player_selection_report.json`'s `tracks` audit
+  array but is NOT carried onto the entries in the actual exported `tracks.json` "players" list, so
+  the frozen scorer (and any other consumer reading the product artifact directly) has no way to
+  filter them out. Scorer itself is clean: 0 recorded errors, both clip rows present in both the
+  env-fidelity and selection score reports. Full evidence + hashes:
+  runs/lanes/p0i_scorecard_20260720/vm_pull/ (27/27 files sha256-verified two-sided, tarball hash
+  match). **Manager should NOT flip best_stack; NOT a real win as committed; route back to the P0-I
+  owner for a fix (drop or clearly out-of-band-flag unbound fragments before export) and a fresh
+  single-shot re-score once fixed — no further tuning on this run's numbers.**
+
+## 2026-07-20T17:32:32Z pbv_replay_20260720 CLOSE — DONE+DELETED, list-confirmed, ~$2-3.3
+
+- `pickleball-gpu-replay` DELETED 2026-07-20T17:32:32Z: `gcloud compute instances delete` exit 0; `instances list --filter=labels.fable-fleet=pickleball` shows only `pickleball-gpu-retrain` (RUNNING, event_head_retrain lane, untouched — not this lane's resource) + `pickleball-a100-fleet1` (TERMINATED, historical); `disks list --filter=name~pickleball-gpu-replay` returns 0 (auto-delete=yes boot disk cleaned up with the instance). Wall: created 2026-07-20T16:12:15Z -> deleted 2026-07-20T17:32:32Z = **~1.32h**. A100-80 spot band $1.5-2.5/hr -> est **$1.98-3.30** (well under the $8 cap).
+- **RESULT (honest, partial):** frozen main-stack `process_video.py` ran E2E on pb.vision Drill Session (xkadsq9bli3h, 186.015s, compare-only hold-out, owner-signed usage rights) with `--body-local --allow-auto-court-corners-preview --verify-viewer --max-players 4`. The pre-tracking court-calibration correction gate (`_court_calibration_needs_correction`) fail-closed BLOCKED tracking for real: aggregated court-line evidence across the full clip found every required line/net EXCEPT `far_centerline` (`auto_calibration_ready:false`, single missing line) — this cascaded to blocked placement/BODY/paddle_pose/match_stats (0 tracked players, no BODY mesh, by design, not a crash). Ball (WASB, full-rate) DID run: 9,132/11,168 frames visible (~81.8% raw 2D detection, trust-band `low_confidence`, BALL M1 gate 0/8 milestones — not a verified track), 230 unreviewed bounce candidates, 8 ball_inflection markers. `ball_arc` (3D chain) TRIPPED the mandated 20-min external cap (~16:49:28Z->17:09:28Z, process confirmed alive/CPU-active throughout, no arc-solved artifact ever appeared) -> SIGTERM'd and cleanly relaunched with `--no-ball-arc`, which content-addressed-reused ingest/calibration/camera_motion/ball (skipped, identical fingerprint) and finished in 150.5s wall, overall bundle status `partial` (honest, not fabricated complete). Manifest built, all 7 non-null manifest URLs resolve to real files (video/ball_bounce_candidates/ball_inflections/contact_windows/coaching_card_facts/confidence_gated_world), everything else honestly `null`. Real headless-Chromium viewer load independently verified (Node 20 + Playwright installed fresh on the VM; packaged `verify_process_video_viewer.py`'s `.world-panel canvas` selector timed out on the freshly-started dev server, so verification was done via an equivalent manual Playwright script): zero page/console errors, screenshot shows the real video frame + honest \"Players 0 / Ball not visible / low_confidence\" HUD, saved to `runs/lanes/pbv_replay_20260720/vm_pull/viewer_screenshot.png`.
+- Two-sided sha256 match on the pulled run bundle: `940572fda0312949baf090946f76deff6e8b38a6b2718aeaed964de0f9797f41`. Full evidence + report at `runs/lanes/pbv_replay_20260720/`.
+
+## 2026-07-20 event_head_retrain lane — DONE + DELETED, TEARDOWN CONFIRMED
+
+- pickleball-gpu-retrain: created ~15:22:30Z us-central1-a (asia-southeast1-a/-b stockout first),
+  deleted 19:30:41Z. Wall ~4h08m. Cost est **$4.55-$6.20** (4.13h * $1.1-1.5/hr A100-40 spot band).
+  `gcloud compute instances list --filter="labels.fable-lane=event_head_retrain"` EMPTY;
+  `gcloud compute disks list` has no `pickleball-gpu-retrain` disk — list-confirmed zero resources.
+  Fleet now: only pre-existing pickleball-a100-fleet1 (TERMINATED, historical, untouched, not this
+  lane's VM).
+- RESULT: weighted-loss retrain (T17 fix, commit 5adaf396c, HEAD c373ce7f3) ESCAPES all-negative
+  collapse. Step-9000 baseline: TP=0 (all tolerances), max_positive_class_probability mean 0.025 /
+  max 0.031 over 50 clips. Step-16918 final (threshold 0.05, same frozen 50-clip public gate):
+  510 predictions, TP=44/70/107 at tolerance 1/2/5 frames (F1 0.135/0.215/0.329), max
+  positive_class_probability mean 0.137 / max 0.357. Internal training-validation trajectory (own
+  stricter metric, tolerance_frames=2) was non-monotonic: f1=0 through step 15000 (max_prob rising
+  0.110->0.144->0.509), first nonzero at step 16000 (f1=0.00094, tp=3), regressed back to f1=0/tp=0
+  at final step 16918 (max_prob 0.466) — the internal metric's own threshold this checkpoint just
+  misses, but the recipe's actual threshold-0.05 gate is unambiguous: WEIGHTED_LOSS_WORKS.
+  Manifest SHA e53954ef9ca7336b1d694586185288e7112aa4b56690abc24df13087a922ce84 byte-identical
+  reproduction required excluding 7 jhong93 + 2 OpenTT videos to match the frozen corpus's own
+  (undocumented, historical) media-present pattern — see report for detail. Two VM_RUN_PLAN.md
+  staleness bugs fixed in-lane: OpenTT videos are direct `.mp4` URLs not zip-embedded (fetch script
+  rewritten), and `unzip` was missing from the DL-platform image (installed). All artifacts pulled +
+  two-sided sha256 verified at runs/lanes/event_head_retrain_20260720/vm_pull/. VERIFIED=0 (this is
+  a bounded resume experiment per RETRAIN_RECIPE.md, not a promotion); no best_stack change.
+
+## 2026-07-20T00:36:38Z pooling_wire_20260720 GPU proof-run lane — PROVISIONED
+
+- `pickleball-gpu-poolproof` created us-central1-a on first zone-ladder attempt (a2-highgpu-1g,
+  A100-40GB SXM4, SPOT, instance-termination-action=STOP), labels
+  fable-lane=pool_proof/fable-fleet=pickleball/owner=arnavchokshi, external IP 136.64.211.135. Boot
+  disk = source-snapshot pickleball-fleet-snap-20260709-w7close (200GB pd-balanced, pre-baked
+  pipeline venv+ultralytics+ffmpeg+corpus — reused for speed/cost vs a bare-image full env rebuild;
+  fresh `git fetch && git checkout main && git pull` performed post-boot to reach HEAD e245cd2da).
+  startup-script = locally-amended runs/lanes/pooling_wire_20260720/scripts/lane_vm_startup_railed.sh
+  (rail armed at BOOT via metadata per the 2026-07-17 ops lesson: `shutdown -P +90` hard 90min wall +
+  20-min idle watchdog polling process_video.py/ffmpeg/git/pip/playwright/node activity + preemption
+  watcher; NOT committed). Mission: prove whether e245cd2da's cross-frame court-line evidence pooling
+  (--court-line-evidence-pooling, default-OFF) recovers far_centerline on the real pb.vision Drill
+  clip (xkadsq9bli3h) and flips auto_calibration_ready so TRK/BODY finally run on a fresh clip — one
+  GPU replay, RERUN_CMD.md, $8 cap. Video re-fetched from the public GCS source
+  (storage.googleapis.com/pbv-pro/xkadsq9bli3h/max.mp4), sha256
+  5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181 verified. No other fable-fleet
+  instance running concurrently (fleet was empty except historical TERMINATED pickleball-a100-fleet1
+  before this create).
+
+## 2026-07-20T19:41:15-07:00 (02:41:15Z) pooling_wire_20260720 GPU proof-run lane CLOSE — DONE, VM DELETED (unexpected external teardown), list-confirmed zero
+
+- **RESULT: DECISIVE POSITIVE.** `--court-line-evidence-pooling` (commit e245cd2da) recovered
+  `far_centerline` on the real Drill clip (xkadsq9bli3h) at production runtime: 68 total support
+  frames (53 contributing + 15 held-out), `geometry_fit_p90_px=0.3587` — matching the diagnostic's
+  proven 63-frame/0.357px recovery. `court_line_evidence_pooled.json` readiness flipped
+  `auto_calibration_ready: true`, `missing_required_line_ids: []`. The pre-tracking
+  `_court_correction_gate_before_tracking` gate did NOT block (no `court_correction_task.json`
+  written) — first time ever on this clip. Tracking RAN FOR REAL (1015.3s, yolo26m+BotSORT+OSNet
+  ReID, `source_mode=yolo26m_botsort_reid`) and produced 4 player tracks (ids 1-4; coverage 5.0%,
+  5.3%, 50.8%, 46.1% of 11,168 frames — all recomputed role=right/side=near by placement's geometry
+  check, plausible for a one-sided feeding drill). Placement/frames/world/confidence_gate/match_stats
+  all RAN. BODY DEGRADED to skeleton-only (`base_skeleton_player_frame_count=5984`; the scheduled
+  1,368 deep_mesh/world_mesh player-frame targets were never fulfilled — `body_mesh_url: null`,
+  `mesh_status: null` in the final manifest) due to `CUDA error: CUDA-capable device(s) is/are busy
+  or unavailable` when the FastSAM-3D-Body batch subprocess tried to init — **likely self-inflicted
+  by this lane's own startup script's `nvidia-smi -c EXCLUSIVE_PROCESS`** (copied from the
+  cross-lane-contention scaffold pattern; blocks the pipeline's OWN FastSAM-3D-Body subprocess from
+  getting a second CUDA context on a single-GPU VM). Flagging for future BODY-local lanes: do not set
+  EXCLUSIVE_PROCESS on a VM running `--body-local`. Real headless-Chromium viewer verification (manual
+  Playwright fallback — the packaged `--verify-viewer` timed out on the `.world-panel canvas`
+  selector against a cold Vite dev server, same defect as the 2026-07-20 pbv_replay lane; also hit
+  and resolved a `Sign in` dev-auth wall via `VITE_REPLAY_VERIFY_DEV_BYPASS=1` +
+  `REPLAY_VERIFY_DEV_BYPASS=1`) shows the real video frame with players on court, HUD reading
+  `Players: 4`, `Coverage gaps now: 2/4`, zero page/console errors — screenshot at
+  `runs/lanes/pooling_wire_20260720/gpu_replay_pull/viewer_screenshot_pooled.png`.
+- Two intermediate environment gaps on the stale 2026-07-09 snapshot were fixed in-lane (both
+  previously-solved, just absent from this snapshot): missing `models/checkpoints/osnet_x1_0_market1501.pt`
+  (re-fetched via the documented `gdown` recipe, byte-identical 10,399,605 bytes) and missing
+  `torchreid` package (`pip install torchreid==0.2.5`). Two prior full-pipeline attempts failed on
+  these before the third attempt succeeded; content-addressed stage reuse meant only tracking-onward
+  was recomputed on retries, not the whole pipeline.
+- **Ops anomaly (honest disclosure):** an out-of-band automated process (not a command I issued)
+  extended this lane's boot shutdown rail once (`WALL_MESSAGE=pool_proof rail extended by manager
+  (bounded)`) and then **deleted the VM itself** (`gcloud` delete operation completed
+  2026-07-20T19:41:15-07:00) before I finished my own full artifact pull — SSH connectivity was lost
+  mid-pull. That same process appears to have performed its own partial artifact pull (PIPELINE_SUMMARY.json,
+  tracks.json, court_line_evidence_pooled.json, placement.json, court_calibration.json,
+  body_compute_execution.json, replay_viewer_manifest.json — all landed in gpu_replay_pull/ at the
+  same timestamp as the deletion) and dropped its own `runs/lanes/pooling_wire_20260720/PROOF_RESULT.md`
+  verdict, which is directionally consistent with mine but its "3,233 mesh frames scheduled/computed"
+  claim is NOT supported by the pulled artifacts (body_compute_execution.json's `summary` block shows
+  1,368 *scheduled* player-frame mesh targets, not 3,233, and none were actually computed —
+  `body_mesh_url` is null); this report treats the directly-inspected artifacts as authoritative over
+  that external summary. Large raw evidence (25MB `court_line_evidence_pool_raw_frames.json`,
+  `virtual_world.json`, `confidence_gated_world.json`, `trust_bands.json`) was inspected live over SSH
+  (values recorded in this run's transcript / PROOF_RESULT.md) but not preserved as pulled files —
+  the VM was gone before those copies could be made. Two-sided sha256 (local vs remote) could not be
+  completed for the same reason; `CHECKSUMS_local.sha256` in the pull dir is local-side only.
+- Teardown: list-confirmed zero — `gcloud compute instances list`/`disks list` filtered on
+  `pickleball-gpu-poolproof` both return empty; only `pickleball-a100-fleet1` (historical, TERMINATED,
+  untouched) remains fleet-wide. Wall: created 2026-07-21T00:36:38Z -> deleted 2026-07-21T02:41:15Z =
+  **~2.08h**. A100-40 spot band ~$1.1-1.5/hr -> est **$2.29-3.12** (well under the $8 cap).
+  VERIFIED=0 — this is a one-shot real-clip proof, not a promotion; best_stack.json untouched
+  (`--court-line-evidence-pooling` stays default-OFF pending owner review of the BODY/CUDA-mode and
+  coaching_facts findings above).
+
+## 2026-07-21T09:32:22Z mesh_proof_20260721 GPU proof-run lane — PROVISIONED
+
+- `pickleball-gpu-meshproof` created us-central1-a on first zone-ladder attempt (a2-highgpu-1g,
+  A100-40GB, SPOT, instance-termination-action=STOP), labels
+  fable-lane=mesh_proof/fable-fleet=pickleball/owner=arnavchokshi, external IP 34.58.11.62. Boot
+  disk = source-snapshot pickleball-fleet-snap-20260709-w7close (200GB pd-balanced, pre-baked
+  pipeline venv). startup-script = COMMITTED scripts/fleet/lane_vm_startup.sh (post-86f170976:
+  pipeline VMs default to DEFAULT CUDA compute mode; EXCLUSIVE_PROCESS now requires explicit
+  fable-role=training; no baked-in shutdown rail in the checked-in scaffold, so a rail is armed
+  via SSH fallback immediately post-boot per lane spec). Mission: re-run yesterday's
+  pooling_wire_20260720 Drill-clip replay (xkadsq9bli3h) with this fix live to prove FULL 3D BODY
+  MESHES compute (yesterday: 0 meshes, CUDA busy/unavailable from self-inflicted EXCLUSIVE_PROCESS
+  on the old railed startup script; coaching_facts also crashed on missing_player_positions, now
+  typed-degradation per the same commit). auth verified live (hello@swayformations.com,
+  project gifted-electron-498923-h1). $8 cap; teardown mandatory at lane close.
+
+## 2026-07-21 holdout_eval_20260721 lane — PROVISIONED
+
+- `pickleball-gpu-holdout` created us-central1-a on FIRST zone-ladder attempt (a2-highgpu-1g,
+  1x A100-40GB SXM4, SPOT, instance-termination-action=STOP), labels
+  fable-lane=holdout_eval,fable-fleet=pickleball,owner=arnavchokshi, external IP 136.65.0.149.
+  Boot disk = source-snapshot pickleball-fleet-snap-20260709-w7close (200GB pd-balanced,
+  pre-baked pipeline venv). startup-script = committed scripts/fleet/lane_vm_startup.sh
+  (sets CUDA DEFAULT compute mode only; no baked shutdown rail — armed via SSH immediately
+  post-boot per lane spec). Mission: preregistered 2026-07-21 selection-layer ONE-SHOT holdout
+  eval (Indoor fresh + Outdoor disclosed-historical) + RF-DETR production-reproduction gate
+  (burlington+wolverine). Pin 94d1027d0a828c37bfcec0c382b2f8450271b532 (== current origin/main
+  HEAD at dispatch; 4 pinned file sha256s verified locally before dispatch). Fleet before this
+  create: pickleball-gpu-meshproof (RUNNING, mesh_proof lane, untouched) + historical
+  pickleball-a100-fleet1 (TERMINATED) — 2 concurrent after this create, under the 5-GPU cap.
+  $7 cap this lane; teardown mandatory at close.
+
+## 2026-07-21T10:42:41Z holdout_eval_20260721 CLOSE — DONE + DELETED, list-confirmed zero
+
+- `pickleball-gpu-holdout` DELETED 2026-07-21T10:42:41Z: `gcloud compute instances delete` exit 0;
+  `instances list --filter=labels.fable-fleet=pickleball` shows only `pickleball-gpu-meshproof`
+  (RUNNING, mesh_proof lane, untouched — not this lane's resource) + `pickleball-a100-fleet1`
+  (TERMINATED, historical); `disks list --filter="name~holdout"` returns 0 (auto-delete boot disk).
+  Wall: created ~10:04Z -> deleted 10:42:41Z = **~0.64h**. A100-40 spot band ~$1.1-1.5/hr -> est
+  **$0.70-0.96** (well under the $7 cap).
+- **Two real infra bugs found and fixed in-lane (both environment/path, zero code/config/threshold
+  changes, so retries do not violate one-shot scoring discipline — no valid score existed before
+  either fix landed):**
+  1. `models/MANIFEST.json` `rfdetr_large_2026.local_path` is hardcoded to a historical VM path
+     (`/home/arnavchokshi/pickleball_git/...`); unlike `yolo26m`, `process_video.py`'s
+     `_runtime_manifest_for_local_host()` host-portability override only covers `yolo26m`, not
+     rfdetr — fixed by placing the checkpoint at the exact legacy path (sha256 verified match, no
+     code touched). Flagging for a future lane: extend `local_overrides` to cover rfdetr_large_2026.
+  2. Lane harness bug (mine, not product code): `--out` must be the PARENT of the clip dir —
+     `process_video.py` builds `self.clip_dir = run_dir / clip` internally — passing an
+     already-clip-named path as `--out` doubles the path and silently orphans every downstream
+     artifact lookup. Cost the lane one wasted ~7.5min full run (indoor/outdoor tracking pools were
+     still real and salvaged without rerun; RF-DETR pools needed one clean retry after the
+     checkpoint-path fix landed).
+- **RESULT: EVAL 1 (selection-layer holdout) — CLEAN MISS on both clips, every axis, verbatim (see
+  coordinator report).** Indoor (fresh): IDF1 0.559 (bar 0.85), 4 switches, 395 true-spectator FP,
+  750 far-off-court FP, cov4 0.457 (bar 0.95), near-miss 0.125 (bar 0.10) — ALL SIX AXES FAIL.
+  Outdoor (disclosed historical): IDF1 0.756, 1 switch, 0 true-spectator FP (PASS), 41 far-off-court
+  FP, cov4 0.604, near-miss 0.167 — 5/6 axes FAIL. Pin 94d1027d0 includes the 2026-07-20
+  unbound-export fix (commit 0784dfaa6) that resolved p0i_scorecard_20260720's catastrophic
+  regression; even with that fix in, the selection layer is nowhere near the preregistered bar on
+  fresh/historical held-out data.
+- **RESULT: EVAL 2 (RF-DETR production reproduction) — discrete axes matched exactly, continuous
+  axes MISSED the 0.0001 bar.** Burlington: switches/spectFP/farFP 0/0/0 (exact match), IDF1
+  delta +0.00125 (repro 0.923269 vs frozen 0.922018), cov4 delta ~+0.0000003 (within tolerance).
+  Wolverine: switches/spectFP/farFP 1/4/0 (exact match), IDF1 delta +0.01770 (repro 0.821322 vs
+  frozen 0.803625), cov4 delta +0.09333 (repro 0.816667 vs frozen 0.723333) — large miss. Honest
+  read: this run used FRESH end-to-end RF-DETR inference through the real production entry on an
+  A100, whereas the frozen card's variant P reused H100 detbench raw detection dumps
+  (`vm_rerun/report.json`'s own disclosed honest-issue: "RF-DETR-L detections were NOT re-run on
+  this VM ... deterministic-in-practice ... not re-verified"); discrete count-axis exactness plus
+  continuous-metric drift is consistent with GPU-class floating-point inference variance, not a
+  construction-path bug. `rf_detr_production_reproduction_status` should move from `NO-ATTEMPT` to
+  a real, verbatim, dated **MISSED** entry per the trk_rfdetr_integrate_20260717 gate — flip stays
+  NOT authorized.
+- All artifacts pulled two-sided sha256 (tarball 301e107ebca5f0ccc0c994a4057d3c344df12a747f13b44f22263f2890e3dae6, 3295-file manifest) to
+  `runs/lanes/holdout_eval_20260721/vm_pull/`. VERIFIED=0 regardless; no best_stack change made by
+  this lane (reporting only).
+
+## 2026-07-21 abc_experiment_20260721 lane — PROVISIONING (attempt starting)
+
+- Provision gate reconcile: `gcloud compute instances list --filter="labels.fable-fleet=pickleball"`
+  at dispatch showed `pickleball-gpu-meshproof` (RUNNING, mesh_proof lane, untouched) +
+  `pickleball-a100-fleet1` (TERMINATED, historical). `pickleball-gpu-holdout` from the prior ledger
+  entry is ABSENT from the live list (already torn down by its own lane) — ledger reconciled.
+  1 concurrent GPU before this create; provisioning `pickleball-gpu-abc` makes 2/5. Gate PASS.
+- Mission: A/B/C causal experiment (does pb.vision in-domain teacher data lift pickleball
+  hit-detection vs owner-labels-only vs placebo), executing
+  `runs/lanes/w1b_abc_loader_20260721/VM_ABC_RUN.md` EXACTLY (LAUNCH_OK, 4 ultra review rounds).
+  Pin `e3f47d65176eb9a541b4c480a5ed39d78e6e3ce6` (== local HEAD == origin/main HEAD at dispatch).
+  Frozen T20 step-9000-lineage checkpoint =
+  `runs/lanes/event_head_corpus_20260719/vm_pull/train/last_event_head.pt`
+  (sha256 f7b61b25d7e147e3d6353c8ec2bdf6a86e41721455398c23b9c617e065316082). Owner-41 split from
+  `runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json` (61 train / 41 val, unchanged).
+  $15 hard cap this session; teardown mandatory at close.
+
+- `pickleball-gpu-abc` CREATED us-central1-a on FIRST zone-ladder attempt (a2-highgpu-1g,
+  1x A100-40GB SXM4, SPOT, instance-termination-action=STOP), external IP 34.136.248.78,
+  image pytorch-2-9-cu129-ubuntu-2204-nvidia-580/deeplearning-platform-release, 200GB pd-balanced
+  boot disk (WARN: disk 200GB > image 100GB, may need root repartition resize — checked post-boot).
+  startup-script = local runs/lanes/abc_experiment_20260721/scripts/lane_vm_startup_railed.sh
+  (boot-armed `shutdown -P +360` 6h hard wall + 30-min idle watchdog + CUDA DEFAULT compute mode +
+  clean fresh clone pinned e3f47d651, NOT committed). Fleet after this create: pickleball-gpu-abc
+  (RUNNING, this lane) + pickleball-gpu-meshproof (RUNNING, mesh_proof lane, untouched) +
+  pickleball-a100-fleet1 (TERMINATED, historical) = 2/5 concurrent GPUs.
+
+## 2026-07-21T11:26:55Z mesh_proof_20260721 GPU proof-run lane CLOSE — DONE (partial), VM+disk DELETED (unexpected external teardown, out-of-band operation, NOT issued by this lane), list-confirmed zero
+
+- **RESULT: DECISIVE PARTIAL POSITIVE.** The `86f170976` CUDA-compute-mode fix is CONFIRMED WORKING: `nvidia-smi -q` read `Compute Mode: Default` immediately post-boot (no manual correction needed), and — unlike yesterday's INSTANT 46s `CUDA-capable device(s) is/are busy or unavailable` failure — the BODY stage's FastSAM-3D-Body batch subprocess this run got a real second CUDA context and RAN REAL GPU INFERENCE for ~50 minutes: `nvidia-smi` showed live GPU utilization (spiked to 54%, 9.5-10.4GB VRAM used), real `fast_sam_subprocess/batch_outputs-*.json.chunks/bucket_*.pkl` output chunks were written progressively (grew to 86+ buckets), and `sam3d_body_input_prep.json` + `sam3d_keypoints_2d.json` were produced. The prior lane's blocking defect is closed.
+- **NEW BLOCKING DEFECT FOUND (not the same bug):** the local BODY run never completed. `body_compute_execution.json` (13.6MB, scheduled ex-ante) shows the request: `scheduled_frame_count=1200`, `scheduled_player_frame_count=1368`, `tier1_mesh_player_frame_count=1368` (ALL 1368 player-frames requested as full tier1 `world_mesh`, none downgraded to tier2 joints), `mesh_density_profile.status=uniform_fallback_missing_contact_evidence` (scheduled 3233/3574 frame/player-frame before the 1200-frame hard cap). **ACTUALLY COMPUTED: 0** — no `smpl_motion.json`, `skeleton3d.json`, or `body_mesh.json` was ever written; last real progress was `sam3d_keypoints_2d.json` at 10:24Z. Starting ~10:26-10:28Z the VM entered a severe, sustained kernel-level livelock: SSH banner-exchange timed out via both the external IP and an `--tunnel-through-iap` retry (ruling out a network-only cause); the serial console corroborates a true guest freeze — a `systemd` SIGABRT signal issued to `snapd` at 10:34:25Z was not delivered/printed until 10:47:56Z (13+ minute scheduling delay), and console output went fully silent from 10:50Z onward. `free -h` on this VM shape (a2-highgpu-1g: 12 vCPU, **83GB RAM, 0 swap**) had shown RSS climbing past 76-97GB shortly before the hang — consistent with a host-memory-exhaustion livelock (no swap to cushion it) during dense full-mesh vertex computation for 1368 player-frames, not a repeat of yesterday's CUDA-context bug. After ~55 minutes of total unresponsiveness with no recovery, `gcloud compute instances reset` was issued to regain control (hard reset; the in-flight run is unrecoverable by construction). Post-reset `journalctl -k -b -1` and `dmesg` showed **no explicit kernel OOM-killer log line** in the previous boot's journal — the hang manifested as scheduling/reclaim starvation severe enough that even syslog itself stalled, not a clean single OOM-kill.
+- **coaching_facts / manifest / verify: NEVER REACHED** — the pipeline died mid-BODY, before any of stages 12-24 ran. The rally_metrics `missing_player_positions` typed-degradation fix (same commit `86f170976`) was therefore NOT exercised live on this run; it remains verified only via the w3a lane's own focused suite (65 passed/8 skipped), not proven end-to-end against a real GPU bundle this session.
+- **Remediation attempted, interrupted:** diagnosed the likely fix (more host RAM, same A100-40 GPU type, still SPOT, within quota: `a2-highgpu-2g` = 24 vCPU/170GB RAM/2x A100-40GB vs `a2-highgpu-1g`'s 85GB — `a2-ultragpu-1g` was ruled out, it pairs with A100-**80GB** and this project's `PREEMPTIBLE_NVIDIA_A100_80GB_GPUS` quota is **0**, so a SPOT ultragpu instance is not provisionable). While issuing `gcloud compute instances stop` to begin the resize, discovered a **conflicting operation already `RUNNING`: `operationType: delete`**, issued under this same session's authenticated account (`hello@swayformations.com`) but **not a command this lane ran**. The delete completed (`status: DONE`, `progress: 100`, `endTime: 2026-07-21T11:26:55Z`) before the resize or a final artifact pull could happen — `gcloud compute scp` immediately after returned "resource ... was not found". This is the same class of ops anomaly the 2026-07-20 `pooling_wire_20260720` lane recorded (an out-of-band process deleting the lane's own VM mid-work); the fleet-reconcile idle-timeout sweep is the most likely source given the VM had been unreachable via SSH for ~55+ minutes (indistinguishable from "idle" to an external health check that can't see the guest-side livelock).
+- **Consequence:** `body_compute_execution.json`, `tracks.json`, `virtual_world.json`, and the process log could not be pulled to `runs/lanes/mesh_proof_20260721/vm_pull/` (boot disk was `auto-delete=yes`, destroyed with the instance) — no two-sided sha256 is possible. The numeric facts above (scheduled counts, hang timeline, compute-mode confirmation) were read directly over live SSH before the deletion and are recorded here as the authoritative record, per the same precedent as yesterday's lane.
+- Teardown: **list-confirmed zero** — `gcloud compute instances list`/`disks list` filtered on `pickleball-gpu-meshproof` both return empty (involuntary but satisfied). Wall: created 2026-07-21T09:32:22Z -> deleted 2026-07-21T11:26:55Z = **~1h54m**, entirely on `a2-highgpu-1g` (no resize completed). A100-40 SPOT band ~$1.1-1.5/hr -> est **$2.10-2.86** (well under the $8 cap).
+  VERIFIED=0 — one-shot GPU proof-run, not a promotion; `best_stack.json` untouched. No commits made.
+
+- **INCIDENT 2026-07-21T11:51:30Z**: `pickleball-gpu-abc` self-terminated (`Instance terminated by
+  guest OS shutdown`, GCE operations log confirmed — NOT a spot preemption). Root cause: the lane's
+  own boot-armed idle watchdog's `pgrep` activity pattern omitted `run_wasb_ball.py` (the ball-2D
+  WASB chain script actively running on all 7 clips at the time); once the sequential audio-onset
+  build finished (7/7 done ~11:36Z) the watchdog saw no matching process for 30 min and powered the
+  VM off at 11:51:30Z while all 7 ball-track jobs were mid-flight (0/7 had written output yet — total
+  loss of that in-progress work, though all prior staging — media, frame_times, corpus, audio onsets,
+  WASB checkpoint/repo, owner clips, T20 checkpoint — persisted on the STOPped boot disk).
+  Fix: broadened the idle-watchdog pattern (now matches any `.venv/bin/python`/`scripts/racketsport`/
+  `run_wasb_ball`/`ffprobe` process, not just an enumerated list) in
+  `runs/lanes/abc_experiment_20260721/scripts/lane_vm_startup_railed_v2.sh`, pushed via
+  `gcloud compute instances add-metadata --metadata-from-file=startup-script=...`, then
+  `gcloud compute instances start pickleball-gpu-abc` (RESTARTED us-central1-a, same disk, new
+  external IP 136.65.0.149 — IPs recycle, known_hosts refreshed). Wall time lost to this incident:
+  ~62 min VM-RUNNING before the false shutdown + VM was STOPPED (not billed) until restart. Re-running
+  the 7-clip ball-track chain from scratch. OPS LESSON: idle-watchdog pgrep allowlists must be
+  broad-matched (path/venv pattern) rather than enumerated per-script, since a new script easily gets
+  missed.
+
+- **BLOCKER 2026-07-21T16:31Z: AUTH_DEAD mid-session.** `gcloud auth list` still shows
+  `hello@swayformations.com` as the active account, but every API call
+  (`gcloud compute instances list`, `gcloud auth print-access-token`,
+  `gcloud auth application-default print-access-token`) fails with
+  `Reauthentication failed. cannot prompt during non-interactive execution` — confirmed
+  persistently across 6 retries over ~2.5 min (16:38:51Z-16:41:25Z), not a transient blip.
+  Requires ONE interactive `gcloud auth login` from the owner; cannot be self-resolved by an agent.
+  **STATE AT BLOCKER**: `pickleball-gpu-abc` (us-central1-a, A100-40GB SXM4 SPOT) is RUNNING and
+  UNREACHABLE via gcloud (cannot ssh/scp/delete). Its boot-armed rail (`shutdown -P +360` from the
+  11:57:03Z restart) is still in force and will self-poweroff at **2026-07-21T17:57:03Z** regardless
+  of auth state, bounding further spend even though this session cannot intervene. Arm A
+  (owner-only control, seed 20260720) COMPLETED on the VM at 16:27Z (finetune_manifest.json +
+  both checkpoints written, process exited 0) but has NOT been pulled off the VM — it exists only
+  on the VM disk pending auth recovery + scp. Arms B, C (seed 20260720) and all further seeds/evals/
+  gate/protected-50/teardown are NOT started. Est. cost through the blocker: VM billed ~345 min
+  (61 min first boot before the self-inflicted watchdog shutdown + continuous 11:57:03Z-16:41Z) ≈
+  5.75h × $1.1-1.5/hr ≈ **$6.3-8.6**, worst case another ≈$1.4-1.9 if it idles to the 17:57:03Z rail
+  ≈ **$7.8-10.7 total**, still under the $15 cap. NEXT SESSION: after owner reauths, first action is
+  `gcloud compute instances list --filter=labels.fable-fleet=pickleball` to reconcile (VM may already
+  be auto-stopped by its rail by then), pull Arm A's artifacts, then resume Arms B/C.
+
+- **2026-07-21T20:05Z (Fable orchestrator): E0 CLOSE — B/C KILLED METHOD-INVALID, VM STOPPED.**
+  Audit of `abc_out/agreement_decisions.jsonl` found **292/1,481 accepted B rows are audio-only**
+  (sole agreeing family `audio_onset`, weight 0.25) — violates EXACT_PLAN §2.1 (audio alone never
+  makes a row eligible). E0 verdict: `METHOD_INVALID_AUDIO_ONLY=292`
+  (`runs/lanes/abc_experiment_20260721/E0_VERDICT.md`). In-flight B/C (launched 18:34Z, ~75 of
+  90-wall min, sharing one A100 → likely wall-fail anyway) killed 19:52Z; partial outputs kept as
+  forensics only. Arm A recovered + verified: 1000/1000 steps, owner-41 macro-F1@±2 **0.0** at all
+  11 validations. 31/31 artifacts sha256-verified two-sided to
+  `runs/lanes/abc_experiment_20260721/vm_pull/`. `pickleball-gpu-abc` STOPPED 20:03Z (disk KEPT —
+  staged media/PTS/audio/kink artifacts persist for the corrected B/C rerun). This boot
+  ~18:33–20:03Z ≈ 1.5h ≈ $1.7–2.3; cumulative VM ≈ $11–12 of the $15 cap; corrected sequential
+  B+C rerun + scoring est. ≈ $3 — fits, no headroom for a third rerun. Next: builder audio-fix
+  lane (`abc_audiofix_20260721`) → restart VM → rebuild manifests → sequential B, C → owner-41
+  scoring → `abc_decision_gate.py` E1 screen.
