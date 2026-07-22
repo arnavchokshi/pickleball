@@ -1,0 +1,194 @@
+{
+  "artifact_type": "racketsport_ball_regroup_parent_source_split",
+  "artifacts": {
+    "lineage_rows": "runs/lanes/ball_b0_split_20260721/split/lineage_rows.jsonl",
+    "report": "runs/lanes/ball_b0_split_20260721/split/report.json",
+    "train": "runs/lanes/ball_b0_split_20260721/split/train.jsonl",
+    "validation": "runs/lanes/ball_b0_split_20260721/split/validation.jsonl"
+  },
+  "ball_verified": false,
+  "checks": {
+    "confirmed_prelabel_policy": {
+      "evaluation_row_count": 0,
+      "training_weight": 0.25,
+      "verdict": "PASS"
+    },
+    "evaluation_lineage": {
+      "required": "scratch",
+      "row_count": 167,
+      "verdict": "PASS"
+    },
+    "historical_scratch_row_intersection": {
+      "count": 0,
+      "row_keys": [],
+      "verdict": "PASS"
+    },
+    "metrics_separated_by_holdout_source": {
+      "sources": [
+        "Ezz6HDNHlnk",
+        "HyUqT7zFiwk"
+      ],
+      "verdict": "PASS"
+    },
+    "protected_collision_count": {
+      "candidate_image_count": 350,
+      "count": 0,
+      "protected_frame_count": 2953,
+      "verdict": "PASS"
+    },
+    "reviewed_lineage_reconciled": {
+      "after": "3026/3026",
+      "verdict": "PASS"
+    },
+    "scratch_package_reconciled": {
+      "after": "350/350",
+      "verdict": "PASS"
+    },
+    "train_validation_source_intersection": {
+      "count": 0,
+      "sources": [],
+      "verdict": "PASS"
+    }
+  },
+  "evaluation_metrics_by_source": {
+    "Ezz6HDNHlnk": {
+      "f1_at_20": null,
+      "hidden_fp": null,
+      "lineage_required": "scratch",
+      "precision": null,
+      "recall": null,
+      "row_count": 67
+    },
+    "HyUqT7zFiwk": {
+      "f1_at_20": null,
+      "hidden_fp": null,
+      "lineage_required": "scratch",
+      "precision": null,
+      "recall": null,
+      "row_count": 100
+    }
+  },
+  "input_contract": {
+    "lineage_origin_counts": {
+      "legacy_wasb_prelabel": 486,
+      "runs/lanes/w5_labelpack_20260708/selection_manifest.json:ball_session_01": 635,
+      "runs/lanes/w6_labelpack_20260708/selection_manifest.json:ball_session_01": 629,
+      "runs/lanes/w6_labelpack_20260708/selection_manifest.json:ball_session_02": 638,
+      "runs/lanes/w6_labelpack_20260708/selection_manifest.json:ball_session_03": 638
+    },
+    "reviewed_ingest_report": "runs/lanes/w7_ballingest4_20260709/ingest_report.json",
+    "reviewed_ingest_report_sha256": "c4200032e86f912d68adfefdb27118e48b2ed0673fee6122a21df638c601968d",
+    "reviewed_per_source": {
+      "73VurrTKCZ8": 397,
+      "Ezz6HDNHlnk": 400,
+      "HyUqT7zFiwk": 560,
+      "_L0HVmAlCQI": 554,
+      "wBu8bC4OfUY": 555,
+      "zwCtH_i1_S4": 560
+    },
+    "reviewed_root": "runs/lanes/w7_ballingest4_20260709/reviewed_corpus",
+    "reviewed_row_count": 3026,
+    "scratch_export": "cvat_upload/exports/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_annotations.zip",
+    "scratch_export_image_count": 350,
+    "scratch_export_sha256": "fea4b9529a4020ee577c5702478753fa4ea84f99c51a9e3ef16e87e96d7fc104",
+    "scratch_image_zip": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_images.zip",
+    "scratch_package": "cvat_upload/w7_audit_stratum_20260709/package_manifest.json",
+    "scratch_package_image_count": 350,
+    "scratch_package_sha256": "a04fd956ac56c16130643a79344c21298dec6a3e69f507e0788e996a927a9a55",
+    "scratch_sampling_manifest": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_auditstratum_20260709/sampling_manifest.json",
+    "scratch_sampling_manifest_md5": "3dc23a4e73d6bb04a8865f316983aca4",
+    "selection_manifests": [
+      "runs/lanes/w5_labelpack_20260708/selection_manifest.json",
+      "runs/lanes/w6_labelpack_20260708/selection_manifest.json"
+    ]
+  },
+  "lineage_counts": {
+    "per_source": {
+      "73VurrTKCZ8": {
+        "confirmed_prelabel": 126,
+        "corrected_prelabel": 271,
+        "scratch": 27,
+        "total": 424
+      },
+      "Ezz6HDNHlnk": {
+        "confirmed_prelabel": 120,
+        "corrected_prelabel": 280,
+        "scratch": 67,
+        "total": 467
+      },
+      "HyUqT7zFiwk": {
+        "confirmed_prelabel": 332,
+        "corrected_prelabel": 228,
+        "scratch": 100,
+        "total": 660
+      },
+      "_L0HVmAlCQI": {
+        "confirmed_prelabel": 490,
+        "corrected_prelabel": 64,
+        "scratch": 34,
+        "total": 588
+      },
+      "wBu8bC4OfUY": {
+        "confirmed_prelabel": 408,
+        "corrected_prelabel": 147,
+        "scratch": 60,
+        "total": 615
+      },
+      "zwCtH_i1_S4": {
+        "confirmed_prelabel": 522,
+        "corrected_prelabel": 38,
+        "scratch": 62,
+        "total": 622
+      }
+    },
+    "totals": {
+      "confirmed_prelabel": 1998,
+      "corrected_prelabel": 1028,
+      "scratch": 350
+    }
+  },
+  "protected_collision_guard": {
+    "candidate_image_count": 350,
+    "collision_count": 0,
+    "collision_hamming_threshold": 3,
+    "hash_type": "decoded_pixel_sha256_plus_dhash_8x8_64bit",
+    "protected_addition_count": 2,
+    "protected_addition_counts": {
+      "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames/frame_000060.jpg": 1,
+      "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames/frame_000240.jpg": 1
+    },
+    "protected_frame_count": 2953,
+    "protected_video_count": 4,
+    "protected_video_frame_counts": {
+      "eval_clips/ball/burlington_gold_0300_low_steep_corner/source.mp4": 600,
+      "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4": 900,
+      "eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/source.mp4": 1151,
+      "eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4": 300
+    }
+  },
+  "schema_version": 1,
+  "split_counts": {
+    "old_train": 2066,
+    "scratch_train": 183,
+    "train": 2249,
+    "validation": 167
+  },
+  "split_semantics": "parent_source",
+  "train_sources": [
+    "73VurrTKCZ8",
+    "_L0HVmAlCQI",
+    "wBu8bC4OfUY",
+    "zwCtH_i1_S4"
+  ],
+  "validation_sources": [
+    "Ezz6HDNHlnk",
+    "HyUqT7zFiwk"
+  ],
+  "verdict": "BALL_CLEAN_JUDGE",
+  "weight_policy": {
+    "confirmed_prelabel": 0.25,
+    "confirmed_prelabel_authority": "teacher_only_not_ground_truth",
+    "corrected_prelabel": 1.0,
+    "scratch": 1.0
+  }
+}

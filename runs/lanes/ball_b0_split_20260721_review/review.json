@@ -1,0 +1,121 @@
+{
+  "verdict": "REJECT",
+  "decision": "Do not use this judge for the BALL A/B experiment yet.",
+  "primary_blocker": {
+    "finding": "The export proves 350 image records were ingested, but it does not prove all 350 images were human-reviewed.",
+    "evidence": [
+      "Task 87 contains 224 images with manual ball boxes and 126 boxless images.",
+      "Validation contains 94 positives and 73 boxless negatives.",
+      "scripts/racketsport/build_ball_regroup_split.py:858-875 converts every boxless XML image into ball_present=false, ground_truth=true, teacher_derived=false, and evaluation_eligible=true.",
+      "CVAT Images exports include untouched image nodes; no per-image reviewed/completed/negative-attestation artifact is consumed.",
+      "The focused happy-path test explicitly accepts an unattested boxless image as ground truth."
+    ],
+    "impact": "Forty-four percent of the 167-row judge consists of negatives that are mechanically indistinguishable from images an annotator never inspected. A missed ball in any such row directly corrupts A/B scoring."
+  },
+  "verified_claims": {
+    "structural_task87_ingestion": {
+      "status": "PASS",
+      "result": "350/350 unique image IDs and names match the sampling manifest and image package.",
+      "export_sha256": "fea4b9529a4020ee577c5702478753fa4ea84f99c51a9e3ef16e87e96d7fc104",
+      "observed_labels": {
+        "manual_ball_boxes": 224,
+        "boxless_images": 126
+      },
+      "limitation": "This verifies structural ingestion, not review completion."
+    },
+    "parent_source_grouping": {
+      "status": "PASS",
+      "train_sources": [
+        "73VurrTKCZ8",
+        "_L0HVmAlCQI",
+        "wBu8bC4OfUY",
+        "zwCtH_i1_S4"
+      ],
+      "validation_sources": [
+        "HyUqT7zFiwk",
+        "Ezz6HDNHlnk"
+      ],
+      "source_intersection": [],
+      "row_intersection": [],
+      "clip_intersection": [],
+      "result": "All 40 rally provenance records resolve to six parent videos, and every rally from each held-out parent remains outside training."
+    },
+    "split_counts": {
+      "status": "PASS",
+      "lineage_rows": 3376,
+      "train": 2249,
+      "validation": 167,
+      "excluded_holdout_old": 960,
+      "lineage": {
+        "scratch": 350,
+        "corrected_prelabel": 1028,
+        "confirmed_prelabel": 1998
+      }
+    },
+    "protected_frame_purity": {
+      "status": "PASS",
+      "frames_checked": 2953,
+      "scope": "Every decoded frame from the four protected videos plus both protected additions",
+      "exact_collisions": 0,
+      "dhash_distance_le_3_collisions": 0
+    },
+    "current_lineage_comparison": {
+      "status": "PARTIAL_PASS",
+      "result": "Independent comparison found no corrected W5/W6 package row currently classified as confirmed. All 167 validation rows originate from task 87, so no existing W5/W6 or legacy row enters the judge.",
+      "observed_defect": "One legacy training row, wBu8bC4OfUY_rally_0001:000320, is marked confirmed although final visibility is out_of_frame and the original model record was merely absent. The absence shortcut ignores visibility semantics.",
+      "judge_effect": "No direct current judge leak from this row, but it disproves perfect lineage-classification semantics."
+    }
+  },
+  "additional_gate_defects": [
+    {
+      "severity": "HIGH",
+      "finding": "Task-87 scratch status is asserted rather than enforced.",
+      "details": "The parser does not bind the export to task 87's import ledger, task fingerprint, prelabel_zip=null, or required manual source. It stamps every imported row scratch unconditionally. Current artifacts are reassuring, but an auto/file-sourced export could pass the same code path."
+    },
+    {
+      "severity": "HIGH",
+      "finding": "Original-lineage inputs are not content-bound.",
+      "details": "Selection manifests, legacy prelabel tracks, and review exports are loaded from mutable paths without pinned hashes. Only the reviewed ingest report itself is pinned. Independent inspection shows the current reviewed files match the embedded MD5 manifest, but the production gate does not verify that fact."
+    },
+    {
+      "severity": "HIGH",
+      "finding": "A noncanonical protected set can emit the production clean verdict.",
+      "details": "CLI overrides can replace protected videos and additions while still producing BALL_CLEAN_JUDGE. Production mode does not require the exact four protected videos, two additions, and expected hashes."
+    }
+  ],
+  "seven_test_assessment": {
+    "result": "All seven focused tests pass, but they are materially gameable.",
+    "weaknesses": [
+      "The grouping fixture has only one rally per source, so it cannot detect per-clip rather than parent-source splitting.",
+      "The happy-path fixture treats an unattested no-box image as verified ground truth.",
+      "The CLI failure test accepts any Exception because main catches broadly; unrelated programmer errors can satisfy it.",
+      "Production expected hashes are disabled in fixtures.",
+      "Determinism reruns into the same output directory instead of fresh directories with reordered inputs.",
+      "The protected-frame test generates and checks hashes through the same private helper rather than exercising the complete production path.",
+      "Legacy coverage tests only a helper and misses the observed absent-versus-out_of_frame misclassification."
+    ]
+  },
+  "wide_suite_causality": {
+    "status": "B0_EXONERATED",
+    "summary": "None of the 31 failures is plausibly caused by the two B0-owned files.",
+    "evidence": [
+      "The B0 module is not imported or referenced by non-B0 production code.",
+      "Twenty-eight failures are identical to an earlier wide-suite artifact.",
+      "Socket failures reproduce as environment-level TCP/Unix bind EPERM and involve implementations predating B0.",
+      "Storage-policy failures trace to files introduced by pre-session commit f9dc11dfc.",
+      "The parameterless-model StopIteration traces to pre-session commit e3f47d65176e.",
+      "The remaining current-only timing failure is a pre-existing fixed-five-second simulation test that ran slowly under concurrent load."
+    ]
+  },
+  "required_fixes_before_rereview": [
+    "Produce a hash-bound, per-image task-87 review ledger covering all 350 image names. Every boxless row must carry an explicit human negative confirmation; task-level completion alone is insufficient.",
+    "Make the builder reject boxless rows lacking that confirmation. Regenerate the split and prove all 73 validation negatives are explicitly reviewed.",
+    "Bind task-87 ingestion to task ID, job ID, task fingerprint, image-package hash, export hash, frame count, prelabel_zip=null, and manual-only box sources.",
+    "Pin and verify every original-lineage input: package selection manifests, original prelabels, reviewed exports, legacy tracks, and the reviewed-file MD5 manifest.",
+    "Require the exact canonical four protected videos and two additions, with expected content hashes, before emitting BALL_CLEAN_JUDGE.",
+    "Compare full label semantics, including visibility, before assigning confirmed_prelabel.",
+    "Add adversarial tests for multiple rallies from one parent source, unattested negatives, auto/file-sourced task-87 boxes, tampered lineage inputs, wrong task identity, canonical protected-set enforcement, fresh-directory determinism, and the legacy visibility mismatch."
+  ],
+  "read_only_review": true,
+  "files_modified": []
+}

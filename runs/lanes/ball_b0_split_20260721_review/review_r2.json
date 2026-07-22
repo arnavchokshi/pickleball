@@ -1,0 +1,128 @@
+{
+  "verdict": "REJECT",
+  "decision": "Do not authorize BALL GPU training from this judge yet.",
+  "review_target": {
+    "branch": "main",
+    "worktree": "dirty",
+    "target_files_untracked": true,
+    "builder_sha256": "9c07aad8e3ec7bed0a5d564b92accb79ef21d978a15c97b71ba54ee99a499863",
+    "test_sha256": "ef74be07ef3507aeb29e54045db052dc06d22a29be0781b9066c728c0c220825"
+  },
+  "findings": {
+    "1_attestation": {
+      "status": "CLOSED",
+      "evidence": {
+        "real_export_sha256": "fea4b9529a4020ee577c5702478753fa4ea84f99c51a9e3ef16e87e96d7fc104",
+        "real_attestation_sha256": "197fa5261491cae10f2be36390dfe0a442ebb5d9e041fc6eb350815ff0d47c7b",
+        "real_attestation_consumed": true,
+        "wrong_sha_refused": true,
+        "all_frames_inspected_false_refused": true,
+        "missing_file_refused": true,
+        "boxless_export_rows": 126,
+        "validation_attested_negatives": 73,
+        "validation_unattested_negatives": 0
+      }
+    },
+    "2_task87_provenance": {
+      "status": "PARTIAL_HIGH_BLOCKER",
+      "closed": [
+        "Pinned ledger and fingerprint are checked",
+        "task_id=87 is enforced",
+        "prelabel_zip=null is enforced",
+        "auto/file box sources are refused",
+        "224/224 real boxes declare source=manual"
+      ],
+      "open": [
+        "The import ledger contains no distinct job_id.",
+        "The import ledger contains no imported image-ZIP digest.",
+        "task_fingerprint hashes the image path, not its bytes.",
+        "The current image ZIP SHA-256 f1b7ba88084c8664202bf19f73e4704599b46bd42e50e2a6c1a29265cff8b653 is absent from the provenance contract.",
+        "Injected wrong job_id and image_zip_sha256 values were ignored by the validator."
+      ],
+      "impact": "The gate cannot cryptographically prove that task 87 was annotated against the exact current image bytes."
+    },
+    "3_lineage_content_binding": {
+      "status": "CLOSED",
+      "evidence": {
+        "aggregate_sha256": "56545ee6f099695d03f8f7ba0ae5085856b6c2996225185fed11f740a79701bd",
+        "bound_files": 14,
+        "roles": {
+          "selection_manifests": 2,
+          "legacy_review_exports": 6,
+          "legacy_prelabel_tracks": 6
+        },
+        "reviewed_corpus_files_verified": 40,
+        "one_byte_tamper_refused": true
+      }
+    },
+    "4_canonical_protected_set": {
+      "status": "CLOSED_FOR_SET_WITH_HARDENING_GAP",
+      "evidence": {
+        "canonical_videos": 4,
+        "canonical_additions": 2,
+        "protected_frames": 2953,
+        "content_hashes_pinned": true,
+        "noncanonical_set_refused": true,
+        "collisions": 0
+      },
+      "gap": "Production still accepts a collision_hamming_threshold override, including 0; pin the production threshold to 3."
+    },
+    "5_visibility_semantics": {
+      "status": "CLOSED",
+      "evidence": {
+        "confirmed_prelabel": 1997,
+        "corrected_prelabel": 1029,
+        "target_row": "wBu8bC4OfUY_rally_0001:000320",
+        "target_class": "corrected_prelabel",
+        "rule": "Absent original prediction is confirmed only when final visibility is exactly none; out_of_frame is a correction."
+      }
+    },
+    "6_new_failure_attribution": {
+      "status": "CLOSED_B0_EXONERATED",
+      "evidence": {
+        "prior_failures": 31,
+        "fix1_failures": 35,
+        "common_failures": 30,
+        "new_failures": 5,
+        "resolved_prior_failures": 1,
+        "new_failure_owner": "tests/racketsport/test_export_roboflow_person_yolo_dataset.py",
+        "p1_isolated_result": "26 passed",
+        "b0_focused_result": "18 passed",
+        "concurrent_rewrite_confirmed": true,
+        "b0_cross_import_or_reference": false
+      },
+      "conclusion": "The five failures came from an intermediate P1 exporter snapshot and are not B0 regressions."
+    }
+  },
+  "additional_blocker": {
+    "finding": "The canonical/default artifact remains the unsafe pre-fix judge.",
+    "unsafe_path": "runs/lanes/ball_b0_split_20260721/split/report.json",
+    "safe_path": "runs/lanes/ball_b0_split_20260721/split_fix1/report.json",
+    "details": [
+      "DEFAULT_OUT still points to split/.",
+      "split/report.json still says BALL_CLEAN_JUDGE while lacking attestation, lineage hashes, canonical-set verification, and corrected visibility counts.",
+      "Its 73 validation negatives remain ground_truth=true without attestation status.",
+      "No downstream reference pins split_fix1."
+    ]
+  },
+  "fresh_rebuild": {
+    "method": "Read-only in-memory production rebuild",
+    "verdict": "BALL_CLEAN_JUDGE",
+    "exact_match_to_split_fix1_report": true,
+    "train": 2249,
+    "validation": 167,
+    "lineage_totals": {
+      "confirmed_prelabel": 1997,
+      "corrected_prelabel": 1029,
+      "scratch": 350
+    }
+  },
+  "required_before_acceptance": [
+    "Bind task 87 to an independently recorded job ID and the exact imported image-ZIP SHA-256, preferably by re-importing with a byte-hashing importer or exhaustively reconciling all CVAT task frames to the package.",
+    "Promote one attested artifact to the canonical/default path and retire or invalidate the stale split/ report.",
+    "Pin collision_hamming_threshold=3 in production mode.",
+    "Rerun the wide suite after all concurrent lanes stabilize and record the reviewed source/test hashes."
+  ],
+  "read_only_review": true,
+  "files_modified": []
+}

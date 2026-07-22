@@ -1,0 +1,9 @@
+{
+  "task_id": 87,
+  "export_sha256": "fea4b9529a4020ee577c5702478753fa4ea84f99c51a9e3ef16e87e96d7fc104",
+  "all_frames_inspected": true,
+  "boxless_means_no_ball": true,
+  "attested_by": "arnavchokshi (owner, swayformations@gmail.com)",
+  "attested_utc": "2026-07-22T00:29:55Z",
+  "statement": "I inspected every one of the 350 frames in CVAT task 87 (w7_audit_stratum_uniform350). Every frame I left without a box means I looked at it and no ball (or ball motion-blur streak) was visible or locatable without guessing. Attestation given as an explicit yes/no answer in the main Claude session on 2026-07-21 local / 2026-07-22 UTC; recorded by the session on the owner's behalf."
+}
