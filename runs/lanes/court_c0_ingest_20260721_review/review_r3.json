@@ -1,0 +1,54 @@
+{
+  "verdict": "REJECT",
+  "failing_probe": "2_C1_RELOCATED_CORPUS_COPY",
+  "probes": {
+    "1_sliver_geometry": {
+      "status": "PASS",
+      "r2_96px2_sliver": "REJECTED",
+      "r2_0_001px_edge": "REJECTED",
+      "new_1920x1080_0_5px_edge_variant": "REJECTED"
+    },
+    "2_C1_relocated_corpus_copy": {
+      "status": "FAIL",
+      "rows_through_real_C1_wrapper": 60,
+      "paths_under_original_corpus": 60,
+      "paths_under_relocated_copy": 0,
+      "result_when_original_is_unavailable": "60 null image_path values; sample materialization fails",
+      "cause": "ingest emits frame_dir relative to the repository root and bound to the original output location; the trainer resolves it against CWD without rebasing against --real-root",
+      "test_gap": "The fix2 regression loads the corpus in place and contains no copy or move operation."
+    },
+    "3_production_manifest_shards": {
+      "status": "PASS",
+      "manifest_sha256": "c0243e9146152c5c46b5d0aebca9d571bfd39b6e90b34227d4024d09eabcdd7e",
+      "shards": 4,
+      "images": 100,
+      "production_cli_result": "Manifest accepted; CLI advanced to the deliberately absent export-directory seam."
+    },
+    "4_PPA_alias_and_counts": {
+      "status": "PASS",
+      "alias_sha256": "d947cb3a975cef27450bf7d77dfed8df9d33279ea9f240914ee1150791db1bdc",
+      "alias_hash_matches_pin": true,
+      "train_rows": 66,
+      "train_families": 18,
+      "frozen_holdout_source_groups": 8,
+      "holdout_families_after_alias": 7
+    }
+  },
+  "suite": {
+    "snapshot_artifact_matches_current_fix_files": true,
+    "tests": 4254,
+    "passed": 4199,
+    "failed": 30,
+    "skipped": 25,
+    "failures_exactly_known_set": true,
+    "failure_groups": {
+      "CAL_or_protected_fixture_drift": 18,
+      "sandbox_or_socket": 8,
+      "event_head_fixture": 1,
+      "scaffold_category": 1,
+      "storage_policy": 2
+    },
+    "owned_file_failures": 0,
+    "fresh_full_rerun": "Unavailable because the enforced read-only sandbox provides no writable temporary directory; the matching JUnit artifact was independently reparsed."
+  }
+}

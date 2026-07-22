@@ -1,0 +1,111 @@
+{
+  "verdict": "REJECT",
+  "summary": "C0-01 is fixed and suite failures do not trace to the owned files. C0-03 still accepts materially degenerate geometry, C0-04 remains incompatible with the exact C1 working directory, and production ingest rejects the pinned manifest because it expects the wrong shard key.",
+  "target_sha256": {
+    "scripts/racketsport/ingest_cvat_court_images.py": "69c12a3ae3b84e3b0f8d1c132cf97f68448e2e561c944b8bf95e6ca5a4b4202d",
+    "tests/racketsport/test_ingest_cvat_court_images.py": "59a3f8b0647db574cdeec6edf3ac1bd54eb421f44f0c95f8835002c5d0fb7458"
+  },
+  "checks": {
+    "C0-01": {
+      "status": "PASS",
+      "evidence": [
+        "Runtime validation requires exactly {IYnbdRs1Jdk}.",
+        "Wrong-valid {3sC53GlvW_s} exited 1 before input access.",
+        "Extra {IYnbdRs1Jdk, 3sC53GlvW_s} exited 1 before input access.",
+        "The pinned manifest SHA matches c0243e9146152c5c46b5d0aebca9d571bfd39b6e90b34227d4024d09eabcdd7e and contains exactly three IYnbdRs1Jdk rows.",
+        "All three rows receive DENIED_PERMANENT_SOURCE and split=denied."
+      ]
+    },
+    "C0-02": {
+      "status": "PASS_EXACT_TOKENS_WITH_UNRESOLVED_FAMILY_ALIAS",
+      "exact_manifest_result": {
+        "train_rows": 66,
+        "train_families": 18,
+        "holdout_rows": 27,
+        "frozen_holdout_source_groups": 8,
+        "quarantined_rows": 4,
+        "quarantined_source": "3sC53GlvW_s"
+      },
+      "evidence": [
+        "The union-find correctly connects exact normalized channel or venue values, including transitive bridges.",
+        "3sC53GlvW_s and holdout 4qSoA-jwpVM share family:722553ada5a527bb; 3sC53GlvW_s is QUARANTINED_FAMILY_COLLISION.",
+        "The eight frozen holdout source IDs are unchanged.",
+        "evaluate_gate counts source_family_key values: 14 families failed and 15 passed.",
+        "Independent reconstruction found no other missed exact-value train/holdout edge."
+      ],
+      "residual": "The manifest labels Se7M6ZKaC4Y as PPA Tour Asia and 3sC53GlvW_s as PPA Tour. The implementation has no alias/fork-family mechanism. Based on the [official PPA announcement](https://ppatour.com/ppa-asia-and-mlp-asia-set-to-launch-bringing-world-class-pro-pickleball-to-the-worlds-most-populous-continent/), treating these as one organizational family is a credible inference requiring an explicit ruling. Merging them leaves 66/18 and eight holdout source groups unchanged, but reduces distinct holdout families from eight to seven.",
+      "honesty_note": "66 rows / 18 families is pre-label manifest capacity, not a real usable-label gate result because the CVAT export is absent."
+    },
+    "C0-03": {
+      "status": "FAIL",
+      "obvious_probes": {
+        "all_coincident": "REJECTED",
+        "collinear": "REJECTED",
+        "crossed": "REJECTED",
+        "concave": "REJECTED",
+        "near_zero_area": "REJECTED"
+      },
+      "subtle_probe": {
+        "resolution": [1280, 720],
+        "points": {
+          "near_left_corner": [40.0, 400.0],
+          "near_right_corner": [1240.0, 400.0],
+          "far_left_corner": [40.0, 399.92],
+          "far_right_corner": [1240.0, 399.92]
+        },
+        "height_px": 0.08,
+        "area_px2": 96.0,
+        "configured_minimum_px2": 92.16,
+        "result": "ACCEPTED"
+      },
+      "impact": "A second configuration with a 0.001-pixel near baseline was accepted. Repeating it across 60 train rows, 15 families, and all holdouts produced COURT_DIVERSITY_ROWS_SUFFICIENT. Materially unusable geometry can still pass the gate."
+    },
+    "C0-04": {
+      "status": "FAIL",
+      "split_parser": {
+        "status": "PASS",
+        "result": "The emitted train_datasets list matched 18/18 rows through load_real_training_rows."
+      },
+      "absolute_mac_paths": {
+        "status": "PASS",
+        "result": "Emitted frame_dir values are relative and contain no hardcoded Mac path."
+      },
+      "exact_c1_relocation": {
+        "status": "FAIL",
+        "reason": "train_court_keypoint_heatmap.py resolves frames.frame_dir against process CWD and ignores path_base. The exact C1 command runs from the repository root, so emitted train/<source>/... paths resolve under the wrong directory and image_path becomes null.",
+        "test_gap": "The relocation test masks this by changing CWD to the relocated corpus root before loading. That prerequisite is absent from the prescribed C1 command.",
+        "fallback": "C0 emits no source.mp4 fallback."
+      }
+    },
+    "production_manifest": {
+      "status": "FAIL",
+      "reason": "The pinned manifest contains four shards under key shards, while _expected_export_shards reads task_shards.",
+      "fresh_probe": "The production CLI exited 1 with: package manifest task_shards must define exactly four CVAT export shards.",
+      "impact": "Production ingest cannot run even after the four export ZIPs arrive. The synthetic fixture hides this by creating task_shards."
+    },
+    "suite": {
+      "status": "NO_FAILURE_TRACED_TO_OWNED_FILES",
+      "logged_final_counts": {
+        "passed": 4131,
+        "failed": 35,
+        "skipped": 25
+      },
+      "attribution": [
+        "Neither owned module is imported outside its owned test, and no failure traceback names either file.",
+        "Four additional final-run failures were in ABC files rewritten during collection, with tracebacks inconsistent with collected parameters.",
+        "The fifth additional failure is not a rewrite race: the unrelated flight-simulator timing test reproduced at 7.245 seconds against a 5-second threshold.",
+        "An earlier run's five exporter failures occurred during exporter rewrites and immediately reran 26/26 green.",
+        "The final run collected 4191 tests versus the 4121-test baseline, so it is not a frozen-suite comparison."
+      ],
+      "artifact_gap": "The JUnit files were not refreshed: focused_suite.junit.xml still records 7 tests and wide_suite.junit.xml still records 32 failures. The 18-pass and 35-failure results exist only in log_fix1.txt.",
+      "fresh_read_only_subset": "9 current pure tests passed."
+    }
+  },
+  "blocking_fixes": [
+    "Add scale-aware minimum edge/area and stable normalized homography checks, with subpixel-sliver adversarial tests.",
+    "Resolve frame_dir relative to the corpus root in the actual trainer path, then test from the repository working directory used by the exact C1 command.",
+    "Read the pinned manifest's shards key or introduce a compatible, hash-pinned manifest revision.",
+    "Pin an explicit PPA Tour/PPA Tour Asia family ruling or alias map."
+  ],
+  "files_modified_by_review": false
+}

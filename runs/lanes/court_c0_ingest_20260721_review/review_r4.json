@@ -1,0 +1,33 @@
+{
+  "verdict": "REJECT",
+  "closure_confirmed": false,
+  "failing_probe": "2_C1_RELOCATED_CORPUS_COPY",
+  "probe_2": {
+    "status": "NOT_MEASURED",
+    "fixture_emitted": false,
+    "corpus_copied": false,
+    "rows_resolved_inside_copy": null,
+    "paths_at_original": null,
+    "image_materialized_from_copy": null,
+    "blocker": "Enforced read-only sandbox provides no writable temporary directory; the exact focused probe exited 1 during tmp_path setup."
+  },
+  "spot_checks": {
+    "geometry_sliver": {
+      "status": "PASS",
+      "result": "REJECTED",
+      "error": "near-zero-area four-corner configuration: 96px^2 < 921.6px^2"
+    },
+    "production_manifest_shards": {
+      "status": "PASS",
+      "manifest_sha256": "c0243e9146152c5c46b5d0aebca9d571bfd39b6e90b34227d4024d09eabcdd7e",
+      "shards": 4,
+      "images": 100
+    },
+    "alias_map_hash": {
+      "status": "PASS",
+      "expected_sha256": "d947cb3a975cef27450bf7d77dfed8df9d33279ea9f240914ee1150791db1bdc",
+      "observed_sha256": "d947cb3a975cef27450bf7d77dfed8df9d33279ea9f240914ee1150791db1bdc"
+    }
+  },
+  "reason": "ACCEPT requires a fresh 60/60 relocated-copy and materialization result; static wiring and passing side checks cannot substitute for that measurement."
+}

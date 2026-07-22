@@ -1,0 +1,169 @@
+{
+  "verdict": "REJECT",
+  "summary": "The 32 wide-suite failures are not plausibly caused by this lane, but C0 itself is not commit-ready. It has two critical data-safety defects, can certify geometrically unusable labels, and cannot feed the prescribed C1 command correctly.",
+  "blocking_findings": [
+    {
+      "id": "C0-01",
+      "severity": "CRITICAL",
+      "category": "protected-data",
+      "finding": "Permanent IYnbdRs1Jdk denial is fail-open.",
+      "evidence": [
+        "scripts/racketsport/ingest_cvat_court_images.py:665-680 accepts any nonempty set of existing manifest source IDs; production code never requires IYnbdRs1Jdk.",
+        "ManifestImage.split at lines 91-93 otherwise classifies IYnbdRs1Jdk as train.",
+        "A fresh probe denying valid train source 3sC53GlvW_s left all three IY rows train-reachable while retaining 69 train rows across 19 source IDs and all eight holdouts, so the numeric gate can pass.",
+        "tests/racketsport/test_ingest_cvat_court_images.py:357-365 tests only a nonexistent typo, not a wrong-but-valid denial."
+      ],
+      "exact_fixes": [
+        "In production mode require exactly the permanent deny set containing IYnbdRs1Jdk.",
+        "Before CVAT parsing, assert that the pinned manifest contains exactly three IYnbdRs1Jdk rows and that all three are excluded.",
+        "Reject wrong-valid and extra deny-source configurations; add adversarial tests."
+      ]
+    },
+    {
+      "id": "C0-02",
+      "severity": "CRITICAL",
+      "category": "split-leakage",
+      "finding": "The required source/channel/venue-family split is not implemented, and the real manifest has a cross-partition family collision.",
+      "evidence": [
+        "spec.md:28-32 and EXACT_PLAN.md:311-320 require grouping by original source/channel/venue family.",
+        "Manifest train source 3sC53GlvW_s and frozen holdout 4qSoA-jwpVM both have channel PPA Tour and venue_group inferred:PPA Tour at package_manifest.json:173-210.",
+        "Code partitions and counts solely by source_id at ingest_cvat_court_images.py:91-93, 508-545, and 549-555, while falsely emitting source_family_key equal to source_id.",
+        "The fixture assigns every source a unique channel and venue at test_ingest_cvat_court_images.py:143-146, then merely asserts the implementation's descriptive partition string."
+      ],
+      "exact_fixes": [
+        "Obtain an authoritative ruling for the PPA collision: move or exclude the entire family, or amend the contract with a defensible frozen family definition.",
+        "Fail closed on every train/holdout family intersection before label inspection.",
+        "Count actual family groups at the gate and add a shared-family adversarial fixture."
+      ]
+    },
+    {
+      "id": "C0-03",
+      "severity": "HIGH",
+      "category": "validity-gate",
+      "finding": "Syntactically present but unusable court geometry passes as a valid row.",
+      "evidence": [
+        "parse_reviewed_keypoints at ingest_cvat_court_images.py:407-438 checks only label presence and image bounds.",
+        "A fresh in-memory probe placed all four required corners at the identical coordinate (1,1); the parser accepted the row.",
+        "With enough duplicated rows, evaluate_gate can return COURT_DIVERSITY_ROWS_SUFFICIENT even though no court homography can be solved."
+      ],
+      "exact_fixes": [
+        "Reject duplicate, collinear, self-intersecting, singular, or materially degenerate four-corner configurations.",
+        "Use a finite/invertible homography or equivalent geometric-validity check.",
+        "Add coincident, collinear, crossed-order, and near-zero-area failure tests."
+      ]
+    },
+    {
+      "id": "C0-04",
+      "severity": "HIGH",
+      "category": "C1-integration",
+      "finding": "The emitted artifacts cannot reliably feed the exact C1 training command.",
+      "evidence": [
+        "C0 source_split.json emits train_source_ids, while train_court_model_v2.py:719-737 requires --real-split-proposal to contain a nonempty train_datasets list.",
+        "write_corpus stores resolved absolute Mac frame paths at ingest_cvat_court_images.py:604-606; after relocation to an H100 those paths disappear, and C0 emits no source.mp4 fallback.",
+        "The focused test validates only the low-level loader immediately in place, not the exact C1 load path or relocation."
+      ],
+      "exact_fixes": [
+        "Emit a trainer-compatible split proposal containing train_datasets and explicit holdout metadata.",
+        "Emit portable repository-relative paths or provide a supported path-rewrite mechanism.",
+        "Integration-test load_real_training_rows with the emitted split and load images after relocating the corpus."
+      ]
+    },
+    {
+      "id": "C0-05",
+      "severity": "HIGH",
+      "category": "fail-closed-contract",
+      "finding": "Other production safeguards are caller- or payload-weakenable.",
+      "evidence": [
+        "Manifest SHA enforcement at ingest_cvat_court_images.py:136-140 is conditional on the manifest's mutable artifact_type; changing that field bypasses the required hash check.",
+        "--phash-max-distance accepts 0 at lines 762-765, weakening the production threshold of 3; the exact-collision fixture still passes at either threshold.",
+        "The SHA test at test_ingest_cvat_court_images.py:219-220 compares the live file to the implementation constant instead of independently pinning the contract literal."
+      ],
+      "exact_fixes": [
+        "Bind production mode unconditionally to both the literal contract SHA and artifact type.",
+        "Make synthetic-fixture mode explicit and unavailable through the normal production invocation.",
+        "Freeze the production pHash threshold or allow only stricter values.",
+        "Add altered-type/hash and pHash-distance-1-through-3 tests."
+      ]
+    },
+    {
+      "id": "C0-06",
+      "severity": "HIGH",
+      "category": "verification-and-handoff",
+      "finding": "The focused suite and export handoff are not commit-valid.",
+      "evidence": [
+        "The focused test unconditionally reads cvat_upload/court_diversity_20260712/package_manifest.json, but that entire 163 MB directory is untracked and outside lane ownership; a clean checkout of the owned commit will fail.",
+        "OWNER_GUIDE.md:33-36 directs four shard-specific export zips, while spec.md:17-22 and report.next wait for singular annotations.zip.",
+        "The implementation supports a directory of zips, but the required operator command and one-time check do not use it."
+      ],
+      "exact_fixes": [
+        "Remove the unit suite's dependency on untracked workstation data or make it an explicit operator-only integration test.",
+        "Standardize on the four-zip export directory with exact shard reconciliation, or define a deterministic hash-recorded merge step.",
+        "Test missing, duplicate, and incomplete shard exports."
+      ]
+    }
+  ],
+  "report_honesty": {
+    "assessment": "PARTIALLY_HONEST_BUT_MATERIALLY_OVERSTATED",
+    "supported": [
+      "objective_result is PARTIAL.",
+      "The real export and real corpus are correctly reported absent.",
+      "The 4064 passed / 32 failed / 25 skipped counts match wide_suite.junit.xml.",
+      "failures_all_preexisting remains conservatively false."
+    ],
+    "unsupported_or_missing": [
+      "The PASS claim for source/channel/venue grouping is false.",
+      "The claimed fail-closed deny-source validation covers only unknown IDs.",
+      "Production rows are described as denied even though no real ingest ran.",
+      "counts.reviewed is len(seen), meaning present in XML, including blank or uninspected rows; it is not proof of human review.",
+      "Mandatory structured artifacts and count_table fields are absent from report.json."
+    ]
+  },
+  "test_quality": {
+    "focused_result": "7 passed in the focused artifact and all seven passed again in the wide run.",
+    "gate_gaming_findings": [
+      "Holdout IDs are derived from the implementation constant and compared back to that constant.",
+      "The pHash fixture uses an exact collision and does not pin the required distance threshold.",
+      "The family fixture assigns unique channel/venue values, hiding the real collision.",
+      "No blank-row, degenerate-geometry, valid-wrong-deny, altered-hash/type, 14-versus-15-family, relocation, or exact-C1-handoff test exists."
+    ]
+  },
+  "protected_data_audit": {
+    "actual_staging_detected": false,
+    "real_export_present": false,
+    "fresh_phash_probe": {
+      "candidate_images": 97,
+      "protected_frames": 2994,
+      "comparisons": 290418,
+      "hits": 0
+    },
+    "protected_50_or_compare_id_overlap": 0,
+    "named_nc_roboflow_source_present": false,
+    "license_note": "All 28 current package records are R&D-only standard YouTube sources, not the named BY-NC-SA source.",
+    "remaining_violation": "IYnbdRs1Jdk remains structurally reachable under a wrong-but-valid production denial argument."
+  },
+  "wide_suite_attribution": {
+    "counts": {
+      "passed": 4064,
+      "failed": 32,
+      "skipped": 25,
+      "total": 4121
+    },
+    "c0_caused_failures": "NONE_PLAUSIBLE",
+    "basis": [
+      "All seven owned tests passed in the same run; the module is imported only by its owned test and has no relevant import-time mutation.",
+      "The eight socket failures have PermissionError/socket-bind traces and no C0 dependency.",
+      "The eighteen CAL failures track pre-existing protected-fixture drift.",
+      "The scaffold index classifies C0 as dataset with its direct test; the three unknown CLIs are unrelated.",
+      "The two storage failures name artifacts introduced by ancestor commit f9dc11dfc.",
+      "The BALL, EVENT, and trainer-timeout failures have independent code paths and tracebacks."
+    ]
+  },
+  "rereview_requirements": [
+    "Implement every blocking fix above.",
+    "Correct report.json claims and add the mandatory structured fields.",
+    "Run the focused suite from a clean checkout without untracked data dependencies.",
+    "Run the exact C1 loader handoff and relocation test.",
+    "Rerun the full tests/racketsport suite and preserve exact attribution."
+  ],
+  "files_modified_by_review": false
+}
