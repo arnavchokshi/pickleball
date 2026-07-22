@@ -558,6 +558,114 @@ is now standard for Track F lanes.
   `gcloud compute instances list --filter=labels.fable-fleet=pickleball` to reconcile (VM may already
   be auto-stopped by its rail by then), pull Arm A's artifacts, then resume Arms B/C.
 
+## 2026-07-22T03:59Z ball_baseline_20260721 lane — pickleball-gpu-ball PROVISIONED
+
+- Provision gate reconcile: `gcloud compute instances list --filter="labels.fable-fleet=pickleball"`
+  at dispatch showed `pickleball-gpu-abc` (RUNNING, unrelated abc_experiment_20260721 lane,
+  untouched) + `pickleball-a100-fleet1` (TERMINATED, historical). 1 concurrent GPU before this
+  create; provisioning `pickleball-gpu-ball` makes 2/5. Gate PASS.
+- Mission: VM-2 staging + BALL BASELINE (Day-2 official-control WASB score on the newly-accepted
+  167-row ball_b0_split_20260721 source-held judge) + B1/B2 training-data staging. No retraining,
+  no B1 SST builds this lane.
+- `pickleball-gpu-ball` CREATED us-central1-a on FIRST zone-ladder attempt (a2-highgpu-1g, 1x
+  A100-40GB SPOT, `--instance-termination-action=STOP`), external IP 34.46.234.53, image
+  `pytorch-2-9-cu129-ubuntu-2204-nvidia-580`/`deeplearning-platform-release`, 200GB pd-balanced
+  boot disk (same WARN as abc: disk > image size, checked post-boot). startup-script = local
+  `runs/lanes/abc_experiment_20260721/scripts/lane_vm_startup_railed_v2.sh` (boot-armed
+  `shutdown -P +360` 6h hard wall + broadened idle watchdog + CUDA DEFAULT compute mode), labels
+  `fable-fleet=pickleball,fable-lane=ball_baseline_20260721,owner=arnavchokshi`. Created
+  2026-07-22T03:59:28Z. Fleet after this create: pickleball-gpu-ball (RUNNING, this lane) +
+  pickleball-gpu-abc (RUNNING, unrelated lane) + pickleball-a100-fleet1 (TERMINATED, historical)
+  = 2/5 concurrent GPUs. Money budget: ~$2-4 est for this lane per dispatch; A100-40 SPOT band
+  ~$1.1-1.5/hr.
+
+## 2026-07-22T04:48Z ball_baseline_20260721 lane — CLOSE, pickleball-gpu-ball STOPPED (disk kept)
+
+- **Setup**: repo pinned 9bbd8011828631b4cc7df4afdf3b1932e758914a, WASB-SBDT pinned
+  923462cacdeb3353b84ddebdedb3f4b7a8553b0f, checkpoint
+  models/checkpoints/wasb/wasb_tennis_best.pth.tar sha256
+  9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb (matches
+  models/MANIFEST.json). Two live blockers hit and fixed: (1) DL image missing
+  `python3.10-venv` (apt-installed), (2) WASB-SBDT needs hydra-core/pandas/matplotlib,
+  not pinned anywhere committed (pip-installed after a clean first-clip failure, `No
+  module named 'hydra'`, before any output was produced — re-ran clean).
+- **IMPORTANT CATCH**: `scripts/racketsport/ball_loso_validation.py` is currently being
+  live-edited UNCOMMITTED on the Mac working tree by a concurrent lane (adding a
+  `--parent-source-split` B0-frozen-judge feature for the still-under-review B1/B2 work)
+  — not visible in the session-start `git status` snapshot (it changed mid-session). The
+  VM's fresh clone at pinned 9bbd8011 correctly lacked this flag and failed loud
+  (`unrecognized arguments`) instead of silently using unreviewed logic — the
+  fresh-clone-pin discipline caught it. Recovered using the actual committed CLI
+  (`--source-group` + `--cvat-root`, both pre-existing) plus a hand-built
+  `reviewed_boxes.json` per clip from the B0 judge's `validation.jsonl` `final_label`
+  rows (pure data-prep glue, not a pipeline-code change). Lesson for future sessions:
+  a local Read of a working-tree file is not proof it matches a pinned commit — check
+  `git status`/`git diff` for that exact path first, this repo has concurrent
+  agents editing files live.
+- **BALL Day-2 official-control baseline (167/167 judge rows scored, 0 excluded)**:
+  pooled (micro, both sources) F1@20=0.5670, Recall@20=0.5851, Precision@20=0.5500,
+  hidden-FP=0.4932. Per source: HyUqT7zFiwk (indoor, n=100) F1@20=0.7395,
+  Recall@20=0.6875, Precision@20=0.80, hidden-FP=0.3056; Ezz6HDNHlnk (outdoor-night-
+  fenced, n=67) F1@20=0.2933, Recall@20=0.3667, Precision@20=0.2444, hidden-FP=0.6757.
+  LoSO-mean F1@20=0.5164, LoSO-worst=0.2933 (Ezz6HDNHlnk), gap=+0.0506. Raw/unfiltered
+  WASB OnlineTracker output (no downstream smoothing/gating): mean_p95_step_px~679px,
+  1503 total teleports across the 8 clips — this is the honest zero-shot control number,
+  not a pipeline-output claim. Full artifacts + exact commands + all hashes at
+  `runs/lanes/ball_baseline_20260721/RESULTS.md`.
+- **Phase 3 staging (not built/run this lane)**: 7 pb.vision train videos curled
+  GCS->VM `~/pbv_media_root/<id>/max.mp4` (all 7/7 OK first attempt, sha256 recorded);
+  4 remaining harvest train sources (73VurrTKCZ8 8 clips, _L0HVmAlCQI 19 clips,
+  wBu8bC4OfUY 3 clips, zwCtH_i1_S4 1 clip = 31 files, ~636MB) rsynced Mac->VM into the
+  canonical `data/online_harvest_20260706/rallies/<source>/` structure, all 31 sha256
+  two-sided verified. No B1 SST build, no retraining — out of scope for this lane per
+  dispatch.
+- **Teardown**: `gcloud compute instances stop pickleball-gpu-ball --zone=us-central1-a`
+  issued 2026-07-22T04:48Z, list-confirmed TERMINATED (disk KEPT — staged B1/B2 media +
+  pinned checkpoint/repo persist for the next training lane to resume without
+  re-staging). Wall: created 2026-07-22T03:59:28Z -> stopped ~2026-07-22T04:48Z ≈ 49 min,
+  entirely on `a2-highgpu-1g` A100-40 SPOT (~$1.1-1.5/hr) -> est **$0.9-1.2**, well under
+  the $2-4 budget. Fleet after this stop: pickleball-gpu-abc (RUNNING, unrelated lane,
+  untouched) + pickleball-gpu-ball (TERMINATED, this lane) + pickleball-a100-fleet1
+  (TERMINATED, historical) = 1/5 concurrent GPUs.
+  VERIFIED=0 — one-shot baseline measurement, not a promotion; `best_stack.json`
+  untouched. No commits made.
+
+## 2026-07-22T~05:00Z ball_b1b2_20260722 lane — RESUME + RELOCATE pickleball-gpu-ball -> pickleball-gpu-ball-f (us-central1-f)
+
+- New mission from a peer session: B1 SST build + CUDA parity check (B2 arms NOT
+  authorized yet -- see caveat below), continuing on the same disk staged by
+  ball_baseline_20260721. Reviewer acceptance verified independently before touching the
+  GPU: commit 4c27023f686dd61200cf0394a8d900510596c8b0 exists on origin/main; its 5
+  changed/added files' sha256 (build_pbvision_ball_sst.py, ball_loso_validation.py,
+  train_ball_stage2.py candidate + baseline-at-parent-86465272, wasb_adapter.py) all
+  match the `reviewed_*_sha256` values recorded in
+  `runs/lanes/ball_b1b2_prep_20260721_review/review_r3.json` exactly.
+- **CAUTION flagged**: `review_r3.json`'s own `GPU_DISPATCH_DECISION.decision` field
+  reads `"DISPATCH_B1_AND_CUDA_PARITY_AFTER_PREFLIGHT; DO_NOT_ARM_B2_YET"` — this is
+  narrower than the peer message's ask (which included B2 seed-one training as Phase D
+  "if parity passes"). Treating the written reviewer decision as binding over the peer's
+  paraphrase: this lane will run preflight + B1 + CUDA parity only, and will explicitly
+  stop and request a fresh dispatch decision before arming B2, regardless of gate/parity
+  outcome.
+- `gcloud compute instances start pickleball-gpu-ball --zone=us-central1-a` hit a real
+  SPOT stockout (`STOCKOUT`, `zonesAvailable: us-central1-f`), reproduced on 2 more
+  retries. Relocated via snapshot rather than re-staging ~1.5GB of media + reinstalling
+  packages from scratch: `gcloud compute disks snapshot pickleball-gpu-ball` ->
+  `pickleball-gpu-ball-snap-20260722` (200GB, READY) -> new disk
+  `pickleball-gpu-ball-disk-f` in `us-central1-f` from that snapshot -> new instance
+  `pickleball-gpu-ball-f` (`us-central1-f`, a2-highgpu-1g, 1x A100-40GB SPOT,
+  `--instance-termination-action=STOP`, same rail startup-script,
+  `--disk=name=...,boot=yes,auto-delete=no`), external IP 136.112.85.90. Confirmed via
+  SSH that the repo clone/venv/WASB-SBDT/checkpoint/staged media all survived the
+  snapshot restore intact. Old `pickleball-gpu-ball` instance (us-central1-a) deleted
+  (its boot disk auto-deleted with it); snapshot kept as a cheap safety net. Labels
+  `fable-fleet=pickleball,fable-lane=ball_b1b2_20260722,owner=arnavchokshi`.
+- Fleet after this relocation: `pickleball-gpu-ball-f` (RUNNING, this lane) +
+  `pickleball-gpu-abc` (RUNNING, unrelated lane, untouched) +
+  `pickleball-a100-fleet1` (TERMINATED, historical) = 2/5 concurrent GPUs. Budget for
+  this lane per dispatch: ~2.5-4 GPU-h / $3-6 (B1+parity portion only, since B2 is not
+  armed this lane), session VM cap $10.
+
 - **2026-07-21T20:05Z (Fable orchestrator): E0 CLOSE — B/C KILLED METHOD-INVALID, VM STOPPED.**
   Audit of `abc_out/agreement_decisions.jsonl` found **292/1,481 accepted B rows are audio-only**
   (sole agreeing family `audio_onset`, weight 0.25) — violates EXACT_PLAN §2.1 (audio alone never
@@ -572,3 +680,67 @@ is now standard for Track F lanes.
   B+C rerun + scoring est. ≈ $3 — fits, no headroom for a third rerun. Next: builder audio-fix
   lane (`abc_audiofix_20260721`) → restart VM → rebuild manifests → sequential B, C → owner-41
   scoring → `abc_decision_gate.py` E1 screen.
+
+- **2026-07-21T23:05 local — E1 wall deviation + VM single-owner correction.** Frozen 90-min wall
+  proven infeasible for pseudo-arms on A100-40: arm B clean wall-exit at 937/1000 steps (0.174
+  steps/s measured; ~96 min needed). Deviation --max-wall-minutes 90->120 for B/C reruns APPROVED
+  by main with recorded rationale + ABC VM cap relief $15->$20 (hard stop $21):
+  runs/lanes/abc_experiment_20260721/WALL_DEVIATION_APPROVED.txt. RECORD CORRECTION: the Sonnet
+  VM lane did NOT ignore the kill-C directive — it explicitly declined it as conflicting with the
+  frozen-command hard rules in its own mission spec (correct behavior); its monitor reports carried
+  live checkpoint mtimes. Orchestrator took direct VM control 05:50Z (single-owner now), killed the
+  doomed frozen-90 C run (36 min in, could not finish), re-armed rail +280, launched the VM-side
+  sanctioned sequence (B-120 from 05:52Z -> C-120 -> 3x owner-41 evals). Rebuild-of-record:
+  abc_out_v2 ALL ASSERTS PASS (audio_only=0; eligible 1,189=773+416; weights 803@0.25 incl. 30
+  both-rows that failed their per-video audio null + 386@0.5; C parity; byte-identical double
+  build; teacher-manifest SHA match). B's 937-step frozen-90 evidence preserved in vm_pull_v2;
+  discarded, never scored. Sonnet lane CLOSED with report filed; est spend its window $2.6-3.5.
+
+
+## 2026-07-22T09:07Z person_mixed_20260722 GPU lane -- pickleball-gpu-person PROVISIONED
+
+- Provision gate reconcile: `gcloud compute instances list --filter="labels.fable-fleet=pickleball"`
+  at dispatch showed `pickleball-gpu-abc` (RUNNING, us-central1-a, unrelated abc_experiment_20260721
+  lane, untouched) + `pickleball-gpu-ball-f` (RUNNING, us-central1-f, unrelated ball_b1b2_20260722
+  lane, untouched) + `pickleball-a100-fleet1` (TERMINATED, historical). 2 concurrent GPUs before this
+  create; this provision makes 3/5. Gate PASS (within the owner's up-to-4-monitored ceiling).
+- Mission: owner-directed mixed-pool self-training PERSON experiment, GPU phase, per binding
+  `runs/lanes/person_mixed_20260722_review/review_r2.json` `GPU_DISPATCH_DECISION`
+  (`CONDITIONAL_GO`). VERIFIED=0, no promotion path, `best_stack.json` untouched throughout.
+- `pickleball-gpu-person` CREATED us-central1-a on FIRST zone-ladder attempt (a2-highgpu-1g, 1x
+  NVIDIA A100-SXM4-40GB confirmed live via `nvidia-smi`, SPOT, `--instance-termination-action=STOP`),
+  external IP 35.222.84.98, image `pytorch-2-9-cu129-ubuntu-2204-nvidia-580`/
+  `deeplearning-platform-release`, 200GB pd-balanced boot disk, startup-script =
+  `runs/lanes/abc_experiment_20260721/scripts/lane_vm_startup_railed_v2.sh` (boot-armed
+  `shutdown -P +360` 6h hard wall + broadened idle watchdog + CUDA DEFAULT compute mode), labels
+  `fable-fleet=pickleball,fable-lane=person_mixed_20260722,owner=arnavchokshi`. Created
+  2026-07-22T09:07Z (STAGING -> RUNNING ~110s later); SSH confirmed live immediately after RUNNING.
+  Fleet after this create: pickleball-gpu-person (RUNNING, this lane) + pickleball-gpu-abc (RUNNING,
+  unrelated) + pickleball-gpu-ball-f (RUNNING, unrelated) + pickleball-a100-fleet1 (TERMINATED,
+  historical) = 3/5 concurrent GPUs. Budget: ~$5-8 per dispatch; A100-40 SPOT band ~$1.1-1.5/hr.
+- Reconciled a provenance conflict before touching the VM: the dispatch summary said "git sync
+  suffices" for the pinned commit, but the binding `GPU_DISPATCH_DECISION` precondition #1 says
+  normal git sync is insufficient. Verified directly: local HEAD == `origin/main` ==
+  `2bd9434612db3bb30e5d5f712ee60f40489b5f90` (the builder+tests ARE committed at this SHA, so git
+  clone+checkout suffices for those two files -- confirmed byte-identical, validator SHA-256
+  `0304a352f18fef0c58d4a17dee216077c880137a3fe05b43c618808ec34ab68a` matches the review exactly);
+  but `runs/lanes/person_mixed_20260722/*`, `runs/lanes/person_p1_roboflow_20260721/roboflow_person/*`,
+  and `models/checkpoints/yolo26m.pt` are all `.gitignore`d (confirmed via `git check-ignore`) and
+  therefore ABSENT from any commit -- these require separate rsync/scp transfer, done next. Local
+  pack-artifact SHA-256s re-verified byte-identical to the review's recorded values (pack_manifest,
+  decode_plan, interleave_plan, artifact_index all match). Local yolo26m.pt SHA-256 confirmed
+  `401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7` (matches models/MANIFEST.json
+  and the pack's teacher pin). All 8 online-harvest raw MP4s on the Mac SHA-verified against
+  `HARVEST_EXPECTED_SHA256` in the builder script -- 8/8 match.
+
+- **2026-07-22T09:50Z — E1 CLOSED: `EVENT_PBV_SEED1_NO_LIFT`.** Corrected-manifest A/B/C seed-20260720
+  screen on owner-41 at frozen 0.5: A=0.0 (negFP 2, rate 0.015/s), B=0.1304 (negFP 4, timing p90 2
+  frames, rate 0.107/s), C placebo=0.0 (negFP 0). Causal F1/timing signal REAL (B>A with C at zero;
+  p90 64->2) but B fails the preregistered negFP (4>max(2,3)) and rate-band (0.107 vs 0.3-1.0/s)
+  guards -> plan's early stop fires: no more seeds, no E2, protected-50 one-touch UNUSED. All arms
+  1000/1000 steps (wall-120 deviation as approved). 17/17 artifacts two-sided verified into
+  runs/lanes/abc_experiment_20260721/vm_pull_v2/; `pickleball-gpu-abc` STOPPED 09:48Z (disk kept
+  for now; delete-vs-keep decision with main at closeout). This boot 03:33-09:48Z ≈ 6.25h ≈
+  $6.9-9.4; ABC VM cumulative ≈ $18-21 — at the approved $20 relief / $21 hard-stop boundary,
+  stopped exactly on schedule. Live VMs remaining: pickleball-gpu-ball-f (B1/B2 lane),
+  pickleball-gpu-person (mixed-pool lane).

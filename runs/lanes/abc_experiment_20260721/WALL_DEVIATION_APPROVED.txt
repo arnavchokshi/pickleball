@@ -1,0 +1,9 @@
+APPROVED 2026-07-21T22:41 local (main sign-off relayed to orchestrator).
+Scope: --max-wall-minutes 90 -> 120 for seed-20260720 arm B and arm C RERUNS ONLY. Every other
+flag byte-identical to the frozen ABC_READY commands. Rationale for the record: the scientific
+contract is equal steps (1000) across arms with identical seeds/batch sequences; the 90-min wall
+was an ops spend-bound mis-sized for pseudo-arm throughput on A100-40 (measured 0.174 steps/s ->
+~96 min needed); extending it RESTORES the equal-steps contract. B's 937-step wall-fail run is
+discarded, never scored. Requirement: final report must confirm BOTH reruns reached exactly
+1000/1000 completed steps. Cap relief: ABC VM session cap $15 -> $20, hard stop $21 (pull
+evidence + stop rather than continue).

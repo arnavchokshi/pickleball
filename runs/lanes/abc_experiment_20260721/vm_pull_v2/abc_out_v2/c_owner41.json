@@ -1,0 +1,629 @@
+{
+  "arm": "C",
+  "artifact_type": "event_head_abc_arm_eval",
+  "checkpoint": "runs/lanes/ball_event_abc_20260720/seed_20260720/C_placebo/best_event_head_finetuned.pt",
+  "checkpoint_train_window_frames": 64,
+  "completed_steps": 1000,
+  "full_video_duration_s": 1577.0333333333333,
+  "full_video_event_count": 34,
+  "full_video_events_per_second": 0.021559468199784406,
+  "full_video_summaries": [
+    {
+      "duration_s": 971.0,
+      "event_count": 0,
+      "events_per_second": 0.0,
+      "fps": 30.0,
+      "frames": 29130,
+      "source_video": "HyUqT7zFiwk",
+      "video_path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4",
+      "window_policy": "non_overlapping_checkpoint_windows_covering_every_frame_once"
+    },
+    {
+      "duration_s": 606.0333333333333,
+      "event_count": 34,
+      "events_per_second": 0.05610252461360762,
+      "fps": 30.0,
+      "frames": 18181,
+      "source_video": "zwCtH_i1_S4",
+      "video_path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.mp4",
+      "window_policy": "non_overlapping_checkpoint_windows_covering_every_frame_once"
+    }
+  ],
+  "macro_f1_at_2": 0.0,
+  "mode": "owner_validation_41",
+  "negative_false_positives": 0,
+  "negative_rows": 22,
+  "protected_50_touched": false,
+  "row_summaries": [
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 1.2076795428583864e-05,
+      "max_probability_by_class": {
+        "BOUNCE": 1.2076795428583864e-05,
+        "HIT": 1.0643080713634845e-05,
+        "background": 0.9999997615814209
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_003"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 9.390410559717566e-05,
+      "max_probability_by_class": {
+        "BOUNCE": 9.390410559717566e-05,
+        "HIT": 1.280242304346757e-05,
+        "background": 0.9999994039535522
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_006"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.008383465930819511,
+      "max_probability_by_class": {
+        "BOUNCE": 0.008383465930819511,
+        "HIT": 0.0020538102835416794,
+        "background": 0.9999934434890747
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_007"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.05453725904226303,
+      "max_probability_by_class": {
+        "BOUNCE": 0.020954035222530365,
+        "HIT": 0.05453725904226303,
+        "background": 0.9984172582626343
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_009"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.012460126541554928,
+      "max_probability_by_class": {
+        "BOUNCE": 0.012460126541554928,
+        "HIT": 0.004270338919013739,
+        "background": 0.9999586343765259
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_013"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 2.607464193715714e-05,
+      "max_probability_by_class": {
+        "BOUNCE": 2.607464193715714e-05,
+        "HIT": 1.601563417352736e-05,
+        "background": 0.9999991655349731
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_019"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.07887598872184753,
+      "max_probability_by_class": {
+        "BOUNCE": 0.020162494853138924,
+        "HIT": 0.07887598872184753,
+        "background": 0.9936145544052124
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_020"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.1688520908355713,
+      "max_probability_by_class": {
+        "BOUNCE": 0.07593399286270142,
+        "HIT": 0.1688520908355713,
+        "background": 0.9989297986030579
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_021"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.009490210562944412,
+      "max_probability_by_class": {
+        "BOUNCE": 0.009490210562944412,
+        "HIT": 0.0025445802602916956,
+        "background": 0.9997332692146301
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_022"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.5131040811538696,
+      "max_probability_by_class": {
+        "BOUNCE": 0.04663506895303726,
+        "HIT": 0.5131040811538696,
+        "background": 0.9927207827568054
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "row_id": "els20260715_025"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.19278277456760406,
+      "max_probability_by_class": {
+        "BOUNCE": 0.054991383105516434,
+        "HIT": 0.19278277456760406,
+        "background": 0.9939513206481934
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_027"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.30069467425346375,
+      "max_probability_by_class": {
+        "BOUNCE": 0.03077467903494835,
+        "HIT": 0.30069467425346375,
+        "background": 0.9983213543891907
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_036"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 3.8071048038545996e-05,
+      "max_probability_by_class": {
+        "BOUNCE": 3.8071048038545996e-05,
+        "HIT": 1.743449320201762e-05,
+        "background": 0.9999994039535522
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_037"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 4.6307104639708996e-05,
+      "max_probability_by_class": {
+        "BOUNCE": 4.6307104639708996e-05,
+        "HIT": 1.4264587662182748e-05,
+        "background": 0.9999991655349731
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_039"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.00023276329739019275,
+      "max_probability_by_class": {
+        "BOUNCE": 0.00023276329739019275,
+        "HIT": 1.922715273394715e-05,
+        "background": 0.9999982118606567
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_040"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.015877826139330864,
+      "max_probability_by_class": {
+        "BOUNCE": 0.015877826139330864,
+        "HIT": 0.0037416373379528522,
+        "background": 0.999950647354126
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_041"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 7.995180931175128e-05,
+      "max_probability_by_class": {
+        "BOUNCE": 7.995180931175128e-05,
+        "HIT": 9.434768799110316e-06,
+        "background": 0.999998927116394
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_043"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.0020393638405948877,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0020393638405948877,
+        "HIT": 0.0010089599527418613,
+        "background": 0.9999878406524658
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_046"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.029165035113692284,
+      "max_probability_by_class": {
+        "BOUNCE": 0.029165035113692284,
+        "HIT": 0.013325458392500877,
+        "background": 0.9973360896110535
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_047"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.0007303452002815902,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0007303452002815902,
+        "HIT": 0.00018260054639540613,
+        "background": 0.9999915361404419
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_050"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.1959381103515625,
+      "max_probability_by_class": {
+        "BOUNCE": 0.05664503946900368,
+        "HIT": 0.1959381103515625,
+        "background": 0.9918743968009949
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_053"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.0017804455710574985,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0017804455710574985,
+        "HIT": 0.00014902043039910495,
+        "background": 0.999991774559021
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_058"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.0012271448504179716,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0012271448504179716,
+        "HIT": 0.00010585915151750669,
+        "background": 0.9999946355819702
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_059"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.08451387286186218,
+      "max_probability_by_class": {
+        "BOUNCE": 0.08451387286186218,
+        "HIT": 0.02469385601580143,
+        "background": 0.9948155283927917
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_066"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 3.633284359239042e-05,
+      "max_probability_by_class": {
+        "BOUNCE": 3.633284359239042e-05,
+        "HIT": 1.8437081962474622e-05,
+        "background": 0.9999991655349731
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_067"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.0008954392396844923,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0008954392396844923,
+        "HIT": 0.0007449440308846533,
+        "background": 0.9999911785125732
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_069"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.02167493849992752,
+      "max_probability_by_class": {
+        "BOUNCE": 0.02167493849992752,
+        "HIT": 0.007250085938721895,
+        "background": 0.9997016787528992
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_071"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.020509596914052963,
+      "max_probability_by_class": {
+        "BOUNCE": 0.020509596914052963,
+        "HIT": 0.004688150715082884,
+        "background": 0.9997019171714783
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_072"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.017447417601943016,
+      "max_probability_by_class": {
+        "BOUNCE": 0.017447417601943016,
+        "HIT": 0.00396613497287035,
+        "background": 0.9998683929443359
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_073"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.07104642689228058,
+      "max_probability_by_class": {
+        "BOUNCE": 0.005264934152364731,
+        "HIT": 0.07104642689228058,
+        "background": 0.9998621940612793
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_076"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.004952842835336924,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0009415386593900621,
+        "HIT": 0.004952842835336924,
+        "background": 0.9999915361404419
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_079"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.06777848303318024,
+      "max_probability_by_class": {
+        "BOUNCE": 0.045460570603609085,
+        "HIT": 0.06777848303318024,
+        "background": 0.9981591105461121
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_083"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.00015793884813319892,
+      "max_probability_by_class": {
+        "BOUNCE": 0.00015793884813319892,
+        "HIT": 4.87089273519814e-05,
+        "background": 0.9999979734420776
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_084"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.0001395345025230199,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0001395345025230199,
+        "HIT": 1.526981395727489e-05,
+        "background": 0.9999991655349731
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_085"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.02650557830929756,
+      "max_probability_by_class": {
+        "BOUNCE": 0.02650557830929756,
+        "HIT": 0.018722260370850563,
+        "background": 0.9992977380752563
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_088"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.011067850515246391,
+      "max_probability_by_class": {
+        "BOUNCE": 0.011067850515246391,
+        "HIT": 0.0032769725657999516,
+        "background": 0.9999622106552124
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_091"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.00043319424730725586,
+      "max_probability_by_class": {
+        "BOUNCE": 0.00043319424730725586,
+        "HIT": 0.00038296947604976594,
+        "background": 0.999995231628418
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_092"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 3.889252548106015e-05,
+      "max_probability_by_class": {
+        "BOUNCE": 3.889252548106015e-05,
+        "HIT": 1.7928621673490852e-05,
+        "background": 0.9999971389770508
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_094"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 1.8473951058695093e-05,
+      "max_probability_by_class": {
+        "BOUNCE": 1.5604715372319333e-05,
+        "HIT": 1.8473951058695093e-05,
+        "background": 0.999998927116394
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_095"
+    },
+    {
+      "ground_truth_count": 1,
+      "max_positive_class_probability": 0.011487113311886787,
+      "max_probability_by_class": {
+        "BOUNCE": 0.011487113311886787,
+        "HIT": 0.0031458016019314528,
+        "background": 0.9999393224716187
+      },
+      "negative": false,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_097"
+    },
+    {
+      "ground_truth_count": 0,
+      "max_positive_class_probability": 0.0762816071510315,
+      "max_probability_by_class": {
+        "BOUNCE": 0.016569731757044792,
+        "HIT": 0.0762816071510315,
+        "background": 0.9979536533355713
+      },
+      "negative": true,
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "row_id": "els20260715_100"
+    }
+  ],
+  "schema_version": 1,
+  "seed": 20260720,
+  "selection_rows": 41,
+  "selection_scope": "owner_validation_41",
+  "target_steps": 1000,
+  "threshold": 0.5,
+  "timing_error_p90_frames": 64.0,
+  "timing_error_p90_policy": "nearest_rank_absolute_error_at_tolerance_2; no_matches=window_frames",
+  "tolerance_sweep": [
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.0,
+          "fn": 4,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        },
+        "HIT": {
+          "f1": 0.0,
+          "fn": 15,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        }
+      },
+      "tolerance_frames": 1
+    },
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.0,
+          "fn": 4,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        },
+        "HIT": {
+          "f1": 0.0,
+          "fn": 15,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        }
+      },
+      "tolerance_frames": 2
+    }
+  ],
+  "verified": false
+}

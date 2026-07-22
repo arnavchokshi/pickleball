@@ -1,0 +1,30 @@
+{
+  "artifact_type": "event_head_abc_e1_screen",
+  "schema_version": 1,
+  "date_utc": "2026-07-22T09:50:00Z",
+  "verdict": "EVENT_PBV_SEED1_NO_LIFT",
+  "selection_scope": "owner_validation_41",
+  "protected_50_touched": false,
+  "seed": 20260720,
+  "arms": {
+    "A_owner_only":      {"macro_f1_at_2": 0.0,                 "neg_fp_of_22": 2, "timing_p90_frames": 64.0, "full_video_rate_per_s": 0.0152, "train_completed_steps": 1000, "eval_best_checkpoint_step": 900},
+    "B_pbvision_teacher":{"macro_f1_at_2": 0.13043478260869568, "neg_fp_of_22": 4, "timing_p90_frames": 2.0,  "full_video_rate_per_s": 0.1065, "train_completed_steps": 1000, "eval_best_checkpoint_step": 800},
+    "C_placebo":         {"macro_f1_at_2": 0.0,                 "neg_fp_of_22": 0, "timing_p90_frames": 64.0, "full_video_rate_per_s": 0.0216, "train_completed_steps": 1000, "eval_best_checkpoint_step": 1000}
+  },
+  "screen_criteria": {
+    "b_minus_a_macro_f1_ge_0.10": {"value": 0.13043478260869568, "pass": true},
+    "b_greater_than_c":           {"value": "0.1304 > 0.0",      "pass": true},
+    "b_neg_fp_le_2_and_le_a_plus_1": {"value": "4 vs max(2, A+1=3)", "pass": false},
+    "b_timing_p90_non_worse_than_a": {"value": "2.0 vs 64.0 frames", "pass": true},
+    "b_rate_in_0.3_to_1.0_per_s":    {"value": 0.1065,            "pass": false}
+  },
+  "wall_deviation": "max-wall-minutes 90->120 for B/C reruns ONLY (ops spend-bound mis-sized for pseudo-arm throughput on A100-40: measured 0.1727 steps/s -> ~96.5 min needed; approved with recorded rationale in WALL_DEVIATION_APPROVED.txt before relaunch; B's discarded frozen-90 wall-fail at 937/1000 steps preserved in vm_pull_v2 and never scored). Both reruns confirmed completed_steps==target_steps==1000 (B elapsed 5790s, C manifest verified in-run).",
+  "interpretation": "Directional causal signal is REAL on the selection metric: B lifts macro-F1 +0.1304 over A while the same-pixels shuffled-time placebo C stays at 0.0, and B's timing p90 collapses 64->2 frames. But B FAILS both preregistered safety guards: 4/22 negative-subset false positives (allowed <=2 and <=A+1=3) and full-video firing rate 0.1065/s (required 0.3-1.0/s; ~3-10x under-firing vs a real game's contact rate). Per EXACT_PLAN E1 early-stop this records EVENT_PBV_SEED1_NO_LIFT: no seeds 20260721/20260722, no E2, the registered 3-seed gate is never run, and the protected-50 one-touch token remains unused. The signal-vs-guards split is preserved for any future separately-registered experiment design; it does not soften this verdict.",
+  "evidence": {
+    "eval_jsons": "vm_pull_v2/abc_out_v2/{a,b,c}_owner41.json",
+    "manifests": "vm_pull_v2/{B_pbvision_teacher,C_placebo}/finetune_manifest.json",
+    "orchestration_log": "vm_pull_v2/e1_orchestrate.log",
+    "pull_verification": "vm_pull_v2/vm_pull_v2_sha256.txt (17/17 two-sided)",
+    "rebuild_of_record": "abc_out_v2 asserts all PASS (E0 repair path; see fleet ledger 2026-07-21T23:05)"
+  }
+}
