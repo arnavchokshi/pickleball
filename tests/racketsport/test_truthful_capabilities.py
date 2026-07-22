@@ -22,6 +22,7 @@ CANONICAL_DOCS = [
 ]
 
 ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
+    "OWNER_CHECKIN.md",
     "corrections/README.md",
     "cvat_upload/CVAT_LABELING_INSTRUCTIONS.md",
     "cvat_upload/OWNER_SESSION_20260708.md",
