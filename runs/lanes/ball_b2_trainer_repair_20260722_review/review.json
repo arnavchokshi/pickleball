@@ -1,0 +1,281 @@
+{
+  "schema_version": 1,
+  "artifact_type": "ball_b2_trainer_repair_ultra_adversarial_review",
+  "review_id": "ball_b2_trainer_repair_20260722_review",
+  "review_date": "2026-07-22",
+  "reviewed_lane": "runs/lanes/ball_b2_trainer_repair_20260722",
+  "branch": "main",
+  "mode": "CPU-only; reviewed production files read-only",
+  "VERIFIED": false,
+  "promotion_claimed": false,
+  "B2_armed": false,
+  "VERDICT": "ACCEPT",
+  "verdict_scope": "Accept the revision-explicit parity-harness repair and SST duplicate-free sampler repair for commit. This does not authorize B2 and does not replace the pending real 2372-step CUDA parity or fresh arming review.",
+  "reviewed_identities": {
+    "required_baseline_revision": "86465272f3b267a1ab5a7c3dc5be4ca824c70d43",
+    "required_baseline_trainer_sha256": "8118ff0e8fbf1d573f61e1ce09de140cb2c9e9e62bf1d57b030560a55a157f47",
+    "pre_repair_HEAD_trainer_sha256": "9d2d326103da97afa1adc5f13bffc9560cc8f2d2af9942199a198568c9d44f3a",
+    "new_candidate_trainer_sha256": "b8e653dab6d906070bfeabc146035f00b3adf8b632e1c12f1c5f1e043898bbc7",
+    "owned_test_module_sha256": "40ece9ccb49eb8a4a16bcd8d279804c4b9da0e99c493de207df99a34cfb4f5c1",
+    "trainer_sources_distinct": true
+  },
+  "acceptance": [
+    {
+      "ordinal": 1,
+      "name": "Revision-explicit parity harness",
+      "verdict": "PASS",
+      "evidence": [
+        "scripts/racketsport/train_ball_stage2.py:2217-2259 requires a nonblank revision and explicit expected SHA-256, resolves the revision to a commit, and loads git show <commit>:scripts/racketsport/train_ball_stage2.py rather than the working tree.",
+        "scripts/racketsport/train_ball_stage2.py:2262-2286 has no HEAD/hash inference and rejects equal baseline/candidate source hashes.",
+        "scripts/racketsport/train_ball_stage2.py:2563-2571 performs the distinct-source check before CUDA, dataset construction, or output-directory creation; output is created only at lines 2714-2717.",
+        "Fresh owned-module run passed all 31 tests. The self-comparison test reproduced return code 2, the candidate-versus-itself error, and no output directory.",
+        "An independent direct reproduction used identical simulated running-file and HEAD-blob SHA 9d2d3261... and again observed rc=2 with no artifact. Missing-revision, missing-hash, and hash-mismatch cases also failed closed.",
+        "The seven-step CPU fixture passed twice with byte-identical result values: losses [0.34526681900024414, 0.5392073392868042, 0.343158483505249, 0.5391553044319153, 0.34319964051246643, 0.5385992527008057, 0.3436070680618286] for both arms and model-state SHA 0f735e48513d0b6f270830d897dc7af35f8e0a19dc1c3d59e47a69af97262a7e for both arms."
+      ],
+      "seven_step_trace": {
+        "test": "tests/racketsport/test_ball_stage2_training.py:472",
+        "rows_per_step": 8,
+        "steps_per_arm": 7,
+        "inputs": "8x3x4x4 float tensors at step/10",
+        "targets": "8x1x4x4 alternating zero/one tensors",
+        "weights": "linspace 0.25 through 1.0",
+        "model": "torch Sequential Conv2d(3,4,1), ReLU, Conv2d(4,1,1)",
+        "optimizer": "AdamW lr=0.01 weight_decay=0",
+        "real_compute": "run_revision_explicit_compute_parity calls the baseline blob's and candidate's real train_one_stage2_batch; that executes forward, BCE-with-logits, weighted reduction, backward, and optimizer.step, then saves and reloads actual checkpoints",
+        "sst_path_exercised": false,
+        "arm_A_equivalent": true,
+        "limitation": "Tiny synthetic CPU compute proof, not production WASB/B0 decoding and not the 2372-step CUDA gate."
+      }
+    },
+    {
+      "ordinal": 2,
+      "name": "SST within-batch uniqueness via Option B",
+      "verdict": "PASS",
+      "evidence": [
+        "Historical sampler reproduction at sample_count=1001, batch_size=8, seed=20260722 produced step 1751 [256,432,546,743,401,497,432,947], 7 unique.",
+        "Candidate produced step 1751 [256,432,546,743,401,497,120,947], 8 unique, and moved 432 into the next batch in place of 120; this is an in-permutation cross-boundary swap, not a drop or redraw.",
+        "scripts/racketsport/train_ball_stage2.py:3778-3837 uses one private seeded randperm per permutation, swaps only colliding splice-prefix elements, preserves the complete permutation multiset, and asserts dataset-index uniqueness.",
+        "scripts/racketsport/train_ball_stage2.py:3872-3894 installs the distinct sampler only in the SST loader; lines 2863-2869 enter it only in dual-SST mode.",
+        "scripts/racketsport/train_ball_stage2.py:3917-3933 independently rejects missing or duplicate semantic sample IDs; lines 2947-2950 run that guard before pseudo forward/backward.",
+        "Fresh owned-module tests passed the exact reviewer reproduction, boundary splice, deterministic restart/resume, and semantic duplicate-ID refusal."
+      ],
+      "independent_property_sweep": {
+        "total_batches": 1356000,
+        "batch_size": 8,
+        "seed": 20260722,
+        "duplicate_batches": 0,
+        "out_of_range_batches": 0,
+        "global_cpu_rng_unchanged": true,
+        "cases": [
+          {
+            "manifest_size": 1000,
+            "batches": 226000,
+            "min_exposure": 1808,
+            "max_exposure": 1808,
+            "exact_prefix_exposure": true,
+            "deterministic_prefix": true,
+            "resume_exact": true
+          },
+          {
+            "manifest_size": 1001,
+            "batches": 226000,
+            "min_exposure": 1806,
+            "max_exposure": 1807,
+            "exact_prefix_exposure": true,
+            "deterministic_prefix": true,
+            "resume_exact": true
+          },
+          {
+            "manifest_size": 1007,
+            "batches": 226000,
+            "min_exposure": 1795,
+            "max_exposure": 1796,
+            "exact_prefix_exposure": true,
+            "deterministic_prefix": true,
+            "resume_exact": true
+          },
+          {
+            "manifest_size": 1023,
+            "batches": 226000,
+            "min_exposure": 1767,
+            "max_exposure": 1768,
+            "exact_prefix_exposure": true,
+            "deterministic_prefix": true,
+            "resume_exact": true
+          },
+          {
+            "manifest_size": 2003,
+            "batches": 226000,
+            "min_exposure": 902,
+            "max_exposure": 903,
+            "exact_prefix_exposure": true,
+            "deterministic_prefix": true,
+            "resume_exact": true
+          },
+          {
+            "manifest_size": 2049,
+            "batches": 226000,
+            "min_exposure": 882,
+            "max_exposure": 883,
+            "exact_prefix_exposure": true,
+            "deterministic_prefix": true,
+            "resume_exact": true
+          }
+        ]
+      },
+      "distribution_review": {
+        "verdict": "NO_SYSTEMATIC_SAMPLE_DISADVANTAGE_FOUND",
+        "reasoning": [
+          "The repair changes temporal pairing at a splice by delaying a colliding repeat and advancing the first later nonblocked row. That local anti-repeat correlation is intentional and is a real distributional change from the defective stream.",
+          "The algorithm is label-equivariant: it compares sample identities only for equality and never orders or thresholds numeric indices. The first later nonblocked row in a uniform permutation is uniform over eligible rows, so manifest/index order is not favored.",
+          "Every generated permutation retains every row exactly once. At any finite batch prefix, exposure is therefore exactly floor(total_rows_drawn/N) or ceil(total_rows_drawn/N); the six-case sweep confirmed the exact quotient/remainder histogram.",
+          "An additional independent high-collision n=11 probe over 220000 batches found exact 160000 exposures per ID, pair-count coefficient of variation 0.000846, and per-ID mean interarrival approximately 11.0."
+        ],
+        "random_draws": "Historical and candidate production-shape probes each made 19 randperm calls for 2372 batches, had identical raw randperm streams/private-generator final state, and left global CPU RNG unchanged."
+      }
+    },
+    {
+      "ordinal": 3,
+      "name": "Human-only path invariance",
+      "verdict": "PASS",
+      "evidence": [
+        "AST audit against pre-repair HEAD 9d2d3261... found all 26 imports unchanged and no module global/constant added, removed, or changed.",
+        "DeterministicFullBatchSampler, _make_training_loader, _assert_human_training_batch, train_one_stage2_batch, apply_occlusion_augmentation, CombinedStage2Dataset/B0 dataset code, _no_cache_cycle, save/load checkpoint compute, and imported train_ball_pretrain dependency are unchanged.",
+        "The run() diff changes only the dual_sst_mode loader call. The no-SST branch at lines 2934-2945 still invokes the historical human-only training step with the same loader, seed, optimizer, augmentation parameters, and step count.",
+        "_training_data_summary returns human_dataset.summary before the changed SST-only description branch.",
+        "The distinct-baseline fixture is arm-A-equivalent: no SST manifest, dataset, loader, assertion, forward, or loss is involved, and exact losses, sample order, RNG consumption, final state, and loaded checkpoint state matched."
+      ],
+      "non_compute_difference": "The two new parser selectors serialize as null fields in ordinary candidate checkpoint args. Raw checkpoint bytes/metadata therefore differ even though human compute and model state are identical."
+    },
+    {
+      "ordinal": 4,
+      "name": "Wide-suite reporting and regression attribution",
+      "verdict": "PASS",
+      "evidence": [
+        "The repair's exact wide run recorded 4414 passed, 42 failed, 25 skipped, exit 1, and zero failures in the owned trainer/test module. It did not claim a green suite or prove all failures at clean HEAD.",
+        "Against ball_audio_anchor_20260722/wide_suite_failures.txt: repair 42, earlier classified 41, intersection 39, repair-only 3, earlier-only 2.",
+        "Earlier-only nodes are the obsolete parity-premise test, now intentionally renamed/repaired and passing, plus an event-dataset node that now passes.",
+        "Repair-only nodes are one flight-simulator timing threshold and two Track-C player-selection/pooling nodes. A fresh review rerun produced flight 12.048 seconds versus the 5-second threshold and both Track-C nodes passed; no trainer path was entered.",
+        "The durable coordinator addendum at runs/lanes/trackE_datahygiene_20260722/RESUME_BRIEF.md:26 identifies best_stack rev-15 drift as KNOWN_ATTRIBUTED(trkC_constraints_wire). Track C's own spec owns best_stack, process_video, player-selection code/tests, and the revision bump.",
+        "The otherwise unresolved ball-arc and event-eval nodes are both present in the earlier 41-failure run, their files are tracked-clean relative to this repair, and neither imports or reaches train_ball_stage2. No residual failure is attributable to this repair."
+      ],
+      "full_suite_green": false,
+      "failures_all_proven_at_clean_HEAD": false,
+      "wide_suite_rerun_by_reviewer": false,
+      "wide_suite_rerun_reason": "The dispatch made the wide rerun optional under documented concurrent drift; the review instead performed exact failure-set reconciliation and focused residual reruns."
+    },
+    {
+      "ordinal": 5,
+      "name": "New candidate identity",
+      "verdict": "PASS",
+      "evidence": [
+        "Fresh shasum -a 256 of scripts/racketsport/train_ball_stage2.py is b8e653dab6d906070bfeabc146035f00b3adf8b632e1c12f1c5f1e043898bbc7.",
+        "The future CUDA run and fresh arming review must use this full SHA-256, not obsolete candidate 9d2d3261...."
+      ]
+    }
+  ],
+  "scope_review": {
+    "verdict": "PASS",
+    "repair_owned_changes": [
+      "scripts/racketsport/train_ball_stage2.py",
+      "tests/racketsport/test_ball_stage2_training.py",
+      "runs/lanes/ball_b2_trainer_repair_20260722/**"
+    ],
+    "best_stack_touched_by_this_repair": false,
+    "classification": [
+      "configs/racketsport/best_stack.json rev 15 and player-selection/process_video files belong to trkC_constraints_wire_20260722.",
+      "Court keypoint/data files belong to concurrent court lanes.",
+      "Audio/event files belong to concurrent Track-B/Track-D lanes.",
+      "No repair transcript patch target was outside the trainer, its owned test, or repair lane directory."
+    ]
+  },
+  "review_r4_minimum_reopen_conditions": [
+    {
+      "ordinal": 1,
+      "condition": "Repair and independently ultra-review revision/hash-pinned parity plus SST sample-ID uniqueness.",
+      "parity_harness_half": "DISCHARGED_BY_THIS_ACCEPT",
+      "sst_uniqueness_half": "DISCHARGED_BY_THIS_ACCEPT",
+      "new_trainer_hash_independently_verified": true,
+      "overall_status": "DISCHARGED_BY_THIS_ACCEPT"
+    },
+    {
+      "ordinal": 2,
+      "condition": "B1 gate PASS with completed decoding, accepted_windows>=1000, accepted_sources>=5, zero holdout rows, decodable windows, agreement reasons, exact hashes, and trainer replay validation.",
+      "overall_status": "OPEN_NOT_DISCHARGED"
+    },
+    {
+      "ordinal": 3,
+      "condition": "Real 2372-step CUDA parity, no CPU fallback, all losses/sample arrays/final state/checkpoint/environment/hashes.",
+      "overall_status": "OPEN_NOT_DISCHARGED",
+      "required_baseline_sha256": "8118ff0e8fbf1d573f61e1ce09de140cb2c9e9e62bf1d57b030560a55a157f47",
+      "required_new_candidate_sha256": "b8e653dab6d906070bfeabc146035f00b3adf8b632e1c12f1c5f1e043898bbc7"
+    },
+    {
+      "ordinal": 4,
+      "condition": "Builder pin finalized exactly as review_r4 specifies.",
+      "overall_status": "OPEN_NOT_DISCHARGED"
+    },
+    {
+      "ordinal": 5,
+      "condition": "Resume lane ultra adversarial review ACCEPT, including telemetry/whole-manifest-byte-identity resolution.",
+      "overall_status": "OPEN_NOT_DISCHARGED"
+    },
+    {
+      "ordinal": 6,
+      "condition": "Fresh arming review supersedes review_r4 DO_NOT_ARM after all prior evidence exists.",
+      "overall_status": "OPEN_NOT_DISCHARGED"
+    }
+  ],
+  "recommended_commit_scope": [
+    "scripts/racketsport/train_ball_stage2.py",
+    "tests/racketsport/test_ball_stage2_training.py",
+    "runs/lanes/ball_b2_trainer_repair_20260722/spec.md",
+    "runs/lanes/ball_b2_trainer_repair_20260722/report.json",
+    "runs/lanes/ball_b2_trainer_repair_20260722/parity_cpu_fixture_summary.json",
+    "runs/lanes/ball_b2_trainer_repair_20260722/sampler_proof.json",
+    "runs/lanes/ball_b2_trainer_repair_20260722/full_suite_summary.json",
+    "runs/lanes/ball_b2_trainer_repair_20260722/targeted_tests.xml",
+    "runs/lanes/ball_b2_trainer_repair_20260722_review/spec.md",
+    "runs/lanes/ball_b2_trainer_repair_20260722_review/review.json",
+    "runs/lanes/ball_b2_trainer_repair_20260722_review/report.json"
+  ],
+  "explicitly_excluded_from_commit_scope": [
+    "configs/racketsport/best_stack.json",
+    "runs/lanes/ball_b2_trainer_repair_20260722/codex.pid",
+    "runs/lanes/ball_b2_trainer_repair_20260722/log.txt",
+    "runs/lanes/ball_b2_trainer_repair_20260722/RESUME.md",
+    "runs/lanes/ball_b2_trainer_repair_20260722_review/codex.pid",
+    "runs/lanes/ball_b2_trainer_repair_20260722_review/log.txt",
+    "all concurrent Track-C, court, audio, event, data-ledger, and manager-file drift"
+  ],
+  "tests_run_by_review": [
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 TMPDIR=<review-lane>/tmp MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/test_ball_stage2_training.py -q -p no:cacheprovider",
+      "passed": 31,
+      "failed": 0,
+      "skipped": 0,
+      "duration_seconds": 79.93
+    },
+    {
+      "command": "Independent DeterministicDistinctFullBatchSampler sweep: 226000 batches each at N=1000,1001,1007,1023,2003,2049; batch_size=8; seed=20260722",
+      "passed_batches": 1356000,
+      "duplicate_batches": 0,
+      "exposure_defects": 0
+    },
+    {
+      "command": "PYTHONDONTWRITEBYTECODE=1 ... pytest flight timing + Track-C player-selection + pooling-wire residual nodes",
+      "passed": 2,
+      "failed": 1,
+      "failure": "flight simulator timing only: 12.048043290997157s >= 5.0s"
+    }
+  ],
+  "honest_issues": [
+    "The repository-wide suite is red: 4414 passed, 42 failed, 25 skipped, and the failures were not all proven at clean HEAD. ACCEPT is scoped to this repair because exact set reconciliation and dependency-focused reruns found no trainer regression.",
+    "The CPU parity fixture is seven tiny synthetic steps. It does not run production WASB, real B0 decoding, CUDA, or the required 2372 steps.",
+    "B1, the builder pin, the resume ultra review, real CUDA parity, and a fresh explicit arming review remain open. B2 remains DO_NOT_ARM and VERIFIED=0.",
+    "Candidate parser additions alter checkpoint args metadata/raw checkpoint bytes even on human-only runs, although compute/sample order/model state are identical.",
+    "Same-candidate sampler resume offsets are exact, but pre-repair dual-SST checkpoints do not pin trainer/sampler source and must not be treated as cross-version schedule-compatible. B2's fresh commands forbid resume; the broader resume review remains open.",
+    "The repair's schema-constrained report distributes the requested option/hash/invariance/classification details across its acceptance rows and dedicated proof JSONs rather than exposing every requested item as a top-level report key. The evidence is internally consistent, but consumers should read the proof artifacts with report.json."
+  ],
+  "new_candidate_trainer_sha256": "b8e653dab6d906070bfeabc146035f00b3adf8b632e1c12f1c5f1e043898bbc7"
+}

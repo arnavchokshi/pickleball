@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "artifact_type": "ball_b2_sst_distinct_sampler_proof",
+  "generated_date": "2026-07-22",
+  "option_chosen": "B",
+  "justification": "The SST-only sampler repairs permutation-splice collisions by construction without discarding rows or drawing extra random numbers, while a semantic sample-ID assertion remains fail-closed at runtime. This preserves deterministic full exposure and avoids making the legal 1001-row SST plan fail only because the historical splice algorithm collided.",
+  "reviewer_reproduction": {
+    "sample_count": 1001,
+    "batch_size": 8,
+    "seed": 20260722,
+    "zero_based_step": 1751,
+    "historical_batch": [256, 432, 546, 743, 401, 497, 432, 947],
+    "historical_unique_count": 7,
+    "repaired_batch": [256, 432, 546, 743, 401, 497, 120, 947],
+    "repaired_unique_count": 8,
+    "verdict": "PASS"
+  },
+  "construction": {
+    "class": "DeterministicDistinctFullBatchSampler",
+    "scope": "dual_sst_mode only",
+    "requires_sample_count_at_least_batch_size": true,
+    "splice_behavior": "Swap each colliding next-permutation prefix element with the first later element not already present in the batch.",
+    "rows_discarded": 0,
+    "extra_rng_draws": 0,
+    "deterministic_from_manifest_size_and_seed": true,
+    "private_rng_state": true
+  },
+  "runtime_guard": {
+    "function": "_assert_sst_training_batch",
+    "checks_semantic_sample_id_uniqueness": true,
+    "duplicate_action": "raise RuntimeError before pseudo forward",
+    "test_node": "tests/racketsport/test_ball_stage2_training.py::test_sst_runtime_assertion_rejects_duplicate_sample_ids",
+    "verdict": "PASS"
+  },
+  "tests": {
+    "reviewer_and_boundary_test_node": "tests/racketsport/test_ball_stage2_training.py::test_sst_distinct_sampler_repairs_reviewer_reproduction_and_boundary_splices",
+    "boundary_splice_case_passed": true,
+    "focused_trainer_module": {
+      "passed": 31,
+      "failed": 0,
+      "duration_seconds": 30.60,
+      "junit_artifact": "runs/lanes/ball_b2_trainer_repair_20260722/targeted_tests.xml"
+    },
+    "property_sweep_batches_main": 1356000,
+    "property_sweep_duplicate_batches_main": 0,
+    "independent_stress_batches": 813600,
+    "independent_stress_full_exposure_cycles": 3432,
+    "independent_stress_defects": 0,
+    "global_cpu_rng_unchanged_after_2372_sst_batches": true
+  },
+  "human_path": {
+    "historical_human_sampler_unchanged": true,
+    "historical_human_loader_unchanged": true,
+    "historical_human_batch_assertion_unchanged": true,
+    "human_loss_path_unchanged": true,
+    "human_step_count_unchanged": true,
+    "verdict": "PASS"
+  },
+  "verdict": "PASS"
+}

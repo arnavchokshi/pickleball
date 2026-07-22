@@ -15,6 +15,8 @@ import pytest
 torch = pytest.importorskip("torch")
 
 CLI_PATH = "scripts/racketsport/train_ball_stage2.py"
+PARITY_BASELINE_REV = "86465272f3b267a1ab5a7c3dc5be4ca824c70d43"
+PARITY_BASELINE_SHA256 = "8118ff0e8fbf1d573f61e1ce09de140cb2c9e9e62bf1d57b030560a55a157f47"
 
 
 def test_sparse_review_semantics_only_emit_reviewed_rows(tmp_path: Path) -> None:
@@ -347,6 +349,8 @@ def test_train_ball_stage2_cli_help_is_indexed() -> None:
 
     assert "--cvat-export-root" in completed.stdout
     assert "--b0-split-root" in completed.stdout
+    assert "--baseline-rev" in completed.stdout
+    assert "--baseline-sha256" in completed.stdout
     assert "--sst-manifest" in completed.stdout
     assert "--sst-batch-size" in completed.stdout
     assert "--sst-loss-cap" in completed.stdout
@@ -465,7 +469,7 @@ def test_train_ball_stage2_resume_refuses_swapped_dataset_identity_set(tmp_path:
     assert not (tmp_path / "resume_swapped" / "summary.json").exists()
 
 
-def test_pinned_head_harness_loads_actual_git_source_and_records_exact_compute() -> None:
+def test_revision_explicit_harness_loads_pinned_git_source_and_records_exact_compute() -> None:
     from scripts.racketsport import train_ball_stage2 as stage2
 
     batches = []
@@ -496,8 +500,10 @@ def test_pinned_head_harness_loads_actual_git_source_and_records_exact_compute()
         "batch_size": 8,
         "device": "cpu",
     }
-    result = stage2.run_pinned_head_compute_parity(
+    result = stage2.run_revision_explicit_compute_parity(
         batches,
+        baseline_revision=PARITY_BASELINE_REV,
+        baseline_sha256=PARITY_BASELINE_SHA256,
         model_factory=model_factory,
         optimizer_factory=lambda parameters: torch.optim.AdamW(parameters, lr=0.01, weight_decay=0.0),
         steps=7,
@@ -507,41 +513,58 @@ def test_pinned_head_harness_loads_actual_git_source_and_records_exact_compute()
         production=False,
     )
 
-    head_source = subprocess.run(
-        ["git", "show", "HEAD:scripts/racketsport/train_ball_stage2.py"],
+    baseline_source = subprocess.run(
+        ["git", "show", f"{PARITY_BASELINE_REV}:scripts/racketsport/train_ball_stage2.py"],
         check=True,
         capture_output=True,
     ).stdout
-    assert result["head_trainer"]["source_sha256"] == hashlib.sha256(head_source).hexdigest()
-    assert result["head_trainer"]["commit"] == subprocess.run(
-        ["git", "rev-parse", "HEAD"], check=True, capture_output=True, text=True
-    ).stdout.strip()
-    assert result["head_trainer"]["load_method"].startswith("git show")
+    assert hashlib.sha256(baseline_source).hexdigest() == PARITY_BASELINE_SHA256
+    assert result["baseline_trainer"] == {
+        "requested_revision": PARITY_BASELINE_REV,
+        "commit": PARITY_BASELINE_REV,
+        "source_sha256": PARITY_BASELINE_SHA256,
+        "expected_source_sha256": PARITY_BASELINE_SHA256,
+        "source_path": "scripts/racketsport/train_ball_stage2.py",
+        "load_method": (
+            "git show <resolved-commit>:scripts/racketsport/train_ball_stage2.py "
+            "then isolated exec"
+        ),
+    }
+    assert result["candidate_trainer"]["source_sha256"] == stage2._sha256_file(
+        Path(stage2.__file__)
+    )
+    assert result["candidate_trainer"]["source_sha256"] != PARITY_BASELINE_SHA256
+    assert result["trainer_sources_distinct"] is True
     assert result["artifact_type"] == "racketsport_ball_stage2_head_compute_parity_fixture"
     assert result["production_configuration_executed"] is False
     assert result["comparison_config"] == fixture_config
-    assert result["exact_sample_order"] == {"head": expected_order, "working_tree": expected_order}
+    assert result["exact_sample_order"] == {
+        "baseline": expected_order,
+        "candidate": expected_order,
+    }
     assert result["sample_order_identical"] is True
-    assert result["exact_losses"]["head"] == result["exact_losses"]["working_tree"]
-    assert result["model_state_sha256"]["head"] == result["model_state_sha256"]["working_tree"]
+    assert result["exact_losses"]["baseline"] == result["exact_losses"]["candidate"]
+    assert result["model_state_sha256"]["baseline"] == result["model_state_sha256"]["candidate"]
     checkpoint_comparison = result["checkpoint_format_comparison"]
     assert checkpoint_comparison["full_checkpoint_bytes_compared"] is True
     assert checkpoint_comparison["status"] == "actual_payloads_materialized_and_loaded"
-    assert checkpoint_comparison["checkpoint_schema"]["head"]["schema_version"] == 1
-    assert checkpoint_comparison["checkpoint_schema"]["working_tree"]["schema_version"] == 1
-    assert checkpoint_comparison["checkpoint_args"]["head"]["steps"] == 7
-    assert checkpoint_comparison["checkpoint_args"]["working_tree"]["steps"] == 7
-    assert checkpoint_comparison["train_dataset_summary"]["head"] == checkpoint_comparison[
+    assert checkpoint_comparison["checkpoint_schema"]["baseline"]["schema_version"] == 1
+    assert checkpoint_comparison["checkpoint_schema"]["candidate"]["schema_version"] == 1
+    assert checkpoint_comparison["checkpoint_args"]["baseline"]["steps"] == 7
+    assert checkpoint_comparison["checkpoint_args"]["candidate"]["steps"] == 7
+    assert checkpoint_comparison["train_dataset_summary"]["baseline"] == checkpoint_comparison[
         "train_dataset_summary"
-    ]["working_tree"]
+    ]["candidate"]
     assert checkpoint_comparison["loaded_model_state_identical"] is True
     assert checkpoint_comparison["loaded_model_state_sha256"] == result["model_state_sha256"]
     assert "b0_split_root" in checkpoint_comparison["added_args_fields"]
     assert result["verdict"] == "PASS"
 
     with pytest.raises(ValueError, match="generic compute parity cannot claim production"):
-        stage2.run_pinned_head_compute_parity(
+        stage2.run_revision_explicit_compute_parity(
             batches,
+            baseline_revision=PARITY_BASELINE_REV,
+            baseline_sha256=PARITY_BASELINE_SHA256,
             model_factory=model_factory,
             optimizer_factory=lambda parameters: torch.optim.AdamW(
                 parameters, lr=0.01, weight_decay=0.0
@@ -552,6 +575,52 @@ def test_pinned_head_harness_loads_actual_git_source_and_records_exact_compute()
             comparison_config=fixture_config,
             production=True,
         )
+
+
+def test_revision_explicit_parity_rejects_hash_mismatch_and_candidate_versus_itself(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from scripts.racketsport import train_ball_stage2 as stage2
+
+    with pytest.raises(ValueError, match="git blob SHA-256 mismatch"):
+        stage2.load_trainer_module_from_git_revision(
+            PARITY_BASELINE_REV,
+            expected_sha256="0" * 64,
+        )
+
+    missing_selector_args = stage2._build_parser().parse_args(
+        ["--mode", "verify-head-parity", "--out-dir", str(tmp_path / "missing")]
+    )
+    with pytest.raises(ValueError, match="explicit --baseline-rev"):
+        stage2.run_revision_explicit_production_parity(missing_selector_args)
+
+    head_source = subprocess.run(
+        ["git", "show", "HEAD:scripts/racketsport/train_ball_stage2.py"],
+        check=True,
+        capture_output=True,
+    ).stdout
+    head_sha256 = hashlib.sha256(head_source).hexdigest()
+    simulated_running_file = tmp_path / "train_ball_stage2.py"
+    simulated_running_file.write_bytes(head_source)
+    monkeypatch.setattr(stage2, "__file__", str(simulated_running_file))
+    return_code = stage2.main(
+        [
+            "--mode",
+            "verify-head-parity",
+            "--out-dir",
+            str(tmp_path / "self_parity"),
+            "--baseline-rev",
+            "HEAD",
+            "--baseline-sha256",
+            head_sha256,
+        ]
+    )
+    captured = capsys.readouterr()
+    assert return_code == 2
+    assert "candidate-versus-itself comparisons are invalid" in captured.err
+    assert not (tmp_path / "self_parity").exists()
 
 
 def test_production_parity_refuses_when_requested_cuda_is_unavailable(
@@ -574,6 +643,10 @@ def test_production_parity_refuses_when_requested_cuda_is_unavailable(
             "verify-head-parity",
             "--out-dir",
             str(tmp_path / "parity"),
+            "--baseline-rev",
+            PARITY_BASELINE_REV,
+            "--baseline-sha256",
+            PARITY_BASELINE_SHA256,
             "--b0-split-root",
             str(stage2.DEFAULT_B0_SPLIT_ROOT),
             "--init-checkpoint",
@@ -587,7 +660,7 @@ def test_production_parity_refuses_when_requested_cuda_is_unavailable(
         ]
     )
     with pytest.raises(RuntimeError, match="requires requested CUDA"):
-        stage2.run_pinned_head_production_parity(args)
+        stage2.run_revision_explicit_production_parity(args)
     assert not (tmp_path / "parity").exists()
 
 
@@ -617,6 +690,68 @@ def test_frozen_b0_split_and_full_batch_cycle_exclude_every_judge_parent() -> No
     assert all(rows[index]["parent_source_id"] not in stage2.B0_JUDGE_PARENT_IDS for index in flattened)
     repeat = list(islice(iter(stage2.DeterministicFullBatchSampler(2249, 8, seed=20260721, torch=torch)), 2372))
     assert repeat == batches
+
+
+def test_sst_distinct_sampler_repairs_reviewer_reproduction_and_boundary_splices() -> None:
+    from scripts.racketsport import train_ball_stage2 as stage2
+
+    reviewer_sampler = stage2.DeterministicDistinctFullBatchSampler(
+        1001,
+        8,
+        seed=20260722,
+        torch=torch,
+    )
+    reviewer_batches = list(islice(iter(reviewer_sampler), 2372))
+    assert reviewer_batches[1751] == [256, 432, 546, 743, 401, 497, 120, 947]
+    assert reviewer_batches[1751] != [256, 432, 546, 743, 401, 497, 432, 947]
+    assert all(len(batch) == len(set(batch)) == 8 for batch in reviewer_batches)
+
+    boundary_sampler = stage2.DeterministicDistinctFullBatchSampler(
+        11,
+        8,
+        seed=20260722,
+        torch=torch,
+    )
+    boundary_batches = list(islice(iter(boundary_sampler), 4))
+    assert all(len(batch) == len(set(batch)) == 8 for batch in boundary_batches)
+    boundary_repeat = list(
+        islice(
+            iter(
+                stage2.DeterministicDistinctFullBatchSampler(
+                    11,
+                    8,
+                    seed=20260722,
+                    torch=torch,
+                )
+            ),
+            4,
+        )
+    )
+    assert boundary_repeat == boundary_batches
+    resumed = stage2.DeterministicDistinctFullBatchSampler(
+        11,
+        8,
+        seed=20260722,
+        torch=torch,
+    )
+    resumed.set_start_batch(1)
+    assert next(iter(resumed)) == boundary_batches[1]
+
+    with pytest.raises(ValueError, match="sample_count >= batch_size"):
+        stage2.DeterministicDistinctFullBatchSampler(7, 8, seed=20260722, torch=torch)
+
+
+def test_sst_runtime_assertion_rejects_duplicate_sample_ids() -> None:
+    from scripts.racketsport import train_ball_stage2 as stage2
+
+    reviewer_ids = [256, 432, 546, 743, 401, 497, 432, 947]
+    duplicate_batch = {
+        "input": torch.zeros((8, 3, 4, 4)),
+        "sample_id": [f"sst-{index}" for index in reviewer_ids],
+        "parent_source_id": [sorted(stage2.SST_TRAIN_SOURCE_IDS)[0]] * 8,
+    }
+    with pytest.raises(RuntimeError, match="duplicate sample IDs.*sst-432"):
+        stage2._assert_sst_training_batch(duplicate_batch, exact_count=8)
 
 
 def test_frozen_b0_media_inventory_is_exact_and_symlink_roots_are_refused(tmp_path: Path) -> None:
@@ -707,6 +842,10 @@ def test_production_training_and_parity_refuse_image_path_rewrites_before_execut
             "verify-head-parity",
             "--out-dir",
             str(tmp_path / "parity"),
+            "--baseline-rev",
+            PARITY_BASELINE_REV,
+            "--baseline-sha256",
+            PARITY_BASELINE_SHA256,
             "--b0-split-root",
             str(stage2.DEFAULT_B0_SPLIT_ROOT),
             "--init-checkpoint",
@@ -722,7 +861,7 @@ def test_production_training_and_parity_refuse_image_path_rewrites_before_execut
         ]
     )
     with pytest.raises(ValueError, match="frozen production config"):
-        stage2.run_pinned_head_production_parity(parity_args)
+        stage2.run_revision_explicit_production_parity(parity_args)
 
 
 def test_dual_loaders_keep_exact_eight_humans_and_add_eight_sst_without_changing_human_order() -> None:
@@ -763,8 +902,8 @@ def test_dual_loaders_keep_exact_eight_humans_and_add_eight_sst_without_changing
     human_b, _ = stage2._make_training_loader(
         human, batch_size=8, seed=20260721, num_workers=0, torch=torch, require_full_batches=True
     )
-    sst_b, _ = stage2._make_training_loader(
-        sst, batch_size=8, seed=20260722, num_workers=0, torch=torch, require_full_batches=True
+    sst_b, _ = stage2._make_sst_training_loader(
+        sst, batch_size=8, seed=20260722, num_workers=0, torch=torch
     )
     batches_a = list(islice(iter(human_a), 25))
     batches_b = list(islice(iter(human_b), 25))

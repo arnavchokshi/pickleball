@@ -2214,9 +2214,19 @@ def _xy_close(left: Sequence[float], right: Sequence[float]) -> bool:
     return all(math.isclose(float(a), float(b), rel_tol=0.0, abs_tol=1e-12) for a, b in zip(left, right))
 
 
-def load_trainer_module_from_git_revision(revision: str = "HEAD") -> tuple[Any, dict[str, str]]:
-    """Load the actual trainer source stored at a git revision into an isolated module."""
+def load_trainer_module_from_git_revision(
+    revision: str,
+    *,
+    expected_sha256: str,
+) -> tuple[Any, dict[str, str]]:
+    """Load one explicitly pinned trainer git blob into an isolated module."""
 
+    if not isinstance(revision, str) or not revision.strip():
+        raise ValueError("parity baseline revision must be passed explicitly")
+    expected_source_sha256 = _require_sha256(
+        expected_sha256,
+        "parity baseline trainer sha256",
+    )
     commit = _git_commit(revision)
     relative_path = "scripts/racketsport/train_ball_stage2.py"
     completed = subprocess.run(
@@ -2227,6 +2237,12 @@ def load_trainer_module_from_git_revision(revision: str = "HEAD") -> tuple[Any, 
     )
     source_bytes = completed.stdout
     source_sha256 = hashlib.sha256(source_bytes).hexdigest()
+    if source_sha256 != expected_source_sha256:
+        raise ValueError(
+            "parity baseline git blob SHA-256 mismatch: "
+            f"revision={revision!r} resolved_commit={commit} "
+            f"expected={expected_source_sha256} actual={source_sha256}"
+        )
     module_name = f"_ball_stage2_pinned_{commit[:12]}_{source_sha256[:12]}"
     module = types.ModuleType(module_name)
     module.__file__ = str(ROOT / relative_path)
@@ -2234,17 +2250,47 @@ def load_trainer_module_from_git_revision(revision: str = "HEAD") -> tuple[Any, 
     sys.modules[module_name] = module
     exec(compile(source_bytes, module.__file__, "exec"), module.__dict__)
     return module, {
-        "revision": revision,
+        "requested_revision": revision,
         "commit": commit,
         "source_sha256": source_sha256,
+        "expected_source_sha256": expected_source_sha256,
         "source_path": relative_path,
         "load_method": "git show <resolved-commit>:scripts/racketsport/train_ball_stage2.py then isolated exec",
     }
 
 
-def run_pinned_head_compute_parity(
+def _resolve_distinct_parity_trainers(
+    *,
+    baseline_revision: str | None,
+    baseline_sha256: str | None,
+) -> tuple[Any, dict[str, str], dict[str, str]]:
+    if baseline_revision is None:
+        raise ValueError("parity requires explicit --baseline-rev; no HEAD default is allowed")
+    if baseline_sha256 is None:
+        raise ValueError("parity requires explicit --baseline-sha256; no inferred hash is allowed")
+    candidate_path = Path(__file__).resolve(strict=True)
+    candidate_identity = {
+        "path": str(candidate_path),
+        "source_sha256": _sha256_file(candidate_path),
+        "load_method": "running trainer file",
+    }
+    baseline_module, baseline_identity = load_trainer_module_from_git_revision(
+        baseline_revision,
+        expected_sha256=baseline_sha256,
+    )
+    if baseline_identity["source_sha256"] == candidate_identity["source_sha256"]:
+        raise ValueError(
+            "parity baseline and candidate trainer SHA-256 must be distinct; "
+            "candidate-versus-itself comparisons are invalid"
+        )
+    return baseline_module, baseline_identity, candidate_identity
+
+
+def run_revision_explicit_compute_parity(
     batches: Any,
     *,
+    baseline_revision: str,
+    baseline_sha256: str,
     model_factory: Any,
     optimizer_factory: Any,
     steps: int,
@@ -2253,79 +2299,82 @@ def run_pinned_head_compute_parity(
     comparison_config: Mapping[str, Any] | None = None,
     production: bool = False,
 ) -> dict[str, Any]:
-    """Compare actual HEAD and working-tree no-SST compute on separately iterated batches."""
+    """Compare a pinned git baseline and running no-SST trainer on shared batches."""
 
     if production:
         raise ValueError(
-            "generic compute parity cannot claim production execution; use run_pinned_head_production_parity"
+            "generic compute parity cannot claim production execution; "
+            "use run_revision_explicit_production_parity"
         )
     if steps <= 0:
         raise ValueError("parity steps must be positive")
-    head_module, head_identity = load_trainer_module_from_git_revision("HEAD")
+    baseline_module, baseline_identity, candidate_identity = _resolve_distinct_parity_trainers(
+        baseline_revision=baseline_revision,
+        baseline_sha256=baseline_sha256,
+    )
     base_model = model_factory()
-    head_model = copy.deepcopy(base_model).to(device)
-    working_model = copy.deepcopy(base_model).to(device)
-    head_model.train()
-    working_model.train()
-    head_optimizer = optimizer_factory(head_model.parameters())
-    working_optimizer = optimizer_factory(working_model.parameters())
-    head_losses: list[float] = []
-    working_losses: list[float] = []
-    head_sample_order: list[list[str]] = []
-    working_sample_order: list[list[str]] = []
-    head_batch_iterator = iter(batches)
-    working_batch_iterator = iter(batches)
+    baseline_model = copy.deepcopy(base_model).to(device)
+    candidate_model = copy.deepcopy(base_model).to(device)
+    baseline_model.train()
+    candidate_model.train()
+    baseline_optimizer = optimizer_factory(baseline_model.parameters())
+    candidate_optimizer = optimizer_factory(candidate_model.parameters())
+    baseline_losses: list[float] = []
+    candidate_losses: list[float] = []
+    baseline_sample_order: list[list[str]] = []
+    candidate_sample_order: list[list[str]] = []
+    baseline_batch_iterator = iter(batches)
+    candidate_batch_iterator = iter(batches)
     for step_index in range(steps):
-        head_batch = next(head_batch_iterator)
-        working_batch = next(working_batch_iterator)
-        head_ids = [str(value) for value in head_batch.get("sample_id", [])]
-        working_ids = [str(value) for value in working_batch.get("sample_id", [])]
-        if len(head_ids) != B2_HUMAN_BATCH_SIZE or len(working_ids) != B2_HUMAN_BATCH_SIZE:
+        baseline_batch = next(baseline_batch_iterator)
+        candidate_batch = next(candidate_batch_iterator)
+        baseline_ids = [str(value) for value in baseline_batch.get("sample_id", [])]
+        candidate_ids = [str(value) for value in candidate_batch.get("sample_id", [])]
+        if len(baseline_ids) != B2_HUMAN_BATCH_SIZE or len(candidate_ids) != B2_HUMAN_BATCH_SIZE:
             raise ValueError(
                 f"pinned parity requires {B2_HUMAN_BATCH_SIZE} human rows per arm at step {step_index}, "
-                f"got HEAD={len(head_ids)} working={len(working_ids)}"
+                f"got baseline={len(baseline_ids)} candidate={len(candidate_ids)}"
             )
-        if head_ids != working_ids:
-            raise RuntimeError(f"HEAD/working-tree sample order diverged at parity step {step_index}")
-        head_sample_order.append(head_ids)
-        working_sample_order.append(working_ids)
+        if baseline_ids != candidate_ids:
+            raise RuntimeError(f"baseline/candidate sample order diverged at parity step {step_index}")
+        baseline_sample_order.append(baseline_ids)
+        candidate_sample_order.append(candidate_ids)
         before_rng = _capture_torch_rng(torch)
-        head_loss = head_module.train_one_stage2_batch(
-            head_model,
-            head_batch,
-            optimizer=head_optimizer,
+        baseline_loss = baseline_module.train_one_stage2_batch(
+            baseline_model,
+            baseline_batch,
+            optimizer=baseline_optimizer,
             device=device,
             torch=torch,
             occluded_prob=0.0,
             occlusion_generator=None,
         )
-        after_head_rng = _capture_torch_rng(torch)
+        after_baseline_rng = _capture_torch_rng(torch)
         _restore_torch_rng(before_rng, torch)
-        working_loss = train_one_stage2_batch(
-            working_model,
-            working_batch,
-            optimizer=working_optimizer,
+        candidate_loss = train_one_stage2_batch(
+            candidate_model,
+            candidate_batch,
+            optimizer=candidate_optimizer,
             device=device,
             torch=torch,
             occluded_prob=0.0,
             occlusion_generator=None,
         )
-        after_working_rng = _capture_torch_rng(torch)
-        if not _rng_states_equal(after_head_rng, after_working_rng, torch=torch):
-            raise RuntimeError(f"HEAD/working-tree RNG consumption diverged at parity step {step_index}")
-        _restore_torch_rng(after_head_rng, torch)
-        head_losses.append(float(head_loss))
-        working_losses.append(float(working_loss))
+        after_candidate_rng = _capture_torch_rng(torch)
+        if not _rng_states_equal(after_baseline_rng, after_candidate_rng, torch=torch):
+            raise RuntimeError(f"baseline/candidate RNG consumption diverged at parity step {step_index}")
+        _restore_torch_rng(after_baseline_rng, torch)
+        baseline_losses.append(float(baseline_loss))
+        candidate_losses.append(float(candidate_loss))
 
-    head_state_sha = state_dict_sha256(head_model.state_dict())
-    working_state_sha = state_dict_sha256(working_model.state_dict())
-    working_source_sha = _sha256_file(Path(__file__))
+    baseline_state_sha = state_dict_sha256(baseline_model.state_dict())
+    candidate_state_sha = state_dict_sha256(candidate_model.state_dict())
     checkpoint_comparison = _materialize_parity_checkpoint_comparison(
-        head_module=head_module,
-        head_model=head_model,
-        working_model=working_model,
-        head_optimizer=head_optimizer,
-        working_optimizer=working_optimizer,
+        baseline_module=baseline_module,
+        baseline_model=baseline_model,
+        candidate_model=candidate_model,
+        baseline_optimizer=baseline_optimizer,
+        candidate_optimizer=candidate_optimizer,
         step=steps,
         comparison_config=dict(comparison_config or {}),
         torch=torch,
@@ -2336,33 +2385,31 @@ def run_pinned_head_compute_parity(
         "comparison_scope": "fixture_shared_batches_compute_parity",
         "production_configuration_executed": False,
         "comparison_config": dict(comparison_config or {}),
-        "head_trainer": head_identity,
-        "working_tree_trainer": {
-            "path": str(Path(__file__).resolve()),
-            "source_sha256": working_source_sha,
-        },
+        "baseline_trainer": baseline_identity,
+        "candidate_trainer": candidate_identity,
+        "trainer_sources_distinct": True,
         "steps": steps,
         "exact_losses": {
-            "head": head_losses,
-            "working_tree": working_losses,
+            "baseline": baseline_losses,
+            "candidate": candidate_losses,
         },
         "exact_sample_order": {
-            "head": head_sample_order,
-            "working_tree": working_sample_order,
+            "baseline": baseline_sample_order,
+            "candidate": candidate_sample_order,
         },
-        "sample_order_identical": head_sample_order == working_sample_order,
+        "sample_order_identical": baseline_sample_order == candidate_sample_order,
         "model_state_sha256": {
-            "head": head_state_sha,
-            "working_tree": working_state_sha,
+            "baseline": baseline_state_sha,
+            "candidate": candidate_state_sha,
         },
-        "losses_identical": head_losses == working_losses,
-        "model_state_identical": head_state_sha == working_state_sha,
+        "losses_identical": baseline_losses == candidate_losses,
+        "model_state_identical": baseline_state_sha == candidate_state_sha,
         "checkpoint_format_comparison": checkpoint_comparison,
         "verdict": (
             "PASS"
-            if head_losses == working_losses
-            and head_state_sha == working_state_sha
-            and head_sample_order == working_sample_order
+            if baseline_losses == candidate_losses
+            and baseline_state_sha == candidate_state_sha
+            and baseline_sample_order == candidate_sample_order
             else "PARITY_MISMATCH"
         ),
     }
@@ -2370,112 +2417,118 @@ def run_pinned_head_compute_parity(
 
 def _materialize_parity_checkpoint_comparison(
     *,
-    head_module: Any,
-    head_model: Any,
-    working_model: Any,
-    head_optimizer: Any,
-    working_optimizer: Any,
+    baseline_module: Any,
+    baseline_model: Any,
+    candidate_model: Any,
+    baseline_optimizer: Any,
+    candidate_optimizer: Any,
     step: int,
     comparison_config: Mapping[str, Any],
     torch: Any,
 ) -> dict[str, Any]:
-    head_args = head_module._build_parser().parse_args([])
-    working_args = _build_parser().parse_args([])
-    _apply_checkpoint_comparison_config(head_args, comparison_config)
-    _apply_checkpoint_comparison_config(working_args, comparison_config)
+    baseline_args = baseline_module._build_parser().parse_args([])
+    candidate_args = _build_parser().parse_args([])
+    _apply_checkpoint_comparison_config(baseline_args, comparison_config)
+    _apply_checkpoint_comparison_config(candidate_args, comparison_config)
     dataset_summary = {
         "artifact_type": "racketsport_ball_stage2_parity_dataset_binding",
         "comparison_config": dict(comparison_config),
     }
     with tempfile.TemporaryDirectory(prefix="ball_stage2_checkpoint_parity_") as temporary:
         root = Path(temporary)
-        head_path = head_module.save_stage2_checkpoint(
-            root / "head_checkpoint.pt",
-            model=head_model,
-            optimizer=head_optimizer,
+        baseline_path = baseline_module.save_stage2_checkpoint(
+            root / "baseline_checkpoint.pt",
+            model=baseline_model,
+            optimizer=baseline_optimizer,
             step=step,
-            args=head_args,
+            args=baseline_args,
             train_dataset_summary=dataset_summary,
         )
-        working_path = save_stage2_checkpoint(
-            root / "working_checkpoint.pt",
-            model=working_model,
-            optimizer=working_optimizer,
+        candidate_path = save_stage2_checkpoint(
+            root / "candidate_checkpoint.pt",
+            model=candidate_model,
+            optimizer=candidate_optimizer,
             step=step,
-            args=working_args,
+            args=candidate_args,
             train_dataset_summary=dataset_summary,
         )
-        head_raw_sha = _sha256_file(head_path)
-        working_raw_sha = _sha256_file(working_path)
-        head_payload = torch.load(head_path, map_location="cpu", weights_only=False)
-        working_payload = torch.load(working_path, map_location="cpu", weights_only=False)
-    head_args_fields = sorted(_required_mapping(head_payload.get("args"), "HEAD parity checkpoint args"))
-    working_args_fields = sorted(_required_mapping(working_payload.get("args"), "working parity checkpoint args"))
-    head_loaded_state_sha = state_dict_sha256(head_payload["model_state_dict"])
-    working_loaded_state_sha = state_dict_sha256(working_payload["model_state_dict"])
+        baseline_raw_sha = _sha256_file(baseline_path)
+        candidate_raw_sha = _sha256_file(candidate_path)
+        baseline_payload = torch.load(baseline_path, map_location="cpu", weights_only=False)
+        candidate_payload = torch.load(candidate_path, map_location="cpu", weights_only=False)
+    baseline_args_fields = sorted(
+        _required_mapping(baseline_payload.get("args"), "baseline parity checkpoint args")
+    )
+    candidate_args_fields = sorted(
+        _required_mapping(candidate_payload.get("args"), "candidate parity checkpoint args")
+    )
+    baseline_loaded_state_sha = state_dict_sha256(baseline_payload["model_state_dict"])
+    candidate_loaded_state_sha = state_dict_sha256(candidate_payload["model_state_dict"])
     return {
         "status": "actual_payloads_materialized_and_loaded",
         "full_checkpoint_bytes_compared": True,
         "full_checkpoint_bytes_expected_identical": False,
-        "raw_checkpoint_sha256": {"head": head_raw_sha, "working_tree": working_raw_sha},
-        "raw_checkpoint_bytes_identical": head_raw_sha == working_raw_sha,
+        "raw_checkpoint_sha256": {"baseline": baseline_raw_sha, "candidate": candidate_raw_sha},
+        "raw_checkpoint_bytes_identical": baseline_raw_sha == candidate_raw_sha,
         "checkpoint_schema": {
-            "head": {
-                "schema_version": head_payload.get("schema_version"),
-                "artifact_type": head_payload.get("artifact_type"),
-                "step": head_payload.get("step"),
-                "model_family": head_payload.get("model_family"),
-                "frames_in": head_payload.get("frames_in"),
-                "output_channels": head_payload.get("output_channels"),
-                "image_size": head_payload.get("image_size"),
+            "baseline": {
+                "schema_version": baseline_payload.get("schema_version"),
+                "artifact_type": baseline_payload.get("artifact_type"),
+                "step": baseline_payload.get("step"),
+                "model_family": baseline_payload.get("model_family"),
+                "frames_in": baseline_payload.get("frames_in"),
+                "output_channels": baseline_payload.get("output_channels"),
+                "image_size": baseline_payload.get("image_size"),
             },
-            "working_tree": {
-                "schema_version": working_payload.get("schema_version"),
-                "artifact_type": working_payload.get("artifact_type"),
-                "step": working_payload.get("step"),
-                "model_family": working_payload.get("model_family"),
-                "frames_in": working_payload.get("frames_in"),
-                "output_channels": working_payload.get("output_channels"),
-                "image_size": working_payload.get("image_size"),
+            "candidate": {
+                "schema_version": candidate_payload.get("schema_version"),
+                "artifact_type": candidate_payload.get("artifact_type"),
+                "step": candidate_payload.get("step"),
+                "model_family": candidate_payload.get("model_family"),
+                "frames_in": candidate_payload.get("frames_in"),
+                "output_channels": candidate_payload.get("output_channels"),
+                "image_size": candidate_payload.get("image_size"),
             },
         },
         "top_level_fields": {
-            "head": sorted(head_payload),
-            "working_tree": sorted(working_payload),
+            "baseline": sorted(baseline_payload),
+            "candidate": sorted(candidate_payload),
         },
         "checkpoint_args": {
-            "head": dict(_required_mapping(head_payload.get("args"), "HEAD parity checkpoint args")),
-            "working_tree": dict(
-                _required_mapping(working_payload.get("args"), "working parity checkpoint args")
+            "baseline": dict(
+                _required_mapping(baseline_payload.get("args"), "baseline parity checkpoint args")
+            ),
+            "candidate": dict(
+                _required_mapping(candidate_payload.get("args"), "candidate parity checkpoint args")
             ),
         },
-        "head_args_fields": head_args_fields,
-        "working_tree_args_fields": working_args_fields,
-        "added_args_fields": sorted(set(working_args_fields) - set(head_args_fields)),
-        "removed_args_fields": sorted(set(head_args_fields) - set(working_args_fields)),
+        "baseline_args_fields": baseline_args_fields,
+        "candidate_args_fields": candidate_args_fields,
+        "added_args_fields": sorted(set(candidate_args_fields) - set(baseline_args_fields)),
+        "removed_args_fields": sorted(set(baseline_args_fields) - set(candidate_args_fields)),
         "train_dataset_summary": {
-            "head": dict(
+            "baseline": dict(
                 _required_mapping(
-                    head_payload.get("train_dataset_summary"),
-                    "HEAD parity checkpoint train_dataset_summary",
+                    baseline_payload.get("train_dataset_summary"),
+                    "baseline parity checkpoint train_dataset_summary",
                 )
             ),
-            "working_tree": dict(
+            "candidate": dict(
                 _required_mapping(
-                    working_payload.get("train_dataset_summary"),
-                    "working parity checkpoint train_dataset_summary",
+                    candidate_payload.get("train_dataset_summary"),
+                    "candidate parity checkpoint train_dataset_summary",
                 )
             ),
         },
         "train_dataset_summary_structure": {
-            "head": _payload_structure(head_payload.get("train_dataset_summary")),
-            "working_tree": _payload_structure(working_payload.get("train_dataset_summary")),
+            "baseline": _payload_structure(baseline_payload.get("train_dataset_summary")),
+            "candidate": _payload_structure(candidate_payload.get("train_dataset_summary")),
         },
         "loaded_model_state_sha256": {
-            "head": head_loaded_state_sha,
-            "working_tree": working_loaded_state_sha,
+            "baseline": baseline_loaded_state_sha,
+            "candidate": candidate_loaded_state_sha,
         },
-        "loaded_model_state_identical": head_loaded_state_sha == working_loaded_state_sha,
+        "loaded_model_state_identical": baseline_loaded_state_sha == candidate_loaded_state_sha,
         "reason": "raw torch checkpoint bytes are recorded separately from semantic model-state parity",
     }
 
@@ -2504,15 +2557,22 @@ def _payload_structure(value: Any) -> Any:
     return type(value).__name__
 
 
-def run_pinned_head_production_parity(args: argparse.Namespace) -> dict[str, Any]:
-    """Run the encoded 2,372-step WASB/CUDA parity contract when that environment exists."""
+def run_revision_explicit_production_parity(args: argparse.Namespace) -> dict[str, Any]:
+    """Run the encoded 2,372-step WASB/CUDA parity against an explicit baseline."""
 
     if args.out_dir is None:
         raise ValueError("--mode verify-head-parity requires --out-dir")
+    # Resolve and compare source identities before touching CUDA, datasets, or output.
+    # The compute harness resolves them again immediately before execution so the
+    # artifact always records identities observed in the same call that computed it.
+    _resolve_distinct_parity_trainers(
+        baseline_revision=args.baseline_rev,
+        baseline_sha256=args.baseline_sha256,
+    )
     if args.sst_manifest or args.cvat_export_root is not None or args.resume_checkpoint is not None:
-        raise ValueError("HEAD production parity is a no-SST frozen-B0 comparison only")
+        raise ValueError("production parity is a no-SST frozen-B0 comparison only")
     if args.max_cvat_samples is not None or args.max_sst_samples is not None:
-        raise ValueError("HEAD production parity cannot truncate either data arm")
+        raise ValueError("production parity cannot truncate either data arm")
     actual_config = {
         "model_family": str(args.model_family),
         "image_size": list(_parse_image_size(args.image_size)),
@@ -2536,36 +2596,39 @@ def run_pinned_head_production_parity(args: argparse.Namespace) -> dict[str, Any
     expected_config = dict(PINNED_HEAD_PRODUCTION_PARITY_CONFIG)
     expected_config["b0_split_root"] = str(DEFAULT_B0_SPLIT_ROOT)
     if actual_config != expected_config:
-        raise ValueError(f"HEAD parity must use the frozen production config: expected={expected_config} actual={actual_config}")
+        raise ValueError(
+            f"production parity must use the frozen production config: "
+            f"expected={expected_config} actual={actual_config}"
+        )
     torch = _torch()
     if str(args.device) == "cuda" and not torch.cuda.is_available():
         raise RuntimeError(
-            "HEAD production parity requires requested CUDA, but torch.cuda.is_available() is false"
+            "production parity requires requested CUDA, but torch.cuda.is_available() is false"
         )
     _required_canonical_directory(
         args.b0_split_root,
-        "HEAD parity B0 split_root",
+        "production parity B0 split_root",
         expected=ROOT / DEFAULT_B0_SPLIT_ROOT,
     )
     _required_canonical_directory(
         args.rally_root,
-        "HEAD parity rally_root",
+        "production parity rally_root",
         expected=ROOT / DEFAULT_RALLY_ROOT,
     )
     if args.init_checkpoint is None:
-        raise ValueError("HEAD parity requires the official WASB --init-checkpoint")
+        raise ValueError("production parity requires the official WASB --init-checkpoint")
     expected_wasb = _expected_wasb_identity()
     init_checkpoint = _required_canonical_file(
         args.init_checkpoint,
-        "HEAD parity init checkpoint",
+        "production parity init checkpoint",
         expected=ROOT / expected_wasb["checkpoint_path"],
     )
     init_checkpoint_sha = _sha256_file(init_checkpoint)
     if init_checkpoint_sha != expected_wasb["checkpoint_sha256"]:
-        raise ValueError("HEAD parity init checkpoint does not match models/MANIFEST.json")
+        raise ValueError("production parity init checkpoint does not match models/MANIFEST.json")
     wasb_repo_identity = _required_clean_git_repo(
         args.wasb_repo,
-        "HEAD parity WASB repo",
+        "production parity WASB repo",
         expected=ROOT / SST_WASB_REPO_ROOT,
         expected_commit=expected_wasb["repo_commit"],
     )
@@ -2611,8 +2674,10 @@ def run_pinned_head_production_parity(args: argparse.Namespace) -> dict[str, Any
     def optimizer_factory(parameters: Any) -> Any:
         return torch.optim.AdamW(parameters, lr=float(args.learning_rate), weight_decay=float(args.weight_decay))
 
-    summary = run_pinned_head_compute_parity(
+    summary = run_revision_explicit_compute_parity(
         loader,
+        baseline_revision=args.baseline_rev,
+        baseline_sha256=args.baseline_sha256,
         model_factory=model_factory,
         optimizer_factory=optimizer_factory,
         steps=int(args.steps),
@@ -2660,7 +2725,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.mode == "build-sst-manifest":
             summary = run_build_sst_manifest(args)
         elif args.mode == "verify-head-parity":
-            summary = run_pinned_head_production_parity(args)
+            summary = run_revision_explicit_production_parity(args)
         else:
             summary = run(args)
     except ModuleNotFoundError as exc:
@@ -2795,13 +2860,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
         if not _exact_number(sst_loss_cap, B2_SST_LOSS_CAP):
             raise ValueError(f"production SST training requires frozen --sst-loss-cap {B2_SST_LOSS_CAP}")
         sst_dataset = CombinedStage2Dataset(sst_datasets)
-        sst_loader, sst_batch_sampler = _make_training_loader(
+        sst_loader, sst_batch_sampler = _make_sst_training_loader(
             sst_dataset,
             batch_size=sst_batch_size,
             seed=int(args.seed) + 1,
             num_workers=int(args.num_workers),
             torch=torch,
-            require_full_batches=True,
         )
     else:
         sst_batch_sampler = None
@@ -3671,7 +3735,10 @@ def _training_data_summary(
             "dataset_identity_set_sha256": _canonical_json_sha256(combined_identity),
         },
         "human_exposure_policy": "one full --batch-size human batch every optimizer step",
-        "sst_exposure_policy": "one independent --sst-batch-size pseudo batch every optimizer step",
+        "sst_exposure_policy": (
+            "one independent --sst-batch-size pseudo batch every optimizer step; "
+            "dataset indices are distinct within every batch"
+        ),
     }
 
 
@@ -3703,6 +3770,68 @@ class DeterministicFullBatchSampler:
             while len(pending) >= self.batch_size:
                 batch = pending[: self.batch_size]
                 del pending[: self.batch_size]
+                if batches_seen >= self.start_batch:
+                    yield batch
+                batches_seen += 1
+
+
+class DeterministicDistinctFullBatchSampler(DeterministicFullBatchSampler):
+    """Cycle seeded permutations with distinct indices in every SST batch.
+
+    Only the SST loader uses this sampler. At a permutation splice, a colliding
+    prefix index is swapped with the first later index that is not already in
+    the pending tail. The algorithm consumes no additional RNG values and
+    preserves every generated permutation's complete multiset.
+    """
+
+    def __init__(self, sample_count: int, batch_size: int, *, seed: int, torch: Any) -> None:
+        super().__init__(sample_count, batch_size, seed=seed, torch=torch)
+        if self.sample_count < self.batch_size:
+            raise ValueError(
+                "distinct full-batch sampler requires sample_count >= batch_size"
+            )
+
+    def __iter__(self) -> Any:
+        generator = _loader_generator(self.seed, torch=self.torch)
+        pending: list[int] = []
+        batches_seen = 0
+        while True:
+            permutation = [
+                int(index)
+                for index in self.torch.randperm(
+                    self.sample_count,
+                    generator=generator,
+                ).tolist()
+            ]
+            if pending:
+                prefix_count = self.batch_size - len(pending)
+                blocked = set(pending)
+                replacement_cursor = prefix_count
+                for prefix_index in range(prefix_count):
+                    if permutation[prefix_index] not in blocked:
+                        continue
+                    while (
+                        replacement_cursor < len(permutation)
+                        and permutation[replacement_cursor] in blocked
+                    ):
+                        replacement_cursor += 1
+                    if replacement_cursor >= len(permutation):
+                        raise RuntimeError(
+                            "distinct full-batch sampler could not repair a permutation splice"
+                        )
+                    permutation[prefix_index], permutation[replacement_cursor] = (
+                        permutation[replacement_cursor],
+                        permutation[prefix_index],
+                    )
+                    replacement_cursor += 1
+            pending.extend(permutation)
+            while len(pending) >= self.batch_size:
+                batch = pending[: self.batch_size]
+                del pending[: self.batch_size]
+                if len(set(batch)) != self.batch_size:
+                    raise RuntimeError(
+                        "distinct full-batch sampler emitted duplicate dataset indices"
+                    )
                 if batches_seen >= self.start_batch:
                     yield batch
                 batches_seen += 1
@@ -3740,6 +3869,31 @@ def _make_training_loader(
     return loader, None
 
 
+def _make_sst_training_loader(
+    dataset: Any,
+    *,
+    batch_size: int,
+    seed: int,
+    num_workers: int,
+    torch: Any,
+) -> tuple[Any, DeterministicDistinctFullBatchSampler]:
+    sampler = DeterministicDistinctFullBatchSampler(
+        len(dataset),
+        batch_size,
+        seed=seed,
+        torch=torch,
+    )
+    loader = torch.utils.data.DataLoader(
+        dataset,
+        batch_sampler=sampler,
+        num_workers=num_workers,
+        generator=_loader_generator(seed + 50_000, torch=torch),
+        worker_init_fn=_seed_loader_worker,
+        collate_fn=_collate_stage2_batch,
+    )
+    return loader, sampler
+
+
 def _collate_stage2_batch(items: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
     batch = _collate_batch(items)
     batch["parent_source_id"] = [str(item["parent_source_id"]) for item in items]
@@ -3764,6 +3918,16 @@ def _assert_sst_training_batch(batch: Mapping[str, Any], *, exact_count: int) ->
     count = int(batch["input"].shape[0])
     if count != exact_count:
         raise RuntimeError(f"SST batch must contain exactly {exact_count} additive rows, got {count}")
+    sample_ids = [str(value) for value in batch.get("sample_id", [])]
+    if len(sample_ids) != count:
+        raise RuntimeError("SST batch is missing sample_id lineage")
+    if len(set(sample_ids)) != count:
+        duplicates = sorted(
+            sample_id
+            for sample_id in set(sample_ids)
+            if sample_ids.count(sample_id) > 1
+        )
+        raise RuntimeError(f"SST batch contains duplicate sample IDs: {duplicates}")
     parents = [str(value) for value in batch.get("parent_source_id", [])]
     if len(parents) != count or not set(parents) <= SST_TRAIN_SOURCE_IDS:
         raise RuntimeError("SST batch contains missing or noncanonical source identities")
@@ -3966,7 +4130,9 @@ def _cli_summary(summary: Mapping[str, Any]) -> dict[str, Any]:
             "status": "head_parity_complete",
             "verdict": summary.get("verdict"),
             "head_parity_json": str(Path(str(summary["out_dir"])) / "head_parity.json"),
-            "head_trainer": summary.get("head_trainer"),
+            "baseline_trainer": summary.get("baseline_trainer"),
+            "candidate_trainer": summary.get("candidate_trainer"),
+            "trainer_sources_distinct": summary.get("trainer_sources_distinct"),
             "model_state_sha256": summary.get("model_state_sha256"),
         }
     if summary.get("artifact_type") == "racketsport_ball_sst_manifest":
@@ -3990,6 +4156,16 @@ def _build_parser() -> argparse.ArgumentParser:
         description="Train BALL2D stage-2 on sparse owner CVAT labels and/or SST pseudo-label manifests.",
     )
     parser.add_argument("--mode", choices=("train", "build-sst-manifest", "verify-head-parity"), default="train")
+    parser.add_argument(
+        "--baseline-rev",
+        default=None,
+        help="Explicit git revision for verify-head-parity; no HEAD default is permitted.",
+    )
+    parser.add_argument(
+        "--baseline-sha256",
+        default=None,
+        help="Expected SHA-256 of the trainer blob loaded from --baseline-rev.",
+    )
     parser.add_argument("--cvat-export-root", type=Path, default=None)
     parser.add_argument(
         "--b0-split-root",

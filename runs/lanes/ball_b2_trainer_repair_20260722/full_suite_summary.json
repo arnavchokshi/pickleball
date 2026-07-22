@@ -1,0 +1,114 @@
+{
+  "schema_version": 1,
+  "artifact_type": "ball_b2_trainer_repair_wide_suite_summary",
+  "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport -q",
+  "exit_code": 1,
+  "duration_seconds": 6154.54,
+  "passed": 4414,
+  "failed": 42,
+  "skipped": 25,
+  "warnings": 8,
+  "failures_all_preexisting": false,
+  "authoritative_source": "completed wide-run stdout in runs/lanes/ball_b2_trainer_repair_20260722/log.txt; mutable .pytest_cache/lastfailed was not used for counts",
+  "owned_trainer_failures": 0,
+  "owned_test_module_failures": 0,
+  "known_baseline": {
+    "source": "runs/lanes/ball_b2_seed1_20260722/scripts_used/full_test_failures.txt",
+    "baseline_failed": 6,
+    "exact_matches_in_wide_failures": 0,
+    "all_six_absent_from_wide_failures": true,
+    "repaired_parity_premise_test_explicitly_cleared": true,
+    "cleared_nodes": [
+      "tests/racketsport/test_build_pbvision_ball_sst.py::test_missing_media_cli_emits_machine_readable_refusal",
+      "tests/racketsport/test_build_pbvision_ball_sst.py::test_production_artifact_verifier_refuses_reauthored_split",
+      "tests/racketsport/test_ball_stage2_training.py::test_pinned_head_harness_loads_actual_git_source_and_records_exact_compute",
+      "tests/racketsport/test_ball_stage2_training.py::test_failed_gate_sst_fixture_and_sst_only_invocation_are_refused",
+      "tests/racketsport/test_ball_loso_validation.py::test_live_b0_split_scores_final_labels_and_binds_prediction_media",
+      "tests/racketsport/test_ball_loso_validation.py::test_live_b0_split_refuses_same_hyu_prediction_reused_for_ezz"
+    ]
+  },
+  "classification": {
+    "concurrent_unowned_dirty_or_artifact_drift": {
+      "count": 30,
+      "proven_preexisting_at_head": false,
+      "failures": [
+        "tests/racketsport/test_best_stack_manifest.py::test_best_stack_manifest_integrity",
+        "tests/racketsport/test_rfdetr_tracking_runner.py::test_default_yolo_and_explicit_rfdetr_candidate_resolve_full_operating_points",
+        "tests/racketsport/test_rfdetr_tracking_runner.py::test_committed_rfdetr_manifest_and_preview_stack_contract",
+        "tests/racketsport/test_compare_court_proposals.py::test_compare_img1605_partial_labels_rejects_current_bad_proposal",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_or_distance_mask_selector_scores_candidate_combination",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_or_refined_regulation_selector_uses_guarded_refinement_when_it_improves_median",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_lsd_regulation_selector_scores_and_improves_mean_floor_error",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_hough_lsd_line_adapter_uses_available_frame_sequence",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_persistent_line_adapter_reports_frame_support",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_hough_lsd_regulation_scores_without_claiming_verified",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_regulation_temporal_selector_improves_deployable_mean",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_summary_reports_floor_visible_p95_tail_metrics_after_geometry_guard",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_balanced_temporal_selector_reduces_tail_risk_without_losing_median_gain",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_persistent_tail_selector_uses_temporal_persistence_when_it_reduces_risk",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_reviewed_oracle_selector_reports_candidate_pool_upper_bound",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_reviewed_oracle_reports_candidate_pool_upper_bound",
+        "tests/racketsport/test_court_keypoint_no_tap_eval.py::test_build_report_includes_img1605_partial_visible_gate",
+        "tests/racketsport/test_court_keypoint_partial_labels.py::test_img1605_progress_builds_partial_visible_label_payload",
+        "tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_infers_img1605_occluded_corner",
+        "tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_requires_four_floor_points",
+        "tests/racketsport/test_overlapping_court_calibration_eval.py::test_lm_homography_report_scores_reviewed_full_labels_without_claiming_verified",
+        "tests/racketsport/test_placewire_trajectory_stage.py::test_stage_identity_covers_inputs_config_output_and_reuses_only_matching_generation",
+        "tests/racketsport/test_player_selection.py::test_enabled_cli_validates_tracks_and_publishes_interpolated_true",
+        "tests/racketsport/test_pooling_wire_20260720.py::test_cli_and_stage_identity_are_default_off",
+        "tests/racketsport/test_process_video.py::test_default_stage_order_runs_camera_motion_before_placement",
+        "tests/racketsport/test_spine_stage_contract.py::test_authoritative_graph_projects_exact_23_24_25_stage_contracts",
+        "tests/racketsport/test_truthful_capabilities.py::test_runbook_documents_current_process_video_entrypoint",
+        "tests/racketsport/test_scaffold_tool_index.py::test_real_scaffold_tool_index_matches_checked_in_schema",
+        "tests/racketsport/test_truthful_capabilities.py::test_storage_policy_keeps_large_tracked_artifacts_explicit",
+        "tests/racketsport/test_truthful_capabilities.py::test_storage_policy_audit_classifies_large_worktree_artifacts"
+      ],
+      "evidence": [
+        "best_stack.json changed concurrently from revision 14 to 15 and was outside lane ownership",
+        "IMG1605/eval-root inputs contained extra untracked artifacts before or during the run",
+        "player-selection/process-video, scaffold, and storage-policy surfaces were concurrently dirty or gained artifacts"
+      ]
+    },
+    "sandbox_or_environment": {
+      "count": 10,
+      "proven_preexisting_at_head": false,
+      "failures": [
+        "tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_rejects_missing_or_wrong_token",
+        "tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_post_save_accepts_correct_token",
+        "tests/racketsport/test_court_keypoint_review_server.py::test_court_keypoint_served_page_embeds_save_token_not_placeholder",
+        "tests/racketsport/test_review_input_server.py::test_review_input_post_save_rejects_missing_or_wrong_token",
+        "tests/racketsport/test_review_input_server.py::test_review_input_post_save_accepts_correct_token",
+        "tests/racketsport/test_review_input_server.py::test_review_input_served_pages_embed_save_token_not_placeholder",
+        "tests/racketsport/test_sam3dbody_persistent_worker.py::test_serve_and_client_round_trip_succeeds",
+        "tests/racketsport/test_sam3dbody_persistent_worker.py::test_worker_idle_timeout_self_exits_and_removes_socket",
+        "tests/racketsport/test_flight_simulator.py::test_generate_corpus_is_deterministic_and_fast_for_small_cpu_sample",
+        "tests/racketsport/test_train_court_model_v2.py::test_train_court_model_v2_cli_cpu_smoke_beats_random_init"
+      ],
+      "evidence": [
+        "Eight server/worker failures trace to EPERM on TCP or AF_UNIX socket.bind in the managed sandbox.",
+        "The wide flight-simulator sample took 7.3488 seconds against a 5-second limit; a fresh rerun took 13.3737 seconds.",
+        "The court-model CPU smoke subprocess exceeded its exact 540-second timeout."
+      ]
+    },
+    "unresolved_unowned": {
+      "count": 2,
+      "proven_preexisting_at_head": false,
+      "failures": [
+        "tests/racketsport/test_ball_arc_solver.py::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds",
+        "tests/racketsport/test_event_head_eval.py::test_public_eval_persists_probability_maxima_and_nonfinite_count"
+      ],
+      "evidence": [
+        "The ball-arc fixture returned status degraded instead of ran; no owned dependency or environmental cause was proven.",
+        "The event diagnostic model has no parameters and _predict raises StopIteration at next(model.parameters()); no owned dependency was found."
+      ]
+    }
+  },
+  "classification_count_check": 42,
+  "trainer_dependency_audit": {
+    "failing_nodes_directly_importing_train_ball_stage2": 0,
+    "failing_nodes_with_local_import_graph_path_to_train_ball_stage2": 0,
+    "failing_stack_traces_entering_train_ball_stage2": 0,
+    "conclusion": "No wide failure exercises the owned repair, but the red suite still prevents a full-suite-green claim."
+  },
+  "verdict": "FAIL"
+}

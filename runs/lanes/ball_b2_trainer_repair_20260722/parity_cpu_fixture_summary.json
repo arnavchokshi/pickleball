@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "artifact_type": "ball_b2_revision_explicit_cpu_parity_proof",
+  "generated_date": "2026-07-22",
+  "test_node": "tests/racketsport/test_ball_stage2_training.py::test_revision_explicit_harness_loads_pinned_git_source_and_records_exact_compute",
+  "mode": "tiny_cpu_fixture",
+  "production_configuration_executed": false,
+  "steps": 7,
+  "batch_size": 8,
+  "device": "cpu",
+  "baseline_trainer": {
+    "requested_revision": "86465272f3b267a1ab5a7c3dc5be4ca824c70d43",
+    "resolved_commit": "86465272f3b267a1ab5a7c3dc5be4ca824c70d43",
+    "source_sha256": "8118ff0e8fbf1d573f61e1ce09de140cb2c9e9e62bf1d57b030560a55a157f47",
+    "expected_source_sha256": "8118ff0e8fbf1d573f61e1ce09de140cb2c9e9e62bf1d57b030560a55a157f47",
+    "source_path": "scripts/racketsport/train_ball_stage2.py",
+    "load_method": "git show <resolved-commit>:scripts/racketsport/train_ball_stage2.py then isolated exec"
+  },
+  "candidate_trainer": {
+    "source_path": "scripts/racketsport/train_ball_stage2.py",
+    "source_sha256": "b8e653dab6d906070bfeabc146035f00b3adf8b632e1c12f1c5f1e043898bbc7"
+  },
+  "trainer_sources_distinct": true,
+  "checks": {
+    "exact_losses_identical": true,
+    "exact_sample_order_identical": true,
+    "model_state_sha256_baseline": "0f735e48513d0b6f270830d897dc7af35f8e0a19dc1c3d59e47a69af97262a7e",
+    "model_state_sha256_candidate": "0f735e48513d0b6f270830d897dc7af35f8e0a19dc1c3d59e47a69af97262a7e",
+    "full_checkpoint_payloads_materialized_and_loaded": true,
+    "loaded_model_state_identical": true,
+    "added_checkpoint_args_fields": [
+      "b0_split_root",
+      "baseline_rev",
+      "baseline_sha256",
+      "sst_batch_size",
+      "sst_loss_cap"
+    ]
+  },
+  "fail_closed_proofs": {
+    "candidate_versus_itself_test_node": "tests/racketsport/test_ball_stage2_training.py::test_revision_explicit_parity_rejects_hash_mismatch_and_candidate_versus_itself",
+    "candidate_versus_itself_return_code": 2,
+    "candidate_versus_itself_error_contains": "candidate-versus-itself comparisons are invalid",
+    "candidate_versus_itself_output_directory_created": false,
+    "missing_baseline_revision_rejected": true,
+    "baseline_hash_mismatch_rejected": true
+  },
+  "verdict": "PASS",
+  "limitations": [
+    "This is a tiny seven-step CPU parity proof, not the required 2372-step CUDA parity gate.",
+    "VERIFIED=0 remains binding and this artifact does not arm B2."
+  ]
+}
