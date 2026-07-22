@@ -1,0 +1,214 @@
+{
+  "VERDICT": "REJECT",
+  "lane": "person_p1_roboflow_20260721",
+  "decision": "Do not commit as-is. The artifacts reconcile numerically, but the split violates original-video-family isolation and several advertised safety gates are not actually enforced.",
+  "review_mode": "Read-only; no files modified.",
+  "blocking_findings": [
+    {
+      "severity": "CRITICAL",
+      "id": "P1-SPLIT-LEAK",
+      "finding": "A proven original-video family crosses train and validation.",
+      "evidence": [
+        "pickleball-od8al/pickleball-tsgju is assigned to train, while pickleball-od8al/pickleball-version2 and pickleball-seg are assigned to validation.",
+        "tsgju output_frame_21 and version2 output_frame_20 are consecutive frames of the same 2021 US Open broadcast; all four temporal filename prefixes overlap.",
+        "Family discovery only consumes corpus-card mappings and free-text notes: scripts/racketsport/export_roboflow_person_yolo_dataset.py:417-436. It does not enforce temporal/video lineage.",
+        "This violates EXACT_PLAN.md:72 and EXACT_PLAN.md:581."
+      ],
+      "exact_fix": [
+        "Place tsgju, seg and version2 in one validation family.",
+        "Add an auditable original-video/game/session/channel-family map and fail on cross-split temporal lineage.",
+        "Add a regression test using this exact family.",
+        "Regenerate every count, audit and collision artifact. Provisional arithmetic after moving tsgju is train 9,129 images/24,299 boxes/9 groups and validation 1,941 images/6,437 boxes; do not hand-edit these numbers."
+      ]
+    },
+    {
+      "severity": "HIGH",
+      "id": "P1-BALANCE-NOOP",
+      "finding": "--source-balanced does not balance training.",
+      "evidence": [
+        "The flag is only required as a boolean at exporter.py:117-120.",
+        "exporter.py:268-279 records enabled=true while explicitly retaining every image once.",
+        "racket-ai contributes 8,067 of 9,209 train images, or 87.6%.",
+        "The stated P2 YOLO command consumes only data.yaml and cannot use the emitted family-count metadata."
+      ],
+      "exact_fix": [
+        "Emit deterministic family-balanced sampling that the exact P2 command consumes, and test it with strongly unequal source sizes.",
+        "Otherwise remove --source-balanced and every enabled/balanced claim, and mark the contract unmet."
+      ]
+    },
+    {
+      "severity": "HIGH",
+      "id": "P1-HUMAN-GATE-BYPASS",
+      "finding": "Machine-readable artifacts pass gates that are still pending human review.",
+      "evidence": [
+        "Retention is computed before source-quality quarantine at exporter.py:186-200.",
+        "summary.json reports objective_result=PASS while annotation_quality.status=PENDING_HUMAN_REVIEW.",
+        "report.json marks both pending human precision and recall rows PASS.",
+        "The CLI exits zero solely from pre-review retention at exporter.py:83.",
+        "There is no implementation that ingests review_template.csv, quarantines sources below 90%, and recomputes post-quarantine retention as required by EXACT_PLAN.md:432."
+      ],
+      "exact_fix": [
+        "Use PARTIAL/PENDING_HUMAN_REVIEW until measured precision, recall and per-source results exist.",
+        "Mark pre-quarantine retention as provisional, not PASS.",
+        "Implement reviewed-card ingestion, below-90% quarantine, and post-quarantine retention.",
+        "Require an explicit training-ready gate before P2 can consume the dataset."
+      ]
+    },
+    {
+      "severity": "HIGH",
+      "id": "P1-COLLISION-WEAK",
+      "finding": "The zero-collision result is exhaustive over candidates but insufficiently robust to ordinary protected-image derivatives.",
+      "evidence": [
+        "The implementation calculates three whole-frame pHashes and requires all three distances to be <=6: exporter.py:676-716.",
+        "The only positive test copies identical bytes: test_export_roboflow_person_yolo_dataset.py:309-337.",
+        "Across 12 protected frames, detection was 0/12 for horizontal flips, 0/12 for 20% crops, 1/12 for 10% crops, and 0/12 for 10-20% letterboxing.",
+        "A Burlington frame specifically produced distances [26,28,28] after a horizontal flip and [12,12,12] after a 5% crop, so both evade the threshold.",
+        "The Roboflow inventory contains augmented .rf.* derivatives and source documentation includes flips/crops."
+      ],
+      "exact_fix": [
+        "Add transform-aware comparison for flips, crops, padding/letterboxing and color transforms, or add a pinned local embedding comparator alongside pHash.",
+        "Add transformed-positive regression tests.",
+        "Rerun the complete collision gate before claiming zero protected derivatives."
+      ]
+    },
+    {
+      "severity": "HIGH",
+      "id": "P1-ADJACENT-FAILOPEN",
+      "finding": "Adjacent-sport exclusion succeeds in this run but is not a hard invariant.",
+      "evidence": [
+        "The CLI accepts an arbitrary --bucket at exporter.py:49-50.",
+        "_filter_samples retains whichever bucket the caller requests at exporter.py:342-362.",
+        "Requesting adjacent_sport_aux can materialize the quarantined 15,469 rows before the CLI later evaluates retention."
+      ],
+      "exact_fix": [
+        "Hard-refuse every bucket except core_pickleball.",
+        "Add a negative test proving adjacent_sport_aux cannot create any output images or labels."
+      ]
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "P1-PROTECTED-MANIFEST",
+      "finding": "Protected enumeration is not bound to the four-clip manifest.",
+      "evidence": [
+        "exporter.py:624-673 recursively scans whatever happens to be under the supplied directory.",
+        "It does not require the four clip IDs, source hashes or expected frame counts from eval_clips/ball/manifest.json.",
+        "A missing clip could therefore reduce the denominator without failing."
+      ],
+      "exact_fix": [
+        "Require the protected manifest, verify all four video SHA-256 values and frame counts, and reject missing or unexpected protected videos.",
+        "Report four-clip video frames separately from additional conservative stills."
+      ]
+    }
+  ],
+  "additional_findings": [
+    {
+      "severity": "MEDIUM",
+      "id": "P1-AUDIT-DUPLICATES",
+      "finding": "The audit card is unique only by sample ID, not original pre-augmentation frame.",
+      "evidence": [
+        "Sampling at exporter.py:586-602 does not normalize Roboflow .rf.* derivatives.",
+        "The 186 staged IDs represent only 176 original-frame identities.",
+        "michael-chen-debbx reports 15 samples but contains only 9 originals; four other sources report 15 from 14 originals."
+      ],
+      "exact_fix": "Deduplicate by stable original-frame identity before sampling and report the resulting shortfalls."
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "P1-NONPORTABLE-YAML",
+      "finding": "data.yaml hardcodes the local Mac path.",
+      "evidence": "data.yaml:1 points to /Users/arnavchokshi/Desktop/pickleball/... because exporter.py:779 writes out_dir.resolve().",
+      "exact_fix": "Make the dataset package relocatable and add a test that moves the artifact root before loading it."
+    },
+    {
+      "severity": "LOW",
+      "id": "P1-REPORT-SCHEMA",
+      "finding": "The mandatory structured report is incomplete and contains one inaccurate descriptor statement.",
+      "evidence": [
+        "report.json lacks the required artifacts key from spec.md:62-63; artifact paths are mixed into changes.",
+        "The report says 43 protected image files are from four clips. Only 32 are inside those clip directories; 8 pb.vision and 3 owner stills are additional files.",
+        "report.json says PARTIAL while its claimed authoritative summary.json says PASS."
+      ],
+      "exact_fix": "Add the artifacts field, distinguish video frames/clip stills/extras, and make all machine-readable statuses agree."
+    }
+  ],
+  "artifact_reconciliation": {
+    "index": {
+      "sha256_match": true,
+      "eligible_images": 15312,
+      "indexed_boxes": 47044,
+      "sources": 14
+    },
+    "exclusions": {
+      "adjacent_sport_images": 15469,
+      "adjacent_sport_boxes": 54833,
+      "nc_images": 22,
+      "nc_boxes": 82,
+      "current_run_passed": true
+    },
+    "materialized": {
+      "images": 15312,
+      "relative_symlinks": 15312,
+      "broken_symlinks": 0,
+      "label_files": 15312,
+      "valid_box_rows": 47043,
+      "invalid_boxes_excluded": 1
+    },
+    "splits": {
+      "train": {
+        "images": 9209,
+        "boxes": 24454
+      },
+      "validation": {
+        "images": 1861,
+        "boxes": 6282
+      },
+      "test": {
+        "images": 4242,
+        "boxes": 16307
+      }
+    },
+    "audit": {
+      "staged_ids": 186,
+      "distinct_original_frames": 176,
+      "requested": 210
+    }
+  },
+  "protected_data_assessment": {
+    "confirmed_direct_ingestion": false,
+    "current_video_coverage_exhaustive": true,
+    "four_video_frames": {
+      "burlington": 600,
+      "indoor": 900,
+      "outdoor": 1151,
+      "wolverine": 300,
+      "total": 2951
+    },
+    "additional_still_descriptors": 43,
+    "total_descriptors": 2994,
+    "pair_comparisons": 45844128,
+    "reported_collisions_under_current_rule": 0,
+    "conclusion": "Yes, every frame of all four current protected videos was decoded and compared. However, 2,994 includes 43 stills beyond the 2,951 video frames, and the narrow pHash rule does not prove absence of transformed protected derivatives."
+  },
+  "wide_suite_assessment": {
+    "result": {
+      "passed": 4066,
+      "failed": 32,
+      "skipped": 25
+    },
+    "owned_files_plausibly_caused_failures": false,
+    "failure_accounting": {
+      "court_state_or_fixture_drift": 18,
+      "socket_bind_permission_failures": 8,
+      "event_head_pre_session_regression": 1,
+      "flight_wall_clock_failure": 1,
+      "unrelated_scaffold_unknowns": 1,
+      "court_model_timeout": 1,
+      "storage_policy_failures": 2
+    },
+    "storage_provenance": "The six flagged large files were introduced by pre-session commit f9dc11dfc.",
+    "socket_conclusion": "The traces fail at TCP/Unix bind with PermissionError before application logic and are consistent with the claimed orchestrator-local socket pass.",
+    "focused_tests": "11 passed after the wide suite.",
+    "report_honesty": "Keeping failures_all_preexisting=false is correct because no clean pre-lane baseline was captured.",
+    "verdict_effect": "The 32 failures are not a reason for rejection; the contract and safety defects above are."
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "ruling": "ACCEPT_WITH_CONDITIONS",
+  "as_proposed_information_equivalent": false,
+  "conditions": [
+    "Use a lossless exception taxonomy keyed by source and sample_id. For drawn count d, the owner reports nonzero i = incorrect, duplicate, or unusable boxes; o = valid boxes on off-court persons; and m = visible on-court persons lacking a valid box. Derive correct=d-i, annotated_on_court=d-i-o, and visible_on_court=d-i-o+m. Off-court boxes remain precision-correct.",
+    "An unflagged row must explicitly mean i=o=m=0 and frame_complete=yes. Merely stating that all boxes are persons and no on-court player is missed is insufficient because it leaves the on-court count unknown.",
+    "Exception multiplicities must be exact, not defect-type-only free text. Ambiguous cases require owner-approved per-frame counts; the coordinator may perform arithmetic but no visual or semantic judgment.",
+    "Before review, bind the ordered 182 IDs, sources, drawn counts, annotation IDs, rubric version, and every rendered image byte through per-image SHA-256 values or one byte-complete pack digest. The current manifest SHA alone does not bind the rendered JPEG bytes.",
+    "The signed, timestamped attestation must bind the content manifest, ordered ID-list hash, exception-record hash, and fixed conversion rules. Preserve the original attestation and exceptions alongside the derived CSV.",
+    "Conversion must fail closed on missing, duplicate, unknown, or inconsistent IDs; emit exactly 182 rows using the existing CSV schema; and log hashes for the converter version, inputs, output CSV, and conversion record.",
+    "Retain evidence that all 182 bound images rendered and were traversed at reviewable resolution, with source-block checkpoints or an equivalent coverage log. Breaks are allowed and preferable to attention decay.",
+    "Run the unchanged per-source and post-quarantine scorer. Do not use the informal 90-percent impression.",
+    "This accepts only the recording mechanism. It does not pass P1 or P2; the current export independently retains only 7 train source groups against the required 8."
+  ],
+  "precedent_scope": "Task 87 supports blanket attestation where the default fully determines a binary row. Its R2 reviewer closed the attestation finding, but the overall review remained rejected on other provenance issues. It does not supply P1's varying on-court cardinalities.",
+  "minimal_alternative_if_reject": "Not applicable; the amendment is accepted only after all listed conditions are satisfied."
+}

@@ -1,0 +1,90 @@
+{
+  "VERDICT": "REJECT",
+  "lane": "person_p1_roboflow_20260721",
+  "review_mode": "Read-only; no files modified.",
+  "decision": "Do not feed P2 or accept the fix round. Cross-split leakage remains, and a legacy YAML bypasses both human review and balanced sampling.",
+  "blocking_findings": [
+    {
+      "severity": "CRITICAL",
+      "id": "P1-SPLIT-LEAK-R2",
+      "finding": "Two additional train-to-validation video families remain leaked across different workspace and prefix conventions.",
+      "evidence": [
+        "pickle-es3fs/yt-UF0i_EboHqA-0004 versus od8al/output_frame_file2_28: SSIM 0.916809, pHash [2,0,0], 2307 ORB homography inliers; visually adjacent Waters/Johns-Todd/Newman frames.",
+        "nigh-workspace/PBGAME13_mp4-0206 versus od8al/output_frame_file4_844: SSIM 0.904504, pHash [4,0,2], 1130 ORB homography inliers; same MLP San Clemente footage.",
+        "An exhaustive 9129-by-1941 train-validation scan found 30 pairs at pHash distance <=6 and 74 at <=8, all confined to these two leaked relationships.",
+        "Exact SHA-256 and .rf-hash-stripped basename scans found zero, demonstrating that cross-workspace renaming defeats the implemented detector.",
+        "The detector keys lineage by workspace channel at exporter lines 637-653 and 741-759. Ten of eleven emitted families remain UNRESOLVED_SOURCE_LEVEL_FAMILY."
+      ],
+      "impact": {
+        "projected_train_images": 8887,
+        "projected_train_boxes": 23489,
+        "projected_train_sources": 8,
+        "projected_train_families": 7,
+        "retention_gate": "FAIL: requires at least 8 families",
+        "projected_balanced_list_entries": 1066
+      }
+    },
+    {
+      "severity": "HIGH",
+      "id": "P1-HUMAN-GATE-LEGACY-YAML-BYPASS",
+      "finding": "A preserved pre-fix data.yaml remains directly trainable.",
+      "evidence": [
+        "runs/lanes/person_p1_roboflow_20260721/roboflow_person_pre_family_fix_20260721T131633PDT/data.yaml exists.",
+        "Its absolute path targets the current fixed roboflow_person directory.",
+        "Its train setting is images/train, exposing all 9129 images and bypassing the 1308-entry balanced list.",
+        "Racket-AI therefore contributes 8067/9129 images instead of 194/1308 entries."
+      ]
+    },
+    {
+      "severity": "HIGH",
+      "id": "P1-HUMAN-GATE-PASS-STATE-CONTRADICTION",
+      "finding": "A future legitimate PASS package would still bundle machine-readable PENDING audit artifacts.",
+      "evidence": [
+        "exporter lines 1757-1795 always emit a blank review_template.csv and PENDING_HUMAN_REVIEW audit manifest.",
+        "The completed external review CSV is not copied into the package.",
+        "Tests permit data.yaml and overall PASS without checking the bundled audit status."
+      ]
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "P1-REPORT-SCHEMA",
+      "finding": "report_fix1.json claims an explicit artifacts key, but the key is absent."
+    }
+  ],
+  "resolved_checks": {
+    "original_tsgju_version2_pair": {
+      "status": "PASS",
+      "result": "tsgju frame 21, both version2 frame 20 derivatives, and seg are now validation-only in one family."
+    },
+    "balance_core": {
+      "status": "PASS_BUT_INVALIDATED_BY_SPLIT_AND_BYPASS",
+      "result": "Independent reconstruction was byte-identical: 1308 entries, SHA-256 2fa213f2f1c38c6e6ebd9fc9869bca1c114a31cd3ed7fc9f8bd5a746b151aa42, target 194, cap 4, Racket-AI 8067 to 194."
+    },
+    "canonical_human_gate": {
+      "status": "PASS",
+      "result": "Current canonical data.yaml is absent; review is clearly PENDING, post-quarantine retention is null, and the CLI gate has five explicit blockers."
+    },
+    "collision": {
+      "status": "PASS_WITH_DECLARED_RESIDUALS",
+      "result": "Fresh probes detected flip and every 5/10/20% center-crop and letterbox class at 12/12. Rotation, off-center crop, and flip-plus-crop detected 0/12; perspective warp detected 4/12. These residuals are honestly declared. Manifest hashes, 2994 protected references, 45844128 frame pairs, and 366753024 descriptor comparisons reconcile."
+    }
+  },
+  "suite": {
+    "recorded_result": "4111 passed, 30 failed, 25 skipped",
+    "strict_subset_confirmed": true,
+    "prior_failure_count": 32,
+    "removed_failures": [
+      "test_generate_corpus_is_deterministic_and_fast_for_small_cpu_sample",
+      "test_train_court_model_v2_cli_cpu_smoke_beats_random_init"
+    ],
+    "new_failures": [],
+    "fresh_rerun": "Blocked before collection because the read-only sandbox provides no writable temporary directory; this is an environment limitation, not a test failure."
+  },
+  "required_fix": [
+    "Adjudicate the two newly proven cross-workspace video relationships, apply holdout-wins source grouping, regenerate every artifact, and honestly report PERSON_RF_POOL_TOO_THIN if only seven train families remain.",
+    "Add cross-workspace perceptual lineage checks and fail closed on unresolved original-video families.",
+    "Neutralize every legacy YAML that resolves to pending/current data and add a stale-reference regression.",
+    "On PASS, preserve the completed review CSV and emit COMPLETE audit-pack status instead of a fresh blank PENDING pack.",
+    "Add the mandatory artifacts key to report_fix1.json."
+  ]
+}

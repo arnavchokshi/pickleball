@@ -1,0 +1,64 @@
+{
+  "part_a": {
+    "verdict": "REJECT",
+    "core_checks": "PASS",
+    "findings": [
+      {
+        "check": "R2 whole-source merge and leak scan",
+        "status": "PASS",
+        "evidence": "All 12 pickle-es3fs and 230 nigh-workspace images are validation-only in family:pickleball-od8al/pickleball-seg. A fresh pixel-level rerun decoded all 15,312 images and scanned 66,359,261 cross-split pairs using the production three-scale pHash<=6 method: 0 candidates and 0 verified leaks."
+      },
+      {
+        "check": "Retention-family recount",
+        "status": "PASS",
+        "evidence": "Independent dataset_manifest recount gives 8,887 train images, 23,489 boxes, 8 sources, and 7 source families. The only merged train pair is ak-zcxgt plus pickleball-1uztf; both corpora share all 118 original-frame lineages, so the merge is justified. The frozen >=8-family gate therefore honestly fails as PERSON_RF_POOL_TOO_THIN."
+      },
+      {
+        "check": "Legacy YAML and future PASS consistency",
+        "status": "PASS",
+        "evidence": "There are zero YAML files anywhere under the lane; canonical and legacy data.yaml are both absent, and the legacy package is marked REFUSED. Current code requires a future PASS package to contain the completed CSV, COMPLETE zero-pending audit manifest, matching CSV hash, and data.yaml."
+      },
+      {
+        "check": "EXACT_PLAN disposition",
+        "status": "PASS",
+        "evidence": "training_ready_gate.json records status=FAIL, permanently_closed_for_export=true, blocker PERSON_RF_POOL_TOO_THIN, and p2_disposition=NO_ATTEMPT_PREREQ. This matches EXACT_PLAN section 3.4."
+      },
+      {
+        "check": "FIX2 report schema",
+        "status": "FAIL",
+        "evidence": "report_fix2.json has no top-level artifacts key, despite claiming that nine artifact entries are present. This repeats an explicit FIX2_SPEC requirement."
+      },
+      {
+        "check": "FIX2 wide-suite acceptance",
+        "status": "FAIL",
+        "evidence": "The required full invocation recorded 4,192 passed, 31 failed, and 25 skipped versus the known 30-failure set. The additional test passed alone, but the no-new-wide-failure requirement remains unmet. report_fix2.json correctly remains objective_result=PARTIAL."
+      }
+    ]
+  },
+  "part_b_ruling": {
+    "verdict": "POSTHOC_REJECT",
+    "verified_consistency": [
+      "All three requested artifacts exist and parse.",
+      "pack_binding.json contains 182 unique IDs and paths; all 182 JPEGs exist, decode, and match their declared SHA-256 values.",
+      "The sorted sample_id:sha256 newline digest recomputes exactly to 2975b96a9a8f97c0ed591f04e813a91f9097e156c98d024941f2a7eacf53a48d.",
+      "exception_record.json recomputes to 5aa1c3296b047cbb93fd1d240c98e6fa321b9ea759fe7e1d965c83c0d4060e50, matching the attestation.",
+      "The newest JPEG mtime is 2026-07-21 19:36:12.269878 PDT; pack binding is timestamped 20:22:39 and attestation/exceptions 20:36:32."
+    ],
+    "rejection_reasons": [
+      "The JPEGs are ordinary writable 0644 files with no immutable filesystem flags. Their mtimes are corroborative, but mutable and backdatable; there is also no independently timestamped review-pass event.",
+      "The accepted protocol required binding before review. Retrospective hashing cannot prove that the current bytes and metadata were the exact reviewed target.",
+      "The zero-exception premise is false under the ruling's taxonomy: exception_record.json declares o=0 while admitting off-court person boxes exist. The ruling defines o as their exact count.",
+      "pack_binding.json omits required gallery order, sources, drawn counts, annotation IDs, rubric version, and conversion-rule binding.",
+      "The attestation binds the pack and exception hashes, but not the required content manifest, ordered gallery list, or fixed conversion rules.",
+      "review_completed.csv is byte-identical to the blank template. audit_manifest.json remains PENDING_HUMAN_REVIEW with reviewed_row_count=0 and pending_row_count=182. No coverage log, fail-closed conversion record, or unchanged scorer result exists.",
+      "P1's remaining permitted role is itself a formal data-quality diagnostic. Accepting this as diagnostic-only would waive the protocol governing that deliverable."
+    ],
+    "what_would_fix_it": [
+      "Create and freeze one pre-review manifest binding gallery order, all IDs and sources, drawn counts, annotation IDs, rubric/conversion rules, and every JPEG hash.",
+      "Repeat the 182-image owner pass against that already-bound digest, recording exact i/o/m multiplicities, including off-court boxes, with traversal checkpoints.",
+      "Sign an attestation binding every required hash and rule, convert exactly 182 rows, mark the audit COMPLETE, and run the unchanged per-source/post-quarantine scorer."
+    ],
+    "scope": "A compliant redo could validate the P1 data-quality diagnostic only. It cannot reopen P2, which remains permanently NO_ATTEMPT_PREREQ."
+  },
+  "overall": "REJECT"
+}
