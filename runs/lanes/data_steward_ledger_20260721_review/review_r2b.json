@@ -1,0 +1,168 @@
+{
+  "verdict": "REJECT",
+  "review_mode": "READ_ONLY",
+  "summary": "The eight prior bypasses and both requested additional shapes now refuse from actual argv plus ledger facts. However, the enforcement remains generically fail-open because some argv tokens are never scanned, and the 25-asset snapshot still contains unbound or conflated claims.",
+  "test_evidence": {
+    "eight_required_tests": "8 passed in 0.33s",
+    "full_focused_file": "19 passed; 4 tmp_path tests could not initialize because the read-only sandbox has no writable temporary directory",
+    "tmp_test_equivalents": "Round-trip, unknown-input refusal, hash-mismatch refusal, and exact-selector behavior were independently reproduced without writes",
+    "actual_cli_probes": "All eight prior scenarios and both added scenarios returned exit 1 with status=fail",
+    "worktree_modified": false
+  },
+  "refusal_derivation": {
+    "argv_tokenization": "scripts/racketsport/audit_data_utilization.py:306-321",
+    "operation_gpu_component": "scripts/racketsport/audit_data_utilization.py:352-418",
+    "path_normalization": "scripts/racketsport/audit_data_utilization.py:287-295",
+    "argv_to_ledger_resolution": "scripts/racketsport/audit_data_utilization.py:429-497",
+    "caller_metadata_advisory_only": "scripts/racketsport/audit_data_utilization.py:533-556",
+    "ledger_enforcement": "scripts/racketsport/audit_data_utilization.py:558-605",
+    "partition_overlap": "scripts/racketsport/audit_data_utilization.py:607-617",
+    "live_hash_verification": "scripts/racketsport/audit_data_utilization.py:619-623"
+  },
+  "required_scenarios": [
+    {
+      "id": 1,
+      "scenario": "Protected EVENT seed with trainer_reachable=false",
+      "result": "REFUSED",
+      "argv_analysis": "argv classified as train, EVENT, GPU; protected path resolved from argv",
+      "ledger_fields": "QUARANTINED, trainer_forbidden=true, EVENT=CONDITIONAL without selector",
+      "ledger_location": "runs/manager/data_ledger.json:176-185"
+    },
+    {
+      "id": 2,
+      "scenario": "Protected eval_clips asset with trainer_reachable=false",
+      "result": "REFUSED",
+      "argv_analysis": "argv classified as train, PERSON, GPU; eval_clips/ball resolved",
+      "ledger_fields": "QUARANTINED, trainer_forbidden=true, overlap=PARTIAL, PERSON=FORBID",
+      "ledger_location": "runs/manager/data_ledger.json:383-392"
+    },
+    {
+      "id": 3,
+      "scenario": "NC-licensed Roboflow PERSON source",
+      "result": "REFUSED",
+      "argv_analysis": "PERSON training argv resolved the NC index",
+      "ledger_fields": "QUARANTINED, trainer_forbidden=true, PERSON=FORBID",
+      "ledger_location": "runs/manager/data_ledger.json:326-333"
+    },
+    {
+      "id": 4,
+      "scenario": "pb.vision gallery containing compare-only identities",
+      "result": "REFUSED",
+      "argv_analysis": "REID training argv resolved the broad gallery path; --teacher-data was recognized as teacher supervision",
+      "ledger_fields": "Three compare-only identities, clean_subsets=[], overlap=PARTIAL, REID=CONDITIONAL",
+      "ledger_location": "runs/manager/data_ledger.json:138-148"
+    },
+    {
+      "id": 5,
+      "scenario": "Court pack containing IYnbdRs1Jdk derivatives",
+      "result": "REFUSED",
+      "argv_analysis": "COURT training argv resolved both court_diversity and its registered online_harvest parent asset",
+      "ledger_fields": "BLOCKED, IYnbdRs1Jdk identity, clean_subsets=[], overlap=PARTIAL, COURT=CONDITIONAL",
+      "ledger_location": "runs/manager/data_ledger.json:292-301,360-369"
+    },
+    {
+      "id": 6,
+      "scenario": "Rejected TT Sounds asset",
+      "result": "REFUSED",
+      "argv_analysis": "EVENT training argv resolved tt_sounds_data",
+      "ledger_fields": "REJECTED, EVENT=FORBID; train/test canonicalize to the same tt_sounds family",
+      "ledger_location": "runs/manager/data_ledger.json:240-247"
+    },
+    {
+      "id": 7,
+      "scenario": "Zero-decoded asset with command.asset_ids=[] and caller kind=CPU",
+      "result": "REFUSED",
+      "argv_analysis": "--accelerator=cuda independently established GPU use and the argv path resolved the asset",
+      "ledger_fields": "decoded_count=0, BLOCKED, overlap=PARTIAL, no clean selector",
+      "ledger_location": "runs/manager/data_ledger.json:151-160"
+    },
+    {
+      "id": 8,
+      "scenario": "Benign contract declaration while argv points at protected data",
+      "result": "REFUSED",
+      "argv_analysis": "The protected argv path controlled resolution; the benign owner asset declaration granted nothing",
+      "ledger_fields": "Protected seed remained QUARANTINED and trainer_forbidden",
+      "ledger_location": "runs/manager/data_ledger.json:163-185"
+    }
+  ],
+  "additional_shapes": [
+    {
+      "shape": "Relative/normalized protected path using ./ and ../",
+      "result": "REFUSED",
+      "reason": "Path.resolve(strict=false) normalized it to the registered protected seed before ledger enforcement."
+    },
+    {
+      "shape": "Contract claims a selector but actual argv uses the broad mixed gallery",
+      "result": "REFUSED",
+      "reason": "Caller selector metadata is ignored. A clean subset is recognized only from an exact selector path in argv; the broad path therefore retained PARTIAL overlap, mixed-identity, and CONDITIONAL-without-selector refusals."
+    }
+  ],
+  "mixed_identity_verification": {
+    "count": 5,
+    "result": "ALL_REFUSED",
+    "enforcement": "scripts/racketsport/audit_data_utilization.py:579-595",
+    "assets": [
+      "pbvision_gallery_20260719",
+      "pbv_pickleball_teacher_events_20260720",
+      "online_harvest_20260712",
+      "ball_reviewed_corpus_chain_1121_3026",
+      "court_diversity_100_20260712"
+    ]
+  },
+  "schema_and_snapshot": {
+    "schema_version": 2,
+    "mechanical_status": "PASS",
+    "asset_count": 25,
+    "registered_hash_bindings": 31,
+    "schema_errors": 0,
+    "hash_errors": 0,
+    "view_errors": 0,
+    "never_queued_count": 0,
+    "state_distribution": {
+      "BLOCKED": 8,
+      "CONSUMED": 6,
+      "QUARANTINED": 5,
+      "REJECTED": 6
+    },
+    "round_trip_byte_identical": true,
+    "render_and_view_sha256": "40f47ab8437e90cd066b324a088cc9e8689828c7bcdae0f7710b5c07aaa22cec",
+    "semantic_integrity": "FAIL"
+  },
+  "blocking_findings": [
+    {
+      "id": "ARGV-TOKEN-SCAN-FAIL-OPEN",
+      "severity": "CRITICAL",
+      "finding": "_command_pairs silently drops concatenated short options such as -dPATH.",
+      "proof": "A schema-valid in-memory probe used a benign visible asset plus -druns/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json. The protected token was absent from parsed pairs and audit_dispatch_contract returned [].",
+      "impact": "This violates FIX_SPEC.md:7-9, which requires every argv token/path to be scanned. No current in-repo trainer was found with a short data option, but the audit is a generic pre-dispatch gate."
+    },
+    {
+      "id": "SELECTOR-ROLE-FAIL-OPEN",
+      "severity": "CRITICAL",
+      "finding": "An exact selector path is treated as clean-subset proof regardless of whether it is an input.",
+      "proof": "With a schema-valid clean selector, argv using --teacher-output <selector> returned no dispatch errors.",
+      "code": "scripts/racketsport/audit_data_utilization.py:421-426,455-483,562-595",
+      "impact": "Once selectors are added, merely mentioning one as an output can grant training access without enforcing the selected rows."
+    },
+    {
+      "id": "PROTECTED-PERSON-SNAPSHOT-UNBOUND",
+      "severity": "HIGH",
+      "finding": "eval_clips_ball_protected_4 claims 11,459 PERSON boxes, but its only immutable binding is eval_clips/ball/manifest.json, which contains BALL/event/foot/court bindings and no PERSON ground-truth files.",
+      "evidence": "The actual four person_ground_truth.json files contain 2400 + 3379 + 4480 + 1200 = 11459 labels but are neither listed nor hashed. The row's 80-file/22015191-byte total also includes owner_IMG_1605 and pbvision_11min files absent from its lineage.",
+      "ledger_location": "runs/manager/data_ledger.json:383-392"
+    },
+    {
+      "id": "ROBOFLOW-CONSUMER-CONFLATION",
+      "severity": "HIGH",
+      "finding": "roboflow_person_core_20260706 represents a 15,312-image PERSON subset but is marked CONSUMED by a 34,658-row BALL pretraining consumer.",
+      "evidence": "Its hashed shared person_index contains 30,803 samples: 15,334 core including 22 NC samples plus 15,469 adjacent samples. No immutable 15,312-only selector exists.",
+      "ledger_location": "runs/manager/data_ledger.json:304-313"
+    }
+  ],
+  "required_fixes": [
+    "Scan every argv token, including concatenated and equals-form short options, or reject unsupported dash-prefixed forms as ambiguous; add adversarial regressions.",
+    "Require a clean selector to appear under a recognized data-bearing input role, reject output/save/log/config-only references, and require every resolved reference to use the same selector.",
+    "List and hash all four protected PERSON ground-truth files, and separate unrelated owner/pb.vision files from the eval asset's byte/file accounting.",
+    "Create an immutable 15,312-row Roboflow PERSON selector and correct the mismatched BALL consumer/state before recomputing snapshot utilization."
+  ]
+}

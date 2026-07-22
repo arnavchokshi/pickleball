@@ -1,0 +1,82 @@
+{
+  "verdict": "ACCEPT",
+  "failing_check": null,
+  "checks": {
+    "option_scanning": {
+      "status": "PASS",
+      "original_concatenated_dPATH": "exit 1; protected asset resolved and refused",
+      "equals_forms": {
+        "-d=PATH": "refused",
+        "--data=PATH": "refused",
+        "--teacher-data=PATH": "refused"
+      },
+      "unsupported_dash_form": "exit 1 with explicit unsupported dash-prefixed form is ambiguous error; protected path was still scanned"
+    },
+    "selector_roles": {
+      "status": "PASS",
+      "output_save_log_roles": "all refused as non-input roles",
+      "config_role": "refused as configuration",
+      "data_input_positive_control": "passed using a read-only streamed ledger overlay and the real hash-bound selector",
+      "selector_plus_broad_input": "refused because every resolved data reference must use the same immutable selector"
+    },
+    "protected_person": {
+      "status": "PASS",
+      "hash_bindings": 4,
+      "boxes_by_file": [2400, 3379, 4480, 1200],
+      "box_total": 11459,
+      "accounting": {
+        "files": 69,
+        "bytes_actual": 24804487,
+        "bytes_ledger": 24804487
+      },
+      "unrelated_owner_or_pbvision_paths_present": false
+    },
+    "person_selector_and_consumers": {
+      "status": "PASS",
+      "selector_rows": 15312,
+      "unique_rows": 15312,
+      "exact_source_selection_match": true,
+      "selector_sha256": "b3395763ab6e87ca1c429d0707804d80222f5041349190ebffaedc8505ecd11c",
+      "source_index_hash_match": true,
+      "person_boxes": 47044,
+      "person_state": "BLOCKED",
+      "person_consumers": 0,
+      "ball_state": "CONSUMED",
+      "ball_consumer_rows": 34658,
+      "ball_rows_recomputed": {
+        "train": 32018,
+        "internal_validation": 2640,
+        "total": 34658
+      }
+    },
+    "snapshot": {
+      "status": "PASS",
+      "asset_count": 27,
+      "unique_asset_count": 27,
+      "never_queued_count": 0,
+      "state_distribution": {
+        "BLOCKED": 9,
+        "CONSUMED": 6,
+        "QUARANTINED": 6,
+        "REJECTED": 6
+      },
+      "ledger_errors": 0,
+      "hash_errors": 0,
+      "view_errors": 0
+    },
+    "extra_suite_failures": {
+      "status": "PASS_UNRELATED",
+      "tests": [
+        "test_fit_flight_segment_recovers_simulated_scalar_magnus_spin",
+        "test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds"
+      ],
+      "classification": "load-sensitive flakes around the unchanged 5.0-second BALL segment budget",
+      "same_day_junit_variability": "spin passed in 5/6 suites; seg6 passed in 4/6 suites",
+      "fresh_read_only_confirmation": "spin passed; in-memory seg6 equivalent returned ran/fit_bvp_fallback with valid bounded samples",
+      "owned_file_intersection": [],
+      "unrelated_to_fix2_owned_files": true
+    }
+  },
+  "read_only": true,
+  "files_modified_by_review": []
+}
