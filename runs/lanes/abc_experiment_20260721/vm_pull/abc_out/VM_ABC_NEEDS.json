@@ -1,0 +1,233 @@
+{
+  "artifact_type": "pbvision_abc_vm_needs",
+  "clips": [
+    {
+      "required_artifacts": {
+        "audio_onsets": {
+          "cli_flag": "--audio-onsets",
+          "path": "/home/arnavchokshi/audio_onsets/143sf3gdwxsa_audio_onsets_v2.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "ball_velocity_kinks": {
+          "cli_flag": "--ball-velocity-kinks",
+          "path": "/home/arnavchokshi/ball_kinks/143sf3gdwxsa_ball_inflections.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "frame_times": {
+          "cli_flag": "--frame-times",
+          "path": "/home/arnavchokshi/pbv_frame_times_root/143sf3gdwxsa/frame_times.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "media": {
+          "cli_flag": "--media",
+          "path": "/home/arnavchokshi/pbv_media_root/143sf3gdwxsa/max.mp4",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        }
+      },
+      "source_lineage_key": "d213dcaa77cec6c2573080dadded1edf17c10740a1e54751fec53c669e5f9cac",
+      "source_video_sha256": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c",
+      "split": "train",
+      "video_id": "143sf3gdwxsa"
+    },
+    {
+      "required_artifacts": {
+        "audio_onsets": {
+          "cli_flag": "--audio-onsets",
+          "path": "/home/arnavchokshi/audio_onsets/98z43hspqz13_audio_onsets_v2.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "ball_velocity_kinks": {
+          "cli_flag": "--ball-velocity-kinks",
+          "path": "/home/arnavchokshi/ball_kinks/98z43hspqz13_ball_inflections.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "frame_times": {
+          "cli_flag": "--frame-times",
+          "path": "/home/arnavchokshi/pbv_frame_times_root/98z43hspqz13/frame_times.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "media": {
+          "cli_flag": "--media",
+          "path": "/home/arnavchokshi/pbv_media_root/98z43hspqz13/max.mp4",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        }
+      },
+      "source_lineage_key": "689376c327b88cd45321364349ab381dbe71713aeaa0ab8fe52e19e6a03b64df",
+      "source_video_sha256": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f",
+      "split": "train",
+      "video_id": "98z43hspqz13"
+    },
+    {
+      "required_artifacts": {
+        "audio_onsets": {
+          "cli_flag": "--audio-onsets",
+          "path": "/home/arnavchokshi/audio_onsets/st0epgnab7dr_audio_onsets_v2.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "ball_velocity_kinks": {
+          "cli_flag": "--ball-velocity-kinks",
+          "path": "/home/arnavchokshi/ball_kinks/st0epgnab7dr_ball_inflections.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "frame_times": {
+          "cli_flag": "--frame-times",
+          "path": "/home/arnavchokshi/pbv_frame_times_root/st0epgnab7dr/frame_times.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "media": {
+          "cli_flag": "--media",
+          "path": "/home/arnavchokshi/pbv_media_root/st0epgnab7dr/max.mp4",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        }
+      },
+      "source_lineage_key": "160396fd0d2ba89aac75fa58895b1d613af01f67d50a65d74b36243b64f83d8e",
+      "source_video_sha256": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04",
+      "split": "train",
+      "video_id": "st0epgnab7dr"
+    },
+    {
+      "required_artifacts": {
+        "audio_onsets": {
+          "cli_flag": "--audio-onsets",
+          "path": "/home/arnavchokshi/audio_onsets/td2szayjwtrj_audio_onsets_v2.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "ball_velocity_kinks": {
+          "cli_flag": "--ball-velocity-kinks",
+          "path": "/home/arnavchokshi/ball_kinks/td2szayjwtrj_ball_inflections.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "frame_times": {
+          "cli_flag": "--frame-times",
+          "path": "/home/arnavchokshi/pbv_frame_times_root/td2szayjwtrj/frame_times.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "media": {
+          "cli_flag": "--media",
+          "path": "/home/arnavchokshi/pbv_media_root/td2szayjwtrj/max.mp4",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        }
+      },
+      "source_lineage_key": "5ae6c16798f6a896a86cde5db63cfe8151ca3b46c033b120c966d580480cc23d",
+      "source_video_sha256": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79",
+      "split": "train",
+      "video_id": "td2szayjwtrj"
+    },
+    {
+      "required_artifacts": {
+        "audio_onsets": {
+          "cli_flag": "--audio-onsets",
+          "path": "/home/arnavchokshi/audio_onsets/utasf5hnozwz_audio_onsets_v2.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "ball_velocity_kinks": {
+          "cli_flag": "--ball-velocity-kinks",
+          "path": "/home/arnavchokshi/ball_kinks/utasf5hnozwz_ball_inflections.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "frame_times": {
+          "cli_flag": "--frame-times",
+          "path": "/home/arnavchokshi/pbv_frame_times_root/utasf5hnozwz/frame_times.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "media": {
+          "cli_flag": "--media",
+          "path": "/home/arnavchokshi/pbv_media_root/utasf5hnozwz/max.mp4",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        }
+      },
+      "source_lineage_key": "f766e6cd7e00f3921f8a958970b29184d7f0fd38e91711cb4e500a5c3a562774",
+      "source_video_sha256": "614580f5b3a2f634a76f5483e10b8c1f7919fd5affbd3ee86532a539f3f58197",
+      "split": "train",
+      "video_id": "utasf5hnozwz"
+    },
+    {
+      "required_artifacts": {
+        "audio_onsets": {
+          "cli_flag": "--audio-onsets",
+          "path": "/home/arnavchokshi/audio_onsets/xkadsq9bli3h_audio_onsets_v2.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "ball_velocity_kinks": {
+          "cli_flag": "--ball-velocity-kinks",
+          "path": "/home/arnavchokshi/ball_kinks/xkadsq9bli3h_ball_inflections.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "frame_times": {
+          "cli_flag": "--frame-times",
+          "path": "/home/arnavchokshi/pbv_frame_times_root/xkadsq9bli3h/frame_times.json",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        },
+        "media": {
+          "cli_flag": "--media",
+          "path": "/home/arnavchokshi/pbv_media_root/xkadsq9bli3h/max.mp4",
+          "provided": true,
+          "required": true,
+          "sha256_required": true
+        }
+      },
+      "source_lineage_key": "16cbdcd98325f65d72f9471b0937fb32f021bd65a8cd2dfc69fa1922f0720a5e",
+      "source_video_sha256": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181",
+      "split": "train",
+      "video_id": "xkadsq9bli3h"
+    }
+  ],
+  "no_scoring": true,
+  "permanent_compare_only_sha256_denylist": [
+    "1f3109f5764c86bc36dffbd1613b3f98750df8088fd6d5191ee3037476b1587a",
+    "21b82040d55fcc662665a45d1d5351cdc74793e2774f4083e6a9621fdd1a6dd1"
+  ],
+  "required_train_clips": 6,
+  "schema_version": 1,
+  "teacher_manifest": {
+    "path": "runs/lanes/abc_experiment_20260721/corpus_out_6clip/manifest.json",
+    "sha256": "1d33f4dd70a90a526b0b9ec5cf7c0027428983f690c911d3148d4729431172b8"
+  },
+  "verified": false
+}

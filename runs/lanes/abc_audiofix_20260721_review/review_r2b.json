@@ -1,0 +1,88 @@
+{
+  "VERDICT": "ACCEPT_WITH_FIXES",
+  "DISPATCH_DECISION": "NO_AS_STATED",
+  "DISPATCH_DETAIL": {
+    "may_start_vm_preflight_and_rebuild": true,
+    "may_start_training_after_only_the_stated_six_chain_preflight": false,
+    "training_condition": "The current builder must successfully create a fresh abc_out_v2, completion hashes must verify, and the recount, weighting, B/C parity, and determinism gates must pass."
+  },
+  "PRIOR_FINDINGS": {
+    "family_and_provenance": {
+      "status": "CLOSED_IN_IMPLEMENTATION_WITH_TEST_GAP",
+      "result": "Fresh negative probes against the real loader refused incorrect ball artifact_type, source, world_frame and family values, and incorrect audio artifact_type, source and family values.",
+      "shipped_tests": "Wrong-type and wrong-source cases are covered. Ball case-variant family strings are covered. An explicit audio case-variant family regression test is missing, although the production validator rejects it."
+    },
+    "event_id_uniqueness": {
+      "status": "CLOSED",
+      "result": "Duplicate IDs, empty IDs, and coercion collisions such as 1 versus \"1\" are rejected. Matching uses internal indices and recomputes the selected event delta.",
+      "fresh_test_result": "Internal-index and delta-recheck tests passed."
+    },
+    "null_window_period": {
+      "status": "CLOSED",
+      "result": "The circular period is derived from verified PTS. Declared duration is consistency-checked and not used as the null period.",
+      "inflated_duration_test": "Real: the fixture is rehashed after duration is changed to 1000, so rejection exercises the semantic duration check rather than failing on a stale digest."
+    },
+    "frame_times_identity": {
+      "status": "CLOSED",
+      "result": "Missing media identity and conflicting aliases are rejected. Declared and staged media identities are recorded separately.",
+      "coverage": "Present in shipped tests and confirmed with a fresh negative probe."
+    }
+  },
+  "OVER_STRICTNESS": {
+    "status": "VM_PREFLIGHT_REQUIRED",
+    "compatible_emitters": [
+      "build_audio_onsets_v2.py emits the required audio contract, media identity, PTS source and frame-times digest.",
+      "build_ball_inflections.py emits the required kink contract and identities when invoked with --ball-track and --frame-times."
+    ],
+    "required_fields_not_emitted_by_the_raw_wasb_writer": [
+      "source_video_sha256 or media_sha256",
+      "frame_times_sha256"
+    ],
+    "additional_emitter_gap": "The generic frame-times writer does not itself emit media identity; the VM runbook relies on operator enrichment.",
+    "real_artifact_evidence": "The pulled outer artifacts show enriched media identities, but the six raw ball tracks were not pulled. Therefore their frame_times_sha256 bindings cannot be confirmed locally. Existing kink artifacts do not prove that field because the kink emitter historically allowed it to be absent.",
+    "duration_sample": "The locally available xkadsq9bli3h clip agrees with its PTS-derived period within approximately 1 microsecond. The other five remain VM-only."
+  },
+  "INVARIANTS": {
+    "audio_only_accepted": 0,
+    "corrected_recount": {
+      "total": 1189,
+      "kink_only": 773,
+      "both": 416
+    },
+    "old_pulled_audio_only_rows": 292,
+    "weights": {
+      "one_cue": 0.25,
+      "two_cues": 0.5,
+      "three_cues": 0.5,
+      "null": 0.0
+    },
+    "c_parity": "Covered; the corrected B subset preserves C ordering, unknown masks and non-placebo projection.",
+    "determinism": "Covered by shipped tests.",
+    "cli_flags": "Unchanged; the shipped CLI-contract test passed freshly."
+  },
+  "VM_PREFLIGHT": {
+    "six_chain_list_complete": "Yes, but only for the pinned six-clip manifest with SHA256 1d33f4dd70a90a526b0b9ec5cf7c0027428983f690c911d3148d4729431172b8.",
+    "warning": "A sibling manifest contains seven training clips, so CORPUS_OUT must be pinned by path, digest and the exact six IDs.",
+    "sufficient": false,
+    "reason": "The stated preflight omits several checks now enforced by the builder: kink top-level contract, pts_source, canonical rebuild and candidate validation; audio contract and identity; frame-times count, PTS, duration and media binding; teacher identity; and fresh completion-file hashes.",
+    "required_train_gate": [
+      "Verify all six nested raw ball-track paths and provenance bindings.",
+      "Run the exact reviewed builder into a fresh output directory.",
+      "Verify materialization_complete.json and every recorded digest.",
+      "Confirm 0 newly accepted audio-only rows and exactly 1189 corrected B rows.",
+      "Confirm weights, exact B/C parity and deterministic output before training."
+    ]
+  },
+  "FRESH_EXECUTION": {
+    "focused_pytest": "4 passed in 1.95s",
+    "negative_probes": "All requested malformed inputs were refused by the actual validation functions.",
+    "collection": "74 tests collected.",
+    "full_suite_limit": "The read-only environment prevented pytest from creating temporary directories, so fixture-heavy tests were inspected rather than freshly rerun. The lane report's wider run was not green: 4185 passed, 31 failed, 25 skipped."
+  },
+  "REQUIRED_FIXES": [
+    "Add explicit shipped tests for case-variant audio family values at both root and onset/candidate level.",
+    "Expand the VM preflight into the complete current-builder gate and pin the exact six-clip manifest.",
+    "Correct or remove the stale embedded report_fix1.json self-digest; the claimed digest does not match the current file."
+  ],
+  "CURRENT_STATUS": "VERIFIED=0; rebuild may be attempted, but training is not authorized by the stated preflight alone."
+}

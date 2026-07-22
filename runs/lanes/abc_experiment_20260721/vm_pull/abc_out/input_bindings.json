@@ -1,0 +1,187 @@
+{
+  "artifact_type": "pbvision_abc_input_bindings",
+  "bindings": [
+    {
+      "audio_onsets": {
+        "cue_count": 3608,
+        "declared_frame_times_sha256": "423921694184a5e42d00099a83f6974e20a5799bcaa7e75a956fedf1aff8975c",
+        "declared_media_sha256": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c",
+        "dependency_binding_sha256": "c89afbffbec88dd50a172e62343788ebe9165d75621860e3facc57a30a964e83",
+        "path": "/home/arnavchokshi/audio_onsets/143sf3gdwxsa_audio_onsets_v2.json",
+        "sha256": "451984159d16825ad315bdd2c1e1971d2572e478ee2b912bd7f6abe912fb5957"
+      },
+      "ball_velocity_kinks": {
+        "cue_count": 3166,
+        "declared_frame_times_sha256": "423921694184a5e42d00099a83f6974e20a5799bcaa7e75a956fedf1aff8975c",
+        "declared_media_sha256": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c",
+        "dependency_binding_sha256": "00bbec79bb3f324a506fe6e1ee2b643abdfa40e0b9d9e56e36893b00e828dee8",
+        "path": "/home/arnavchokshi/ball_kinks/143sf3gdwxsa_ball_inflections.json",
+        "sha256": "ebba7348c3cc0c3ed0196adf516db725dfea9de27ebc58ffd9a38bad9335e6d6"
+      },
+      "frame_times": {
+        "binding_sha256": "955977cb99ae8d7d049c8170ae8369863cc5f0afd85c3b515e2937f82575b2c8",
+        "media_sha256": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c",
+        "path": "/home/arnavchokshi/pbv_frame_times_root/143sf3gdwxsa/frame_times.json",
+        "sha256": "423921694184a5e42d00099a83f6974e20a5799bcaa7e75a956fedf1aff8975c"
+      },
+      "media": {
+        "path": "/home/arnavchokshi/pbv_media_root/143sf3gdwxsa/max.mp4",
+        "sha256": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c"
+      },
+      "source_lineage_key": "d213dcaa77cec6c2573080dadded1edf17c10740a1e54751fec53c669e5f9cac",
+      "video_id": "143sf3gdwxsa"
+    },
+    {
+      "audio_onsets": {
+        "cue_count": 1744,
+        "declared_frame_times_sha256": "c74e7489f92398fc666a894334274011c2b22ef8ea8f64929a3160a8d4d0aa1a",
+        "declared_media_sha256": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f",
+        "dependency_binding_sha256": "034d72ddf3c0fab0ebc46836213362000e6ff451bf6f0e20005651935a9e1a4e",
+        "path": "/home/arnavchokshi/audio_onsets/98z43hspqz13_audio_onsets_v2.json",
+        "sha256": "fb40eca3beea204f22bec5707307292d05fbdadce38c5273b528290517bb04cb"
+      },
+      "ball_velocity_kinks": {
+        "cue_count": 1812,
+        "declared_frame_times_sha256": "c74e7489f92398fc666a894334274011c2b22ef8ea8f64929a3160a8d4d0aa1a",
+        "declared_media_sha256": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f",
+        "dependency_binding_sha256": "668131268c9d05e8f89d0c3f4721829d8ce36d85bd0ff89fa7dc6a5ea9a57a9b",
+        "path": "/home/arnavchokshi/ball_kinks/98z43hspqz13_ball_inflections.json",
+        "sha256": "4d91078afcf6629c41fd1f24ab7378b7969c28656efc2cf2903a30640b553298"
+      },
+      "frame_times": {
+        "binding_sha256": "79224a1d4a06efda8d79c7a64cce437ca5440e7076de6d9ae2d39eea06240729",
+        "media_sha256": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f",
+        "path": "/home/arnavchokshi/pbv_frame_times_root/98z43hspqz13/frame_times.json",
+        "sha256": "c74e7489f92398fc666a894334274011c2b22ef8ea8f64929a3160a8d4d0aa1a"
+      },
+      "media": {
+        "path": "/home/arnavchokshi/pbv_media_root/98z43hspqz13/max.mp4",
+        "sha256": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f"
+      },
+      "source_lineage_key": "689376c327b88cd45321364349ab381dbe71713aeaa0ab8fe52e19e6a03b64df",
+      "video_id": "98z43hspqz13"
+    },
+    {
+      "audio_onsets": {
+        "cue_count": 1877,
+        "declared_frame_times_sha256": "df1e1f347cf1cdc5c7907611c0489b71de5f2f5603c2338ddc312d8fe8141d03",
+        "declared_media_sha256": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04",
+        "dependency_binding_sha256": "8a695cfcea17501e1979494757e2cca373676709de6c3588f864a15156f0604a",
+        "path": "/home/arnavchokshi/audio_onsets/st0epgnab7dr_audio_onsets_v2.json",
+        "sha256": "c9ba777987be5685963ae31fbf4190503798e012985de8151c3bd7c5dbb70e41"
+      },
+      "ball_velocity_kinks": {
+        "cue_count": 3625,
+        "declared_frame_times_sha256": "df1e1f347cf1cdc5c7907611c0489b71de5f2f5603c2338ddc312d8fe8141d03",
+        "declared_media_sha256": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04",
+        "dependency_binding_sha256": "3fc8902a628e49c4eca763a681398a5ffe82d08051e8e3a783254c44053f72a9",
+        "path": "/home/arnavchokshi/ball_kinks/st0epgnab7dr_ball_inflections.json",
+        "sha256": "e2ce131df6eefbb4d9bb9a66b079c39f392c67df626a6d02522e7a21657c6867"
+      },
+      "frame_times": {
+        "binding_sha256": "59c4d117fd3a59981cadcf57a14168ef5204b7fc9e00d278620f593c7eda1d12",
+        "media_sha256": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04",
+        "path": "/home/arnavchokshi/pbv_frame_times_root/st0epgnab7dr/frame_times.json",
+        "sha256": "df1e1f347cf1cdc5c7907611c0489b71de5f2f5603c2338ddc312d8fe8141d03"
+      },
+      "media": {
+        "path": "/home/arnavchokshi/pbv_media_root/st0epgnab7dr/max.mp4",
+        "sha256": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04"
+      },
+      "source_lineage_key": "160396fd0d2ba89aac75fa58895b1d613af01f67d50a65d74b36243b64f83d8e",
+      "video_id": "st0epgnab7dr"
+    },
+    {
+      "audio_onsets": {
+        "cue_count": 2318,
+        "declared_frame_times_sha256": "271b41e3acad139a3c0c238b5f57f034bef68741b662abb53fbb5638c3ae1755",
+        "declared_media_sha256": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79",
+        "dependency_binding_sha256": "3aa83bb50fbb0a6e28519ba57613836f39f898c8db990bae16610019c31804e7",
+        "path": "/home/arnavchokshi/audio_onsets/td2szayjwtrj_audio_onsets_v2.json",
+        "sha256": "bc5bd003ace6d7a94a9e61f09fd218d4ddeee86892d070d64bcbfb6471b13236"
+      },
+      "ball_velocity_kinks": {
+        "cue_count": 1148,
+        "declared_frame_times_sha256": "271b41e3acad139a3c0c238b5f57f034bef68741b662abb53fbb5638c3ae1755",
+        "declared_media_sha256": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79",
+        "dependency_binding_sha256": "2606b885b6984fdc2e9837c5ca7646e6e1788bdc096784e56c2e95de1970e702",
+        "path": "/home/arnavchokshi/ball_kinks/td2szayjwtrj_ball_inflections.json",
+        "sha256": "043c244531b7c50785d37a0940ebf705fb1d2a5793f743dba184cb4ef977c879"
+      },
+      "frame_times": {
+        "binding_sha256": "5b06d0774729cd4c0ca17fdaacdddbe136833d3435088732292452861fdbb3a6",
+        "media_sha256": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79",
+        "path": "/home/arnavchokshi/pbv_frame_times_root/td2szayjwtrj/frame_times.json",
+        "sha256": "271b41e3acad139a3c0c238b5f57f034bef68741b662abb53fbb5638c3ae1755"
+      },
+      "media": {
+        "path": "/home/arnavchokshi/pbv_media_root/td2szayjwtrj/max.mp4",
+        "sha256": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79"
+      },
+      "source_lineage_key": "5ae6c16798f6a896a86cde5db63cfe8151ca3b46c033b120c966d580480cc23d",
+      "video_id": "td2szayjwtrj"
+    },
+    {
+      "audio_onsets": {
+        "cue_count": 2190,
+        "declared_frame_times_sha256": "a264e7c9be21904b3bdfe97e4ed45adb921d08aae2ebb46bc3f29b25a9e31611",
+        "declared_media_sha256": "614580f5b3a2f634a76f5483e10b8c1f7919fd5affbd3ee86532a539f3f58197",
+        "dependency_binding_sha256": "fe3ebee72c27945cee839eb4cf60f8b55032305adfba764cf956e48087a9d241",
+        "path": "/home/arnavchokshi/audio_onsets/utasf5hnozwz_audio_onsets_v2.json",
+        "sha256": "bbd006d85c0327d50338a68c1ae94bab7a3a09f650d52b2ecbaa4ac4a94d8ca9"
+      },
+      "ball_velocity_kinks": {
+        "cue_count": 1126,
+        "declared_frame_times_sha256": "a264e7c9be21904b3bdfe97e4ed45adb921d08aae2ebb46bc3f29b25a9e31611",
+        "declared_media_sha256": "614580f5b3a2f634a76f5483e10b8c1f7919fd5affbd3ee86532a539f3f58197",
+        "dependency_binding_sha256": "b0efde6f5b21a521a644225f0c5a667dfc742f36f7427b3e8e679db88ed5dad1",
+        "path": "/home/arnavchokshi/ball_kinks/utasf5hnozwz_ball_inflections.json",
+        "sha256": "bff5ec5c5455508ab3ecd4e29b76e4594947708d90c40455eb1448a529ca91e6"
+      },
+      "frame_times": {
+        "binding_sha256": "e242a967c650fb43ceb3a9cccc1a54c20f7ae73bc1d47a0c03997fc2b986c0ae",
+        "media_sha256": "614580f5b3a2f634a76f5483e10b8c1f7919fd5affbd3ee86532a539f3f58197",
+        "path": "/home/arnavchokshi/pbv_frame_times_root/utasf5hnozwz/frame_times.json",
+        "sha256": "a264e7c9be21904b3bdfe97e4ed45adb921d08aae2ebb46bc3f29b25a9e31611"
+      },
+      "media": {
+        "path": "/home/arnavchokshi/pbv_media_root/utasf5hnozwz/max.mp4",
+        "sha256": "614580f5b3a2f634a76f5483e10b8c1f7919fd5affbd3ee86532a539f3f58197"
+      },
+      "source_lineage_key": "f766e6cd7e00f3921f8a958970b29184d7f0fd38e91711cb4e500a5c3a562774",
+      "video_id": "utasf5hnozwz"
+    },
+    {
+      "audio_onsets": {
+        "cue_count": 483,
+        "declared_frame_times_sha256": "3c0a4eca8ac60349969193275d97cffa3137cc43e6b834b97524f0e37270119b",
+        "declared_media_sha256": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181",
+        "dependency_binding_sha256": "4fdd534207b555be553dd83b4a55e0bb4d4fc6bf3a042021bf413744cc1b99d2",
+        "path": "/home/arnavchokshi/audio_onsets/xkadsq9bli3h_audio_onsets_v2.json",
+        "sha256": "eb198401aab75786ad1f13390d791ce714c36b6fe298a1d90fa4fedf95a0bed6"
+      },
+      "ball_velocity_kinks": {
+        "cue_count": 1043,
+        "declared_frame_times_sha256": "3c0a4eca8ac60349969193275d97cffa3137cc43e6b834b97524f0e37270119b",
+        "declared_media_sha256": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181",
+        "dependency_binding_sha256": "12112159377a51e22eb15b77d5518f6b91283d02815f196de53759570826ad41",
+        "path": "/home/arnavchokshi/ball_kinks/xkadsq9bli3h_ball_inflections.json",
+        "sha256": "082017c73c0d2992c528e40e6d7edf0db809e4e624d2260da1517581b0978a4e"
+      },
+      "frame_times": {
+        "binding_sha256": "d2e09c06e9d197127d31e3aec79f1df06b4a2bca1dcee47f800dc55d7ebef209",
+        "media_sha256": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181",
+        "path": "/home/arnavchokshi/pbv_frame_times_root/xkadsq9bli3h/frame_times.json",
+        "sha256": "3c0a4eca8ac60349969193275d97cffa3137cc43e6b834b97524f0e37270119b"
+      },
+      "media": {
+        "path": "/home/arnavchokshi/pbv_media_root/xkadsq9bli3h/max.mp4",
+        "sha256": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181"
+      },
+      "source_lineage_key": "16cbdcd98325f65d72f9471b0937fb32f021bd65a8cd2dfc69fa1922f0720a5e",
+      "video_id": "xkadsq9bli3h"
+    }
+  ],
+  "schema_version": 1,
+  "verified": false
+}

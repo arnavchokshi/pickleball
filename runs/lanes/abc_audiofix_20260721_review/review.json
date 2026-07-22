@@ -1,0 +1,143 @@
+{
+  "VERDICT": "REJECT",
+  "dispatch_decision": "DO_NOT_SPEND_VM_BUDGET_OR_TRAIN_B_C",
+  "reason": "The happy path is correct, but three reproducible fail-open paths can contaminate eligibility or audio weighting. The lane also reports PARTIAL because its mandatory wide-suite gate is unmet.",
+  "blocking_findings": [
+    {
+      "id": "BALL_FAMILY_SPOOF",
+      "severity": "CRITICAL",
+      "evidence": "scripts/racketsport/build_abc_arm_manifests.py:330-409,866-891",
+      "finding": "The CLI slot determines the family. Artifact type, source, world frame and upstream BALL-track provenance are not validated. A bound exotic or pb.vision-derived candidates JSON is stamped as ball_velocity_kink.",
+      "reproduction": "An artifact declaring artifact_type=exotic_audio_disguised_as_ball, source=pbvision_teacher_predictions and family=AuDiO_OnSeT produced an exact ball_velocity_kink agreement.",
+      "required_fix": [
+        "Require ball artifacts to be schema-v1 racketsport_ball_inflections with source=ball_track_image_motion and world_frame=image_xy.",
+        "Validate and record ball_track_source SHA/path, pts_source SHA/media identity and candidate-level image-space provenance.",
+        "Require the real audio-v2 contract: artifact_type=racketsport_audio_onsets, detector_version=audio_onset_pop_v2 and source=video_audio_pop_v2.",
+        "Add rejection tests for exotic, pb.vision, audio-disguised-as-ball and case-variant artifacts."
+      ]
+    },
+    {
+      "id": "DUPLICATE_EVENT_ID_ALIAS",
+      "severity": "CRITICAL",
+      "evidence": "scripts/racketsport/build_abc_arm_manifests.py:419-449,903-918; threed/racketsport/event_head/datasets.py:119-133",
+      "finding": "Matches are keyed by stringified event_id, but event IDs are not required to be unique. One genuine kink can therefore be reused by multiple rows.",
+      "reproduction": "DUP@1s and DUP@8s with one kink at 1s caused both event lookups to receive the same zero-delta kink match.",
+      "required_fix": [
+        "Require nonempty string event IDs unique within each video before matching.",
+        "Reject string-coercion collisions such as 1 versus \"1\".",
+        "Key matching by an internal unique event index and recheck the emitted cue-to-current-event delta.",
+        "Add duplicate-ID and distant-alias regression tests."
+      ]
+    },
+    {
+      "id": "NULL_DURATION_GAMING",
+      "severity": "CRITICAL",
+      "evidence": "scripts/racketsport/build_abc_arm_manifests.py:280-288,483-546",
+      "finding": "The circular null trusts duration_s so long as it exceeds the last PTS. Hash binding authenticates the bytes, not the truthfulness of that duration.",
+      "reproduction": "Identical dense events/onsets failed with duration=10s because observed=1.0 and null_max=1.0, but passed after only declaring duration=1000s because observed=1.0 and null_max=0.0.",
+      "required_fix": [
+        "Derive the circular period from verified frame PTS plus a validated terminal-frame duration, or tightly reject duration inconsistent with that interval.",
+        "Require the racketsport_frame_times artifact type, frame_count and media declaration.",
+        "Add an inflated-duration refusal test."
+      ]
+    },
+    {
+      "id": "FRAME_TIMES_IDENTITY_OMISSION",
+      "severity": "HIGH",
+      "evidence": "scripts/racketsport/build_abc_arm_manifests.py:306-312; runs/lanes/w1b_abc_loader_20260721/VM_ABC_RUN.md:23-24,41-42,101-104",
+      "finding": "A frame-times artifact may omit source_video_sha256/media_sha256 and still pass. This directly violates the documented hard-refusal contract.",
+      "required_fix": [
+        "Require the declaration to be present and equal to the staged media SHA.",
+        "Record declared_media_sha256 separately from the inferred staged-media value.",
+        "Add a missing-frame-times-media-identity test."
+      ]
+    }
+  ],
+  "attack_surface_results": {
+    "eligibility": {
+      "status": "FAIL",
+      "happy_path": "Audio-only, zero-agreement, case variants and exotic families cannot bypass the final has_physical_cue check when inputs are semantically honest.",
+      "loopholes": [
+        "Artifact-family spoofing manufactures the required family.",
+        "Duplicate event IDs reuse another row's kink match."
+      ],
+      "real_pulled_manifest": "Clean: 2192 of 2192 video/event IDs are unique."
+    },
+    "audio_weight_null": {
+      "status": "FAIL",
+      "correct_behaviors": [
+        "Per-video computation",
+        "Strict observed > max(null)",
+        "Modulo wrap relative to the PTS origin",
+        "Twenty deterministic offsets with absolute offset at least 1 second on actual-length clips",
+        "Empty onsets fail",
+        "Dense approximately 29 Hz onsets tie the null and fail"
+      ],
+      "remaining_risks": [
+        "Duration inflation can force a pass.",
+        "A single exact onset/event passes 1.0 > 0.0. This follows the current formula but exposes missing minimum-support doctrine.",
+        "Videos barely longer than 2 seconds can produce repeated offsets, reducing the effective null below K=20."
+      ],
+      "required_ruling": "Before inspecting rebuilt results, preregister a minimum observed-match support or explicitly accept singleton behavior. Also require 20 unique offsets or fail closed."
+    },
+    "c_placebo": {
+      "status": "PASS_CURRENT_IMPLEMENTATION",
+      "evidence": "The C construction itself was unchanged. On the recovered pair, all 1481 rows matched; filtering to the corrected 1189 kink-backed rows produced zero pixel-window, class, weight, exact-mask, agreement or rally-bound mismatches. C's recorded B SHA exactly matched arm_b_manifest.json.",
+      "hardening": "scripts/racketsport/build_abc_arm_manifests.py:806-812 compares only the count of valid frames. Require exact mask equality and normalized equality of every non-placebo field."
+    },
+    "determinism_and_sha": {
+      "status": "PARTIAL",
+      "positive_evidence": [
+        "Recovered B/C and standalone consumed-input ledgers are identical.",
+        "All 12 recovered audio/kink dependency bindings recompute exactly.",
+        "Teacher SHA and C-to-B SHA recompute exactly.",
+        "The synthetic determinism test compares all five emitted artifacts byte-for-byte."
+      ],
+      "fail_closed_gaps": [
+        "Missing frame-times media identity is accepted.",
+        "Semantic artifact provenance is not authenticated.",
+        "Outputs are written sequentially into an existing directory. A failed rebuild can leave stale invalid B/C files beside a new VM_ABC_NEEDS.json."
+      ],
+      "required_fix": "Publish into a fresh staging directory atomically, or require an empty output directory and write a completion manifest last. The immediate VM rebuild must use a new empty ABC_OUT."
+    },
+    "recount_1189": {
+      "status": "PASS_CURRENT_CHECKOUT",
+      "evidence": {
+        "sha256": "3a3463565e57a5cd909eaad01f2ddf6fa66f23468396f7162a94c85f8b1bf4f1",
+        "rows": 2192,
+        "kink_only": 773,
+        "both": 416,
+        "corrected_eligible": 1189,
+        "audio_only_excluded": 292,
+        "kink_bearing_old_rejected": 0
+      },
+      "assessment": "The test reads the real pinned file and independently applies the new family rule; it is not calling production eligibility logic.",
+      "gap": "The evidence file is ignored/untracked and tests/racketsport/test_abc_arm_manifests.py:612-613 silently skips when absent.",
+      "required_fix": "Make missing pinned evidence a preflight failure and assert the 773/416 split plus zero kink-bearing rejected rows."
+    },
+    "cli_contract": {
+      "status": "PASS_STATIC_ONLY",
+      "evidence": "Parser flags/defaults are unchanged and VM_ABC_NEEDS.json has all four explicit paths for all six clips.",
+      "limitation": "The raw VM frame/audio/kink artifacts were not pulled, so their new duration and semantic-input checks cannot be verified locally."
+    },
+    "wide_suite": {
+      "status": "FAIL_LITERAL_GATE",
+      "candidate_result": "4063 passed, 31 failed, 25 skipped",
+      "attribution": "Thirty failures reproduced with both owned files byte-identical to HEAD. The remaining court-training test timed out at 540 seconds in the candidate-wide run but passed against HEAD in 98.936 seconds.",
+      "causal_assessment": "No credible import, state or execution path connects either ABC file to that court-training test. It is probably transient, but selected-node reproduction does not satisfy the lane's explicit every-failure-proven-pre-existing requirement.",
+      "required_fix": "After code fixes, rerun the focused suite and full candidate suite. If the timeout returns, run a matched full-suite HEAD-owned baseline in the same dirty workspace and ordering."
+    }
+  },
+  "rereview_gate": [
+    "Fix all three critical fail-open paths and the frame-times identity omission.",
+    "Strengthen exact C parity and atomic output publication.",
+    "Make the real recount non-skippable for experiment preflight.",
+    "Preregister the singleton/minimum-support null policy before viewing rebuilt null results.",
+    "Run focused adversarial tests plus the mandatory wide-suite attribution check.",
+    "Only then rebuild into a fresh empty VM output directory; do not train from the existing abc_out."
+  ],
+  "review_mode": {
+    "read_only": true,
+    "files_modified": 0
+  }
+}
