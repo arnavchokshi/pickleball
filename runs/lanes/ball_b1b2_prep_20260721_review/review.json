@@ -1,0 +1,171 @@
+```json
+{
+  "verdict": "REJECT",
+  "confidence": "HIGH",
+  "scope": {
+    "mode": "read-only",
+    "files_changed": [],
+    "lane_status": "PARTIAL",
+    "production_verification": "B1 emitted zero accepted rows and promotion remained false; B2 was not run on a valid frozen split."
+  },
+  "decisive_failures": [
+    "B1 eligibility and frozen-teacher policy are not enforced at the B2 trust boundary.",
+    "The trainer cannot consume the frozen B0 split and would leak 960 HyU/Ezz judge-parent rows into training.",
+    "The live B0 parent-source scorer redirects scratch labels to an unrelated historical corpus and fails before scoring.",
+    "The claimed historical A-arm parity test is a self-comparison, not an old-code-versus-new-code proof.",
+    "Exact eight-human-row batch composition is false."
+  ],
+  "attack_surfaces": [
+    {
+      "id": 1,
+      "name": "Compare-ID refusal",
+      "ruling": "FAIL",
+      "severity": "HIGH",
+      "findings": [
+        "Literal compare IDs are rejected before per-source media or gallery access, but the split manifest itself is read first.",
+        "The protection is string-based, not structural. Arbitrary media and gallery roots are accepted, Path.is_file follows symlinks, and neither canonical path identity nor expected source-video SHA is enforced.",
+        "A split row containing video=<allowed-train-ID> and source_video=<compare-ID> is accepted because video wins and the conflicting alias is ignored.",
+        "A copied, renamed, or symlinked compare derivative under an allowed train-ID directory can therefore pass.",
+        "The currently present seven gallery provenance IDs matched their directory IDs and no current symlink was found; this only establishes that the inspected artifact is not presently aliased."
+      ],
+      "evidence": [
+        "scripts/racketsport/build_pbvision_ball_sst.py:662-726",
+        "scripts/racketsport/build_pbvision_ball_sst.py:837-849"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Eligibility and teacher-negative handling",
+      "ruling": "FAIL",
+      "severity": "CRITICAL",
+      "findings": [
+        "The confidence threshold, agreement radius, pseudo weight, checkpoint path, and repository path are mutable CLI inputs. The emitted manifest records the chosen values after execution; that is not preregistration.",
+        "A direct probe accepted confidence 0.10 and radius 999 pixels as frozen_wasb_spatial. Another accepted out-of-bounds teacher/WASB coordinates because spatial agreement does not enforce image bounds.",
+        "The temporal policy declares neighbor confidence 0.90, but the implementation uses the caller-provided confidence threshold instead. Three confidence-0.20 teacher points passed when the CLI threshold was 0.10 while the emitted policy still claimed 0.90.",
+        "With WASB entirely absent and the default values, the same-teacher temporal fallback admitted 2,181 rows across all seven train IDs: 225, 292, 80, 505, 209, 714, and 156. That clears the 1,000-row and five-source gates without one frozen-WASB agreement.",
+        "The selected local WASB checkpoint currently matches models/MANIFEST.json, but the builder does not enforce that SHA or repository commit; an arbitrary caller-supplied checkpoint is merely hashed.",
+        "assemble_sst_manifest trusts supplied sample and clip objects instead of revalidating their agreement evidence. A fabricated 1,000-row, five-clip manifest returned PASS.",
+        "The trainer performs only shallow SST schema checks. It does not require a PASS gate, minimum counts, canonical source IDs, agreement evidence, dependency hashes, media SHA, teacher checkpoint SHA, teacher_derived=true, or ground_truth=false. The shipped failed-gate sample manifest still loaded one trainable row.",
+        "Teacher absence cannot become a negative through the canonical builder: missing teacher observations are omitted, and every accepted SST row is forced to ball_present=true by the trainer. That narrow doctrine requirement passes. However, the untrusted manifest boundary permits fabricated pseudo-positives."
+      ],
+      "evidence": [
+        "scripts/racketsport/build_pbvision_ball_sst.py:372-406",
+        "scripts/racketsport/build_pbvision_ball_sst.py:471-557",
+        "scripts/racketsport/build_pbvision_ball_sst.py:593-659",
+        "scripts/racketsport/train_ball_stage2.py:157-212",
+        "threed/racketsport/ball_sst_dataset.py:149-172",
+        "runs/lanes/ball_b1b2_prep_20260721/schema_valid_sample_manifest.json:54"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "A-arm historical parity",
+      "ruling": "LANE_PROOF_FAILS; SMALL-FIXTURE COMPUTE PARITY PASSES",
+      "severity": "HIGH",
+      "findings": [
+        "The committed parity test runs the modified trainer twice. Its legacy arm merely deletes two new argparse attributes; it never loads the pre-change trainer.",
+        "The lane therefore did not prove its claimed old-versus-new exact loss array or model-state SHA.",
+        "An independent read-only comparison against actual HEAD commit a7aee1ada55a7f4fe99d5571fa9ca51742f796df did find identical seven-step numerical behavior on a small fixture.",
+        "The independent exact model-state SHA was 27e604db056d1917635b9cacf2267621cea41a431625f304a60097a3441475b4 in both arms.",
+        "The exact shuffled access order was [3, 1, 0, 4, 2, 4, 2, 3, 0, 1, 4, 3] in both arms.",
+        "This supports static evidence that the no-SST compute path has no new RNG draws, but it is not the required production-equivalent WASB/CUDA/batch-8/2,372-step proof.",
+        "Full checkpoint bytes are definitely not identical: the new default SST arguments are serialized through vars(args) into every checkpoint even when no SST flags are supplied."
+      ],
+      "independent_exact_losses": [
+        2.0738778710365295,
+        0.4412669241428375,
+        0.10065823793411255,
+        0.052452653646469116,
+        0.25876812636852264,
+        0.8219014406204224,
+        0.5825876109302044
+      ],
+      "evidence": [
+        "tests/racketsport/test_ball_stage2_training.py:328-368",
+        "tests/racketsport/test_ball_stage2_training.py:513-516",
+        "scripts/racketsport/train_ball_stage2.py:780-803",
+        "runs/lanes/ball_b1b2_prep_20260721/report.json:1"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "SST batch composition and cap math",
+      "ruling": "FAIL",
+      "severity": "CRITICAL",
+      "findings": [
+        "The ordinary scalar cap formula is correct after sample weighting. Weight 0 produced applied loss 0; weight 0.25 produced 0.1732867956; weight 0.50 bound to the same 0.1732867956 with scale 0.5; nonbinding and zero-human cases also behaved correctly.",
+        "Exact eight-human-row exposure is false because both DataLoaders omit drop_last. With 2,249 B0 rows and batch size eight, the final batch has one human row; a 2,372-step run contains eight one-row human steps.",
+        "Pseudo batches can likewise be short at iterator boundaries.",
+        "The cap only constrains the scalar loss. The SST forward pass occurs before scaling, so BatchNorm state receives an uncapped update. With pseudo weight zero, learned parameters matched human-only training, but the probed running mean changed from [0.1, 0.1, 0.1] to [1.09, 1.09, 1.09].",
+        "SST-only invocation bypasses the cap entirely because bounded mode is enabled only when both human and SST datasets exist. A probe with sst-loss-cap=0 still trained with loss 0.7448089122772217 and emitted no sst_loss_applied field.",
+        "The trainer has no consumer for B0 train.jsonl. Against the live reviewed root it loads 3,026 rows instead of the frozen 2,249: 960 extra HyU/Ezz held-out-parent rows, 183 missing scratch-train rows, and only 2,066 rows in common.",
+        "Among 1,546 intersecting B0 confirmed-prelabel rows, the trainer assigned 1,545 weight 1.0 and one weight 3.0 instead of B0's 0.25 lineage weight. The proposed A/B experiment is therefore not executable without contamination."
+      ],
+      "evidence": [
+        "scripts/racketsport/train_ball_stage2.py:107-142",
+        "scripts/racketsport/train_ball_stage2.py:324-353",
+        "scripts/racketsport/train_ball_stage2.py:658-730",
+        "scripts/racketsport/train_ball_stage2.py:835-847",
+        "scripts/racketsport/train_ball_stage2.py:1082-1083",
+        "scripts/racketsport/build_ball_regroup_split.py:1863-1895",
+        "third_party/WASB-SBDT/src/models/hrnet.py:39-42"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Parent-source scorer",
+      "ruling": "FAIL",
+      "severity": "CRITICAL",
+      "findings": [
+        "The live B0 data itself is internally grouped correctly: 167 unique rows, eight clips, and two parents; HyU has 100 rows and Ezz has 67. The inspected rows matched their sampling lineage with no current parent/prefix mismatch.",
+        "The executable scorer is nevertheless broken. It reads B0 validation frame IDs but discards final_label, redirects lookup to the historical 3,026-row reviewed corpus, and attempts to score unrelated reviewed_boxes.json labels.",
+        "Historical/scratch intersection is 0 of 167. The full live invocation exits 2 before scoring with: reviewed_frame_indices contains 3 non-reviewed frames for Ezz6HDNHlnk_rally_0001: [334, 757, 996].",
+        "No loso_report.json exists in the lane. The reported PASS only exercised a loader count of 167 rows, eight clips, and two parents.",
+        "Parent identity is caller-controlled. The loader does not bind source_id to parent_source_id, derive the parent from clip identity, validate row_key/image/digest lineage, reject negative frame indices, or compare the validation SHA against a trusted B0 report.",
+        "An in-memory probe accepted swapped HyU/Ezz parents, bogus row keys and image names, and frame -1.",
+        "Candidate prediction paths are also not clip-bound. Assigning the same HyU ball_track.json path to all eight clip names passed coverage because the schema contains no clip ID or source-video SHA."
+      ],
+      "evidence": [
+        "scripts/racketsport/ball_loso_validation.py:317-439",
+        "scripts/racketsport/ball_loso_validation.py:566",
+        "scripts/racketsport/ball_loso_validation.py:647-669",
+        "runs/lanes/ball_b1b2_prep_20260721/log.txt:138028",
+        "runs/lanes/ball_b0_split_20260721/split_fix2/validation.jsonl:1",
+        "tests/racketsport/test_ball_loso_validation.py:372"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Media-absent refusal",
+      "ruling": "PASS_WITH_DIAGNOSTIC_FIXES",
+      "severity": "LOW",
+      "findings": [
+        "The path is fail-closed: six missing media IDs produced zero accepted rows, ball_verified=false, promotion=false, verdict=MISSING_MEDIA, and exit status 3.",
+        "It refused before teacher inference and did not convert missing media or teacher output into negatives.",
+        "The artifact is slightly misleading: decode_failures=0 means decoding was not attempted, and its next-action text says to stage seven media files even though one of seven is already present and only six are missing."
+      ],
+      "evidence": [
+        "runs/lanes/ball_b1b2_prep_20260721/empty_media_refusal.json:1-93"
+      ]
+    }
+  ],
+  "required_fixes_before_rereview": [
+    "Bind every B1 source to canonical provenance and expected media SHA; reject conflicting manifest aliases, symlinks outside frozen roots, copied compare derivatives, and unexpected checkpoint/repository identities.",
+    "Create a separately frozen preregistration artifact containing policy parameters, code commit/hash, checkpoint SHA, media/PTS hashes, and temporal geometry. Remove post-hoc CLI mutability or reject any mismatch.",
+    "Make the B2 loader independently revalidate manifest PASS status, exact gates, source IDs, positive-only semantics, agreement evidence, and dependency hashes.",
+    "Add a real consumer or materialized dataset for the exact B0 train split and preserve its lineage weights. Hard-reject judge-parent rows.",
+    "Guarantee exactly eight human rows per optimizer step, and the intended pseudo count, through deterministic full-batch sampling or an explicitly justified drop-last policy.",
+    "Prevent pseudo forwards from mutating uncapped BatchNorm buffers, fail closed on SST-only cap bypass, and test weight-zero model-state identity.",
+    "Replace the parity self-test with an actual pinned-HEAD versus working-tree harness using the production configuration and record exact losses, sample order, model-state SHA, and checkpoint-format differences.",
+    "Score B0 final_label directly or materialize a scratch-specific reviewed root. Bind validation identity and each prediction artifact to canonical clip/source-video hashes.",
+    "Report missing-media decoding as not_attempted rather than zero failures and correct the six-of-seven staging instruction."
+  ],
+  "verification_notes": {
+    "recorded_lane_tests": "The lane records 29 focused passes, but the crucial parity and parent tests are synthetic/self-comparisons and do not cover the live failures.",
+    "fresh_pytest": "Not rerun because the read-only sandbox denied creation of pytest temporary files.",
+    "fresh_checks": "Source-level audit and read-only in-memory adversarial probes were executed, including actual HEAD-versus-working-tree trainer comparison and the live parent-scorer invocation.",
+    "verified_flag": false
+  }
+}
+```
+

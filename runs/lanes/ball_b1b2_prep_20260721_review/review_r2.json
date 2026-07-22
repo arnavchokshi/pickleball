@@ -1,0 +1,206 @@
+```json
+{
+  "VERDICT": "REJECT",
+  "confidence": "HIGH",
+  "mode": "read-only",
+  "files_changed": [],
+  "verified_flag": false,
+  "decisive_failures": [
+    "The <=2-frame temporal rule is implemented as <=2 frames on each side. Anchors at frames 8 and 12 accept frame 10 despite three interior teacher-only frames.",
+    "The temporal search skips contradictory high-confidence WASB observations at intermediate frames and continues outward to acceptable anchors; the trainer independently accepts the same malformed bridge.",
+    "Judge rows can still reach a training batch through the retained generic CVAT path when their clip/media identity is aliased. Resume checkpoints also have no dataset-provenance enforcement."
+  ],
+  "checks": [
+    {
+      "id": 1,
+      "name": "Preregistration and trainer refusal",
+      "ruling": "PASS",
+      "findings": [
+        "Production confidence=0.90, radius=20px, and weight=0.25 are code constants in the builder and independently duplicated in the trainer.",
+        "Lowered confidence/radius/weight can produce an experimental row, but the assembled manifest becomes production_eligible=false with gate verdict NON_PRODUCTION_MANIFEST.",
+        "Fabricated non-production, override-selected, and altered-request manifests were refused before training.",
+        "The shipped failed-gate manifest was refused with: SST gate verdict must be PASS, got PBV_BALL_INSUFFICIENT_AGREEMENT."
+      ],
+      "negative_results": [
+        "Lowered experimental inputs: accepted by the diagnostic eligibility helper, override fields recorded.",
+        "Trainer override refusal: SST gate verdict must be PASS, got NON_PRODUCTION_MANIFEST.",
+        "Forged PASS/non-production refusal: SST manifest is not production_eligible.",
+        "Forged override refusal: SST manifest was built with policy overrides."
+      ],
+      "evidence": [
+        "scripts/racketsport/build_pbvision_ball_sst.py:58",
+        "scripts/racketsport/build_pbvision_ball_sst.py:1055",
+        "scripts/racketsport/build_pbvision_ball_sst.py:2134",
+        "scripts/racketsport/train_ball_stage2.py:697"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Independent eligibility",
+      "ruling": "FAIL",
+      "findings": [
+        "The original teacher-only bypass is closed: WASB absent across all seven sources produced zero eligible rows.",
+        "One anchor is insufficient, current-frame high-confidence WASB disagreement is rejected, and caller-raised max-gap evidence is rejected by production validation.",
+        "However, anchors at frames 8 and 12 accepted frame 10 with three interior missing frames 9-11. The frozen value 2 is enforced per side, not as the total teacher-only gap length.",
+        "High-confidence WASB disagreements at frames 9 and 11 are silently skipped while searching outward; anchors 8 and 12 still make frame 10 eligible.",
+        "The trainer replay validator applies the same endpoint-only logic and accepted this contradictory three-frame-gap construction."
+      ],
+      "probe_results": {
+        "wasb_entirely_absent": "0 eligible rows across all seven sources",
+        "only_prior_anchor": "rejected: no_independent_wasb_agreement",
+        "current_high_confidence_disagreement": "rejected: high_confidence_wasb_disagreement",
+        "three_interior_missing_frames": "ACCEPTED with anchors 8 and 12",
+        "contradictory_interior_wasb": "ACCEPTED with anchors 8 and 12"
+      },
+      "required_fix": "Define the frozen gap as at most two total consecutive teacher-only frames. Validate every interior frame as WASB absent, invisible, or below threshold, and reject any intermediate high-confidence disagreement in both builder and trainer.",
+      "evidence": [
+        "scripts/racketsport/build_pbvision_ball_sst.py:1988",
+        "scripts/racketsport/build_pbvision_ball_sst.py:2052",
+        "scripts/racketsport/build_pbvision_ball_sst.py:1490",
+        "scripts/racketsport/train_ball_stage2.py:2000"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Frozen-split enforcement",
+      "ruling": "FAIL_LITERAL_ANY_INPUT_PATH",
+      "canonical_path": {
+        "ruling": "PASS",
+        "train_rows": 2249,
+        "allowed_parent_count": 4,
+        "judge_rows": 0,
+        "excluded_judge_rows": 960,
+        "media_hashes_verified": 31,
+        "train_sha256": "b92218d47816e01893a687c6414bdaa5220f02be6d3b1c25b684128d12ee9c20"
+      },
+      "bypasses": [
+        "The generic CVAT loader accepts arbitrary annotation identity and media paths. An exact Ezz validation frame 334 and Ezz video relabeled as allowedalias_rally_0001 produced an accepted eight-entry training batch whose parent was allowedalias.",
+        "The batch guard examines parent_source_id strings, not canonical media lineage, so copied, renamed, symlinked, or directly mapped judge media can bypass the exact-name check.",
+        "Resume validation checks model shape/family only. A fabricated checkpoint declaring HyU/Ezz training provenance was accepted, including optimizer state and global_step.",
+        "Production run ordering loads resumed optimizer state and then overwrites model weights with official initialization, leaving resumed optimizer moments and step state active."
+      ],
+      "alias_probe": {
+        "result": "ACCEPTED",
+        "batch_shape": [8, 9, 32, 32],
+        "reported_parent": "allowedalias",
+        "actual_media": "Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4",
+        "actual_frame": 334
+      },
+      "required_fix": "Make production/B2 reject the generic CVAT path, or bind it structurally to frozen clip/media hashes. Reject production resume, or validate its exact dataset, code, checkpoint, optimizer, and sample-order provenance.",
+      "evidence": [
+        "scripts/racketsport/train_ball_stage2.py:279",
+        "scripts/racketsport/train_ball_stage2.py:500",
+        "scripts/racketsport/train_ball_stage2.py:610",
+        "scripts/racketsport/train_ball_stage2.py:2606",
+        "scripts/racketsport/train_ball_stage2.py:2682",
+        "scripts/racketsport/train_ball_stage2.py:3159",
+        "scripts/racketsport/train_ball_stage2.py:3514"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Live B0 scorer",
+      "ruling": "PASS",
+      "independent_recount": {
+        "rows": 167,
+        "visible_labels": 94,
+        "hidden_labels": 73,
+        "true_positives": 55,
+        "false_positives": 45,
+        "false_positives_breakdown": {
+          "hidden": 36,
+          "visible_mislocalized": 9
+        },
+        "false_negatives": 39,
+        "precision": 0.55,
+        "recall": 0.5851063829787234,
+        "f1_rational": "110/194",
+        "f1": 0.5670103092783505,
+        "hidden_false_positive_rate": 0.4931506849315068
+      },
+      "comparison": "Counts match the emitted report exactly. The report's F1 0.5670103092783506 differs from the direct rational evaluation only by one floating-point rounding unit.",
+      "artifact_sha256": "db9e83a929716c8ae2c2fefb7b017a46a99e5756c78200a6a26be357036781e2",
+      "promotion_status": "ball_verified=false; this is plumbing/internal-validation evidence, not a BALL promotion.",
+      "evidence": [
+        "scripts/racketsport/ball_loso_validation.py:351",
+        "scripts/racketsport/ball_loso_validation.py:879",
+        "scripts/racketsport/ball_loso_validation.py:1457",
+        "threed/racketsport/ball_cvat_benchmark.py:543",
+        "runs/lanes/ball_b1b2_prep_20260721/loso_b0_live_fix1/loso_report.json"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Pinned-HEAD comparator",
+      "ruling": "PASS_HARNESS_ONLY_GPU_PENDING",
+      "findings": [
+        "The comparator resolves HEAD, executes git show <commit>:scripts/racketsport/train_ball_stage2.py, compiles those bytes into a distinct module, and compares that function with the working-tree function.",
+        "The seven-step CPU fixture matched all 56 sample IDs, exact losses, and loaded model-state SHA. A deliberate working-only perturbation produced loss and state mismatches, demonstrating sensitivity.",
+        "Fixture identities were HEAD commit 9bbd8011828631b4cc7df4afdf3b1932e758914a, HEAD source SHA 8118ff0e8fbf1d573f61e1ce09de140cb2c9e9e62bf1d57b030560a55a157f47, and working source SHA 8fdc67f32f6a79e0a6b04b1bbcd80a718683a71467518b792c218020fec950ee.",
+        "Main advanced during review to bcfb20ae05b7266dec235f46decdc526ce130009, but the HEAD trainer blob remained 8118ff0e.... The harness does not hard-code the baseline or require HEAD and working-tree source hashes to differ.",
+        "The 2,372-step CUDA proof remains NOT_ATTEMPTED with no fallback."
+      ],
+      "residual_risk": "If fixes are committed before the VM run, HEAD may equal the working tree and produce a vacuous PASS. Imported dependency code is also shared rather than loaded historically.",
+      "evidence": [
+        "scripts/racketsport/train_ball_stage2.py:2077",
+        "scripts/racketsport/train_ball_stage2.py:2105",
+        "scripts/racketsport/train_ball_stage2.py:2367",
+        "runs/lanes/ball_b1b2_prep_20260721/head_parity_fix1/head_parity_fixture.json",
+        "runs/lanes/ball_b1b2_prep_20260721/head_parity_fix1/production_not_attempted.json"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Batch math",
+      "ruling": "PASS_CANONICAL_FRESH_B0_SST_ONLY",
+      "findings": [
+        "The frozen B0 sampler emitted 2,372 deterministic batches of exactly eight human entries: 18,976 exposures, zero judge parents, and no within-batch duplicates for the production B0 size/seed.",
+        "A and B human order matched with order SHA f1b91e98e87b6bebc6c99246e03d417c51a9cbe3a4d8e1956d395f009d7493.",
+        "SST uses a separate exact-eight sampler and a separate forward; both losses are combined into one optimizer step.",
+        "Weight 0 contributed 0. Weight 0.25 contributed 0.1732867956. Weight 0.50 was capped to the same 0.1732867956. Zero-weight and zero-cap SST were model-state-identical to human-only, and nonzero SST did not mutate BatchNorm twice.",
+        "Generic CVAT batching remains ordinary non-drop-last batching: a nine-row input produced batch sizes 8,1,8,1.",
+        "The infinite full sampler guarantees eight slots, not eight distinct rows. A 1,001-row SST simulation contained a duplicate within batch at step 1751.",
+        "The historical EXACT_PLAN B command still combines --cvat-export-root with --sst-manifest, which the fixed trainer now rejects. Both arms must use --b0-split-root."
+      ],
+      "evidence": [
+        "scripts/racketsport/train_ball_stage2.py:2561",
+        "scripts/racketsport/train_ball_stage2.py:2632",
+        "scripts/racketsport/train_ball_stage2.py:2715",
+        "scripts/racketsport/train_ball_stage2.py:2990",
+        "scripts/racketsport/train_ball_stage2.py:3443",
+        "runs/regroup_20260721/EXACT_PLAN.md:263"
+      ]
+    }
+  ],
+  "fresh_verification": {
+    "focused_builder_tests": "7 passed in 0.40s",
+    "split_and_batch_tests": "3 passed in 1.69s",
+    "manual_probes": [
+      "WASB-absent, one-anchor, contradictory-current, three-frame-gap, and contradictory-interior temporal shapes",
+      "override and fabricated manifest trainer refusals",
+      "independent scorer recount over all 167 rows and eight prediction artifacts",
+      "2,372-batch B0 sampler and alias-input batch",
+      "loss-cap, zero-weight, zero-cap, and BatchNorm state behavior"
+    ],
+    "environment_note": "Two ordinary PyTorch optimizer tests could not initialize their cache in the read-only environment; equivalent direct probes used a minimal in-memory optimizer. This was an environment limitation, not counted as a product pass or failure."
+  },
+  "GPU_DISPATCH_DECISION": {
+    "decision": "DO_NOT_ARM_B2",
+    "dispatch_now": false,
+    "permitted_diagnostic": "The full CUDA parity run may be dispatched for diagnostic evidence, but it cannot override the two trust-boundary failures.",
+    "on_vm_preconditions": [
+      "Fix and test total-gap semantics plus contradictory-interior WASB refusal in both builder and trainer.",
+      "Eliminate or identity-bind the generic CVAT production path; reject or fully provenance-bind production resume checkpoints.",
+      "Transfer immutable exact code bytes. build_pbvision_ball_sst.py is currently untracked with SHA efe4498a245b9330bab7fa8dad0e13fdd7483f584e8dfc8489ffdb7e39e6f06e.",
+      "Stage and hash all seven canonical B1 videos. The current local lane is missing six.",
+      "Run B1 unchanged and require production_eligible=true, gate verdict PASS, accepted_windows>=1000, accepted_sources>=5, zero holdout rows, completed decoding, and successful trainer replay validation. Otherwise stop with PBV_BALL_INSUFFICIENT_AGREEMENT.",
+      "Run the exact 2,372-step CUDA parity command with no fallback. Require production_configuration_executed=true, 2,372 equal loss entries, 2,372 equal eight-row sample-ID arrays, identical final model-state SHA, and loaded-checkpoint state parity.",
+      "Before parity, assert HEAD trainer SHA is 8118ff0e8fbf1d573f61e1ce09de140cb2c9e9e62bf1d57b030560a55a157f47, working trainer SHA is 8fdc67f32f6a79e0a6b04b1bbcd80a718683a71467518b792c218020fec950ee, and they are distinct.",
+      "Record GPU, driver, CUDA, cuDNN, PyTorch, imported training-dependency hashes, and direct output artifact hashes.",
+      "Run both B2 arms fresh with canonical --b0-split-root, no --cvat-export-root, no --image-root-rewrite, no --resume-checkpoint, batch-size=8, SST batch-size=8, steps=2372, seed=20260721, and occluded-prob=0.",
+      "Before scoring B versus A, require identical recorded human sample-order arrays and, if eight distinct SST rows are intended, explicitly reject within-batch pseudo duplicates."
+    ]
+  }
+}
+```
+

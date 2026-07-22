@@ -1,0 +1,84 @@
+{
+  "VERDICT": "ACCEPT",
+  "confidence": "HIGH",
+  "scope": "Round-3 fix2 confirmation only; this is not BALL or product verification.",
+  "mode": "read-only",
+  "files_changed_by_review": [],
+  "verified_flag": false,
+  "checks": {
+    "gap_semantics": {
+      "ruling": "PASS",
+      "builder_anchors_8_12_gap_3": "REFUSED",
+      "trainer_anchors_8_12_gap_3": "REFUSED: exceeds frozen total teacher-only gap",
+      "gap_exactly_2_builder": "ACCEPTED",
+      "gap_exactly_2_trainer": "ACCEPTED"
+    },
+    "contradictory_wasb": {
+      "ruling": "PASS",
+      "builder_prior_direction_frame_9": "REFUSED",
+      "builder_following_direction_frame_11": "REFUSED",
+      "trainer_frame_9": "REFUSED: contradictory high-confidence WASB",
+      "trainer_frame_11": "REFUSED: contradictory high-confidence WASB"
+    },
+    "judge_alias_and_resume": {
+      "ruling": "PASS",
+      "aliased_clip": "allowedalias_rally_0001",
+      "actual_media": "Ezz6HDNHlnk_rally_0001.mp4",
+      "actual_row": 334,
+      "media_sha256": "582ffbb02098bb8e59afff74ffa25fb178be8ecc7782889b06a0e0aa64bef844",
+      "alias_result": "REFUSED by generic CVAT loader before label materialization",
+      "swapped_resume": "REFUSED before model or optimizer state application"
+    },
+    "no_disturbance": {
+      "ruling": "PASS",
+      "production_constants": {
+        "teacher_confidence_min": 0.9,
+        "agreement_radius_px": 20.0,
+        "pseudo_weight": 0.25,
+        "temporal_max_gap_source_frames": 2
+      },
+      "failed_gate_sample": "REFUSED: SST gate verdict must be PASS, got PBV_BALL_INSUFFICIENT_AGREEMENT",
+      "live_b0_scorer_return_code": 0,
+      "rows": 167,
+      "true_positives": 55,
+      "false_positives": 45,
+      "false_negatives": 39,
+      "pooled_f1_at_20px": 0.5670103092783506,
+      "report_sha256": "db9e83a929716c8ae2c2fefb7b017a46a99e5756c78200a6a26be357036781e2",
+      "fresh_report_byte_identical_to_preserved": true,
+      "ball_verified": false
+    },
+    "fresh_test_summary": {
+      "bridge_targeted_pytest": "5 passed",
+      "fix2_focused_junit_corroboration": "78 tests, 0 failures, 0 errors",
+      "read_only_caveat": "The alias/resume tmp_path tests were replayed directly without filesystem writes. The scorer ran with its exact argv and returned 0; only its two final artifact writes were intercepted in memory."
+    }
+  },
+  "reviewed_identity": {
+    "main_head": "86465272f3b267a1ab5a7c3dc5be4ca824c70d43",
+    "head_trainer_sha256": "8118ff0e8fbf1d573f61e1ce09de140cb2c9e9e62bf1d57b030560a55a157f47",
+    "reviewed_builder_sha256": "cad2b8907e88dd5ebb30c013d4269be1a404409797d19ac7533d46669228fb57",
+    "reviewed_trainer_sha256": "9d2d326103da97afa1adc5f13bffc9560cc8f2d2af9942199a198568c9d44f3a",
+    "reviewed_scorer_sha256": "d8eb1478fd881416acc6750fb4511c0138a240d626732ff001dbb18207d02f41",
+    "wasb_adapter_sha256": "56e53d8ddc2589b8c2e74ef62f9235368b97e831ac96b6c864409ebe57405345",
+    "workspace_note": "Builder remains untracked and trainer modified relative to HEAD; a plain clone does not reproduce the reviewed bytes."
+  },
+  "GPU_DISPATCH_DECISION": {
+    "decision": "DISPATCH_B1_AND_CUDA_PARITY_AFTER_PREFLIGHT; DO_NOT_ARM_B2_YET",
+    "before_B1_build": [
+      "Transfer and verify the exact reviewed code hashes above on main at HEAD 86465272f3b267a1ab5a7c3dc5be4ca824c70d43.",
+      "Rerun the five bridge tests plus the exact aliased-frame-334 and swapped-resume tests in writable VM scratch; require zero failures.",
+      "Verify all seven canonical B1 media against code-pinned SHA-256 values, all 21 gallery artifacts, split-manifest SHA cf8f251827688c7923e35ce93b06b66c014ba9192b9d18f4ecbd2a256195451b, WASB checkpoint SHA 9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb, and WASB repository commit 923462cacdeb3353b84ddebdedb3f4b7a8553b0f.",
+      "Require the WASB adapter working bytes to equal its pinned HEAD blob and keep teacher-validation, teacher-test, and compare-only IDs outside B1.",
+      "Run B1 unchanged at 0.90 confidence, 20px radius, 0.25 weight, and total gap 2."
+    ],
+    "before_B2_arms_train": [
+      "Require B1 decoding completion, production_eligible=true, gate verdict PASS, accepted_windows>=1000, accepted_sources>=5, holdout_rows_present=0, exact dependency/media/PTS hashes, and successful trainer replay validation.",
+      "Run the exact 2372-step CUDA parity with no CPU fallback. Pin baseline trainer SHA 8118ff0e8fbf1d573f61e1ce09de140cb2c9e9e62bf1d57b030560a55a157f47 and candidate SHA 9d2d326103da97afa1adc5f13bffc9560cc8f2d2af9942199a198568c9d44f3a; require them to remain distinct.",
+      "Require all 2372 loss entries and eight-row sample-ID arrays to match, identical final model-state SHA, and loaded-checkpoint state parity. Record GPU, driver, CUDA, cuDNN, PyTorch, dependency hashes, and output hashes.",
+      "Verify frozen B0 hashes: report 122e65913d54df6be6c3e5c6ca91229fc17d207674edc7a31ea705bafd6eb3a3, train b92218d47816e01893a687c6414bdaa5220f02be6d3b1c25b684128d12ee9c20, validation 39a07ed6d5211cbdc2ccc8a3f1f73b298a1ed262a6cae1f8a6190e5aa1533429; require 2249 train rows, 167 judge rows, and zero judge-parent training rows.",
+      "Run both arms fresh using canonical --b0-split-root, not --cvat-export-root; forbid --image-root-rewrite and --resume-checkpoint. Use official initialization, batch-size=8, SST batch-size=8, SST loss cap=0.25, steps=2372, seed=20260721, and occluded-prob=0.",
+      "Require identical human sample order between A and B. If eight distinct pseudo rows per batch are intended, explicitly reject within-batch SST duplicates."
+    ]
+  }
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import subprocess
 import sys
@@ -100,6 +101,214 @@ def _write_ball_track(
         json.dumps({"schema_version": 1, "fps": 30.0, "source": "tracknet", "frames": frames, "bounces": []}),
         encoding="utf-8",
     )
+
+
+def _digest(path: Path, algorithm: str = "sha256") -> str:
+    digest = hashlib.new(algorithm)
+    digest.update(path.read_bytes())
+    return digest.hexdigest()
+
+
+def _b0_row(
+    *,
+    clip: str,
+    parent: str,
+    frame_index: int,
+    ordinal: int,
+    ball_present: bool,
+    source_video: Path,
+    image_zip: Path,
+) -> dict:
+    image_name = f"{parent}__{clip}__abs_{frame_index:06d}.png"
+    return {
+        "clip_id": clip,
+        "evaluation_eligible": True,
+        "final_label": {
+            "ball_present": ball_present,
+            "bbox_xyxy": [95.0, 95.0, 105.0, 105.0] if ball_present else None,
+            "visibility_level": "clear" if ball_present else "none",
+        },
+        "frame_index": frame_index,
+        "ground_truth": True,
+        "image_height": 360,
+        "image_md5": hashlib.md5(image_name.encode("utf-8")).hexdigest(),
+        "image_name": image_name,
+        "image_width": 640,
+        "image_zip": str(image_zip),
+        "image_zip_member": image_name,
+        "lineage_class": "scratch",
+        "lineage_origin": "scratch_no_prelabel_package",
+        "original_prelabel": None,
+        "parent_source_id": parent,
+        "row_key": f"{clip}:{frame_index:06d}",
+        "sample_ordinal": ordinal,
+        "source_class": "fixture_source",
+        "source_id": parent,
+        "split": "validation",
+        "teacher_derived": False,
+        "training_weight": 1.0,
+        "_fixture_source_video": str(source_video),
+    }
+
+
+def _build_b0_parent_source_fixture(tmp_path: Path) -> tuple[Path, dict[str, Path], list[dict]]:
+    split_dir = tmp_path / "split"
+    split_dir.mkdir()
+    image_zip = tmp_path / "scratch_images.zip"
+    image_zip.write_bytes(b"fixture-image-zip")
+    parent = "original_game_a"
+    clip_specs = {
+        f"{parent}_rally_0001": {"frame_count": 21, "rows": [(0, True), (20, False)]},
+        f"{parent}_rally_0002": {"frame_count": 3, "rows": [(0, True), (2, False)]},
+    }
+    tracks: dict[str, Path] = {}
+    validation_rows: list[dict] = []
+    lineage_rows: list[dict] = []
+    sampling_frames: list[dict] = []
+    universe_videos: list[dict] = []
+    ordinal = 0
+    for clip, spec in clip_specs.items():
+        video = tmp_path / "media" / "rallies" / parent / f"{clip}.mp4"
+        video.parent.mkdir(parents=True, exist_ok=True)
+        video.write_bytes((f"canonical-video:{clip}\n" * 3).encode("utf-8"))
+        video_sha = _digest(video)
+        universe_videos.append(
+            {
+                "rally_id": clip,
+                "source_id": parent,
+                "video_path": str(video),
+                "source_video_sha256": video_sha,
+                "frame_count": spec["frame_count"],
+                "width": 640,
+                "height": 360,
+            }
+        )
+        for frame_index, ball_present in spec["rows"]:
+            row = _b0_row(
+                clip=clip,
+                parent=parent,
+                frame_index=frame_index,
+                ordinal=ordinal,
+                ball_present=ball_present,
+                source_video=video,
+                image_zip=image_zip,
+            )
+            row.pop("_fixture_source_video")
+            validation_rows.append(row)
+            lineage_rows.append(
+                {
+                    **{
+                        key: value
+                        for key, value in row.items()
+                        if key
+                        in {
+                            "clip_id",
+                            "evaluation_eligible",
+                            "final_label",
+                            "frame_index",
+                            "ground_truth",
+                            "lineage_class",
+                            "lineage_origin",
+                            "original_prelabel",
+                            "parent_source_id",
+                            "row_key",
+                            "source_class",
+                            "source_id",
+                            "split",
+                            "teacher_derived",
+                            "training_weight",
+                        }
+                    },
+                    "video_path": str(video),
+                    "source_video_sha256": video_sha,
+                }
+            )
+            sampling_frames.append(
+                {
+                    "rally_id": clip,
+                    "frame_index": frame_index,
+                    "row_key": row["row_key"],
+                    "source_id": parent,
+                    "source_class": row["source_class"],
+                    "sample_ordinal": ordinal,
+                    "image_name": row["image_name"],
+                    "image_zip_member": row["image_zip_member"],
+                    "image_md5": row["image_md5"],
+                    "image_width": 640,
+                    "image_height": 360,
+                    "video_path": str(video),
+                    "source_video_sha256": video_sha,
+                }
+            )
+            ordinal += 1
+
+        track_path = tmp_path / "predictions" / clip / "ball_track.json"
+        _write_ball_track(
+            track_path,
+            total_frames=spec["frame_count"],
+            ball_xy=(100.0, 100.0),
+            hit_frames={0},
+        )
+        metadata = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_wasb_ball_run",
+            "frame_count": spec["frame_count"],
+            "out": str(track_path),
+            "runtime": {
+                "video": str(video),
+                "source_video_sha256": video_sha,
+                "source_video_frame_count": spec["frame_count"],
+                "source_video_size": [640, 360],
+            },
+        }
+        track_path.with_name("ball_track_metadata.json").write_text(
+            json.dumps(metadata), encoding="utf-8"
+        )
+        tracks[clip] = track_path
+
+    validation_path = split_dir / "validation.jsonl"
+    validation_path.write_text(
+        "".join(json.dumps(row) + "\n" for row in validation_rows), encoding="utf-8"
+    )
+    lineage_path = split_dir / "lineage_rows.jsonl"
+    lineage_path.write_text(
+        "".join(json.dumps(row) + "\n" for row in lineage_rows), encoding="utf-8"
+    )
+    train_path = split_dir / "train.jsonl"
+    train_path.write_text("", encoding="utf-8")
+    sampling_path = tmp_path / "sampling_manifest.json"
+    sampling_path.write_text(
+        json.dumps({"frames": sampling_frames, "universe_videos": universe_videos}),
+        encoding="utf-8",
+    )
+    report_path = split_dir / "report.json"
+    report = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_ball_regroup_parent_source_split",
+        "verdict": "BALL_CLEAN_JUDGE",
+        "split_semantics": "parent_source",
+        "split_counts": {"validation": len(validation_rows)},
+        "validation_sources": [parent],
+        "checks": {
+            "evaluation_lineage": {"verdict": "PASS"},
+            "protected_collision_count": {"verdict": "PASS"},
+            "scratch_package_reconciled": {"verdict": "PASS"},
+            "train_validation_source_intersection": {"verdict": "PASS"},
+        },
+        "artifacts": {
+            "report": str(report_path),
+            "train": str(train_path),
+            "validation": str(validation_path),
+            "lineage_rows": str(lineage_path),
+        },
+        "input_contract": {
+            "scratch_sampling_manifest": str(sampling_path),
+            "scratch_sampling_manifest_md5": _digest(sampling_path, "md5"),
+            "scratch_image_zip": str(image_zip),
+        },
+    }
+    report_path.write_text(json.dumps(report), encoding="utf-8")
+    return split_dir, tracks, validation_rows
 
 
 def _build_two_source_two_candidate_fixture(tmp_path: Path) -> tuple[Path, Path]:
@@ -367,6 +576,210 @@ def test_loso_validation_groups_multiple_clips_into_one_true_source(tmp_path: Pa
         candidate["pooled_mixed_metrics"]["micro_label_f1_at_20px"]
     )
     assert "p99_error_px_worst_clip" in candidate["per_source_metrics"]["recording_a"]
+
+
+def test_loso_validation_consumes_b0_parent_source_split_jsonl(tmp_path: Path) -> None:
+    split_dir, tracks, _rows = _build_b0_parent_source_fixture(tmp_path)
+    out_dir = tmp_path / "out"
+    clips = sorted(tracks)
+
+    completed = _run_cli(
+        [
+            "--out-dir",
+            str(out_dir),
+            "--parent-source-split",
+            str(split_dir),
+            "--candidate-track",
+            f"wasb_like={clips[0]}={tracks[clips[0]]}",
+            "--candidate-track",
+            f"wasb_like={clips[1]}={tracks[clips[1]]}",
+        ]
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    report = json.loads((out_dir / "loso_report.json").read_text(encoding="utf-8"))
+    assert report["source_grouping_mode"] == "b0_parent_source_split"
+    assert report["label_source"] == "b0_validation_final_label"
+    assert report["parent_source_split"]["row_count"] == 4
+    assert report["parent_source_split"]["label_source"] == "validation_jsonl.final_label"
+    assert report["parent_source_split"]["identity_mode"] == "structurally_bound_fixture"
+    assert report["parent_source_split"]["parent_sources"] == ["original_game_a"]
+    candidate = report["candidates"]["wasb_like"]
+    assert candidate["sources_scored"] == ["original_game_a"]
+    assert candidate["clips_by_source_group"] == {
+        "original_game_a": clips
+    }
+    assert candidate["pooled_parent_source_metrics"] == {
+        "hidden_false_positive_rate": 0.0,
+        "label_f1_at_20px": 1.0,
+        "precision_at_20px": 1.0,
+        "visible_recall_at_20px": 1.0,
+    }
+    assert set(report["prediction_artifacts"]["wasb_like"]) == set(clips)
+    for clip in clips:
+        binding = report["prediction_artifacts"]["wasb_like"][clip]
+        assert len(binding["prediction_sha256"]) == 64
+        assert len(binding["metadata_sha256"]) == 64
+        assert len(binding["canonical_source_video_sha256"]) == 64
+
+
+@pytest.mark.parametrize(
+    ("mutation", "error_text"),
+    [
+        ("swapped_parent", "caller-swapped parent/source"),
+        ("negative_frame", "nonnegative integer frame_index"),
+        ("bogus_row_key", "row_key identity mismatch"),
+        ("bogus_image", "image identity mismatch"),
+    ],
+)
+def test_b0_parent_source_refuses_caller_controlled_row_identity(
+    tmp_path: Path,
+    mutation: str,
+    error_text: str,
+) -> None:
+    split_dir, tracks, rows = _build_b0_parent_source_fixture(tmp_path)
+    if mutation == "swapped_parent":
+        rows[0]["parent_source_id"] = "other_game"
+        rows[0]["source_id"] = "other_game"
+    elif mutation == "negative_frame":
+        rows[0]["frame_index"] = -1
+    elif mutation == "bogus_row_key":
+        rows[0]["row_key"] = "bogus:999999"
+    else:
+        rows[0]["image_name"] = "caller_swapped.png"
+    (split_dir / "validation.jsonl").write_text(
+        "".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8"
+    )
+    args = ["--out-dir", str(tmp_path / "out"), "--parent-source-split", str(split_dir)]
+    for clip, track in sorted(tracks.items()):
+        args.extend(["--candidate-track", f"wasb={clip}={track}"])
+
+    completed = _run_cli(args)
+
+    assert completed.returncode == 2
+    assert error_text in completed.stderr
+    assert not (tmp_path / "out" / "loso_report.json").exists()
+
+
+def test_b0_parent_source_refuses_conflicting_prediction_video_aliases(tmp_path: Path) -> None:
+    split_dir, tracks, _rows = _build_b0_parent_source_fixture(tmp_path)
+    clip = sorted(tracks)[0]
+    metadata_path = tracks[clip].with_name("ball_track_metadata.json")
+    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    # Exact audit regression: the bogus alias retains the valid
+    # rallies/<parent>/<clip>.mp4 suffix. Suffix identity alone must not make two
+    # different canonical paths agree.
+    metadata["runtime"]["source_video"] = (
+        f"/definitely/not/the/canonical/prefix/rallies/original_game_a/{clip}.mp4"
+    )
+    metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+    args = ["--out-dir", str(tmp_path / "out"), "--parent-source-split", str(split_dir)]
+    for candidate_clip, track in sorted(tracks.items()):
+        args.extend(["--candidate-track", f"wasb={candidate_clip}={track}"])
+
+    completed = _run_cli(args)
+
+    assert completed.returncode == 2
+    assert "conflicting video/source_video aliases" in completed.stderr
+    assert "aliases disagree on canonical path identity" in completed.stderr
+
+
+def test_b0_parent_source_refuses_source_video_sha_mismatch(tmp_path: Path) -> None:
+    split_dir, tracks, _rows = _build_b0_parent_source_fixture(tmp_path)
+    clip = sorted(tracks)[0]
+    metadata = json.loads(
+        tracks[clip].with_name("ball_track_metadata.json").read_text(encoding="utf-8")
+    )
+    Path(metadata["runtime"]["video"]).write_bytes(b"caller-swapped-video")
+    args = ["--out-dir", str(tmp_path / "out"), "--parent-source-split", str(split_dir)]
+    for candidate_clip, track in sorted(tracks.items()):
+        args.extend(["--candidate-track", f"wasb={candidate_clip}={track}"])
+
+    completed = _run_cli(args)
+
+    assert completed.returncode == 2
+    assert "source-video SHA-256 mismatch" in completed.stderr
+
+
+def test_b0_parent_source_refuses_symlinked_prediction(tmp_path: Path) -> None:
+    split_dir, tracks, _rows = _build_b0_parent_source_fixture(tmp_path)
+    clip = sorted(tracks)[0]
+    target = tracks[clip]
+    symlink_root = tmp_path / "symlink_predictions" / clip
+    symlink_root.mkdir(parents=True)
+    symlink_track = symlink_root / "ball_track.json"
+    symlink_track.symlink_to(target)
+    tracks[clip] = symlink_track
+    args = ["--out-dir", str(tmp_path / "out"), "--parent-source-split", str(split_dir)]
+    for candidate_clip, track in sorted(tracks.items()):
+        args.extend(["--candidate-track", f"wasb={candidate_clip}={track}"])
+
+    completed = _run_cli(args)
+
+    assert completed.returncode == 2
+    assert "may not use symlinks" in completed.stderr
+
+
+def test_live_b0_split_scores_final_labels_and_binds_prediction_media(tmp_path: Path) -> None:
+    split_dir = Path("runs/lanes/ball_b0_split_20260721/split")
+    validation_rows = [
+        json.loads(line)
+        for line in (split_dir / "validation.jsonl").read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    clips = sorted({row["clip_id"] for row in validation_rows})
+    assert len(validation_rows) == 167
+    assert len(clips) == 8
+    args = ["--out-dir", str(tmp_path / "live_out"), "--parent-source-split", str(split_dir)]
+    for clip in clips:
+        track = Path("data/online_harvest_20260706/prelabels") / clip / "ball_track.json"
+        args.extend(["--candidate-track", f"wasb={clip}={track}"])
+
+    completed = _run_cli(args)
+
+    assert completed.returncode == 0, completed.stderr
+    report = json.loads((tmp_path / "live_out" / "loso_report.json").read_text(encoding="utf-8"))
+    assert report["objective_result"] == "PASS"
+    assert report["label_source"] == "b0_validation_final_label"
+    assert report["parent_source_split"]["identity_mode"] == "frozen_b0_20260721"
+    assert report["parent_source_split"]["validation_sha256"] == (
+        "39a07ed6d5211cbdc2ccc8a3f1f73b298a1ed262a6cae1f8a6190e5aa1533429"
+    )
+    assert report["reviewed_row_filter"] == {"clip_count": 8, "row_count": 167}
+    assert report["candidates"]["wasb"]["sources_scored"] == ["Ezz6HDNHlnk", "HyUqT7zFiwk"]
+    assert set(report["prediction_artifacts"]["wasb"]) == set(clips)
+    assert report["candidates"]["wasb"]["pooled_parent_source_metrics"] == {
+        "hidden_false_positive_rate": pytest.approx(0.4931506849315068),
+        "label_f1_at_20px": pytest.approx(0.5670103092783506),
+        "precision_at_20px": pytest.approx(0.55),
+        "visible_recall_at_20px": pytest.approx(0.5851063829787234),
+    }
+
+
+def test_live_b0_split_refuses_same_hyu_prediction_reused_for_ezz(tmp_path: Path) -> None:
+    split_dir = Path("runs/lanes/ball_b0_split_20260721/split")
+    clips = sorted(
+        {
+            json.loads(line)["clip_id"]
+            for line in (split_dir / "validation.jsonl").read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        }
+    )
+    hyu_clip = "HyUqT7zFiwk_rally_0001"
+    hyu_track = Path("data/online_harvest_20260706/prelabels") / hyu_clip / "ball_track.json"
+    args = ["--out-dir", str(tmp_path / "out"), "--parent-source-split", str(split_dir)]
+    for index, clip in enumerate(clips):
+        track = (
+            hyu_track
+            if index == 0
+            else Path("data/online_harvest_20260706/prelabels") / clip / "ball_track.json"
+        )
+        args.extend(["--candidate-track", f"wasb={clip}={track}"])
+
+    completed = _run_cli(args)
+
+    assert completed.returncode == 2
+    assert "canonical path is bound to 'HyUqT7zFiwk_rally_0001'" in completed.stderr
 
 
 def test_loso_validation_rejects_conflicting_source_group_mapping(tmp_path: Path) -> None:
