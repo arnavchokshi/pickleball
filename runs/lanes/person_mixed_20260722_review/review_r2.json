@@ -1,0 +1,106 @@
+{
+  "VERDICT": "ACCEPT",
+  "VERIFIED": 0,
+  "SCOPE": "Only the three round-1 findings and the requested counts, caps, and determinism spot-check.",
+  "SUMMARY": "All three structural findings are closed in the current workspace. This accepts the fix, not model quality, GPU completion, or promotion.",
+  "CRITERIA": [
+    {
+      "criterion": "Canonical quarantine and content identity",
+      "status": "PASS",
+      "fresh_results": {
+        "alias_matrix": "24/24 refused: four protected IDs, three compare-only IDs, and IYnbdRs1Jdk under percent-encoded, case-changed, and fullwidth Unicode/NFKC aliases.",
+        "compare_sha_under_permitted_id": "3/3 compare-only media SHAs paired with permitted ID 0tmdeghtfvjx refused as PBVISION_COMPARE_ONLY_MEDIA_SHA256.",
+        "positive_control": "The real manifest selected 10 permitted IDs and refused exactly three compare-only IDs.",
+        "targeted_pytest": "23 passed, 23 deselected."
+      },
+      "evidence": [
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:46-126",
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:191-275",
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:423-500"
+      ]
+    },
+    {
+      "criterion": "Validation purity and executable final-list barrier",
+      "status": "PASS",
+      "fresh_results": {
+        "injected_provenance": "teacher_derived=true and ground_truth=false refused with FidelityError before rewriting.",
+        "different_id_same_content": "Decoded-image-SHA and media/frame cross-split collisions both refused despite different sample IDs.",
+        "validator_executable": true,
+        "validator_filesystem_mode": "-rwxr-xr-x",
+        "validator_sha256": "0304a352f18fef0c58d4a17dee216077c880137a3fe05b43c618808ec34ab68a",
+        "manifest_sha_matches_live_code": true,
+        "manifest_command_replay": "Executed and failed closed at the intentionally absent pseudo_train.txt barrier after validator SHA, artifact-index, and closed-P1 checks.",
+        "targeted_pytest": "17 passed, 29 deselected."
+      },
+      "evidence": [
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:653-695",
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:809-931",
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:1008-1132",
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:1695-1727",
+        "runs/lanes/person_mixed_20260722/pack_manifest.json:664-701"
+      ]
+    },
+    {
+      "criterion": "Build-time closed-P1 six-hash binding",
+      "status": "PASS",
+      "live_hashes": {
+        "closed_manifest_sha256": "0803d1bab92fb8f501086090bdcda57aee5a689f14080457182ed20b20cded60",
+        "closed_train_list_sha256": "954a704aaf1e5c12d7dc1bb972609d048bc16763386139b92607622382918116",
+        "closed_train_all_rows_sha256": "61b39fe2cf1320848236c092fd30a382b2670abed3d69b6454ff66b83d23529e",
+        "anchor_exposure_rows_sha256": "1046db282dcc22de6d85a8706220b56d41fca8db27caa9d0518a9eeeee0dd3a9",
+        "human_val_od8al_rows_sha256": "8a8dc3ce62c0b8d5ec0d1d92470fba5085f05f6c07bff4a2d9fe3dc21052dcee",
+        "human_val_hemel_rows_sha256": "a25038b00baa0088927fc94cbbbddabfa87246c057f9e4731cf80d98a81ec039"
+      },
+      "registry_sha256": "1b4789b59a5861e616f8fd12a50f377adac761061158680f75d6965749011b3a",
+      "drift_results": "Changed manifest bytes, train-list bytes, and referenced row bytes each caused build_pack to refuse before output. Individually injected mismatches for all six fields refused 6/6.",
+      "evidence": [
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:128-140",
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:698-806",
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:1156-1160"
+      ]
+    }
+  ],
+  "SPOT_CHECK": {
+    "regeneration": "13/13 outputs byte-identical using a no-write in-memory regeneration against live inputs.",
+    "planned_pseudo_rows": 7200,
+    "source_families": 18,
+    "maximum_rows_per_source": 400,
+    "maximum_venue_family_rows": 800,
+    "maximum_venue_family_fraction": 0.111111111111,
+    "family_fraction_cap": 0.15,
+    "anchor_rows": 1066,
+    "od8al_validation_rows": 2183,
+    "hemel_validation_rows": 4242,
+    "mixed_exposures": 14400,
+    "anchor_pseudo_ratio": "1:1",
+    "artifact_hashes": {
+      "artifact_index": "83b5c0221ba2900d3045f27d78b12ca1a6df9e505550ee11c89a6dc26cfbaba7",
+      "pack_manifest": "9b44f4de310d86c38bd839827d5c56248b1e12c2f929b50af4db290a1c048bd1",
+      "decode_plan": "3cae3fdbfe167e2e997f89e8a58ab3bfec9e6db28a3206c712c1d0417acd6067",
+      "interleave_plan": "d79904c3986fdcfaeaa5c599ac7b07e10e49424f8f67fa9f4fedf6c569e65ae2"
+    }
+  },
+  "GPU_DISPATCH_DECISION": {
+    "decision": "CONDITIONAL_GO",
+    "teacher_inference": "GO_AFTER_ON_VM_PRECONDITIONS_PASS",
+    "mixed_retrain": "HOLD_UNTIL_TEACHER_MATERIALIZATION_AND_FINAL_LIST_VALIDATOR_PASS",
+    "on_vm_preconditions": [
+      "Transfer the exact reviewed working-tree bytes; normal git sync is insufficient because the builder and tests are untracked and lane/P1 artifacts are ignored.",
+      "Verify validator SHA 0304a352f18fef0c58d4a17dee216077c880137a3fe05b43c618808ec34ab68a and the artifact-index, pack, decode-plan, interleave, and six closed-P1 hashes above.",
+      "SHA-verify all 18 source videos, reject unsafe or escaping resolved paths, and verify actual decode counts and PTS cover every frozen frame index.",
+      "Verify YOLO26m SHA 401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7.",
+      "Record Ultralytics, CUDA, decoder, image size, seed, and resolved default NMS configuration.",
+      "Run person class 0 only at confidence >=0.60 with no geometry filter or four-player cap; do not reuse run_yolo26_teacher.py unchanged.",
+      "Materialize exactly 7200 candidate frames, retaining confidence for every detection and an explicit zero-detection state.",
+      "Materialize the exact 14400-entry 1:1 mixed list and run the SHA-pinned manifest validator successfully before creating data.yaml.",
+      "Preregister identical control/candidate initialization, image size, epochs, optimizer, augmentations, seeds, exposure budget, and scorer.",
+      "Require aggregate F1 and mAP50 deltas greater than zero and both deltas non-negative for each held-out family."
+    ],
+    "promotion_posture": "VERIFIED=0, do_not_promote, experiment-only, and unresolved licensing remain binding regardless of outcome."
+  },
+  "REVIEW_LIMITATIONS": [
+    "No GPU inference or retraining was performed.",
+    "The read-only sandbox prohibited temporary filesystem mutation; regeneration used an in-memory write sink and drift was injected through the real hashing/build refusal paths.",
+    "No repository files were modified."
+  ]
+}

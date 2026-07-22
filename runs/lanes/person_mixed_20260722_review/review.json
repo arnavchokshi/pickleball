@@ -1,0 +1,128 @@
+{
+  "VERDICT": "REJECT",
+  "VERIFIED": 0,
+  "SUMMARY": "The real plan, hashes, caps, determinism, teacher identity, caveat, bars, licensing record, and decode honesty check out. Rejection is required because three explicit hard rules are not structurally enforced.",
+  "CRITERIA": [
+    {
+      "criterion": "Structural quarantine",
+      "status": "FAIL",
+      "evidence": [
+        "All three compare-only media SHAs were accepted when paired with permitted pb.vision ID 0tmdeghtfvjx.",
+        "Percent-encoded aliases bypassed all four protected clip names, all three compare-only IDs, and IYnbdRs1Jdk.",
+        "The loader trusts an ignored pb.vision manifest's ID-to-SHA association."
+      ],
+      "code": [
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:148-177",
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:332-380"
+      ]
+    },
+    {
+      "criterion": "Pseudo never enters validation structurally",
+      "status": "FAIL",
+      "evidence": [
+        "Same media/frame content under different sample IDs passed assert_no_pseudo_in_validation.",
+        "_validation_rows rewrote injected teacher_derived=true, ground_truth=false provenance into teacher_derived=false, ground_truth=true and roboflow_human_annotation.",
+        "The future GPU materialization barrier is prose metadata, not an executable final-list validator."
+      ],
+      "code": [
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:605-642",
+        "scripts/racketsport/build_person_mixed_pseudo_pack.py:1060-1074"
+      ]
+    },
+    {
+      "criterion": "Closed-P1 anchor and validation fidelity",
+      "status": "FAIL",
+      "current_bytes": "MATCH",
+      "structural_binding": "MISSING",
+      "evidence": {
+        "closed_manifest_sha256": "0803d1bab92fb8f501086090bdcda57aee5a689f14080457182ed20b20cded60",
+        "closed_train_list_sha256": "954a704aaf1e5c12d7dc1bb972609d048bc16763386139b92607622382918116",
+        "closed_train_rows_sha256": "61b39fe2cf1320848236c092fd30a382b2670abed3d69b6454ff66b83d23529e",
+        "anchor_rows_sha256": "1046db282dcc22de6d85a8706220b56d41fca8db27caa9d0518a9eeeee0dd3a9",
+        "od8al_rows_sha256": "8a8dc3ce62c0b8d5ec0d1d92470fba5085f05f6c07bff4a2d9fe3dc21052dcee",
+        "hemel_rows_sha256": "a25038b00baa0088927fc94cbbbddabfa87246c057f9e4731cf80d98a81ec039",
+        "problem": "These exactly match the live P1 directory, but P1 dataset_manifest.json and train_family_balanced.txt are ignored/untracked. No committed authoritative manifest pins these six values, and load_closed_p1 accepts and newly fingerprints any structurally similar replacement."
+      },
+      "code": "scripts/racketsport/build_person_mixed_pseudo_pack.py:526-602"
+    },
+    {
+      "criterion": "Real-plan caps",
+      "status": "PASS",
+      "result": "7,200 unique candidates, 18 source families, exactly 400/source; maximum venue family is Rich Pickleball at 800/7,200 = 11.111%, below 15%."
+    },
+    {
+      "criterion": "Teacher constants and overrides",
+      "status": "PASS",
+      "result": "YOLO26m person class 0, confidence 0.60, Ultralytics default NMS, checkpoint SHA 401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7 matching committed models/MANIFEST.json. Protocol overrides mark the pack non-production."
+    },
+    {
+      "criterion": "Determinism",
+      "status": "PASS",
+      "result": "No-write regeneration produced all 13 outputs byte-identical to the existing pack. All 12 artifact-index hashes and sizes matched."
+    },
+    {
+      "criterion": "Blind-spot caveat and experiment bars",
+      "status": "PASS",
+      "result": "The manifest contains verbatim: teacher misses become background holes in pseudo frames. Aggregate F1 and mAP50 deltas must both be positive, with both metrics non-negative for each held-out family."
+    },
+    {
+      "criterion": "Decode-plan honesty",
+      "status": "PASS",
+      "result": "All 7,200 rows are explicitly GPU-required candidates with teacher_conf=null. pseudo_train.txt, mixed_train.txt, and data.yaml are absent. report.json correctly calls the objective PARTIAL and does not claim materialized labels."
+    },
+    {
+      "criterion": "Harvest license recording",
+      "status": "PASS",
+      "result": "All eight harvest rows record license_field=null, owner_directed_experiment_only_source_license_unresolved, production_eligible=false, and exclusion from validation/evaluation/promotion."
+    }
+  ],
+  "ADDITIONAL_FINDING": {
+    "severity": "MEDIUM",
+    "finding": "The allocator initially caps source_family_id and later trims shared venue families without redistribution. A feasible 6,000-row override case returns 5,880. The frozen real 7,200-row plan is unaffected."
+  },
+  "REPORT_CORRECTION": "report.json overclaims that quarantine exclusions fail closed and that pseudo-validation isolation is structural. The current artifacts are segregated, but the negative-input guarantees are false.",
+  "TEST_EVIDENCE": {
+    "fresh_targeted_pytest": "17 passed, 6 deselected",
+    "fresh_negative_probes": "Compare-SHA aliases, encoded aliases, renamed-content validation, and provenance-rewrite probes failed the claimed guarantees.",
+    "fresh_no_write_regeneration": "13/13 outputs matched existing bytes",
+    "stored_wide_junit": "4,341 tests; 4,286 passed; 30 failed; 25 skipped; 0 errors",
+    "artifact_hashes": {
+      "pack_manifest": "292dafed931c24af53b89554b3d024f7fe4a5176da79383177108ad026f872a8",
+      "decode_plan": "3cae3fdbfe167e2e997f89e8a58ab3bfec9e6db28a3206c712c1d0417acd6067",
+      "interleave_plan": "d79904c3986fdcfaeaa5c599ac7b07e10e49424f8f67fa9f4fedf6c569e65ae2"
+    },
+    "workspace_changes": "None"
+  },
+  "GPU_DISPATCH_DECISION": {
+    "decision": "HOLD",
+    "allowed_now": [
+      "Non-GPU staging and hash-only verification"
+    ],
+    "blocked_now": [
+      "Teacher inference",
+      "Pseudo-label materialization",
+      "Anchor-only or mixed retraining"
+    ],
+    "pre_dispatch_fixes": [
+      "Freeze permitted pb.vision ID-to-SHA pairs and deny all three compare-only SHAs.",
+      "Canonicalize identity and lineage using bounded repeated URL decoding plus Unicode normalization.",
+      "Content-collision-check decoded candidates against the four protected clips and three compare-only videos.",
+      "Commit an authoritative closed-P1 closure-hash manifest and fail closed against all six fidelity hashes.",
+      "Implement an executable materializer/final validator that derives validation only from the pinned P1 artifacts and rejects overlap by content hash, media lineage, and source family."
+    ],
+    "on_vm_preconditions_after_re_review": [
+      "Verify the reviewed pack, decode-plan and interleave SHAs before execution.",
+      "SHA-verify all 18 source videos; resolve paths, reject unsafe symlinks, and confirm every frozen frame index exists against actual decode counts and PTS.",
+      "Verify YOLO26m SHA 401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7.",
+      "Freeze and record Ultralytics, CUDA, decoder, image-size, seed and resolved NMS configuration.",
+      "Run person class 0 only at confidence >=0.60, with no geometric post-filter or four-player cap.",
+      "Do not reuse run_yolo26_teacher.py unchanged; its confidence 0.18, IoU 0.6, extra classes, geometry filters and player cap conflict with this protocol.",
+      "Record confidence per retained detection and an explicit zero-detection state for candidate frames.",
+      "Materialize exactly 7,200 candidate frames and the frozen 14,400-entry 1:1 interleave; generate a VM-local data.yaml only after all checks pass.",
+      "Recompute the six P1 hashes and rerun content/lineage-based pseudo-versus-validation isolation on final files.",
+      "Preregister identical control/candidate initialization, image size, epochs, optimizer, augmentations, seeds, exposure budget and scorer.",
+      "Require positive aggregate F1 and mAP50 deltas and non-negative deltas for both metrics on each held-out family.",
+      "Retain VERIFIED=0, do_not_promote and experiment-only licensing posture regardless of outcome."
+    ]
+  }
+}
