@@ -308,6 +308,43 @@ def test_load_real_court_keypoint_labels_reads_reviewed_full_15_point_labels(tmp
     assert row["label_status"] == "reviewed"
 
 
+def test_load_real_court_keypoint_labels_preserves_absolute_and_repo_relative_frame_dirs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    real_root = tmp_path / "real_corpus"
+    absolute_frames = tmp_path / "absolute_frames"
+    repo_relative_frames = Path("repo_relative_frames")
+    absolute_frames.mkdir()
+    repo_relative_frames.mkdir()
+    (absolute_frames / "frame_000002.jpg").write_bytes(b"absolute")
+    (repo_relative_frames / "frame_000002.jpg").write_bytes(b"repo-relative")
+
+    absolute_payload = _reviewed_court_keypoint_label_payload()
+    absolute_payload["frames"].update(
+        {"frame_dir": str(absolute_frames), "path_base": "repo_root"}
+    )
+    repo_relative_payload = _reviewed_court_keypoint_label_payload()
+    repo_relative_payload["frames"].update(
+        {"frame_dir": repo_relative_frames.as_posix(), "path_base": "repo_root"}
+    )
+    _write_json(real_root / "absolute_clip" / "labels" / "court_keypoints.json", absolute_payload)
+    _write_json(
+        real_root / "repo_relative_clip" / "labels" / "court_keypoints.json",
+        repo_relative_payload,
+    )
+
+    rows = {row["clip"]: row for row in load_real_court_keypoint_labels(real_root)}
+
+    assert Path(rows["absolute_clip"]["image_path"]).resolve() == (
+        absolute_frames / "frame_000002.jpg"
+    ).resolve()
+    assert Path(rows["repo_relative_clip"]["image_path"]).resolve() == (
+        repo_relative_frames / "frame_000002.jpg"
+    ).resolve()
+
+
 def test_load_real_court_keypoint_labels_reads_all_reviewed_items(tmp_path: Path) -> None:
     clip_root = tmp_path / "eval_clips" / "ball" / "clip_a"
     clip_root.mkdir(parents=True)

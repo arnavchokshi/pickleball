@@ -121,14 +121,19 @@ def _items(payload: dict[str, Any]) -> list[Any]:
     return items
 
 
-def _frame_dir(payload: dict[str, Any]) -> Path:
+def _frame_dir(payload: dict[str, Any], *, corpus_root: Path | None = None) -> Path:
     frames = payload.get("frames")
     if not isinstance(frames, dict):
         raise ValueError("frames block missing")
     frame_dir = frames.get("frame_dir")
     if not isinstance(frame_dir, str) or not frame_dir:
         raise ValueError("frames.frame_dir missing")
-    return Path(frame_dir)
+    path = Path(frame_dir)
+    if path.is_absolute():
+        return path
+    if frames.get("path_base") == "corpus_root" and corpus_root is not None:
+        return corpus_root / path
+    return path
 
 
 def _source_resolution(payload: dict[str, Any]) -> tuple[int, int] | None:
@@ -237,7 +242,7 @@ def load_real_court_keypoint_labels(root: Path) -> list[dict[str, Any]]:
     labels: list[dict[str, Any]] = []
     for path in sorted(root.glob("*/labels/court_keypoints.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
-        for row in court_keypoint_label_rows(payload, clip_root=path.parent.parent):
+        for row in court_keypoint_label_rows(payload, clip_root=path.parent.parent, corpus_root=root):
             row["clip"] = path.parent.parent.name
             labels.append(row)
     if not labels:
@@ -264,16 +269,39 @@ def _load_real_court_keypoint_labels_from_roots(real_root: Any) -> list[dict[str
     return labels
 
 
-def court_keypoint_label_rows(payload: dict[str, Any], *, clip_root: Path | None = None) -> list[dict[str, Any]]:
+def court_keypoint_label_rows(
+    payload: dict[str, Any],
+    *,
+    clip_root: Path | None = None,
+    corpus_root: Path | None = None,
+) -> list[dict[str, Any]]:
     items = _items(payload)
     _require_reviewed(payload, items=items)
-    return [_court_keypoint_label_row_from_item(payload, item, clip_root=clip_root) for item in items]
+    return [
+        _court_keypoint_label_row_from_item(
+            payload,
+            item,
+            clip_root=clip_root,
+            corpus_root=corpus_root,
+        )
+        for item in items
+    ]
 
 
-def court_keypoint_label_row(payload: dict[str, Any], *, clip_root: Path | None = None) -> dict[str, Any]:
+def court_keypoint_label_row(
+    payload: dict[str, Any],
+    *,
+    clip_root: Path | None = None,
+    corpus_root: Path | None = None,
+) -> dict[str, Any]:
     items = _items(payload)
     _require_reviewed(payload, items=items)
-    return _court_keypoint_label_row_from_item(payload, items[0], clip_root=clip_root)
+    return _court_keypoint_label_row_from_item(
+        payload,
+        items[0],
+        clip_root=clip_root,
+        corpus_root=corpus_root,
+    )
 
 
 def _court_keypoint_label_row_from_item(
@@ -281,6 +309,7 @@ def _court_keypoint_label_row_from_item(
     item: Any,
     *,
     clip_root: Path | None = None,
+    corpus_root: Path | None = None,
 ) -> dict[str, Any]:
     if not isinstance(item, dict):
         raise ValueError("court keypoint item must be an object")
@@ -303,7 +332,7 @@ def _court_keypoint_label_row_from_item(
             details.append(f"unexpected {', '.join(extra)}")
         raise ValueError("court keypoint labels must contain exactly the 15 canonical keypoints: " + "; ".join(details))
 
-    frame_dir = _frame_dir(payload)
+    frame_dir = _frame_dir(payload, corpus_root=corpus_root)
     source_size = _source_resolution(payload)
     label_size = _label_coordinate_space(payload)
     raw_keypoints: dict[str, list[float]] = {}
