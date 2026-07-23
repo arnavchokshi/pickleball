@@ -1,0 +1,206 @@
+{
+  "schema_version": 1,
+  "artifact_type": "trackE_methodrules_deciding_adversarial_review",
+  "review_date": "2026-07-22",
+  "verdict": "ADOPT_WITH_FIXES",
+  "commit_authorized_now": false,
+  "verified": false,
+  "VERIFIED": 0,
+  "review_snapshot": {
+    "branch": "main",
+    "head": "7cfa02258fbfb69ff3f43e10a62afcb46f12fb3b",
+    "skill_sha256": "df576d7674aeb51169192473cd0b6209a7dbe859bef93b81171619bb04c57ddd",
+    "skill_diff_numstat": "72 insertions, 18 deletions",
+    "named_negative_sha256": "86631182de70da5c17d6c63402d7abfd0a4f3ae66fca6982e23a476ca527cf03",
+    "lane_report_sha256": "cc53d82133888921e18df5ab2119199d637ce1f01004eeb582d0880c2356fdbf"
+  },
+  "summary": "All requested method-rule, dispatch, subagent, economy-tier, and named-negative content is present. The lane's 4432P/43F/25S record is honestly PARTIAL and iteration-only, and representative attribution checks are supported. The combined skill must not be committed yet because six internal governance contradictions make the instructions non-executable or weaker than the binding report schema.",
+  "required_fixes": [
+    {
+      "id": "F1_CURRENT_AUTHORITIES",
+      "severity": "HIGH",
+      "paths": [
+        ".claude/skills/run-lane/SKILL.md"
+      ],
+      "finding": "The skill still treats absent archived documents as active authorities: FABLE_OPERATING_MANUAL, BUILD_CHECKLIST, manual sections, and a task board. AGENTS.md and CLAUDE.md say the North Star is the sole product/current-truth authority and explicitly forbid reviving a build checklist or operating manual.",
+      "required_change": "Replace those references with NORTH_STAR_ROADMAP.md, AGENTS.md, the relevant RUNBOOK.md section, and runs/manager/inflight_lanes.md or gpu_fleet.md only for volatile coordination. Remove the dated BUILD_CHECKLIST deliverable requirement."
+    },
+    {
+      "id": "F2_DISPATCH_IS_NOT_SELF_CONSISTENT",
+      "severity": "HIGH",
+      "paths": [
+        ".claude/skills/run-lane/SKILL.md"
+      ],
+      "finding": "The canonical dispatch block hardcodes model_reasoning_effort=high even though xhigh is the default, contains no nohup/PID capture, and is followed by the unqualified instruction run_in_background: true even though long lanes are forbidden from harness background Bash tasks.",
+      "required_change": "Make the canonical/default command xhigh or use an explicit chosen-tier placeholder, add a concrete nohup-detached/PID/PPID command for long lanes, and remove or narrowly qualify run_in_background: true so it cannot select the killed-by-harness path."
+    },
+    {
+      "id": "F3_ATTRIBUTION_CANNOT_OVERRIDE_SCHEMA",
+      "severity": "HIGH",
+      "paths": [
+        ".claude/skills/run-lane/SKILL.md"
+      ],
+      "finding": "Rule 5 says attributed cross-lane noise never blocks acceptance, while the mandatory report rule and lane_report.schema.json reject objective_result=PASS whenever failed>0 and failures_all_preexisting=false. Ownership or a KNOWN_ATTRIBUTED label alone also does not prove causality; a lane can break an unowned test.",
+      "required_change": "State that ownership is a lead, not proof; require move-aside, clean-HEAD, or independently evidenced equivalent reproduction for nonblocking certification. Preserve lane-level acceptance rows if useful, but require objective_result=PARTIAL/BLOCKED whenever the schema's pre-existing-failure condition is unmet."
+    },
+    {
+      "id": "F4_COMMIT_AND_IMMUTABILITY_PHASES",
+      "severity": "HIGH",
+      "paths": [
+        ".claude/skills/run-lane/SKILL.md"
+      ],
+      "finding": "Every generated lane spec says no branches/commits, but SUBAGENT OPS says a worktree subagent MUST git add and commit as one preservation option. Rule 6 simultaneously requires a commit-pinned promotion suite, which cannot contain an uncommitted pre-review candidate.",
+      "required_change": "Declare the phase boundary and exception explicitly: no lane/subagent commit unless its spec authorizes one; under the default no-commit policy the parent-copy-before-complete path is mandatory. Promotion-grade testing occurs on the integration commit or on an explicitly authorized temporary immutable commit; precommit shared-tree results remain iteration-only."
+    },
+    {
+      "id": "F5_SALVAGE_MUST_END_IN_REPORT_JSON",
+      "severity": "MEDIUM",
+      "paths": [
+        ".claude/skills/run-lane/SKILL.md"
+      ],
+      "finding": "The skill says Fable rules only on report.json, but SALVAGED_VERDICT.md is described as a salvageable verdict without requiring a schema-valid report to be produced.",
+      "required_change": "Define SALVAGED_VERDICT.md as provenance input only; require the countersigning coordinator to emit or replace report.json with a schema-valid salvaged report before any ruling."
+    },
+    {
+      "id": "F6_FINAL_REPORT_SUPERSESSION_NOTE",
+      "severity": "MEDIUM",
+      "paths": [
+        "runs/lanes/trackE_methodrules_20260722/report.json"
+      ],
+      "finding": "The lane-authored report honestly records its own +40/0 slice, but the commit candidate is now the combined +72/-18 artifact and the report still directs an ultra review. The owner-provided attribution explains the later coordination edits, but the report does not.",
+      "required_change": "Keep the historical lane attribution, add a post-lane coordination/supersession note naming the NORMAL/xhigh, timeout/salvage, and subagent blocks, record the current combined diff separately, and change the next-review tier to xhigh. Do not silently rewrite the historical spec."
+    }
+  ],
+  "required_content": [
+    {
+      "item": "Six standing method rules",
+      "result": "PASS",
+      "evidence": ".claude/skills/run-lane/SKILL.md:45-77"
+    },
+    {
+      "item": "Nohup/PID, PPID, >120s wrapper, and SALVAGED_VERDICT text",
+      "result": "PASS_CONTENT_PRESENT",
+      "evidence": ".claude/skills/run-lane/SKILL.md:114-125"
+    },
+    {
+      "item": "SUBAGENT OPS isolation, artifact preservation, and respawn semantics",
+      "result": "PASS_CONTENT_PRESENT",
+      "evidence": ".claude/skills/run-lane/SKILL.md:127-135"
+    },
+    {
+      "item": "NORMAL-only speed and economy tier ladder",
+      "result": "PASS_CONTENT_PRESENT",
+      "evidence": ".claude/skills/run-lane/SKILL.md:138-157"
+    },
+    {
+      "item": "No stale ordinary-review ultra mandate inside final SKILL.md",
+      "result": "PASS",
+      "evidence": "Standard reviews are xhigh and only blast-radius reviews are ultra at lines 150-157."
+    }
+  ],
+  "named_negative_fidelity": {
+    "result": "PASS",
+    "facts": [
+      "13.5x gradient-update ratio present; 14400/1066=13.5084",
+      "6.75x human-anchor ratio present; 7200/1066=6.7542",
+      "1066 and 14400 list sizes present as 1,066 and 14,400",
+      "21320 and 288000 total exposures present as 21,320 and 288,000",
+      "signed od8al precision -0.1924 present",
+      "signed od8al F1 -0.0842 present",
+      "signed hemel F1 +0.0460 present"
+    ],
+    "evidence": [
+      "runs/lanes/person_mixed_20260722/NAMED_NEGATIVE.md:7-19",
+      "runs/lanes/person_mixed_20260722/gpu_phase_report.json:73-115",
+      "runs/handoff_20260722/ORCHESTRATOR_STATE.md:292-324"
+    ]
+  },
+  "lane_delivery": {
+    "result": "PASS_WITH_HONEST_PARTIAL_REPORT",
+    "details": [
+      "Original rules 1-4 and NAMED_NEGATIVE.md are present.",
+      "PPID, rule 5, rule 6, >120s wrapper, and SALVAGED_VERDICT addenda are present in the final skill.",
+      "The lane report is schema-shaped, says PARTIAL, leaves failures_all_preexisting=false, and labels the shared-tree suite ITERATION EVIDENCE ONLY.",
+      "Later tier/subagent/long-command coordination edits are owner-attributed and were reviewed as part of the combined skill."
+    ]
+  },
+  "wide_suite_record_review": {
+    "rerun": false,
+    "reason": "Explicitly prohibited by the review spec.",
+    "recorded": {
+      "passed": 4432,
+      "failed": 43,
+      "skipped": 25,
+      "failure_cases_parsed_from_junit": 43,
+      "evidence_grade": "ITERATION_ONLY",
+      "failures_all_preexisting": false,
+      "run_time_head": "c4ea0bce59b33193ff76eade232d07614b79667b"
+    },
+    "set_logic": "Baseline had 33 failures; 32 node IDs persisted, 11 were added, and 1 disappeared, yielding 43. The shared worktree also collected 119 additional tests.",
+    "spot_checks": [
+      {
+        "node": "tests.racketsport.test_best_stack_manifest::test_best_stack_manifest_integrity",
+        "observed": "revision 15 versus expected 14",
+        "attribution": "Track C spec owns configs/racketsport/best_stack.json and the live diff performs revision 14 to 15.",
+        "result": "SUPPORTED"
+      },
+      {
+        "node": "tests.racketsport.test_measure_audio_event_alignment::test_direct_cli_refuses_compare_only_id_before_path_access",
+        "observed": "old expected refusal wording versus registry-refusal wording",
+        "attribution": "ball_audio_ttcal_20260722 owns both the CLI and test module.",
+        "result": "SUPPORTED"
+      },
+      {
+        "node": "tests.racketsport.test_train_court_model_v2::test_train_court_model_v2_cli_cpu_smoke_beats_random_init",
+        "observed": "subprocess timed out at 540 seconds",
+        "attribution": "The independent trackE_datadebt_20260722 full-suite report records the same runtime-sensitive node; method-rules files cannot enter this code path.",
+        "result": "SUPPORTED_AS_CROSS_LANE_RUNTIME_NOISE_NOT_PROVEN_AT_HEAD"
+      },
+      {
+        "node": "tests.racketsport.test_ball_arc_solver::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds",
+        "observed": "artifact status degraded versus ran",
+        "attribution": "The independent trackE_datadebt_20260722 full-suite report records the same node; no method-rules owned file enters BALL code.",
+        "result": "SUPPORTED_AS_CROSS_LANE_RUNTIME_NOISE_NOT_PROVEN_AT_HEAD"
+      }
+    ]
+  },
+  "scope_fence": {
+    "result": "PASS_FOR_SURVIVING_WORKTREE_ATTRIBUTION",
+    "details": "The only tracked current diff inside the lane's fence is .claude/skills/run-lane/SKILL.md. NAMED_NEGATIVE.md and the lane directory are ignored run artifacts but exist inside the declared fence. inflight_lanes.md assigns those substantive paths solely to trackE_methodrules, while other tracked diffs belong to named concurrent lanes or manager coordination. This is strong surviving-diff evidence, not cryptographic actor provenance in a shared dirty checkout."
+  },
+  "commit": {
+    "authorized": false,
+    "condition": "Apply F1-F6 and obtain a bounded rereview of the final hashes. No wide-suite rerun is requested for these governance-only fixes.",
+    "exact_commit_file_list_after_fixes": [
+      ".claude/skills/run-lane/SKILL.md",
+      "runs/lanes/person_mixed_20260722/NAMED_NEGATIVE.md",
+      "runs/lanes/trackE_methodrules_20260722/spec.md",
+      "runs/lanes/trackE_methodrules_20260722/RESUME_BRIEF.md",
+      "runs/lanes/trackE_methodrules_20260722/junit_failure_set_diff.json",
+      "runs/lanes/trackE_methodrules_20260722/wide_suite_attribution.json",
+      "runs/lanes/trackE_methodrules_20260722/report.json",
+      "runs/lanes/trackE_methodrules_review_20260722/spec.md",
+      "runs/lanes/trackE_methodrules_review_20260722/review.json",
+      "runs/lanes/trackE_methodrules_review_20260722/findings.md",
+      "runs/lanes/trackE_methodrules_review_20260722/report.json"
+    ],
+    "explicitly_excluded": [
+      "runs/lanes/trackE_methodrules_20260722/RESUME.md",
+      "runs/lanes/trackE_methodrules_20260722/codex.pid",
+      "runs/lanes/trackE_methodrules_20260722/log.txt",
+      "runs/lanes/trackE_methodrules_20260722/log_resume.txt",
+      "runs/lanes/trackE_methodrules_20260722/log_resume2.txt",
+      "runs/lanes/trackE_methodrules_20260722/log_resume3.txt",
+      "runs/lanes/trackE_methodrules_20260722/wide.junit.xml",
+      "runs/lanes/trackE_methodrules_20260722/wide_postchange.junit.xml",
+      "runs/lanes/trackE_methodrules_review_20260722/codex.pid",
+      "runs/lanes/trackE_methodrules_review_20260722/log.txt",
+      "runs/lanes/trackE_methodrules_review_20260722/log2.txt"
+    ]
+  },
+  "honest_issues": [
+    "The wide suite remains red and was not rerun; its 43 failures are iteration evidence, not proof at clean HEAD.",
+    "The shared checkout is broadly dirty, so final-path attribution cannot prove historical process authorship.",
+    "VERIFIED=0 remains binding; this governance review does not promote a product capability."
+  ]
+}

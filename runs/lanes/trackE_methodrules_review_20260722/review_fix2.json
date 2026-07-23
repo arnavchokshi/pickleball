@@ -1,0 +1,101 @@
+{
+  "review": "trackE_methodrules_review_20260722 bounded final re-review",
+  "reviewed_at": "2026-07-22",
+  "verdict": "ADOPT_COMMIT",
+  "commit_authorized": true,
+  "VERIFIED": 0,
+  "reviewed_head": "7cfa02258fbfb69ff3f43e10a62afcb46f12fb3b",
+  "reviewed_snapshot": {
+    ".claude/skills/run-lane/SKILL.md": {
+      "sha256": "cda6295d97ace988f6d14be6e5beec2b1941fbf6b23fe3d8e075c712ea4822f4",
+      "diff_vs_head": "+122/-34"
+    },
+    "runs/lanes/trackE_methodrules_20260722/SUPERSESSION_NOTE.md": {
+      "sha256": "7232ea02b9d001bbbbb200cf2eaa5c83d60de7368f8470d476dd5235626070e3"
+    }
+  },
+  "scope": "Round 3 current-hash-only verification of F1, F2, F6, and F7. Previously passed items and the wide-suite attribution record were not reopened.",
+  "residual_verification": [
+    {
+      "id": "F1",
+      "verdict": "PASS",
+      "evidence": [
+        "SKILL.md:8-15 contains no undefined numbered-section reference.",
+        "SKILL.md:83-88 names NORTH_STAR_ROADMAP.md, AGENTS.md, the relevant RUNBOOK.md section, and runs/manager/inflight_lanes.md as the hard-rules reading set.",
+        "A current-file search found no FABLE_OPERATING_MANUAL, BUILD_CHECKLIST, task-board, or numbered-section authority reference."
+      ]
+    },
+    {
+      "id": "F2",
+      "verdict": "PASS",
+      "evidence": [
+        "SKILL.md:113-123 uses the shell-safe assignment TIER=xhigh and expands it into model_reasoning_effort.",
+        "The exact dispatch block passed zsh -n after substituting only the pre-existing <short-name> token.",
+        "SKILL.md:125-127 moves the PPID assertion to a SEPARATE later shell and explicitly explains that reparenting occurs after the launcher exits.",
+        "A controlled nohup/disown launcher-exit probe independently observed os.getppid()=1 in the detached child."
+      ]
+    },
+    {
+      "id": "F6",
+      "verdict": "PASS",
+      "evidence": [
+        "SUPERSESSION_NOTE.md:11-12 records +122/-34 and SKILL.md sha256 cda6295d97ace988f6d14be6e5beec2b1941fbf6b23fe3d8e075c712ea4822f4; both match the current working-tree snapshot.",
+        "SUPERSESSION_NOTE.md:13-15 binds review.json, review_fix.json, and this final review_fix2 record while preserving the historical lane report unmodified."
+      ]
+    },
+    {
+      "id": "F7",
+      "verdict": "PASS",
+      "evidence": [
+        "SKILL.md:97-101 states objective_result enum PASS | BLOCKED | PARTIAL.",
+        "The same text reserves PASS/FAIL for acceptance-row verdicts, matching docs/racketsport/lane_report.schema.json."
+      ]
+    }
+  ],
+  "verdict_rationale": "All four Round 3 residuals are genuinely resolved on the recorded current hashes. No blocker remains within the bounded scope, so the combined governance artifact is approved for the exact amended whitelist below.",
+  "commit_whitelist_decision": {
+    "prior_count": 13,
+    "final_count": 14,
+    "decision": "AMENDED",
+    "reason": "Retain all 13 previously approved paths and add the required final Round 3 ruling, review_fix2.json. Omitting it would leave SUPERSESSION_NOTE.md pointing to an unpreserved binding review record.",
+    "exact_files": [
+      ".claude/skills/run-lane/SKILL.md",
+      "runs/lanes/person_mixed_20260722/NAMED_NEGATIVE.md",
+      "runs/lanes/trackE_methodrules_20260722/spec.md",
+      "runs/lanes/trackE_methodrules_20260722/RESUME_BRIEF.md",
+      "runs/lanes/trackE_methodrules_20260722/junit_failure_set_diff.json",
+      "runs/lanes/trackE_methodrules_20260722/wide_suite_attribution.json",
+      "runs/lanes/trackE_methodrules_20260722/report.json",
+      "runs/lanes/trackE_methodrules_20260722/SUPERSESSION_NOTE.md",
+      "runs/lanes/trackE_methodrules_review_20260722/spec.md",
+      "runs/lanes/trackE_methodrules_review_20260722/review.json",
+      "runs/lanes/trackE_methodrules_review_20260722/findings.md",
+      "runs/lanes/trackE_methodrules_review_20260722/review_fix.json",
+      "runs/lanes/trackE_methodrules_review_20260722/review_fix2.json",
+      "runs/lanes/trackE_methodrules_review_20260722/report.json"
+    ]
+  },
+  "excluded_from_commit": [
+    "All codex.pid files",
+    "All lane and review log files",
+    "runs/lanes/trackE_methodrules_20260722/RESUME.md",
+    "runs/lanes/trackE_methodrules_20260722/wide.junit.xml",
+    "runs/lanes/trackE_methodrules_20260722/wide_postchange.junit.xml",
+    "runs/manager/inflight_lanes.md",
+    "Every unrelated dirty-worktree path"
+  ],
+  "suite_record": {
+    "rerun": false,
+    "reason": "Round 3 explicitly prohibited a wide rerun and reopening previously passed attribution work.",
+    "recorded_passed": 4432,
+    "recorded_failed": 43,
+    "recorded_skipped": 25,
+    "failures_all_preexisting": false,
+    "evidence_grade": "ITERATION_ONLY"
+  },
+  "honest_issues": [
+    "The historical shared-working-tree suite remains red and iteration-only; this governance ruling is not promotion evidence.",
+    "The 13 run-directory paths in the final whitelist are ignored/untracked and require explicit force-add when Track E stages the commit.",
+    "VERIFIED=0 remains binding."
+  ]
+}

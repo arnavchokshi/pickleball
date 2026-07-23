@@ -1,0 +1,56 @@
+{
+  "convention": "STANDING ATTRIBUTION CONVENTION for concurrent-lane suite noise",
+  "suite": "runs/lanes/trackE_methodrules_20260722/wide_postchange.junit.xml",
+  "evidence_grade": "ITERATION_ONLY",
+  "promotion_grade": false,
+  "immutable_revision": false,
+  "head_sha_at_run_time": "c4ea0bce59b33193ff76eade232d07614b79667b",
+  "head_evidence": "The JUnit completed at 2026-07-22T15:24:08-0700; git reflog shows c4ea0bce59b33193ff76eade232d07614b79667b from 2026-07-22T10:24:04-0700 until the next commit at 2026-07-22T15:28:56-0700.",
+  "stability_note": "This shared-working-tree run is iteration evidence only under standing rule 6, not acceptance/promotion evidence.",
+  "owned_file_failures": [],
+  "attributed_failure_count": 43,
+  "unattributed_failures": [],
+  "certifications": [
+    {
+      "certification": "KNOWN_ATTRIBUTED(pre_change_baseline)",
+      "count": 32,
+      "method": "move-aside/JUnit-diff technique (2) in spirit",
+      "evidence": "The same node IDs fail in runs/lanes/trackE_methodrules_20260722/wide.junit.xml with this lane's additions absent."
+    },
+    {
+      "certification": "KNOWN_ATTRIBUTED(trkC_constraints_wire)",
+      "count": 7,
+      "method": "coordinator certification plus concurrent ownership",
+      "evidence": "runs/lanes/trkC_constraints_wire_20260722/spec.md owns configs/racketsport/best_stack.json, scripts/racketsport/process_video.py, threed/racketsport/player_selection.py, and tests/racketsport/test_player_selection.py.",
+      "failures": [
+        "tests.racketsport.test_best_stack_manifest::test_best_stack_manifest_integrity",
+        "tests.racketsport.test_placewire_trajectory_stage::test_stage_identity_covers_inputs_config_output_and_reuses_only_matching_generation",
+        "tests.racketsport.test_player_selection::test_enabled_cli_validates_tracks_and_publishes_interpolated_true",
+        "tests.racketsport.test_process_video::test_default_stage_order_runs_camera_motion_before_placement",
+        "tests.racketsport.test_rfdetr_tracking_runner::test_default_yolo_and_explicit_rfdetr_candidate_resolve_full_operating_points",
+        "tests.racketsport.test_spine_stage_contract::test_authoritative_graph_projects_exact_23_24_25_stage_contracts",
+        "tests.racketsport.test_truthful_capabilities::test_runbook_documents_current_process_video_entrypoint"
+      ]
+    },
+    {
+      "certification": "KNOWN_ATTRIBUTED(ball_audio_ttcal_20260722)",
+      "count": 1,
+      "method": "concurrent file ownership",
+      "evidence": "runs/lanes/ball_audio_ttcal_20260722/spec.md owns scripts/racketsport/measure_audio_event_alignment.py and its test module.",
+      "failures": [
+        "tests.racketsport.test_measure_audio_event_alignment::test_direct_cli_refuses_compare_only_id_before_path_access"
+      ]
+    },
+    {
+      "certification": "KNOWN_ATTRIBUTED(trackE_datadebt_20260722)",
+      "count": 3,
+      "method": "independent concurrent full-suite reproduction outside this lane's file fence",
+      "evidence": "runs/lanes/trackE_datadebt_20260722/report.json records the same three runtime-sensitive failures.",
+      "failures": [
+        "tests.racketsport.test_ball_arc_solver::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds",
+        "tests.racketsport.test_flight_simulator::test_generate_corpus_is_deterministic_and_fast_for_small_cpu_sample",
+        "tests.racketsport.test_train_court_model_v2::test_train_court_model_v2_cli_cpu_smoke_beats_random_init"
+      ]
+    }
+  ]
+}

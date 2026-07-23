@@ -1,0 +1,144 @@
+{
+  "review": "trackE_methodrules_review_20260722 fix verification",
+  "reviewed_at": "2026-07-22",
+  "verdict": "ADOPT_WITH_FIXES",
+  "reviewed_head": "7cfa02258fbfb69ff3f43e10a62afcb46f12fb3b",
+  "reviewed_snapshot": {
+    ".claude/skills/run-lane/SKILL.md": {
+      "sha256": "a8fd8425462b28e3ea6142dfed9ec97f668555a3fe1eb5d07499ae22d7fc9f38",
+      "diff_vs_head": "+114/-31"
+    },
+    "runs/lanes/trackE_methodrules_20260722/SUPERSESSION_NOTE.md": {
+      "sha256": "a01e91b716d21b357bdc120d6a1d834636a930e38aa53c5dea2b80babff023d5"
+    }
+  },
+  "scope": "Bounded post-fix review of the current combined SKILL.md text and SUPERSESSION_NOTE.md only. The wide suite was not rerun and prior named-negative/attribution findings were not reopened.",
+  "fix_verification": [
+    {
+      "id": "F1",
+      "verdict": "FAIL",
+      "evidence": [
+        "SKILL.md:9 still points to undefined section 1.",
+        "SKILL.md:14 still says GPU provisioning is per section 12, but this skill has no section 12 and the obsolete operating-manual authority was removed.",
+        "SKILL.md:83-84 names NORTH_STAR_ROADMAP.md and inflight_lanes.md but still omits AGENTS.md and the relevant RUNBOOK.md section required by F1."
+      ],
+      "required_fix": "Remove or replace the undefined section references and make the hard-rules reading set name NORTH_STAR_ROADMAP.md, AGENTS.md, the relevant RUNBOOK.md section, and manager coordination files only where applicable."
+    },
+    {
+      "id": "F2",
+      "verdict": "FAIL",
+      "evidence": [
+        "SKILL.md:115 uses the literal value <xhigh default | high mechanical | ultra blast-radius review>; zsh -n rejects the command with a parse error near >.",
+        "SKILL.md:120-121 runs the PID-1 assertion in the same shell that launched the process. A controlled zsh probe showed shell_pid=8736 and child_ppid=8736 after disown: disown removes job-table tracking but does not itself reparent a live child to PID 1."
+      ],
+      "required_fix": "Use a shell-safe selected-tier value and place the PPID check after the launcher shell has actually exited, or use a genuinely detaching launch mechanism whose example demonstrably yields PPID 1."
+    },
+    {
+      "id": "F3",
+      "verdict": "PASS",
+      "evidence": [
+        "SKILL.md:68-73 makes ownership a lead, requires causal evidence for nonblocking attribution, preserves PARTIAL/BLOCKED when failures are not proven pre-existing, and describes attribution as nonblocking for the ruling rather than erasing failures."
+      ],
+      "required_fix": null
+    },
+    {
+      "id": "F4",
+      "verdict": "PASS",
+      "evidence": [
+        "SKILL.md:146-155 requires worktree isolation at spawn, copy-out before completion under the default no-commit policy, explicit authority for in-worktree commits, and an integration or expressly authorized temporary immutable commit for promotion-grade suites."
+      ],
+      "required_fix": null
+    },
+    {
+      "id": "F5",
+      "verdict": "PASS",
+      "evidence": [
+        "SKILL.md:133-135 now makes SALVAGED_VERDICT.md provenance input only and requires the countersigning coordinator to emit schema-valid report.json before ruling."
+      ],
+      "required_fix": null
+    },
+    {
+      "id": "F6",
+      "verdict": "FAIL",
+      "evidence": [
+        "SUPERSESSION_NOTE.md:2-10 honestly supersedes the lane-authored +40/0 scope, attributes the later coordination additions, and changes the deciding review tier to xhigh.",
+        "The note does not provide the requested exact combined numstat. The current combined diff is +114/-31, materially different from both the historical +40/0 lane slice and the +72/-18 snapshot reviewed in round one.",
+        "The note points to review.json, not this final review_fix.json or the final SKILL.md snapshot hash."
+      ],
+      "required_fix": "Make the supersession record identify the final combined +114/-31 delta and bind or point to the final reviewed snapshot/review_fix record while preserving the historical lane report as historical evidence."
+    }
+  ],
+  "additional_findings": [
+    {
+      "id": "F7",
+      "severity": "HIGH",
+      "finding": "SKILL.md:97-99 instructs a mandatory structured report whose objective_result is PASS/FAIL, but docs/racketsport/lane_report.schema.json:9-12 permits PASS, BLOCKED, or PARTIAL and does not permit FAIL. This can directly produce schema-invalid reports.",
+      "required_fix": "State the exact objective_result enum PASS/BLOCKED/PARTIAL and reserve PASS/FAIL for individual acceptance-row verdicts."
+    }
+  ],
+  "coordinator_additions": [
+    {
+      "item": "contamination-adjacent lane standard",
+      "verdict": "PASS",
+      "evidence": "SKILL.md:91-94 adds a forbidden-path list, own-log self-audit output, and threshold provenance without weakening protected/judge fences."
+    },
+    {
+      "item": "log-sweep review obligation",
+      "verdict": "PASS",
+      "evidence": "SKILL.md:182-186 requires full-log protected/judge contact review and does not substitute diff-only inspection."
+    },
+    {
+      "item": "revert discipline",
+      "verdict": "PASS",
+      "evidence": "SKILL.md:157-160 requires a session-start dirty-state cross-check and STOP on pre-existing dirty targets, consistent with AGENTS.md preservation rules."
+    },
+    {
+      "item": "content-filter gotcha",
+      "verdict": "PASS",
+      "evidence": "SKILL.md:137-142 uses neutral data-integrity language and banks already verified context without instructing reviewers to suppress checks, evidence, or adverse findings."
+    },
+    {
+      "item": "NORMAL speed and economy ladder",
+      "verdict": "PASS",
+      "evidence": "SKILL.md:163-180 consistently makes xhigh the standard-review/default tier and confines ultra to blast-radius reviews; no remaining text mandates ultra for an ordinary lane."
+    }
+  ],
+  "suite_record": {
+    "rerun": false,
+    "reason": "The review spec explicitly prohibited rerunning the wide suite.",
+    "recorded_passed": 4432,
+    "recorded_failed": 43,
+    "recorded_skipped": 25,
+    "failures_all_preexisting": false,
+    "evidence_grade": "ITERATION_ONLY"
+  },
+  "required_fixes_before_commit": [
+    "Complete F1 by removing undefined section references and naming the full current authority set.",
+    "Complete F2 with a shell-valid tier selection and a truthful detached PPID example.",
+    "Complete F6 with the exact current combined delta and final snapshot/review binding.",
+    "Resolve F7's objective_result enum contradiction."
+  ],
+  "exact_commit_file_list_after_fixes_and_bounded_rereview": [
+    ".claude/skills/run-lane/SKILL.md",
+    "runs/lanes/person_mixed_20260722/NAMED_NEGATIVE.md",
+    "runs/lanes/trackE_methodrules_20260722/spec.md",
+    "runs/lanes/trackE_methodrules_20260722/RESUME_BRIEF.md",
+    "runs/lanes/trackE_methodrules_20260722/junit_failure_set_diff.json",
+    "runs/lanes/trackE_methodrules_20260722/wide_suite_attribution.json",
+    "runs/lanes/trackE_methodrules_20260722/report.json",
+    "runs/lanes/trackE_methodrules_20260722/SUPERSESSION_NOTE.md",
+    "runs/lanes/trackE_methodrules_review_20260722/spec.md",
+    "runs/lanes/trackE_methodrules_review_20260722/review.json",
+    "runs/lanes/trackE_methodrules_review_20260722/findings.md",
+    "runs/lanes/trackE_methodrules_review_20260722/review_fix.json",
+    "runs/lanes/trackE_methodrules_review_20260722/report.json"
+  ],
+  "excluded_from_commit": [
+    "All codex.pid files",
+    "All lane log files",
+    "runs/lanes/trackE_methodrules_20260722/RESUME.md",
+    "runs/lanes/trackE_methodrules_20260722/wide.junit.xml",
+    "runs/lanes/trackE_methodrules_20260722/wide_postchange.junit.xml",
+    "runs/manager/inflight_lanes.md and every unrelated dirty-worktree path"
+  ]
+}

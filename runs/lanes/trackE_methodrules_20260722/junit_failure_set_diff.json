@@ -1,0 +1,31 @@
+{
+  "baseline": {
+    "path": "runs/lanes/trackE_methodrules_20260722/wide.junit.xml",
+    "tests": 4381,
+    "failed": 33,
+    "skipped": 25
+  },
+  "postchange": {
+    "path": "runs/lanes/trackE_methodrules_20260722/wide_postchange.junit.xml",
+    "tests": 4500,
+    "failed": 43,
+    "skipped": 25
+  },
+  "identical_failure_sets": false,
+  "added_failures": [
+    "tests.racketsport.test_ball_arc_solver::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds",
+    "tests.racketsport.test_best_stack_manifest::test_best_stack_manifest_integrity",
+    "tests.racketsport.test_flight_simulator::test_generate_corpus_is_deterministic_and_fast_for_small_cpu_sample",
+    "tests.racketsport.test_measure_audio_event_alignment::test_direct_cli_refuses_compare_only_id_before_path_access",
+    "tests.racketsport.test_placewire_trajectory_stage::test_stage_identity_covers_inputs_config_output_and_reuses_only_matching_generation",
+    "tests.racketsport.test_player_selection::test_enabled_cli_validates_tracks_and_publishes_interpolated_true",
+    "tests.racketsport.test_process_video::test_default_stage_order_runs_camera_motion_before_placement",
+    "tests.racketsport.test_rfdetr_tracking_runner::test_default_yolo_and_explicit_rfdetr_candidate_resolve_full_operating_points",
+    "tests.racketsport.test_spine_stage_contract::test_authoritative_graph_projects_exact_23_24_25_stage_contracts",
+    "tests.racketsport.test_train_court_model_v2::test_train_court_model_v2_cli_cpu_smoke_beats_random_init",
+    "tests.racketsport.test_truthful_capabilities::test_runbook_documents_current_process_video_entrypoint"
+  ],
+  "removed_failures": [
+    "tests.racketsport.test_ball_stage2_training::test_pinned_head_harness_loads_actual_git_source_and_records_exact_compute"
+  ]
+}
