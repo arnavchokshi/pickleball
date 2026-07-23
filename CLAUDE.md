@@ -8,6 +8,9 @@ Read in this order before acting:
 3. The relevant `RUNBOOK.md` section for commands and actual runtime behavior.
 4. `runs/manager/inflight_lanes.md` and `runs/manager/gpu_fleet.md` only when
    coordinating live lanes or cloud workers.
+5. `DATA_INVENTORY.md` to see what training data exists on every lane and whether
+   it is used (generated from `runs/manager/data_ledger.json`; regenerate with
+   `scripts/racketsport/build_data_inventory.py` after any ledger change).
 
 Do not create or revive a separate master plan, build checklist, capability
 matrix, wave roadmap, operating manual, edge playbook, or technical blueprint.

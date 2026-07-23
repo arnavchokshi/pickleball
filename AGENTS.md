@@ -17,6 +17,7 @@
 |---|---|
 | Product goal, current truth, exact next order, and no-retry decisions | `NORTH_STAR_ROADMAP.md`. |
 | Repo rules and doc map | This file, then `README.md`. |
+| What data exists on each lane and whether it is used | `DATA_INVENTORY.md` (generated from `runs/manager/data_ledger.json`). |
 | Current pipeline run behavior | `RUNBOOK.md`, then `scripts/racketsport/process_video.py`. |
 | Selected runtime/model defaults | `configs/racketsport/best_stack.json`, `models/MANIFEST.json`, and `configs/`. |
 | Pipeline CLIs and orchestration helpers | `scripts/racketsport/`. |

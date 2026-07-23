@@ -43,6 +43,7 @@ isolated model campaign.
 | `models/MANIFEST.json` | Checkpoint/model manifest. Treat it as the weight registry. |
 | `configs/` | Runtime/tracker/remote configuration. |
 | `eval_clips/` | Small committed eval/label assets. Protected owner clips are eval-only unless code explicitly permits internal-val use. |
+| `DATA_INVENTORY.md` | Scannable per-lane inventory of every dataset and whether it is used. Generated from `runs/manager/data_ledger.json`. |
 | `docs/racketsport/` | JSON schemas and manifests only. Product direction lives only in the North Star. |
 | `runs/` | Generated evidence and experiment outputs. Usually ignored; cite paths carefully and never assume old runs are current. |
 
