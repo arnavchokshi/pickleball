@@ -680,7 +680,7 @@ test "$(wc -l < /tmp/trackD_ev2_owner_media.txt | tr -d ' ')" = 40
 while IFS= read -r media_path; do
   shasum -a 256 "$media_path"
 done < /tmp/trackD_ev2_owner_media.txt > /tmp/trackD_ev2_owner_media_SHA256SUMS
-tar -cf /tmp/trackD_ev2_owner_media.tar -T /tmp/trackD_ev2_owner_media.txt
+tar -cf /tmp/trackD_ev2_owner_media.tar --no-xattrs -T /tmp/trackD_ev2_owner_media.txt
 
 gcloud compute ssh "arnavchokshi@$INSTANCE" --project="$PROJECT" --zone="$ZONE" --command \
   'mkdir -p /home/arnavchokshi/pickleball/runs/lanes/abc_experiment_20260721/vm_pull_v2/abc_out_v2 /home/arnavchokshi/pickleball/runs/lanes/abc_experiment_20260721/vm_pull/abc_out /home/arnavchokshi/pickleball/runs/lanes/abc_experiment_20260721/vm_pull/inputs /home/arnavchokshi/pickleball/runs/lanes/ball_event_abc_20260720/inputs'
@@ -707,7 +707,7 @@ gcloud compute scp \
   /tmp/trackD_ev2_owner_media_SHA256SUMS \
   "arnavchokshi@$INSTANCE:/tmp/" --project="$PROJECT" --zone="$ZONE"
 gcloud compute ssh "arnavchokshi@$INSTANCE" --project="$PROJECT" --zone="$ZONE" --command \
-  'rm -rf /home/arnavchokshi/pickleball/data/online_harvest_20260706/rallies && tar -xf /tmp/trackD_ev2_owner_media.tar -C /home/arnavchokshi/pickleball && cd /home/arnavchokshi/pickleball && sha256sum -c /tmp/trackD_ev2_owner_media_SHA256SUMS && .venv/bin/python -c "from pathlib import Path; from scripts.racketsport.finetune_event_head import validate_registered_rate_media_inventory as v; r=v(Path(\"data/online_harvest_20260706/rallies\"), Path(\"runs/lanes/trackD_ev2_design_20260722/RATE_MEDIA_LOCK.json\"), \"79ecae3a6bb57af0b1d3a2548c05b0be70ac42600a50c22c2586752c111de5ee\"); assert len(r[\"train\"]) == 38 and len(r[\"validation\"]) == 2"'
+  'rm -rf /home/arnavchokshi/pickleball/data/online_harvest_20260706/rallies && tar -xf /tmp/trackD_ev2_owner_media.tar -C /home/arnavchokshi/pickleball && cd /home/arnavchokshi/pickleball && find data/online_harvest_20260706/rallies -name "._*" -delete && sha256sum -c /tmp/trackD_ev2_owner_media_SHA256SUMS && .venv/bin/python -c "from pathlib import Path; from scripts.racketsport.finetune_event_head import validate_registered_rate_media_inventory as v; r=v(Path(\"data/online_harvest_20260706/rallies\"), Path(\"runs/lanes/trackD_ev2_design_20260722/RATE_MEDIA_LOCK.json\"), \"79ecae3a6bb57af0b1d3a2548c05b0be70ac42600a50c22c2586752c111de5ee\"); assert len(r[\"train\"]) == 38 and len(r[\"validation\"]) == 2"'
 
 # Recreate the exact registered Stage-P absolute paths as symlinks to the shared
 # read-only cache and verify every source video against the UNCHANGED INPUT_LOCK pins.
