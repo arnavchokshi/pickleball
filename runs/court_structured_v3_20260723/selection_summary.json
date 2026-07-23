@@ -1,0 +1,89 @@
+{
+  "artifact_type": "court_structured_v3_checkpoint_selection",
+  "schema_version": 1,
+  "generated_at": "2026-07-23",
+  "repo_head_used_for_evaluation": "f73ec4f9fddea93e82c4d062ed81b914ca1db4a8",
+  "training_input": {
+    "asset_id": "roboflow_court_keypoints_adapted_20260723",
+    "reviewed_floor_rows": 264,
+    "non_null_floor_points": 3168,
+    "net_gradient": 0,
+    "input_gate_status": "PASS"
+  },
+  "evaluation": {
+    "dataset": "Task 88 human-reviewed holdout",
+    "sample_count": 6,
+    "labeled_floor_point_count": 71,
+    "semantic_matching": "exact_name_only",
+    "selection_order": [
+      "maximize structured PCK@5",
+      "minimize structured p95",
+      "minimize structured median"
+    ]
+  },
+  "results": [
+    {
+      "name": "baseline_epoch_0014",
+      "structured_pck_at_5px": 0.647887323943662,
+      "structured_pck_at_10px": 0.9154929577464789,
+      "structured_median_px": 3.937167155991696,
+      "structured_p95_px": 10.253705021231106
+    },
+    {
+      "name": "curated264_epoch_0001",
+      "structured_pck_at_5px": 0.6619718309859155,
+      "structured_pck_at_10px": 0.9295774647887324,
+      "structured_median_px": 3.9584727341458343,
+      "structured_p95_px": 11.091075587101056
+    },
+    {
+      "name": "curated264_epoch_0002",
+      "structured_pck_at_5px": 0.647887323943662,
+      "structured_pck_at_10px": 0.9436619718309859,
+      "structured_median_px": 4.126831164276462,
+      "structured_p95_px": 9.817510432674698
+    },
+    {
+      "name": "curated264_epoch_0003",
+      "structured_pck_at_5px": 0.6338028169014085,
+      "structured_pck_at_10px": 0.9295774647887324,
+      "structured_median_px": 4.005488461197064,
+      "structured_p95_px": 10.170680972909139
+    },
+    {
+      "name": "curated264_epoch_0004",
+      "structured_pck_at_5px": 0.5633802816901409,
+      "structured_pck_at_10px": 0.8309859154929577,
+      "structured_median_px": 4.578863803954958,
+      "structured_p95_px": 14.18385028280846
+    },
+    {
+      "name": "curated264_epoch_0005",
+      "structured_pck_at_5px": 0.6901408450704225,
+      "structured_pck_at_10px": 0.9154929577464789,
+      "structured_median_px": 3.9450041475933744,
+      "structured_p95_px": 10.599398775009515
+    },
+    {
+      "name": "curated264_epoch_0006",
+      "structured_pck_at_5px": 0.6901408450704225,
+      "structured_pck_at_10px": 0.9154929577464789,
+      "structured_median_px": 3.868393393312045,
+      "structured_p95_px": 10.218114970671461
+    }
+  ],
+  "winner": {
+    "name": "curated264_epoch_0006",
+    "checkpoint_sha256": "bba24725dc4c184f7c2ad42c2223391d4b76829716285030e913561da2a32aae",
+    "missing_prediction_count": 0,
+    "topology_valid_count": 6,
+    "topology_available_count": 6,
+    "boundary_polygon_self_intersection_count": 0,
+    "duplicate_or_collapse_pair_count": 0,
+    "authority_state": "review_only",
+    "measurement_valid": false,
+    "promotion_allowed": false,
+    "confidence_status": "uncalibrated_underconfident"
+  },
+  "decision": "Install and commit the best measured running method without treating the 0.95 goal as a commit blocker. Keep VERIFIED=0 and measurement authority fail-closed."
+}

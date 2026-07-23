@@ -1,0 +1,47 @@
+{
+  "artifact_type": "training_input_gate_proof",
+  "expires_at_utc": "2026-07-23T20:15:12Z",
+  "generated_at_utc": "2026-07-23T20:00:12Z",
+  "global_reasons": [],
+  "inputs": [
+    {
+      "actual_sha256": "34b833b7c52df20a7bfe6787f5e356f34c00f60ae08b7b45e971fc80ec1a3085",
+      "asset_id": "roboflow_court_keypoints_adapted_20260723",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "COURT",
+      "index": 0,
+      "input_bytes_read_for_integrity": true,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [],
+      "requested_path": "/home/arnavchokshi/pickleball_train/runs/lanes/roboflow_court_adapter_20260723/adapted_corpus",
+      "resolved_path": "/home/arnavchokshi/pickleball_train/runs/lanes/roboflow_court_adapter_20260723/adapted_corpus",
+      "sha256_kind": "directory_tree_v1",
+      "source_id": null,
+      "verdict": "PASS"
+    }
+  ],
+  "manifest_sha256s": {
+    "cache_manifest": null,
+    "data_ledger": "d37fb8d19757facb61cbb6690b9b67d8e1f84282c31f8d9c4a8c1e1277ee1671",
+    "training_inputs": "a9af00761f6c26c30ba6f33b384f974843ab59b75375a83611f0ae1d6ad3c635"
+  },
+  "proof_sha256": "8d50d2057ba1e8dac1f5e6de7646f71082345850e20315972916ae2bbc7a9fc4",
+  "repo_head_sha": "c445a29bd73b6c5a04e8015f88639aafccb9a5fd",
+  "repo_root": "/home/arnavchokshi/pickleball_train",
+  "schema_version": 1,
+  "source_manifests": {
+    "cache_manifest": null,
+    "data_ledger": {
+      "path": "/home/arnavchokshi/pickleball_train/runs/manager/data_ledger.json",
+      "sha256": "d37fb8d19757facb61cbb6690b9b67d8e1f84282c31f8d9c4a8c1e1277ee1671"
+    },
+    "training_inputs": {
+      "path": "/home/arnavchokshi/pickleball_train/runs/lanes/roboflow_court_adapter_20260723/curated_finetune_inputs.json",
+      "sha256": "a9af00761f6c26c30ba6f33b384f974843ab59b75375a83611f0ae1d6ad3c635"
+    }
+  },
+  "status": "PASS"
+}

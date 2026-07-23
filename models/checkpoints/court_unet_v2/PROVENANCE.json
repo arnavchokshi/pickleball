@@ -1,0 +1,36 @@
+{
+ "checkpoint": "court_model_v2.pt",
+ "sha256": "bba24725dc4c184f7c2ad42c2223391d4b76829716285030e913561da2a32aae",
+ "trained": "2026-07-23 A100 curated-264 fine-tune, seed 13, 6 epochs x 100 steps, warm-started from the prior epoch-14 real-plus-synthetic checkpoint",
+ "training_data": {
+  "reviewed_external_floor_rows": 264,
+  "non_null_floor_points": 3168,
+  "net_gradient": 0,
+  "synthetic_weight": 0.25,
+  "real_weight": 0.75,
+  "input_gate_status": "PASS"
+ },
+ "structured_task88_eval": {
+  "labeled_floor_points": 71,
+  "median_px": 3.868393393312045,
+  "p95_px": 10.218114970671461,
+  "pck_at_5px": 0.6901408450704225,
+  "pck_at_10px": 0.9154929577464789,
+  "missing_points": 0,
+  "topology_valid": "6/6",
+  "duplicate_or_collapsed_outputs": 0,
+  "baseline_pck_at_5px": 0.647887323943662,
+  "baseline_median_px": 3.937167155991696,
+  "baseline_p95_px": 10.253705021231106
+ },
+ "authority_state": "review_only",
+ "measurement_valid": false,
+ "confidence_status": "uncalibrated and intentionally underconfident; no authoritative confidence claim",
+ "verification": "Best measured running candidate is installed locally. The 0.95 product goal is not met; VERIFIED=0 remains binding for authority.",
+ "previous_checkpoint_backup": "court_model_v2_previous_cdf0555d.pt",
+ "source_artifacts": [
+  "runs/court_structured_v3_20260723/diagnostic_train/court_unet_v2_curated264_seed13/",
+  "runs/court_structured_v3_20260723/diagnostic_eval/curated264_task88/",
+  "runs/lanes/roboflow_court_adapter_20260723/curated_finetune_gate_proof_remote.json"
+ ]
+}
