@@ -1,0 +1,739 @@
+{
+  "lane": "trackE_fleetcache_20260722",
+  "built_at_utc": "2026-07-23T00:45:20Z",
+  "repo_head_sha": "e1e2184df5da667a5cc08b7a595515871bd74c62",
+  "checkpoints": [
+    {
+      "id": "yolo26m",
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/yolo26m.pt",
+      "status": "STAGED",
+      "reason": null,
+      "flags": [
+        "sha256_matches_manifest"
+      ],
+      "bytes": 44255705,
+      "sha256": "401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7",
+      "expected_sha256": "401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7"
+    },
+    {
+      "id": "wasb_tennis_bmvc2023",
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+      "status": "STAGED",
+      "reason": null,
+      "flags": [
+        "sha256_matches_manifest"
+      ],
+      "bytes": 6102633,
+      "sha256": "9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb",
+      "expected_sha256": "9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb"
+    },
+    {
+      "id": "osnet_x1_0_market1501",
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/osnet_x1_0_market1501.pt",
+      "status": "STAGED",
+      "reason": null,
+      "flags": [
+        "sha256_matches_manifest"
+      ],
+      "bytes": 10399605,
+      "sha256": "2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154",
+      "expected_sha256": "2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154"
+    },
+    {
+      "id": "rfdetr_large_2026",
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/rf-detr-large-2026.pth",
+      "status": "STAGED",
+      "reason": null,
+      "flags": [
+        "sha256_matches_manifest"
+      ],
+      "bytes": 135954129,
+      "sha256": "0f4e20e19a99c0f8a62b5685f57f6c8b5c371c59081feda6752a0561a79ccf38",
+      "expected_sha256": "0f4e20e19a99c0f8a62b5685f57f6c8b5c371c59081feda6752a0561a79ccf38"
+    },
+    {
+      "id": "ball_latest_seed_official_aug",
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/w7_ballretrain_20260709/vm_pull/arm3_finetunes/A_seed_official_aug/checkpoints/latest.pt",
+      "status": "STAGED",
+      "reason": null,
+      "flags": [],
+      "bytes": 16568698,
+      "sha256": "630a4f4206b114ce9a09a6153297bfeb8074623cf061f0d4f985dfa810ede5a9"
+    },
+    {
+      "id": "dinov2_vitl14_torchhub_fallback",
+      "path": "/cache/models/dinov2/dinov2_vitl14_state_dict.pt",
+      "bytes": 1217598782,
+      "sha256": "944c878253618f3c63ff759ac392b208e2044a0562da0d78ccc6c63a48bc96cf",
+      "source": "torch.hub.load('facebookresearch/dinov2','dinov2_vitl14',pretrained=True)",
+      "status": "STAGED",
+      "reason": null,
+      "flags": [
+        "VARIANT_ASSUMED",
+        "repo_names_no_dinov2_variant_explicitly"
+      ]
+    },
+    {
+      "id": "fast_sam_3d_body_dinov3",
+      "path": null,
+      "sha256_provenance_only": "b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf",
+      "source": "https://github.com/yangtiming/Fast-SAM-3D-Body plus facebook/sam-3d-body-dinov3 (Meta SAM-license-gated checkpoint)",
+      "status": "NOT_STAGED",
+      "reason": "GAP_NO_RECIPE: no in-repo fetch URL/script for the checkpoint weights themselves (only env-install + H100 local_path provenance)",
+      "flags": [
+        "GAP_NO_RECIPE"
+      ]
+    }
+  ],
+  "media": {
+    "pbvision": [
+      {
+        "id": "0tmdeghtfvjx",
+        "path": "/cache/media/pbvision/0tmdeghtfvjx/max.mp4",
+        "expected_sha256": "8b007124fa949defff85b11f70de5bf4c4c0e43ba64c085c7eded18f0041dfd1",
+        "bytes": 222315614,
+        "sha256": "8b007124fa949defff85b11f70de5bf4c4c0e43ba64c085c7eded18f0041dfd1",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "143sf3gdwxsa",
+        "path": "/cache/media/pbvision/143sf3gdwxsa/max.mp4",
+        "expected_sha256": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c",
+        "bytes": 152436118,
+        "sha256": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "83gyqyc10y8f",
+        "path": "/cache/media/pbvision/83gyqyc10y8f/max.mp4",
+        "expected_sha256": "272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383",
+        "bytes": 144970700,
+        "sha256": "5855cb92d4170e939bda322640cfd6a38b3b5aa4f3f7ad4abb897ab3f313ce7a",
+        "status": "QUARANTINED_SHA_MISMATCH",
+        "quarantine_rationale": "The cached 144970700-byte object does not match the canonical local 119911668-byte object or its recorded SHA-256. This compare-only object must not be consumed from cache until it is re-derived and matches the expected digest.",
+        "re_derivation": {
+          "source_url": "https://storage.googleapis.com/pbv-pro/83gyqyc10y8f/max.mp4",
+          "expected_sha256": "272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383"
+        },
+        "flags": [
+          "COMPARE_ONLY_NEVER_TRAIN",
+          "SHA256_MISMATCH",
+          "QUARANTINED_SHA_MISMATCH"
+        ]
+      },
+      {
+        "id": "98z43hspqz13",
+        "path": "/cache/media/pbvision/98z43hspqz13/max.mp4",
+        "expected_sha256": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f",
+        "bytes": 180321865,
+        "sha256": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "bewqc0glhgpq",
+        "path": "/cache/media/pbvision/bewqc0glhgpq/max.mp4",
+        "expected_sha256": "e6b73a38535aea5d3644c3a94091b3c5d261b6c2b60e5d80a21514ad502b69cf",
+        "bytes": 112184212,
+        "sha256": "e6b73a38535aea5d3644c3a94091b3c5d261b6c2b60e5d80a21514ad502b69cf",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "iottnc0h3ekn",
+        "path": "/cache/media/pbvision/iottnc0h3ekn/max.mp4",
+        "expected_sha256": "1f3109f5764c86bc36dffbd1613b3f98750df8088fd6d5191ee3037476b1587a",
+        "bytes": 203665387,
+        "sha256": "1f3109f5764c86bc36dffbd1613b3f98750df8088fd6d5191ee3037476b1587a",
+        "status": "STAGED",
+        "flags": [
+          "COMPARE_ONLY_NEVER_TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "o4dee9dn0ccr",
+        "path": "/cache/media/pbvision/o4dee9dn0ccr/max.mp4",
+        "expected_sha256": "21b82040d55fcc662665a45d1d5351cdc74793e2774f4083e6a9621fdd1a6dd1",
+        "bytes": 291958287,
+        "sha256": "21b82040d55fcc662665a45d1d5351cdc74793e2774f4083e6a9621fdd1a6dd1",
+        "status": "STAGED",
+        "flags": [
+          "COMPARE_ONLY_NEVER_TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "pldtjpw3h0jw",
+        "path": "/cache/media/pbvision/pldtjpw3h0jw/max.mp4",
+        "expected_sha256": "4d55d822c0b0bbaedbf27e16301b035beef2542df0b11b416b87f898ba8ff59c",
+        "bytes": 291343243,
+        "sha256": "4d55d822c0b0bbaedbf27e16301b035beef2542df0b11b416b87f898ba8ff59c",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "st0epgnab7dr",
+        "path": "/cache/media/pbvision/st0epgnab7dr/max.mp4",
+        "expected_sha256": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04",
+        "bytes": 271661642,
+        "sha256": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "td2szayjwtrj",
+        "path": "/cache/media/pbvision/td2szayjwtrj/max.mp4",
+        "expected_sha256": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79",
+        "bytes": 122096753,
+        "sha256": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "tqjlrcntpjvt",
+        "path": "/cache/media/pbvision/tqjlrcntpjvt/max.mp4",
+        "expected_sha256": "176cb66c13e2fa481839815c1dc41c063b2a0cc17758e75dd9c7f39627f31490",
+        "bytes": 305557352,
+        "sha256": "176cb66c13e2fa481839815c1dc41c063b2a0cc17758e75dd9c7f39627f31490",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "utasf5hnozwz",
+        "path": "/cache/media/pbvision/utasf5hnozwz/max.mp4",
+        "expected_sha256": "614580f5b3a2f634a76f5483e10b8c1f7919fd5affbd3ee86532a539f3f58197",
+        "bytes": 175476682,
+        "sha256": "614580f5b3a2f634a76f5483e10b8c1f7919fd5affbd3ee86532a539f3f58197",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "xkadsq9bli3h",
+        "path": "/cache/media/pbvision/xkadsq9bli3h/max.mp4",
+        "expected_sha256": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181",
+        "bytes": 61628656,
+        "sha256": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181",
+        "status": "STAGED",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ]
+      }
+    ],
+    "harvest": [
+      {
+        "id": "73VurrTKCZ8",
+        "path": "/cache/media/harvest/raw/73VurrTKCZ8.mp4",
+        "expected_sha256": "e0507678976d31fc04f196467a51bd73dd1bf522d921df915713ad6e7dbc28b7",
+        "bytes": 222783419,
+        "sha256": "e0507678976d31fc04f196467a51bd73dd1bf522d921df915713ad6e7dbc28b7",
+        "status": "STAGED",
+        "flags": [
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "Ezz6HDNHlnk",
+        "path": "/cache/media/harvest/raw/Ezz6HDNHlnk.mp4",
+        "expected_sha256": "03c82d9769b380dead2b6bd38e9f42bea04a83364c91673fa2ff737aeb71853e",
+        "bytes": 187656191,
+        "sha256": "03c82d9769b380dead2b6bd38e9f42bea04a83364c91673fa2ff737aeb71853e",
+        "status": "STAGED",
+        "flags": [
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "HyUqT7zFiwk",
+        "path": "/cache/media/harvest/raw/HyUqT7zFiwk.mp4",
+        "expected_sha256": "8679a62299d7a50684f04497a371acd4b0db0417a24bc2e59c9d5ec8cd485b4e",
+        "bytes": 244845173,
+        "sha256": "8679a62299d7a50684f04497a371acd4b0db0417a24bc2e59c9d5ec8cd485b4e",
+        "status": "STAGED",
+        "flags": [
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "_L0HVmAlCQI",
+        "path": "/cache/media/harvest/raw/_L0HVmAlCQI.mp4",
+        "expected_sha256": "9e454f99bfac00c56eca2bd339a585b9d2ba30c9a8b37868c9a28f49b0ac708a",
+        "bytes": 151173081,
+        "sha256": "9e454f99bfac00c56eca2bd339a585b9d2ba30c9a8b37868c9a28f49b0ac708a",
+        "status": "STAGED",
+        "flags": [
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "pwxNwFfYQlQ",
+        "path": "/cache/media/harvest/raw/pwxNwFfYQlQ.mp4",
+        "expected_sha256": "1fdd6419366d144858be3b1d9da24b073e5eafc495540f43e604f0bfb2e456c8",
+        "bytes": 134744808,
+        "sha256": "1fdd6419366d144858be3b1d9da24b073e5eafc495540f43e604f0bfb2e456c8",
+        "status": "STAGED",
+        "flags": [
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "vQhtz8l6VqU",
+        "path": "/cache/media/harvest/raw/vQhtz8l6VqU.mp4",
+        "expected_sha256": "f2b4e74b1fb23a3db5cce78f4563f8c466a6b6ed414366c527be1ae7df7ee426",
+        "bytes": 91448266,
+        "sha256": "f2b4e74b1fb23a3db5cce78f4563f8c466a6b6ed414366c527be1ae7df7ee426",
+        "status": "STAGED",
+        "flags": [
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "wBu8bC4OfUY",
+        "path": "/cache/media/harvest/raw/wBu8bC4OfUY.mp4",
+        "expected_sha256": "91758a50be32bd5e40ce46e45ef1222f0c56e9ab84fecdce72f65be37b760e7e",
+        "bytes": 192729206,
+        "sha256": "91758a50be32bd5e40ce46e45ef1222f0c56e9ab84fecdce72f65be37b760e7e",
+        "status": "STAGED",
+        "flags": [
+          "sha256_matches"
+        ]
+      },
+      {
+        "id": "zwCtH_i1_S4",
+        "path": "/cache/media/harvest/raw/zwCtH_i1_S4.mp4",
+        "expected_sha256": "9528b5d82606735e457bad1ba870fb31a6a61a31d94ccbd6e2103e19a6a5a445",
+        "bytes": 151931143,
+        "sha256": "9528b5d82606735e457bad1ba870fb31a6a61a31d94ccbd6e2103e19a6a5a445",
+        "status": "STAGED",
+        "flags": [
+          "sha256_matches"
+        ]
+      }
+    ],
+    "event_public_events": {
+      "jhong93_spot": [
+        {
+          "name": "usopen_2015_mens_final_federer_djokovic",
+          "yt_id": "634UMLDrVzc",
+          "status": "ok",
+          "size_bytes": 387713771,
+          "sha256": "bff417d4d1da34fbed73b3e32842eb8c9c108690fd3d5549df457bf2986b0cde",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2017_mens_round2_federer_youzhny",
+          "yt_id": "i8TAarlV4_Q",
+          "status": "ok",
+          "size_bytes": 725892625,
+          "sha256": "4e7d0fb8076ff86b9b7795eb95771c94f8ed1a22b5a3ffbba46f3378a6bf1a5e",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2019_mens_final_medvedev_nadal",
+          "yt_id": "ROaqNQ-12Js",
+          "status": "ok",
+          "size_bytes": 728686841,
+          "sha256": "cae44c0e8ab75f05ca0f82b055a959952395678d52427a4650e51ceb701e4c83",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2019_mens_round3_monfils_shapovalov",
+          "yt_id": "eumuWpLF8E4",
+          "status": "ok",
+          "size_bytes": 781370585,
+          "sha256": "70f2d4441a5e0f338ecdd00db23c53685648264471de71875790ec666871111f",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2019_womens_final_andreescu_williams",
+          "yt_id": "GCzsODijnqw",
+          "status": "ok",
+          "size_bytes": 285151803,
+          "sha256": "d0b76f007c46c93e283c58e4510b688028ededcbba4124a11a803c6b1b02005d",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2019_womens_osaka_gauff",
+          "yt_id": "v4IKkudrQtc",
+          "status": "ok",
+          "size_bytes": 173796783,
+          "sha256": "26a37ffe5cf3e536533abac917e63a31434e092ebe04812cce005bcfc42bb03f",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2019_womens_round1_williams_sharapova",
+          "yt_id": "63_e3G9Yf04",
+          "status": "ok",
+          "size_bytes": 125481246,
+          "sha256": "17ba45e92da250b1ab7263a90404b81e279a2b21c1ca9f81d56200d87eeeba79",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2020_mens_final_zverev_thiem",
+          "yt_id": "Mac4XI3ka5I",
+          "status": "ok",
+          "size_bytes": 506094952,
+          "sha256": "aac671ecec943acf08d693aadaf59cd6c4bf2ce3e386b6fe16dd1d972cf1476f",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2020_womens_final_osaka_azarenka",
+          "yt_id": "LVjO-dH0P6c",
+          "status": "ok",
+          "size_bytes": 335370849,
+          "sha256": "b773cad59d8f172c141cad5ccc6a0cb1332c4178e99e8993b9afe3df07326546",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2020_womens_quarterfinal_osaka_rogers",
+          "yt_id": "6NCDNdB43qU",
+          "status": "ok",
+          "size_bytes": 246888793,
+          "sha256": "a253ab9c71827e83d0dfa9dcbe84ab3cb5cb4a4958688f03f4ece332809bcac1",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2021_mens_final_medvedev_djokovic",
+          "yt_id": "yACtNdJaBso",
+          "status": "ok",
+          "size_bytes": 453708000,
+          "sha256": "7ea1adc58a5d03427ba4f519009608591ad77e74a01408c82d209f1f91a02729",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2021_mens_round1_murray_tsitsipas",
+          "yt_id": "34G0OeXzWio",
+          "status": "ok",
+          "size_bytes": 866501527,
+          "sha256": "1cade3ddbd8f6d190fba1d218bd34829459a556be35de57b9661b028fada5162",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2021_mens_semifinal_djokovic_zverev",
+          "yt_id": "_g1lEtQXtxE",
+          "status": "ok",
+          "size_bytes": 759975151,
+          "sha256": "5fe6891609f989945c9412fe7fbbc57ae360fa86b7986cafee9a9e269b967ac7",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2021_womens_final_raducanu_fernandez",
+          "yt_id": "F99Kz2eptqM",
+          "status": "ok",
+          "size_bytes": 244840151,
+          "sha256": "557237588ba3659a05167f6f27cc9bcc6d40826ff0cace151d32c70ba9d16ac2",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2021_womens_round4_sakkari_andreescu",
+          "yt_id": "JwwQL3rA59Y",
+          "status": "ok",
+          "size_bytes": 429648185,
+          "sha256": "711ce377169bc814d4f989805f7440d10edc90b5ff242b357c530449827e7af5",
+          "decode_verified": true
+        },
+        {
+          "name": "usopen_2021_womens_semifinal_raducanu_sakkari",
+          "yt_id": "Lg2_-XjjvyY",
+          "status": "ok",
+          "size_bytes": 156921524,
+          "sha256": "9077a7e78b78a5f5cd7830b0c840f6d149a8f30fc9625d0d91c072452d68cbdd",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2015_womens_quarterfinal_williams_azarenka",
+          "yt_id": "XK0uXbNUz_g",
+          "status": "ok",
+          "size_bytes": 421155199,
+          "sha256": "d5c59a641553e4a7ad03ba5f134361fa708c94e5ca2e97dadc45ecb003ac55da",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2017_womens_round2_konta_vekic",
+          "yt_id": "RXUl2lYAFAQ",
+          "status": "ok",
+          "size_bytes": 597839180,
+          "sha256": "e02cf14b1e6e3870f4b5bca2f1e5b033da1257677f3a17c3c455a8735b6f83d0",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2018_mens_quarterfinal_delpotro_nadal",
+          "yt_id": "S5LVbZUgM48",
+          "status": "ok",
+          "size_bytes": 712209891,
+          "sha256": "a185446e26458fd0612b51c9192b9fa7acfccee9f6e14a1cc2d43198b3dd3d25",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2018_mens_semifinal_djokovic_nadal",
+          "yt_id": "V96sSCV03ng",
+          "status": "ok",
+          "size_bytes": 863897654,
+          "sha256": "e08d3d615b4a8b4c16c0496e9b89ef9c65949517af66872c74a58ce2e75fc122",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2018_womens_quarterfinal_kerber_kasatkina",
+          "yt_id": "rR8PfwoyDeE",
+          "status": "ok",
+          "size_bytes": 348136103,
+          "sha256": "fea6bc2673c52262c5e1590124568d61efee244433e21c662d1984579722e4eb",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2018_womens_quarterfinal_williams_giorgi",
+          "yt_id": "EjqeygN7Tf0",
+          "status": "ok",
+          "size_bytes": 300227810,
+          "sha256": "2bc2cac4297778440d73264b0decc9cd0209c41ed46dae9e4cffee904e836212",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2019_mens_final_djokovic_federer",
+          "yt_id": "TUikJi0Qhhw",
+          "status": "ok",
+          "size_bytes": 748857774,
+          "sha256": "a902c737b3e35c96698c905ff1bfc4778955ad17ac73cbd3eed444338f404863",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2019_mens_round2_nadal_kyrgios",
+          "yt_id": "T4S5YmO0KOU",
+          "status": "ok",
+          "size_bytes": 462786401,
+          "sha256": "8304966a409fc8d15e2dcc95a9fc6710d5ad5334bbaee3e822c89c9c03c0a4e6",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2019_mens_semifinal_federer_nadal",
+          "yt_id": "wZnCcqm_g-E",
+          "status": "ok",
+          "size_bytes": 472725161,
+          "sha256": "c1ef45a22f058de81b4e7b35a0682da145f9248a3750756b7427947ece7bd06b",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2019_womens_final_halep_williams",
+          "yt_id": "fduc5bZx3ss",
+          "status": "ok",
+          "size_bytes": 146765994,
+          "sha256": "ae4acf9a042f9561b6d1b52f85e7bf409f3c07f63f47339c4941580993eb28c8",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2019_womens_gauff_hercog",
+          "yt_id": "zjX2sRXaGVk",
+          "status": "ok",
+          "size_bytes": 423329250,
+          "sha256": "bf2368cb9ea47c030c65c4f4fd9a84a6885d26fb7d6835924a9daa1348372526",
+          "decode_verified": true
+        },
+        {
+          "name": "wimbledon_2019_womens_round1_gauff_williams",
+          "yt_id": "RmctP3ffidY",
+          "status": "ok",
+          "size_bytes": 236149915,
+          "sha256": "cbdb15aa1e7b5c5d2c69b896e1feedc5772b782ec9db0de631bc042459f396f4",
+          "decode_verified": true
+        }
+      ],
+      "openttgames": [
+        {
+          "name": "game_1",
+          "status": "ok",
+          "raw_size_bytes": 5572649632,
+          "transcoded_size_bytes": 20813036,
+          "sha256": "c1a937743fef5a9649dda1cb1fd04dd018efcafd3c8674c1c342b01bc2523114",
+          "decode_verified": true
+        },
+        {
+          "name": "game_2",
+          "status": "ok",
+          "raw_size_bytes": 10833064677,
+          "transcoded_size_bytes": 39014881,
+          "sha256": "3861aecfa46bccbabab8921af7c0733010c7655565569569c1148fc864ce0fff",
+          "decode_verified": true
+        },
+        {
+          "name": "game_3",
+          "status": "ok",
+          "raw_size_bytes": 4637044123,
+          "transcoded_size_bytes": 13804677,
+          "sha256": "18662e37fa847f0010655c6a1cbb6b478f6528e9fb218a18916722db205ec415",
+          "decode_verified": true
+        },
+        {
+          "name": "game_4",
+          "status": "ok",
+          "raw_size_bytes": 3947371986,
+          "transcoded_size_bytes": 10376023,
+          "sha256": "da52388a0642c6b2a73a24b08ebd15d7ef800c92dfc75093115de8ab6b2616cb",
+          "decode_verified": true
+        },
+        {
+          "name": "game_5",
+          "status": "ok",
+          "raw_size_bytes": 4493632417,
+          "transcoded_size_bytes": 25494179,
+          "sha256": "3d21202040d02c3ce91c2da4a3e60e3614a14996c7fb880d7187e65252bbb55b",
+          "decode_verified": true
+        },
+        {
+          "name": "test_1",
+          "status": "ok",
+          "raw_size_bytes": 1050070368,
+          "transcoded_size_bytes": 2950246,
+          "sha256": "9382213b1dc79ff883a76f5417c3e35bab36dde2a697adf455a211454736df11",
+          "decode_verified": true
+        },
+        {
+          "name": "test_2",
+          "status": "ok",
+          "raw_size_bytes": 225118372,
+          "transcoded_size_bytes": 979422,
+          "sha256": "f47492cfc77952c8cd182a05347d09e3d36a658017e544c9f706deb6bab67acb",
+          "decode_verified": true
+        },
+        {
+          "name": "test_3",
+          "status": "ok",
+          "raw_size_bytes": 487941402,
+          "transcoded_size_bytes": 2217706,
+          "sha256": "b2113ac912dd43c0081f715caed4b8a85709069c377852af821e58ddbfd95cfc",
+          "decode_verified": true
+        },
+        {
+          "name": "test_4",
+          "status": "ok",
+          "raw_size_bytes": 2250582415,
+          "transcoded_size_bytes": 7959523,
+          "sha256": "0c26768f38a987d33374f600b30924957522bec965b9e34a44cd7b2a7d8ab970",
+          "decode_verified": true
+        },
+        {
+          "name": "test_5",
+          "status": "ok",
+          "raw_size_bytes": 720160846,
+          "transcoded_size_bytes": 2581898,
+          "sha256": "3085972457e2c06c0958995c0c6bb7bf3ad2d1a2c9a4e6bb101872feee9a9349",
+          "decode_verified": true
+        },
+        {
+          "name": "test_6",
+          "status": "ok",
+          "raw_size_bytes": 675731698,
+          "transcoded_size_bytes": 2440593,
+          "sha256": "02c6e73013003000b39164dda6b2fa1162c22ab97c53b192746d9fb2343cb4ee",
+          "decode_verified": true
+        },
+        {
+          "name": "test_7",
+          "status": "ok",
+          "raw_size_bytes": 488378737,
+          "transcoded_size_bytes": 2779008,
+          "sha256": "e0538f325c7b2f67099654f1e0153dcf43662099e6d458c20c93f4698121580c",
+          "decode_verified": true
+        }
+      ]
+    }
+  },
+  "corpora": {
+    "roboflow_universe_20260706": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/data/roboflow_universe_20260706",
+      "status": "STAGED",
+      "note": "pre-existing on boot snapshot/image; verified present, not re-copied to data disk",
+      "dataset_dir_count": 66
+    },
+    "roboflow_person_yolo_export": {
+      "path": "/cache/corpora/roboflow_person",
+      "status": "STAGED",
+      "source": "runs/lanes/person_p1_roboflow_20260721/roboflow_person (harvest disk)"
+    },
+    "person_mixed_pseudo_media_7200frames": {
+      "path": "/cache/corpora/person_mixed_pseudo_media",
+      "status": "STAGED",
+      "source": "runs/lanes/person_mixed_20260722/pseudo_media (harvest disk)"
+    },
+    "event_public_20260713_labels_rsync": {
+      "path": "/cache/media/public_events/event_public_20260713_labels",
+      "status": "STAGED",
+      "source": "Mac rsync (excluding jhong93_spot/videos_pilot/*.mp4 and openttgames/videos/*.mp4, refetched fresh instead)"
+    },
+    "pbvision_gallery_20260719": {
+      "path": "/cache/media/public_events/pbvision_gallery_20260719",
+      "status": "STAGED"
+    },
+    "pbvision_11min_20260713": {
+      "path": "/cache/media/public_events/pbvision_11min_20260713/source_video.mp4",
+      "status": "STAGED",
+      "flags": [
+        "EVAL_ONLY"
+      ]
+    }
+  },
+  "venv_packages": {
+    "venv_path": "/home/arnavchokshi/coldstart_20260706/body_runtime/body_venv (symlinked as repo .venv)",
+    "torch": {
+      "before": "2.5.1+cu124",
+      "after": "2.13.0+cu130"
+    },
+    "torchvision": {
+      "before": "0.20.1+cu124",
+      "after": "0.28.0+cu130"
+    },
+    "torchreid": {
+      "before": "MISSING",
+      "after": "0.2.5"
+    },
+    "rfdetr": {
+      "before": "MISSING",
+      "after": "1.8.3"
+    },
+    "yt-dlp": {
+      "before": "MISSING",
+      "after": "2026.7.4"
+    },
+    "ultralytics": {
+      "before": "8.4.87",
+      "after": "8.4.87",
+      "note": "unchanged, already present"
+    },
+    "opencv-python": {
+      "before": "5.0.0.93",
+      "after": "5.0.0.93",
+      "note": "unchanged, already present"
+    },
+    "import_smoke_status_cpu_builder": "PASS (torch, torchvision, ultralytics, cv2, torchreid, rfdetr all import cleanly; torch.cuda.is_available()==False as expected, no GPU on this CPU-only builder by design)",
+    "import_smoke_status_gpu": "deferred to the smoke-test VM step"
+  }
+}
