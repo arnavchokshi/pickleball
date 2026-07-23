@@ -1,0 +1,413 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            173.0,
+            258.5
+          ],
+          "far_left_corner": [
+            54.0,
+            273.5
+          ],
+          "far_nvz_center": [
+            227.0,
+            283.5
+          ],
+          "far_nvz_left": [
+            77.0,
+            306.5
+          ],
+          "far_nvz_right": [
+            350.0,
+            265.5
+          ],
+          "far_right_corner": [
+            272.0,
+            248.5
+          ],
+          "near_baseline_center": [
+            639.0,
+            444.5
+          ],
+          "near_left_corner": null,
+          "near_nvz_center": [
+            333.0,
+            323.5
+          ],
+          "near_nvz_left": [
+            115.0,
+            366.5
+          ],
+          "near_nvz_right": [
+            485.0,
+            291.5
+          ],
+          "near_right_corner": null,
+          "net_center": [
+            269.0,
+            228.5
+          ],
+          "net_left_sideline": [
+            81.0,
+            241.5
+          ],
+          "net_right_sideline": [
+            390.0,
+            214.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "near_left_corner",
+            "near_right_corner"
+          ],
+          "frame_sha256": "c367e5eae9c78e13ffb9560489c2e99b4ba010a588dd8bebeb2bf3d8357b7224",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 10,
+            "inlier_count": 10,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 10,
+              "max": 2.7537103127962705,
+              "mean": 1.3494272734627164,
+              "median": 1.1803963545759288,
+              "min": 0.42883219148841356,
+              "p90": 2.4369157818324174
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v016_f01_667b77be49fd.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/testworkspace-i8nb1__pickle-court-keypoints__v2/valid/Screenshot-2024-06-14-at-11-29-29-PM_png_jpg.rf.89e73cafb708335758ed7801424a5f2e.jpg",
+          "source_sha256": "24d0bfcd4c5917281a4dc9466246d12a92ef9e451213cf809651b4a2f2c1c37b",
+          "venue": "phone-video outdoor multi-court complex",
+          "venue_id": "av016_phone_outdoor_complex",
+          "workspace": "testworkspace-i8nb1__pickle-court-keypoints__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            464.0,
+            366.5
+          ],
+          "far_left_corner": [
+            369.0,
+            355.5
+          ],
+          "far_nvz_center": [
+            405.0,
+            389.5
+          ],
+          "far_nvz_left": [
+            294.0,
+            373.5
+          ],
+          "far_nvz_right": [
+            552.0,
+            409.5
+          ],
+          "far_right_corner": [
+            579.0,
+            379.5
+          ],
+          "near_baseline_center": [
+            6.0,
+            542.5
+          ],
+          "near_left_corner": null,
+          "near_nvz_center": [
+            295.0,
+            430.5
+          ],
+          "near_nvz_left": [
+            161.0,
+            403.5
+          ],
+          "near_nvz_right": [
+            495.0,
+            468.5
+          ],
+          "near_right_corner": null,
+          "net_center": [
+            381.0,
+            339.5
+          ],
+          "net_left_sideline": [
+            242.0,
+            325.5
+          ],
+          "net_right_sideline": [
+            506.0,
+            346.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "near_left_corner",
+            "near_right_corner"
+          ],
+          "frame_sha256": "56d076d42f15191471566af4897420db13d5ad2eac548df5cb6b7d9a81de1d79",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 10,
+            "inlier_count": 10,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 10,
+              "max": 3.1409664452786177,
+              "mean": 1.647277860883485,
+              "median": 1.473353174149333,
+              "min": 0.3861482663157736,
+              "p90": 2.736966976813951
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v016_f02_830f5cf58bb3.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/testworkspace-i8nb1__pickle-court-keypoints__v2/valid/Screenshot-2024-06-14-at-11-30-22-PM_png_jpg.rf.ad8d40eb7ddfd78f72d3298eacf2221a.jpg",
+          "source_sha256": "958c71e7a8cc9cf1fcac06910ebf6522991bff811ef076225ef0c8fac65cdbe5",
+          "venue": "phone-video outdoor multi-court complex",
+          "venue_id": "av016_phone_outdoor_complex",
+          "workspace": "testworkspace-i8nb1__pickle-court-keypoints__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            498.0,
+            269.5
+          ],
+          "far_left_corner": [
+            409.0,
+            261.5
+          ],
+          "far_nvz_center": [
+            434.0,
+            293.5
+          ],
+          "far_nvz_left": [
+            325.0,
+            280.5
+          ],
+          "far_nvz_right": [
+            572.0,
+            308.5
+          ],
+          "far_right_corner": [
+            615.0,
+            279.5
+          ],
+          "near_baseline_center": null,
+          "near_left_corner": null,
+          "near_nvz_center": [
+            322.0,
+            332.5
+          ],
+          "near_nvz_left": [
+            201.0,
+            307.5
+          ],
+          "near_nvz_right": [
+            501.0,
+            365.5
+          ],
+          "near_right_corner": [
+            290.0,
+            523.5
+          ],
+          "net_center": [
+            382.0,
+            245.5
+          ],
+          "net_left_sideline": [
+            280.0,
+            236.5
+          ],
+          "net_right_sideline": [
+            526.0,
+            248.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "near_baseline_center",
+            "near_left_corner"
+          ],
+          "frame_sha256": "0e6b52d2febe3b7d9d0025bc756da847511b775b86f7e1e41163c3f6cd162631",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 10,
+            "inlier_count": 10,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 10,
+              "max": 1.9346820745917812,
+              "mean": 1.3390183227496475,
+              "median": 1.2870024252516692,
+              "min": 0.7275973790841648,
+              "p90": 1.9123944710366585
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v016_f03_9925b0c97ab4.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/testworkspace-i8nb1__pickle-court-keypoints__v2/valid/Screenshot-2024-06-14-at-11-31-36-PM_png_jpg.rf.02006c900ec956b380935d85eee0c81e.jpg",
+          "source_sha256": "d7aa9c90b3bc120f3ce9d032f92a71e0c5bb52bc77628935b7a2510864086354",
+          "venue": "phone-video outdoor multi-court complex",
+          "venue_id": "av016_phone_outdoor_complex",
+          "workspace": "testworkspace-i8nb1__pickle-court-keypoints__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000004.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            474.0,
+            232.5
+          ],
+          "far_left_corner": [
+            376.0,
+            236.5
+          ],
+          "far_nvz_center": [
+            425.0,
+            264.5
+          ],
+          "far_nvz_left": [
+            309.0,
+            263.5
+          ],
+          "far_nvz_right": [
+            577.0,
+            261.5
+          ],
+          "far_right_corner": [
+            597.0,
+            225.5
+          ],
+          "near_baseline_center": [
+            46.0,
+            495.5
+          ],
+          "near_left_corner": null,
+          "near_nvz_center": [
+            327.0,
+            321.5
+          ],
+          "near_nvz_left": [
+            174.0,
+            317.5
+          ],
+          "near_nvz_right": [
+            552.0,
+            326.5
+          ],
+          "near_right_corner": null,
+          "net_center": [
+            387.0,
+            215.5
+          ],
+          "net_left_sideline": [
+            267.0,
+            222.5
+          ],
+          "net_right_sideline": [
+            558.0,
+            199.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "near_left_corner",
+            "near_right_corner"
+          ],
+          "frame_sha256": "f99ce52c2ed3260ae703786291b93ba1481b999bbbe3445e4fb717f5e56026ad",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 10,
+            "inlier_count": 10,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 10,
+              "max": 6.6608339624559125,
+              "mean": 2.885582402676681,
+              "median": 2.432964058730196,
+              "min": 1.572902052262702,
+              "p90": 4.062812234966968
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v016_f04_ee96a9306196.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/testworkspace-i8nb1__pickle-court-keypoints__v2/train/Screenshot-2024-06-14-at-11-29-01-PM_png_jpg.rf.6f4e0c928c894b3eb740f16e1ab07549.jpg",
+          "source_sha256": "35bf5af3a74e156c6e3a337a0306a25d7f81fd4443607ee83c16bc282117d350",
+          "venue": "phone-video outdoor multi-court complex",
+          "venue_id": "av016_phone_outdoor_complex",
+          "workspace": "testworkspace-i8nb1__pickle-court-keypoints__v2"
+        },
+        "status": "reviewed"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "av016_phone_outdoor_complex",
+  "frames": {
+    "available_review_frame_count": 4,
+    "frame_count": 4,
+    "frame_dir": "av016_phone_outdoor_complex/frames",
+    "label_coordinate_space": [
+      640,
+      640
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "independent_reviewed_count": 4,
+    "note": "Owner clicked every visible point. Explicit skips and unfilled points are JSON null because the owner confirmed they were covered or not visible; no coordinate was fabricated.",
+    "reviewer": "owner_sequential_court_labelpack3_20260723",
+    "status": "reviewed"
+  },
+  "schema_version": 1
+}

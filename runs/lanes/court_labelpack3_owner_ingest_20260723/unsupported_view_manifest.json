@@ -1,0 +1,215 @@
+{
+  "artifact_type": "racketsport_court_unsupported_view_labels",
+  "authority": "owner_reviewed",
+  "items": [
+    {
+      "file_name": "v001_f01_bdb2a237d781.jpg",
+      "frame_sha256": "63c61e03442abb5f91fefdeef0955d4a5ee70360b4b1a280d05649606d653c77",
+      "image": "unsupported/av001_indoor_fisheye_red_blue/frames/v001_f01_bdb2a237d781.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "942b569161df4b94667811101a9ce17327564808a28cb928928b871048fa29ff",
+      "supported_view": false,
+      "venue": "indoor fisheye red-blue three-camera court",
+      "venue_id": "av001_indoor_fisheye_red_blue",
+      "workspace": "acmai__pickleball-courts-emwra__v3"
+    },
+    {
+      "file_name": "v001_f02_faa97a7391ea.jpg",
+      "frame_sha256": "94268c49c62e5fb7ceb52a49811ccf49ea77875fe7dcd3fb67eff94410d6f4f8",
+      "image": "unsupported/av001_indoor_fisheye_red_blue/frames/v001_f02_faa97a7391ea.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "1c2ec9aed18ace3fe41e39ed2d3c2a6a23db3f647eb392bf3183c473659e2e77",
+      "supported_view": false,
+      "venue": "indoor fisheye red-blue three-camera court",
+      "venue_id": "av001_indoor_fisheye_red_blue",
+      "workspace": "acmai__pickleball-courts-emwra__v3"
+    },
+    {
+      "file_name": "v001_f03_0dac12c4ef49.jpg",
+      "frame_sha256": "084a7385008f3af77a5e55b81a40ff1201588adde97a9515a2d3fb851bdbd2f5",
+      "image": "unsupported/av001_indoor_fisheye_red_blue/frames/v001_f03_0dac12c4ef49.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "29e734dab8efe9e932a232a735223aa55abf45e571e82c16a32b9bfff621422d",
+      "supported_view": false,
+      "venue": "indoor fisheye red-blue three-camera court",
+      "venue_id": "av001_indoor_fisheye_red_blue",
+      "workspace": "acmai__pickleball-courts-emwra__v3"
+    },
+    {
+      "file_name": "v002_f01_37622408c916.jpg",
+      "frame_sha256": "10173f57f1c8739fa824c90d2638739333b8d0d536f55c1641aac9a2cadc8728",
+      "image": "unsupported/av002_margaritaville_bright_blue/frames/v002_f01_37622408c916.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "c71a44c58464a9addf24a6f24af57cf396bcdd36e5b660d922ba03aaf0b8403d",
+      "supported_view": false,
+      "venue": "bright-blue Margaritaville show court",
+      "venue_id": "av002_margaritaville_bright_blue",
+      "workspace": "acmai__pickleball-courts-emwra__v3"
+    },
+    {
+      "file_name": "v024_f01_76fe7469c654.jpg",
+      "frame_sha256": "2eec29b84c042d15b9c3b8316e81c3b0ecb1be542c8af31b681af3a7e939b937",
+      "image": "unsupported/av024_red_night_outdoor/frames/v024_f01_76fe7469c654.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "57d208f652056e1e131ff8afce46ae4e3f6e74c2cc1ea55523456318a6660fe0",
+      "supported_view": false,
+      "venue": "red night-lit outdoor court",
+      "venue_id": "av024_red_night_outdoor",
+      "workspace": "luiss-workspace-99bfi__pickleball-court-detection-o8i4o__v1"
+    },
+    {
+      "file_name": "v024_f02_cf2626e268b3.jpg",
+      "frame_sha256": "1b7265a6b1d34f1f5925faad62582834fde6342c78f15d71a880b8d7e511d1c9",
+      "image": "unsupported/av024_red_night_outdoor/frames/v024_f02_cf2626e268b3.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "a55628f3048b826238d71838d83d2f5c907d1a89e392a81f8dde0d08dea691f7",
+      "supported_view": false,
+      "venue": "red night-lit outdoor court",
+      "venue_id": "av024_red_night_outdoor",
+      "workspace": "luiss-workspace-99bfi__pickleball-court-detection-o8i4o__v1"
+    },
+    {
+      "file_name": "v024_f03_1b36ef6b4e07.jpg",
+      "frame_sha256": "71e533763a3abe73ea8344622458287ac5b234e0144c0da776bc0ab81aa0c680",
+      "image": "unsupported/av024_red_night_outdoor/frames/v024_f03_1b36ef6b4e07.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "3da3bf155031015aea20b6cf10708a80b762ae091eb3c28e29e7e3f146bc5bf9",
+      "supported_view": false,
+      "venue": "red night-lit outdoor court",
+      "venue_id": "av024_red_night_outdoor",
+      "workspace": "luiss-workspace-99bfi__pickleball-court-detection-o8i4o__v1"
+    },
+    {
+      "file_name": "v024_f04_5aded5e58a09.jpg",
+      "frame_sha256": "028389e23ea5896b9a81f522df32ea43c2da47eae1f38098fd901088c15b961f",
+      "image": "unsupported/av024_red_night_outdoor/frames/v024_f04_5aded5e58a09.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "4be95f910dca81b7ac2e09e410ec7b52db2fbbd5f6983f6ef8034d81f87d190c",
+      "supported_view": false,
+      "venue": "red night-lit outdoor court",
+      "venue_id": "av024_red_night_outdoor",
+      "workspace": "luiss-workspace-99bfi__pickleball-court-detection-o8i4o__v1"
+    },
+    {
+      "file_name": "v025_f01_fc38d1842280.jpg",
+      "frame_sha256": "336420687b44fea0e2c3d8c2d9a4c25c99143a8a7d01767308bd8e72cca61554",
+      "image": "unsupported/av025_blackwall_indoor_recreation/frames/v025_f01_fc38d1842280.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "74559cf4c3e273be0ca779de368e80bca5008b38a6c9bb770d2a68c1cdcbc825",
+      "supported_view": false,
+      "venue": "black-wall indoor recreational court",
+      "venue_id": "av025_blackwall_indoor_recreation",
+      "workspace": "nigh-workspace__pickleball-court-vhpgp__v11"
+    },
+    {
+      "file_name": "v025_f02_ce0ab12cdcda.jpg",
+      "frame_sha256": "ed5e7275639cfe688bfd77fa94c4f3fa2654adf8506932753c94cb9260c2279b",
+      "image": "unsupported/av025_blackwall_indoor_recreation/frames/v025_f02_ce0ab12cdcda.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "79e8b216e8dc6c76a4cb9ad4cb6b7571d78f5d6072c7ef9df25c5a1384325b7c",
+      "supported_view": false,
+      "venue": "black-wall indoor recreational court",
+      "venue_id": "av025_blackwall_indoor_recreation",
+      "workspace": "nigh-workspace__pickleball-court-vhpgp__v11"
+    },
+    {
+      "file_name": "v025_f03_4d28cae462c9.jpg",
+      "frame_sha256": "c67895ce0f6299fe9b7e92e1568aea12e99dfa66c4ebb563f91c584220d9776b",
+      "image": "unsupported/av025_blackwall_indoor_recreation/frames/v025_f03_4d28cae462c9.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "4b0451e94197f8b4b580586902e0280cfa2800b04917255d788246ed3d8ab756",
+      "supported_view": false,
+      "venue": "black-wall indoor recreational court",
+      "venue_id": "av025_blackwall_indoor_recreation",
+      "workspace": "nigh-workspace__pickleball-court-vhpgp__v11"
+    },
+    {
+      "file_name": "v033_f01_a51ef64abc0b.jpg",
+      "frame_sha256": "7ba3274a358bed64c4e6ab8a96a37d894497c0bbfe63a9063b3075b039b367b6",
+      "image": "unsupported/av033_carvana_splitcolor_close/frames/v033_f01_a51ef64abc0b.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "48f8c81e0349ec2dd957604a1b9f1dc86e060bd4fea87cf79162c678b0b49049",
+      "supported_view": false,
+      "venue": "Carvana split-color close court",
+      "venue_id": "av033_carvana_splitcolor_close",
+      "workspace": "necromancer__pickleball-court-vbmkq__v2"
+    },
+    {
+      "file_name": "v034_f01_adaeb6951090.jpg",
+      "frame_sha256": "d257ccdff2240949ba67c5287599f9a806c250721ffcb4c628a4fe951c1aeb0e",
+      "image": "unsupported/av034_humana_gray_highcorner/frames/v034_f01_adaeb6951090.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "346cc72ed85697d3469385cae06349f929647e3488f5af93da9269ec3d4407fe",
+      "supported_view": false,
+      "venue": "Humana gray high-corner court",
+      "venue_id": "av034_humana_gray_highcorner",
+      "workspace": "necromancer__pickleball-court-vbmkq__v2"
+    },
+    {
+      "file_name": "v034_f02_897c796cf3c1.jpg",
+      "frame_sha256": "e4c34d39e7f0da20926a4de22bf57068bb020724b5194da4f4d231acc4af8e18",
+      "image": "unsupported/av034_humana_gray_highcorner/frames/v034_f02_897c796cf3c1.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "46df81fa4efe442cbafca160d5fa3dce014629488bed4dabb987d58a2a0ccf6b",
+      "supported_view": false,
+      "venue": "Humana gray high-corner court",
+      "venue_id": "av034_humana_gray_highcorner",
+      "workspace": "necromancer__pickleball-court-vbmkq__v2"
+    },
+    {
+      "file_name": "v040_f01_54628643f12e.jpg",
+      "frame_sha256": "af8a70e6e4f82eb19242461b88a24543f593a27fe4735a270ac359f5f8fcb140",
+      "image": "unsupported/av040_ppa_tour_asia_bluegreen/frames/v040_f01_54628643f12e.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "d9c82fbe60552e5d37aa73e34bcec5264b5c73e62317dcd7ba3dc131456fe2b1",
+      "supported_view": false,
+      "venue": "PPA Tour Asia blue-green arena",
+      "venue_id": "av040_ppa_tour_asia_bluegreen",
+      "workspace": "necromancer__pickleball-court-vbmkq__v2"
+    },
+    {
+      "file_name": "v049_f01_59e2b40846d5.jpg",
+      "frame_sha256": "6bade25c5c0f79d12592da048e264ff18e6bf55936b54d302432f528bb3b99ee",
+      "image": "unsupported/av049_humana_gray_cornerwide/frames/v049_f01_59e2b40846d5.jpg",
+      "reasons": [
+        "bad_angle"
+      ],
+      "source_sha256": "0a331965630b658cf068f2265cf53805b30f40418890dc5dc7a9c99141f34363",
+      "supported_view": false,
+      "venue": "Humana gray corner-wide court",
+      "venue_id": "av049_humana_gray_cornerwide",
+      "workspace": "necromancer__pickleball-court-vbmkq__v2"
+    }
+  ],
+  "schema_version": 1
+}

@@ -1,0 +1,425 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            320.0,
+            136.5
+          ],
+          "far_left_corner": [
+            247.0,
+            136.5
+          ],
+          "far_nvz_center": [
+            319.0,
+            179.5
+          ],
+          "far_nvz_left": [
+            221.0,
+            179.5
+          ],
+          "far_nvz_right": [
+            416.0,
+            179.5
+          ],
+          "far_right_corner": [
+            392.0,
+            141.5
+          ],
+          "near_baseline_center": [
+            314.0,
+            467.5
+          ],
+          "near_left_corner": [
+            48.0,
+            465.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            251.5
+          ],
+          "near_nvz_left": [
+            177.0,
+            249.5
+          ],
+          "near_nvz_right": [
+            458.0,
+            251.5
+          ],
+          "near_right_corner": [
+            571.0,
+            471.5
+          ],
+          "net_center": [
+            317.0,
+            153.5
+          ],
+          "net_left_sideline": [
+            210.0,
+            148.5
+          ],
+          "net_right_sideline": [
+            422.0,
+            152.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "3791187f529c3ae76f6023ab7fae5efc3029600e7c352932dfe55eafb1b0e9ff",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.789896627105943,
+              "mean": 1.8634384920868656,
+              "median": 1.638113121230318,
+              "min": 0.4055841167712485,
+              "p90": 3.2112241157678536
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v038_f01_d29abb319ee4.jpg",
+          "owner_result_status": "in_progress",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/necromancer__pickleball-court-vbmkq__v2/valid/frame_000507_jpg.rf.5380adfa19bc47a7a5e1d11a4747c243.jpg",
+          "source_sha256": "b08ad0c628eb38052b12ff80149e6fc908ee12c0a1bb0586ea920b222654d594",
+          "venue": "gray-green low-baseline show court",
+          "venue_id": "av038_graygreen_low_baseline",
+          "workspace": "necromancer__pickleball-court-vbmkq__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            320.0,
+            136.5
+          ],
+          "far_left_corner": [
+            247.0,
+            136.5
+          ],
+          "far_nvz_center": [
+            319.0,
+            179.5
+          ],
+          "far_nvz_left": [
+            221.0,
+            179.5
+          ],
+          "far_nvz_right": [
+            416.0,
+            179.5
+          ],
+          "far_right_corner": [
+            392.0,
+            141.5
+          ],
+          "near_baseline_center": [
+            314.0,
+            467.5
+          ],
+          "near_left_corner": [
+            48.0,
+            465.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            251.5
+          ],
+          "near_nvz_left": [
+            177.0,
+            249.5
+          ],
+          "near_nvz_right": [
+            458.0,
+            251.5
+          ],
+          "near_right_corner": [
+            571.0,
+            471.5
+          ],
+          "net_center": [
+            317.0,
+            153.5
+          ],
+          "net_left_sideline": [
+            210.0,
+            148.5
+          ],
+          "net_right_sideline": [
+            426.0,
+            150.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "77d2ee7e1e2683fe07acfc47e537c227b3ce62922a8bfca280dc02af853f5797",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.789896627105943,
+              "mean": 1.8634384920868656,
+              "median": 1.638113121230318,
+              "min": 0.4055841167712485,
+              "p90": 3.2112241157678536
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v038_f02_fbff7e09207a.jpg",
+          "owner_result_status": "in_progress",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/necromancer__pickleball-court-vbmkq__v2/train/frame_000483_jpg.rf.0a10677d453b046acf116e4e702770d4.jpg",
+          "source_sha256": "414fbb40a026ba1086f6578b38c2b1d1101b17276a899716fe843b0deb14443a",
+          "venue": "gray-green low-baseline show court",
+          "venue_id": "av038_graygreen_low_baseline",
+          "workspace": "necromancer__pickleball-court-vbmkq__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            320.0,
+            136.5
+          ],
+          "far_left_corner": [
+            247.0,
+            136.5
+          ],
+          "far_nvz_center": [
+            319.0,
+            179.5
+          ],
+          "far_nvz_left": [
+            221.0,
+            179.5
+          ],
+          "far_nvz_right": [
+            416.0,
+            179.5
+          ],
+          "far_right_corner": [
+            392.0,
+            141.5
+          ],
+          "near_baseline_center": [
+            314.0,
+            467.5
+          ],
+          "near_left_corner": [
+            48.0,
+            465.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            251.5
+          ],
+          "near_nvz_left": [
+            177.0,
+            249.5
+          ],
+          "near_nvz_right": [
+            458.0,
+            251.5
+          ],
+          "near_right_corner": [
+            571.0,
+            471.5
+          ],
+          "net_center": [
+            317.0,
+            153.5
+          ],
+          "net_left_sideline": [
+            210.0,
+            148.5
+          ],
+          "net_right_sideline": [
+            426.0,
+            150.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "e234a32d26e56d035c4b98d9563e8552364156dc52c59721a1d1acd711763c8e",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.789896627105943,
+              "mean": 1.8634384920868656,
+              "median": 1.638113121230318,
+              "min": 0.4055841167712485,
+              "p90": 3.2112241157678536
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v038_f03_cc567b6a9641.jpg",
+          "owner_result_status": "in_progress",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/necromancer__pickleball-court-vbmkq__v2/train/frame_000500_jpg.rf.bbe95ed3c819468f9e6e15c28e766f04.jpg",
+          "source_sha256": "1e111c461745f60f8cbb3e3504f7ecf059b4c982d4e53049a6630605576f2f9b",
+          "venue": "gray-green low-baseline show court",
+          "venue_id": "av038_graygreen_low_baseline",
+          "workspace": "necromancer__pickleball-court-vbmkq__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000004.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            320.0,
+            136.5
+          ],
+          "far_left_corner": [
+            247.0,
+            136.5
+          ],
+          "far_nvz_center": [
+            319.0,
+            179.5
+          ],
+          "far_nvz_left": [
+            221.0,
+            179.5
+          ],
+          "far_nvz_right": [
+            416.0,
+            179.5
+          ],
+          "far_right_corner": [
+            392.0,
+            141.5
+          ],
+          "near_baseline_center": [
+            314.0,
+            467.5
+          ],
+          "near_left_corner": [
+            48.0,
+            465.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            251.5
+          ],
+          "near_nvz_left": [
+            177.0,
+            249.5
+          ],
+          "near_nvz_right": [
+            458.0,
+            251.5
+          ],
+          "near_right_corner": [
+            571.0,
+            471.5
+          ],
+          "net_center": [
+            317.0,
+            153.5
+          ],
+          "net_left_sideline": [
+            210.0,
+            148.5
+          ],
+          "net_right_sideline": [
+            426.0,
+            150.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "0bf187e1daf156dc166939de0be78b6410924bf0fa80528e8e2b1b0dd25df969",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.789896627105943,
+              "mean": 1.8634384920868656,
+              "median": 1.638113121230318,
+              "min": 0.4055841167712485,
+              "p90": 3.2112241157678536
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v038_f04_3c41a3b4015d.jpg",
+          "owner_result_status": "in_progress",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/necromancer__pickleball-court-vbmkq__v2/train/frame_000515_jpg.rf.c237bf2f79974f7c5983d18f02ee0a6d.jpg",
+          "source_sha256": "34625d75852c548e255caa98fd292becfb7f9006497afca8f6fbcd12f63eae69",
+          "venue": "gray-green low-baseline show court",
+          "venue_id": "av038_graygreen_low_baseline",
+          "workspace": "necromancer__pickleball-court-vbmkq__v2"
+        },
+        "status": "reviewed"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "av038_graygreen_low_baseline",
+  "frames": {
+    "available_review_frame_count": 4,
+    "frame_count": 4,
+    "frame_dir": "av038_graygreen_low_baseline/frames",
+    "label_coordinate_space": [
+      640,
+      640
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "independent_reviewed_count": 4,
+    "note": "Owner clicked every visible point. Explicit skips and unfilled points are JSON null because the owner confirmed they were covered or not visible; no coordinate was fabricated.",
+    "reviewer": "owner_sequential_court_labelpack3_20260723",
+    "status": "reviewed"
+  },
+  "schema_version": 1
+}

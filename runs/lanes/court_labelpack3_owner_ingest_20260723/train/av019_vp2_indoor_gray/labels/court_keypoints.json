@@ -1,0 +1,127 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            446.0,
+            363.5
+          ],
+          "far_left_corner": [
+            375.0,
+            355.5
+          ],
+          "far_nvz_center": [
+            406.0,
+            390.5
+          ],
+          "far_nvz_left": [
+            320.0,
+            378.5
+          ],
+          "far_nvz_right": [
+            512.0,
+            405.5
+          ],
+          "far_right_corner": [
+            532.0,
+            373.5
+          ],
+          "near_baseline_center": [
+            121.0,
+            557.5
+          ],
+          "near_left_corner": [
+            15.0,
+            493.5
+          ],
+          "near_nvz_center": [
+            322.0,
+            435.5
+          ],
+          "near_nvz_left": [
+            227.0,
+            415.5
+          ],
+          "near_nvz_right": [
+            477.0,
+            469.5
+          ],
+          "near_right_corner": null,
+          "net_center": [
+            394.0,
+            354.5
+          ],
+          "net_left_sideline": [
+            292.0,
+            344.5
+          ],
+          "net_right_sideline": [
+            498.0,
+            357.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "near_right_corner"
+          ],
+          "frame_sha256": "5df33488f9e79f12e593fc127e33dec7d00b96181c614e45dfd6fcd958537a8a",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 11,
+            "inlier_count": 11,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 11,
+              "max": 4.9276216390477305,
+              "mean": 2.216344841454182,
+              "median": 1.932022944929374,
+              "min": 0.3100242645363964,
+              "p90": 3.4923942786350155
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v019_f01_bdb14520e6a6.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/testworkspace-i8nb1__pickle-court-keypoints__v2/valid/videoplayback-2-_mp4-0022_jpg.rf.b524a02e9290a0bfeed7394f44b1201b.jpg",
+          "source_sha256": "585beafecdb6ac847d3464dfa56746738b40075b3e8b9b322e7cf1c78122f01c",
+          "venue": "videoplayback indoor gray warehouse court",
+          "venue_id": "av019_vp2_indoor_gray",
+          "workspace": "testworkspace-i8nb1__pickle-court-keypoints__v2"
+        },
+        "status": "reviewed"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "av019_vp2_indoor_gray",
+  "frames": {
+    "available_review_frame_count": 1,
+    "frame_count": 1,
+    "frame_dir": "av019_vp2_indoor_gray/frames",
+    "label_coordinate_space": [
+      640,
+      640
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "independent_reviewed_count": 1,
+    "note": "Owner clicked every visible point. Explicit skips and unfilled points are JSON null because the owner confirmed they were covered or not visible; no coordinate was fabricated.",
+    "reviewer": "owner_sequential_court_labelpack3_20260723",
+    "status": "reviewed"
+  },
+  "schema_version": 1
+}

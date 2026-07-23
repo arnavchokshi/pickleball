@@ -1,0 +1,425 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            309.0,
+            183.5
+          ],
+          "far_left_corner": [
+            175.0,
+            181.5
+          ],
+          "far_nvz_center": [
+            311.0,
+            263.5
+          ],
+          "far_nvz_left": [
+            163.0,
+            261.5
+          ],
+          "far_nvz_right": [
+            461.0,
+            266.5
+          ],
+          "far_right_corner": [
+            435.0,
+            183.5
+          ],
+          "near_baseline_center": [
+            323.0,
+            523.5
+          ],
+          "near_left_corner": [
+            96.0,
+            522.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            365.5
+          ],
+          "near_nvz_left": [
+            136.0,
+            365.5
+          ],
+          "near_nvz_right": [
+            492.0,
+            364.5
+          ],
+          "near_right_corner": [
+            545.0,
+            525.5
+          ],
+          "net_center": [
+            310.0,
+            229.5
+          ],
+          "net_left_sideline": [
+            158.0,
+            228.5
+          ],
+          "net_right_sideline": [
+            462.0,
+            225.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "405d199a8657c123171f8356d6b461f947ff6a2f761d99dd1198e5e8a526964f",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.024302964634084,
+              "mean": 2.080123230886266,
+              "median": 1.9798407633811483,
+              "min": 0.7733962243185639,
+              "p90": 3.639574372175515
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v039_f01_14cf093dd7a0.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/necromancer__pickleball-court-vbmkq__v2/valid/frame_000766_jpg.rf.c6a9f1aa2522bd2932b3bc3bb6d56ade.jpg",
+          "source_sha256": "3808803f0638980bb9c779d2ba8c0bc686de8a990387b3ca6e9c14f0c5520dbc",
+          "venue": "PPA Asia electric-blue court",
+          "venue_id": "av039_ppa_asia_electricblue",
+          "workspace": "necromancer__pickleball-court-vbmkq__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            309.0,
+            183.5
+          ],
+          "far_left_corner": [
+            175.0,
+            181.5
+          ],
+          "far_nvz_center": [
+            311.0,
+            263.5
+          ],
+          "far_nvz_left": [
+            163.0,
+            261.5
+          ],
+          "far_nvz_right": [
+            461.0,
+            266.5
+          ],
+          "far_right_corner": [
+            435.0,
+            183.5
+          ],
+          "near_baseline_center": [
+            323.0,
+            523.5
+          ],
+          "near_left_corner": [
+            102.0,
+            525.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            365.5
+          ],
+          "near_nvz_left": [
+            136.0,
+            365.5
+          ],
+          "near_nvz_right": [
+            492.0,
+            364.5
+          ],
+          "near_right_corner": [
+            545.0,
+            525.5
+          ],
+          "net_center": [
+            310.0,
+            229.5
+          ],
+          "net_left_sideline": [
+            158.0,
+            228.5
+          ],
+          "net_right_sideline": [
+            462.0,
+            225.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "0654550e51672df11d3d42296d93263bff75e173f27f1f5c61e33483feef9faa",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 3.356787037535512,
+              "mean": 1.6935480703877868,
+              "median": 1.8019860853156517,
+              "min": 0.2967219184705071,
+              "p90": 2.2970228565777826
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v039_f02_29d1be29329d.jpg",
+          "owner_result_status": "in_progress",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/necromancer__pickleball-court-vbmkq__v2/valid/frame_000750_jpg.rf.34e80238fc9cebb6ef9ffb4239628510.jpg",
+          "source_sha256": "bec2f3c0abf7e669213dcc837923e3ba37a3f6ed04fbbb11154200968cb4742d",
+          "venue": "PPA Asia electric-blue court",
+          "venue_id": "av039_ppa_asia_electricblue",
+          "workspace": "necromancer__pickleball-court-vbmkq__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            309.0,
+            183.5
+          ],
+          "far_left_corner": [
+            175.0,
+            181.5
+          ],
+          "far_nvz_center": [
+            311.0,
+            263.5
+          ],
+          "far_nvz_left": [
+            163.0,
+            261.5
+          ],
+          "far_nvz_right": [
+            461.0,
+            266.5
+          ],
+          "far_right_corner": [
+            435.0,
+            183.5
+          ],
+          "near_baseline_center": [
+            323.0,
+            523.5
+          ],
+          "near_left_corner": [
+            96.0,
+            522.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            365.5
+          ],
+          "near_nvz_left": [
+            136.0,
+            365.5
+          ],
+          "near_nvz_right": [
+            492.0,
+            364.5
+          ],
+          "near_right_corner": [
+            545.0,
+            525.5
+          ],
+          "net_center": [
+            310.0,
+            229.5
+          ],
+          "net_left_sideline": [
+            158.0,
+            228.5
+          ],
+          "net_right_sideline": [
+            462.0,
+            225.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "3016088266761caaae317bbf8699aab6c8220cbb8c5cc9caad9f7935e42bc8c9",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.024302964634084,
+              "mean": 2.080123230886266,
+              "median": 1.9798407633811483,
+              "min": 0.7733962243185639,
+              "p90": 3.639574372175515
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v039_f03_e54ee611c2ca.jpg",
+          "owner_result_status": "in_progress",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/necromancer__pickleball-court-vbmkq__v2/valid/frame_000760_jpg.rf.4fb493c4e2b1ccd824e952642c003b5c.jpg",
+          "source_sha256": "d6142c2327f37206159b5d1840db78d139e7eb78d25d6f804d857cffe35ac5e6",
+          "venue": "PPA Asia electric-blue court",
+          "venue_id": "av039_ppa_asia_electricblue",
+          "workspace": "necromancer__pickleball-court-vbmkq__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000004.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            309.0,
+            183.5
+          ],
+          "far_left_corner": [
+            180.0,
+            181.5
+          ],
+          "far_nvz_center": [
+            311.0,
+            263.5
+          ],
+          "far_nvz_left": [
+            163.0,
+            261.5
+          ],
+          "far_nvz_right": [
+            461.0,
+            266.5
+          ],
+          "far_right_corner": [
+            435.0,
+            183.5
+          ],
+          "near_baseline_center": [
+            323.0,
+            523.5
+          ],
+          "near_left_corner": [
+            102.0,
+            523.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            365.5
+          ],
+          "near_nvz_left": [
+            136.0,
+            365.5
+          ],
+          "near_nvz_right": [
+            492.0,
+            364.5
+          ],
+          "near_right_corner": [
+            545.0,
+            525.5
+          ],
+          "net_center": [
+            310.0,
+            229.5
+          ],
+          "net_left_sideline": [
+            158.0,
+            228.5
+          ],
+          "net_right_sideline": [
+            462.0,
+            225.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "ecb5b1917beca52af862409d1672403dd136e247c6dbf932143c7f3647422acd",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 3.175527377633369,
+              "mean": 1.6219729021330724,
+              "median": 1.3431839612781076,
+              "min": 0.8731898876556401,
+              "p90": 2.5929624013025254
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v039_f04_27eeb962fd31.jpg",
+          "owner_result_status": "in_progress",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/necromancer__pickleball-court-vbmkq__v2/train/frame_000747_jpg.rf.2eb63aed07efe3fb72984f39b6ff0909.jpg",
+          "source_sha256": "b81460dfd28be4f57d53ef297196410131edf8ac3793d9f3fc1b7efb1ecb68fe",
+          "venue": "PPA Asia electric-blue court",
+          "venue_id": "av039_ppa_asia_electricblue",
+          "workspace": "necromancer__pickleball-court-vbmkq__v2"
+        },
+        "status": "reviewed"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "av039_ppa_asia_electricblue",
+  "frames": {
+    "available_review_frame_count": 4,
+    "frame_count": 4,
+    "frame_dir": "av039_ppa_asia_electricblue/frames",
+    "label_coordinate_space": [
+      640,
+      640
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "independent_reviewed_count": 4,
+    "note": "Owner clicked every visible point. Explicit skips and unfilled points are JSON null because the owner confirmed they were covered or not visible; no coordinate was fabricated.",
+    "reviewer": "owner_sequential_court_labelpack3_20260723",
+    "status": "reviewed"
+  },
+  "schema_version": 1
+}

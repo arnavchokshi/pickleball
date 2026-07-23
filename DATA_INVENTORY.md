@@ -2,7 +2,7 @@
 
 > **GENERATED FILE — do not hand-edit.** Authority is `runs/manager/data_ledger.json`; this is its scannable human view.
 > Regenerate after any ledger change: `.venv/bin/python scripts/racketsport/build_data_inventory.py`
-> Ledger generated: `2026-07-23T16:44:55Z` · 33 registered datasets · `VERIFIED=0` binding.
+> Ledger generated: `2026-07-23T21:16:15Z` · 34 registered datasets · `VERIFIED=0` binding.
 
 The single place to see **all data we have on every lane and whether it is used**. Every dataset the project has touched is a registered asset here with a state and a reason. If a dataset is not in this table, it is not registered — add a ledger row before any training touches it (the data-safety gate enforces this).
 
@@ -12,12 +12,12 @@ The single place to see **all data we have on every lane and whether it is used*
 
 | Lane | ✅ used | 🟡 authorized | 🔴 blocked | 🔒 held-out | ❌ rejected |
 |---|---|---|---|---|---|
-| **COURT** | 3 | 1 | 2 | 2 | 0 |
+| **COURT** | 3 | 2 | 2 | 2 | 0 |
 | **BALL** | 1 | 0 | 2 | 1 | 0 |
 | **PERSON** | 0 | 0 | 2 | 1 | 0 |
 | **EVENT** | 2 | 1 | 4 | 1 | 3 |
 | **SHARED / OTHER** | 1 | 0 | 2 | 0 | 4 |
-| **TOTAL** | 7 | 2 | 12 | 5 | 7 |
+| **TOTAL** | 7 | 3 | 12 | 5 | 7 |
 
 ## COURT
 
@@ -26,6 +26,7 @@ The single place to see **all data we have on every lane and whether it is used*
 | `online_harvest_20260712` | source channel IDs in harvest metadata | 28 rows | ✅ used (training) | Feed only protocol-eligible reviewed rows from the derived 100-frame court package into the Track A court pool through the court_diversity_100_202607… |
 | `pbvision_gallery_20260719` | pb.vision gallery and owner-provided demo | 124,743 labels | ✅ used (training) | After the approximately 10-frame owner-tap spot-check, add only corpus-eligible pseudo-label IDs 0tmdeghtfvjx, 143sf3gdwxsa, 98z43hspqz13, bewqc0glhg… |
 | `online_harvest_20260706` | source YouTube channels recorded in manifest | 40 rows | 📊 used (audit/eval only) | Keep the unregistered court_calibrations directory items audit-only; use them only to reproduce and verify the frozen Track A external audit packagin… |
+| `court_labelpack3_owner_labels_20260723` | seven Roboflow court workspaces selected into the owner pack | 1,446 labels | 🟡 authorized — not yet trained | Fine-tune the current selected court checkpoint on the union of curated264 and these 106 owner-reviewed rows, then compare every epoch on the same ex… |
 | `roboflow_court_keypoints_adapted_20260723` | seven owner-approved Roboflow court-keypoint workspaces | 3,168 labels | 🟡 authorized — not yet trained | Use this 264-row pack3-disjoint curated subset in the next court fine-tune instead of adding it to the duplicate-heavy 2833-row parent pool; keep net… |
 | `court_diversity_100_20260712` | 28 source YouTube channel families | 97 rows | 🔴 not used — blocked | After the owner exports tasks 88-91, add only the protocol-eligible reviewed rows to the Track A court retrain pool with the frozen source-family spl… |
 | `roboflow_court_taxonomy_20260706` | Roboflow workspaces/projects | 2,734 labels | 🔴 not used — blocked | Audit whether the normalized court boxes/masks can provide auxiliary Track A supervision; build a source-grouped adapter if valid, otherwise issue a… |

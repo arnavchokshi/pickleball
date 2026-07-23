@@ -1,0 +1,408 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            307.0,
+            228.5
+          ],
+          "far_left_corner": [
+            249.0,
+            225.5
+          ],
+          "far_nvz_center": [
+            308.0,
+            264.5
+          ],
+          "far_nvz_left": [
+            229.0,
+            261.5
+          ],
+          "far_nvz_right": [
+            380.0,
+            266.5
+          ],
+          "far_right_corner": [
+            360.0,
+            232.5
+          ],
+          "near_baseline_center": null,
+          "near_left_corner": null,
+          "near_nvz_center": [
+            311.0,
+            335.5
+          ],
+          "near_nvz_left": [
+            190.0,
+            326.5
+          ],
+          "near_nvz_right": [
+            422.0,
+            333.5
+          ],
+          "near_right_corner": null,
+          "net_center": [
+            308.0,
+            248.5
+          ],
+          "net_left_sideline": [
+            218.0,
+            239.5
+          ],
+          "net_right_sideline": [
+            383.0,
+            249.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "near_baseline_center",
+            "near_left_corner",
+            "near_right_corner"
+          ],
+          "frame_sha256": "ae37704fe0ebacf0692d73f0239ed7723730f67400f3f26ecf25dc0056891673",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 9,
+            "inlier_count": 9,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 9,
+              "max": 3.415923374683076,
+              "mean": 1.4362911746977314,
+              "median": 1.1007932850721251,
+              "min": 0.2873488052600152,
+              "p90": 3.353963619702753
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v023_f01_598c0eb54ef8.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_000330_jpg.rf.b01ae30db92c4cb736f1910b98c13a34.jpg",
+          "source_sha256": "5e6aec240c692fdef8e9eb8bfd21cb74626bba5f61c368f57f7d87ac963f806a",
+          "venue": "tree-wall outdoor tennis-overlay court",
+          "venue_id": "av023_treewall_outdoor_tennis_overlay",
+          "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            293.0,
+            184.5
+          ],
+          "far_left_corner": [
+            234.0,
+            179.5
+          ],
+          "far_nvz_center": [
+            293.0,
+            222.5
+          ],
+          "far_nvz_left": [
+            216.0,
+            216.5
+          ],
+          "far_nvz_right": [
+            369.0,
+            233.5
+          ],
+          "far_right_corner": [
+            348.0,
+            195.5
+          ],
+          "near_baseline_center": [
+            301.0,
+            544.5
+          ],
+          "near_left_corner": [
+            11.0,
+            547.5
+          ],
+          "near_nvz_center": [
+            295.0,
+            291.5
+          ],
+          "near_nvz_left": [
+            174.0,
+            285.5
+          ],
+          "near_nvz_right": [
+            410.0,
+            300.5
+          ],
+          "near_right_corner": [
+            533.0,
+            541.5
+          ],
+          "net_center": [
+            297.0,
+            204.5
+          ],
+          "net_left_sideline": [
+            209.0,
+            191.5
+          ],
+          "net_right_sideline": [
+            363.0,
+            211.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "906e1bef8e7e90e6a7d6892296e134fd794483e5cd87f323eea45cdcc2cac99f",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 3.6349181379978566,
+              "mean": 2.1728379054707534,
+              "median": 2.244035885552724,
+              "min": 0.7757499771557111,
+              "p90": 3.528781600410452
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v023_f02_c2e4d101a67b.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000690_jpg.rf.6837da3ff29ad869a20046b533521846.jpg",
+          "source_sha256": "ef61d10ea6984edd9afb287d2933b10f1782c4322577b443c44b929b7e108372",
+          "venue": "tree-wall outdoor tennis-overlay court",
+          "venue_id": "av023_treewall_outdoor_tennis_overlay",
+          "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            307.0,
+            234.5
+          ],
+          "far_left_corner": [
+            250.0,
+            223.5
+          ],
+          "far_nvz_center": [
+            302.0,
+            267.5
+          ],
+          "far_nvz_left": [
+            226.0,
+            255.5
+          ],
+          "far_nvz_right": [
+            380.0,
+            281.5
+          ],
+          "far_right_corner": [
+            362.0,
+            244.5
+          ],
+          "near_baseline_center": null,
+          "near_left_corner": [
+            13.0,
+            570.5
+          ],
+          "near_nvz_center": [
+            307.0,
+            338.5
+          ],
+          "near_nvz_left": null,
+          "near_nvz_right": null,
+          "near_right_corner": null,
+          "net_center": [
+            311.0,
+            250.5
+          ],
+          "net_left_sideline": [
+            228.0,
+            233.5
+          ],
+          "net_right_sideline": [
+            379.0,
+            262.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "near_baseline_center",
+            "near_nvz_left",
+            "near_nvz_right",
+            "near_right_corner"
+          ],
+          "frame_sha256": "3063bcda6fd6e00dfd291651479acc29d3d0189ac90d644248b67d0af3487e9e",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 8,
+            "inlier_count": 8,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 8,
+              "max": 3.972081042633696,
+              "mean": 1.7012647700336183,
+              "median": 0.9953481446488697,
+              "min": 0.6991961840650704,
+              "p90": 3.242577444209212
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v023_f03_af9823bd5813.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_001230_jpg.rf.ff7bc163d7f781d862b82c82b3c7a7ee.jpg",
+          "source_sha256": "a67c5ca124b55193c1642240bea147f2607327a5be4eed7786542ba51f869b33",
+          "venue": "tree-wall outdoor tennis-overlay court",
+          "venue_id": "av023_treewall_outdoor_tennis_overlay",
+          "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000004.jpg",
+        "keypoints": {
+          "far_baseline_center": null,
+          "far_left_corner": [
+            236.0,
+            224.5
+          ],
+          "far_nvz_center": [
+            294.0,
+            261.5
+          ],
+          "far_nvz_left": [
+            218.0,
+            261.5
+          ],
+          "far_nvz_right": [
+            371.0,
+            266.5
+          ],
+          "far_right_corner": [
+            349.0,
+            229.5
+          ],
+          "near_baseline_center": null,
+          "near_left_corner": null,
+          "near_nvz_center": [
+            300.0,
+            334.5
+          ],
+          "near_nvz_left": [
+            176.0,
+            329.5
+          ],
+          "near_nvz_right": [
+            412.0,
+            333.5
+          ],
+          "near_right_corner": [
+            550.0,
+            572.5
+          ],
+          "net_center": [
+            295.0,
+            243.5
+          ],
+          "net_left_sideline": [
+            214.0,
+            237.5
+          ],
+          "net_right_sideline": [
+            366.0,
+            245.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "far_baseline_center",
+            "near_baseline_center",
+            "near_left_corner"
+          ],
+          "frame_sha256": "bf5316b00911e2250995288fad3db964917a6e450c416090148c5274e625a5ce",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 9,
+            "inlier_count": 9,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 9,
+              "max": 2.3557394568351473,
+              "mean": 1.4307853873849519,
+              "median": 1.8708005304584523,
+              "min": 0.20571388878956912,
+              "p90": 2.236262138936284
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v023_f04_b7ef30e5c27a.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000450_jpg.rf.7a2b627ddae09bf5944ffd5528ba48b6.jpg",
+          "source_sha256": "5b639f9f36638ea571c7c3ec170ff60ac43865bc20f23ef59bd4d6e5c0ac2f16",
+          "venue": "tree-wall outdoor tennis-overlay court",
+          "venue_id": "av023_treewall_outdoor_tennis_overlay",
+          "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1"
+        },
+        "status": "reviewed"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "av023_treewall_outdoor_tennis_overlay",
+  "frames": {
+    "available_review_frame_count": 4,
+    "frame_count": 4,
+    "frame_dir": "av023_treewall_outdoor_tennis_overlay/frames",
+    "label_coordinate_space": [
+      640,
+      640
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "independent_reviewed_count": 4,
+    "note": "Owner clicked every visible point. Explicit skips and unfilled points are JSON null because the owner confirmed they were covered or not visible; no coordinate was fabricated.",
+    "reviewer": "owner_sequential_court_labelpack3_20260723",
+    "status": "reviewed"
+  },
+  "schema_version": 1
+}

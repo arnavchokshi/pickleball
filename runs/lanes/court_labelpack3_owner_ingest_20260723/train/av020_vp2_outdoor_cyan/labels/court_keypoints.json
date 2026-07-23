@@ -1,0 +1,217 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            468.0,
+            312.5
+          ],
+          "far_left_corner": null,
+          "far_nvz_center": [
+            416.0,
+            333.5
+          ],
+          "far_nvz_left": [
+            336.0,
+            320.5
+          ],
+          "far_nvz_right": [
+            529.0,
+            344.5
+          ],
+          "far_right_corner": [
+            555.0,
+            321.5
+          ],
+          "near_baseline_center": [
+            134.0,
+            469.5
+          ],
+          "near_left_corner": [
+            39.0,
+            412.5
+          ],
+          "near_nvz_center": [
+            336.0,
+            368.5
+          ],
+          "near_nvz_left": [
+            242.0,
+            347.5
+          ],
+          "near_nvz_right": [
+            487.0,
+            402.5
+          ],
+          "near_right_corner": null,
+          "net_center": null,
+          "net_left_sideline": [
+            295.0,
+            280.5
+          ],
+          "net_right_sideline": [
+            511.0,
+            295.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "far_left_corner",
+            "near_right_corner",
+            "net_center"
+          ],
+          "frame_sha256": "95297b160643ce75203ffd8eb59865eb9c52e2a37f60db87afa018690cc293d9",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 10,
+            "inlier_count": 10,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 10,
+              "max": 4.06637179224507,
+              "mean": 2.786507864927786,
+              "median": 2.813603215249552,
+              "min": 1.4548952070342893,
+              "p90": 3.9393511681627813
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v020_f01_6532e84a1415.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/testworkspace-i8nb1__pickle-court-keypoints__v2/train/videoplayback-2-_mp4-0021_jpg.rf.65fbd075d41e595c0e9f7573868b8587.jpg",
+          "source_sha256": "a9840731293f1ddde84650e6e0d7b036e724d1d16315775fc07d16c44cfef7c7",
+          "venue": "videoplayback outdoor cyan club court",
+          "venue_id": "av020_vp2_outdoor_cyan",
+          "workspace": "testworkspace-i8nb1__pickle-court-keypoints__v2"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            521.0,
+            320.5
+          ],
+          "far_left_corner": null,
+          "far_nvz_center": [
+            474.0,
+            340.5
+          ],
+          "far_nvz_left": [
+            383.0,
+            323.5
+          ],
+          "far_nvz_right": [
+            596.0,
+            363.5
+          ],
+          "far_right_corner": [
+            624.0,
+            332.5
+          ],
+          "near_baseline_center": [
+            192.0,
+            461.5
+          ],
+          "near_left_corner": [
+            109.0,
+            398.5
+          ],
+          "near_nvz_center": [
+            385.0,
+            372.5
+          ],
+          "near_nvz_left": [
+            291.0,
+            347.5
+          ],
+          "near_nvz_right": [
+            546.0,
+            415.5
+          ],
+          "near_right_corner": null,
+          "net_center": null,
+          "net_left_sideline": [
+            351.0,
+            283.5
+          ],
+          "net_right_sideline": [
+            580.0,
+            305.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "far_left_corner",
+            "near_right_corner",
+            "net_center"
+          ],
+          "frame_sha256": "b37e5d2e79460d4841b6f2ad9bbecdc62a0c99cee7a5e099c77e5258c22367b7",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 10,
+            "inlier_count": 10,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 10,
+              "max": 4.041316537123964,
+              "mean": 2.3849197469711636,
+              "median": 2.4245502268811236,
+              "min": 0.608371752255638,
+              "p90": 3.9740334275188918
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v020_f02_e82dba0bdf5b.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/testworkspace-i8nb1__pickle-court-keypoints__v2/train/videoplayback-2-_mp4-0104_jpg.rf.a72dd5423ed6239686546709638fa887.jpg",
+          "source_sha256": "b548d437d82e570ae0eda50863d177922257596f9a559e4c26b7cd9da9ce291b",
+          "venue": "videoplayback outdoor cyan club court",
+          "venue_id": "av020_vp2_outdoor_cyan",
+          "workspace": "testworkspace-i8nb1__pickle-court-keypoints__v2"
+        },
+        "status": "reviewed"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "av020_vp2_outdoor_cyan",
+  "frames": {
+    "available_review_frame_count": 2,
+    "frame_count": 2,
+    "frame_dir": "av020_vp2_outdoor_cyan/frames",
+    "label_coordinate_space": [
+      640,
+      640
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "independent_reviewed_count": 2,
+    "note": "Owner clicked every visible point. Explicit skips and unfilled points are JSON null because the owner confirmed they were covered or not visible; no coordinate was fabricated.",
+    "reviewer": "owner_sequential_court_labelpack3_20260723",
+    "status": "reviewed"
+  },
+  "schema_version": 1
+}

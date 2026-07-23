@@ -1,0 +1,50 @@
+{
+  "artifact_type": "racketsport_court_labelpack_owner_ingest_report",
+  "artifacts": {
+    "source_package_manifest_copy": "runs/lanes/court_labelpack3_owner_ingest_20260723/source_package_manifest.json",
+    "source_results_copy": "runs/lanes/court_labelpack3_owner_ingest_20260723/source_results.json",
+    "train_root": "runs/lanes/court_labelpack3_owner_ingest_20260723/train",
+    "unsupported_manifest": "runs/lanes/court_labelpack3_owner_ingest_20260723/unsupported_view_manifest.json"
+  },
+  "counts": {
+    "explicitly_skipped_points": 109,
+    "geometry_audited_positive_frames": 106,
+    "geometry_flagged_positive_frames": 0,
+    "labeled_points": 1446,
+    "new_source_positive_frames": 46,
+    "omitted_points_interpreted_as_invisible": 35,
+    "package_frames": 122,
+    "positive_frames": 106,
+    "positive_venue_groups": 44,
+    "prior_training_exact_source_overlap_positive_frames": 60,
+    "trainer_clip_groups": 45,
+    "unsupported_view_frames": 16
+  },
+  "geometry_flags": [],
+  "inputs": {
+    "package_manifest": "cvat_upload/court_labelpack3_20260723/package_manifest.json",
+    "package_manifest_sha256": "51e4ee9431a2502e40a6bba6df6a6b5b259fa48310f0ae6af952c88128db0353",
+    "prior_training_manifest": "runs/court_unified_training_20260723/final_external_corpus/manifest.json",
+    "results": "/Users/arnavchokshi/Downloads/court_labelpack3_20260723_results.json",
+    "results_sha256": "a03411a236cb2851b21e75b4b56032ba52739b92442b9cc88fbb651ecbfd5cba"
+  },
+  "policies": {
+    "independent_gate_usage": "forbidden; training-only rows",
+    "missing_points_fabricated": false,
+    "owner_omissions_are_invisible": true,
+    "raw_owner_results_immutable": true,
+    "source_grouping": "venue_id plus resolution; no venue crosses partitions",
+    "unsupported_views_enter_keypoint_training": false,
+    "unsupported_views_preserved_for_supported_view_training": true
+  },
+  "schema_version": 1,
+  "status": "READY",
+  "status_counts": {
+    "excluded": 16,
+    "in_progress": 44,
+    "reviewed": 62
+  },
+  "unsupported_reason_counts": {
+    "bad_angle": 16
+  }
+}

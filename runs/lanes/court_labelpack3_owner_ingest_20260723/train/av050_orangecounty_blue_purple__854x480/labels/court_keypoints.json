@@ -1,0 +1,311 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            422.0,
+            82.75
+          ],
+          "far_left_corner": [
+            339.0,
+            77.75
+          ],
+          "far_nvz_center": [
+            423.0,
+            131.75
+          ],
+          "far_nvz_left": [
+            314.0,
+            131.75
+          ],
+          "far_nvz_right": [
+            530.0,
+            131.75
+          ],
+          "far_right_corner": [
+            506.0,
+            81.75
+          ],
+          "near_baseline_center": [
+            424.0,
+            385.75
+          ],
+          "near_left_corner": [
+            202.0,
+            389.75
+          ],
+          "near_nvz_center": [
+            425.0,
+            209.75
+          ],
+          "near_nvz_left": [
+            281.0,
+            208.75
+          ],
+          "near_nvz_right": [
+            566.0,
+            210.75
+          ],
+          "near_right_corner": [
+            637.0,
+            385.75
+          ],
+          "net_center": null,
+          "net_left_sideline": null,
+          "net_right_sideline": null
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "net_center",
+            "net_left_sideline",
+            "net_right_sideline"
+          ],
+          "frame_sha256": "7d50b5f3701fad87486e699385954def4af8d5fa6e86715560af4ba5f8084aea",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 3.6725725071091,
+              "mean": 1.7137937328041843,
+              "median": 1.6984058957230395,
+              "min": 0.44463485639899797,
+              "p90": 2.260791962528541
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v050_f02_15123163a67b.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10/train/-1-Ben-Johns-vs-3-Jay-Devilliers-Men-s-Singles-GOLD-Highlights-2021-PPA-Orange-County-Cup-2025-02-26T101327-958_jpeg.rf.9360c98b1ce3907c901f287d2999c9c4.jpg",
+          "source_sha256": "463155f648706bcf013cc5fb8eab5431d1b93c0fe39c7fa4bf3a96a2d2d52456",
+          "venue": "Orange County blue-purple show court",
+          "venue_id": "av050_orangecounty_blue_purple",
+          "workspace": "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            409.0,
+            79.75
+          ],
+          "far_left_corner": [
+            323.0,
+            79.75
+          ],
+          "far_nvz_center": null,
+          "far_nvz_left": null,
+          "far_nvz_right": null,
+          "far_right_corner": [
+            489.0,
+            76.75
+          ],
+          "near_baseline_center": [
+            414.0,
+            386.75
+          ],
+          "near_left_corner": [
+            197.0,
+            388.75
+          ],
+          "near_nvz_center": [
+            411.0,
+            211.75
+          ],
+          "near_nvz_left": [
+            265.0,
+            213.75
+          ],
+          "near_nvz_right": [
+            552.0,
+            206.75
+          ],
+          "near_right_corner": [
+            622.0,
+            378.75
+          ],
+          "net_center": [
+            406.0,
+            129.75
+          ],
+          "net_left_sideline": [
+            282.0,
+            132.75
+          ],
+          "net_right_sideline": [
+            523.0,
+            128.75
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "far_nvz_center",
+            "far_nvz_left",
+            "far_nvz_right"
+          ],
+          "frame_sha256": "ff7e473ccb6a0aa16ce5ec416fa943b99869488f80e58f5dfde3e402dfad69e8",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 9,
+            "inlier_count": 9,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 9,
+              "max": 3.301406775346836,
+              "mean": 2.3003083923259733,
+              "median": 2.2237649354513387,
+              "min": 0.2577644999199447,
+              "p90": 3.159421277995251
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v050_f03_a951a3da14a2.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10/train/-1-Ben-Johns-vs-3-Jay-Devilliers-Men-s-Singles-GOLD-Highlights-2021-PPA-Orange-County-Cup-2025-03-20T110213-195_jpeg.rf.c3a8dcb24689ac41ae10fd13a092f5f1.jpg",
+          "source_sha256": "d909179355e7b89632369cbff468c67a3d826979ff6cf12bbcb1fadd98c46170",
+          "venue": "Orange County blue-purple show court",
+          "venue_id": "av050_orangecounty_blue_purple",
+          "workspace": "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            418.0,
+            80.75
+          ],
+          "far_left_corner": [
+            336.0,
+            80.75
+          ],
+          "far_nvz_center": null,
+          "far_nvz_left": null,
+          "far_nvz_right": null,
+          "far_right_corner": [
+            505.0,
+            79.75
+          ],
+          "near_baseline_center": [
+            421.0,
+            384.75
+          ],
+          "near_left_corner": [
+            201.0,
+            384.75
+          ],
+          "near_nvz_center": [
+            419.0,
+            210.75
+          ],
+          "near_nvz_left": [
+            275.0,
+            210.75
+          ],
+          "near_nvz_right": [
+            560.0,
+            208.75
+          ],
+          "near_right_corner": [
+            633.0,
+            383.75
+          ],
+          "net_center": [
+            417.0,
+            129.75
+          ],
+          "net_left_sideline": [
+            298.0,
+            132.75
+          ],
+          "net_right_sideline": [
+            530.0,
+            131.75
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [
+            "far_nvz_center",
+            "far_nvz_left",
+            "far_nvz_right"
+          ],
+          "frame_sha256": "c8a83a86df3a58182d993bdf92e1e1f9aeec7a1ee5945c42c8d280a3a96213e0",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 9,
+            "inlier_count": 9,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 9,
+              "max": 3.395178880614248,
+              "mean": 1.5191382109109925,
+              "median": 1.1987271493500535,
+              "min": 0.2668210766511006,
+              "p90": 2.442195605333511
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v050_f04_fb59ccaad211.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": false,
+          "source_path": "data/roboflow_universe_20260706/xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10/valid/-1-Ben-Johns-vs-3-Jay-Devilliers-Men-s-Singles-GOLD-Highlights-2021-PPA-Orange-County-Cup-73-_jpeg.rf.a93c1d36b8602cdadc448edbd71e5a9e.jpg",
+          "source_sha256": "7286d81e8c58af1d6ebb70634e35f5778e0a166734c430d88bd0253d5b9761c1",
+          "venue": "Orange County blue-purple show court",
+          "venue_id": "av050_orangecounty_blue_purple",
+          "workspace": "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10"
+        },
+        "status": "reviewed"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "av050_orangecounty_blue_purple__854x480",
+  "frames": {
+    "available_review_frame_count": 3,
+    "frame_count": 3,
+    "frame_dir": "av050_orangecounty_blue_purple__854x480/frames",
+    "label_coordinate_space": [
+      854,
+      480
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      854,
+      480
+    ]
+  },
+  "review": {
+    "independent_reviewed_count": 3,
+    "note": "Owner clicked every visible point. Explicit skips and unfilled points are JSON null because the owner confirmed they were covered or not visible; no coordinate was fabricated.",
+    "reviewer": "owner_sequential_court_labelpack3_20260723",
+    "status": "reviewed"
+  },
+  "schema_version": 1
+}

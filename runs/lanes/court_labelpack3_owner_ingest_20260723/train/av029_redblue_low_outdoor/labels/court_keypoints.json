@@ -1,0 +1,127 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            293.0,
+            285.5
+          ],
+          "far_left_corner": [
+            171.0,
+            284.5
+          ],
+          "far_nvz_center": [
+            302.0,
+            317.5
+          ],
+          "far_nvz_left": [
+            152.0,
+            316.5
+          ],
+          "far_nvz_right": [
+            438.0,
+            315.5
+          ],
+          "far_right_corner": [
+            411.0,
+            285.5
+          ],
+          "near_baseline_center": [
+            322.0,
+            430.5
+          ],
+          "near_left_corner": [
+            77.0,
+            432.5
+          ],
+          "near_nvz_center": [
+            307.0,
+            358.5
+          ],
+          "near_nvz_left": [
+            126.0,
+            360.5
+          ],
+          "near_nvz_right": [
+            479.0,
+            357.5
+          ],
+          "near_right_corner": [
+            555.0,
+            434.5
+          ],
+          "net_center": null,
+          "net_left_sideline": [
+            146.0,
+            289.5
+          ],
+          "net_right_sideline": [
+            432.0,
+            290.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "92577e5ccf57e13d542c1321e140e15f8b66d39f0f605a8e963b358b6ca0b7d6",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.215658804025675,
+              "mean": 1.9848857548452283,
+              "median": 1.9859537047500677,
+              "min": 0.2730021024469439,
+              "p90": 3.5837418221166537
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": [
+              "net_center"
+            ]
+          },
+          "original_file_name": "v029_f01_8d2d7e119616.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/nigh-workspace__pickleball-court-vhpgp__v11/valid/PBGAME8_mp4-0037_jpg.rf.2cd59ba07bea01aa9421024250cc3ab2.jpg",
+          "source_sha256": "fb5f8a05b2d8508a2347af8d14df0d24b730c33dbc60f838155b5e7d86212664",
+          "venue": "red-blue low outdoor show court",
+          "venue_id": "av029_redblue_low_outdoor",
+          "workspace": "nigh-workspace__pickleball-court-vhpgp__v11"
+        },
+        "status": "reviewed"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "av029_redblue_low_outdoor",
+  "frames": {
+    "available_review_frame_count": 1,
+    "frame_count": 1,
+    "frame_dir": "av029_redblue_low_outdoor/frames",
+    "label_coordinate_space": [
+      640,
+      640
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "independent_reviewed_count": 1,
+    "note": "Owner clicked every visible point. Explicit skips and unfilled points are JSON null because the owner confirmed they were covered or not visible; no coordinate was fabricated.",
+    "reviewer": "owner_sequential_court_labelpack3_20260723",
+    "status": "reviewed"
+  },
+  "schema_version": 1
+}

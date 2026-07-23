@@ -1,0 +1,49 @@
+{
+  "artifact_type": "racketsport_court_curated264_pack3_finetune_recipe",
+  "schema_version": 1,
+  "status": "frozen_diagnostic_recipe",
+  "verified": false,
+  "purpose": "Measure whether adding 106 owner-reviewed pack3 frames to the selected curated264 checkpoint improves exact-semantic structured court accuracy.",
+  "data_facts": {
+    "curated_external_rows": 264,
+    "owner_pack3_supported_rows": 106,
+    "union_rows": 370,
+    "union_non_null_keypoints": 4614,
+    "owner_pack3_non_null_net_points": 292,
+    "owner_pack3_new_source_pixels": 46,
+    "owner_pack3_prior_source_label_upgrades": 60,
+    "unsupported_view_negatives_preserved_but_not_used_by_v2": 16
+  },
+  "initialization": {
+    "path": "models/checkpoints/court_unet_v2/court_model_v2.pt",
+    "sha256": "bba24725dc4c184f7c2ad42c2223391d4b76829716285030e913561da2a32aae"
+  },
+  "training": {
+    "epochs": 6,
+    "steps_per_epoch": 100,
+    "batch_size": 32,
+    "real_batch_size": 32,
+    "real_weight": 0.8,
+    "synthetic_weight": 0.2,
+    "learning_rate": 0.00015,
+    "weight_decay": 0.0001,
+    "geometric_loss_weight": 0.05,
+    "geometry_on_real_batches": true,
+    "real_photometric_augmentation": true,
+    "real_validation_samples": 0,
+    "seed": 13,
+    "synthetic_workers": 8
+  },
+  "evaluation": {
+    "same_development_set": "runs/court_diversity_owner_ingest_20260723/holdout",
+    "structured_best_court": true,
+    "selection_order": [
+      "reject topology, duplicate, collapse, or missing-output violations",
+      "maximize exact-semantic structured floor PCK@5",
+      "minimize structured p95",
+      "minimize structured median"
+    ],
+    "authority": "review_only",
+    "measurement_valid": false
+  }
+}

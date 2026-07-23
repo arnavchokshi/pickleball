@@ -1,0 +1,326 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            320.0,
+            200.5
+          ],
+          "far_left_corner": [
+            235.0,
+            200.5
+          ],
+          "far_nvz_center": [
+            319.0,
+            231.5
+          ],
+          "far_nvz_left": [
+            208.0,
+            231.5
+          ],
+          "far_nvz_right": [
+            427.0,
+            228.5
+          ],
+          "far_right_corner": [
+            404.0,
+            201.5
+          ],
+          "near_baseline_center": [
+            317.0,
+            417.5
+          ],
+          "near_left_corner": [
+            34.0,
+            417.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            281.5
+          ],
+          "near_nvz_left": [
+            167.0,
+            277.5
+          ],
+          "near_nvz_right": [
+            475.0,
+            280.5
+          ],
+          "near_right_corner": [
+            608.0,
+            418.5
+          ],
+          "net_center": [
+            318.0,
+            214.5
+          ],
+          "net_left_sideline": [
+            191.0,
+            214.5
+          ],
+          "net_right_sideline": [
+            421.0,
+            213.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "8a934214e18616ca6430c4d36d3f194a71b188c11990ab8db6990c65b4af8058",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.638151057579782,
+              "mean": 2.0424834112878396,
+              "median": 1.8165868617784564,
+              "min": 0.8514700979002316,
+              "p90": 3.4210153249912167
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v030_f01_b7d9e82de331.jpg",
+          "owner_result_status": "reviewed",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/nigh-workspace__pickleball-court-vhpgp__v11/valid/PBGAME10_mp4-0009_jpg.rf.ed33134770b6df41a4f5408106ee5162.jpg",
+          "source_sha256": "bf9a8dda50fe34eac94402e87d114499cee43f31c86dd9a6dead9ab9d9350fb8",
+          "venue": "Carvana green-navy show court",
+          "venue_id": "av030_carvana_green_navy",
+          "workspace": "nigh-workspace__pickleball-court-vhpgp__v11"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            320.0,
+            200.5
+          ],
+          "far_left_corner": [
+            235.0,
+            200.5
+          ],
+          "far_nvz_center": [
+            319.0,
+            231.5
+          ],
+          "far_nvz_left": [
+            208.0,
+            231.5
+          ],
+          "far_nvz_right": [
+            427.0,
+            228.5
+          ],
+          "far_right_corner": [
+            404.0,
+            201.5
+          ],
+          "near_baseline_center": [
+            317.0,
+            417.5
+          ],
+          "near_left_corner": [
+            34.0,
+            417.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            281.5
+          ],
+          "near_nvz_left": [
+            167.0,
+            277.5
+          ],
+          "near_nvz_right": [
+            475.0,
+            280.5
+          ],
+          "near_right_corner": [
+            608.0,
+            418.5
+          ],
+          "net_center": [
+            318.0,
+            214.5
+          ],
+          "net_left_sideline": [
+            191.0,
+            214.5
+          ],
+          "net_right_sideline": [
+            421.0,
+            213.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "91814b80f036203b0143695ea94e1fe4d7169fbaac830ba385d85f8ceeed4e5c",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.638151057579782,
+              "mean": 2.0424834112878396,
+              "median": 1.8165868617784564,
+              "min": 0.8514700979002316,
+              "p90": 3.4210153249912167
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v030_f02_c5c1403335ea.jpg",
+          "owner_result_status": "in_progress",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/nigh-workspace__pickleball-court-vhpgp__v11/test/PBGAME10_mp4-0062_jpg.rf.7cf765949597a3bee0fcd453344b0ec0.jpg",
+          "source_sha256": "6e087677c66f54f5011590a5d5cb5e476f771cacbff02d4567387c1acb5402b3",
+          "venue": "Carvana green-navy show court",
+          "venue_id": "av030_carvana_green_navy",
+          "workspace": "nigh-workspace__pickleball-court-vhpgp__v11"
+        },
+        "status": "reviewed"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "keypoints": {
+          "far_baseline_center": [
+            320.0,
+            200.5
+          ],
+          "far_left_corner": [
+            235.0,
+            200.5
+          ],
+          "far_nvz_center": [
+            319.0,
+            231.5
+          ],
+          "far_nvz_left": [
+            208.0,
+            231.5
+          ],
+          "far_nvz_right": [
+            427.0,
+            228.5
+          ],
+          "far_right_corner": [
+            404.0,
+            201.5
+          ],
+          "near_baseline_center": [
+            317.0,
+            417.5
+          ],
+          "near_left_corner": [
+            34.0,
+            417.5
+          ],
+          "near_nvz_center": [
+            316.0,
+            281.5
+          ],
+          "near_nvz_left": [
+            167.0,
+            277.5
+          ],
+          "near_nvz_right": [
+            475.0,
+            280.5
+          ],
+          "near_right_corner": [
+            608.0,
+            418.5
+          ],
+          "net_center": [
+            318.0,
+            214.5
+          ],
+          "net_left_sideline": [
+            191.0,
+            214.5
+          ],
+          "net_right_sideline": [
+            421.0,
+            213.5
+          ]
+        },
+        "provenance": {
+          "explicitly_skipped_points": [],
+          "frame_sha256": "bed649f26758517ba5a58dcf5f6fd80c042d247d17f7a1faad9f65e5ebfb7db4",
+          "geometry_audit": {
+            "available": true,
+            "flagged": false,
+            "floor_observation_count": 12,
+            "inlier_count": 12,
+            "residual_outlier_count": 0,
+            "residual_outliers": [],
+            "residual_stats_px": {
+              "count": 12,
+              "max": 4.638151057579782,
+              "mean": 2.0424834112878396,
+              "median": 1.8165868617784564,
+              "min": 0.8514700979002316,
+              "p90": 3.4210153249912167
+            },
+            "solver_status": "solved_best_effort"
+          },
+          "omitted_points_interpreted_as": {
+            "meaning": "occluded_or_not_visible_per_owner_message_2026-07-23",
+            "names": []
+          },
+          "original_file_name": "v030_f03_6ca117140d75.jpg",
+          "owner_result_status": "in_progress",
+          "prior_training_exact_source_overlap": true,
+          "source_path": "data/roboflow_universe_20260706/nigh-workspace__pickleball-court-vhpgp__v11/train/PBGAME10_mp4-0016_jpg.rf.77a8c1a0d70b506e6c060b53e97a1cd4.jpg",
+          "source_sha256": "0ee6c78055d9d6eecc03830fc647809e28aa2c810759ec7ac519dbae84154a4a",
+          "venue": "Carvana green-navy show court",
+          "venue_id": "av030_carvana_green_navy",
+          "workspace": "nigh-workspace__pickleball-court-vhpgp__v11"
+        },
+        "status": "reviewed"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "av030_carvana_green_navy",
+  "frames": {
+    "available_review_frame_count": 3,
+    "frame_count": 3,
+    "frame_dir": "av030_carvana_green_navy/frames",
+    "label_coordinate_space": [
+      640,
+      640
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "independent_reviewed_count": 3,
+    "note": "Owner clicked every visible point. Explicit skips and unfilled points are JSON null because the owner confirmed they were covered or not visible; no coordinate was fabricated.",
+    "reviewer": "owner_sequential_court_labelpack3_20260723",
+    "status": "reviewed"
+  },
+  "schema_version": 1
+}
