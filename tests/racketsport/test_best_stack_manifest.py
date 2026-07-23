@@ -17,7 +17,7 @@ def test_best_stack_manifest_integrity() -> None:
     manifest = load_best_stack_manifest()
 
     assert manifest.schema_version == 1
-    assert manifest.revision == 14
+    assert manifest.revision == 15
     assert "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim" in manifest.invariants
     assert len(manifest.entries) >= 30
 
@@ -27,6 +27,7 @@ def test_best_stack_manifest_integrity() -> None:
         "tracking.reid_model",
         "tracking.global_association_profile",
         "tracking.eval_only_association_profiles",
+        "tracking.player_selection_layer",
         "confidence.calibration_curves",
         "mesh.coverage_mode",
         "mesh.byte_budget_mib",
@@ -119,6 +120,25 @@ def test_best_stack_manifest_integrity() -> None:
     assert association_margin.proven_against["full_bar_cov4_ge_0p95"] is False
     assert association_margin.provenance["lane"] == "trk_flip_20260713"
     assert "NOT an accuracy-gate promotion" in association_margin.notes
+
+    player_selection = manifest.entry("tracking.player_selection_layer")
+    assert player_selection.status == "PENDING"
+    assert player_selection.raw["trust_band"] == "preview"
+    assert player_selection.value["enabled"] is False
+    assert player_selection.value["do_not_promote"] is True
+    assert player_selection.value["registered_constants"] == {
+        "COURT_REGION_HARD_BOUND_M": 1.0,
+        "EXACTLY_FOUR_HARD_CAP": 4,
+    }
+    assert player_selection.gate["name"] == (
+        "player_selection_two_leg_reproduction_mechanics_then_untouched_judge_accuracy"
+    )
+    assert "Leg 1" in player_selection.gate["bar"]
+    assert "Leg 2" in player_selection.gate["bar"]
+    assert player_selection.provenance["commit"] == "worktree"
+    assert player_selection.provenance["lane"] == "trkC_constraints_rebuild_20260722"
+    assert "burned them as an accuracy judge" in player_selection.notes
+    assert "VERIFIED=0" in player_selection.notes
 
     pending_without_gate = [
         key for key, entry in manifest.entries.items() if entry.status == "PENDING" and entry.gate is None

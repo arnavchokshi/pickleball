@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "revision": 14,
- "updated": "2026-07-20",
+ "revision": 15,
+ "updated": "2026-07-23",
  "invariants": [
   "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
   "Explicit CLI flag overrides manifest defaults; absent manifest entry is a hard error on decision paths.",
@@ -1063,7 +1063,7 @@
     },
     "fresh_clip_full_gate_passed": false
    },
-   "notes": "PENDING and non-default; NOT an accuracy promotion. On the frozen historical-internal card this detector IMPROVES burlington (IDF1 0.8831\u21920.9220, cov4 0.7117\u21920.9933, all FP axes zero) and REGRESSES wolverine (IDF1 0.8516\u21920.8036, cov4 0.7600\u21920.7233, 0\u21921 identity switch, 0\u21924 true-spectator false-positive frames). CORRECTED CAUSAL TEXT: the four wolverine spectator ghosts are P0-I's fabricated f45-86 association bridge with confidence pinned 0.35, not detector output; a preregistered conf-0.30 attempt made every wolverine axis worse, so threshold suppression is exhausted for the wrong reason. The fix belongs in a downstream selection layer (stitch veto + slot re-bind), owned by a separate track. RF-DETR may be selected explicitly only for its frozen reproduction; it cannot become the no-flag default unless both frozen rows reproduce within 0.0001 on a GPU-class environment. YOLO26m remains default. TRK stays preview; do_not_promote=true; VERIFIED=0.",
+   "notes": "PENDING and non-default; NOT an accuracy promotion. On the frozen historical-internal card this detector IMPROVES burlington (IDF1 0.8831→0.9220, cov4 0.7117→0.9933, all FP axes zero) and REGRESSES wolverine (IDF1 0.8516→0.8036, cov4 0.7600→0.7233, 0→1 identity switch, 0→4 true-spectator false-positive frames). CORRECTED CAUSAL TEXT: the four wolverine spectator ghosts are P0-I's fabricated f45-86 association bridge with confidence pinned 0.35, not detector output; a preregistered conf-0.30 attempt made every wolverine axis worse, so threshold suppression is exhausted for the wrong reason. The fix belongs in a downstream selection layer (stitch veto + slot re-bind), owned by a separate track. RF-DETR may be selected explicitly only for its frozen reproduction; it cannot become the no-flag default unless both frozen rows reproduce within 0.0001 on a GPU-class environment. YOLO26m remains default. TRK stays preview; do_not_promote=true; VERIFIED=0.",
    "gate": {
     "name": "rfdetr_gpu_production_reproduction_then_trk_fresh_clip_full_gate",
     "metric_key": "burlington_and_wolverine_frozen_card_axes",
@@ -1142,6 +1142,60 @@
      "runs/lanes/trk_flip_20260713/report.json"
     ]
    }
+  },
+  "tracking.player_selection_layer": {
+   "stage": "player_selection",
+   "selection": "default-OFF preview selection stage with registered exactly-four and court-region hard post-filter plus selective-ReID logging",
+   "value": {
+    "enabled": false,
+    "enable_flag": "--player-selection",
+    "disable_flag": "--no-player-selection",
+    "stage_order": 35,
+    "preselection_artifact": "tracks_preselection.json",
+    "selected_artifact": "tracks.json",
+    "report_artifact": "selection_report.json",
+    "trust_band": "preview",
+    "do_not_promote": true,
+    "registered_constants": {
+     "EXACTLY_FOUR_HARD_CAP": 4,
+     "COURT_REGION_HARD_BOUND_M": 1.0
+    },
+    "selective_reid_policy": {
+     "policy": "ambiguous_frames_only",
+     "ambiguous_definition": "zero or two-plus candidate real detections inside the registered court region competing for a slot",
+     "unambiguous_log": "reid_skipped_unambiguous",
+     "unavailable_policy": "typed_warning_and_nonzero_reid_unavailable_including_provider_absence"
+    }
+   },
+   "status": "PENDING",
+   "trust_band": "preview",
+   "do_not_promote": true,
+   "gate": {
+    "name": "player_selection_two_leg_reproduction_mechanics_then_untouched_judge_accuracy",
+    "metric_key": "reproduction_constraint_mechanics_plus_manager_named_untouched_judge_accuracy",
+    "bar": "Leg 1 is manager-gated reproduction and constraint-mechanics evidence only. Leg 2 is a named, preregistered untouched-judge accuracy gate chosen by manager ruling. Both legs must pass before promotion.",
+    "evidence_path": "runs/lanes/trkC_constraints_rebuild_20260722/VM_CARD_PLAN.md",
+    "accuracy_gate_name": "TBD by manager ruling before execution"
+   },
+   "provenance": {
+    "lane": "trkC_constraints_rebuild_20260722",
+    "commit": "worktree",
+    "date": "2026-07-22",
+    "evidence_paths": [
+     "runs/lanes/trkC_constraints_rebuild_20260722/report.json",
+     "runs/lanes/trkC_constraints_rebuild_20260722/VM_CARD_PLAN.md",
+     "runs/lanes/trkL_selection_20260717/DESIGN_selection_layer.md",
+     "runs/lanes/trkL_binding_fix_20260720/MANAGER_RULING.md",
+     "runs/research_sota_20260722/PROGRAM.md"
+    ]
+   },
+   "proven_against": {
+    "scope": "fixture-only constraint and wiring mechanics; judge-hygiene evidence is limited to the lane report self-audit grep result",
+    "reproduction_card": "NO-ATTEMPT in this lane; manager-gated follow-up only",
+    "untouched_judge_accuracy_gate": "TBD by manager ruling",
+    "accuracy_promotion_passed": false
+   },
+   "notes": "PENDING, default OFF, preview, do_not_promote=true; fixture-mechanics wiring only; VERIFIED=0. GPU card NO-GO on Wolverine/Burlington for this component — scorer-guided development burned them as an accuracy judge; they can prove reproduction only. The frozen card cannot support an accuracy claim; promotion requires the manager-named untouched-judge gate."
   },
   "ball.recovery_policy_v2_one_sided": {
    "stage": "ball_arc",
