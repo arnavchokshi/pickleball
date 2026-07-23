@@ -1,0 +1,188 @@
+{
+  "after": {
+    "real_keypoint_count": 89,
+    "real_keypoint_mean_px": 103.72753181714535,
+    "real_keypoint_median_px": 5.744938674318917,
+    "real_keypoint_p95_px": 521.656126213241,
+    "real_keypoint_pck_at_10px": 0.6629213483146067,
+    "real_keypoint_pck_at_5px": 0.4044943820224719,
+    "real_keypoint_pck_per_clip": {
+      "4qSoA-jwpVM": {
+        "count": 15,
+        "max": 741.6245112543968,
+        "mean": 111.30156822675941,
+        "median": 5.515988378529886,
+        "p95": 731.6608664860629,
+        "pck_at_10px": 0.6,
+        "pck_at_5px": 0.4666666666666667
+      },
+      "A9H6EWfXht0": {
+        "count": 29,
+        "max": 1023.9047499169948,
+        "mean": 156.69226173940936,
+        "median": 7.507386282786767,
+        "p95": 828.6617913555456,
+        "pck_at_10px": 0.5862068965517241,
+        "pck_at_5px": 0.3103448275862069
+      },
+      "Se7M6ZKaC4Y": {
+        "count": 15,
+        "max": 392.79266179607896,
+        "mean": 45.56282204250855,
+        "median": 5.325049496866222,
+        "p95": 276.747077328324,
+        "pck_at_10px": 0.8,
+        "pck_at_5px": 0.4666666666666667
+      },
+      "q3575jnmjJQ": {
+        "count": 30,
+        "max": 449.8357671601191,
+        "mean": 77.82362957480146,
+        "median": 5.217017713383788,
+        "p95": 424.3744932152317,
+        "pck_at_10px": 0.7,
+        "pck_at_5px": 0.43333333333333335
+      }
+    }
+  },
+  "all": {
+    "keypoint_error_summary": {
+      "count": 89,
+      "max": 1023.9047499169948,
+      "mean": 103.72753181714535,
+      "median": 5.744938674318917,
+      "p95": 521.656126213241
+    },
+    "pck_at_10px": 0.6629213483146067,
+    "pck_at_5px": 0.4044943820224719,
+    "per_clip": {
+      "4qSoA-jwpVM": {
+        "count": 15,
+        "max": 741.6245112543968,
+        "mean": 111.30156822675941,
+        "median": 5.515988378529886,
+        "p95": 731.6608664860629,
+        "pck_at_10px": 0.6,
+        "pck_at_5px": 0.4666666666666667
+      },
+      "A9H6EWfXht0": {
+        "count": 29,
+        "max": 1023.9047499169948,
+        "mean": 156.69226173940936,
+        "median": 7.507386282786767,
+        "p95": 828.6617913555456,
+        "pck_at_10px": 0.5862068965517241,
+        "pck_at_5px": 0.3103448275862069
+      },
+      "Se7M6ZKaC4Y": {
+        "count": 15,
+        "max": 392.79266179607896,
+        "mean": 45.56282204250855,
+        "median": 5.325049496866222,
+        "p95": 276.747077328324,
+        "pck_at_10px": 0.8,
+        "pck_at_5px": 0.4666666666666667
+      },
+      "q3575jnmjJQ": {
+        "count": 30,
+        "max": 449.8357671601191,
+        "mean": 77.82362957480146,
+        "median": 5.217017713383788,
+        "p95": 424.3744932152317,
+        "pck_at_10px": 0.7,
+        "pck_at_5px": 0.43333333333333335
+      }
+    }
+  },
+  "all_frame_count": 6,
+  "architecture": {
+    "name": "court_unet_v2",
+    "network_architecture": "court_unet_v2"
+  },
+  "artifact_type": "court_keypoint_owner_gate_report_v2",
+  "checkpoint": "runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13/court_model_v2_epoch_0016.pt",
+  "gate": {
+    "metric": "real_keypoint_pck_at_5px_independent",
+    "not_cal3_verified": true,
+    "passed": false,
+    "pck_threshold_px": 5.0,
+    "threshold": 0.95,
+    "value": 0.4044943820224719
+  },
+  "gate_passed": {
+    "all": false,
+    "independent": false
+  },
+  "gate_passed_per_viewpoint": {
+    "all": false,
+    "independent": false
+  },
+  "gate_passed_pooled": {
+    "all": false,
+    "independent": false
+  },
+  "gate_threshold": 0.95,
+  "holdout_artifacts": [],
+  "independent": {
+    "keypoint_error_summary": {
+      "count": 89,
+      "max": 1023.9047499169948,
+      "mean": 103.72753181714535,
+      "median": 5.744938674318917,
+      "p95": 521.656126213241
+    },
+    "pck_at_10px": 0.6629213483146067,
+    "pck_at_5px": 0.4044943820224719,
+    "per_clip": {
+      "4qSoA-jwpVM": {
+        "count": 15,
+        "max": 741.6245112543968,
+        "mean": 111.30156822675941,
+        "median": 5.515988378529886,
+        "p95": 731.6608664860629,
+        "pck_at_10px": 0.6,
+        "pck_at_5px": 0.4666666666666667
+      },
+      "A9H6EWfXht0": {
+        "count": 29,
+        "max": 1023.9047499169948,
+        "mean": 156.69226173940936,
+        "median": 7.507386282786767,
+        "p95": 828.6617913555456,
+        "pck_at_10px": 0.5862068965517241,
+        "pck_at_5px": 0.3103448275862069
+      },
+      "Se7M6ZKaC4Y": {
+        "count": 15,
+        "max": 392.79266179607896,
+        "mean": 45.56282204250855,
+        "median": 5.325049496866222,
+        "p95": 276.747077328324,
+        "pck_at_10px": 0.8,
+        "pck_at_5px": 0.4666666666666667
+      },
+      "q3575jnmjJQ": {
+        "count": 30,
+        "max": 449.8357671601191,
+        "mean": 77.82362957480146,
+        "median": 5.217017713383788,
+        "p95": 424.3744932152317,
+        "pck_at_10px": 0.7,
+        "pck_at_5px": 0.43333333333333335
+      }
+    }
+  },
+  "independent_frame_count": 6,
+  "notes": [
+    "independent: PRIMARY, the 4 independently human-reviewed frames (1 per clip).",
+    "all: SECONDARY, all 32 rows including owner-approved reviewed_static_camera_copy rows.",
+    "gate_passed_per_viewpoint requires every clip present to individually clear pck_threshold_px, not just the pooled-across-clips average (gate_passed aliases it)."
+  ],
+  "pck_threshold_px": 5.0,
+  "postprocess": {
+    "decode": "parabolic_subpixel_refine",
+    "prediction_mode": "keypoint_heatmap_subpixel_argmax"
+  },
+  "real_holdout_count": 6,
+  "schema_version": 1
+}

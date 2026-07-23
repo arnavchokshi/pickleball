@@ -1,0 +1,74 @@
+{
+  "artifact_type": "racketsport_court_diagnostic_training_result_summary",
+  "schema_version": 1,
+  "status": "trained_not_phase_verified",
+  "promotion_allowed": false,
+  "training": {
+    "architecture": "court_unet_v2",
+    "epochs_completed": 18,
+    "steps_per_epoch": 100,
+    "total_steps_completed": 1800,
+    "seed": 13,
+    "training_revision": "12b555824af6804da00330d64d7b3ae6d7891172"
+  },
+  "evaluation": {
+    "dataset": "Task 88 independent human holdout",
+    "frames": 6,
+    "clips": 4,
+    "labeled_keypoints": 89,
+    "promotion_gate": "PCK@5px >= 0.95 for every viewpoint"
+  },
+  "baseline": {
+    "pck_at_5px": 0.07865168539325842,
+    "pck_at_10px": 0.1348314606741573,
+    "median_error_px": 265.2501473859689,
+    "mean_error_px": 315.40856142635204,
+    "p95_error_px": 686.0509472753909,
+    "gate_passed": false
+  },
+  "saved_candidates": [
+    {
+      "epoch": 14,
+      "pck_at_5px": 0.4044943820224719,
+      "pck_at_10px": 0.7078651685393258,
+      "median_error_px": 5.799868205700877,
+      "mean_error_px": 89.65799400302588,
+      "p95_error_px": 493.630259990044,
+      "gate_passed": false
+    },
+    {
+      "epoch": 16,
+      "pck_at_5px": 0.4044943820224719,
+      "pck_at_10px": 0.6629213483146067,
+      "median_error_px": 5.744938674318917,
+      "mean_error_px": 103.72753181714535,
+      "p95_error_px": 521.656126213241,
+      "gate_passed": false
+    },
+    {
+      "epoch": 18,
+      "pck_at_5px": 0.3707865168539326,
+      "pck_at_10px": 0.6179775280898876,
+      "median_error_px": 6.88100431347271,
+      "mean_error_px": 113.96221842242234,
+      "p95_error_px": 521.2380495799478,
+      "gate_passed": false
+    }
+  ],
+  "selected_diagnostic_checkpoint": {
+    "epoch": 14,
+    "path": "runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13/court_model_v2_epoch_0014.pt",
+    "sha256": "8bf89501679a36f43ca7001d9b52a2795f42c7c84b5f407691012e98bfb72920",
+    "selection_rule": "Highest PCK@5px; epoch 14 wins the tie with epoch 16 on PCK@10px, mean error, and p95 error."
+  },
+  "visual_review": {
+    "prediction_contact_sheet": "runs/court_unified_training_20260723/diagnostic_eval/candidate_task88/best_epoch14_prediction_gallery/prediction_contact_sheet.jpg",
+    "comparison_contact_sheet": "runs/court_unified_training_20260723/diagnostic_eval/candidate_task88/best_epoch14_prediction_gallery/comparison_contact_sheet.jpg",
+    "legend": {
+      "green": "model prediction",
+      "cyan": "human label",
+      "magenta": "prediction-to-label error"
+    },
+    "finding": "Most visible court lines are localized closely, but occasional semantic point swaps create crossing diagonals and very large outliers."
+  }
+}

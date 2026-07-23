@@ -1,0 +1,188 @@
+{
+  "after": {
+    "real_keypoint_count": 89,
+    "real_keypoint_mean_px": 89.65799400302588,
+    "real_keypoint_median_px": 5.799868205700877,
+    "real_keypoint_p95_px": 493.630259990044,
+    "real_keypoint_pck_at_10px": 0.7078651685393258,
+    "real_keypoint_pck_at_5px": 0.4044943820224719,
+    "real_keypoint_pck_per_clip": {
+      "4qSoA-jwpVM": {
+        "count": 15,
+        "max": 741.704815375445,
+        "mean": 111.48834138469823,
+        "median": 5.529235901287901,
+        "p95": 731.7428558162783,
+        "pck_at_10px": 0.6666666666666666,
+        "pck_at_5px": 0.4
+      },
+      "A9H6EWfXht0": {
+        "count": 29,
+        "max": 1022.9730953240185,
+        "mean": 134.55146832168685,
+        "median": 6.850030588330739,
+        "p95": 810.0929971875646,
+        "pck_at_10px": 0.6206896551724138,
+        "pck_at_5px": 0.3793103448275862
+      },
+      "Se7M6ZKaC4Y": {
+        "count": 15,
+        "max": 393.023418422376,
+        "mean": 30.353836531909497,
+        "median": 5.015814211095421,
+        "p95": 125.80251328460697,
+        "pck_at_10px": 0.8666666666666667,
+        "pck_at_5px": 0.4666666666666667
+      },
+      "q3575jnmjJQ": {
+        "count": 30,
+        "max": 450.8463885011223,
+        "mean": 64.99787387304232,
+        "median": 5.77216163897819,
+        "p95": 421.6614824030166,
+        "pck_at_10px": 0.7333333333333333,
+        "pck_at_5px": 0.4
+      }
+    }
+  },
+  "all": {
+    "keypoint_error_summary": {
+      "count": 89,
+      "max": 1022.9730953240185,
+      "mean": 89.65799400302588,
+      "median": 5.799868205700877,
+      "p95": 493.630259990044
+    },
+    "pck_at_10px": 0.7078651685393258,
+    "pck_at_5px": 0.4044943820224719,
+    "per_clip": {
+      "4qSoA-jwpVM": {
+        "count": 15,
+        "max": 741.704815375445,
+        "mean": 111.48834138469823,
+        "median": 5.529235901287901,
+        "p95": 731.7428558162783,
+        "pck_at_10px": 0.6666666666666666,
+        "pck_at_5px": 0.4
+      },
+      "A9H6EWfXht0": {
+        "count": 29,
+        "max": 1022.9730953240185,
+        "mean": 134.55146832168685,
+        "median": 6.850030588330739,
+        "p95": 810.0929971875646,
+        "pck_at_10px": 0.6206896551724138,
+        "pck_at_5px": 0.3793103448275862
+      },
+      "Se7M6ZKaC4Y": {
+        "count": 15,
+        "max": 393.023418422376,
+        "mean": 30.353836531909497,
+        "median": 5.015814211095421,
+        "p95": 125.80251328460697,
+        "pck_at_10px": 0.8666666666666667,
+        "pck_at_5px": 0.4666666666666667
+      },
+      "q3575jnmjJQ": {
+        "count": 30,
+        "max": 450.8463885011223,
+        "mean": 64.99787387304232,
+        "median": 5.77216163897819,
+        "p95": 421.6614824030166,
+        "pck_at_10px": 0.7333333333333333,
+        "pck_at_5px": 0.4
+      }
+    }
+  },
+  "all_frame_count": 6,
+  "architecture": {
+    "name": "court_unet_v2",
+    "network_architecture": "court_unet_v2"
+  },
+  "artifact_type": "court_keypoint_owner_gate_report_v2",
+  "checkpoint": "runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13/court_model_v2_epoch_0014.pt",
+  "gate": {
+    "metric": "real_keypoint_pck_at_5px_independent",
+    "not_cal3_verified": true,
+    "passed": false,
+    "pck_threshold_px": 5.0,
+    "threshold": 0.95,
+    "value": 0.4044943820224719
+  },
+  "gate_passed": {
+    "all": false,
+    "independent": false
+  },
+  "gate_passed_per_viewpoint": {
+    "all": false,
+    "independent": false
+  },
+  "gate_passed_pooled": {
+    "all": false,
+    "independent": false
+  },
+  "gate_threshold": 0.95,
+  "holdout_artifacts": [],
+  "independent": {
+    "keypoint_error_summary": {
+      "count": 89,
+      "max": 1022.9730953240185,
+      "mean": 89.65799400302588,
+      "median": 5.799868205700877,
+      "p95": 493.630259990044
+    },
+    "pck_at_10px": 0.7078651685393258,
+    "pck_at_5px": 0.4044943820224719,
+    "per_clip": {
+      "4qSoA-jwpVM": {
+        "count": 15,
+        "max": 741.704815375445,
+        "mean": 111.48834138469823,
+        "median": 5.529235901287901,
+        "p95": 731.7428558162783,
+        "pck_at_10px": 0.6666666666666666,
+        "pck_at_5px": 0.4
+      },
+      "A9H6EWfXht0": {
+        "count": 29,
+        "max": 1022.9730953240185,
+        "mean": 134.55146832168685,
+        "median": 6.850030588330739,
+        "p95": 810.0929971875646,
+        "pck_at_10px": 0.6206896551724138,
+        "pck_at_5px": 0.3793103448275862
+      },
+      "Se7M6ZKaC4Y": {
+        "count": 15,
+        "max": 393.023418422376,
+        "mean": 30.353836531909497,
+        "median": 5.015814211095421,
+        "p95": 125.80251328460697,
+        "pck_at_10px": 0.8666666666666667,
+        "pck_at_5px": 0.4666666666666667
+      },
+      "q3575jnmjJQ": {
+        "count": 30,
+        "max": 450.8463885011223,
+        "mean": 64.99787387304232,
+        "median": 5.77216163897819,
+        "p95": 421.6614824030166,
+        "pck_at_10px": 0.7333333333333333,
+        "pck_at_5px": 0.4
+      }
+    }
+  },
+  "independent_frame_count": 6,
+  "notes": [
+    "independent: PRIMARY, the 4 independently human-reviewed frames (1 per clip).",
+    "all: SECONDARY, all 32 rows including owner-approved reviewed_static_camera_copy rows.",
+    "gate_passed_per_viewpoint requires every clip present to individually clear pck_threshold_px, not just the pooled-across-clips average (gate_passed aliases it)."
+  ],
+  "pck_threshold_px": 5.0,
+  "postprocess": {
+    "decode": "parabolic_subpixel_refine",
+    "prediction_mode": "keypoint_heatmap_subpixel_argmax"
+  },
+  "real_holdout_count": 6,
+  "schema_version": 1
+}

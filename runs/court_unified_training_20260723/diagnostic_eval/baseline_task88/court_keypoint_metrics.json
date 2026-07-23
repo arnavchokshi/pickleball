@@ -1,0 +1,188 @@
+{
+  "after": {
+    "real_keypoint_count": 89,
+    "real_keypoint_mean_px": 315.40856142635204,
+    "real_keypoint_median_px": 265.2501473859689,
+    "real_keypoint_p95_px": 686.0509472753909,
+    "real_keypoint_pck_at_10px": 0.1348314606741573,
+    "real_keypoint_pck_at_5px": 0.07865168539325842,
+    "real_keypoint_pck_per_clip": {
+      "4qSoA-jwpVM": {
+        "count": 15,
+        "max": 819.1334473753008,
+        "mean": 310.64376955356914,
+        "median": 258.99355686498006,
+        "p95": 713.9724241479223,
+        "pck_at_10px": 0.06666666666666667,
+        "pck_at_5px": 0.0
+      },
+      "A9H6EWfXht0": {
+        "count": 29,
+        "max": 729.7241305665376,
+        "mean": 368.20427718571233,
+        "median": 405.31958379846617,
+        "p95": 684.5224070350807,
+        "pck_at_10px": 0.10344827586206896,
+        "pck_at_5px": 0.06896551724137931
+      },
+      "Se7M6ZKaC4Y": {
+        "count": 15,
+        "max": 698.0493150806226,
+        "mean": 287.6733447282484,
+        "median": 237.7905463577726,
+        "p95": 599.3908411579292,
+        "pck_at_10px": 0.06666666666666667,
+        "pck_at_5px": 0.06666666666666667
+      },
+      "q3575jnmjJQ": {
+        "count": 30,
+        "max": 735.7923252112964,
+        "mean": 280.6227071444136,
+        "median": 304.1146773121722,
+        "p95": 614.2486344732557,
+        "pck_at_10px": 0.23333333333333334,
+        "pck_at_5px": 0.13333333333333333
+      }
+    }
+  },
+  "all": {
+    "keypoint_error_summary": {
+      "count": 89,
+      "max": 819.1334473753008,
+      "mean": 315.40856142635204,
+      "median": 265.2501473859689,
+      "p95": 686.0509472753909
+    },
+    "pck_at_10px": 0.1348314606741573,
+    "pck_at_5px": 0.07865168539325842,
+    "per_clip": {
+      "4qSoA-jwpVM": {
+        "count": 15,
+        "max": 819.1334473753008,
+        "mean": 310.64376955356914,
+        "median": 258.99355686498006,
+        "p95": 713.9724241479223,
+        "pck_at_10px": 0.06666666666666667,
+        "pck_at_5px": 0.0
+      },
+      "A9H6EWfXht0": {
+        "count": 29,
+        "max": 729.7241305665376,
+        "mean": 368.20427718571233,
+        "median": 405.31958379846617,
+        "p95": 684.5224070350807,
+        "pck_at_10px": 0.10344827586206896,
+        "pck_at_5px": 0.06896551724137931
+      },
+      "Se7M6ZKaC4Y": {
+        "count": 15,
+        "max": 698.0493150806226,
+        "mean": 287.6733447282484,
+        "median": 237.7905463577726,
+        "p95": 599.3908411579292,
+        "pck_at_10px": 0.06666666666666667,
+        "pck_at_5px": 0.06666666666666667
+      },
+      "q3575jnmjJQ": {
+        "count": 30,
+        "max": 735.7923252112964,
+        "mean": 280.6227071444136,
+        "median": 304.1146773121722,
+        "p95": 614.2486344732557,
+        "pck_at_10px": 0.23333333333333334,
+        "pck_at_5px": 0.13333333333333333
+      }
+    }
+  },
+  "all_frame_count": 6,
+  "architecture": {
+    "name": "court_unet_v2",
+    "network_architecture": "court_unet_v2"
+  },
+  "artifact_type": "court_keypoint_owner_gate_report_v2",
+  "checkpoint": "models/checkpoints/court_unet_v2/court_model_v2.pt",
+  "gate": {
+    "metric": "real_keypoint_pck_at_5px_independent",
+    "not_cal3_verified": true,
+    "passed": false,
+    "pck_threshold_px": 5.0,
+    "threshold": 0.95,
+    "value": 0.07865168539325842
+  },
+  "gate_passed": {
+    "all": false,
+    "independent": false
+  },
+  "gate_passed_per_viewpoint": {
+    "all": false,
+    "independent": false
+  },
+  "gate_passed_pooled": {
+    "all": false,
+    "independent": false
+  },
+  "gate_threshold": 0.95,
+  "holdout_artifacts": [],
+  "independent": {
+    "keypoint_error_summary": {
+      "count": 89,
+      "max": 819.1334473753008,
+      "mean": 315.40856142635204,
+      "median": 265.2501473859689,
+      "p95": 686.0509472753909
+    },
+    "pck_at_10px": 0.1348314606741573,
+    "pck_at_5px": 0.07865168539325842,
+    "per_clip": {
+      "4qSoA-jwpVM": {
+        "count": 15,
+        "max": 819.1334473753008,
+        "mean": 310.64376955356914,
+        "median": 258.99355686498006,
+        "p95": 713.9724241479223,
+        "pck_at_10px": 0.06666666666666667,
+        "pck_at_5px": 0.0
+      },
+      "A9H6EWfXht0": {
+        "count": 29,
+        "max": 729.7241305665376,
+        "mean": 368.20427718571233,
+        "median": 405.31958379846617,
+        "p95": 684.5224070350807,
+        "pck_at_10px": 0.10344827586206896,
+        "pck_at_5px": 0.06896551724137931
+      },
+      "Se7M6ZKaC4Y": {
+        "count": 15,
+        "max": 698.0493150806226,
+        "mean": 287.6733447282484,
+        "median": 237.7905463577726,
+        "p95": 599.3908411579292,
+        "pck_at_10px": 0.06666666666666667,
+        "pck_at_5px": 0.06666666666666667
+      },
+      "q3575jnmjJQ": {
+        "count": 30,
+        "max": 735.7923252112964,
+        "mean": 280.6227071444136,
+        "median": 304.1146773121722,
+        "p95": 614.2486344732557,
+        "pck_at_10px": 0.23333333333333334,
+        "pck_at_5px": 0.13333333333333333
+      }
+    }
+  },
+  "independent_frame_count": 6,
+  "notes": [
+    "independent: PRIMARY, the 4 independently human-reviewed frames (1 per clip).",
+    "all: SECONDARY, all 32 rows including owner-approved reviewed_static_camera_copy rows.",
+    "gate_passed_per_viewpoint requires every clip present to individually clear pck_threshold_px, not just the pooled-across-clips average (gate_passed aliases it)."
+  ],
+  "pck_threshold_px": 5.0,
+  "postprocess": {
+    "decode": "parabolic_subpixel_refine",
+    "prediction_mode": "keypoint_heatmap_subpixel_argmax"
+  },
+  "real_holdout_count": 6,
+  "schema_version": 1
+}
