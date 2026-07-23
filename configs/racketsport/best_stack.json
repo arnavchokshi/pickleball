@@ -726,39 +726,41 @@
    "value": {
     "kind": "local_path",
     "path": "models/checkpoints/court_unet_v2/court_model_v2.pt",
-    "sha256": "bba24725dc4c184f7c2ad42c2223391d4b76829716285030e913561da2a32aae"
+    "sha256": "31da51630b82a85ee39384e65eb705b045adcdda900dd025ca15784a2edd3ffe"
    },
    "status": "PENDING",
    "gate": {
     "name": "calv1_fusedefault_decisive_eval",
     "metric_key": "court_pck_at_5px",
     "bar": ">=0.95",
-    "evidence_path": "runs/court_structured_v3_20260723/diagnostic_eval/curated264_task88/epoch_0006-court-keypoint-metrics.json"
+    "evidence_path": "runs/court_structured_v3_20260723/diagnostic_eval/curated264_pack3_task88/court_model_v2_epoch_0006-court-keypoint-metrics.json"
    },
    "provenance": {
     "lane": "court_structured_v3_20260723",
-    "commit": "f73ec4f9f",
+    "commit": "worktree",
     "date": "2026-07-23",
     "evidence_paths": [
-     "runs/court_structured_v3_20260723/diagnostic_eval/curated264_task88/baseline-court-keypoint-metrics.json",
-     "runs/court_structured_v3_20260723/diagnostic_eval/curated264_task88/epoch_0006-court-keypoint-metrics.json",
-     "runs/lanes/roboflow_court_adapter_20260723/curated_finetune_gate_proof_remote.json"
+     "runs/court_structured_v3_20260723/diagnostic_eval/curated264_pack3_task88/baseline-court-keypoint-metrics.json",
+     "runs/court_structured_v3_20260723/diagnostic_eval/curated264_pack3_task88/court_model_v2_epoch_0006-court-keypoint-metrics.json",
+     "runs/court_structured_v3_20260723/diagnostic_eval/curated264_pack3_extension_task88/",
+     "runs/court_structured_v3_20260723/pack3_selection_summary.json",
+     "runs/lanes/court_labelpack3_owner_ingest_20260723/finetune_gate_proof_remote.json"
     ]
    },
    "proven_against": {
     "task88_labeled_floor_points": 71,
-    "structured_pck_at_5px": 0.6901408450704225,
-    "structured_pck_at_10px": 0.9154929577464789,
-    "structured_median_px": 3.868393393312045,
-    "structured_p95_px": 10.218114970671461,
-    "baseline_structured_pck_at_5px": 0.647887323943662,
-    "baseline_structured_median_px": 3.937167155991696,
-    "baseline_structured_p95_px": 10.253705021231106,
+    "structured_pck_at_5px": 0.7183098591549296,
+    "structured_pck_at_10px": 0.9295774647887324,
+    "structured_median_px": 3.6313174256843372,
+    "structured_p95_px": 10.3190035506857,
+    "baseline_structured_pck_at_5px": 0.6901408450704225,
+    "baseline_structured_median_px": 3.868393393312045,
+    "baseline_structured_p95_px": 10.218114970671461,
     "topology_valid_samples": 6,
     "duplicate_or_collapsed_outputs": 0,
-    "checkpoint_sha256": "bba24725dc4c184f7c2ad42c2223391d4b76829716285030e913561da2a32aae"
+    "checkpoint_sha256": "31da51630b82a85ee39384e65eb705b045adcdda900dd025ca15784a2edd3ffe"
    },
-   "notes": "Best measured running candidate is installed and committed to the manifest even though the 0.95 goal is not met. It remains PENDING/review-only with measurement_valid=false and VERIFIED=0; confidence is not calibrated for authority."
+   "notes": "Best measured running candidate is installed and committed to the manifest. Selection scored final solver-projected floor points, not raw heatmap argmax. The 0.95 goal is not a commit blocker. It remains PENDING/review-only with measurement_valid=false and VERIFIED=0; confidence is not calibrated for authority."
   },
   "court.e4_fusion_default": {
    "stage": "calibration",

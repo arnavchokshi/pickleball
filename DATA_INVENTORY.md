@@ -12,22 +12,22 @@ The single place to see **all data we have on every lane and whether it is used*
 
 | Lane | ✅ used | 🟡 authorized | 🔴 blocked | 🔒 held-out | ❌ rejected |
 |---|---|---|---|---|---|
-| **COURT** | 3 | 2 | 2 | 2 | 0 |
+| **COURT** | 5 | 0 | 2 | 2 | 0 |
 | **BALL** | 1 | 0 | 2 | 1 | 0 |
 | **PERSON** | 0 | 0 | 2 | 1 | 0 |
 | **EVENT** | 2 | 1 | 4 | 1 | 3 |
 | **SHARED / OTHER** | 1 | 0 | 2 | 0 | 4 |
-| **TOTAL** | 7 | 3 | 12 | 5 | 7 |
+| **TOTAL** | 9 | 1 | 12 | 5 | 7 |
 
 ## COURT
 
 | Dataset | What / source | Size | Status | Why not used / next step |
 |---|---|---|---|---|
+| `court_labelpack3_owner_labels_20260723` | seven Roboflow court workspaces selected into the owner pack | 1,446 labels | ✅ used (training) | Retain the 106 supported rows for structured-v3 training and use the 16 rejected views when the supported-view classifier is actually trained. |
 | `online_harvest_20260712` | source channel IDs in harvest metadata | 28 rows | ✅ used (training) | Feed only protocol-eligible reviewed rows from the derived 100-frame court package into the Track A court pool through the court_diversity_100_202607… |
 | `pbvision_gallery_20260719` | pb.vision gallery and owner-provided demo | 124,743 labels | ✅ used (training) | After the approximately 10-frame owner-tap spot-check, add only corpus-eligible pseudo-label IDs 0tmdeghtfvjx, 143sf3gdwxsa, 98z43hspqz13, bewqc0glhg… |
+| `roboflow_court_keypoints_adapted_20260723` | seven owner-approved Roboflow court-keypoint workspaces | 3,168 labels | ✅ used (training) | Retain these 264 rows in the next structured-v3 training corpus; do not double-count them as new pixels or use them as independent truth. |
 | `online_harvest_20260706` | source YouTube channels recorded in manifest | 40 rows | 📊 used (audit/eval only) | Keep the unregistered court_calibrations directory items audit-only; use them only to reproduce and verify the frozen Track A external audit packagin… |
-| `court_labelpack3_owner_labels_20260723` | seven Roboflow court workspaces selected into the owner pack | 1,446 labels | 🟡 authorized — not yet trained | Fine-tune the current selected court checkpoint on the union of curated264 and these 106 owner-reviewed rows, then compare every epoch on the same ex… |
-| `roboflow_court_keypoints_adapted_20260723` | seven owner-approved Roboflow court-keypoint workspaces | 3,168 labels | 🟡 authorized — not yet trained | Use this 264-row pack3-disjoint curated subset in the next court fine-tune instead of adding it to the duplicate-heavy 2833-row parent pool; keep net… |
 | `court_diversity_100_20260712` | 28 source YouTube channel families | 97 rows | 🔴 not used — blocked | After the owner exports tasks 88-91, add only the protocol-eligible reviewed rows to the Track A court retrain pool with the frozen source-family spl… |
 | `roboflow_court_taxonomy_20260706` | Roboflow workspaces/projects | 2,734 labels | 🔴 not used — blocked | Audit whether the normalized court boxes/masks can provide auxiliary Track A supervision; build a source-grouped adapter if valid, otherwise issue a… |
 | `court_keypoints_6_20260707` | six source YouTube channels | 6 labels | 🔒 held out (eval/protected) | Use the three fully usable rows once as the frozen Track A external audit; never train or tune on any of the six rows. |

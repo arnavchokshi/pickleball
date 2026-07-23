@@ -1,0 +1,65 @@
+{
+  "artifact_type": "training_input_gate_proof",
+  "expires_at_utc": "2026-07-23T23:24:49Z",
+  "generated_at_utc": "2026-07-23T21:24:49Z",
+  "global_reasons": [],
+  "inputs": [
+    {
+      "actual_sha256": "34b833b7c52df20a7bfe6787f5e356f34c00f60ae08b7b45e971fc80ec1a3085",
+      "asset_id": "roboflow_court_keypoints_adapted_20260723",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "COURT",
+      "index": 0,
+      "input_bytes_read_for_integrity": true,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [],
+      "requested_path": "/home/arnavchokshi/pickleball_train/runs/lanes/roboflow_court_adapter_20260723/adapted_corpus",
+      "resolved_path": "/home/arnavchokshi/pickleball_train/runs/lanes/roboflow_court_adapter_20260723/adapted_corpus",
+      "sha256_kind": "directory_tree_v1",
+      "source_id": null,
+      "verdict": "PASS"
+    },
+    {
+      "actual_sha256": "44faad2c5175a505ae8a8a733f271c48cb4cda7683a553e85eb55b3504446690",
+      "asset_id": "court_labelpack3_owner_labels_20260723",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "COURT",
+      "index": 1,
+      "input_bytes_read_for_integrity": true,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [],
+      "requested_path": "/home/arnavchokshi/pickleball_train/runs/lanes/court_labelpack3_owner_ingest_20260723/train",
+      "resolved_path": "/home/arnavchokshi/pickleball_train/runs/lanes/court_labelpack3_owner_ingest_20260723/train",
+      "sha256_kind": "directory_tree_v1",
+      "source_id": null,
+      "verdict": "PASS"
+    }
+  ],
+  "manifest_sha256s": {
+    "cache_manifest": null,
+    "data_ledger": "5a62b5b749480bff001110f8b3fed1e94ecb567d76f8eafd7e335d06584933b8",
+    "training_inputs": "dcc43711858032f784f10a6c35b236d65825a63e038d5cf645ae40df71e207e5"
+  },
+  "proof_sha256": "3121e815a6f2081d1701f35c0d2ca80b3d86d882f8ae20da3f590b846944fac4",
+  "repo_head_sha": "8a9a7e2b88a5c0ba130fcc053380601e1660c02e",
+  "repo_root": "/home/arnavchokshi/pickleball_train",
+  "schema_version": 1,
+  "source_manifests": {
+    "cache_manifest": null,
+    "data_ledger": {
+      "path": "/home/arnavchokshi/pickleball_train/runs/manager/data_ledger.json",
+      "sha256": "5a62b5b749480bff001110f8b3fed1e94ecb567d76f8eafd7e335d06584933b8"
+    },
+    "training_inputs": {
+      "path": "/home/arnavchokshi/pickleball_train/runs/lanes/court_labelpack3_owner_ingest_20260723/finetune_inputs.json",
+      "sha256": "dcc43711858032f784f10a6c35b236d65825a63e038d5cf645ae40df71e207e5"
+    }
+  },
+  "status": "PASS"
+}

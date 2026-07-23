@@ -19,7 +19,7 @@
     "sha256": "bba24725dc4c184f7c2ad42c2223391d4b76829716285030e913561da2a32aae"
   },
   "training": {
-    "epochs": 6,
+    "initial_epochs": 6,
     "steps_per_epoch": 100,
     "batch_size": 32,
     "real_batch_size": 32,
@@ -32,11 +32,22 @@
     "real_photometric_augmentation": true,
     "real_validation_samples": 0,
     "seed": 13,
-    "synthetic_workers": 8
+    "synthetic_workers": 8,
+    "adaptive_extension": {
+      "trigger": "best structured Task 88 result occurred at the initial epoch boundary",
+      "epochs": 4,
+      "steps_per_epoch": 100,
+      "learning_rate": 0.00005,
+      "seed": 613,
+      "warm_start_checkpoint": "court_model_v2_epoch_0006.pt",
+      "decision": "stop because all four extension checkpoints regressed on the same structured card"
+    }
   },
   "evaluation": {
     "same_development_set": "runs/court_diversity_owner_ingest_20260723/holdout",
     "structured_best_court": true,
+    "raw_epoch_log_metric": "15-channel subpixel argmax on held-out synthetic samples; diagnostic only and not used for checkpoint selection",
+    "selection_metric": "final 12 floor points projected by the floor-only regulation-court solver with exact semantic-name matching",
     "selection_order": [
       "reject topology, duplicate, collapse, or missing-output violations",
       "maximize exact-semantic structured floor PCK@5",
@@ -44,6 +55,13 @@
       "minimize structured median"
     ],
     "authority": "review_only",
-    "measurement_valid": false
+    "measurement_valid": false,
+    "winner": {
+      "checkpoint": "runs/court_structured_v3_20260723/diagnostic_train/court_unet_v2_curated264_pack3_seed13/court_model_v2_epoch_0006.pt",
+      "sha256": "31da51630b82a85ee39384e65eb705b045adcdda900dd025ca15784a2edd3ffe",
+      "structured_pck_at_5px": 0.7183098591549296,
+      "structured_median_px": 3.6313174256843372,
+      "structured_p95_px": 10.3190035506857
+    }
   }
 }
