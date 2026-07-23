@@ -4,6 +4,7 @@ import json
 import math
 import subprocess
 import time
+from collections import OrderedDict
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
@@ -603,13 +604,89 @@ def load_frame_time_table(path: str | Path) -> dict[str, Any]:
     return payload
 
 
+_FRAME_TIME_LOOKUP_CACHE_MAXSIZE = 32
+_FRAME_TIME_LOOKUP_CACHE: "OrderedDict[tuple[Any, ...], tuple[Any, dict[int, float]]]" = OrderedDict()
+
+
+def _frame_time_lookup_cache_key(frame_times: Any) -> tuple[Any, ...] | None:
+    """A cheap-to-compute cache key for inputs worth memoizing, else ``None``.
+
+    Only keys costing O(1) relative to table size are used: a filesystem
+    stat tuple for on-disk tables (so a rewritten file on the same path is
+    never served stale) and object identity for in-memory containers (the
+    identity hit is re-checked against a retained reference before being
+    trusted -- see ``_frame_time_lookup_from_cache`` -- so a reused id()
+    can never produce a stale result). Anything else falls back to the
+    uncached path, unchanged from before.
+    """
+    if isinstance(frame_times, (str, Path)):
+        try:
+            resolved = Path(frame_times)
+            stat = resolved.stat()
+        except OSError:
+            return None
+        return ("path", str(resolved), stat.st_mtime_ns, stat.st_size)
+    if isinstance(frame_times, (Mapping, Sequence)) and not isinstance(frame_times, (str, bytes)):
+        return ("id", id(frame_times))
+    return None
+
+
+def _frame_time_lookup_from_cache(frame_times: Any, cache_key: tuple[Any, ...]) -> dict[int, float] | None:
+    entry = _FRAME_TIME_LOOKUP_CACHE.get(cache_key)
+    if entry is None:
+        return None
+    cached_source, cached_result = entry
+    if cache_key[0] == "id" and cached_source is not frame_times:
+        # id() was reused by an unrelated object after the original entry
+        # was evicted; treat this as a miss rather than trust a coincidence.
+        return None
+    _FRAME_TIME_LOOKUP_CACHE.move_to_end(cache_key)
+    return cached_result
+
+
+def _frame_time_lookup_store(frame_times: Any, cache_key: tuple[Any, ...], result: dict[int, float]) -> None:
+    # Retain a strong reference to `frame_times` alongside the id()-based key
+    # so the source object cannot be garbage-collected (and its id reused by
+    # an unrelated object) while the entry is live in the cache.
+    _FRAME_TIME_LOOKUP_CACHE[cache_key] = (frame_times, result)
+    _FRAME_TIME_LOOKUP_CACHE.move_to_end(cache_key)
+    while len(_FRAME_TIME_LOOKUP_CACHE) > _FRAME_TIME_LOOKUP_CACHE_MAXSIZE:
+        _FRAME_TIME_LOOKUP_CACHE.popitem(last=False)
+
+
 def frame_time_lookup(frame_times: Any) -> dict[int, float]:
-    """Normalize supported frame-time payloads into ``{frame_index: pts_s}``."""
+    """Normalize supported frame-time payloads into ``{frame_index: pts_s}``.
+
+    Perf note: hot-path callers (e.g. ``wasb_csv_to_ball_track``) invoke this
+    once per *output frame* with the same ``frame_times`` argument unchanged
+    across the whole loop. Re-validating/re-parsing that argument from
+    scratch on every call made data builds effectively O(frame_count^2)
+    (observed ~10 frames/sec on a real multi-hour build). This function now
+    memoizes the normalized result for a bounded set of recently-seen inputs
+    so repeat calls with an unchanged table are O(1) after the first call;
+    every accept/reject decision and every returned value is still produced
+    by the exact same logic in ``_frame_time_lookup_uncached`` below -- only
+    the *work* of redoing it is skipped on a cache hit.
+    """
 
     if frame_times is None:
         return {}
+    cache_key = _frame_time_lookup_cache_key(frame_times)
+    if cache_key is not None:
+        cached_result = _frame_time_lookup_from_cache(frame_times, cache_key)
+        if cached_result is not None:
+            return cached_result
+    result = _frame_time_lookup_uncached(frame_times)
+    if cache_key is not None:
+        _frame_time_lookup_store(frame_times, cache_key, result)
+    return result
+
+
+def _frame_time_lookup_uncached(frame_times: Any) -> dict[int, float]:
+    """Byte-for-byte the original (pre-cache) normalization logic."""
+
     if isinstance(frame_times, (str, Path)):
-        return frame_time_lookup(load_frame_time_table(frame_times))
+        return _frame_time_lookup_uncached(load_frame_time_table(frame_times))
     if isinstance(frame_times, Mapping):
         frames = frame_times.get("frames")
         if isinstance(frames, Sequence) and not isinstance(frames, (str, bytes)):

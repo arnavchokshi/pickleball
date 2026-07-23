@@ -10,6 +10,7 @@ import pytest
 
 from scripts.racketsport.ingest_testclips import ingest_testclips
 from tests.racketsport.json_schema_assertions import assert_matches_json_schema
+import threed.racketsport.io_decode as io_decode
 from threed.racketsport.io_decode import (
     ClipQualityProbe,
     FrameSource,
@@ -18,6 +19,7 @@ from threed.racketsport.io_decode import (
     build_frame_time_table,
     build_timebase_artifacts,
     decode_clip,
+    frame_time_lookup,
     load_frame_time_table,
     measure_decode_throughput,
     probe_clip,
@@ -637,3 +639,110 @@ def test_measure_decode_throughput_rejects_unknown_backend(tmp_path):
 
     with pytest.raises(ValueError, match="Unsupported decode backend"):
         measure_decode_throughput(clip, backend="bad")
+
+
+def _synthetic_frame_time_table(n_frames: int, *, fps: float = 30.0) -> dict:
+    """A representative ``racketsport_frame_times`` payload (see
+    ``_legacy_frame_time_table``'s real output shape)."""
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_times",
+        "clip_path": "/synthetic/bench_clip.mp4",
+        "provenance": "ffprobe_pts",
+        "trust_band": "pts",
+        "fps": fps,
+        "r_frame_rate": fps,
+        "duration_s": n_frames / fps,
+        "frame_count": n_frames,
+        "source_start_pts_s": 0.0,
+        "fps_assumed": None,
+        "frames": [{"frame": i, "pts_s": round(i / fps, 9)} for i in range(n_frames)],
+    }
+
+
+@pytest.fixture(autouse=True)
+def _reset_frame_time_lookup_cache():
+    """Keep the module-level memoization cache (added for the io_decode perf
+    fix) from leaking state or growing unbounded across the test session."""
+
+    io_decode._FRAME_TIME_LOOKUP_CACHE.clear()
+    yield
+    io_decode._FRAME_TIME_LOOKUP_CACHE.clear()
+
+
+def test_frame_time_lookup_cached_result_matches_uncached_reference_for_every_supported_shape():
+    """The perf-fix memoizing wrapper (``frame_time_lookup``) must return
+    exactly what the pre-fix normalization logic (preserved verbatim as
+    ``_frame_time_lookup_uncached``) returns, for every payload shape it
+    accepts -- proving the cache changes performance, not behavior."""
+
+    dict_table = _synthetic_frame_time_table(37)
+    plain_index_map = {str(i): i / 30.0 for i in range(37)}
+    list_table = [{"frame": i, "pts_s": i / 30.0} for i in range(37)]
+
+    for payload in (dict_table, plain_index_map, list_table, {}):
+        reference = io_decode._frame_time_lookup_uncached(payload)
+        first_call = frame_time_lookup(payload)  # cache miss
+        second_call = frame_time_lookup(payload)  # cache hit (same object)
+        assert first_call == reference
+        assert second_call == reference
+
+    assert frame_time_lookup(None) == {}
+
+
+def test_frame_time_lookup_repeated_hot_loop_calls_match_independent_uncached_computation():
+    """Reproduces the real ``wasb_csv_to_ball_track`` hot-loop pattern: the
+    same ``frame_times`` object, unchanged, is passed to
+    ``frame_time_lookup``/``time_for_frame`` once per output frame. Every
+    call across the loop must match a ground truth computed independently by
+    the untouched pre-fix logic."""
+
+    n_frames = 500
+    table = _synthetic_frame_time_table(n_frames)
+    ground_truth = io_decode._frame_time_lookup_uncached(table)
+    assert len(ground_truth) == n_frames
+
+    for frame_index in range(n_frames):
+        looked_up = frame_time_lookup(table)  # same object every iteration
+        assert looked_up == ground_truth
+        resolved = time_for_frame(frame_index, frame_times=table, fps=30.0)
+        assert resolved == pytest.approx(ground_truth[frame_index])
+
+
+def test_frame_time_lookup_path_cache_invalidates_on_file_rewrite(tmp_path):
+    """A str/Path ``frame_times`` argument must never serve a stale cached
+    table if the underlying file is rewritten between calls -- matching the
+    always-fresh-read pre-fix behavior for on-disk tables."""
+
+    out = tmp_path / "frame_times.json"
+    out.write_text(json.dumps(_synthetic_frame_time_table(5)), encoding="utf-8")
+
+    first = frame_time_lookup(str(out))
+    assert first == {i: pytest.approx(i / 30.0) for i in range(5)}
+
+    out.write_text(json.dumps(_synthetic_frame_time_table(9)), encoding="utf-8")
+    second = frame_time_lookup(str(out))
+
+    assert set(second) == set(range(9))
+    assert second != first
+
+
+def test_frame_time_lookup_survives_cache_eviction_and_id_reuse(monkeypatch: pytest.MonkeyPatch):
+    """Force the bounded cache to evict early entries and confirm looked-up
+    values for already-evicted (and potentially id()-reused) tables are
+    still correctly recomputed rather than silently served a stale hit."""
+
+    monkeypatch.setattr(io_decode, "_FRAME_TIME_LOOKUP_CACHE_MAXSIZE", 2)
+
+    tables = [_synthetic_frame_time_table(3, fps=10.0 + i) for i in range(10)]
+    references = [io_decode._frame_time_lookup_uncached(table) for table in tables]
+
+    for table, reference in zip(tables, references):
+        assert frame_time_lookup(table) == reference
+    assert len(io_decode._FRAME_TIME_LOOKUP_CACHE) <= 2
+
+    # Re-query in the same order: most of these were evicted by now, so this
+    # forces genuine recomputation (not a stale cache hit) for each of them.
+    for table, reference in zip(tables, references):
+        assert frame_time_lookup(table) == reference
