@@ -21,6 +21,7 @@ class EventHead(nn.Module):
     def __init__(
         self, *, weights: Literal["none", "imagenet"] = "none", feature_dim: int = 32,
         hidden_dim: int = 32, num_classes: int = 3,
+        offset_regression_head: bool = False,
     ) -> None:
         super().__init__()
         if weights not in {"none", "imagenet"}:
@@ -44,15 +45,22 @@ class EventHead(nn.Module):
             feature_dim, hidden_dim, batch_first=True, bidirectional=True
         )
         self.classifier = nn.Linear(hidden_dim * 2, num_classes)
+        # The auxiliary dimensions are ordered HIT, BOUNCE. Keeping the module
+        # absent (rather than allocating an unused layer) preserves the exact
+        # legacy state-dict surface when the feature is disabled.
+        self.offset_regressor = (
+            nn.Linear(hidden_dim * 2, 2) if offset_regression_head else None
+        )
         self.config = {
             "weights": weights,
             "feature_dim": feature_dim,
             "hidden_dim": hidden_dim,
             "num_classes": num_classes,
+            "offset_regression_head": offset_regression_head,
             "backbone": "torchvision_mobilenet_v3_small_truncated_4_blocks",
         }
 
-    def forward(self, frames: torch.Tensor) -> torch.Tensor:
+    def _temporal_features(self, frames: torch.Tensor) -> torch.Tensor:
         if frames.ndim != 5:
             raise ValueError(f"expected [B,T,C,H,W], got {tuple(frames.shape)}")
         batch, time, channels, height, width = frames.shape
@@ -60,7 +68,58 @@ class EventHead(nn.Module):
         encoded = self.pool(encoded).flatten(1)
         encoded = self.frame_projection(encoded).reshape(batch, time, -1)
         temporal, _ = self.temporal(encoded)
-        return self.classifier(temporal)
+        return temporal
+
+    def forward(self, frames: torch.Tensor) -> torch.Tensor:
+        """Return legacy per-frame classification logits only."""
+
+        return self.classifier(self._temporal_features(frames))
+
+    def forward_with_aux(
+        self, frames: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return logits and raw sub-frame offsets ordered HIT, BOUNCE."""
+
+        if self.offset_regressor is None:
+            raise RuntimeError(
+                "offset regression head is disabled; construct EventHead with "
+                "offset_regression_head=True"
+            )
+        temporal = self._temporal_features(frames)
+        return self.classifier(temporal), self.offset_regressor(temporal)
+
+
+def upgrade_event_head_with_offset(model: EventHead) -> EventHead:
+    """Clone a legacy head and randomly initialize only its offset regressor.
+
+    This is the model-only initialization seam for a classification checkpoint:
+    all legacy parameters and buffers must load, while the two new offset-head
+    tensors retain the caller-seeded initialization from the new model.
+    """
+
+    if model.offset_regressor is not None:
+        raise ValueError("event head already has offset regression enabled")
+
+    config = model.config
+    upgraded = EventHead(
+        weights="none",
+        feature_dim=int(config["feature_dim"]),
+        hidden_dim=int(config["hidden_dim"]),
+        num_classes=int(config["num_classes"]),
+        offset_regression_head=True,
+    )
+    reference = next(model.parameters())
+    upgraded.to(device=reference.device, dtype=reference.dtype)
+    incompatible = upgraded.load_state_dict(model.state_dict(), strict=False)
+    expected_missing = {"offset_regressor.weight", "offset_regressor.bias"}
+    if set(incompatible.missing_keys) != expected_missing or incompatible.unexpected_keys:
+        raise RuntimeError(
+            "legacy event-head state did not match the offset-enabled model: "
+            f"missing={incompatible.missing_keys}, "
+            f"unexpected={incompatible.unexpected_keys}"
+        )
+    upgraded.train(model.training)
+    return upgraded
 
 
 def masked_cross_entropy(
@@ -124,7 +183,8 @@ def load_checkpoint(path: str | bytes | "os.PathLike[str]", *, device: str = "cp
     model = EventHead(
         weights="none", feature_dim=int(config["feature_dim"]),
         hidden_dim=int(config["hidden_dim"]), num_classes=int(config["num_classes"]),
+        offset_regression_head=bool(config.get("offset_regression_head", False)),
     )
-    model.load_state_dict(payload["state_dict"])
+    model.load_state_dict(payload["state_dict"], strict=True)
     model.to(device).eval()
     return model, payload

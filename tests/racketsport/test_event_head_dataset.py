@@ -92,6 +92,7 @@ def test_manifest_windows_slide_over_full_row_and_union_labels() -> None:
     assert windows[1].events == ((38, BOUNCE),)
     assert windows[2].events == ((34, BOUNCE),)
     assert all(window.validity_mask == (True, True, False) for window in windows)
+    assert all(window.source_video == "" for window in windows)
 
 
 def test_schema_v2_unknown_mask_reaches_frame_loss_mask_not_background() -> None:

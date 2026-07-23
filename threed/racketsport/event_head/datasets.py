@@ -10,8 +10,10 @@ No loader in this module reads ``data/event_bootstrap_20260713``.
 from __future__ import annotations
 
 import csv
+import copy
 import hashlib
 import json
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -54,6 +56,11 @@ class WindowSpec:
     source: str
     license_posture: str
     unknown_frame_mask: tuple[bool, ...] = ()
+    event_subframe_offsets: tuple[float, ...] = ()
+    sample_weight: float = 1.0
+    teacher_derived: bool = False
+    row_index: int = -1
+    source_video: str = ""
 
 
 def validate_current_manifest(manifest: dict[str, Any]) -> None:
@@ -198,6 +205,144 @@ def decode_video_frames(
     return torch.stack(frames)
 
 
+def event_subframe_offset_frames(event: dict[str, Any], *, fps: float) -> float:
+    """Resolve an optional sub-frame label residual without inventing precision.
+
+    Current owner labels are frame-addressed and therefore resolve to ``0``.
+    Agreement-corpus rows preserve both the teacher timestamp and the selected
+    encoded-frame PTS; their difference is a real, bounded fractional-frame
+    target for the additive offset head.
+    """
+
+    for key in ("subframe_offset_frames", "frame_offset"):
+        if key in event:
+            value = float(event[key])
+            if not math.isfinite(value) or abs(value) > 0.5:
+                raise DatasetFormatError(f"{key} must be finite and within +/-0.5 frame")
+            return value
+    if "teacher_timestamp_s" in event and "source_pts_s" in event:
+        value = (float(event["teacher_timestamp_s"]) - float(event["source_pts_s"])) * fps
+        if not math.isfinite(value) or abs(value) > 0.5 + 1e-6:
+            raise DatasetFormatError(
+                "teacher/source PTS residual must be finite and within +/-0.5 frame"
+            )
+        return max(-0.5, min(0.5, value))
+    return 0.0
+
+
+def window_target_tensors(
+    spec: WindowSpec,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    """Build hard labels, loss mask, and sub-frame offsets without decoding RGB."""
+
+    if spec.unknown_frame_mask and len(spec.unknown_frame_mask) != spec.num_frames:
+        raise DatasetFormatError("window unknown_frame_mask length mismatch")
+    if spec.event_subframe_offsets and len(spec.event_subframe_offsets) != len(spec.events):
+        raise DatasetFormatError("event_subframe_offsets must align with events")
+    targets = torch.zeros(spec.num_frames, dtype=torch.long)
+    subframe_offsets = torch.zeros(spec.num_frames, dtype=torch.float32)
+    occupied: dict[int, int] = {}
+    offsets = spec.event_subframe_offsets or (0.0,) * len(spec.events)
+    for (local_frame, class_id), offset in zip(spec.events, offsets, strict=True):
+        if not 0 <= local_frame < spec.num_frames:
+            continue
+        prior = occupied.get(local_frame)
+        if prior is not None and prior != class_id:
+            raise DatasetFormatError(
+                "per-frame CE cannot encode two event classes at the same frame"
+            )
+        occupied[local_frame] = class_id
+        targets[local_frame] = class_id
+        subframe_offsets[local_frame] = float(offset)
+    frame_loss_mask = ~torch.tensor(
+        spec.unknown_frame_mask or (False,) * spec.num_frames,
+        dtype=torch.bool,
+    )
+    return targets, frame_loss_mask, subframe_offsets
+
+
+def dense_class_counts(
+    windows: Sequence[WindowSpec],
+    *,
+    label_dilation_frames: int,
+    neighbor_positive_weight: float,
+) -> tuple[float, float, float]:
+    """Count the actual loss-eligible dense target mass for a window set."""
+
+    from .assignment import build_soft_dense_targets
+
+    counts = torch.zeros(len(CLASS_NAMES), dtype=torch.float64)
+    for spec in windows:
+        targets, frame_loss_mask, _ = window_target_tensors(spec)
+        validity = torch.tensor(spec.validity_mask, dtype=torch.bool)
+        dense = build_soft_dense_targets(
+            targets.unsqueeze(0),
+            validity.unsqueeze(0),
+            frame_loss_mask.unsqueeze(0),
+            label_dilation_frames=label_dilation_frames,
+            neighbor_positive_weight=neighbor_positive_weight,
+        )[0]
+        counts += dense[frame_loss_mask].to(torch.float64).sum(0)
+    values = tuple(float(value) for value in counts.tolist())
+    if len(values) != 3:
+        raise AssertionError("event head must have exactly three classes")
+    return values  # type: ignore[return-value]
+
+
+def sqrt_frequency_class_weights(
+    class_counts: Sequence[float],
+) -> tuple[float, float, float]:
+    """Return sqrt-inverse-frequency weights normalized to background=1.
+
+    Normalizing the common scale leaves the weighted CE objective unchanged:
+    ``w_c = sqrt(n_background / n_c)``.  A missing class fails closed rather
+    than turning into an infinite rare-class weight.
+    """
+
+    if len(class_counts) != len(CLASS_NAMES):
+        raise DatasetFormatError("class_counts must contain background, HIT, BOUNCE")
+    counts = tuple(float(value) for value in class_counts)
+    if any(not math.isfinite(value) or value <= 0 for value in counts):
+        raise DatasetFormatError("sqrt-frequency weighting requires every class count > 0")
+    background = counts[BACKGROUND]
+    values = tuple(math.sqrt(background / value) for value in counts)
+    return values  # type: ignore[return-value]
+
+
+def deterministic_source_video_holdout(
+    manifest: dict[str, Any], *, seed: int, holdout_source_count: int,
+) -> tuple[dict[str, Any], tuple[str, ...]]:
+    """Create a source-video-disjoint internal split from an all-train corpus."""
+
+    if isinstance(seed, bool) or seed < 0 or holdout_source_count < 1:
+        raise DatasetFormatError("seed must be nonnegative and holdout_source_count positive")
+    rows = manifest.get("rows")
+    if not isinstance(rows, list) or not rows:
+        raise DatasetFormatError("manifest has no rows to split")
+    if any(row.get("split") != "train" for row in rows):
+        raise DatasetFormatError("internal split requires an all-train input manifest")
+    sources = sorted({str(row.get("source_video", "")) for row in rows})
+    if "" in sources or holdout_source_count >= len(sources):
+        raise DatasetFormatError("internal split must leave at least one training source")
+    ordered = sorted(
+        sources,
+        key=lambda source: (
+            hashlib.sha256(f"{seed}:{source}".encode()).hexdigest(), source,
+        ),
+    )
+    held_out = tuple(ordered[:holdout_source_count])
+    output = copy.deepcopy(manifest)
+    for row in output["rows"]:
+        row["split"] = "val" if str(row["source_video"]) in held_out else "train"
+    output.setdefault("config", {})["internal_validation"] = {
+        "policy": "sha256_seeded_source_video_holdout",
+        "seed": seed,
+        "holdout_source_count": holdout_source_count,
+        "held_out_source_videos": list(held_out),
+    }
+    return output, held_out
+
+
 class EventWindowDataset(Dataset[dict[str, Any]]):
     """Small window dataset that decodes source video on demand."""
 
@@ -212,23 +357,20 @@ class EventWindowDataset(Dataset[dict[str, Any]]):
 
     def __getitem__(self, index: int) -> dict[str, Any]:
         spec = self.windows[index]
-        if spec.unknown_frame_mask and len(spec.unknown_frame_mask) != spec.num_frames:
-            raise DatasetFormatError("window unknown_frame_mask length mismatch")
         absolute = range(spec.start_frame, spec.start_frame + spec.num_frames)
         frames = decode_video_frames(spec.video_path, list(absolute), image_size=self.image_size)
-        targets = torch.zeros(spec.num_frames, dtype=torch.long)
-        for local_frame, class_id in spec.events:
-            if 0 <= local_frame < spec.num_frames:
-                targets[local_frame] = class_id
+        targets, frame_loss_mask, event_subframe_offsets = window_target_tensors(spec)
         return {
             "frames": frames,
             "targets": targets,
             "validity_mask": torch.tensor(spec.validity_mask, dtype=torch.bool),
-            "frame_loss_mask": ~torch.tensor(
-                spec.unknown_frame_mask or (False,) * spec.num_frames,
-                dtype=torch.bool,
-            ),
+            "frame_loss_mask": frame_loss_mask,
+            "event_subframe_offsets": event_subframe_offsets,
+            "sample_weight": torch.tensor(spec.sample_weight, dtype=torch.float32),
+            "teacher_derived": torch.tensor(spec.teacher_derived, dtype=torch.bool),
+            "row_index": torch.tensor(spec.row_index, dtype=torch.long),
             "source": spec.source,
+            "source_video": spec.source_video,
             "license_posture": spec.license_posture,
         }
 
@@ -457,7 +599,8 @@ def manifest_windows(
         raise DatasetFormatError("limit, window_frames, and stride_frames must be positive")
     windows: list[WindowSpec] = []
     included_rows = 0
-    for row in manifest["rows"]:
+    teacher_derived = bool(manifest.get("teacher_derived", False))
+    for row_index, row in enumerate(manifest["rows"]):
         if row["split"] != split or not row["media_present"] or not row["events"]:
             continue
         if included_rows >= limit:
@@ -475,6 +618,10 @@ def manifest_windows(
                 for item in row["events"]
                 if local_start <= int(item["frame"]) < local_start + window_frames
             )
+            selected_events = [
+                item for item in row["events"]
+                if local_start <= int(item["frame"]) < local_start + window_frames
+            ]
             windows.append(WindowSpec(
                 video_path=Path(row["video_path"]), start_frame=source_start,
                 num_frames=window_frames, fps=float(row["fps"]), events=local_events,
@@ -485,6 +632,14 @@ def manifest_windows(
                         local_start:local_start + window_frames
                     ]
                 ),
+                event_subframe_offsets=tuple(
+                    event_subframe_offset_frames(item, fps=float(row["fps"]))
+                    for item in selected_events
+                ),
+                sample_weight=float(row.get("sample_weight", 1.0)),
+                teacher_derived=teacher_derived,
+                row_index=row_index,
+                source_video=str(row.get("source_video", row.get("video", ""))),
             ))
     return windows
 
@@ -502,7 +657,8 @@ def manifest_event_centered_windows(
     if limit < 1 or window_frames < 1:
         raise DatasetFormatError("limit and window_frames must be positive")
     windows: list[WindowSpec] = []
-    for row in manifest["rows"]:
+    teacher_derived = bool(manifest.get("teacher_derived", False))
+    for row_index, row in enumerate(manifest["rows"]):
         if row["split"] != split or not row["media_present"] or not row["events"]:
             continue
         event = row["events"][0]
@@ -513,6 +669,10 @@ def manifest_event_centered_windows(
             for item in row["events"]
             if local_start <= int(item["frame"]) < local_start + window_frames
         )
+        selected_events = [
+            item for item in row["events"]
+            if local_start <= int(item["frame"]) < local_start + window_frames
+        ]
         windows.append(WindowSpec(
             video_path=Path(row["video_path"]),
             start_frame=int(row["source_start_frame"]) + local_start,
@@ -524,6 +684,14 @@ def manifest_event_centered_windows(
                     local_start:local_start + window_frames
                 ]
             ),
+            event_subframe_offsets=tuple(
+                event_subframe_offset_frames(item, fps=float(row["fps"]))
+                for item in selected_events
+            ),
+            sample_weight=float(row.get("sample_weight", 1.0)),
+            teacher_derived=teacher_derived,
+            row_index=row_index,
+            source_video=str(row.get("source_video", row.get("video", ""))),
         ))
         if len(windows) >= limit:
             break
