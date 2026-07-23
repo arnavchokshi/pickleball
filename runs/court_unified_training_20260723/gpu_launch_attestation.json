@@ -1,0 +1,67 @@
+{
+  "artifact_type": "racketsport_court_diagnostic_gpu_launch_attestation",
+  "schema_version": 1,
+  "created_at_utc": "2026-07-23T07:51:01Z",
+  "status": "TRAINING_IN_PROGRESS",
+  "posture": {
+    "promotion_allowed": false,
+    "status_after_successful_execution": "trained_not_phase_verified",
+    "verified": false
+  },
+  "runtime": {
+    "cloud": "gcp",
+    "project": "gifted-electron-498923-h1",
+    "instance": "pickleball-gpu-court23",
+    "zone": "us-central1-f",
+    "machine_type": "a2-highgpu-1g",
+    "gpu": "NVIDIA A100-SXM4-40GB",
+    "gpu_compute_mode": "Exclusive_Process",
+    "automatic_poweroff_minutes": 240,
+    "training_pid": 2683
+  },
+  "source": {
+    "training_revision": "12b555824af6804da00330d64d7b3ae6d7891172",
+    "landed_main_revision_at_launch": "f27767f64ebc3ee4c9f0d16091ac3b2827fd11ff",
+    "trainer_blob_sha1": "22a5cff768f470d9c6207f1762612ba63739b4b3",
+    "loader_blob_sha1": "cd0350067b97e30a8689e24d5df03d2168d787ba",
+    "note": "The training host uses the exact revision required by the frozen recipe. The trainer and reviewed external-data loader blobs are byte-identical at the later landed main revision."
+  },
+  "inputs": {
+    "bundle": "runs/court_unified_training_20260723/court_training_data_12b555824.tar",
+    "bundle_sha256": "ccc93df141cdbba35c33fc3ba86910aa4a54ab9c4edeb2f72152340a34787c5c",
+    "normal_loader_rows": 2867,
+    "validation_rows": 8,
+    "gradient_rows": 2859,
+    "external_rows": 2839,
+    "external_rows_with_non_null_net_channels": 0,
+    "train_protected_exact_image_overlap": 0,
+    "immutable_input_hashes_verified": [
+      "current_baseline",
+      "external_manifest",
+      "external_owner_act",
+      "imagenet_encoder"
+    ]
+  },
+  "preflight": {
+    "device": "cuda",
+    "epochs": 1,
+    "steps": 1,
+    "mixed_real_and_synthetic_backward_completed": true,
+    "optimizer_step_completed": true,
+    "checkpoint_written": true,
+    "status": "PASS"
+  },
+  "training": {
+    "output": "runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13",
+    "log": "runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13/train.log",
+    "epochs": 18,
+    "steps_per_epoch": 100,
+    "total_steps": 1800,
+    "batch_size": 32,
+    "seed": 13,
+    "device": "cuda",
+    "process_observed_alive_after_seconds": 48,
+    "gpu_memory_observed_mib": 8184,
+    "gpu_utilization_observed_percent": 59
+  }
+}
