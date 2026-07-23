@@ -159,7 +159,7 @@ PY
 # Mechanically obtain a fresh public-list-price proof from Google's authoritative
 # Cloud Billing Catalog API. No operator-entered rate or source is accepted.
 # The selected evidence is registered to us-central1-f and covers A2 Spot vCPU,
-# RAM, and A100 GPU, plus the disposable 200 GiB boot disk and one in-use external
+# RAM, and A100 GPU, plus the disposable 250 GiB boot disk and one in-use external
 # IPv4. The already-existing shared cache disk/image are not charged to this run.
 # Staleness is measured from
 # this live retrieval (maximum 15 minutes before use), not from a SKU's
@@ -261,7 +261,7 @@ component_hourly = {
     'a2_spot_vcpu_12': by_name['a2_spot_vcpu']['unit_price_usd'] * 12,
     'a2_spot_ram_85_gib': by_name['a2_spot_ram_gib']['unit_price_usd'] * 85,
     'a100_spot_gpu_1': by_name['a100_spot_gpu']['unit_price_usd'],
-    'balanced_pd_200_gib': by_name['balanced_pd_gib_month']['unit_price_usd'] * 200 / 730,
+    'balanced_pd_250_gib': by_name['balanced_pd_gib_month']['unit_price_usd'] * 250 / 730,
     'external_ipv4_1': by_name['external_ipv4_hour']['unit_price_usd'],
 }
 rate = sum(component_hourly.values())
@@ -276,7 +276,7 @@ proof = {
     'zone': 'us-central1-f',
     'machine_type': 'a2-highgpu-1g',
     'machine_shape': {'vcpu': 12, 'ram_gib': 85, 'a100_40gb_gpu': 1},
-    'disk': {'type': 'pd-balanced', 'gib': 200, 'monthly_hours': 730},
+    'disk': {'type': 'pd-balanced', 'gib': 250, 'monthly_hours': 730},
     'external_ipv4_count': 1,
     'components': components,
     'component_hourly_usd': component_hourly,
@@ -435,7 +435,7 @@ if ! gcloud compute instances create "$INSTANCE" \
   --image="$CACHE_IMAGE" \
   --image-project="$PROJECT" \
   --disk=name="$CACHE_DISK",mode=ro,device-name=cache,auto-delete=no \
-  --boot-disk-size=200GB \
+  --boot-disk-size=250GB \
   --boot-disk-type=pd-balanced \
   --boot-disk-device-name="$INSTANCE" \
   --boot-disk-auto-delete \
@@ -478,7 +478,7 @@ accelerators = instance.get('guestAccelerators', [])
 assert len(accelerators) == 1, accelerators
 assert basename(accelerators[0]['acceleratorType']) == 'nvidia-tesla-a100', accelerators
 assert int(accelerators[0]['acceleratorCount']) == 1, accelerators
-assert int(disk['sizeGb']) == 200, disk
+assert int(disk['sizeGb']) == 250, disk
 assert basename(disk['type']) == 'pd-balanced', disk['type']
 assert '/projects/gifted-electron-498923-h1/' in disk['sourceImage'], disk['sourceImage']
 assert basename(disk['sourceImage']).startswith(
