@@ -2,6 +2,8 @@
 .venv_yolo_coreml/
 __pycache__/
 .pytest_cache/
+.pytest*/
+pytest_*_tmp/
 .mypy_cache/
 .ruff_cache/
 *.pyc
@@ -25,6 +27,13 @@ configs/ssh/*
 runs/*
 !runs/CV_PIPELINE_DEEP_REVIEW_20260709.md
 !runs/CV_SOTA_RESEARCH_20260709.md
+!runs/lanes/
+runs/lanes/*
+!runs/lanes/ball_event_abc_20260720/
+runs/lanes/ball_event_abc_20260720/*
+!runs/lanes/ball_event_abc_20260720/inputs/
+runs/lanes/ball_event_abc_20260720/inputs/*
+!runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json
 !runs/archive/
 runs/archive/*
 !runs/archive/root_docs_20260709/
@@ -57,3 +66,9 @@ yolo26n-cls.pt
 data/pbvision_gallery*/
 data/pbvision_11min*/
 !data/event_labels_owner_20260719/
+
+# Large local data caches — never commit (repo-hygiene triage 2026-07-23)
+data/event_public_20260713/
+data/event_bootstrap_20260713/
+data/pbv_replay_20260720/
+eval_clips/ball/pbvision_11min_20260713/
