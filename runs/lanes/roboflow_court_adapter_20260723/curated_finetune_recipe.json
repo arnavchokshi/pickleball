@@ -1,0 +1,36 @@
+{
+  "artifact_type": "racketsport_court_curated_external_finetune_recipe",
+  "schema_version": 1,
+  "status": "frozen_diagnostic_recipe",
+  "verified": false,
+  "purpose": "Measure whether replacing the duplicate-heavy 2833-row Roboflow pool with the 264-row source-deduplicated, venue-capped, court_labelpack3-disjoint subset improves the current epoch-14 checkpoint.",
+  "data_facts": {
+    "parent_external_rows_previously_used": 2833,
+    "adapter_rows_before_pack3_exclusion": 293,
+    "selected_rows_after_pack3_exclusion": 264,
+    "selected_rows_that_are_new_pixels_relative_to_parent": 0,
+    "selected_owner_pack3_collisions": 0,
+    "net_channels": "all_null"
+  },
+  "initialization": "runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13/court_model_v2_epoch_0014.pt",
+  "training": {
+    "epochs": 6,
+    "steps_per_epoch": 100,
+    "batch_size": 32,
+    "real_batch_size": 32,
+    "real_weight": 0.75,
+    "synthetic_weight": 0.25,
+    "learning_rate": 0.0002,
+    "geometric_loss_weight": 0.05,
+    "geometry_on_real_batches": true,
+    "seed": 13,
+    "synthetic_workers": 8
+  },
+  "evaluation": {
+    "same_development_set": "runs/court_diversity_owner_ingest_20260723/holdout",
+    "structured_best_court": true,
+    "selection_rule": "compare every saved epoch to the frozen epoch-14 initialization and keep only a measured improvement",
+    "authority": "review_only",
+    "measurement_valid": false
+  }
+}

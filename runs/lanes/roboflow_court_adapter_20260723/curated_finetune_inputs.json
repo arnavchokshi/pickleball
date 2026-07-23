@@ -1,0 +1,11 @@
+{
+  "artifact_type": "training_input_manifest",
+  "inputs": [
+    {
+      "asset_id": "roboflow_court_keypoints_adapted_20260723",
+      "component": "COURT",
+      "path": "runs/lanes/roboflow_court_adapter_20260723/adapted_corpus"
+    }
+  ],
+  "schema_version": 1
+}

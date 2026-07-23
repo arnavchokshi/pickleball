@@ -17,6 +17,7 @@ from threed.racketsport.court_keypoint_net import make_court_keypoint_heatmap_mo
 from scripts.racketsport.evaluate_court_model_v2 import (  # noqa: E402
     _row_native_image_bgr,
     evaluate_checkpoint_against_real_labels,
+    evaluate_structured_checkpoint_against_real_labels,
     predict_row_keypoints_source_px,
 )
 
@@ -158,6 +159,23 @@ def test_evaluate_checkpoint_against_real_labels_reports_independent_and_all_mod
     assert report["independent"]["keypoint_error_summary"]["count"] > 0
     assert set(report["independent"]["per_clip"]) == {"clip_a", "clip_b"}
     assert set(report["all"]["per_clip"]) == {"clip_a", "clip_b"}
+
+
+def test_structured_eval_scores_floor_names_and_stays_review_only(tmp_path: Path) -> None:
+    owner_root = tmp_path / "owner"
+    _write_owner_clip(owner_root, "clip_a", loaded_size=(64, 36), source_size=(64, 36))
+    checkpoint_path = _write_checkpoint(tmp_path)
+
+    from scripts.racketsport.train_court_keypoint_heatmap import load_real_court_keypoint_labels
+
+    rows = load_real_court_keypoint_labels(owner_root)[:1]
+    report = evaluate_structured_checkpoint_against_real_labels(checkpoint_path, rows, device="cpu")
+
+    assert report["evaluated_taxonomy"] == "12_canonical_floor_points_exact_name"
+    assert report["point_metrics"]["labeled_count"] == 12
+    assert report["authority_state"] == "review_only"
+    assert report["measurement_valid"] is False
+    assert report["promotion_allowed"] is False
 
 
 def test_evaluate_court_model_v2_cli_writes_scanner_compatible_report(tmp_path: Path) -> None:

@@ -1,0 +1,530 @@
+{
+  "schema_version": 1,
+  "clip": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3__valid",
+  "status": "OWNER_APPROVED",
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            5.792,
+            596.807
+          ],
+          "near_baseline_center": [
+            317.794,
+            598.066
+          ],
+          "near_right_corner": [
+            629.795,
+            603.606
+          ],
+          "far_right_corner": [
+            460.07,
+            193.396
+          ],
+          "far_baseline_center": [
+            320.312,
+            192.388
+          ],
+          "far_left_corner": [
+            181.309,
+            190.878
+          ],
+          "near_nvz_left": [
+            101.231,
+            378.23
+          ],
+          "near_nvz_center": [
+            319.305,
+            379.993
+          ],
+          "near_nvz_right": [
+            537.126,
+            382.511
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            148.824,
+            265.164
+          ],
+          "far_nvz_center": [
+            320.312,
+            268.185
+          ],
+          "far_nvz_right": [
+            491.799,
+            270.2
+          ]
+        },
+        "provenance": {
+          "dataset": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+          "workspace": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+          "split": "valid",
+          "coco_image_id": 0,
+          "coco_annotation_id": 0,
+          "original_file_name": "youtube-1128_jpg.rf.b377c5fb29e79457fc6593f809ad2ef1.jpg",
+          "roboflow_original_name": "youtube-1128_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3/valid/youtube-1128_jpg.rf.b377c5fb29e79457fc6593f809ad2ef1.jpg",
+          "source_group": "p3chl_14kp_family",
+          "source_media_family": "youtube_sequence",
+          "apparent_venue_id": "p3chl_14kp_family:youtube_sequence",
+          "license": "CC BY 4.0",
+          "image_sha256": "ad778b97fde64e032407308af3da802b76096ee04397101a2c0dfb2dbdb68c61",
+          "perceptual_hash64": "d5552b2eac7ad0d0",
+          "mapping_mode": "generic_index_geometric_inferred_static",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "new-point-0": "far_left_corner",
+            "new-point-1": "far_baseline_center",
+            "new-point-2": "far_right_corner",
+            "new-point-3": "far_nvz_right",
+            "new-point-4": "far_nvz_center",
+            "new-point-5": "far_nvz_left",
+            "new-point-6": "near_nvz_left",
+            "new-point-7": "near_nvz_center",
+            "new-point-8": "near_nvz_right",
+            "new-point-9": "near_right_corner",
+            "new-point-10": "near_baseline_center",
+            "new-point-11": "near_left_corner",
+            "new-point-12": "net_left_sideline",
+            "new-point-13": "net_right_sideline"
+          },
+          "source_visible_keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-10",
+            "new-point-11",
+            "new-point-12",
+            "new-point-13",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.44972832071217356,
+            "median_reprojection_error_ratio": 0.0006971670238502421,
+            "max_reprojection_error_ratio": 0.0024102755333947844,
+            "projective_row_y": [
+              0.0,
+              0.33893483877182007,
+              0.6571188569068909,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            155.623,
+            578.173
+          ],
+          "near_baseline_center": [
+            319.556,
+            601.592
+          ],
+          "near_right_corner": [
+            482.482,
+            580.187
+          ],
+          "far_right_corner": [
+            386.54,
+            52.126
+          ],
+          "far_baseline_center": [
+            318.549,
+            50.112
+          ],
+          "far_left_corner": [
+            249.803,
+            51.119
+          ],
+          "near_nvz_left": [
+            199.691,
+            285.057
+          ],
+          "near_nvz_center": [
+            317.794,
+            283.798
+          ],
+          "near_nvz_right": [
+            436.903,
+            285.561
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            229.154,
+            139.507
+          ],
+          "far_nvz_center": [
+            318.549,
+            135.478
+          ],
+          "far_nvz_right": [
+            407.189,
+            140.011
+          ]
+        },
+        "provenance": {
+          "dataset": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+          "workspace": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+          "split": "valid",
+          "coco_image_id": 3,
+          "coco_annotation_id": 3,
+          "original_file_name": "middle_court19_jpg.rf.ec84e38b0482957bd262894e5b20a894.jpg",
+          "roboflow_original_name": "middle_court19_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3/valid/middle_court19_jpg.rf.ec84e38b0482957bd262894e5b20a894.jpg",
+          "source_group": "p3chl_14kp_family",
+          "source_media_family": "middle_court",
+          "apparent_venue_id": "p3chl_14kp_family:middle_court",
+          "license": "CC BY 4.0",
+          "image_sha256": "f2be87caac6966f84b64b463eaf0c7036afcf4998a5d43bb5f2e785c8a1e1364",
+          "perceptual_hash64": "a09feb68d929d838",
+          "mapping_mode": "generic_index_geometric_inferred_static",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "new-point-0": "far_left_corner",
+            "new-point-1": "far_baseline_center",
+            "new-point-2": "far_right_corner",
+            "new-point-3": "far_nvz_right",
+            "new-point-4": "far_nvz_center",
+            "new-point-5": "far_nvz_left",
+            "new-point-6": "near_nvz_left",
+            "new-point-7": "near_nvz_center",
+            "new-point-8": "near_nvz_right",
+            "new-point-9": "near_right_corner",
+            "new-point-10": "near_baseline_center",
+            "new-point-11": "near_left_corner",
+            "new-point-12": "net_left_sideline",
+            "new-point-13": "net_right_sideline"
+          },
+          "source_visible_keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-10",
+            "new-point-11",
+            "new-point-12",
+            "new-point-13",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.2985484454061011,
+            "median_reprojection_error_ratio": 0.007315824676411879,
+            "max_reprojection_error_ratio": 0.024766404878956445,
+            "projective_row_y": [
+              -5.551980023174268e-17,
+              0.3229277729988098,
+              0.6543089151382446,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            112.919,
+            450.066
+          ],
+          "near_baseline_center": [
+            320.097,
+            449.101
+          ],
+          "near_right_corner": [
+            526.953,
+            449.101
+          ],
+          "far_right_corner": [
+            392.481,
+            98.12
+          ],
+          "far_baseline_center": [
+            321.384,
+            99.085
+          ],
+          "far_left_corner": [
+            250.608,
+            99.085
+          ],
+          "near_nvz_left": [
+            195.919,
+            239.027
+          ],
+          "near_nvz_center": [
+            321.062,
+            238.062
+          ],
+          "near_nvz_right": [
+            445.884,
+            237.097
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            230.019,
+            151.845
+          ],
+          "far_nvz_center": [
+            321.384,
+            152.167
+          ],
+          "far_nvz_right": [
+            412.748,
+            152.488
+          ]
+        },
+        "provenance": {
+          "dataset": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+          "workspace": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+          "split": "valid",
+          "coco_image_id": 15,
+          "coco_annotation_id": 15,
+          "original_file_name": "youtube-352_jpg.rf.7bd41e070a331a5d34d1563dacf03779.jpg",
+          "roboflow_original_name": "youtube-352_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3/valid/youtube-352_jpg.rf.7bd41e070a331a5d34d1563dacf03779.jpg",
+          "source_group": "p3chl_14kp_family",
+          "source_media_family": "youtube_sequence",
+          "apparent_venue_id": "p3chl_14kp_family:youtube_sequence",
+          "license": "CC BY 4.0",
+          "image_sha256": "0131b1d20b0f06b79d119521c75b90a32c950a089dc44050ffc0bedc46905dbb",
+          "perceptual_hash64": "c08969f9a9d85a5e",
+          "mapping_mode": "generic_index_geometric_inferred_static",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "new-point-0": "far_left_corner",
+            "new-point-1": "far_baseline_center",
+            "new-point-2": "far_right_corner",
+            "new-point-3": "far_nvz_right",
+            "new-point-4": "far_nvz_center",
+            "new-point-5": "far_nvz_left",
+            "new-point-6": "near_nvz_left",
+            "new-point-7": "near_nvz_center",
+            "new-point-8": "near_nvz_right",
+            "new-point-9": "near_right_corner",
+            "new-point-10": "near_baseline_center",
+            "new-point-11": "near_left_corner",
+            "new-point-12": "net_left_sideline",
+            "new-point-13": "net_right_sideline"
+          },
+          "source_visible_keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-10",
+            "new-point-11",
+            "new-point-12",
+            "new-point-13",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.23817101159171122,
+            "median_reprojection_error_ratio": 0.0005431492026468249,
+            "max_reprojection_error_ratio": 0.0017744317131467373,
+            "projective_row_y": [
+              -1.1092197538038032e-16,
+              0.34452515840530396,
+              0.6580236554145813,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000004.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            90.017,
+            480.979
+          ],
+          "near_baseline_center": [
+            317.885,
+            487.29
+          ],
+          "near_right_corner": [
+            545.752,
+            486.626
+          ],
+          "far_right_corner": [
+            380.871,
+            99.783
+          ],
+          "far_baseline_center": [
+            314.288,
+            99.229
+          ],
+          "far_left_corner": [
+            248.794,
+            98.322
+          ],
+          "near_nvz_left": [
+            191.993,
+            233.514
+          ],
+          "near_nvz_center": [
+            315.763,
+            234.793
+          ],
+          "near_nvz_right": [
+            440.63,
+            237.007
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            228.199,
+            147.815
+          ],
+          "far_nvz_center": [
+            315.947,
+            148.66
+          ],
+          "far_nvz_right": [
+            402.266,
+            148.66
+          ]
+        },
+        "provenance": {
+          "dataset": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+          "workspace": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+          "split": "valid",
+          "coco_image_id": 19,
+          "coco_annotation_id": 19,
+          "original_file_name": "youtube-1068_jpg.rf.10c46d47eecdfbca03f49e6eada20b44.jpg",
+          "roboflow_original_name": "youtube-1068_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3/valid/youtube-1068_jpg.rf.10c46d47eecdfbca03f49e6eada20b44.jpg",
+          "source_group": "p3chl_14kp_family",
+          "source_media_family": "youtube_sequence",
+          "apparent_venue_id": "p3chl_14kp_family:youtube_sequence",
+          "license": "CC BY 4.0",
+          "image_sha256": "e4defc01d7f931f7760d952e2c3d858b64920adfa974f70e59019bd0dc72eab0",
+          "perceptual_hash64": "b5429f7d85f46026",
+          "mapping_mode": "generic_index_geometric_inferred_static",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "new-point-0": "far_left_corner",
+            "new-point-1": "far_baseline_center",
+            "new-point-2": "far_right_corner",
+            "new-point-3": "far_nvz_right",
+            "new-point-4": "far_nvz_center",
+            "new-point-5": "far_nvz_left",
+            "new-point-6": "near_nvz_left",
+            "new-point-7": "near_nvz_center",
+            "new-point-8": "near_nvz_right",
+            "new-point-9": "near_right_corner",
+            "new-point-10": "near_baseline_center",
+            "new-point-11": "near_left_corner",
+            "new-point-12": "net_left_sideline",
+            "new-point-13": "net_right_sideline"
+          },
+          "source_visible_keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-10",
+            "new-point-11",
+            "new-point-12",
+            "new-point-13",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.2760485624491457,
+            "median_reprojection_error_ratio": 0.00102960615252604,
+            "max_reprojection_error_ratio": 0.0038607474710960587,
+            "projective_row_y": [
+              2.2209526808318896e-16,
+              0.33803021907806396,
+              0.6532773375511169,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      }
+    ]
+  },
+  "frames": {
+    "frame_dir": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3__valid/frames",
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ],
+    "label_coordinate_space": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "status": "reviewed",
+    "reviewer": "upstream_roboflow_human_annotations",
+    "note": "Mapped external floor points only. All 15 canonical keys are present; all three unsafe external bottom-of-net channels are JSON null."
+  },
+  "training_eligibility": {
+    "queued": true,
+    "reason": "owner-approved floor-only source row; external net channels nulled",
+    "owner_adjudication": {
+      "path": "runs/court_unified_training_20260723/external_training_owner_act_final.json",
+      "sha256": "e0f8935c5d42a531d144f74f0c527fc51b0cdd7c18e6c59ed5c5faca26893f29",
+      "decision": "APPROVE",
+      "scope_type": "roboflow_dataset",
+      "scope_id": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+      "training_condition": "FLOOR_ONLY_ALL_NET_CHANNELS_NULL"
+    }
+  }
+}

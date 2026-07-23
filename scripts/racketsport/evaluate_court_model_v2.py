@@ -41,6 +41,7 @@ from scripts.racketsport.train_court_keypoint_heatmap import (  # noqa: E402
     load_real_court_keypoint_labels,
 )
 from threed.racketsport.court_model_infer import infer_court_model  # noqa: E402
+from threed.racketsport.court_structured_metrics import evaluate_structured_court_outputs  # noqa: E402
 
 INDEPENDENT_REVIEWED_STATUS = "reviewed"
 
@@ -72,6 +73,70 @@ def predict_row_keypoints_source_px(row: dict[str, Any], checkpoint_path: Path, 
         name: [xy[0] * scale_x, xy[1] * scale_y]
         for name, xy in result["keypoints_xy"].items()
     }
+
+
+def evaluate_structured_checkpoint_against_real_labels(
+    checkpoint_path: Path,
+    rows: list[dict[str, Any]],
+    *,
+    device: str = "cpu",
+) -> dict[str, Any]:
+    """Score the review-only regulation-template ``best_court`` output on exact floor names."""
+
+    records: list[dict[str, Any]] = []
+    for row in rows:
+        image_bgr, (scale_x, scale_y) = _row_native_image_bgr(row)
+        result = infer_court_model(image_bgr, checkpoint_path, device=device)
+        best = result["best_court"]
+        prediction = {
+            name: [float(xy[0]) * scale_x, float(xy[1]) * scale_y]
+            for name, xy in best["keypoints_xy"].items()
+        }
+        truth = {
+            name: [float(xy[0]), float(xy[1])]
+            for name, xy in row["keypoints"].items()
+            if xy is not None and not name.startswith("net_")
+        }
+        ignored: list[dict[str, Any]] = []
+        for item in best.get("ignored_observations") or []:
+            if not isinstance(item, dict):
+                continue
+            normalized = dict(item)
+            semantic = normalized.get("name", normalized.get("semantic"))
+            if not isinstance(semantic, str) or semantic not in truth:
+                continue
+            normalized["name"] = semantic
+            xy = normalized.get("xy")
+            if isinstance(xy, (list, tuple)) and len(xy) == 2:
+                normalized["xy"] = [float(xy[0]) * scale_x, float(xy[1]) * scale_y]
+            ignored.append(normalized)
+        records.append(
+            {
+                "sample_id": f"{row.get('clip', 'unknown')}/frame_{int(row.get('frame_index') or 0):06d}",
+                "viewpoint": str(row.get("clip") or "unknown"),
+                "ground_truth": truth,
+                "prediction": {
+                    "keypoints": prediction,
+                    "confidences": dict(best.get("point_confidence") or {}),
+                    "ignored_observations": ignored,
+                    "whole_court_confidence": float(best.get("court_confidence") or 0.0),
+                },
+            }
+        )
+    report = evaluate_structured_court_outputs(records)
+    report.update(
+        {
+            "schema_version": 1,
+            "artifact_type": "court_structured_best_effort_eval",
+            "checkpoint": str(checkpoint_path),
+            "status": "diagnostic_only",
+            "promotion_allowed": False,
+            "measurement_valid": False,
+            "authority_state": "review_only",
+            "evaluated_taxonomy": "12_canonical_floor_points_exact_name",
+        }
+    )
+    return report
 
 
 def _row_errors(row: dict[str, Any], predicted: dict[str, list[float]]) -> list[float]:
@@ -183,6 +248,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--pck-threshold-px", type=float, default=5.0)
     parser.add_argument("--gate-threshold", type=float, default=0.95)
+    parser.add_argument(
+        "--include-structured-best-court",
+        action="store_true",
+        help=(
+            "Also score the confidence-aware floor-only regulation-template best_court output. "
+            "The result remains diagnostic/review-only and cannot satisfy CAL promotion."
+        ),
+    )
     args = parser.parse_args(argv)
 
     rows = load_real_court_keypoint_labels(args.real_root)
@@ -252,6 +325,12 @@ def main(argv: list[str] | None = None) -> int:
             "pck_threshold_px, not just the pooled-across-clips average (gate_passed aliases it).",
         ],
     }
+    if args.include_structured_best_court:
+        report["structured_best_court"] = evaluate_structured_checkpoint_against_real_labels(
+            args.checkpoint,
+            rows,
+            device=args.device,
+        )
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     args.out.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")

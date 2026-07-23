@@ -1,0 +1,633 @@
+{
+  "schema_version": 1,
+  "clip": "nigh-workspace__pickleball-court-vhpgp__v11__valid",
+  "status": "OWNER_APPROVED",
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            75.714,
+            405.714
+          ],
+          "near_baseline_center": [
+            322.381,
+            404.286
+          ],
+          "near_right_corner": [
+            570.0,
+            404.667
+          ],
+          "far_right_corner": [
+            403.333,
+            207.619
+          ],
+          "far_baseline_center": [
+            322.857,
+            208.571
+          ],
+          "far_left_corner": [
+            242.857,
+            208.095
+          ],
+          "near_nvz_left": [
+            180.0,
+            283.81
+          ],
+          "near_nvz_center": [
+            322.857,
+            282.381
+          ],
+          "near_nvz_right": [
+            466.19,
+            282.381
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            218.571,
+            238.571
+          ],
+          "far_nvz_center": [
+            322.857,
+            238.571
+          ],
+          "far_nvz_right": [
+            428.571,
+            238.095
+          ]
+        },
+        "provenance": {
+          "dataset": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "workspace": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "split": "valid",
+          "coco_image_id": 10,
+          "coco_annotation_id": 11,
+          "original_file_name": "PBGAME2_mp4-0022_jpg.rf.97cebff18747248a67ad315bd2938724.jpg",
+          "roboflow_original_name": "PBGAME2_mp4-0022_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/nigh-workspace__pickleball-court-vhpgp__v11/valid/PBGAME2_mp4-0022_jpg.rf.97cebff18747248a67ad315bd2938724.jpg",
+          "source_group": "vbmkq_vhpgp_12kp_family",
+          "source_media_family": "PBGAME2_mp4",
+          "apparent_venue_id": "vbmkq_vhpgp_12kp_family:PBGAME2_mp4",
+          "license": "CC BY 4.0",
+          "image_sha256": "fe7528abdf7bc1275a98a7b26406b14d5c24a7b79fc8c4e222ec8b12481435d4",
+          "perceptual_hash64": "b3e44c0b2d1793ea",
+          "mapping_mode": "semantic_abbreviation_direct",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "l-n-b": "far_left_corner",
+            "l-m-b": "far_baseline_center",
+            "l-f-b": "far_right_corner",
+            "l-f-k": "far_nvz_right",
+            "r-f-k": "near_nvz_right",
+            "r-f-b": "near_right_corner",
+            "r-m-b": "near_baseline_center",
+            "r-n-b": "near_left_corner",
+            "r-n-k": "near_nvz_left",
+            "l-n-k": "far_nvz_left",
+            "l-m-k": "far_nvz_center",
+            "r-m-k": "near_nvz_center"
+          },
+          "source_visible_keypoint_names": [
+            "l-f-b",
+            "l-f-k",
+            "l-m-b",
+            "l-m-k",
+            "l-n-b",
+            "l-n-k",
+            "r-f-b",
+            "r-f-k",
+            "r-m-b",
+            "r-m-k",
+            "r-n-b",
+            "r-n-k"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.15772230262778664,
+            "median_reprojection_error_ratio": 0.0017389510472723493,
+            "max_reprojection_error_ratio": 0.0027801549588373745,
+            "projective_row_y": [
+              4.442423110552788e-16,
+              0.36057743430137634,
+              0.6533085703849792,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            75.238,
+            406.19
+          ],
+          "near_baseline_center": [
+            324.286,
+            403.333
+          ],
+          "near_right_corner": [
+            568.095,
+            403.333
+          ],
+          "far_right_corner": [
+            403.333,
+            209.048
+          ],
+          "far_baseline_center": [
+            322.857,
+            209.524
+          ],
+          "far_left_corner": [
+            242.593,
+            209.63
+          ],
+          "near_nvz_left": [
+            179.63,
+            284.444
+          ],
+          "near_nvz_center": [
+            322.963,
+            283.333
+          ],
+          "near_nvz_right": [
+            466.19,
+            282.857
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            217.778,
+            238.889
+          ],
+          "far_nvz_center": [
+            322.857,
+            238.571
+          ],
+          "far_nvz_right": [
+            427.143,
+            238.095
+          ]
+        },
+        "provenance": {
+          "dataset": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "workspace": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "split": "valid",
+          "coco_image_id": 14,
+          "coco_annotation_id": 15,
+          "original_file_name": "PBGAME2_mp4-0034_jpg.rf.3c4dca4249f43514f28a971b0b62cb73.jpg",
+          "roboflow_original_name": "PBGAME2_mp4-0034_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/nigh-workspace__pickleball-court-vhpgp__v11/valid/PBGAME2_mp4-0034_jpg.rf.3c4dca4249f43514f28a971b0b62cb73.jpg",
+          "source_group": "vbmkq_vhpgp_12kp_family",
+          "source_media_family": "PBGAME2_mp4",
+          "apparent_venue_id": "vbmkq_vhpgp_12kp_family:PBGAME2_mp4",
+          "license": "CC BY 4.0",
+          "image_sha256": "dd033482aefeaf189fb51ff3e835fbea2ab1117378e6129402f13da3e6396023",
+          "perceptual_hash64": "b1f84e0e09b7966a",
+          "mapping_mode": "semantic_abbreviation_direct",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "l-n-b": "far_left_corner",
+            "l-m-b": "far_baseline_center",
+            "l-f-b": "far_right_corner",
+            "l-f-k": "far_nvz_right",
+            "r-f-k": "near_nvz_right",
+            "r-f-b": "near_right_corner",
+            "r-m-b": "near_baseline_center",
+            "r-n-b": "near_left_corner",
+            "r-n-k": "near_nvz_left",
+            "l-n-k": "far_nvz_left",
+            "l-m-k": "far_nvz_center",
+            "r-m-k": "near_nvz_center"
+          },
+          "source_visible_keypoint_names": [
+            "l-f-b",
+            "l-f-k",
+            "l-m-b",
+            "l-m-k",
+            "l-n-b",
+            "l-n-k",
+            "r-f-b",
+            "r-f-k",
+            "r-m-b",
+            "r-m-k",
+            "r-n-b",
+            "r-n-k"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.1559119835880682,
+            "median_reprojection_error_ratio": 0.001135258555284133,
+            "max_reprojection_error_ratio": 0.002662187246944398,
+            "projective_row_y": [
+              0.0,
+              0.3497741222381592,
+              0.6521778702735901,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            47.917,
+            433.333
+          ],
+          "near_baseline_center": [
+            319.583,
+            435.0
+          ],
+          "near_right_corner": [
+            590.833,
+            434.583
+          ],
+          "far_right_corner": [
+            395.0,
+            201.25
+          ],
+          "far_baseline_center": [
+            322.5,
+            200.833
+          ],
+          "far_left_corner": [
+            247.917,
+            201.25
+          ],
+          "near_nvz_left": [
+            180.833,
+            278.75
+          ],
+          "near_nvz_center": [
+            322.083,
+            278.75
+          ],
+          "near_nvz_right": [
+            461.25,
+            280.417
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            222.5,
+            231.25
+          ],
+          "far_nvz_center": [
+            321.25,
+            231.25
+          ],
+          "far_nvz_right": [
+            420.0,
+            232.083
+          ]
+        },
+        "provenance": {
+          "dataset": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "workspace": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "split": "valid",
+          "coco_image_id": 24,
+          "coco_annotation_id": 25,
+          "original_file_name": "PBGAME12_mp4-0018_jpg.rf.0b00826337628720d93a20abf51a0cf7.jpg",
+          "roboflow_original_name": "PBGAME12_mp4-0018_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/nigh-workspace__pickleball-court-vhpgp__v11/valid/PBGAME12_mp4-0018_jpg.rf.0b00826337628720d93a20abf51a0cf7.jpg",
+          "source_group": "vbmkq_vhpgp_12kp_family",
+          "source_media_family": "PBGAME12_mp4",
+          "apparent_venue_id": "vbmkq_vhpgp_12kp_family:PBGAME12_mp4",
+          "license": "CC BY 4.0",
+          "image_sha256": "730d4d6146540761de57dd1eff66f6239a9ebc9ff23203c677f0f6d0282ccc9b",
+          "perceptual_hash64": "80007fff5342ca3f",
+          "mapping_mode": "semantic_abbreviation_direct",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "l-n-b": "far_left_corner",
+            "l-m-b": "far_baseline_center",
+            "l-f-b": "far_right_corner",
+            "l-f-k": "far_nvz_right",
+            "r-f-k": "near_nvz_right",
+            "r-f-b": "near_right_corner",
+            "r-m-b": "near_baseline_center",
+            "r-n-b": "near_left_corner",
+            "r-n-k": "near_nvz_left",
+            "l-n-k": "far_nvz_left",
+            "l-m-k": "far_nvz_center",
+            "r-m-k": "near_nvz_center"
+          },
+          "source_visible_keypoint_names": [
+            "l-f-b",
+            "l-f-k",
+            "l-m-b",
+            "l-m-k",
+            "l-n-b",
+            "l-n-k",
+            "r-f-b",
+            "r-f-k",
+            "r-m-b",
+            "r-m-k",
+            "r-n-b",
+            "r-n-k"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.19600939597818978,
+            "median_reprojection_error_ratio": 0.001549695102136834,
+            "max_reprojection_error_ratio": 0.0032834112474063267,
+            "projective_row_y": [
+              -4.444123529194401e-16,
+              0.35355186462402344,
+              0.6487557888031006,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000004.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            75.238,
+            405.238
+          ],
+          "near_baseline_center": [
+            322.857,
+            404.286
+          ],
+          "near_right_corner": [
+            570.476,
+            403.81
+          ],
+          "far_right_corner": [
+            402.963,
+            208.519
+          ],
+          "far_baseline_center": [
+            322.222,
+            209.259
+          ],
+          "far_left_corner": [
+            243.333,
+            209.524
+          ],
+          "near_nvz_left": [
+            179.524,
+            284.286
+          ],
+          "near_nvz_center": [
+            322.857,
+            283.333
+          ],
+          "near_nvz_right": [
+            466.667,
+            283.333
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            219.048,
+            238.095
+          ],
+          "far_nvz_center": [
+            322.857,
+            238.095
+          ],
+          "far_nvz_right": [
+            427.619,
+            238.095
+          ]
+        },
+        "provenance": {
+          "dataset": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "workspace": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "split": "valid",
+          "coco_image_id": 34,
+          "coco_annotation_id": 35,
+          "original_file_name": "PBGAME2_mp4-0004_jpg.rf.5eaf74af65fc2960ad81eaf62f6d3ce8.jpg",
+          "roboflow_original_name": "PBGAME2_mp4-0004_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/nigh-workspace__pickleball-court-vhpgp__v11/valid/PBGAME2_mp4-0004_jpg.rf.5eaf74af65fc2960ad81eaf62f6d3ce8.jpg",
+          "source_group": "vbmkq_vhpgp_12kp_family",
+          "source_media_family": "PBGAME2_mp4",
+          "apparent_venue_id": "vbmkq_vhpgp_12kp_family:PBGAME2_mp4",
+          "license": "CC BY 4.0",
+          "image_sha256": "3327e130fb22fe0277659572ebe49d37060f987d3e402bc682890f1bb124cb9a",
+          "perceptual_hash64": "b1f44e0b2d95926e",
+          "mapping_mode": "semantic_abbreviation_direct",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "l-n-b": "far_left_corner",
+            "l-m-b": "far_baseline_center",
+            "l-f-b": "far_right_corner",
+            "l-f-k": "far_nvz_right",
+            "r-f-k": "near_nvz_right",
+            "r-f-b": "near_right_corner",
+            "r-m-b": "near_baseline_center",
+            "r-n-b": "near_left_corner",
+            "r-n-k": "near_nvz_left",
+            "l-n-k": "far_nvz_left",
+            "l-m-k": "far_nvz_center",
+            "r-m-k": "near_nvz_center"
+          },
+          "source_visible_keypoint_names": [
+            "l-f-b",
+            "l-f-k",
+            "l-m-b",
+            "l-m-k",
+            "l-n-b",
+            "l-n-k",
+            "r-f-b",
+            "r-f-k",
+            "r-m-b",
+            "r-m-k",
+            "r-n-b",
+            "r-n-k"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.15628372984393493,
+            "median_reprojection_error_ratio": 0.0008900460174508752,
+            "max_reprojection_error_ratio": 0.002105919179154049,
+            "projective_row_y": [
+              0.0,
+              0.3514667749404907,
+              0.6566101312637329,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000005.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            78.667,
+            435.667
+          ],
+          "near_baseline_center": [
+            320.333,
+            432.0
+          ],
+          "near_right_corner": [
+            557.333,
+            433.667
+          ],
+          "far_right_corner": [
+            410.333,
+            286.0
+          ],
+          "far_baseline_center": [
+            292.667,
+            287.0
+          ],
+          "far_left_corner": [
+            171.667,
+            286.0
+          ],
+          "near_nvz_left": [
+            127.333,
+            358.0
+          ],
+          "near_nvz_center": [
+            306.333,
+            356.667
+          ],
+          "near_nvz_right": [
+            481.75,
+            356.5
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            152.0,
+            318.0
+          ],
+          "far_nvz_center": [
+            298.167,
+            317.0
+          ],
+          "far_nvz_right": [
+            442.25,
+            317.5
+          ]
+        },
+        "provenance": {
+          "dataset": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "workspace": "nigh-workspace__pickleball-court-vhpgp__v11",
+          "split": "valid",
+          "coco_image_id": 36,
+          "coco_annotation_id": 37,
+          "original_file_name": "PBGAME8_mp4-0075_jpg.rf.4614eb060823b273df380e1de90a9c86.jpg",
+          "roboflow_original_name": "PBGAME8_mp4-0075_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/nigh-workspace__pickleball-court-vhpgp__v11/valid/PBGAME8_mp4-0075_jpg.rf.4614eb060823b273df380e1de90a9c86.jpg",
+          "source_group": "vbmkq_vhpgp_12kp_family",
+          "source_media_family": "PBGAME8_mp4",
+          "apparent_venue_id": "vbmkq_vhpgp_12kp_family:PBGAME8_mp4",
+          "license": "CC BY 4.0",
+          "image_sha256": "50d2fea7e42753fce019ab73375778a2662d6b894b51196f237e1171ff04a318",
+          "perceptual_hash64": "9ec729b874788a87",
+          "mapping_mode": "semantic_abbreviation_direct",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "l-n-b": "far_left_corner",
+            "l-m-b": "far_baseline_center",
+            "l-f-b": "far_right_corner",
+            "l-f-k": "far_nvz_right",
+            "r-f-k": "near_nvz_right",
+            "r-f-b": "near_right_corner",
+            "r-m-b": "near_baseline_center",
+            "r-n-b": "near_left_corner",
+            "r-n-k": "near_nvz_left",
+            "l-n-k": "far_nvz_left",
+            "l-m-k": "far_nvz_center",
+            "r-m-k": "near_nvz_center"
+          },
+          "source_visible_keypoint_names": [
+            "l-f-b",
+            "l-f-k",
+            "l-m-b",
+            "l-m-k",
+            "l-n-b",
+            "l-n-k",
+            "r-f-b",
+            "r-f-k",
+            "r-m-b",
+            "r-m-k",
+            "r-n-b",
+            "r-n-k"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.13024608407634333,
+            "median_reprojection_error_ratio": 0.0017833866013662865,
+            "max_reprojection_error_ratio": 0.003045876877554992,
+            "projective_row_y": [
+              -4.426009200221776e-16,
+              0.351675420999527,
+              0.6463528275489807,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      }
+    ]
+  },
+  "frames": {
+    "frame_dir": "nigh-workspace__pickleball-court-vhpgp__v11__valid/frames",
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ],
+    "label_coordinate_space": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "status": "reviewed",
+    "reviewer": "upstream_roboflow_human_annotations",
+    "note": "Mapped external floor points only. All 15 canonical keys are present; all three unsafe external bottom-of-net channels are JSON null."
+  },
+  "training_eligibility": {
+    "queued": true,
+    "reason": "owner-approved floor-only source row; external net channels nulled",
+    "owner_adjudication": {
+      "path": "runs/court_unified_training_20260723/external_training_owner_act_final.json",
+      "sha256": "e0f8935c5d42a531d144f74f0c527fc51b0cdd7c18e6c59ed5c5faca26893f29",
+      "decision": "APPROVE",
+      "scope_type": "roboflow_dataset",
+      "scope_id": "nigh-workspace__pickleball-court-vhpgp__v11",
+      "training_condition": "FLOOR_ONLY_ALL_NET_CHANNELS_NULL"
+    }
+  }
+}

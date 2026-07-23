@@ -1139,7 +1139,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         model.eval()
         with torch.no_grad():
             probe_loss, probe_components = _compute_batch_loss(
-                model, real_probe_batch, device=device, args=args, torch=torch, skip_geometric=True
+                model, real_probe_batch, device=device, args=args, torch=torch
             )
         real_probe_before = {"loss": float(probe_loss.detach().cpu()), **probe_components}
 
@@ -1228,8 +1228,12 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                     (null_mask & (real_batch["vis_mask"] > 0)).sum().item()
                 )
                 with torch.autocast(device_type=device.type, enabled=amp_enabled):
+                    # Geometry is label-independent: it regularizes the model's own predicted
+                    # floor layout and already excludes the three elevated net-top points.  It
+                    # must run on real images too; limiting it to synthetic batches was the
+                    # reason real-domain semantic collapses remained unconstrained.
                     real_loss, real_components = _compute_batch_loss(
-                        model, real_batch, device=device, args=args, torch=torch, skip_geometric=True
+                        model, real_batch, device=device, args=args, torch=torch
                     )
                 loss = loss + real_loss
                 components["real_heatmap_loss"] = real_components["heatmap_loss"]
@@ -1293,7 +1297,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         model.eval()
         with torch.no_grad():
             probe_loss, probe_components = _compute_batch_loss(
-                model, real_probe_batch, device=device, args=args, torch=torch, skip_geometric=True
+                model, real_probe_batch, device=device, args=args, torch=torch
             )
         real_probe_after = {"loss": float(probe_loss.detach().cpu()), **probe_components}
 
@@ -1375,6 +1379,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "real_fraction": real_fraction,
             "synthetic_fallback": bool(args.synthetic_fallback or _iter_synthetic_court_samples is None),
             "geometric_loss_weight": args.geometric_loss_weight,
+            "geometric_loss_on_real_batches": bool(args.geometric_loss_weight > 0.0),
             "checkpoint_every_eval": bool(args.checkpoint_every_eval),
             "keep_last_checkpoints": args.keep_last_checkpoints,
             "epoch_checkpoints": saved_epoch_checkpoints,

@@ -1,0 +1,395 @@
+{
+  "schema_version": 1,
+  "clip": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6__test",
+  "status": "OWNER_APPROVED",
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            61.668,
+            558.656
+          ],
+          "near_baseline_center": [
+            629.084,
+            562.098
+          ],
+          "near_right_corner": [
+            1196.019,
+            564.932
+          ],
+          "far_right_corner": [
+            796.26,
+            182.858
+          ],
+          "far_baseline_center": [
+            638.144,
+            182.266
+          ],
+          "far_left_corner": [
+            480.37,
+            181.532
+          ],
+          "near_nvz_left": [
+            336.096,
+            313.253
+          ],
+          "near_nvz_center": [
+            634.562,
+            315.341
+          ],
+          "near_nvz_right": [
+            933.873,
+            316.356
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            428.898,
+            227.619
+          ],
+          "far_nvz_center": [
+            637.362,
+            229.868
+          ],
+          "far_nvz_right": [
+            845.61,
+            230.709
+          ]
+        },
+        "provenance": {
+          "dataset": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+          "workspace": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+          "split": "test",
+          "coco_image_id": 0,
+          "coco_annotation_id": 0,
+          "original_file_name": "Screen-Recording-2025-04-26-at-9_55_54-PM_mov-0016_jpg.rf.38c47722389ad8d7fc93c989b874a27e.jpg",
+          "roboflow_original_name": "Screen-Recording-2025-04-26-at-9_55_54-PM_mov-0016_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/pickleball-ball-detection__pickleball-court-keypoints-syncz__v6/test/Screen-Recording-2025-04-26-at-9_55_54-PM_mov-0016_jpg.rf.38c47722389ad8d7fc93c989b874a27e.jpg",
+          "source_group": "syncz_12kp",
+          "source_media_family": "Screen-Recording-2025-04-26-at-9_55_54-PM_mov",
+          "apparent_venue_id": "syncz_12kp:Screen-Recording-2025-04-26-at-9_55_54-PM_mov",
+          "license": "CC BY 4.0",
+          "image_sha256": "fdb275b36a42b301fec3bf03f0ad2c6c2cd8fa230aaa4b0063a6bf550f7828f0",
+          "perceptual_hash64": "88287dfce8aaaa17",
+          "mapping_mode": "generic_index_geometric_inferred_static",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "new-point-0": "near_left_corner",
+            "new-point-11": "near_baseline_center",
+            "new-point-3": "near_right_corner",
+            "new-point-4": "near_nvz_left",
+            "new-point-8": "near_nvz_center",
+            "new-point-5": "near_nvz_right",
+            "new-point-7": "far_nvz_left",
+            "new-point-9": "far_nvz_center",
+            "new-point-6": "far_nvz_right",
+            "new-point-1": "far_left_corner",
+            "new-point-10": "far_baseline_center",
+            "new-point-2": "far_right_corner"
+          },
+          "source_visible_keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-10",
+            "new-point-11",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.29870988900015544,
+            "median_reprojection_error_ratio": 0.0003223547379796214,
+            "max_reprojection_error_ratio": 0.0016495890124793436,
+            "projective_row_y": [
+              4.443358552563912e-16,
+              0.3398987650871277,
+              0.658888578414917,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            61.668,
+            558.656
+          ],
+          "near_baseline_center": [
+            629.084,
+            562.098
+          ],
+          "near_right_corner": [
+            1196.019,
+            564.932
+          ],
+          "far_right_corner": [
+            796.26,
+            182.858
+          ],
+          "far_baseline_center": [
+            638.144,
+            182.266
+          ],
+          "far_left_corner": [
+            480.37,
+            181.532
+          ],
+          "near_nvz_left": [
+            336.096,
+            313.253
+          ],
+          "near_nvz_center": [
+            634.562,
+            315.341
+          ],
+          "near_nvz_right": [
+            933.873,
+            316.356
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            428.898,
+            227.619
+          ],
+          "far_nvz_center": [
+            637.362,
+            229.868
+          ],
+          "far_nvz_right": [
+            845.61,
+            230.709
+          ]
+        },
+        "provenance": {
+          "dataset": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+          "workspace": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+          "split": "test",
+          "coco_image_id": 2,
+          "coco_annotation_id": 2,
+          "original_file_name": "Screen-Recording-2025-04-26-at-9_55_54-PM_mov-0001_jpg.rf.79dd3f0ebb44d6518d1d647191bc6fb5.jpg",
+          "roboflow_original_name": "Screen-Recording-2025-04-26-at-9_55_54-PM_mov-0001_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/pickleball-ball-detection__pickleball-court-keypoints-syncz__v6/test/Screen-Recording-2025-04-26-at-9_55_54-PM_mov-0001_jpg.rf.79dd3f0ebb44d6518d1d647191bc6fb5.jpg",
+          "source_group": "syncz_12kp",
+          "source_media_family": "Screen-Recording-2025-04-26-at-9_55_54-PM_mov",
+          "apparent_venue_id": "syncz_12kp:Screen-Recording-2025-04-26-at-9_55_54-PM_mov",
+          "license": "CC BY 4.0",
+          "image_sha256": "3013b634215e099f003aa6df07b2f27e5ad82d05cd7b3319bcce9bd349aa507f",
+          "perceptual_hash64": "88286df4f2aa2b97",
+          "mapping_mode": "generic_index_geometric_inferred_static",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "new-point-0": "near_left_corner",
+            "new-point-11": "near_baseline_center",
+            "new-point-3": "near_right_corner",
+            "new-point-4": "near_nvz_left",
+            "new-point-8": "near_nvz_center",
+            "new-point-5": "near_nvz_right",
+            "new-point-7": "far_nvz_left",
+            "new-point-9": "far_nvz_center",
+            "new-point-6": "far_nvz_right",
+            "new-point-1": "far_left_corner",
+            "new-point-10": "far_baseline_center",
+            "new-point-2": "far_right_corner"
+          },
+          "source_visible_keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-10",
+            "new-point-11",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.29870988900015544,
+            "median_reprojection_error_ratio": 0.0003223547379796214,
+            "max_reprojection_error_ratio": 0.0016495890124793436,
+            "projective_row_y": [
+              4.443358552563912e-16,
+              0.3398987650871277,
+              0.658888578414917,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            66.183,
+            562.035
+          ],
+          "near_baseline_center": [
+            630.844,
+            564.36
+          ],
+          "near_right_corner": [
+            1192.511,
+            567.056
+          ],
+          "far_right_corner": [
+            796.839,
+            184.795
+          ],
+          "far_baseline_center": [
+            639.554,
+            184.557
+          ],
+          "far_left_corner": [
+            482.872,
+            183.823
+          ],
+          "near_nvz_left": [
+            338.719,
+            315.972
+          ],
+          "near_nvz_center": [
+            636.71,
+            317.712
+          ],
+          "near_nvz_right": [
+            934.381,
+            319.281
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            431.155,
+            231.294
+          ],
+          "far_nvz_center": [
+            638.985,
+            232.616
+          ],
+          "far_nvz_right": [
+            845.707,
+            233.541
+          ]
+        },
+        "provenance": {
+          "dataset": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+          "workspace": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+          "split": "test",
+          "coco_image_id": 3,
+          "coco_annotation_id": 3,
+          "original_file_name": "Screen-Recording-2025-04-27-at-1_36_43-PM_mov-0002_jpg.rf.428fb30c0d0abba07a521fd6efcaa0a5.jpg",
+          "roboflow_original_name": "Screen-Recording-2025-04-27-at-1_36_43-PM_mov-0002_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/pickleball-ball-detection__pickleball-court-keypoints-syncz__v6/test/Screen-Recording-2025-04-27-at-1_36_43-PM_mov-0002_jpg.rf.428fb30c0d0abba07a521fd6efcaa0a5.jpg",
+          "source_group": "syncz_12kp",
+          "source_media_family": "Screen-Recording-2025-04-27-at-1_36_43-PM_mov",
+          "apparent_venue_id": "syncz_12kp:Screen-Recording-2025-04-27-at-1_36_43-PM_mov",
+          "license": "CC BY 4.0",
+          "image_sha256": "17942e2555f06259e18bc7cfb8b8d28660fbe83c4d2fc7a91e3b265d0a366b90",
+          "perceptual_hash64": "84296efde0aa2a97",
+          "mapping_mode": "generic_index_geometric_inferred_static",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "new-point-0": "near_left_corner",
+            "new-point-11": "near_baseline_center",
+            "new-point-3": "near_right_corner",
+            "new-point-4": "near_nvz_left",
+            "new-point-8": "near_nvz_center",
+            "new-point-5": "near_nvz_right",
+            "new-point-7": "far_nvz_left",
+            "new-point-9": "far_nvz_center",
+            "new-point-6": "far_nvz_right",
+            "new-point-1": "far_left_corner",
+            "new-point-10": "far_baseline_center",
+            "new-point-2": "far_right_corner"
+          },
+          "source_visible_keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-10",
+            "new-point-11",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.29715478555593666,
+            "median_reprojection_error_ratio": 0.0006070665013966671,
+            "max_reprojection_error_ratio": 0.0017970620961951323,
+            "projective_row_y": [
+              -4.438395204190798e-16,
+              0.34300971031188965,
+              0.6597341895103455,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      }
+    ]
+  },
+  "frames": {
+    "frame_dir": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6__test/frames",
+    "path_base": "corpus_root",
+    "source_resolution": [
+      1280,
+      720
+    ],
+    "label_coordinate_space": [
+      1280,
+      720
+    ]
+  },
+  "review": {
+    "status": "reviewed",
+    "reviewer": "upstream_roboflow_human_annotations",
+    "note": "Mapped external floor points only. All 15 canonical keys are present; all three unsafe external bottom-of-net channels are JSON null."
+  },
+  "training_eligibility": {
+    "queued": true,
+    "reason": "owner-approved floor-only source row; external net channels nulled",
+    "owner_adjudication": {
+      "path": "runs/court_unified_training_20260723/external_training_owner_act_final.json",
+      "sha256": "e0f8935c5d42a531d144f74f0c527fc51b0cdd7c18e6c59ed5c5faca26893f29",
+      "decision": "APPROVE",
+      "scope_type": "roboflow_dataset",
+      "scope_id": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+      "training_condition": "FLOOR_ONLY_ALL_NET_CHANNELS_NULL"
+    }
+  }
+}

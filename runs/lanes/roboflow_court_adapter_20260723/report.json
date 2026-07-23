@@ -1,0 +1,1032 @@
+{
+  "artifact_type": "racketsport_roboflow_court_keypoint_adapter_report",
+  "schema_version": 1,
+  "lane": "roboflow_court_adapter_20260723",
+  "created_at": "2026-07-23T19:45:39.239726+00:00",
+  "mode": "approved",
+  "verified": false,
+  "status": "PASS",
+  "canonical_contract": {
+    "authority": "threed/racketsport/court_keypoint_net.py:PICKLEBALL_KEYPOINTS",
+    "trainer_channel_order": [
+      "near_left_corner",
+      "near_baseline_center",
+      "near_right_corner",
+      "far_right_corner",
+      "far_baseline_center",
+      "far_left_corner",
+      "near_nvz_left",
+      "near_nvz_center",
+      "near_nvz_right",
+      "net_left_sideline",
+      "net_center",
+      "net_right_sideline",
+      "far_nvz_left",
+      "far_nvz_center",
+      "far_nvz_right"
+    ],
+    "court_line_detector_order_matches": true,
+    "labeling_ui_order": null,
+    "labeling_ui_names_match": false,
+    "coordinate_convention": "image pixel [x,y]; canonical near/far is camera-relative as pinned by the trainer world points and owner labeling UI",
+    "net_semantic": "top_of_net"
+  },
+  "adapter": {
+    "path": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+    "sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74"
+  },
+  "counts": {
+    "court_workspaces_enumerated": 14,
+    "workspaces_with_resolved_keypoint_mapping": 9,
+    "workspaces_in_current_owner_approved_floor_scope": 7,
+    "workspaces_skipped": 5,
+    "workspaces_with_nonzero_yield": 7,
+    "raw_court_workspace_images": 7994,
+    "geometric_sanity_pass_before_dedup": 2844,
+    "adapted_usable_labels_after_dedup_sanity_and_venue_cap": 264,
+    "effective_floor_keypoints": 3168,
+    "canonical_dictionary_keys": 3960,
+    "distinct_apparent_venue_count": 23,
+    "validation_png_count": 12
+  },
+  "per_workspace": [
+    {
+      "workspace": "acmai__pickleball-courts-emwra__v3",
+      "counts_by_split": {
+        "train": {
+          "images": 84,
+          "annotations": 84
+        },
+        "valid": {
+          "images": 24,
+          "annotations": 24
+        },
+        "test": {
+          "images": 12,
+          "annotations": 12
+        }
+      },
+      "image_count": 120,
+      "annotation_count": 120,
+      "task_types": [
+        "bbox",
+        "segmentation"
+      ],
+      "schemas": [],
+      "mapping_configured": false,
+      "schema_kind": "no_usable_keypoint_mapping",
+      "mapping_confidence": "none",
+      "mapping_rationale": "No COCO keypoint category is present; boxes/masks are not converted into guessed point labels.",
+      "owner_approved_floor_only": false,
+      "source_to_canonical": {},
+      "yield_after_dedup_sanity_cap": 0,
+      "drop_and_pass_counts": {},
+      "disposition": "skipped: no COCO keypoint schema; boxes/masks are not guessed into intersections"
+    },
+    {
+      "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "counts_by_split": {
+        "train": {
+          "images": 25,
+          "annotations": 25
+        },
+        "valid": {
+          "images": 7,
+          "annotations": 7
+        },
+        "test": {
+          "images": 3,
+          "annotations": 3
+        }
+      },
+      "image_count": 35,
+      "annotation_count": 35,
+      "task_types": [
+        "bbox",
+        "keypoints"
+      ],
+      "schemas": [
+        {
+          "keypoint_count": 15,
+          "keypoint_names": [
+            "far_left_baseline",
+            "far_center_baseline",
+            "far_right_baseline",
+            "far_left_kitchen",
+            "far_center_kitchen",
+            "far_right_kitchen",
+            "net_left",
+            "net_center",
+            "net_right",
+            "near_left_kitchen",
+            "near_center_kitchen",
+            "near_right_kitchen",
+            "near_left_baseline",
+            "near_center_baseline",
+            "near_right_baseline"
+          ],
+          "splits": [
+            "test",
+            "train",
+            "valid"
+          ]
+        }
+      ],
+      "mapping_configured": true,
+      "schema_kind": "semantic_direct_with_source_depth_reversal",
+      "mapping_confidence": "high",
+      "mapping_rationale": "All source names are semantic. Fresh overlays show source far_* on the image-near half and source near_* on the image-far half, so the mapping reverses source depth to match the trainer/UI camera-relative near/far convention. External net points are subsequently nulled by the binding floor-only owner act.",
+      "owner_approved_floor_only": true,
+      "source_to_canonical": {
+        "far_left_baseline": "near_left_corner",
+        "far_center_baseline": "near_baseline_center",
+        "far_right_baseline": "near_right_corner",
+        "far_left_kitchen": "near_nvz_left",
+        "far_center_kitchen": "near_nvz_center",
+        "far_right_kitchen": "near_nvz_right",
+        "net_left": "net_left_sideline",
+        "net_center": "net_center",
+        "net_right": "net_right_sideline",
+        "near_left_kitchen": "far_nvz_left",
+        "near_center_kitchen": "far_nvz_center",
+        "near_right_kitchen": "far_nvz_right",
+        "near_left_baseline": "far_left_corner",
+        "near_center_baseline": "far_baseline_center",
+        "near_right_baseline": "far_right_corner"
+      },
+      "yield_after_dedup_sanity_cap": 28,
+      "drop_and_pass_counts": {
+        "dedup_perceptual": 3,
+        "owner_pack_near_match_excluded": 4,
+        "raw_images": 35,
+        "sanity_pass": 35
+      },
+      "disposition": "mapped and emitted"
+    },
+    {
+      "workspace": "gideons__pickleball-court__v1",
+      "counts_by_split": {
+        "train": {
+          "images": 84,
+          "annotations": 84
+        },
+        "valid": {
+          "images": 24,
+          "annotations": 24
+        },
+        "test": {
+          "images": 12,
+          "annotations": 12
+        }
+      },
+      "image_count": 120,
+      "annotation_count": 120,
+      "task_types": [
+        "bbox",
+        "segmentation"
+      ],
+      "schemas": [],
+      "mapping_configured": false,
+      "schema_kind": "no_usable_keypoint_mapping",
+      "mapping_confidence": "none",
+      "mapping_rationale": "No COCO keypoint category is present; boxes/masks are not converted into guessed point labels.",
+      "owner_approved_floor_only": false,
+      "source_to_canonical": {},
+      "yield_after_dedup_sanity_cap": 0,
+      "drop_and_pass_counts": {},
+      "disposition": "skipped: no COCO keypoint schema; boxes/masks are not guessed into intersections"
+    },
+    {
+      "workspace": "hughs-workspace-plw3g__pickleball-court-cfyv4__v1",
+      "counts_by_split": {
+        "train": {
+          "images": 3438,
+          "annotations": 3429
+        },
+        "valid": {
+          "images": 86,
+          "annotations": 86
+        },
+        "test": {
+          "images": 92,
+          "annotations": 92
+        }
+      },
+      "image_count": 3616,
+      "annotation_count": 3607,
+      "task_types": [
+        "bbox",
+        "segmentation"
+      ],
+      "schemas": [],
+      "mapping_configured": false,
+      "schema_kind": "no_usable_keypoint_mapping",
+      "mapping_confidence": "none",
+      "mapping_rationale": "No COCO keypoint category is present; boxes/masks are not converted into guessed point labels.",
+      "owner_approved_floor_only": false,
+      "source_to_canonical": {},
+      "yield_after_dedup_sanity_cap": 0,
+      "drop_and_pass_counts": {},
+      "disposition": "skipped: no COCO keypoint schema; boxes/masks are not guessed into intersections"
+    },
+    {
+      "workspace": "luiss-workspace-99bfi__pickleball-court-detection-o8i4o__v1",
+      "counts_by_split": {
+        "train": {
+          "images": 53,
+          "annotations": 210
+        },
+        "valid": {
+          "images": 6,
+          "annotations": 24
+        },
+        "test": {
+          "images": 3,
+          "annotations": 12
+        }
+      },
+      "image_count": 62,
+      "annotation_count": 246,
+      "task_types": [
+        "bbox"
+      ],
+      "schemas": [],
+      "mapping_configured": false,
+      "schema_kind": "no_usable_keypoint_mapping",
+      "mapping_confidence": "none",
+      "mapping_rationale": "No COCO keypoint category is present; boxes/masks are not converted into guessed point labels.",
+      "owner_approved_floor_only": false,
+      "source_to_canonical": {},
+      "yield_after_dedup_sanity_cap": 0,
+      "drop_and_pass_counts": {},
+      "disposition": "skipped: no COCO keypoint schema; boxes/masks are not guessed into intersections"
+    },
+    {
+      "workspace": "n-do-tran__pickleball-court-p3chl__v4",
+      "counts_by_split": {
+        "train": {
+          "images": 84,
+          "annotations": 84
+        },
+        "valid": {
+          "images": 24,
+          "annotations": 24
+        },
+        "test": {
+          "images": 12,
+          "annotations": 12
+        }
+      },
+      "image_count": 120,
+      "annotation_count": 120,
+      "task_types": [
+        "bbox",
+        "keypoints",
+        "segmentation"
+      ],
+      "schemas": [
+        {
+          "keypoint_count": 14,
+          "keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9",
+            "new-point-10",
+            "new-point-11",
+            "new-point-12",
+            "new-point-13"
+          ],
+          "splits": [
+            "test",
+            "train",
+            "valid"
+          ]
+        }
+      ],
+      "mapping_configured": true,
+      "schema_kind": "generic_index_geometric_inferred_static",
+      "mapping_confidence": "high",
+      "mapping_rationale": "The 14-point skeleton and reviewed overlays resolve 12 regulation floor intersections plus two bottom-of-net endpoints. Only the 12 floor points emit.",
+      "owner_approved_floor_only": true,
+      "source_to_canonical": {
+        "new-point-0": "far_left_corner",
+        "new-point-1": "far_baseline_center",
+        "new-point-2": "far_right_corner",
+        "new-point-3": "far_nvz_right",
+        "new-point-4": "far_nvz_center",
+        "new-point-5": "far_nvz_left",
+        "new-point-6": "near_nvz_left",
+        "new-point-7": "near_nvz_center",
+        "new-point-8": "near_nvz_right",
+        "new-point-9": "near_right_corner",
+        "new-point-10": "near_baseline_center",
+        "new-point-11": "near_left_corner",
+        "new-point-12": "net_left_sideline",
+        "new-point-13": "net_right_sideline"
+      },
+      "yield_after_dedup_sanity_cap": 25,
+      "drop_and_pass_counts": {
+        "dedup_perceptual": 10,
+        "owner_pack_near_match_excluded": 85,
+        "raw_images": 120,
+        "sanity_pass": 120
+      },
+      "disposition": "mapped and emitted"
+    },
+    {
+      "workspace": "necromancer__pickleball-court-vbmkq__v2",
+      "counts_by_split": {
+        "train": {
+          "images": 1584,
+          "annotations": 1584
+        },
+        "valid": {
+          "images": 127,
+          "annotations": 127
+        },
+        "test": {
+          "images": 61,
+          "annotations": 61
+        }
+      },
+      "image_count": 1772,
+      "annotation_count": 1772,
+      "task_types": [
+        "bbox",
+        "keypoints"
+      ],
+      "schemas": [
+        {
+          "keypoint_count": 12,
+          "keypoint_names": [
+            "SB1",
+            "BS1",
+            "SB2",
+            "SNZ2",
+            "SNZ3",
+            "SB3",
+            "BS2",
+            "SB4",
+            "SNZ4",
+            "SNZ1",
+            "NS1",
+            "NS2"
+          ],
+          "splits": [
+            "test",
+            "train",
+            "valid"
+          ]
+        }
+      ],
+      "mapping_configured": true,
+      "schema_kind": "semantic_abbreviation_direct",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Abbreviated sideline/baseline/NVZ names and skeleton resolve all 12 floor intersections.",
+      "owner_approved_floor_only": true,
+      "source_to_canonical": {
+        "SB1": "far_left_corner",
+        "BS1": "far_baseline_center",
+        "SB2": "far_right_corner",
+        "SNZ2": "far_nvz_right",
+        "SNZ3": "near_nvz_right",
+        "SB3": "near_right_corner",
+        "BS2": "near_baseline_center",
+        "SB4": "near_left_corner",
+        "SNZ4": "near_nvz_left",
+        "SNZ1": "far_nvz_left",
+        "NS1": "far_nvz_center",
+        "NS2": "near_nvz_center"
+      },
+      "yield_after_dedup_sanity_cap": 47,
+      "drop_and_pass_counts": {
+        "apparent_venue_cap": 40,
+        "dedup_perceptual": 465,
+        "dedup_same_roboflow_origin": 95,
+        "owner_pack_near_match_excluded": 1125,
+        "raw_images": 1772,
+        "sanity_pass": 1772
+      },
+      "disposition": "mapped and emitted"
+    },
+    {
+      "workspace": "nigh-workspace__pickleball-court-vhpgp__v11",
+      "counts_by_split": {
+        "train": {
+          "images": 241,
+          "annotations": 241
+        },
+        "valid": {
+          "images": 38,
+          "annotations": 38
+        },
+        "test": {
+          "images": 16,
+          "annotations": 16
+        }
+      },
+      "image_count": 295,
+      "annotation_count": 295,
+      "task_types": [
+        "bbox",
+        "keypoints"
+      ],
+      "schemas": [
+        {
+          "keypoint_count": 12,
+          "keypoint_names": [
+            "l-n-b",
+            "l-m-b",
+            "l-f-b",
+            "l-f-k",
+            "r-f-k",
+            "r-f-b",
+            "r-m-b",
+            "r-n-b",
+            "r-n-k",
+            "l-n-k",
+            "l-m-k",
+            "r-m-k"
+          ],
+          "splits": [
+            "test",
+            "train",
+            "valid"
+          ]
+        }
+      ],
+      "mapping_configured": true,
+      "schema_kind": "semantic_abbreviation_direct",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Semantic l/r, near/middle/far, baseline/kitchen abbreviations resolve all 12 floor intersections.",
+      "owner_approved_floor_only": true,
+      "source_to_canonical": {
+        "l-n-b": "far_left_corner",
+        "l-m-b": "far_baseline_center",
+        "l-f-b": "far_right_corner",
+        "l-f-k": "far_nvz_right",
+        "r-f-k": "near_nvz_right",
+        "r-f-b": "near_right_corner",
+        "r-m-b": "near_baseline_center",
+        "r-n-b": "near_left_corner",
+        "r-n-k": "near_nvz_left",
+        "l-n-k": "far_nvz_left",
+        "l-m-k": "far_nvz_center",
+        "r-m-k": "near_nvz_center"
+      },
+      "yield_after_dedup_sanity_cap": 100,
+      "drop_and_pass_counts": {
+        "apparent_venue_cap": 4,
+        "dedup_perceptual": 89,
+        "incomplete_floor_mapping": 3,
+        "owner_pack_near_match_excluded": 99,
+        "raw_images": 295,
+        "sanity_pass": 292
+      },
+      "disposition": "mapped and emitted"
+    },
+    {
+      "workspace": "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+      "counts_by_split": {
+        "train": {
+          "images": 29,
+          "annotations": 29
+        },
+        "valid": {
+          "images": 8,
+          "annotations": 8
+        },
+        "test": {
+          "images": 4,
+          "annotations": 4
+        }
+      },
+      "image_count": 41,
+      "annotation_count": 41,
+      "task_types": [
+        "bbox",
+        "keypoints"
+      ],
+      "schemas": [
+        {
+          "keypoint_count": 12,
+          "keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9",
+            "new-point-10",
+            "new-point-11"
+          ],
+          "splits": [
+            "test",
+            "train",
+            "valid"
+          ]
+        }
+      ],
+      "mapping_configured": true,
+      "schema_kind": "generic_index_geometric_inferred_static",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Skeleton adjacency and reviewed overlays resolve the generic indices as the 12 floor intersections.",
+      "owner_approved_floor_only": true,
+      "source_to_canonical": {
+        "new-point-0": "near_left_corner",
+        "new-point-11": "near_baseline_center",
+        "new-point-3": "near_right_corner",
+        "new-point-4": "near_nvz_left",
+        "new-point-8": "near_nvz_center",
+        "new-point-5": "near_nvz_right",
+        "new-point-7": "far_nvz_left",
+        "new-point-9": "far_nvz_center",
+        "new-point-6": "far_nvz_right",
+        "new-point-1": "far_left_corner",
+        "new-point-10": "far_baseline_center",
+        "new-point-2": "far_right_corner"
+      },
+      "yield_after_dedup_sanity_cap": 13,
+      "drop_and_pass_counts": {
+        "dedup_perceptual": 28,
+        "raw_images": 41,
+        "sanity_pass": 41
+      },
+      "disposition": "mapped and emitted"
+    },
+    {
+      "workspace": "pickleball-dl6zm__pickleball-courts-emwra-w8dsr__v1",
+      "counts_by_split": {
+        "train": {
+          "images": 84,
+          "annotations": 84
+        },
+        "valid": {
+          "images": 24,
+          "annotations": 24
+        },
+        "test": {
+          "images": 11,
+          "annotations": 11
+        }
+      },
+      "image_count": 119,
+      "annotation_count": 119,
+      "task_types": [
+        "bbox",
+        "segmentation"
+      ],
+      "schemas": [],
+      "mapping_configured": false,
+      "schema_kind": "no_usable_keypoint_mapping",
+      "mapping_confidence": "none",
+      "mapping_rationale": "No COCO keypoint category is present; boxes/masks are not converted into guessed point labels.",
+      "owner_approved_floor_only": false,
+      "source_to_canonical": {},
+      "yield_after_dedup_sanity_cap": 0,
+      "drop_and_pass_counts": {},
+      "disposition": "skipped: no COCO keypoint schema; boxes/masks are not guessed into intersections"
+    },
+    {
+      "workspace": "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+      "counts_by_split": {
+        "train": {
+          "images": 252,
+          "annotations": 252
+        },
+        "valid": {
+          "images": 24,
+          "annotations": 24
+        },
+        "test": {
+          "images": 12,
+          "annotations": 12
+        }
+      },
+      "image_count": 288,
+      "annotation_count": 288,
+      "task_types": [
+        "bbox",
+        "keypoints",
+        "segmentation"
+      ],
+      "schemas": [
+        {
+          "keypoint_count": 14,
+          "keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9",
+            "new-point-10",
+            "new-point-11",
+            "new-point-12",
+            "new-point-13"
+          ],
+          "splits": [
+            "test",
+            "train",
+            "valid"
+          ]
+        }
+      ],
+      "mapping_configured": true,
+      "schema_kind": "generic_index_geometric_inferred_static",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Same audited 14-point topology and source-image family as p3chl; only the 12 floor points emit.",
+      "owner_approved_floor_only": true,
+      "source_to_canonical": {
+        "new-point-0": "far_left_corner",
+        "new-point-1": "far_baseline_center",
+        "new-point-2": "far_right_corner",
+        "new-point-3": "far_nvz_right",
+        "new-point-4": "far_nvz_center",
+        "new-point-5": "far_nvz_left",
+        "new-point-6": "near_nvz_left",
+        "new-point-7": "near_nvz_center",
+        "new-point-8": "near_nvz_right",
+        "new-point-9": "near_right_corner",
+        "new-point-10": "near_baseline_center",
+        "new-point-11": "near_left_corner",
+        "new-point-12": "net_left_sideline",
+        "new-point-13": "net_right_sideline"
+      },
+      "yield_after_dedup_sanity_cap": 44,
+      "drop_and_pass_counts": {
+        "dedup_perceptual": 65,
+        "dedup_same_roboflow_origin": 100,
+        "owner_pack_near_match_excluded": 79,
+        "raw_images": 288,
+        "sanity_pass": 288
+      },
+      "disposition": "mapped and emitted"
+    },
+    {
+      "workspace": "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1",
+      "counts_by_split": {
+        "train": {
+          "images": 296,
+          "annotations": 296
+        }
+      },
+      "image_count": 296,
+      "annotation_count": 296,
+      "task_types": [
+        "bbox",
+        "keypoints"
+      ],
+      "schemas": [
+        {
+          "keypoint_count": 12,
+          "keypoint_names": [
+            "A",
+            "B",
+            "C",
+            "D",
+            "E",
+            "F",
+            "G",
+            "H",
+            "I",
+            "J",
+            "K",
+            "L"
+          ],
+          "splits": [
+            "train"
+          ]
+        }
+      ],
+      "mapping_configured": true,
+      "schema_kind": "generic_letter_geometric_inferred_static",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Reviewed front-view overlays resolve A-L as the 12 regulation floor intersections.",
+      "owner_approved_floor_only": true,
+      "source_to_canonical": {
+        "A": "near_left_corner",
+        "I": "near_baseline_center",
+        "B": "near_right_corner",
+        "E": "near_nvz_left",
+        "J": "near_nvz_center",
+        "F": "near_nvz_right",
+        "G": "far_nvz_left",
+        "L": "far_nvz_center",
+        "H": "far_nvz_right",
+        "C": "far_left_corner",
+        "K": "far_baseline_center",
+        "D": "far_right_corner"
+      },
+      "yield_after_dedup_sanity_cap": 7,
+      "drop_and_pass_counts": {
+        "dedup_perceptual": 277,
+        "dedup_same_roboflow_origin": 12,
+        "raw_images": 296,
+        "sanity_pass": 296
+      },
+      "disposition": "mapped and emitted"
+    },
+    {
+      "workspace": "testworkspace-i8nb1__pickle-court-keypoints__v2",
+      "counts_by_split": {
+        "train": {
+          "images": 53,
+          "annotations": 54
+        },
+        "valid": {
+          "images": 15,
+          "annotations": 15
+        },
+        "test": {
+          "images": 8,
+          "annotations": 8
+        }
+      },
+      "image_count": 76,
+      "annotation_count": 77,
+      "task_types": [
+        "bbox",
+        "keypoints"
+      ],
+      "schemas": [
+        {
+          "keypoint_count": 12,
+          "keypoint_names": [
+            "new-point-0",
+            "new-point-1",
+            "new-point-2",
+            "new-point-3",
+            "new-point-4",
+            "new-point-5",
+            "new-point-6",
+            "new-point-7",
+            "new-point-8",
+            "new-point-9",
+            "new-point-10",
+            "new-point-11"
+          ],
+          "splits": [
+            "test",
+            "train",
+            "valid"
+          ]
+        }
+      ],
+      "mapping_configured": true,
+      "schema_kind": "generic_index_geometric_inferred_static",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Skeleton and overlays resolve the 12 floor intersections, but this workspace is outside the current immutable owner act and is not emitted in approved mode.",
+      "owner_approved_floor_only": false,
+      "source_to_canonical": {
+        "new-point-0": "far_left_corner",
+        "new-point-1": "far_baseline_center",
+        "new-point-2": "far_right_corner",
+        "new-point-3": "far_nvz_right",
+        "new-point-4": "far_nvz_center",
+        "new-point-5": "far_nvz_left",
+        "new-point-6": "near_nvz_left",
+        "new-point-7": "near_nvz_center",
+        "new-point-8": "near_nvz_right",
+        "new-point-9": "near_right_corner",
+        "new-point-10": "near_baseline_center",
+        "new-point-11": "near_left_corner"
+      },
+      "yield_after_dedup_sanity_cap": 0,
+      "drop_and_pass_counts": {
+        "outside_current_owner_act": 76
+      },
+      "disposition": "schema mapped but skipped: outside current immutable owner act"
+    },
+    {
+      "workspace": "xuann-bacc-ujr91__pickle-court-keypoints-nluo7__v10",
+      "counts_by_split": {
+        "train": {
+          "images": 683,
+          "annotations": 684
+        },
+        "valid": {
+          "images": 195,
+          "annotations": 197
+        },
+        "test": {
+          "images": 156,
+          "annotations": 156
+        }
+      },
+      "image_count": 1034,
+      "annotation_count": 1037,
+      "task_types": [
+        "bbox",
+        "keypoints"
+      ],
+      "schemas": [
+        {
+          "keypoint_count": 12,
+          "keypoint_names": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12"
+          ],
+          "splits": [
+            "test",
+            "train",
+            "valid"
+          ]
+        }
+      ],
+      "mapping_configured": true,
+      "schema_kind": "generic_numeric_geometric_inferred_static",
+      "mapping_confidence": "high",
+      "mapping_rationale": "Skeleton and overlays resolve the 12 floor intersections, but this workspace is outside the current immutable owner act and is not emitted in approved mode.",
+      "owner_approved_floor_only": false,
+      "source_to_canonical": {
+        "1": "far_left_corner",
+        "2": "far_baseline_center",
+        "3": "far_right_corner",
+        "4": "far_nvz_right",
+        "5": "far_nvz_center",
+        "6": "far_nvz_left",
+        "7": "near_nvz_left",
+        "8": "near_nvz_center",
+        "9": "near_nvz_right",
+        "10": "near_right_corner",
+        "11": "near_baseline_center",
+        "12": "near_left_corner"
+      },
+      "yield_after_dedup_sanity_cap": 0,
+      "drop_and_pass_counts": {
+        "outside_current_owner_act": 1034
+      },
+      "disposition": "schema mapped but skipped: outside current immutable owner act"
+    }
+  ],
+  "apparent_venue_counts": {
+    "chetan_court_v2:frame_sequence": 28,
+    "p3chl_14kp_family:left_court": 2,
+    "p3chl_14kp_family:middle_court": 18,
+    "p3chl_14kp_family:right_court": 5,
+    "p3chl_14kp_family:youtube_sequence": 44,
+    "stump_front_view_12kp:frame_sequence": 7,
+    "syncz_12kp:Screen-Recording-2025-04-25-at-8_17_09-PM_mov": 3,
+    "syncz_12kp:Screen-Recording-2025-04-26-at-9_55_54-PM_mov": 6,
+    "syncz_12kp:Screen-Recording-2025-04-27-at-1_36_43-PM_mov": 2,
+    "syncz_12kp:input_video_mp4": 2,
+    "vbmkq_vhpgp_12kp_family:PBGAME10_mp4": 7,
+    "vbmkq_vhpgp_12kp_family:PBGAME12_mp4": 12,
+    "vbmkq_vhpgp_12kp_family:PBGAME13_mp4": 36,
+    "vbmkq_vhpgp_12kp_family:PBGAME14_mp4": 2,
+    "vbmkq_vhpgp_12kp_family:PBGAME2_mp4": 16,
+    "vbmkq_vhpgp_12kp_family:PBGAME6_mp4": 7,
+    "vbmkq_vhpgp_12kp_family:PBGAME8_mp4": 6,
+    "vbmkq_vhpgp_12kp_family:PB_Game_1_mp4": 2,
+    "vbmkq_vhpgp_12kp_family:Screen-Recording-2025-04-25-at-8_17_09-PM_mov": 2,
+    "vbmkq_vhpgp_12kp_family:Screen-Recording-2025-04-26-at-9_55_54-PM_mov": 1,
+    "vbmkq_vhpgp_12kp_family:Screen-Recording-2025-04-27-at-1_36_43-PM_mov": 2,
+    "vbmkq_vhpgp_12kp_family:frame_sequence": 50,
+    "vbmkq_vhpgp_12kp_family:input_video_mp4": 4
+  },
+  "dedup_policy": {
+    "exact_sha256": true,
+    "roboflow_origin_key": "source_group plus filename with .rf.<hash> removed",
+    "perceptual_hash": "64-bit DCT pHash",
+    "phash_hamming_threshold": 4,
+    "max_per_apparent_venue": 50,
+    "cap_selection": "deterministic farthest-first pHash diversity"
+  },
+  "geometric_sanity": {
+    "outer_quad_convex": true,
+    "minimum_outer_quad_area_ratio": 0.02,
+    "max_reprojection_error_ratio": 0.04,
+    "projective_baseline_kitchen_and_left_center_right_order": true,
+    "failed_rows_dropped": true
+  },
+  "exclusions": {
+    "approval_evidence": {
+      "owner_act_path": "runs/court_unified_training_20260723/external_training_owner_act_final.json",
+      "owner_act_sha256": "e0f8935c5d42a531d144f74f0c527fc51b0cdd7c18e6c59ed5c5faca26893f29",
+      "row_manifest_path": "runs/court_unified_training_20260723/final_external_corpus/manifest.json",
+      "row_manifest_sha256": "8693e56d39b776f725704ee0abcd5f32dfe55908fcbde061af583ab8cf3a977a",
+      "approved_datasets": [
+        "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+        "n-do-tran__pickleball-court-p3chl__v4",
+        "necromancer__pickleball-court-vbmkq__v2",
+        "nigh-workspace__pickleball-court-vhpgp__v11",
+        "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+        "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+        "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1"
+      ],
+      "approved_row_count": 2833
+    },
+    "compare_only_ids_checked": [
+      "83gyqyc10y8f",
+      "iottnc0h3ekn",
+      "o4dee9dn0ccr"
+    ],
+    "compare_only_matches": 0,
+    "protected_clip_ids_checked": [
+      "outdoor_webcam_iynbd_1500_long_high_baseline",
+      "indoor_doubles_fwuks_0500_long_mid_baseline",
+      "burlington_gold_0300_low_steep_corner",
+      "wolverine_mixed_0200_mid_steep_corner"
+    ],
+    "protected_git_index_image_count": 32,
+    "protected_git_blob_matches": 0,
+    "protected_lexical_matches": 0,
+    "owner_pack_root": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/court_labelpack3_20260723/frames",
+    "owner_pack_images_hashed": 122,
+    "owner_pack_near_match_excluded_count": 1392,
+    "owner_pack_near_match_excluded_examples": [
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000690_jpg.rf.6837da3ff29ad869a20046b533521846.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_000450_jpg.rf.7a2b627ddae09bf5944ffd5528ba48b6.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/train/frame_001230_jpg.rf.ff7bc163d7f781d862b82c82b3c7a7ee.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_000330_jpg.rf.b01ae30db92c4cb736f1910b98c13a34.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/youtube-475_jpg.rf.078b0a8dd50dd9846bf1b84657a3b7b8.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/youtube-1071_jpg.rf.53383ecaf0080eb006c6bc99cae2e08c.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/left_court1_jpg.rf.2f485f69cda5d62d4316b1e80bc199b9.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/youtube-354_jpg.rf.65e62dfcd09b822040c9b0a9a5e2d071.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/youtube-441_jpg.rf.dd330066abc21cec28489c7f2204bb09.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/right_court12_jpg.rf.51a3399ee6f712c2ef7dfae28da42d79.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/right_court11_jpg.rf.035798ebc9b315fc64748e1262927c4b.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/youtube-405_jpg.rf.a48659d5ca0849b09541efbe5e02c05e.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/left_court14_jpg.rf.90e1a3f1988fdb8f574ac4ab5b729d1a.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/youtube-124_jpg.rf.5369ecbd2e514d43542caf4c01040385.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/left_court5_jpg.rf.ad58d303257d3585b1fc767bcf3d663a.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/right_court7_jpg.rf.0e67506c9234f53805ef7b86db6fe724.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/youtube-418_jpg.rf.a8182d2449ad14bd2d447d853e8771b7.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/middle_court17_jpg.rf.a055bcfdf40838a176ba173004b96905.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/youtube-1124_jpg.rf.c57e4a36223592739dbea0d8c21a0e57.jpg",
+      "/Users/arnavchokshi/Desktop/pickleball/data/roboflow_universe_20260706/n-do-tran__pickleball-court-p3chl__v4/train/left_court20_jpg.rf.818f334fbdc65514b9b70085cfae1ad4.jpg"
+    ],
+    "selected_owner_pack_collision_count": 0
+  },
+  "loader_validation": {
+    "status": "PASS",
+    "mode": "approved",
+    "rows_loaded": 264,
+    "labeled_keypoint_histogram_after_null_removal": {
+      "12": 264
+    },
+    "raw_items_with_exact_15_key_order": 264,
+    "raw_key_order_errors": 0,
+    "nonnull_external_net_values": 0,
+    "default_training_loader_passed": true
+  },
+  "validation_pngs": [
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/01_chetan-rajagiri-9abfm__pickleball-court-v2__v1.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/02_n-do-tran__pickleball-court-p3chl__v4.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/03_necromancer__pickleball-court-vbmkq__v2.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/04_nigh-workspace__pickleball-court-vhpgp__v11.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/05_pickleball-ball-detection__pickleball-court-keypoints-syncz__v6.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/06_ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/07_stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/08_chetan-rajagiri-9abfm__pickleball-court-v2__v1.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/09_n-do-tran__pickleball-court-p3chl__v4.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/10_necromancer__pickleball-court-vbmkq__v2.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/11_nigh-workspace__pickleball-court-vhpgp__v11.png",
+    "runs/lanes/roboflow_court_adapter_20260723/validation_pngs/12_pickleball-ball-detection__pickleball-court-keypoints-syncz__v6.png"
+  ],
+  "artifacts": {
+    "adapted_corpus": "runs/lanes/roboflow_court_adapter_20260723/adapted_corpus",
+    "adapted_labels_jsonl": "runs/lanes/roboflow_court_adapter_20260723/adapted_labels.jsonl",
+    "adapted_labels_sha256": "aaba9fa488e6c170bb05880dac1d447f9f8fb859213b49f0343a2e4addb072b4",
+    "schema_map_json": "runs/lanes/roboflow_court_adapter_20260723/schema_map.json",
+    "schema_map_md": "runs/lanes/roboflow_court_adapter_20260723/schema_map.md",
+    "proposed_ledger_row": "runs/lanes/roboflow_court_adapter_20260723/PROPOSED_LEDGER_ROW.json"
+  },
+  "honest_caveats": [
+    "VERIFIED=0. These external training rows are not independent calibration gate truth.",
+    "The dispatch's example names are Roboflow source names, not our canonical trainer names; the adapter pins the actual near_left_corner/... order.",
+    "Chetan source far/near is reversed relative to our camera-depth convention. The static semantic mapping corrects that reversal before projective sanity checks.",
+    "All three external net channels are null. The binding owner review found bottom-of-net markers, while our canonical net channels require top-of-net.",
+    "Generic index/letter mappings are static geometry-inferred mappings supported by skeleton topology and overlays; they are not inferred independently per image.",
+    "Distinct venue count is an apparent source-camera-family count inferred from filenames, not a claim of known physical venue identity; Roboflow metadata cannot prove venue identity.",
+    "Two resolved generic workspaces remain outside the current immutable owner act and are enumerated but not emitted in approved mode.",
+    "The proposed ledger row was written only to this lane; runs/manager/data_ledger.json was not modified."
+  ],
+  "verified_state": "VERIFIED=0"
+}

@@ -25,10 +25,18 @@ frame, regardless of which specific `court_unet_v2` checkpoint is loaded:
             `threed.racketsport.court_keypoint_net.COURT_UNET_V2_SEG_CLASS_NAMES` and
             `split_line_family_segmentation`), so apron pixels are indistinguishable from
             background here.
+        structured_observations: floor-only top-two heatmap evidence with visibility,
+            entropy/margin, covariance, and source-pixel coordinates.  Net-top points are
+            structurally excluded from the planar evidence set.
+        best_court: one regulation-template floor hypothesis with per-point/whole-court
+            confidence and explicit inlier/ignored observations.  It is permanently
+            review-only and ``measurement_valid=false`` until an independent promotion gate.
     )
 
-Only `court_unet_v2` checkpoints (`threed.racketsport.court_keypoint_net.make_court_unet_v2_model`)
-are supported -- this module intentionally does not attempt to also support the legacy
+Selected production inference remains `court_unet_v2`.  Review-only
+`court_structured_v3` evidence checkpoints are also loadable so the structured candidate can be
+measured behind the same adapter without changing the selected stack.  This module intentionally
+does not attempt to also support the legacy
 single-tensor-output architectures (`encoder_decoder_v1`/`local_conv_v1`), which already have
 their own inference path in `scripts/racketsport/train_court_keypoint_heatmap.py`
 (`predict_source_keypoints`) that this lane does not touch.
@@ -54,6 +62,17 @@ from threed.racketsport.court_keypoint_net import (
     make_court_keypoint_heatmap_model,
     split_line_family_segmentation,
 )
+from threed.racketsport.court_confidence_calibration import (
+    IsotonicConfidenceCalibrator,
+    apply_point_calibration,
+)
+from threed.racketsport.court_structured_model import (
+    COURT_STRUCTURED_V3_ARCHITECTURE,
+    STRUCTURED_FLOOR_KEYPOINT_NAMES,
+    make_court_structured_v3_model,
+)
+from threed.racketsport.court_structured_evidence import extract_court_structured_evidence
+from threed.racketsport.court_structured_solver import solve_best_floor_court
 
 __all__ = [
     "CourtModelCheckpointResolution",
@@ -241,13 +260,18 @@ def build_court_model_from_checkpoint(
     architecture = str(
         payload.get("network_architecture", payload.get("model_architecture", COURT_UNET_V2_ARCHITECTURE))
     )
-    if architecture != COURT_UNET_V2_ARCHITECTURE:
+    if architecture not in {COURT_UNET_V2_ARCHITECTURE, COURT_STRUCTURED_V3_ARCHITECTURE}:
         raise ValueError(
-            f"court_model_infer only supports {COURT_UNET_V2_ARCHITECTURE!r} checkpoints, got {architecture!r}"
+            "court_model_infer only supports "
+            f"{COURT_UNET_V2_ARCHITECTURE!r} and review-only {COURT_STRUCTURED_V3_ARCHITECTURE!r} "
+            f"checkpoints, got {architecture!r}"
         )
-    keypoint_names = [
-        str(name) for name in payload.get("keypoint_names", [point.name for point in PICKLEBALL_KEYPOINTS])
-    ]
+    default_names = (
+        [point.name for point in PICKLEBALL_KEYPOINTS]
+        if architecture == COURT_UNET_V2_ARCHITECTURE
+        else list(STRUCTURED_FLOOR_KEYPOINT_NAMES)
+    )
+    keypoint_names = [str(name) for name in payload.get("keypoint_names", default_names)]
     image_size = payload.get("image_size", [640, 360])
     if not isinstance(image_size, (list, tuple)) or len(image_size) != 2:
         raise ValueError("checkpoint image_size must be a two-item [width, height]")
@@ -255,8 +279,24 @@ def build_court_model_from_checkpoint(
     if model_width <= 0 or model_height <= 0:
         raise ValueError("checkpoint image_size must contain positive dimensions")
 
-    model = make_court_keypoint_heatmap_model(len(keypoint_names), architecture=architecture)
+    if architecture == COURT_STRUCTURED_V3_ARCHITECTURE:
+        if tuple(keypoint_names) != STRUCTURED_FLOOR_KEYPOINT_NAMES:
+            raise ValueError("court_structured_v3 checkpoint keypoint_names must match the 30-point floor taxonomy")
+        model = make_court_structured_v3_model()
+    else:
+        model = make_court_keypoint_heatmap_model(len(keypoint_names), architecture=architecture)
     model.load_state_dict(payload["model"])
+    calibration_payload = payload.get("point_confidence_calibration")
+    point_confidence_calibrator = None
+    if calibration_payload is not None:
+        if not isinstance(calibration_payload, Mapping):
+            raise ValueError("point_confidence_calibration must be a mapping")
+        point_confidence_calibrator = IsotonicConfidenceCalibrator.from_dict(
+            calibration_payload
+        )
+    # Keep the public builder tuple stable.  Calibration belongs to this loaded
+    # checkpoint instance and is consumed by the per-frame decode path.
+    model._point_confidence_calibrator = point_confidence_calibrator
     model.to(device)
     model.eval()
     return model, keypoint_names, (model_width, model_height)
@@ -329,6 +369,25 @@ def _infer_court_model_with_loaded_model(
         keypoints_conf[name] = max(0.0, min(1.0, float(decoded.score)))
         keypoints_vis[name] = float(vis_probabilities[index])
 
+    heatmap_probabilities = {
+        name: probabilities[index].numpy() for index, name in enumerate(keypoint_names)
+    }
+    evidence_records = extract_court_structured_evidence(
+        heatmap_probabilities,
+        keypoints_vis,
+        image_size=(model_width, model_height),
+        source_size=(source_width, source_height),
+    )
+    structured_result = solve_best_floor_court(
+        _solver_observations_from_evidence(evidence_records)
+    )
+    best_court = _best_court_contract(
+        structured_result,
+        point_confidence_calibrator=getattr(
+            model, "_point_confidence_calibrator", None
+        ),
+    )
+
     seg_argmax = seg_logits.argmax(dim=0).numpy().astype(np.uint8)
     line_family_head, surface_head = split_line_family_segmentation(seg_argmax)
     line_family_mask = cv2.resize(
@@ -342,4 +401,111 @@ def _infer_court_model_with_loaded_model(
         "keypoints_vis": keypoints_vis,
         "line_family_mask": line_family_mask,
         "surface_mask": surface_mask,
+        "structured_observations": evidence_records,
+        "best_court": best_court,
+    }
+
+
+def _solver_observations_from_evidence(
+    evidence_records: list[dict[str, Any]],
+) -> dict[str, list[dict[str, Any]]]:
+    """Translate stable heatmap evidence into the solver's bounded top-two candidate contract."""
+
+    observations: dict[str, list[dict[str, Any]]] = {}
+    for record in evidence_records:
+        name = str(record["keypoint_name"])
+        visibility = float(record["visibility"])
+        entropy_factor = max(0.05, 1.0 - float(record["normalized_entropy"]))
+        covariance = record["covariance_px2"]
+        candidates: list[dict[str, Any]] = []
+        for rank, field in enumerate(("primary_peak", "secondary_peak"), start=1):
+            peak = record[field]
+            source_xy = peak.get("source_xy")
+            if source_xy is None:
+                source_xy = record["observation_xy"] if rank == 1 else peak["heatmap_xy"]
+            probability = float(peak["probability"])
+            # This is an evidence weight, not calibrated accuracy.  Keep a small positive floor
+            # so a diffuse heatmap can still participate in best-effort hypothesis search while
+            # naturally ranking below a sharp, visible peak.
+            confidence = min(1.0, max(1.0e-8, visibility * probability * entropy_factor))
+            candidates.append(
+                {
+                    "candidate_id": f"{name}:heatmap_peak_{rank}",
+                    "xy": [float(source_xy[0]), float(source_xy[1])],
+                    "confidence": confidence,
+                    "visibility": visibility,
+                    "covariance_px2": covariance,
+                    "heatmap_probability": probability,
+                    "normalized_entropy": float(record["normalized_entropy"]),
+                    "peak_margin": float(record["peak_margin"]),
+                    "provenance": "court_model_heatmap",
+                }
+            )
+        observations[name] = candidates
+    return observations
+
+
+def _best_court_contract(
+    structured_result: Mapping[str, Any],
+    *,
+    point_confidence_calibrator: IsotonicConfidenceCalibrator | None = None,
+) -> dict[str, Any]:
+    """Expose the always-best candidate without upgrading it to measurement authority."""
+
+    projected = structured_result.get("projected_floor_keypoints") or {}
+    keypoints_xy = {
+        str(name): [float(item["xy"][0]), float(item["xy"][1])]
+        for name, item in projected.items()
+        if isinstance(item, Mapping) and isinstance(item.get("xy"), (list, tuple))
+    }
+    selected = structured_result.get("selected_hypothesis")
+    source = selected.get("source") if isinstance(selected, Mapping) else "no_valid_hypothesis"
+    inliers = list(structured_result.get("inliers") or [])
+    semantic_count = int((structured_result.get("observation_counts") or {}).get("semantic_count", 0))
+    raw_point_confidence = {
+        str(name): float(value)
+        for name, value in dict(structured_result.get("point_confidence") or {}).items()
+    }
+    point_confidence = (
+        apply_point_calibration(raw_point_confidence, point_confidence_calibrator)
+        if point_confidence_calibrator is not None
+        else raw_point_confidence
+    )
+    return {
+        "schema_version": 1,
+        "status": str(structured_result.get("status", "unknown")),
+        "keypoints_xy": keypoints_xy,
+        "point_confidence": point_confidence,
+        "point_confidence_raw": raw_point_confidence,
+        "confidence_status": (
+            "calibrated_source_disjoint_dev"
+            if point_confidence_calibrator is not None
+            else "uncalibrated"
+        ),
+        "point_confidence_calibration": (
+            point_confidence_calibrator.to_dict()
+            if point_confidence_calibrator is not None
+            else None
+        ),
+        "court_confidence": float(structured_result.get("court_confidence") or 0.0),
+        "hypothesis_margin": structured_result.get("margin"),
+        "homography_image_from_court": structured_result.get("homography_image_from_court"),
+        "distortion": {
+            "model": "not_estimated",
+            "k1": None,
+            "source": "future_profile_or_joint_fit",
+        },
+        "transform_covariance": None,
+        "inlier_observations": inliers,
+        "inlier_count": len(inliers),
+        "inlier_ratio": len(inliers) / semantic_count if semantic_count > 0 else 0.0,
+        "ignored_observations": list(structured_result.get("ignored_observations") or []),
+        "residual_stats_px": dict(structured_result.get("residual_stats_px") or {}),
+        "score_components": dict(structured_result.get("score_components") or {}),
+        "source": str(source),
+        "measurement_valid": False,
+        "authority_state": "review_only",
+        "solution_role": "best_effort",
+        "floor_only": True,
+        "diagnostics": dict(structured_result.get("diagnostics") or {}),
     }

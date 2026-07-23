@@ -1,0 +1,663 @@
+{
+  "schema_version": 1,
+  "clip": "chetan-rajagiri-9abfm__pickleball-court-v2__v1__valid",
+  "status": "OWNER_APPROVED",
+  "annotation": {
+    "items": [
+      {
+        "frame": "frame_000001.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            21.594,
+            582.525
+          ],
+          "near_baseline_center": [
+            304.118,
+            584.96
+          ],
+          "near_right_corner": [
+            551.066,
+            584.647
+          ],
+          "far_right_corner": [
+            353.834,
+            228.614
+          ],
+          "far_baseline_center": [
+            298.731,
+            222.407
+          ],
+          "far_left_corner": [
+            241.249,
+            216.425
+          ],
+          "near_nvz_left": [
+            178.625,
+            316.171
+          ],
+          "near_nvz_center": [
+            301.022,
+            326.671
+          ],
+          "near_nvz_right": [
+            412.466,
+            334.222
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            220.517,
+            250.002
+          ],
+          "far_nvz_center": [
+            299.481,
+            258.208
+          ],
+          "far_nvz_right": [
+            373.764,
+            265.01
+          ]
+        },
+        "provenance": {
+          "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "split": "valid",
+          "coco_image_id": 0,
+          "coco_annotation_id": 1,
+          "original_file_name": "frame_001110_jpg.rf.a64a5ae38b15ea552b96cb9588b8d5db.jpg",
+          "roboflow_original_name": "frame_001110_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_001110_jpg.rf.a64a5ae38b15ea552b96cb9588b8d5db.jpg",
+          "source_group": "chetan_court_v2",
+          "source_media_family": "frame_sequence",
+          "apparent_venue_id": "chetan_court_v2:frame_sequence",
+          "license": "CC BY 4.0",
+          "image_sha256": "c163dbbb37982d367299a5d5b3e3a9c87540a2aea995def9f877d0249350c71e",
+          "perceptual_hash64": "b23a3a3e928bc8ea",
+          "mapping_mode": "semantic_direct_with_source_depth_reversal",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "far_left_baseline": "near_left_corner",
+            "far_center_baseline": "near_baseline_center",
+            "far_right_baseline": "near_right_corner",
+            "far_left_kitchen": "near_nvz_left",
+            "far_center_kitchen": "near_nvz_center",
+            "far_right_kitchen": "near_nvz_right",
+            "net_left": "net_left_sideline",
+            "net_center": "net_center",
+            "net_right": "net_right_sideline",
+            "near_left_kitchen": "far_nvz_left",
+            "near_center_kitchen": "far_nvz_center",
+            "near_right_kitchen": "far_nvz_right",
+            "near_left_baseline": "far_left_corner",
+            "near_center_baseline": "far_baseline_center",
+            "near_right_baseline": "far_right_corner"
+          },
+          "source_visible_keypoint_names": [
+            "far_center_baseline",
+            "far_center_kitchen",
+            "far_left_baseline",
+            "far_left_kitchen",
+            "far_right_baseline",
+            "far_right_kitchen",
+            "near_center_baseline",
+            "near_center_kitchen",
+            "near_left_baseline",
+            "near_left_kitchen",
+            "near_right_baseline",
+            "near_right_kitchen",
+            "net_center",
+            "net_left",
+            "net_right"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.28318569352203576,
+            "median_reprojection_error_ratio": 0.0008875346579696831,
+            "max_reprojection_error_ratio": 0.0032438177076617833,
+            "projective_row_y": [
+              8.737434430316951e-16,
+              0.33552759885787964,
+              0.6521419286727905,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000002.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            23.722,
+            566.597
+          ],
+          "near_baseline_center": [
+            311.914,
+            572.181
+          ],
+          "near_right_corner": [
+            555.827,
+            568.966
+          ],
+          "far_right_corner": [
+            358.963,
+            217.809
+          ],
+          "far_baseline_center": [
+            303.75,
+            215.174
+          ],
+          "far_left_corner": [
+            246.411,
+            208.438
+          ],
+          "near_nvz_left": [
+            183.93,
+            307.458
+          ],
+          "near_nvz_center": [
+            308.822,
+            317.11
+          ],
+          "near_nvz_right": [
+            417.053,
+            324.302
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            226.45,
+            244.68
+          ],
+          "far_nvz_center": [
+            304.572,
+            249.109
+          ],
+          "far_nvz_right": [
+            380.026,
+            255.814
+          ]
+        },
+        "provenance": {
+          "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "split": "valid",
+          "coco_image_id": 1,
+          "coco_annotation_id": 2,
+          "original_file_name": "frame_000930_jpg.rf.ec5f143cc73e6019fe1ed31d8db8009c.jpg",
+          "roboflow_original_name": "frame_000930_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_000930_jpg.rf.ec5f143cc73e6019fe1ed31d8db8009c.jpg",
+          "source_group": "chetan_court_v2",
+          "source_media_family": "frame_sequence",
+          "apparent_venue_id": "chetan_court_v2:frame_sequence",
+          "license": "CC BY 4.0",
+          "image_sha256": "9979547736a12a49f89246f120488ab89700da2967d8710c0c18415747b20070",
+          "perceptual_hash64": "a07e3a36129fd0ea",
+          "mapping_mode": "semantic_direct_with_source_depth_reversal",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "far_left_baseline": "near_left_corner",
+            "far_center_baseline": "near_baseline_center",
+            "far_right_baseline": "near_right_corner",
+            "far_left_kitchen": "near_nvz_left",
+            "far_center_kitchen": "near_nvz_center",
+            "far_right_kitchen": "near_nvz_right",
+            "net_left": "net_left_sideline",
+            "net_center": "net_center",
+            "net_right": "net_right_sideline",
+            "near_left_kitchen": "far_nvz_left",
+            "near_center_kitchen": "far_nvz_center",
+            "near_right_kitchen": "far_nvz_right",
+            "near_left_baseline": "far_left_corner",
+            "near_center_baseline": "far_baseline_center",
+            "near_right_baseline": "far_right_corner"
+          },
+          "source_visible_keypoint_names": [
+            "far_center_baseline",
+            "far_center_kitchen",
+            "far_left_baseline",
+            "far_left_kitchen",
+            "far_right_baseline",
+            "far_right_kitchen",
+            "near_center_baseline",
+            "near_center_kitchen",
+            "near_left_baseline",
+            "near_left_kitchen",
+            "near_right_baseline",
+            "near_right_kitchen",
+            "net_center",
+            "net_left",
+            "net_right"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.27927778791652885,
+            "median_reprojection_error_ratio": 0.0017979291080271673,
+            "max_reprojection_error_ratio": 0.0085907236433467,
+            "projective_row_y": [
+              0.0,
+              0.35372820496559143,
+              0.6605788469314575,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000003.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            15.619,
+            561.509
+          ],
+          "near_baseline_center": [
+            304.381,
+            576.586
+          ],
+          "near_right_corner": [
+            552.244,
+            587.266
+          ],
+          "far_right_corner": [
+            358.065,
+            223.426
+          ],
+          "far_baseline_center": [
+            303.042,
+            215.298
+          ],
+          "far_left_corner": [
+            245.744,
+            207.222
+          ],
+          "near_nvz_left": [
+            183.004,
+            306.381
+          ],
+          "near_nvz_center": [
+            304.083,
+            317.01
+          ],
+          "near_nvz_right": [
+            416.608,
+            327.684
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            224.147,
+            241.013
+          ],
+          "far_nvz_center": [
+            303.141,
+            251.714
+          ],
+          "far_nvz_right": [
+            378.059,
+            260.845
+          ]
+        },
+        "provenance": {
+          "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "split": "valid",
+          "coco_image_id": 2,
+          "coco_annotation_id": 3,
+          "original_file_name": "frame_001200_jpg.rf.fa5cd2e433b918c36a412a05543a0335.jpg",
+          "roboflow_original_name": "frame_001200_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_001200_jpg.rf.fa5cd2e433b918c36a412a05543a0335.jpg",
+          "source_group": "chetan_court_v2",
+          "source_media_family": "frame_sequence",
+          "apparent_venue_id": "chetan_court_v2:frame_sequence",
+          "license": "CC BY 4.0",
+          "image_sha256": "3f850cf260f2ef9076a00d61ba200a27ae0646d920444d0f80e19a9c81a4286b",
+          "perceptual_hash64": "bc63333c92839ee8",
+          "mapping_mode": "semantic_direct_with_source_depth_reversal",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "far_left_baseline": "near_left_corner",
+            "far_center_baseline": "near_baseline_center",
+            "far_right_baseline": "near_right_corner",
+            "far_left_kitchen": "near_nvz_left",
+            "far_center_kitchen": "near_nvz_center",
+            "far_right_kitchen": "near_nvz_right",
+            "net_left": "net_left_sideline",
+            "net_center": "net_center",
+            "net_right": "net_right_sideline",
+            "near_left_kitchen": "far_nvz_left",
+            "near_center_kitchen": "far_nvz_center",
+            "near_right_kitchen": "far_nvz_right",
+            "near_left_baseline": "far_left_corner",
+            "near_center_baseline": "far_baseline_center",
+            "near_right_baseline": "far_right_corner"
+          },
+          "source_visible_keypoint_names": [
+            "far_center_baseline",
+            "far_center_kitchen",
+            "far_left_baseline",
+            "far_left_kitchen",
+            "far_right_baseline",
+            "far_right_kitchen",
+            "near_center_baseline",
+            "near_center_kitchen",
+            "near_left_baseline",
+            "near_left_kitchen",
+            "near_right_baseline",
+            "near_right_kitchen",
+            "net_center",
+            "net_left",
+            "net_right"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.2853600867121808,
+            "median_reprojection_error_ratio": 0.0009483146282072434,
+            "max_reprojection_error_ratio": 0.005537610678737994,
+            "projective_row_y": [
+              4.374186136321982e-16,
+              0.3468322157859802,
+              0.6510676145553589,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000004.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            51.051,
+            582.456
+          ],
+          "near_baseline_center": [
+            326.15,
+            586.479
+          ],
+          "near_right_corner": [
+            585.085,
+            589.868
+          ],
+          "far_right_corner": [
+            371.167,
+            229.102
+          ],
+          "far_baseline_center": [
+            316.482,
+            225.683
+          ],
+          "far_left_corner": [
+            260.228,
+            223.178
+          ],
+          "near_nvz_left": [
+            198.396,
+            323.456
+          ],
+          "near_nvz_center": [
+            319.129,
+            329.176
+          ],
+          "near_nvz_right": [
+            433.049,
+            333.866
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            239.755,
+            255.799
+          ],
+          "far_nvz_center": [
+            317.47,
+            260.66
+          ],
+          "far_nvz_right": [
+            392.982,
+            265.613
+          ]
+        },
+        "provenance": {
+          "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "split": "valid",
+          "coco_image_id": 5,
+          "coco_annotation_id": 6,
+          "original_file_name": "frame_000090_jpg.rf.536fcb237b2ba0c6a58dfd493335c618.jpg",
+          "roboflow_original_name": "frame_000090_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_000090_jpg.rf.536fcb237b2ba0c6a58dfd493335c618.jpg",
+          "source_group": "chetan_court_v2",
+          "source_media_family": "frame_sequence",
+          "apparent_venue_id": "chetan_court_v2:frame_sequence",
+          "license": "CC BY 4.0",
+          "image_sha256": "846a190df392a9cce9aab67f29b16aa81c7bc819c6bdb71a18a22a0fd524fe4c",
+          "perceptual_hash64": "a932632d96c9d1ea",
+          "mapping_mode": "semantic_direct_with_source_depth_reversal",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "far_left_baseline": "near_left_corner",
+            "far_center_baseline": "near_baseline_center",
+            "far_right_baseline": "near_right_corner",
+            "far_left_kitchen": "near_nvz_left",
+            "far_center_kitchen": "near_nvz_center",
+            "far_right_kitchen": "near_nvz_right",
+            "net_left": "net_left_sideline",
+            "net_center": "net_center",
+            "net_right": "net_right_sideline",
+            "near_left_kitchen": "far_nvz_left",
+            "near_center_kitchen": "far_nvz_center",
+            "near_right_kitchen": "far_nvz_right",
+            "near_left_baseline": "far_left_corner",
+            "near_center_baseline": "far_baseline_center",
+            "near_right_baseline": "far_right_corner"
+          },
+          "source_visible_keypoint_names": [
+            "far_center_baseline",
+            "far_center_kitchen",
+            "far_left_baseline",
+            "far_left_kitchen",
+            "far_right_baseline",
+            "far_right_kitchen",
+            "near_center_baseline",
+            "near_center_kitchen",
+            "near_left_baseline",
+            "near_left_kitchen",
+            "near_right_baseline",
+            "near_right_kitchen",
+            "net_center",
+            "net_left",
+            "net_right"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.2834141297961853,
+            "median_reprojection_error_ratio": 0.0005474387969356974,
+            "max_reprojection_error_ratio": 0.0033742213740435055,
+            "projective_row_y": [
+              -4.467934684132904e-16,
+              0.33766278624534607,
+              0.6582655906677246,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      },
+      {
+        "frame": "frame_000005.jpg",
+        "status": "reviewed_external_dataset",
+        "keypoints": {
+          "near_left_corner": [
+            46.874,
+            575.139
+          ],
+          "near_baseline_center": [
+            322.009,
+            587.444
+          ],
+          "near_right_corner": [
+            580.506,
+            594.764
+          ],
+          "far_right_corner": [
+            370.547,
+            228.87
+          ],
+          "far_baseline_center": [
+            315.378,
+            225.187
+          ],
+          "far_left_corner": [
+            257.954,
+            219.468
+          ],
+          "near_nvz_left": [
+            197.932,
+            321.403
+          ],
+          "near_nvz_center": [
+            316.689,
+            328.13
+          ],
+          "near_nvz_right": [
+            431.59,
+            334.537
+          ],
+          "net_left_sideline": null,
+          "net_center": null,
+          "net_right_sideline": null,
+          "far_nvz_left": [
+            239.341,
+            253.595
+          ],
+          "far_nvz_center": [
+            315.902,
+            258.259
+          ],
+          "far_nvz_right": [
+            390.986,
+            264.91
+          ]
+        },
+        "provenance": {
+          "dataset": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "workspace": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+          "split": "valid",
+          "coco_image_id": 6,
+          "coco_annotation_id": 7,
+          "original_file_name": "frame_000030_jpg.rf.622ace6756bd7de37d3cea737a7cccba.jpg",
+          "roboflow_original_name": "frame_000030_jpg.jpg",
+          "original_image": "data/roboflow_universe_20260706/chetan-rajagiri-9abfm__pickleball-court-v2__v1/valid/frame_000030_jpg.rf.622ace6756bd7de37d3cea737a7cccba.jpg",
+          "source_group": "chetan_court_v2",
+          "source_media_family": "frame_sequence",
+          "apparent_venue_id": "chetan_court_v2:frame_sequence",
+          "license": "CC BY 4.0",
+          "image_sha256": "aeab6ef995e8b5d8765754d3b5be94193df6bac25055fc260a858fb67c998941",
+          "perceptual_hash64": "e5323c2d928dc8fa",
+          "mapping_mode": "semantic_direct_with_source_depth_reversal",
+          "mapping_confidence": "high",
+          "mapping_used": {
+            "far_left_baseline": "near_left_corner",
+            "far_center_baseline": "near_baseline_center",
+            "far_right_baseline": "near_right_corner",
+            "far_left_kitchen": "near_nvz_left",
+            "far_center_kitchen": "near_nvz_center",
+            "far_right_kitchen": "near_nvz_right",
+            "net_left": "net_left_sideline",
+            "net_center": "net_center",
+            "net_right": "net_right_sideline",
+            "near_left_kitchen": "far_nvz_left",
+            "near_center_kitchen": "far_nvz_center",
+            "near_right_kitchen": "far_nvz_right",
+            "near_left_baseline": "far_left_corner",
+            "near_center_baseline": "far_baseline_center",
+            "near_right_baseline": "far_right_corner"
+          },
+          "source_visible_keypoint_names": [
+            "far_center_baseline",
+            "far_center_kitchen",
+            "far_left_baseline",
+            "far_left_kitchen",
+            "far_right_baseline",
+            "far_right_kitchen",
+            "near_center_baseline",
+            "near_center_kitchen",
+            "near_left_baseline",
+            "near_left_kitchen",
+            "near_right_baseline",
+            "near_right_kitchen",
+            "net_center",
+            "net_left",
+            "net_right"
+          ],
+          "adapter_script": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+          "adapter_sha256": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+          "geometric_sanity": {
+            "pass": true,
+            "reason": "pass",
+            "outer_quad_area_ratio": 0.28462269957672776,
+            "median_reprojection_error_ratio": 0.0012264656525507237,
+            "max_reprojection_error_ratio": 0.0028242260744005938,
+            "projective_row_y": [
+              -4.4085134699984425e-16,
+              0.3353121876716614,
+              0.6570483446121216,
+              1.0
+            ]
+          }
+        },
+        "pseudo_label_status": "OWNER_APPROVED"
+      }
+    ]
+  },
+  "frames": {
+    "frame_dir": "chetan-rajagiri-9abfm__pickleball-court-v2__v1__valid/frames",
+    "path_base": "corpus_root",
+    "source_resolution": [
+      640,
+      640
+    ],
+    "label_coordinate_space": [
+      640,
+      640
+    ]
+  },
+  "review": {
+    "status": "reviewed",
+    "reviewer": "upstream_roboflow_human_annotations",
+    "note": "Mapped external floor points only. All 15 canonical keys are present; all three unsafe external bottom-of-net channels are JSON null."
+  },
+  "training_eligibility": {
+    "queued": true,
+    "reason": "owner-approved floor-only source row; external net channels nulled",
+    "owner_adjudication": {
+      "path": "runs/court_unified_training_20260723/external_training_owner_act_final.json",
+      "sha256": "e0f8935c5d42a531d144f74f0c527fc51b0cdd7c18e6c59ed5c5faca26893f29",
+      "decision": "APPROVE",
+      "scope_type": "roboflow_dataset",
+      "scope_id": "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "training_condition": "FLOOR_ONLY_ALL_NET_CHANNELS_NULL"
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "proposal_only": true,
+  "must_not_apply_automatically": true,
+  "integration_instruction": "Integration manager should review this row and update runs/manager/data_ledger.json; this adapter did not modify the ledger.",
+  "asset_id": "roboflow_court_keypoints_adapted_20260723",
+  "source_asset_id": "roboflow_court_taxonomy_20260706",
+  "acquired_utc": "2026-07-06T20:00:00Z",
+  "paths": [
+    {
+      "path": "runs/lanes/roboflow_court_adapter_20260723/adapted_corpus",
+      "role": "trainer-compatible canonical-15 dictionaries with floor-only non-null supervision",
+      "present": true
+    },
+    {
+      "path": "runs/lanes/roboflow_court_adapter_20260723/adapted_labels.jsonl",
+      "role": "flat provenance index for adapted rows",
+      "present": true
+    }
+  ],
+  "counts": {
+    "adapted_usable_label_count": 264,
+    "label_unit": "deduplicated_sanity_passed_floor_supervision_images",
+    "effective_non_null_keypoints_per_row": 12,
+    "canonical_dictionary_key_count_per_row": 15,
+    "workspace_yield": {
+      "chetan-rajagiri-9abfm__pickleball-court-v2__v1": 28,
+      "n-do-tran__pickleball-court-p3chl__v4": 25,
+      "necromancer__pickleball-court-vbmkq__v2": 47,
+      "nigh-workspace__pickleball-court-vhpgp__v11": 100,
+      "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6": 13,
+      "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3": 44,
+      "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1": 7
+    },
+    "distinct_apparent_venue_count": 23
+  },
+  "source_lineage": {
+    "original_sources": [
+      "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "n-do-tran__pickleball-court-p3chl__v4",
+      "necromancer__pickleball-court-vbmkq__v2",
+      "nigh-workspace__pickleball-court-vhpgp__v11",
+      "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+      "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+      "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1"
+    ],
+    "sessions": [
+      "roboflow_universe_20260706"
+    ],
+    "apparent_venue_definition": "source-group plus normalized source-media filename family"
+  },
+  "immutable_hashes": [
+    {
+      "path": "scripts/racketsport/adapt_roboflow_court_keypoints.py",
+      "algorithm": "sha256",
+      "digest": "3c74e9b5d246d4737045419c1001700372cdd08e2f2495274117070235947b74",
+      "role": "adapter implementation"
+    },
+    {
+      "path": "runs/lanes/roboflow_court_adapter_20260723/adapted_labels.jsonl",
+      "algorithm": "sha256",
+      "digest": "aaba9fa488e6c170bb05880dac1d447f9f8fb859213b49f0343a2e4addb072b4",
+      "role": "adapted row index"
+    },
+    {
+      "path": "runs/lanes/roboflow_court_adapter_20260723/schema_map.json",
+      "algorithm": "sha256",
+      "digest": "85deecd6183cecf3673486eda7bc50572746ce599e555ac571b80b19058abb7d",
+      "role": "workspace schema and mapping evidence"
+    }
+  ],
+  "rights": {
+    "posture": "Preserve source license/attribution metadata and the current owner floor-only act.",
+    "component_rulings": {
+      "COURT": {
+        "decision": "AUTHORIZE_TRACK_A_FLOOR_ONLY_AFTER_LEDGER_INTEGRATION_REVIEW",
+        "ruling": "Use only the emitted 12 floor channels; all three external net channels remain null. This is training data, never independent gate truth."
+      },
+      "BALL": {
+        "decision": "FORBID",
+        "ruling": "Court labels are not ball labels."
+      },
+      "EVENT": {
+        "decision": "FORBID",
+        "ruling": "Court labels are not event labels."
+      }
+    }
+  },
+  "protection": {
+    "compare_only_matches": 0,
+    "protected_matches": 0,
+    "owner_pack_near_match_excluded_count": 1392,
+    "selected_owner_pack_collision_count": 0
+  },
+  "partitions": {
+    "strategy": "group by source_group/apparent_venue_id; never frame-random split related frames",
+    "train": [
+      "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "n-do-tran__pickleball-court-p3chl__v4",
+      "necromancer__pickleball-court-vbmkq__v2",
+      "nigh-workspace__pickleball-court-vhpgp__v11",
+      "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+      "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+      "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1"
+    ],
+    "val": [],
+    "test": []
+  },
+  "disposition": {
+    "consumer_track": "A",
+    "training_intent": true,
+    "next_queue_action": "Manager reviews this proposed row, preserves source-group splits, then points Track A at runs/lanes/roboflow_court_adapter_20260723/adapted_corpus. Do not promote model authority from these rows."
+  },
+  "state": "PROPOSED_READY_FOR_LEDGER_REVIEW",
+  "state_reason": "Rows passed canonical-schema loading, projective geometry, dedup, venue caps, and protected/owner-pack guards; VERIFIED=0 remains binding.",
+  "verified": false
+}

@@ -15,6 +15,14 @@ from threed.racketsport.court_model_infer import (  # noqa: E402
     load_court_model_checkpoint,
 )
 from threed.racketsport.court_keypoint_net import make_court_keypoint_heatmap_model  # noqa: E402
+from threed.racketsport.court_structured_model import (  # noqa: E402
+    COURT_STRUCTURED_V3_ARCHITECTURE,
+    STRUCTURED_FLOOR_KEYPOINT_NAMES,
+    make_court_structured_v3_model,
+)
+from threed.racketsport.court_confidence_calibration import (  # noqa: E402
+    fit_isotonic_confidence,
+)
 
 KEYPOINT_NAMES = [point.name for point in PICKLEBALL_KEYPOINTS]
 
@@ -41,7 +49,15 @@ def test_infer_court_model_returns_stable_contract_keys_and_shapes(tmp_path: Pat
 
     result = infer_court_model(image_bgr, checkpoint_path, device="cpu")
 
-    assert set(result) == {"keypoints_xy", "keypoints_conf", "keypoints_vis", "line_family_mask", "surface_mask"}
+    assert set(result) == {
+        "keypoints_xy",
+        "keypoints_conf",
+        "keypoints_vis",
+        "line_family_mask",
+        "surface_mask",
+        "structured_observations",
+        "best_court",
+    }
     assert set(result["keypoints_xy"]) == set(KEYPOINT_NAMES)
     assert set(result["keypoints_conf"]) == set(KEYPOINT_NAMES)
     assert set(result["keypoints_vis"]) == set(KEYPOINT_NAMES)
@@ -60,6 +76,15 @@ def test_infer_court_model_returns_stable_contract_keys_and_shapes(tmp_path: Pat
     # restricted to {background, interior}, never {apron}=1 (see split_line_family_segmentation).
     assert set(np.unique(result["surface_mask"]).tolist()) <= {0, 2}
     assert set(np.unique(result["line_family_mask"]).tolist()) <= {0, 1, 2, 3}
+    assert len(result["structured_observations"]) == 12
+    assert result["best_court"]["floor_only"] is True
+    assert result["best_court"]["measurement_valid"] is False
+    assert result["best_court"]["authority_state"] == "review_only"
+    assert result["best_court"]["confidence_status"] == "uncalibrated"
+    assert result["best_court"]["point_confidence"] == result["best_court"]["point_confidence_raw"]
+    assert set(result["best_court"]["keypoints_xy"]) == {
+        name for name in KEYPOINT_NAMES if not name.startswith("net_")
+    }
 
 
 def test_infer_court_model_rescales_to_the_callers_own_image_resolution(tmp_path: Path) -> None:
@@ -101,6 +126,49 @@ def test_infer_court_model_rejects_non_court_unet_v2_checkpoints(tmp_path: Path)
     payload = load_court_model_checkpoint(checkpoint_path, device="cpu")
     with pytest.raises(ValueError, match="court_unet_v2"):
         build_court_model_from_checkpoint(payload, device="cpu")
+
+
+def test_build_adapter_accepts_review_only_structured_v3_checkpoint(tmp_path: Path) -> None:
+    model = make_court_structured_v3_model()
+    checkpoint_path = tmp_path / "court_structured_v3.pt"
+    torch.save(
+        {
+            "model": model.state_dict(),
+            "image_size": [160, 96],
+            "model_architecture": COURT_STRUCTURED_V3_ARCHITECTURE,
+            "network_architecture": COURT_STRUCTURED_V3_ARCHITECTURE,
+            "keypoint_names": list(STRUCTURED_FLOOR_KEYPOINT_NAMES),
+            "status": "trained_not_phase_verified",
+        },
+        checkpoint_path,
+    )
+
+    payload = load_court_model_checkpoint(checkpoint_path, device="cpu")
+    loaded, names, image_size = build_court_model_from_checkpoint(payload, device="cpu")
+
+    assert loaded.architecture == COURT_STRUCTURED_V3_ARCHITECTURE
+    assert tuple(names) == STRUCTURED_FLOOR_KEYPOINT_NAMES
+    assert image_size == (160, 96)
+
+
+def test_infer_applies_serialized_point_confidence_calibration(tmp_path: Path) -> None:
+    checkpoint_path = _write_checkpoint(tmp_path, image_size=(160, 96))
+    payload = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+    calibrator = fit_isotonic_confidence(
+        [0.0, 0.1, 0.9, 1.0],
+        [0, 0, 1, 1],
+    )
+    payload["point_confidence_calibration"] = calibrator.to_dict()
+    torch.save(payload, checkpoint_path)
+
+    image_bgr = (np.random.RandomState(7).rand(96, 160, 3) * 255).astype(np.uint8)
+    result = infer_court_model(image_bgr, checkpoint_path, device="cpu")
+
+    assert result["best_court"]["confidence_status"] == "calibrated_source_disjoint_dev"
+    assert result["best_court"]["point_confidence_calibration"]["sample_count"] == 4
+    assert set(result["best_court"]["point_confidence"]) == set(
+        result["best_court"]["point_confidence_raw"]
+    )
 
 
 def test_infer_court_model_rejects_malformed_image(tmp_path: Path) -> None:

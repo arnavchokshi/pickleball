@@ -420,6 +420,31 @@ def test_full_15_real_row_total_loss_is_identical_to_pre_mask_formula(tmp_path: 
     assert torch.equal(actual, legacy)
 
 
+def test_real_batch_can_receive_geometry_regularization(tmp_path: Path) -> None:
+    arrays = train_court_model_v2.real_row_to_sample_arrays(
+        _real_row_fixture(tmp_path), model_width=128, model_height=72, sigma_px=1.5
+    )
+    batch = train_court_model_v2._stack_arrays([arrays], torch)
+    model = _FixedCourtOutputs(
+        torch.randn((1, 15, 18, 32)),
+        torch.zeros((1, 15)),
+    )
+    args = _loss_args()
+    args.geometric_loss_weight = 0.05
+
+    loss, components = train_court_model_v2._compute_batch_loss(
+        model,
+        batch,
+        device=torch.device("cpu"),
+        args=args,
+        torch=torch,
+    )
+
+    assert torch.isfinite(loss)
+    assert "geometric_loss" in components
+    assert components["geometric_loss"] >= 0.0
+
+
 def test_real_photometric_aug_changes_only_pixels_and_is_seeded(tmp_path: Path) -> None:
     import random
 

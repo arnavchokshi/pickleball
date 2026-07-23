@@ -65,6 +65,7 @@ def main() -> int:
     parser.add_argument("--real-root", type=Path, required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--device", default="cuda")
+    parser.add_argument("--structured-best-court", action="store_true")
     args = parser.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -81,7 +82,18 @@ def main() -> int:
         scale_x, scale_y = float(source_w) / loaded_w, float(source_h) / loaded_h
 
         result = infer_court_model(image_bgr, args.checkpoint, device=args.device)
-        predicted = {name: [float(xy[0]), float(xy[1])] for name, xy in result["keypoints_xy"].items()}
+        raw_predicted = {
+            name: [float(xy[0]), float(xy[1])]
+            for name, xy in result["keypoints_xy"].items()
+            if not name.startswith("net_")
+        }
+        best_court = result.get("best_court") or {}
+        selected_predictions = best_court.get("keypoints_xy") if args.structured_best_court else result["keypoints_xy"]
+        predicted = {
+            name: [float(xy[0]), float(xy[1])]
+            for name, xy in selected_predictions.items()
+            if not (args.structured_best_court and name.startswith("net_"))
+        }
         truth = {
             name: [float(xy[0]) / scale_x, float(xy[1]) / scale_y]
             for name, xy in row["keypoints"].items()
@@ -100,6 +112,9 @@ def main() -> int:
         pck5 = sum(value <= 5.0 for value in ordered_errors) / len(ordered_errors) if ordered_errors else None
 
         prediction_only = image_bgr.copy()
+        if args.structured_best_court:
+            for xy in raw_predicted.values():
+                cv2.circle(prediction_only, point(xy), 3, (0, 165, 255), -1, cv2.LINE_AA)
         draw_lines(prediction_only, predicted, (40, 235, 40), 3)
         for marker_index, (name, xy) in enumerate(predicted.items(), start=1):
             cv2.circle(prediction_only, point(xy), 7, (0, 0, 0), -1, cv2.LINE_AA)
@@ -107,6 +122,18 @@ def main() -> int:
             cv2.putText(prediction_only, str(marker_index), (point(xy)[0] + 6, point(xy)[1] - 6), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (255, 255, 255), 1, cv2.LINE_AA)
 
         comparison = image_bgr.copy()
+        if args.structured_best_court:
+            for xy in raw_predicted.values():
+                cv2.circle(comparison, point(xy), 3, (0, 165, 255), -1, cv2.LINE_AA)
+            for ignored in best_court.get("ignored_observations") or []:
+                if ignored.get("reason") not in {"residual_outlier", "duplicate_image_location"}:
+                    continue
+                xy = ignored.get("xy")
+                if not isinstance(xy, list) or len(xy) != 2:
+                    continue
+                px, py = point(xy)
+                cv2.line(comparison, (px - 5, py - 5), (px + 5, py + 5), (0, 0, 255), 2, cv2.LINE_AA)
+                cv2.line(comparison, (px - 5, py + 5), (px + 5, py - 5), (0, 0, 255), 2, cv2.LINE_AA)
         draw_lines(comparison, truth, (255, 255, 0), 2)
         draw_lines(comparison, predicted, (40, 235, 40), 3)
         for name, xy in truth.items():
@@ -116,14 +143,24 @@ def main() -> int:
         for xy in predicted.values():
             cv2.circle(comparison, point(xy), 5, (40, 235, 40), -1, cv2.LINE_AA)
         cv2.rectangle(comparison, (8, 8), (475, 42), (0, 0, 0), -1)
-        cv2.putText(comparison, "GREEN=model  CYAN=label  MAGENTA=error", (18, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+        legend = (
+            "GREEN=best court  ORANGE=raw  CYAN=label  RED X=ignored"
+            if args.structured_best_court
+            else "GREEN=model  CYAN=label  MAGENTA=error"
+        )
+        cv2.putText(comparison, legend, (18, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.50, (255, 255, 255), 1, cv2.LINE_AA)
 
         stem = f"{index + 1:02d}_{row['clip']}_frame_{int(row['frame_index']):06d}"
         prediction_path = args.out_dir / f"{stem}_prediction.jpg"
         comparison_path = args.out_dir / f"{stem}_comparison.jpg"
         cv2.imwrite(str(prediction_path), prediction_only, [cv2.IMWRITE_JPEG_QUALITY, 94])
         cv2.imwrite(str(comparison_path), comparison, [cv2.IMWRITE_JPEG_QUALITY, 94])
-        metric_text = f"{row['clip']} f{int(row['frame_index'])} | median {median_error:.1f}px | PCK5 {pck5:.0%}"
+        confidence_text = (
+            f" | court conf {float(best_court.get('court_confidence') or 0.0):.3f}"
+            if args.structured_best_court
+            else ""
+        )
+        metric_text = f"{row['clip']} f{int(row['frame_index'])} | median {median_error:.1f}px | PCK5 {pck5:.0%}{confidence_text}"
         prediction_tiles.append(make_tile(prediction_only, metric_text))
         comparison_tiles.append(make_tile(comparison, metric_text))
         manifest_rows.append({
@@ -135,6 +172,9 @@ def main() -> int:
             "median_error_px_source": median_error,
             "pck_at_5px": pck5,
             "errors_px_source": errors,
+            "court_confidence": best_court.get("court_confidence") if args.structured_best_court else None,
+            "inlier_count": best_court.get("inlier_count") if args.structured_best_court else None,
+            "ignored_observation_count": len(best_court.get("ignored_observations") or []) if args.structured_best_court else None,
         })
 
     for name, tiles in (("prediction_contact_sheet.jpg", prediction_tiles), ("comparison_contact_sheet.jpg", comparison_tiles)):
@@ -148,9 +188,15 @@ def main() -> int:
 
     manifest = {
         "schema_version": 1,
-        "artifact_type": "court_unet_v2_prediction_gallery",
+        "artifact_type": (
+            "court_structured_best_effort_prediction_gallery"
+            if args.structured_best_court
+            else "court_unet_v2_prediction_gallery"
+        ),
         "checkpoint": str(args.checkpoint),
         "legend": {"model_prediction": "green", "human_label": "cyan", "error_connector": "magenta"},
+        "status": "diagnostic_only" if args.structured_best_court else None,
+        "promotion_allowed": False if args.structured_best_court else None,
         "rows": manifest_rows,
     }
     (args.out_dir / "prediction_gallery_manifest.json").write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
