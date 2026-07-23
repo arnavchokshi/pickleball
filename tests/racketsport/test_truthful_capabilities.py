@@ -33,6 +33,7 @@ ALLOWED_MARKDOWN_DOCS = set(CANONICAL_DOCS) | {
     "cvat_upload/exports/w7_labels_20260709/README_INGEST_QUEUE_20260709.md",
     "cvat_upload/w7_audit_stratum_20260709/TASK_README.md",
     "cvat_upload/court_diversity_20260712/OWNER_GUIDE.md",
+    "cvat_upload/court_labelpack3_20260723/OWNER_INSTRUCTIONS.md",
     "cvat_upload/exports/court_keypoints_20260707/PARTIAL_EXPORT_NOTES_20260709.md",
     "cvat_upload/exports/w6_labelpack_20260708/SESSION_NOTES_20260709.md",
     "cvat_upload/exports/court_keypoints_20260707/README.md",
