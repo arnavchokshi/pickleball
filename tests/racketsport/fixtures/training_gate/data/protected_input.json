@@ -1,0 +1,13 @@
+{
+  "artifact_type": "synthetic_protected_input",
+  "rows": [
+    {
+      "feature": [
+        1,
+        0
+      ],
+      "label": "reserved"
+    }
+  ],
+  "schema_version": 1
+}

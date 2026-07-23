@@ -1,0 +1,50 @@
+{
+  "artifact_type": "synthetic_training_cache_manifest",
+  "media": {
+    "synthetic": [
+      {
+        "bytes": 64,
+        "expected_sha256": "8b007124fa949defff85b11f70de5bf4c4c0e43ba64c085c7eded18f0041dfd1",
+        "flags": [
+          "TRAIN",
+          "sha256_matches"
+        ],
+        "id": "synthetic-cache-allowed",
+        "path": "/cache/media/synthetic/allowed.bin",
+        "sha256": "8b007124fa949defff85b11f70de5bf4c4c0e43ba64c085c7eded18f0041dfd1",
+        "status": "STAGED"
+      },
+      {
+        "bytes": 144970700,
+        "expected_sha256": "272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383",
+        "flags": [
+          "COMPARE_ONLY_NEVER_TRAIN",
+          "SHA256_MISMATCH",
+          "QUARANTINED_SHA_MISMATCH"
+        ],
+        "id": "83gyqyc10y8f",
+        "path": "/cache/media/pbvision/83gyqyc10y8f/max.mp4",
+        "quarantine_rationale": "The synthetic cached object's recorded SHA-256 differs from the expected SHA-256. This protected comparison object must not be consumed from cache until it is re-derived from the named authority and matches the expected digest.",
+        "re_derivation": {
+          "expected_sha256": "272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383",
+          "source_url": "https://fixtures.invalid/training-gate/83gyqyc10y8f/max.mp4"
+        },
+        "sha256": "5855cb92d4170e939bda322640cfd6a38b3b5aa4f3f7ad4abb897ab3f313ce7a",
+        "status": "QUARANTINED_SHA_MISMATCH"
+      },
+      {
+        "bytes": 64,
+        "expected_sha256": "1f3109f5764c86bc36dffbd1613b3f98750df8088fd6d5191ee3037476b1587a",
+        "flags": [
+          "COMPARE_ONLY_NEVER_TRAIN",
+          "sha256_matches"
+        ],
+        "id": "synthetic-cache-protected",
+        "path": "/cache/media/synthetic/protected.bin",
+        "sha256": "1f3109f5764c86bc36dffbd1613b3f98750df8088fd6d5191ee3037476b1587a",
+        "status": "STAGED"
+      }
+    ]
+  },
+  "schema_version": 1
+}

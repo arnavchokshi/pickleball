@@ -53,13 +53,66 @@ if ! nvidia-smi -c "$CUDA_COMPUTE_MODE"; then
   echo "lane_vm_startup: failed to set CUDA compute mode $CUDA_COMPUTE_MODE" >&2
   exit 1
 fi
-# 3. Code + weights: git clone/pull the repo (it is pushed) + restore vendor pins per
+
+# 3. Training-data integrity gate. A training VM is not startup-complete until
+#    the exact checked-out verifier writes a passing proof. The intended-input
+#    manifest must enumerate every trainer-visible data path and ledger asset.
+#    When any path is under /cache, FABLE_CACHE_MANIFEST must point at the
+#    mounted CACHE_MANIFEST.json. Trainers receive the resulting path through
+#    --gate-proof and must validate it again immediately before input reads.
+if [ "$LANE_FABLE_ROLE" = "training" ]; then
+  if [ -z "${FABLE_TRAINING_INPUT_MANIFEST:-}" ]; then
+    echo "lane_vm_startup: TRAINING_INPUT_MANIFEST_REQUIRED: set FABLE_TRAINING_INPUT_MANIFEST" >&2
+    exit 65
+  fi
+  if [ -z "${FABLE_REPO_DIR:-}" ]; then
+    echo "lane_vm_startup: TRAINING_REPO_REQUIRED: set FABLE_REPO_DIR to the exact checked-out revision" >&2
+    exit 65
+  fi
+  if [ -z "${FABLE_GATE_PROOF:-}" ]; then
+    echo "lane_vm_startup: GATE_PROOF_PATH_REQUIRED: set FABLE_GATE_PROOF" >&2
+    exit 65
+  fi
+
+  TRAINING_DATA_LEDGER="${FABLE_DATA_LEDGER:-$FABLE_REPO_DIR/runs/manager/data_ledger.json}"
+  TRAINING_PYTHON="${FABLE_TRAINING_PYTHON:-$FABLE_REPO_DIR/.venv/bin/python}"
+  TRAINING_VERIFIER="$FABLE_REPO_DIR/scripts/racketsport/verify_training_inputs.py"
+  if [ ! -x "$TRAINING_PYTHON" ]; then
+    echo "lane_vm_startup: TRAINING_PYTHON_UNAVAILABLE: $TRAINING_PYTHON" >&2
+    exit 65
+  fi
+  if [ ! -f "$TRAINING_VERIFIER" ]; then
+    echo "lane_vm_startup: TRAINING_VERIFIER_UNAVAILABLE: $TRAINING_VERIFIER" >&2
+    exit 65
+  fi
+
+  TRAINING_GATE_ARGS=(
+    --inputs "$FABLE_TRAINING_INPUT_MANIFEST"
+    --ledger "$TRAINING_DATA_LEDGER"
+    --repo-root "$FABLE_REPO_DIR"
+    --gate-proof "$FABLE_GATE_PROOF"
+  )
+  if [ -n "${FABLE_CACHE_MANIFEST:-}" ]; then
+    TRAINING_GATE_ARGS+=(--cache-manifest "$FABLE_CACHE_MANIFEST")
+  fi
+  if ! "$TRAINING_PYTHON" "$TRAINING_VERIFIER" "${TRAINING_GATE_ARGS[@]}"; then
+    echo "lane_vm_startup: TRAINING_INPUT_GATE_FAILED: refusing training VM startup" >&2
+    exit 65
+  fi
+  if [ ! -s "$FABLE_GATE_PROOF" ]; then
+    echo "lane_vm_startup: GATE_PROOF_MISSING: verifier returned without a proof artifact" >&2
+    exit 65
+  fi
+  echo "lane_vm_startup: training input gate PASS: $FABLE_GATE_PROOF"
+fi
+
+# 4. Code + weights: git clone/pull the repo (it is pushed) + restore vendor pins per
 #    third_party/VENDOR_PINS.md + pull weights per models/MANIFEST.json (see RESET_HANDOFF §7 /
 #    scripts/racketsport/gpu_cold_start.sh — proven 258s).
 echo "lane_vm_startup: scaffold complete (extend in P0-1 lane)"
 
 # ---------------------------------------------------------------------------
-# 4. INFRA-2 pull-worker install hook (product-infra plan §INFRA-2 / §3).
+# 5. INFRA-2 pull-worker install hook (product-infra plan §INFRA-2 / §3).
 #    INERT on every VM except one booted with GCE metadata
 #    `fable-role=pickleball-worker` — training/eval fleet VMs are untouched
 #    by construction. The bounded role lookup above leaves a missing role empty,

@@ -1,0 +1,13 @@
+{
+  "artifact_type": "synthetic_training_input",
+  "rows": [
+    {
+      "feature": [
+        0,
+        1
+      ],
+      "label": "allowed"
+    }
+  ],
+  "schema_version": 1
+}

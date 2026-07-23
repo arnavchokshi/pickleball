@@ -1,0 +1,190 @@
+{
+  "artifact_type": "synthetic_racketsport_data_ledger",
+  "assets": [
+    {
+      "acquired_utc": "2026-07-23T00:00:00Z",
+      "asset_id": "synthetic_training_allowed",
+      "consumers": [],
+      "disposition": {
+        "consumer_evidence": "data/allowed_input.json",
+        "consumer_track": "E",
+        "next_queue_action": "Run a synthetic fine-tune on the allowed fixture only.",
+        "training_intent": true
+      },
+      "immutable_hashes": [
+        {
+          "algorithm": "sha256",
+          "digest": "cce64ebe306d3cee5e0dc1e159a00e07844d7f98ee7cdb9cd9912b5b5bd730fc",
+          "path": "data/allowed_input.json",
+          "role": "deterministic allowed training-input fixture"
+        }
+      ],
+      "paths": [
+        {
+          "path": "data/allowed_input.json",
+          "present": true,
+          "role": "synthetic allowed training input"
+        }
+      ],
+      "protection": {
+        "identities": [],
+        "trainer_forbidden": false,
+        "training_allowed_ids": []
+      },
+      "rights": {
+        "component_rulings": {
+          "BALL": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          },
+          "COURT": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          },
+          "EVENT": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          },
+          "PERSON": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          },
+          "REID": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          }
+        }
+      },
+      "state": "READY",
+      "state_reason": "ready_for_named_consumer"
+    },
+    {
+      "acquired_utc": "2026-07-23T00:00:00Z",
+      "asset_id": "synthetic_training_protected",
+      "consumers": [],
+      "disposition": {
+        "not_usable_because": "PROTECTED_INPUT: reserved for independent evaluation and excluded from training."
+      },
+      "immutable_hashes": [
+        {
+          "algorithm": "sha256",
+          "digest": "97df2ef6084b203dfc8826457ee71275436f08e755ad8342319edf875df7921a",
+          "path": "data/protected_input.json",
+          "role": "deterministic protected input fixture"
+        }
+      ],
+      "paths": [
+        {
+          "path": "data/protected_input.json",
+          "present": true,
+          "role": "synthetic protected input"
+        }
+      ],
+      "protection": {
+        "identities": [
+          {
+            "identity": "synthetic-protected-input",
+            "posture": "protected",
+            "ruling": "Reserved for independent evaluation and excluded from training."
+          }
+        ],
+        "trainer_forbidden": true,
+        "training_allowed_ids": []
+      },
+      "rights": {
+        "component_rulings": {
+          "BALL": {
+            "decision": "FORBID",
+            "ruling": "Reserved for independent evaluation."
+          },
+          "COURT": {
+            "decision": "FORBID",
+            "ruling": "Reserved for independent evaluation."
+          },
+          "EVENT": {
+            "decision": "FORBID",
+            "ruling": "Reserved for independent evaluation."
+          },
+          "PERSON": {
+            "decision": "FORBID",
+            "ruling": "Reserved for independent evaluation."
+          },
+          "REID": {
+            "decision": "FORBID",
+            "ruling": "Reserved for independent evaluation."
+          }
+        }
+      },
+      "state": "QUARANTINED",
+      "state_reason": "reserved_for_independent_evaluation"
+    },
+    {
+      "acquired_utc": "2026-07-23T00:00:00Z",
+      "asset_id": "synthetic_cache_inventory",
+      "consumers": [],
+      "disposition": {
+        "consumer_evidence": "CACHE_MANIFEST.json",
+        "consumer_track": "E",
+        "next_queue_action": "Run a synthetic fine-tune on synthetic-cache-allowed only.",
+        "training_intent": true
+      },
+      "immutable_hashes": [],
+      "paths": [
+        {
+          "path": "/cache/media",
+          "present": false,
+          "role": "synthetic cache namespace"
+        }
+      ],
+      "protection": {
+        "identities": [
+          {
+            "identity": "83gyqyc10y8f",
+            "posture": "compare_only",
+            "ruling": "Synthetic quarantined SHA-mismatch identity."
+          },
+          {
+            "identity": "synthetic-cache-protected",
+            "posture": "compare_only",
+            "ruling": "Synthetic cache-alias refusal identity."
+          }
+        ],
+        "trainer_forbidden": false,
+        "training_allowed_ids": [
+          "synthetic-cache-allowed"
+        ]
+      },
+      "rights": {
+        "component_rulings": {
+          "BALL": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          },
+          "COURT": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          },
+          "EVENT": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          },
+          "PERSON": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          },
+          "REID": {
+            "decision": "ALLOW",
+            "ruling": "Synthetic fixture use only."
+          }
+        }
+      },
+      "state": "READY",
+      "state_reason": "ready_for_named_consumer"
+    }
+  ],
+  "generated_utc": "2026-07-23T00:00:00Z",
+  "schema": {
+    "type": "object"
+  },
+  "schema_version": 1
+}

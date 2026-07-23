@@ -1,0 +1,71 @@
+{
+  "artifact_type": "racketsport_court_frozen_diagnostic_training_recipe",
+  "baseline_first": {
+    "checkpoint": {
+      "path": "models/checkpoints/court_unet_v2/court_model_v2.pt",
+      "sha256": "cdf0555d49335a946e518b177d85e2ab5be02100ba46eb3e634785c84f337c22"
+    },
+    "commands": [
+      ".venv/bin/python scripts/racketsport/evaluate_court_model_v2.py --checkpoint models/checkpoints/court_unet_v2/court_model_v2.pt --real-root runs/court_diversity_owner_ingest_20260723/holdout --out runs/court_unified_training_20260723/diagnostic_eval/baseline_task88/court_keypoint_metrics.json --device cuda",
+      ".venv/bin/python scripts/racketsport/evaluate_court_model_v2.py --checkpoint models/checkpoints/court_unet_v2/court_model_v2.pt --real-root runs/court_unified_training_20260723/protected_eval_loadable_32 --out runs/court_unified_training_20260723/diagnostic_eval/baseline_historical_protected/court_keypoint_metrics.json --device cuda",
+      ".venv/bin/python scripts/racketsport/evaluate_court_model_v2.py --checkpoint models/checkpoints/court_unet_v2/court_model_v2.pt --real-root runs/court_unified_training_20260723/pbvision_materialized/eval --out runs/court_unified_training_20260723/diagnostic_eval/baseline_pbvision/court_keypoint_metrics.json --device cuda"
+    ]
+  },
+  "candidate": {
+    "architecture": "court_unet_v2",
+    "batch_size": 32,
+    "encoder_checkpoint": {
+      "path": "models/checkpoints/court_external/torchvision/resnet34-b627a593.pth",
+      "sha256": "b627a593bcbe140c234610266fe4f8ae95ea42fc881d091c9b6052e6b1d0590f"
+    },
+    "epochs": 18,
+    "heatmap_stride": 4,
+    "initialization": "torchvision_resnet34_imagenet",
+    "input_size": [
+      640,
+      360
+    ],
+    "launch_command": ".venv/bin/python scripts/racketsport/train_court_model_v2.py \\\n  --out runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13 \\\n  --epochs 18 \\\n  --steps-per-epoch 100 \\\n  --batch-size 32 \\\n  --image-width 640 \\\n  --image-height 360 \\\n  --encoder-weights-path models/checkpoints/court_external/torchvision/resnet34-b627a593.pth \\\n  --lr 0.001 \\\n  --weight-decay 0.0001 \\\n  --amp \\\n  --seed 13 \\\n  --val-seed 999983 \\\n  --val-samples 16 \\\n  --heatmap-sigma-px 1.5 \\\n  --seg-loss-weight 1.0 \\\n  --vis-loss-weight 0.2 \\\n  --geometric-loss-weight 0.05 \\\n  --geometric-colinearity-weight 1.0 \\\n  --geometric-homography-weight 1.0 \\\n  --synthetic-workers 0 \\\n  --real-root runs/court_diversity_owner_ingest_20260723/holdout \\\n  --real-root runs/court_unified_training_20260723/pbvision_materialized/eval \\\n  --real-root runs/court_diversity_owner_ingest_20260723/train \\\n  --real-root runs/court_unified_training_20260723/prior_cvat_corpus \\\n  --real-root runs/court_unified_training_20260723/final_external_corpus/roboflow_train \\\n  --real-root runs/court_unified_training_20260723/final_external_corpus/pbvision_train \\\n  --real-weight 0.65 \\\n  --synthetic-weight 0.35 \\\n  --real-batch-size 32 \\\n  --real-photometric-aug \\\n  --real-val-samples 8 \\\n  --eval-every 2 \\\n  --checkpoint-every-eval \\\n  --keep-last-checkpoints 3 \\\n  --device cuda",
+    "output": "runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13",
+    "rationale": "Matches the prior comparable real-transfer diagnostic budget and mixture: 1800 steps, 0.65 real / 0.35 synthetic, ImageNet ResNet34 initialization, 640x360 court_unet_v2. synthetic-workers=0 avoids the known torch 2.5.1 DataLoader in_order incompatibility on the pinned fleet environment.",
+    "seed": 13,
+    "steps_per_epoch": 100,
+    "total_steps": 1800
+  },
+  "candidate_evaluation": {
+    "historical_protected_eval_after_candidate_is_frozen": ".venv/bin/python scripts/racketsport/evaluate_court_model_v2.py --checkpoint runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13/court_model_v2.pt --real-root runs/court_unified_training_20260723/protected_eval_loadable_32 --out runs/court_unified_training_20260723/diagnostic_eval/candidate_historical_protected/court_keypoint_metrics.json --device cuda",
+    "interpretation": "diagnostic comparison only; no promotion from these rows",
+    "metric": "PCK@5px and source-pixel median/p95, with per-viewpoint reporting",
+    "same_internal_holdouts": [
+      ".venv/bin/python scripts/racketsport/evaluate_court_model_v2.py --checkpoint runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13/court_model_v2.pt --real-root runs/court_diversity_owner_ingest_20260723/holdout --out runs/court_unified_training_20260723/diagnostic_eval/candidate_task88/court_keypoint_metrics.json --device cuda",
+      ".venv/bin/python scripts/racketsport/evaluate_court_model_v2.py --checkpoint runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13/court_model_v2.pt --real-root runs/court_unified_training_20260723/pbvision_materialized/eval --out runs/court_unified_training_20260723/diagnostic_eval/candidate_pbvision/court_keypoint_metrics.json --device cuda"
+    ]
+  },
+  "posture": {
+    "future_promotion_requirement": "A fresh, source-disjoint independent human holdout meeting the frozen diversity gate and PCK@5px >= 0.95 per viewpoint.",
+    "promotion_allowed": false,
+    "reason": "Task 88 contributes only 6 independent validation rows across 4 clips/3 source families, below the frozen diversity gate; pb.vision rows are external teacher labels, not independent human ground truth; the 43 protected image assets (32 currently loadable human-gate rows plus 11 additional protected images) remain evaluation-only and are not a fresh promotion set.",
+    "status_after_successful_execution": "trained_not_phase_verified",
+    "verified": false
+  },
+  "required_preconditions": [
+    "The training host checks out exact fetchable main commit 12b555824af6804da00330d64d7b3ae6d7891172 and records it before reading data.",
+    "The normal loader, without allow_pending_diagnostic_only, loads all six ordered roots as exactly 2867 rows.",
+    "The normal loader's first 8 rows exactly match split_mechanism.expected_first_eight_row_ids.",
+    "All immutable input and split-manifest SHA-256 values match.",
+    "The training host has zero overlap between the 2859 train image hashes and all 43 protected image hashes."
+  ],
+  "schema_version": 1,
+  "split_manifest": {
+    "canonical_split_payload_sha256": "503bea0d3e340195201df195a4e4a540b6379c2b7de77e3790d6601109bbea2b",
+    "path": "runs/court_unified_training_20260723/frozen_diagnostic_split_manifest.json",
+    "sha256": "2501451136393c8ed2f6f2679ec1c52f3120327a51a41406d5f285c6e92bd295"
+  },
+  "status": "READY_TO_LAUNCH_AFTER_EXPLICIT_PRECONDITIONS",
+  "stop_conditions": [
+    "Any hash mismatch or row-count/membership drift: do not train.",
+    "Any protected-eval row in trainer inputs: do not train.",
+    "Any non-null external net channel: do not train.",
+    "Any normal-loader failure requiring the diagnostic bypass: do not train."
+  ]
+}

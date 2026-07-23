@@ -1,0 +1,49 @@
+{
+  "artifact_type": "racketsport_court_diagnostic_training_readiness_proof",
+  "branch": "main",
+  "checks": {
+    "additional_training_rows_reserved": 0,
+    "combined_root_count": 6,
+    "combined_row_count": 2867,
+    "external_train_non_null_net_channel_count": 0,
+    "first_eight_exact": true,
+    "gradient_eligible_row_count": 2859,
+    "launch_command_continuation_prefixes_valid": true,
+    "normal_loader_no_diagnostic_bypass": true,
+    "protected_training_root_absent": true,
+    "real_root_flag_count": 6,
+    "real_split_proposal_absent": true,
+    "real_val_samples_flag_exactly_once": true,
+    "reserved_holdout_row_count": 8,
+    "train_protected_exact_image_overlap": 0,
+    "trainer_help_exit_code": 0,
+    "training_started": false
+  },
+  "expected_first_eight_row_ids": [
+    "4qSoA-jwpVM::frame_000001::a2f48351c79b919d",
+    "A9H6EWfXht0::frame_000001::674000261a973e9f",
+    "A9H6EWfXht0::frame_000002::0647b898c5de5027",
+    "Se7M6ZKaC4Y::frame_000001::46d62bf7950360f5",
+    "q3575jnmjJQ::frame_000001::57c1c056dc14c52a",
+    "q3575jnmjJQ::frame_000002::a9dbc3785219b462",
+    "0tmdeghtfvjx::frame_013835::28572e561cd5e098",
+    "pldtjpw3h0jw::frame_017042::897ad0638b704dc3"
+  ],
+  "observed_first_eight_row_ids": [
+    "4qSoA-jwpVM::frame_000001::a2f48351c79b919d",
+    "A9H6EWfXht0::frame_000001::674000261a973e9f",
+    "A9H6EWfXht0::frame_000002::0647b898c5de5027",
+    "Se7M6ZKaC4Y::frame_000001::46d62bf7950360f5",
+    "q3575jnmjJQ::frame_000001::57c1c056dc14c52a",
+    "q3575jnmjJQ::frame_000002::a9dbc3785219b462",
+    "0tmdeghtfvjx::frame_013835::28572e561cd5e098",
+    "pldtjpw3h0jw::frame_017042::897ad0638b704dc3"
+  ],
+  "origin_main": "12b555824af6804da00330d64d7b3ae6d7891172",
+  "posture": "diagnostic_only_trained_not_phase_verified_after_execution",
+  "schema_version": 1,
+  "split_manifest_sha256": "2501451136393c8ed2f6f2679ec1c52f3120327a51a41406d5f285c6e92bd295",
+  "status": "PASS_READY_TO_START_DIAGNOSTIC_TRAINING",
+  "training_recipe_sha256": "ebc734891719844c64b12aae2f428a4abced676b32225b4ff0f8e110fc51cf41",
+  "training_revision": "12b555824af6804da00330d64d7b3ae6d7891172"
+}
