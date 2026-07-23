@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -10,6 +13,8 @@ import pytest
 
 
 CLI = "scripts/racketsport/build_pbvision_ball_sst.py"
+PREPATCH_BUILDER_REVISION = "4c27023f686dd61200cf0394a8d900510596c8b0"
+PREPATCH_BUILDER_SHA256 = "cad2b8907e88dd5ebb30c013d4269be1a404409797d19ac7533d46669228fb57"
 
 
 def _observation(frame: int, xy: tuple[float, float], confidence: float = 0.95):
@@ -1281,6 +1286,785 @@ def test_emitted_sample_manifest_satisfies_stage2_schema(tmp_path: Path) -> None
     assert manifest["preregistration"]["builder_code_sha256"] == builder_identity["builder_code_sha256"]
 
 
+def test_resume_off_manifest_is_byte_identical_to_prepatch_builder(
+    tmp_path: Path,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    head_builder = _load_prepatch_builder(tmp_path)
+    fixture_root = tmp_path / "fixture"
+    with pytest.MonkeyPatch.context() as patch:
+        head_kwargs, _ = _configure_resume_build_fixture(head_builder, patch, fixture_root)
+        head_builder.build_pbvision_ball_sst(**head_kwargs)
+        baseline_bytes = Path(head_kwargs["out"]).read_bytes()
+        baseline_dependencies = {
+            path.relative_to(fixture_root / "sst_dependencies").as_posix(): path.read_bytes()
+            for path in sorted((fixture_root / "sst_dependencies").rglob("*"))
+            if path.is_file()
+        }
+
+    Path(head_kwargs["out"]).unlink()
+    shutil.rmtree(fixture_root / "sst_dependencies")
+    with pytest.MonkeyPatch.context() as patch:
+        current_kwargs, _ = _configure_resume_build_fixture(builder, patch, fixture_root)
+        builder.build_pbvision_ball_sst(**current_kwargs, resume_dependencies=False)
+        patched_bytes = Path(current_kwargs["out"]).read_bytes()
+        patched_dependencies = {
+            path.relative_to(fixture_root / "sst_dependencies").as_posix(): path.read_bytes()
+            for path in sorted((fixture_root / "sst_dependencies").rglob("*"))
+            if path.is_file()
+        }
+
+    assert patched_bytes == baseline_bytes
+    assert patched_dependencies == baseline_dependencies
+    assert b"dependency_reused" not in patched_bytes
+    assert b"dependencies_reused_count" not in patched_bytes
+
+
+def test_real_production_dependency_copies_fail_closed_on_unbound_fifth_source() -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    dependency_root = Path(
+        "runs/lanes/ball_b2_seed1_20260722/vm_pull/"
+        "ball_data_regroup_20260722_partial/pbv_ball_sst_dependencies"
+    )
+    assert sorted(path.name for path in dependency_root.iterdir()) == [
+        "143sf3gdwxsa",
+        "98z43hspqz13",
+        "bewqc0glhgpq",
+        "st0epgnab7dr",
+        "td2szayjwtrj",
+    ]
+    adapter_sha256 = builder._sha256_file(Path("threed/racketsport/wasb_adapter.py"))
+    reusable_ids: list[str] = []
+    rejected_ids: list[str] = []
+    for source_dir in dependency_root.iterdir():
+        metadata_path = source_dir / "wasb_ball_track_metadata.json"
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        expected_bindings = {
+            "source_video_sha256": builder.EXPECTED_SOURCE_VIDEO_SHA256[
+                source_dir.name
+            ],
+            "frame_times_sha256": builder._sha256_file(
+                source_dir / "frame_times.json"
+            ),
+            "wasb_predictions_csv_sha256": builder._sha256_file(
+                source_dir / "wasb_predictions.csv"
+            ),
+            "wasb_ball_track_sha256": builder._sha256_file(
+                source_dir / "wasb_ball_track.json"
+            ),
+            "wasb_checkpoint_sha256": builder.PRODUCTION_WASB_CHECKPOINT_SHA256,
+            "wasb_repo_commit": builder.PRODUCTION_WASB_REPO_COMMIT,
+            "wasb_adapter_code_sha256": adapter_sha256,
+        }
+        if not builder._dependency_builder_bindings_match(
+            metadata,
+            expected_bindings,
+        ):
+            rejected_ids.append(source_dir.name)
+        else:
+            reusable_ids.append(source_dir.name)
+            assert "builder_code_sha256" not in metadata["builder_bindings"]
+
+    assert sorted(reusable_ids) == [
+        "143sf3gdwxsa",
+        "98z43hspqz13",
+        "bewqc0glhgpq",
+        "st0epgnab7dr",
+    ]
+    assert rejected_ids == ["td2szayjwtrj"]
+    assert "builder_bindings" not in json.loads(
+        (dependency_root / rejected_ids[0] / "wasb_ball_track_metadata.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+
+def test_valid_resume_skips_inference_and_preserves_manifest_data(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, calls = _configure_resume_build_fixture(builder, patch, tmp_path)
+    metadata_validation_calls: list[dict[str, object]] = []
+    original_validator = builder._validate_wasb_run_metadata
+
+    def recording_validator(payload, **validator_kwargs):  # noqa: ANN001, ANN202
+        metadata_validation_calls.append(dict(payload))
+        return original_validator(payload, **validator_kwargs)
+
+    patch.setattr(builder, "_validate_wasb_run_metadata", recording_validator)
+    try:
+        fresh = builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        assert len(calls) == 1
+        assert len(metadata_validation_calls) == 1
+        assert fresh["dependencies_reused_count"] == 0
+        assert fresh["clips"][0]["dependency_reused"] is False
+        calls.clear()
+        metadata_validation_calls.clear()
+
+        def forbidden_inference(**_kwargs):  # noqa: ANN202
+            raise AssertionError("valid dependencies must skip run_wasb_or_convert")
+
+        original_runner = builder.run_wasb_or_convert
+        builder.run_wasb_or_convert = forbidden_inference
+        try:
+            resumed = builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        finally:
+            builder.run_wasb_or_convert = original_runner
+
+        assert calls == []
+        assert len(metadata_validation_calls) == 1
+        assert resumed["dependencies_reused_count"] == 1
+        assert resumed["clips"][0]["dependency_reused"] is True
+        assert _manifest_without_reuse_telemetry(resumed) == _manifest_without_reuse_telemetry(
+            fresh
+        )
+        stdout_rows = [json.loads(line) for line in capsys.readouterr().out.splitlines()]
+        assert stdout_rows[-1] == {"reused": True, "video_id": builder.TRAIN_IDS[0]}
+    finally:
+        patch.undo()
+
+
+def test_resume_dependency_identity_change_mid_consumption_fails_without_output(
+    tmp_path: Path,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, calls = _configure_resume_build_fixture(builder, patch, tmp_path)
+    try:
+        builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        calls.clear()
+        out_path = Path(kwargs["out"])
+        out_path.unlink()
+        dependency_dir = (
+            out_path.parent / "sst_dependencies" / builder.TRAIN_IDS[0]
+        )
+        predictions_csv = dependency_dir / "wasb_predictions.csv"
+        predictions_before = predictions_csv.read_bytes()
+        original_validator = builder._validate_wasb_predictions_csv
+        identity_changed = False
+
+        def change_identity_after_validation(path, **validator_kwargs):  # noqa: ANN001, ANN202
+            nonlocal identity_changed
+            result = original_validator(path, **validator_kwargs)
+            if not identity_changed:
+                text = predictions_csv.read_text(encoding="utf-8")
+                predictions_csv.write_text(
+                    text.replace("0.0", "0.00", 1),
+                    encoding="utf-8",
+                )
+                identity_changed = True
+            return result
+
+        patch.setattr(
+            builder,
+            "_validate_wasb_predictions_csv",
+            change_identity_after_validation,
+        )
+
+        manifest = builder.build_pbvision_ball_sst(
+            **kwargs,
+            resume_dependencies=True,
+        )
+
+        assert identity_changed is True
+        assert calls == []
+        assert out_path.exists()
+        assert manifest["dependencies_reused_count"] == 1
+        assert predictions_csv.read_bytes() == predictions_before
+    finally:
+        patch.undo()
+
+
+def test_resume_source_video_identity_change_mid_consumption_fails_without_output(
+    tmp_path: Path,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, calls = _configure_resume_build_fixture(builder, patch, tmp_path)
+    try:
+        builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        calls.clear()
+        out_path = Path(kwargs["out"])
+        out_path.unlink()
+        source_video = (
+            Path(kwargs["media_root"]) / builder.TRAIN_IDS[0] / "max.mp4"
+        )
+        original_extractor = builder.extract_wasb_observations
+        identity_changed = False
+
+        def change_source_after_extraction(payload, **extract_kwargs):  # noqa: ANN001, ANN202
+            nonlocal identity_changed
+            result = original_extractor(payload, **extract_kwargs)
+            if not identity_changed:
+                source_video.write_bytes(source_video.read_bytes() + b"\x00")
+                identity_changed = True
+            return result
+
+        patch.setattr(
+            builder,
+            "extract_wasb_observations",
+            change_source_after_extraction,
+        )
+
+        manifest = builder.build_pbvision_ball_sst(
+            **kwargs,
+            resume_dependencies=True,
+        )
+
+        assert identity_changed is True
+        assert calls == []
+        assert out_path.exists()
+        assert manifest["dependencies_reused_count"] == 1
+        assert (
+            manifest["clips"][0]["source_video_sha256"]
+            != builder._sha256_file(source_video)
+        )
+    finally:
+        patch.undo()
+
+
+def test_resume_checkpoint_identity_change_mid_consumption_fails_without_output(
+    tmp_path: Path,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, calls = _configure_resume_build_fixture(builder, patch, tmp_path)
+    checkpoint_path = Path(kwargs["wasb_checkpoint"])
+    checked_checkpoint_sha256 = builder._sha256_file(checkpoint_path)
+    resolved_identity = builder._resolve_wasb_identity()
+    resolved_identity["checkpoint_sha256"] = checked_checkpoint_sha256
+    resolved_identity["expected_checkpoint_sha256"] = checked_checkpoint_sha256
+    patch.setattr(
+        builder,
+        "PRODUCTION_WASB_CHECKPOINT_SHA256",
+        checked_checkpoint_sha256,
+    )
+    patch.setattr(
+        builder,
+        "_resolve_wasb_identity",
+        lambda **_kwargs: dict(resolved_identity),
+    )
+    try:
+        builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        calls.clear()
+        out_path = Path(kwargs["out"])
+        out_path.unlink()
+        metadata_path = (
+            out_path.parent
+            / "sst_dependencies"
+            / builder.TRAIN_IDS[0]
+            / "wasb_ball_track_metadata.json"
+        )
+        metadata_before = metadata_path.read_bytes()
+        original_validator = builder._validate_wasb_run_metadata
+        identity_changed = False
+
+        def change_checkpoint_after_runtime_validation(
+            payload, **validator_kwargs  # noqa: ANN001
+        ):  # noqa: ANN202
+            nonlocal identity_changed
+            result = original_validator(payload, **validator_kwargs)
+            if not identity_changed:
+                checkpoint_path.write_bytes(
+                    checkpoint_path.read_bytes() + b" changed"
+                )
+                identity_changed = True
+            return result
+
+        patch.setattr(
+            builder,
+            "_validate_wasb_run_metadata",
+            change_checkpoint_after_runtime_validation,
+        )
+
+        manifest = builder.build_pbvision_ball_sst(
+            **kwargs,
+            resume_dependencies=True,
+        )
+
+        assert identity_changed is True
+        assert calls == []
+        assert out_path.exists()
+        assert manifest["dependencies_reused_count"] == 1
+        assert metadata_path.read_bytes() == metadata_before
+        assert builder._sha256_file(checkpoint_path) != checked_checkpoint_sha256
+    finally:
+        patch.undo()
+
+
+def test_resume_wasb_repo_commit_change_mid_consumption_fails_without_output(
+    tmp_path: Path,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, calls = _configure_resume_build_fixture(builder, patch, tmp_path)
+    resolved_identity = builder._resolve_wasb_identity()
+    checked_repo_commit = str(resolved_identity["repo_commit"])
+    changed_repo_commit = "0" * 40
+    assert changed_repo_commit != checked_repo_commit
+    repo_commit = checked_repo_commit
+    patch.setattr(
+        builder,
+        "_resolve_wasb_identity",
+        lambda **_kwargs: dict(resolved_identity),
+    )
+
+    def fake_wasb_git_output(_repo, *args):  # noqa: ANN001, ANN202
+        if args == ("rev-parse", "HEAD"):
+            return repo_commit
+        if args == ("status", "--porcelain", "--untracked-files=all"):
+            return ""
+        raise AssertionError(f"unexpected git identity request: {args}")
+
+    patch.setattr(builder, "_git_output", fake_wasb_git_output)
+    try:
+        builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        calls.clear()
+        out_path = Path(kwargs["out"])
+        out_path.unlink()
+        metadata_path = (
+            out_path.parent
+            / "sst_dependencies"
+            / builder.TRAIN_IDS[0]
+            / "wasb_ball_track_metadata.json"
+        )
+        metadata_before = metadata_path.read_bytes()
+        original_validator = builder._validate_wasb_run_metadata
+        identity_changed = False
+
+        def change_repo_commit_after_runtime_validation(
+            payload, **validator_kwargs  # noqa: ANN001
+        ):  # noqa: ANN202
+            nonlocal identity_changed, repo_commit
+            result = original_validator(payload, **validator_kwargs)
+            if not identity_changed:
+                repo_commit = changed_repo_commit
+                identity_changed = True
+            return result
+
+        patch.setattr(
+            builder,
+            "_validate_wasb_run_metadata",
+            change_repo_commit_after_runtime_validation,
+        )
+
+        manifest = builder.build_pbvision_ball_sst(
+            **kwargs,
+            resume_dependencies=True,
+        )
+
+        assert identity_changed is True
+        assert calls == []
+        assert out_path.exists()
+        assert manifest["dependencies_reused_count"] == 1
+        assert metadata_path.read_bytes() == metadata_before
+    finally:
+        patch.undo()
+
+
+@pytest.mark.parametrize(
+    ("binding_key", "target_path"),
+    [
+        ("builder_code_sha256", "builder"),
+        ("wasb_adapter_code_sha256", "adapter"),
+    ],
+)
+def test_resume_code_identity_change_precedes_metadata_output(
+    tmp_path: Path,
+    binding_key: str,
+    target_path: str,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, calls = _configure_resume_build_fixture(builder, patch, tmp_path)
+    try:
+        builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        calls.clear()
+        out_path = Path(kwargs["out"])
+        out_path.unlink()
+        metadata_path = (
+            out_path.parent
+            / "sst_dependencies"
+            / builder.TRAIN_IDS[0]
+            / "wasb_ball_track_metadata.json"
+        )
+        metadata_before = metadata_path.read_bytes()
+        original_validator = builder._validate_wasb_run_metadata
+        original_sha256_file = builder._sha256_file
+        identity_changed = False
+        identity_path = (
+            Path(builder.__file__).resolve(strict=True)
+            if target_path == "builder"
+            else (
+                Path(builder.ROOT) / builder.WASB_ADAPTER_RELATIVE_PATH
+            ).resolve(strict=True)
+        )
+
+        def change_code_identity_after_runtime_validation(
+            payload, **validator_kwargs  # noqa: ANN001
+        ):  # noqa: ANN202
+            nonlocal identity_changed
+            result = original_validator(payload, **validator_kwargs)
+            identity_changed = True
+            return result
+
+        def divergent_sha256_file(path):  # noqa: ANN001, ANN202
+            observed = original_sha256_file(Path(path))
+            if identity_changed and Path(path).resolve(strict=True) == identity_path:
+                return "0" * 64
+            return observed
+
+        patch.setattr(
+            builder,
+            "_validate_wasb_run_metadata",
+            change_code_identity_after_runtime_validation,
+        )
+        patch.setattr(builder, "_sha256_file", divergent_sha256_file)
+
+        manifest = builder.build_pbvision_ball_sst(
+            **kwargs,
+            resume_dependencies=True,
+        )
+
+        assert identity_changed is True
+        assert calls == []
+        assert out_path.exists()
+        assert manifest["dependencies_reused_count"] == 1
+        assert metadata_path.read_bytes() == metadata_before
+    finally:
+        patch.undo()
+
+
+def test_identity_stability_checks_precede_each_output_boundary(
+    tmp_path: Path,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, _calls = _configure_resume_build_fixture(builder, patch, tmp_path)
+    events: list[tuple[str, Path | None]] = []
+    original_snapshot = builder._create_immutable_dependency_snapshot
+    original_probe = builder.probe_media_pts
+    original_publish = builder._publish_snapshot_file
+
+    def recording_snapshot(**snapshot_kwargs):  # noqa: ANN202
+        snapshot = original_snapshot(**snapshot_kwargs)
+        events.append(("snapshot_verified", snapshot.root))
+        return snapshot
+
+    def recording_probe(path, **probe_kwargs):  # noqa: ANN001, ANN202
+        resolved = Path(path).resolve(strict=True)
+        events.append(("probe", resolved))
+        assert resolved.stat().st_mode & 0o222 == 0
+        return original_probe(path, **probe_kwargs)
+
+    def recording_publish(source, destination):  # noqa: ANN001, ANN202
+        events.append(("publish", Path(destination)))
+        return original_publish(Path(source), Path(destination))
+
+    patch.setattr(builder, "_create_immutable_dependency_snapshot", recording_snapshot)
+    patch.setattr(builder, "probe_media_pts", recording_probe)
+    patch.setattr(builder, "_publish_snapshot_file", recording_publish)
+    try:
+        builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+
+        snapshot_index = next(
+            index for index, event in enumerate(events) if event[0] == "snapshot_verified"
+        )
+        probe_indices = [
+            index for index, event in enumerate(events) if event[0] == "probe"
+        ]
+        publish_indices = [
+            index for index, event in enumerate(events) if event[0] == "publish"
+        ]
+        assert probe_indices and publish_indices
+        assert snapshot_index < min(probe_indices)
+        assert max(probe_indices) < min(publish_indices)
+        source_video = (
+            Path(kwargs["media_root"]) / builder.TRAIN_IDS[0] / "max.mp4"
+        ).resolve(strict=True)
+        assert all(
+            event[1] != source_video
+            for event in events
+            if event[0] == "probe"
+        )
+    finally:
+        patch.undo()
+
+
+@pytest.mark.parametrize(
+    "tamper_case",
+    [
+        "predictions_csv_bytes",
+        "ball_track_bytes",
+        "checkpoint_binding",
+        "repo_commit_binding",
+        "deleted_dependency",
+        "missing_builder_bindings",
+    ],
+)
+def test_resume_tampering_falls_through_to_recompute(
+    tmp_path: Path,
+    tamper_case: str,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, calls = _configure_resume_build_fixture(builder, patch, tmp_path)
+    try:
+        builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        calls.clear()
+        dependency_dir = Path(kwargs["out"]).parent / "sst_dependencies" / builder.TRAIN_IDS[0]
+        _tamper_resume_dependency(dependency_dir, tamper_case)
+
+        rebuilt = builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+
+        assert len(calls) == 1
+        assert rebuilt["dependencies_reused_count"] == 0
+        assert rebuilt["clips"][0]["dependency_reused"] is False
+    finally:
+        patch.undo()
+
+
+def test_mixed_resume_preserves_all_fresh_manifest_data(tmp_path: Path) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    video_ids = builder.TRAIN_IDS[:2]
+    patch = pytest.MonkeyPatch()
+    kwargs, calls = _configure_resume_build_fixture(
+        builder,
+        patch,
+        tmp_path,
+        video_ids=video_ids,
+    )
+    try:
+        fresh = builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        assert len(calls) == 2
+        calls.clear()
+        dependency_root = Path(kwargs["out"]).parent / "sst_dependencies"
+        (dependency_root / video_ids[1] / "wasb_predictions.csv").write_bytes(b"tampered")
+
+        mixed = builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+
+        assert len(calls) == 1
+        assert calls[0].parent.name == video_ids[1]
+        assert mixed["dependencies_reused_count"] == 1
+        assert [clip["dependency_reused"] for clip in mixed["clips"]] == [True, False]
+        assert _manifest_without_reuse_telemetry(mixed) == _manifest_without_reuse_telemetry(
+            fresh
+        )
+    finally:
+        patch.undo()
+
+
+def test_original_source_mutation_after_snapshot_verify_is_byte_identical(
+    tmp_path: Path,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, inference_calls = _configure_resume_build_fixture(
+        builder,
+        patch,
+        tmp_path,
+    )
+    try:
+        builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        inference_calls.clear()
+        unmutated = builder.build_pbvision_ball_sst(
+            **kwargs,
+            resume_dependencies=True,
+        )
+        unmutated_bytes = Path(kwargs["out"]).read_bytes()
+        inference_calls.clear()
+
+        source_video = (
+            Path(kwargs["media_root"]) / builder.TRAIN_IDS[0] / "max.mp4"
+        ).resolve(strict=True)
+        original_probe = builder.probe_media_pts
+        consumed_paths: list[Path] = []
+        source_mutated = False
+
+        def mutate_original_after_snapshot_probe(
+            path, **probe_kwargs  # noqa: ANN001
+        ):  # noqa: ANN202
+            nonlocal source_mutated
+            consumed_paths.append(Path(path).resolve(strict=True))
+            result = original_probe(path, **probe_kwargs)
+            if not source_mutated:
+                source_video.write_bytes(source_video.read_bytes() + b" changed")
+                source_mutated = True
+            return result
+
+        patch.setattr(
+            builder,
+            "probe_media_pts",
+            mutate_original_after_snapshot_probe,
+        )
+
+        mutated = builder.build_pbvision_ball_sst(
+            **kwargs,
+            resume_dependencies=True,
+        )
+        mutated_bytes = Path(kwargs["out"]).read_bytes()
+
+        assert source_mutated is True
+        assert consumed_paths and all(path != source_video for path in consumed_paths)
+        assert inference_calls == []
+        assert mutated == unmutated
+        assert mutated_bytes == unmutated_bytes
+    finally:
+        patch.undo()
+
+
+def test_original_source_deletion_after_snapshot_verify_is_byte_identical(
+    tmp_path: Path,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    patch = pytest.MonkeyPatch()
+    kwargs, inference_calls = _configure_resume_build_fixture(
+        builder,
+        patch,
+        tmp_path,
+    )
+    try:
+        builder.build_pbvision_ball_sst(**kwargs, resume_dependencies=True)
+        inference_calls.clear()
+        baseline = builder.build_pbvision_ball_sst(
+            **kwargs,
+            resume_dependencies=True,
+        )
+        baseline_manifest_bytes = Path(kwargs["out"]).read_bytes()
+        dependency_root = Path(kwargs["out"]).parent / "sst_dependencies"
+        baseline_dependency_bytes = {
+            path.relative_to(dependency_root).as_posix(): path.read_bytes()
+            for path in sorted(dependency_root.rglob("*"))
+            if path.is_file()
+        }
+        inference_calls.clear()
+
+        video_id = builder.TRAIN_IDS[0]
+        source_video = (
+            Path(kwargs["media_root"]) / video_id / "max.mp4"
+        ).resolve(strict=True)
+        checkpoint = Path(kwargs["wasb_checkpoint"]).resolve(strict=True)
+        wasb_repo = Path(kwargs["wasb_repo"]).resolve(strict=True)
+        original_dependency_files = {
+            source_video,
+            checkpoint,
+            Path(kwargs["split_manifest"]).resolve(strict=True),
+            *(
+                (Path(kwargs["gallery_root"]) / video_id / filename).resolve(
+                    strict=True
+                )
+                for filename in builder.PRODUCTION_GALLERY_ARTIFACT_FILENAMES
+            ),
+            *(
+                path.resolve(strict=True)
+                for path in dependency_root.rglob("*")
+                if path.is_file()
+            ),
+        }
+        original_snapshot = builder._create_immutable_dependency_snapshot
+        original_resolve = Path.resolve
+        original_stat = Path.stat
+        original_open = Path.open
+        snapshot_verified = False
+        post_snapshot_original_accesses: list[tuple[str, str]] = []
+
+        def is_original_dependency(path: Path) -> bool:
+            candidate = path if path.is_absolute() else Path.cwd() / path
+            return (
+                candidate in original_dependency_files
+                or candidate == wasb_repo
+                or candidate.is_relative_to(wasb_repo)
+            )
+
+        def record_snapshot_and_delete_source(**snapshot_kwargs):  # noqa: ANN202
+            nonlocal snapshot_verified
+            snapshot = original_snapshot(**snapshot_kwargs)
+            snapshot_verified = True
+            source_video.unlink()
+            return snapshot
+
+        def record_resolve(self, strict=False):  # noqa: ANN001, ANN202
+            if snapshot_verified and is_original_dependency(self):
+                post_snapshot_original_accesses.append(("resolve", str(self)))
+            return original_resolve(self, strict=strict)
+
+        def record_stat(self, *args, **stat_kwargs):  # noqa: ANN001, ANN202
+            if snapshot_verified and is_original_dependency(self):
+                post_snapshot_original_accesses.append(("stat", str(self)))
+            return original_stat(self, *args, **stat_kwargs)
+
+        def record_open(self, *args, **open_kwargs):  # noqa: ANN001, ANN202
+            if snapshot_verified and is_original_dependency(self):
+                post_snapshot_original_accesses.append(("open", str(self)))
+            return original_open(self, *args, **open_kwargs)
+
+        patch.setattr(
+            builder,
+            "_create_immutable_dependency_snapshot",
+            record_snapshot_and_delete_source,
+        )
+        patch.setattr(Path, "resolve", record_resolve)
+        patch.setattr(Path, "stat", record_stat)
+        patch.setattr(Path, "open", record_open)
+
+        deleted_source = builder.build_pbvision_ball_sst(
+            **kwargs,
+            resume_dependencies=True,
+        )
+        snapshot_verified = False
+        deleted_manifest_bytes = Path(kwargs["out"]).read_bytes()
+        deleted_dependency_bytes = {
+            path.relative_to(dependency_root).as_posix(): path.read_bytes()
+            for path in sorted(dependency_root.rglob("*"))
+            if path.is_file()
+        }
+
+        assert inference_calls == []
+        assert deleted_source == baseline
+        assert deleted_manifest_bytes == baseline_manifest_bytes
+        assert deleted_dependency_bytes == baseline_dependency_bytes
+        assert post_snapshot_original_accesses == []
+        assert not source_video.exists()
+    finally:
+        patch.undo()
+
+
+def test_non_snapshot_dependency_consumption_is_typed_error(
+    tmp_path: Path,
+) -> None:
+    from scripts.racketsport import build_pbvision_ball_sst as builder
+
+    snapshot_root = tmp_path / "immutable_snapshot"
+    snapshot_root.mkdir()
+    outside = tmp_path / "original_source.mp4"
+    outside.write_bytes(b"original")
+
+    with pytest.raises(
+        builder.BallSstSnapshotPathError,
+        match="non-snapshot dependency path",
+    ):
+        builder._require_snapshot_path(
+            snapshot_root,
+            outside,
+            context="source PTS probe",
+        )
+
+
 def _train_ids() -> tuple[str, ...]:
     from scripts.racketsport.build_pbvision_ball_sst import TRAIN_IDS
 
@@ -1357,3 +2141,279 @@ def _empty_clips(builder, tmp_path: Path, dependencies):  # noqa: ANN001, ANN202
             }
         )
     return clips
+
+
+def _load_prepatch_builder(tmp_path: Path):  # noqa: ANN202
+    source = subprocess.run(
+        ["git", "show", f"{PREPATCH_BUILDER_REVISION}:{CLI}"],
+        check=True,
+        capture_output=True,
+    ).stdout
+    assert hashlib.sha256(source).hexdigest() == PREPATCH_BUILDER_SHA256
+    module_path = tmp_path / "head_builder" / CLI
+    module_path.parent.mkdir(parents=True)
+    module_path.write_bytes(source)
+    module_name = "_head_build_pbvision_ball_sst_fixture"
+    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _configure_resume_build_fixture(
+    builder,  # noqa: ANN001
+    patch: pytest.MonkeyPatch,
+    root: Path,
+    *,
+    video_ids: tuple[str, ...] | None = None,
+):  # noqa: ANN202
+    repository_root = Path.cwd().resolve(strict=True)
+    selected_ids = video_ids or tuple(builder.TRAIN_IDS[:1])
+    gallery = root / "gallery"
+    media_root = root / "media"
+    checkpoint = root / "checkpoint.pth.tar"
+    repo = root / "wasb_repo"
+    split = root / "split.json"
+    models_manifest = root / "models_manifest.json"
+    out = root / "sst.json"
+    identity_file = root / "stable_builder_identity.py"
+    root.mkdir(parents=True, exist_ok=True)
+    repo.mkdir(parents=True, exist_ok=True)
+    checkpoint.write_bytes(b"fixture checkpoint")
+    split.write_text("{}\n", encoding="utf-8")
+    models_manifest.write_text('{"models": []}\n', encoding="utf-8")
+    identity_file.write_text("# stable fixture identity\n", encoding="utf-8")
+
+    media_hashes: dict[str, str] = {}
+    gallery_hashes: dict[str, dict[str, str]] = {}
+    for video_id in selected_ids:
+        source_media = media_root / video_id / "max.mp4"
+        source_media.parent.mkdir(parents=True, exist_ok=True)
+        source_media.write_bytes(f"fixture media {video_id}".encode("utf-8"))
+        media_hashes[video_id] = builder._sha256_file(source_media)
+
+        source_gallery = gallery / video_id
+        source_gallery.mkdir(parents=True, exist_ok=True)
+        payloads = {
+            "cv_export.json": {"camera": {"fps": 30.0}, "sessions": []},
+            "api_get_metadata.json": {
+                "metadata": {"width": 64, "height": 48, "fps": 30.0}
+            },
+            "video_provenance.json": {
+                "video_id": video_id,
+                "source_video_url": f"https://storage.googleapis.com/pbv-pro/{video_id}/max.mp4",
+            },
+        }
+        hashes: dict[str, str] = {}
+        for filename, payload in payloads.items():
+            path = source_gallery / filename
+            builder._write_json(path, payload)
+            hashes[filename] = builder._sha256_file(path)
+        gallery_hashes[video_id] = hashes
+
+    adapter_path = repository_root / "threed/racketsport/wasb_adapter.py"
+    builder_identity = {
+        "builder_path": CLI,
+        "builder_code_sha256": builder._sha256_file(identity_file),
+        "builder_git_commit": "d" * 40,
+        "wasb_adapter_path": "threed/racketsport/wasb_adapter.py",
+        "wasb_adapter_code_sha256": builder._sha256_file(adapter_path),
+        "wasb_adapter_git_commit": "d" * 40,
+    }
+    wasb_identity = {
+        "manifest_model_id": builder.PRODUCTION_WASB_MODEL_ID,
+        "models_manifest_path": str(models_manifest.resolve(strict=True)),
+        "models_manifest_sha256": builder._sha256_file(models_manifest),
+        "checkpoint_path": str(checkpoint.resolve(strict=True)),
+        "checkpoint_sha256": builder._sha256_file(checkpoint),
+        "expected_checkpoint_sha256": builder._sha256_file(checkpoint),
+        "repo_path": str(repo.resolve(strict=True)),
+        "repo_commit": builder.PRODUCTION_WASB_REPO_COMMIT,
+        "expected_repo_commit": builder.PRODUCTION_WASB_REPO_COMMIT,
+        "repo_clean": True,
+        "production_identity_verified": True,
+    }
+    authority = {
+        "authority_id": "resume_unit_fixture",
+        "canonical_gallery_relative_path": str(gallery),
+        "artifact_filenames": list(builder.PRODUCTION_GALLERY_ARTIFACT_FILENAMES),
+        "expected_sha256_by_source": gallery_hashes,
+    }
+    timing = builder.MediaTiming(
+        fps=30.0,
+        duration_s=0.1,
+        pts_s=(0.0, 1.0 / 30.0, 2.0 / 30.0),
+        width=64,
+        height=48,
+    )
+    calls: list[Path] = []
+
+    def fake_run_wasb_or_convert(**call_kwargs):  # noqa: ANN202
+        calls.append(Path(call_kwargs["video"]))
+        csv_path = Path(call_kwargs["prediction_csv_out"])
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
+        csv_path.write_text(
+            "Frame,Visibility,X,Y,Confidence\n"
+            "0,0,0.0,0.0,0.0\n"
+            "1,0,0.0,0.0,0.0\n"
+            "2,0,0.0,0.0,0.0\n",
+            encoding="utf-8",
+        )
+        track = builder.wasb_csv_to_ball_track(
+            csv_path,
+            fps=call_kwargs["fps"],
+            frame_times=Path(call_kwargs["frame_times"]),
+            visible_threshold=call_kwargs["visible_threshold"],
+            input_preprocessing="official",
+        )
+        builder._write_json(Path(call_kwargs["out"]), track)
+        frame_count = len(timing.pts_s)
+        wall_seconds = 1.0
+        effective_fps = frame_count / wall_seconds
+        return {
+            "schema_version": 1,
+            "artifact_type": "racketsport_wasb_ball_run",
+            "status": builder.STATUS_TESTED,
+            "source_mode": "wasb_predict",
+            "predictions_csv": str(csv_path),
+            "out": str(call_kwargs["out"]),
+            "fps": call_kwargs["fps"],
+            "frame_count": frame_count,
+            "visible_frame_count": 0,
+            "confidence_semantics": builder.WASB_CONFIDENCE_SEMANTICS,
+            "visible_threshold": call_kwargs["visible_threshold"],
+            "input_preprocessing": "official",
+            "non_promotable_measurement_mode": False,
+            "not_ground_truth": True,
+            "official_repo_url": builder.WASB_REPO_URL,
+            "official_model_zoo_url": builder.WASB_MODEL_ZOO_URL,
+            "runtime": {
+                "wasb_repo": str(call_kwargs["wasb_repo"]),
+                "wasb_repo_commit": wasb_identity["repo_commit"],
+                "wasb_checkpoint": {
+                    "path": str(call_kwargs["checkpoint"]),
+                    "sha256": wasb_identity["checkpoint_sha256"],
+                },
+                "video": str(call_kwargs["video"]),
+                "source_video_fps": call_kwargs["fps"],
+                "source_video_frame_count": frame_count,
+                "source_video_size": [timing.width, timing.height],
+                "processed_frame_count": frame_count,
+                "processed_window_count": frame_count - 2,
+                "read_frame_count": frame_count,
+                "video_range_seconds": None,
+                "max_frames": None,
+                "batch_size": call_kwargs["batch_size"],
+                "device": call_kwargs["device"],
+                "input_preprocessing": "official",
+                "non_promotable_measurement_mode": False,
+                "wall_seconds": wall_seconds,
+                "effective_fps": effective_fps,
+                "realtime_factor": effective_fps / call_kwargs["fps"],
+            },
+        }
+
+    patch.setattr(builder, "__file__", str(identity_file))
+    patch.setattr(builder, "ROOT", repository_root)
+    patch.setattr(builder, "TRAIN_IDS", selected_ids)
+    patch.setattr(builder, "TEACHER_VAL_ONLY_IDS", ())
+    patch.setattr(builder, "TEACHER_TEST_ONLY_IDS", ())
+    patch.setattr(builder, "ALL_NONTRAIN_IDS", frozenset())
+    patch.setattr(builder, "EXPECTED_SOURCE_VIDEO_SHA256", media_hashes)
+    patch.setattr(builder, "PRODUCTION_GALLERY_ARTIFACT_SHA256", gallery_hashes)
+    patch.setattr(builder, "_validate_frozen_split", lambda *_args, **_kwargs: None)
+    patch.setattr(
+        builder,
+        "_canonical_gallery_root",
+        lambda path, **_kwargs: Path(path).resolve(strict=True),
+    )
+    patch.setattr(
+        builder,
+        "_validate_production_gallery_inventory",
+        lambda _gallery: gallery_hashes,
+    )
+    patch.setattr(builder, "_builder_identity", lambda: dict(builder_identity))
+    patch.setattr(builder, "_resolve_wasb_identity", lambda **_kwargs: dict(wasb_identity))
+
+    original_git_output = builder._git_output
+
+    def fixture_git_output(git_repo, *args):  # noqa: ANN001, ANN202
+        resolved_git_repo = Path(git_repo).resolve()
+        if (
+            resolved_git_repo == repo.resolve()
+            or resolved_git_repo.name == "wasb_repo"
+        ):
+            if args == ("rev-parse", "HEAD"):
+                return wasb_identity["repo_commit"]
+            if args == ("status", "--porcelain", "--untracked-files=all"):
+                return ""
+            raise AssertionError(f"unexpected fixture WASB git request: {args}")
+        return original_git_output(Path(git_repo), *args)
+
+    patch.setattr(builder, "_git_output", fixture_git_output)
+    patch.setattr(builder, "_production_gallery_authority_payload", lambda: dict(authority))
+    patch.setattr(builder, "probe_media_pts", lambda *_args, **_kwargs: timing)
+    patch.setattr(builder, "run_wasb_or_convert", fake_run_wasb_or_convert)
+    patch.setattr(
+        builder,
+        "_verify_production_artifacts",
+        lambda **_kwargs: {
+            "verified": True,
+            "status": "passed",
+            "reason": "resume unit fixture",
+            "verified_clip_count": len(selected_ids),
+            "verified_sample_count": 0,
+        },
+    )
+    return (
+        {
+            "gallery_root": gallery,
+            "media_root": media_root,
+            "split_manifest": split,
+            "wasb_checkpoint": checkpoint,
+            "wasb_repo": repo,
+            "teacher_confidence_min": 0.90,
+            "agreement_radius_px": 20.0,
+            "pseudo_weight": 0.25,
+            "out": out,
+            "device": "cpu",
+            "wasb_batch_size": 1,
+        },
+        calls,
+    )
+
+
+def _tamper_resume_dependency(dependency_dir: Path, tamper_case: str) -> None:
+    metadata_path = dependency_dir / "wasb_ball_track_metadata.json"
+    if tamper_case == "predictions_csv_bytes":
+        path = dependency_dir / "wasb_predictions.csv"
+        path.write_bytes(path.read_bytes() + b"tampered")
+    elif tamper_case == "ball_track_bytes":
+        path = dependency_dir / "wasb_ball_track.json"
+        path.write_bytes(path.read_bytes() + b" ")
+    elif tamper_case == "deleted_dependency":
+        (dependency_dir / "wasb_predictions.csv").unlink()
+    else:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        if tamper_case == "checkpoint_binding":
+            metadata["builder_bindings"]["wasb_checkpoint_sha256"] = "0" * 64
+        elif tamper_case == "repo_commit_binding":
+            metadata["builder_bindings"]["wasb_repo_commit"] = "0" * 40
+        elif tamper_case == "missing_builder_bindings":
+            metadata.pop("builder_bindings")
+        else:
+            raise AssertionError(f"unknown tamper case: {tamper_case}")
+        metadata_path.write_text(
+            json.dumps(metadata, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+
+
+def _manifest_without_reuse_telemetry(payload: dict[str, object]) -> bytes:
+    normalized = copy.deepcopy(payload)
+    normalized.pop("dependencies_reused_count", None)
+    for clip in normalized["clips"]:
+        clip.pop("dependency_reused", None)
+    return (json.dumps(normalized, indent=2, sort_keys=True) + "\n").encode("utf-8")

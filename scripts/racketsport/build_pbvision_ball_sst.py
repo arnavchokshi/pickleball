@@ -30,6 +30,7 @@ import csv
 import hashlib
 import json
 import math
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -189,10 +190,29 @@ SAMPLE_SHA_DEPENDENCY_KEYS = frozenset(
     }
 )
 SAMPLE_DEPENDENCY_KEYS = SAMPLE_SHA_DEPENDENCY_KEYS | {"wasb_repo_commit"}
+WASB_BUILDER_BINDING_KEYS = frozenset(
+    {
+        "source_video_sha256",
+        "frame_times_sha256",
+        "wasb_predictions_csv_sha256",
+        "wasb_ball_track_sha256",
+        "wasb_checkpoint_sha256",
+        "wasb_repo_commit",
+        "wasb_adapter_code_sha256",
+    }
+)
 
 
 class BallSstBuildError(ValueError):
     """Invalid or unsafe B1 input."""
+
+
+class BallSstDependencyStabilityError(BallSstBuildError):
+    """A captured dependency identity diverged during materialization."""
+
+
+class BallSstSnapshotPathError(BallSstDependencyStabilityError):
+    """A downstream consumer was given a path outside its immutable snapshot."""
 
 
 class BallSstBuildRefusal(RuntimeError):
@@ -226,6 +246,52 @@ class MediaTiming:
     height: int
 
 
+@dataclass(frozen=True)
+class ReusableDependencyIdentity:
+    metadata: Mapping[str, Any]
+    expected_bindings: Mapping[str, str]
+
+
+@dataclass(frozen=True)
+class SnapshotArtifactPaths:
+    frame_times: Path
+    ball_track: Path
+    metadata: Path
+    predictions_csv: Path
+
+
+@dataclass(frozen=True)
+class SnapshotDeclarationIdentities:
+    gallery_root: str
+    media_root: str
+    split_manifest: str
+    source_video_by_id: Mapping[str, str]
+    checkpoint: str
+    wasb_repo: str
+
+
+@dataclass(frozen=True)
+class ImmutableDependencySnapshot:
+    root: Path
+    split_manifest: Path
+    gallery_root: Path
+    media_root: Path
+    checkpoint: Path
+    wasb_repo: Path
+    models_manifest: Path
+    builder_code: Path
+    wasb_adapter_code: Path
+    reused_artifacts: Mapping[str, SnapshotArtifactPaths]
+    declarations: SnapshotDeclarationIdentities
+
+
+@dataclass(frozen=True)
+class SnapshotVerificationContext:
+    inputs: ImmutableDependencySnapshot
+    artifacts: Mapping[str, SnapshotArtifactPaths]
+    publication_artifacts_by_video: Mapping[str, SnapshotArtifactPaths]
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
@@ -242,6 +308,7 @@ def main(argv: list[str] | None = None) -> int:
             out=args.out,
             device=args.device,
             wasb_batch_size=args.wasb_batch_size,
+            resume_dependencies=args.resume_dependencies,
         )
     except BallSstBuildRefusal as exc:
         _write_json(args.out, exc.payload)
@@ -275,6 +342,7 @@ def build_pbvision_ball_sst(
     out: str | Path,
     device: str = "cuda",
     wasb_batch_size: int = 8,
+    resume_dependencies: bool = False,
 ) -> dict[str, Any]:
     gallery = Path(gallery_root)
     media = Path(media_root)
@@ -294,8 +362,6 @@ def build_pbvision_ball_sst(
     production_policy_selected = not policy_overrides
     builder_identity = _builder_identity()
 
-    split_payload = _read_json(split_path)
-    _validate_frozen_split(split_payload, split_path)
     split_sha256 = _sha256_file(split_path)
     wasb_identity = _resolve_wasb_identity(
         checkpoint_path=Path(wasb_checkpoint),
@@ -341,8 +407,6 @@ def build_pbvision_ball_sst(
             )
         )
 
-    checkpoint_path = Path(str(wasb_identity["checkpoint_path"]))
-    repo_path = Path(str(wasb_identity["repo_path"]))
     checkpoint_sha256 = str(wasb_identity["checkpoint_sha256"])
     gallery = _canonical_gallery_root(gallery, require_production_identity=production_policy_selected)
     media = canonical_media_root or _canonical_root(media, field="media_root")
@@ -353,153 +417,378 @@ def build_pbvision_ball_sst(
     )
 
     dependency_root = out_path.parent / f"{out_path.stem}_dependencies"
-    clips: list[dict[str, Any]] = []
-    decode_failures = 0
-    for video_id in TRAIN_IDS:
-        source_media = _canonical_media_path(media, video_id).resolve(strict=True)
-        cv_export_path = _source_file(gallery, video_id, "cv_export.json")
-        metadata_path = _source_file(gallery, video_id, "api_get_metadata.json")
-        provenance_path = _source_file(gallery, video_id, "video_provenance.json")
-        cv_export = _read_source_json(gallery, video_id, "cv_export.json")
-        metadata = _read_source_json(gallery, video_id, "api_get_metadata.json")
-        provenance = _read_source_json(gallery, video_id, "video_provenance.json")
-        _validate_gallery_provenance(provenance, video_id=video_id)
-        gallery_hashes = production_gallery_hashes_by_source.get(video_id) or {
-            "cv_export.json": _sha256_file(cv_export_path),
-            "api_get_metadata.json": _sha256_file(metadata_path),
-            "video_provenance.json": _sha256_file(provenance_path),
-        }
-        source_width, source_height = _source_dimensions(metadata, video_id)
-        teacher_fps = _teacher_fps(cv_export, metadata, video_id)
-        teacher = extract_teacher_observations(
-            cv_export,
-            width=source_width,
-            height=source_height,
-            teacher_fps=teacher_fps,
+    snapshot = _create_immutable_dependency_snapshot(
+        out_path=out_path,
+        gallery_root=gallery,
+        media_root=media,
+        split_manifest=split_path,
+        split_manifest_sha256=split_sha256,
+        dependency_root=dependency_root,
+        builder_identity=builder_identity,
+        wasb_identity=wasb_identity,
+        media_sha256_by_video=media_hashes,
+        gallery_sha256_by_video=production_gallery_hashes_by_source,
+        resume_dependencies=resume_dependencies,
+    )
+    declaration_gallery = Path(snapshot.declarations.gallery_root)
+    declaration_media = Path(snapshot.declarations.media_root)
+    declaration_split = Path(snapshot.declarations.split_manifest)
+    declaration_checkpoint = Path(snapshot.declarations.checkpoint)
+    declaration_wasb_repo = Path(snapshot.declarations.wasb_repo)
+    materialization_root = Path(
+        tempfile.mkdtemp(
+            prefix=f".{out_path.stem}_materialization_",
+            dir=str(out_path.parent),
         )
+    )
+    try:
+        snapshot_split = _require_snapshot_path(
+            snapshot.root,
+            snapshot.split_manifest,
+            context="frozen split validation",
+        )
+        split_payload = _read_json(snapshot_split)
+        _validate_frozen_split(split_payload, snapshot_split)
 
-        media_sha256 = media_hashes[video_id]
-        timing = probe_media_pts(source_media, video_id=video_id)
-        if (timing.width, timing.height) != (source_width, source_height):
-            raise BallSstBuildError(
-                f"{video_id} gallery dimensions {(source_width, source_height)} differ from "
-                f"decoded media dimensions {(timing.width, timing.height)}"
+        snapshot_checkpoint = _require_snapshot_path(
+            snapshot.root,
+            snapshot.checkpoint,
+            context="WASB checkpoint consumption",
+        )
+        snapshot_repo = _require_snapshot_path(
+            snapshot.root,
+            snapshot.wasb_repo,
+            context="WASB repository consumption",
+        )
+        clips: list[dict[str, Any]] = []
+        artifacts_by_video: dict[str, SnapshotArtifactPaths] = {}
+        publication_artifacts_by_video: dict[str, SnapshotArtifactPaths] = {}
+        decode_failures = 0
+        for video_id in TRAIN_IDS:
+            source_declaration = Path(
+                snapshot.declarations.source_video_by_id[video_id]
             )
-        source_dir = dependency_root / video_id
-        frame_times_path = source_dir / "frame_times.json"
-        frame_times_payload = _frame_times_payload(timing, media_sha256=media_sha256)
-        _write_json(frame_times_path, frame_times_payload)
-        frame_times_sha256 = _sha256_file(frame_times_path)
+            snapshot_source = _require_snapshot_path(
+                snapshot.root,
+                _canonical_media_path(snapshot.media_root, video_id),
+                context=f"{video_id} source-video consumption",
+            )
+            cv_export_path = _require_snapshot_path(
+                snapshot.root,
+                _source_file(snapshot.gallery_root, video_id, "cv_export.json"),
+                context=f"{video_id} cv_export consumption",
+            )
+            metadata_path = _require_snapshot_path(
+                snapshot.root,
+                _source_file(
+                    snapshot.gallery_root,
+                    video_id,
+                    "api_get_metadata.json",
+                ),
+                context=f"{video_id} metadata consumption",
+            )
+            provenance_path = _require_snapshot_path(
+                snapshot.root,
+                _source_file(
+                    snapshot.gallery_root,
+                    video_id,
+                    "video_provenance.json",
+                ),
+                context=f"{video_id} provenance consumption",
+            )
+            cv_export = _read_json(cv_export_path)
+            metadata = _read_json(metadata_path)
+            provenance = _read_json(provenance_path)
+            _validate_gallery_provenance(provenance, video_id=video_id)
+            gallery_hashes = production_gallery_hashes_by_source.get(video_id) or {
+                "cv_export.json": _sha256_file(cv_export_path),
+                "api_get_metadata.json": _sha256_file(metadata_path),
+                "video_provenance.json": _sha256_file(provenance_path),
+            }
+            source_width, source_height = _source_dimensions(metadata, video_id)
+            teacher_fps = _teacher_fps(cv_export, metadata, video_id)
+            teacher = extract_teacher_observations(
+                cv_export,
+                width=source_width,
+                height=source_height,
+                teacher_fps=teacher_fps,
+            )
 
-        wasb_track_path = source_dir / "wasb_ball_track.json"
-        wasb_metadata_path = source_dir / "wasb_ball_track_metadata.json"
-        wasb_csv_path = source_dir / "wasb_predictions.csv"
-        run_summary = run_wasb_or_convert(
-            out=wasb_track_path,
-            fps=timing.fps,
-            frame_times=frame_times_path,
-            metadata_out=wasb_metadata_path,
-            video=source_media,
-            checkpoint=checkpoint_path,
-            wasb_repo=repo_path,
-            prediction_csv_out=wasb_csv_path,
-            batch_size=wasb_batch_size,
-            visible_threshold=confidence_min,
-            device=device,
-            input_preprocessing="official",
-            emit_size_observations=False,
-            emit_below_threshold_candidates=False,
-        )
-        wasb_payload = _read_json(wasb_track_path)
-        wasb_rows, wasb_frame_count = extract_wasb_observations(
-            wasb_payload,
-            pts_s=timing.pts_s,
-            fps=timing.fps,
-            width=source_width,
-            height=source_height,
-            visible_threshold=confidence_min,
-        )
-        _validate_wasb_predictions_csv(
-            wasb_csv_path,
-            pts_s=timing.pts_s,
-            width=source_width,
-            height=source_height,
-        )
-        regenerated_track = wasb_csv_to_ball_track(
-            wasb_csv_path,
-            fps=timing.fps,
-            frame_times=frame_times_path,
-            visible_threshold=confidence_min,
-            input_preprocessing="official",
-        )
-        if regenerated_track != wasb_payload:
-            raise BallSstBuildError(
-                f"{video_id} WASB ball track does not reproduce from its prediction CSV"
+            media_sha256 = media_hashes[video_id]
+            timing = probe_media_pts(snapshot_source, video_id=video_id)
+            if (timing.width, timing.height) != (source_width, source_height):
+                raise BallSstBuildError(
+                    f"{video_id} gallery dimensions {(source_width, source_height)} differ from "
+                    f"decoded media dimensions {(timing.width, timing.height)}"
+                )
+
+            source_dir = dependency_root / video_id
+            public_artifacts = SnapshotArtifactPaths(
+                frame_times=source_dir / "frame_times.json",
+                ball_track=source_dir / "wasb_ball_track.json",
+                metadata=source_dir / "wasb_ball_track_metadata.json",
+                predictions_csv=source_dir / "wasb_predictions.csv",
             )
-        decode_failures += max(0, len(timing.pts_s) - wasb_frame_count)
-        wasb_bindings = {
-            "source_video_sha256": media_sha256,
-            "frame_times_sha256": frame_times_sha256,
-            "wasb_predictions_csv_sha256": _sha256_file(wasb_csv_path),
-            "wasb_ball_track_sha256": _sha256_file(wasb_track_path),
-            "wasb_checkpoint_sha256": checkpoint_sha256,
-            "wasb_repo_commit": str(wasb_identity["repo_commit"]),
-            "wasb_adapter_code_sha256": str(
-                builder_identity["wasb_adapter_code_sha256"]
-            ),
-        }
-        run_summary = {**run_summary, "builder_bindings": wasb_bindings}
-        _write_json(wasb_metadata_path, run_summary)
-        _validate_wasb_run_metadata(
-            run_summary,
-            predictions_csv=wasb_csv_path,
-            ball_track=wasb_track_path,
-            source_video=source_media,
-            checkpoint=checkpoint_path,
-            wasb_repo=repo_path,
-            timing=timing,
-            visible_threshold=confidence_min,
-            expected_bindings=wasb_bindings,
-        )
-        dependency_hashes = {
-            "split_manifest_sha256": split_sha256,
-            "pbvision_cv_export_sha256": gallery_hashes["cv_export.json"],
-            "pbvision_metadata_sha256": gallery_hashes["api_get_metadata.json"],
-            "pbvision_provenance_sha256": gallery_hashes["video_provenance.json"],
-            "source_video_sha256": media_sha256,
-            "frame_times_sha256": frame_times_sha256,
-            "wasb_checkpoint_sha256": checkpoint_sha256,
-            "wasb_repo_commit": str(wasb_identity["repo_commit"]),
-            "models_manifest_sha256": str(wasb_identity["models_manifest_sha256"]),
-            "builder_code_sha256": str(builder_identity["builder_code_sha256"]),
-            "wasb_adapter_code_sha256": str(
-                builder_identity["wasb_adapter_code_sha256"]
-            ),
-            "wasb_ball_track_sha256": _sha256_file(wasb_track_path),
-            "wasb_metadata_sha256": _sha256_file(wasb_metadata_path),
-            "wasb_predictions_csv_sha256": _sha256_file(wasb_csv_path),
-        }
-        samples = build_source_samples(
-            video_id=video_id,
-            video_path=source_media,
-            teacher_observations=teacher,
-            wasb_observations=wasb_rows,
-            pts_s=timing.pts_s,
-            width=source_width,
-            height=source_height,
-            teacher_confidence_min=confidence_min,
-            agreement_radius_px=radius,
-            pseudo_weight=weight,
-            dependency_hashes=dependency_hashes,
-        )
-        clips.append(
-            {
+            publication_artifacts_by_video[video_id] = public_artifacts
+            work_dir = materialization_root / video_id
+            work_dir.mkdir(parents=True, exist_ok=True)
+            work_frame_times = work_dir / "frame_times.json"
+            frame_times_payload = _frame_times_payload(
+                timing,
+                media_sha256=media_sha256,
+            )
+            _write_json(work_frame_times, frame_times_payload)
+            sealed_frame_times_root = materialization_root / "sealed_frame_times" / video_id
+            sealed_frame_times = _seal_snapshot_file(
+                work_frame_times,
+                sealed_frame_times_root / "frame_times.json",
+            )
+            _seal_snapshot_directory(sealed_frame_times_root)
+            sealed_frame_times = _require_snapshot_path(
+                sealed_frame_times_root,
+                sealed_frame_times,
+                context=f"{video_id} generated frame-times consumption",
+            )
+            frame_times_sha256 = _sha256_file(sealed_frame_times)
+
+            snapshot_reused = snapshot.reused_artifacts.get(video_id)
+            reusable_identity = (
+                _dependency_artifacts_reusable(
+                    frame_times=_require_snapshot_path(
+                        snapshot.root,
+                        snapshot_reused.frame_times,
+                        context=f"{video_id} reused frame-times consumption",
+                    ),
+                    ball_track=_require_snapshot_path(
+                        snapshot.root,
+                        snapshot_reused.ball_track,
+                        context=f"{video_id} reused ball-track consumption",
+                    ),
+                    metadata=_require_snapshot_path(
+                        snapshot.root,
+                        snapshot_reused.metadata,
+                        context=f"{video_id} reused metadata consumption",
+                    ),
+                    predictions_csv=_require_snapshot_path(
+                        snapshot.root,
+                        snapshot_reused.predictions_csv,
+                        context=f"{video_id} reused prediction-CSV consumption",
+                    ),
+                    source_video=snapshot_source,
+                    source_video_sha256=media_sha256,
+                    expected_frame_times_sha256=frame_times_sha256,
+                    wasb_checkpoint_sha256=checkpoint_sha256,
+                    wasb_repo_commit=str(wasb_identity["repo_commit"]),
+                    wasb_adapter_code_sha256=str(
+                        builder_identity["wasb_adapter_code_sha256"]
+                    ),
+                )
+                if resume_dependencies and snapshot_reused is not None
+                else None
+            )
+            reused = reusable_identity is not None
+            if reused:
+                assert snapshot_reused is not None
+                artifact_paths = snapshot_reused
+                run_summary = dict(reusable_identity.metadata)
+                run_summary.pop("builder_bindings", None)
+            else:
+                work_artifacts = SnapshotArtifactPaths(
+                    frame_times=sealed_frame_times,
+                    ball_track=work_dir / "wasb_ball_track.json",
+                    metadata=work_dir / "wasb_ball_track_metadata.json",
+                    predictions_csv=work_dir / "wasb_predictions.csv",
+                )
+                run_summary = run_wasb_or_convert(
+                    out=work_artifacts.ball_track,
+                    fps=timing.fps,
+                    frame_times=sealed_frame_times,
+                    metadata_out=work_artifacts.metadata,
+                    video=snapshot_source,
+                    checkpoint=snapshot_checkpoint,
+                    wasb_repo=snapshot_repo,
+                    prediction_csv_out=work_artifacts.predictions_csv,
+                    batch_size=wasb_batch_size,
+                    visible_threshold=confidence_min,
+                    device=device,
+                    input_preprocessing="official",
+                    emit_size_observations=False,
+                    emit_below_threshold_candidates=False,
+                )
+                sealed_outputs_root = materialization_root / "sealed_outputs" / video_id
+                sealed_ball_track = _seal_snapshot_file(
+                    work_artifacts.ball_track,
+                    sealed_outputs_root / "wasb_ball_track.json",
+                )
+                sealed_predictions_csv = _seal_snapshot_file(
+                    work_artifacts.predictions_csv,
+                    sealed_outputs_root / "wasb_predictions.csv",
+                )
+                _seal_snapshot_directory(sealed_outputs_root)
+                artifact_paths = SnapshotArtifactPaths(
+                    frame_times=sealed_frame_times,
+                    ball_track=_require_snapshot_path(
+                        sealed_outputs_root,
+                        sealed_ball_track,
+                        context=f"{video_id} generated ball-track consumption",
+                    ),
+                    metadata=work_artifacts.metadata,
+                    predictions_csv=_require_snapshot_path(
+                        sealed_outputs_root,
+                        sealed_predictions_csv,
+                        context=f"{video_id} generated prediction-CSV consumption",
+                    ),
+                )
+            if resume_dependencies:
+                print(json.dumps({"reused": reused, "video_id": video_id}, sort_keys=True))
+
+            run_summary = _normalize_wasb_run_summary_paths(
+                run_summary,
+                predictions_csv=public_artifacts.predictions_csv,
+                ball_track=public_artifacts.ball_track,
+                source_video=source_declaration,
+                checkpoint=declaration_checkpoint,
+                wasb_repo=declaration_wasb_repo,
+            )
+            actual_frame_times = (
+                artifact_paths.frame_times if reused else sealed_frame_times
+            )
+            wasb_payload = _read_json(artifact_paths.ball_track)
+            wasb_rows, wasb_frame_count = extract_wasb_observations(
+                wasb_payload,
+                pts_s=timing.pts_s,
+                fps=timing.fps,
+                width=source_width,
+                height=source_height,
+                visible_threshold=confidence_min,
+            )
+            _validate_wasb_predictions_csv(
+                artifact_paths.predictions_csv,
+                pts_s=timing.pts_s,
+                width=source_width,
+                height=source_height,
+            )
+            regenerated_track = wasb_csv_to_ball_track(
+                artifact_paths.predictions_csv,
+                fps=timing.fps,
+                frame_times=actual_frame_times,
+                visible_threshold=confidence_min,
+                input_preprocessing="official",
+            )
+            if regenerated_track != wasb_payload:
+                raise BallSstBuildError(
+                    f"{video_id} WASB ball track does not reproduce from its prediction CSV"
+                )
+            decode_failures += max(0, len(timing.pts_s) - wasb_frame_count)
+            wasb_bindings = (
+                dict(reusable_identity.expected_bindings)
+                if reusable_identity is not None
+                else {
+                    "source_video_sha256": media_sha256,
+                    "frame_times_sha256": _sha256_file(actual_frame_times),
+                    "wasb_predictions_csv_sha256": _sha256_file(
+                        artifact_paths.predictions_csv
+                    ),
+                    "wasb_ball_track_sha256": _sha256_file(
+                        artifact_paths.ball_track
+                    ),
+                    "wasb_checkpoint_sha256": checkpoint_sha256,
+                    "wasb_repo_commit": str(wasb_identity["repo_commit"]),
+                    "wasb_adapter_code_sha256": str(
+                        builder_identity["wasb_adapter_code_sha256"]
+                    ),
+                }
+            )
+            run_summary = {**run_summary, "builder_bindings": wasb_bindings}
+            _validate_wasb_run_metadata(
+                run_summary,
+                predictions_csv=artifact_paths.predictions_csv,
+                ball_track=artifact_paths.ball_track,
+                source_video=snapshot_source,
+                checkpoint=snapshot_checkpoint,
+                wasb_repo=snapshot_repo,
+                timing=timing,
+                visible_threshold=confidence_min,
+                expected_bindings=wasb_bindings,
+                declared_predictions_csv=public_artifacts.predictions_csv,
+                declared_ball_track=public_artifacts.ball_track,
+                declared_source_video=snapshot.declarations.source_video_by_id[
+                    video_id
+                ],
+                declared_checkpoint=snapshot.declarations.checkpoint,
+                declared_wasb_repo=snapshot.declarations.wasb_repo,
+            )
+            work_metadata = work_dir / "published_wasb_ball_track_metadata.json"
+            _write_json(work_metadata, run_summary)
+            sealed_metadata_root = materialization_root / "sealed_metadata" / video_id
+            sealed_metadata = _seal_snapshot_file(
+                work_metadata,
+                sealed_metadata_root / "wasb_ball_track_metadata.json",
+            )
+            _seal_snapshot_directory(sealed_metadata_root)
+            sealed_metadata = _require_snapshot_path(
+                sealed_metadata_root,
+                sealed_metadata,
+                context=f"{video_id} generated metadata consumption",
+            )
+            artifact_paths = SnapshotArtifactPaths(
+                frame_times=actual_frame_times,
+                ball_track=artifact_paths.ball_track,
+                metadata=sealed_metadata,
+                predictions_csv=artifact_paths.predictions_csv,
+            )
+            artifacts_by_video[video_id] = artifact_paths
+
+            dependency_hashes = {
+                "split_manifest_sha256": split_sha256,
+                "pbvision_cv_export_sha256": gallery_hashes["cv_export.json"],
+                "pbvision_metadata_sha256": gallery_hashes["api_get_metadata.json"],
+                "pbvision_provenance_sha256": gallery_hashes[
+                    "video_provenance.json"
+                ],
+                "source_video_sha256": media_sha256,
+                "frame_times_sha256": _sha256_file(artifact_paths.frame_times),
+                "wasb_checkpoint_sha256": checkpoint_sha256,
+                "wasb_repo_commit": str(wasb_identity["repo_commit"]),
+                "models_manifest_sha256": str(
+                    wasb_identity["models_manifest_sha256"]
+                ),
+                "builder_code_sha256": str(builder_identity["builder_code_sha256"]),
+                "wasb_adapter_code_sha256": str(
+                    builder_identity["wasb_adapter_code_sha256"]
+                ),
+                "wasb_ball_track_sha256": _sha256_file(
+                    artifact_paths.ball_track
+                ),
+                "wasb_metadata_sha256": _sha256_file(artifact_paths.metadata),
+                "wasb_predictions_csv_sha256": _sha256_file(
+                    artifact_paths.predictions_csv
+                ),
+            }
+            samples = build_source_samples(
+                video_id=video_id,
+                video_path=snapshot_source,
+                teacher_observations=teacher,
+                wasb_observations=wasb_rows,
+                pts_s=timing.pts_s,
+                width=source_width,
+                height=source_height,
+                teacher_confidence_min=confidence_min,
+                agreement_radius_px=radius,
+                pseudo_weight=weight,
+                dependency_hashes=dependency_hashes,
+            )
+            _normalize_sample_video_paths(
+                samples,
+                source_media=source_declaration,
+            )
+            clip = {
                 "clip_id": video_id,
                 "canonical_source_id": video_id,
                 "split": "train",
                 "teacher_derived": True,
                 "ground_truth": False,
-                "rally_video": str(source_media),
+                "rally_video": str(source_declaration),
                 "source_video_sha256": media_sha256,
                 "source_width": source_width,
                 "source_height": source_height,
@@ -508,40 +797,81 @@ def build_pbvision_ball_sst(
                 "samples": samples,
                 "dependencies": {
                     **dependency_hashes,
-                    "frame_times_path": str(frame_times_path),
-                    "wasb_ball_track": str(wasb_track_path),
-                    "wasb_metadata_path": str(wasb_metadata_path),
-                    "wasb_predictions_csv_path": str(wasb_csv_path),
+                    "frame_times_path": str(public_artifacts.frame_times),
+                    "wasb_ball_track": str(public_artifacts.ball_track),
+                    "wasb_metadata_path": str(public_artifacts.metadata),
+                    "wasb_predictions_csv_path": str(
+                        public_artifacts.predictions_csv
+                    ),
                     "wasb_runtime": run_summary,
                 },
             }
-        )
+            if resume_dependencies:
+                clip["dependency_reused"] = reused
+            clips.append(clip)
 
-    manifest = assemble_sst_manifest(
-        clips=clips,
-        gallery_root=gallery,
-        media_root=media,
-        split_manifest=split_path,
-        split_manifest_sha256=split_sha256,
-        wasb_checkpoint=checkpoint_path,
-        wasb_checkpoint_sha256=checkpoint_sha256,
-        wasb_identity=wasb_identity,
-        builder_identity=builder_identity,
-        teacher_confidence_min=confidence_min,
-        agreement_radius_px=radius,
-        pseudo_weight=weight,
-        policy_overrides=policy_overrides,
-        decode_failures=decode_failures,
-    )
-    if _sha256_file(Path(__file__).resolve()) != builder_identity["builder_code_sha256"]:
-        raise BallSstBuildError("builder code changed during materialization")
-    if (
-        _sha256_file((ROOT / WASB_ADAPTER_RELATIVE_PATH).resolve(strict=True))
-        != builder_identity["wasb_adapter_code_sha256"]
-    ):
-        raise BallSstBuildError("WASB adapter code changed during materialization")
-    _write_json(out_path, manifest)
-    return manifest
+        verification_snapshot = SnapshotVerificationContext(
+            inputs=snapshot,
+            artifacts=artifacts_by_video,
+            publication_artifacts_by_video=publication_artifacts_by_video,
+        )
+        manifest = assemble_sst_manifest(
+            clips=clips,
+            gallery_root=declaration_gallery,
+            media_root=declaration_media,
+            split_manifest=declaration_split,
+            split_manifest_sha256=split_sha256,
+            wasb_checkpoint=declaration_checkpoint,
+            wasb_checkpoint_sha256=checkpoint_sha256,
+            wasb_identity=wasb_identity,
+            builder_identity=builder_identity,
+            teacher_confidence_min=confidence_min,
+            agreement_radius_px=radius,
+            pseudo_weight=weight,
+            policy_overrides=policy_overrides,
+            decode_failures=decode_failures,
+            dependencies_reused_count=(
+                sum(clip["dependency_reused"] is True for clip in clips)
+                if resume_dependencies
+                else None
+            ),
+            verification_snapshot=verification_snapshot,
+        )
+        work_manifest = materialization_root / "sst.json"
+        _write_json(work_manifest, manifest)
+        sealed_manifest_root = materialization_root / "sealed_manifest"
+        sealed_manifest = _seal_snapshot_file(
+            work_manifest,
+            sealed_manifest_root / out_path.name,
+        )
+        _seal_snapshot_directory(sealed_manifest_root)
+        sealed_manifest = _require_snapshot_path(
+            sealed_manifest_root,
+            sealed_manifest,
+            context="final SST publication",
+        )
+        for video_id in TRAIN_IDS:
+            _publish_snapshot_file(
+                artifacts_by_video[video_id].frame_times,
+                publication_artifacts_by_video[video_id].frame_times,
+            )
+            _publish_snapshot_file(
+                artifacts_by_video[video_id].ball_track,
+                publication_artifacts_by_video[video_id].ball_track,
+            )
+            _publish_snapshot_file(
+                artifacts_by_video[video_id].metadata,
+                publication_artifacts_by_video[video_id].metadata,
+            )
+            _publish_snapshot_file(
+                artifacts_by_video[video_id].predictions_csv,
+                publication_artifacts_by_video[video_id].predictions_csv,
+            )
+        _publish_snapshot_file(sealed_manifest, out_path)
+        return manifest
+    finally:
+        _remove_private_tree(materialization_root)
+        _remove_private_tree(snapshot.root)
 
 
 def extract_teacher_observations(
@@ -716,6 +1046,445 @@ def _validate_wasb_predictions_csv(
             )
 
 
+def _create_immutable_dependency_snapshot(
+    *,
+    out_path: Path,
+    gallery_root: Path,
+    media_root: Path,
+    split_manifest: Path,
+    split_manifest_sha256: str,
+    dependency_root: Path,
+    builder_identity: Mapping[str, Any],
+    wasb_identity: Mapping[str, Any],
+    media_sha256_by_video: Mapping[str, str],
+    gallery_sha256_by_video: Mapping[str, Mapping[str, str]],
+    resume_dependencies: bool,
+) -> ImmutableDependencySnapshot:
+    """Copy every filesystem dependency, verify the copies, then seal them read-only."""
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    snapshot_root = Path(
+        tempfile.mkdtemp(
+            prefix=f".{out_path.stem}_immutable_inputs_",
+            dir=str(out_path.parent),
+        )
+    )
+    try:
+        snapshot_split = _copy_verified_snapshot_file(
+            split_manifest.resolve(strict=True),
+            snapshot_root / "split" / split_manifest.name,
+            expected_sha256=split_manifest_sha256,
+            context="split manifest",
+        )
+        snapshot_gallery = snapshot_root / "gallery"
+        snapshot_media = snapshot_root / "media"
+        source_video_declarations: dict[str, str] = {}
+        for video_id in TRAIN_IDS:
+            source_media = _canonical_media_path(
+                media_root,
+                video_id,
+            ).resolve(strict=True)
+            source_video_declarations[video_id] = str(source_media)
+            _copy_verified_snapshot_file(
+                source_media,
+                _canonical_media_path(snapshot_media, video_id),
+                expected_sha256=str(media_sha256_by_video[video_id]),
+                context=f"{video_id} source video",
+            )
+            for filename in PRODUCTION_GALLERY_ARTIFACT_FILENAMES:
+                source_gallery = _source_file(gallery_root, video_id, filename)
+                expected_gallery_sha256 = (
+                    gallery_sha256_by_video.get(video_id, {}).get(filename)
+                    or _sha256_file(source_gallery)
+                )
+                _copy_verified_snapshot_file(
+                    source_gallery,
+                    snapshot_gallery / video_id / filename,
+                    expected_sha256=str(expected_gallery_sha256),
+                    context=f"{video_id} {filename}",
+                )
+
+        original_checkpoint = Path(
+            str(wasb_identity["checkpoint_path"])
+        ).resolve(strict=True)
+        snapshot_checkpoint = _copy_verified_snapshot_file(
+            original_checkpoint,
+            snapshot_root / "checkpoint" / original_checkpoint.name,
+            expected_sha256=str(wasb_identity["checkpoint_sha256"]),
+            context="WASB checkpoint",
+        )
+        original_models_manifest = Path(
+            str(wasb_identity["models_manifest_path"])
+        ).resolve(strict=True)
+        snapshot_models_manifest = _copy_verified_snapshot_file(
+            original_models_manifest,
+            snapshot_root / "models" / "MANIFEST.json",
+            expected_sha256=str(wasb_identity["models_manifest_sha256"]),
+            context="models manifest",
+        )
+        original_builder = Path(__file__).resolve(strict=True)
+        snapshot_builder = _copy_verified_snapshot_file(
+            original_builder,
+            snapshot_root / "code" / "build_pbvision_ball_sst.py",
+            expected_sha256=str(builder_identity["builder_code_sha256"]),
+            context="builder code",
+        )
+        original_adapter = (
+            ROOT / WASB_ADAPTER_RELATIVE_PATH
+        ).resolve(strict=True)
+        snapshot_adapter = _copy_verified_snapshot_file(
+            original_adapter,
+            snapshot_root / "code" / "wasb_adapter.py",
+            expected_sha256=str(builder_identity["wasb_adapter_code_sha256"]),
+            context="WASB adapter code",
+        )
+
+        original_repo = Path(str(wasb_identity["repo_path"])).resolve(strict=True)
+        original_repo_commit = _git_output(original_repo, "rev-parse", "HEAD")
+        original_repo_status = _git_output(
+            original_repo,
+            "status",
+            "--porcelain",
+            "--untracked-files=all",
+        )
+        original_repo_tree_sha256 = _directory_tree_sha256(
+            original_repo,
+            exclude_top_level={".git"},
+        )
+        snapshot_repo = snapshot_root / "wasb_repo"
+        shutil.copytree(original_repo, snapshot_repo, symlinks=False)
+        snapshot_repo_commit = _git_output(snapshot_repo, "rev-parse", "HEAD")
+        snapshot_repo_status = _git_output(
+            snapshot_repo,
+            "status",
+            "--porcelain",
+            "--untracked-files=all",
+        )
+        snapshot_repo_tree_sha256 = _directory_tree_sha256(
+            snapshot_repo,
+            exclude_top_level={".git"},
+        )
+        if (
+            original_repo_commit != str(wasb_identity["repo_commit"])
+            or snapshot_repo_commit != original_repo_commit
+            or original_repo_status != snapshot_repo_status
+            or (original_repo_status == "") is not bool(wasb_identity["repo_clean"])
+            or snapshot_repo_tree_sha256 != original_repo_tree_sha256
+        ):
+            raise BallSstDependencyStabilityError(
+                "immutable snapshot verification failed: WASB repository state"
+            )
+
+        reused_artifacts: dict[str, SnapshotArtifactPaths] = {}
+        if resume_dependencies:
+            for video_id in TRAIN_IDS:
+                original_dir = dependency_root / video_id
+                original_artifacts = SnapshotArtifactPaths(
+                    frame_times=original_dir / "frame_times.json",
+                    ball_track=original_dir / "wasb_ball_track.json",
+                    metadata=original_dir / "wasb_ball_track_metadata.json",
+                    predictions_csv=original_dir / "wasb_predictions.csv",
+                )
+                snapshot_dir = snapshot_root / "reused" / video_id
+                copied: dict[str, Path] = {}
+                for field_name, source in (
+                    ("frame_times", original_artifacts.frame_times),
+                    ("ball_track", original_artifacts.ball_track),
+                    ("metadata", original_artifacts.metadata),
+                    ("predictions_csv", original_artifacts.predictions_csv),
+                ):
+                    if not source.is_file():
+                        continue
+                    copied[field_name] = _copy_verified_snapshot_file(
+                        source.resolve(strict=True),
+                        snapshot_dir / source.name,
+                        expected_sha256=_sha256_file(source),
+                        context=f"{video_id} persisted {source.name}",
+                    )
+                if set(copied) == {
+                    "frame_times",
+                    "ball_track",
+                    "metadata",
+                    "predictions_csv",
+                }:
+                    reused_artifacts[video_id] = SnapshotArtifactPaths(**copied)
+
+        _seal_snapshot_directory(snapshot_root)
+        return ImmutableDependencySnapshot(
+            root=snapshot_root,
+            split_manifest=snapshot_split,
+            gallery_root=snapshot_gallery,
+            media_root=snapshot_media,
+            checkpoint=snapshot_checkpoint,
+            wasb_repo=snapshot_repo,
+            models_manifest=snapshot_models_manifest,
+            builder_code=snapshot_builder,
+            wasb_adapter_code=snapshot_adapter,
+            reused_artifacts=reused_artifacts,
+            declarations=SnapshotDeclarationIdentities(
+                gallery_root=str(gallery_root),
+                media_root=str(media_root),
+                split_manifest=str(split_manifest),
+                source_video_by_id=source_video_declarations,
+                checkpoint=str(original_checkpoint),
+                wasb_repo=str(original_repo),
+            ),
+        )
+    except Exception:
+        _remove_private_tree(snapshot_root)
+        raise
+
+
+def _copy_verified_snapshot_file(
+    source: Path,
+    destination: Path,
+    *,
+    expected_sha256: str,
+    context: str,
+) -> Path:
+    if source.is_symlink() or not source.is_file():
+        raise BallSstDependencyStabilityError(
+            f"immutable snapshot verification failed: {context} is not a regular file"
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(source, destination)
+    if destination.is_symlink() or _sha256_file(destination) != expected_sha256:
+        raise BallSstDependencyStabilityError(
+            f"immutable snapshot verification failed: {context} SHA-256"
+        )
+    return destination.resolve(strict=True)
+
+
+def _directory_tree_sha256(
+    root: Path,
+    *,
+    exclude_top_level: set[str],
+) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(root.rglob("*")):
+        relative = path.relative_to(root)
+        if relative.parts and relative.parts[0] in exclude_top_level:
+            continue
+        if path.is_symlink():
+            raise BallSstDependencyStabilityError(
+                f"immutable snapshot repository contains symlink: {relative}"
+            )
+        digest.update(relative.as_posix().encode("utf-8"))
+        digest.update(b"\0")
+        if path.is_file():
+            digest.update(_sha256_file(path).encode("ascii"))
+        elif path.is_dir():
+            digest.update(b"directory")
+        else:
+            raise BallSstDependencyStabilityError(
+                f"immutable snapshot repository contains unsupported entry: {relative}"
+            )
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def _seal_snapshot_file(source: Path, destination: Path) -> Path:
+    expected_sha256 = _sha256_file(source)
+    sealed = _copy_verified_snapshot_file(
+        source.resolve(strict=True),
+        destination,
+        expected_sha256=expected_sha256,
+        context=destination.name,
+    )
+    executable = bool(sealed.stat().st_mode & 0o111)
+    sealed.chmod(0o555 if executable else 0o444)
+    return sealed
+
+
+def _seal_snapshot_directory(root: Path) -> None:
+    paths = sorted(root.rglob("*"), key=lambda path: len(path.parts), reverse=True)
+    for path in paths:
+        if path.is_symlink():
+            raise BallSstDependencyStabilityError(
+                f"immutable snapshot contains symlink: {path}"
+            )
+        if path.is_file():
+            executable = bool(path.stat().st_mode & 0o111)
+            path.chmod(0o555 if executable else 0o444)
+        elif path.is_dir():
+            path.chmod(0o555)
+    root.chmod(0o555)
+
+
+def _require_snapshot_path(
+    snapshot_root: Path,
+    path: Path,
+    *,
+    context: str,
+) -> Path:
+    try:
+        root = snapshot_root.resolve(strict=True)
+        resolved = Path(path).resolve(strict=True)
+    except (FileNotFoundError, OSError) as exc:
+        raise BallSstSnapshotPathError(
+            f"{context}: non-snapshot dependency path is unreadable"
+        ) from exc
+    if resolved != root and not resolved.is_relative_to(root):
+        raise BallSstSnapshotPathError(
+            f"{context}: non-snapshot dependency path {resolved}"
+        )
+    current = resolved
+    while True:
+        if current.stat().st_mode & 0o222:
+            raise BallSstSnapshotPathError(
+                f"{context}: snapshot dependency path is writable: {current}"
+            )
+        if current == root:
+            break
+        current = current.parent
+    return resolved
+
+
+def _normalize_wasb_run_summary_paths(
+    payload: Mapping[str, Any],
+    *,
+    predictions_csv: Path,
+    ball_track: Path,
+    source_video: Path,
+    checkpoint: Path,
+    wasb_repo: Path,
+) -> dict[str, Any]:
+    normalized = dict(payload)
+    runtime_value = normalized.get("runtime")
+    if not isinstance(runtime_value, Mapping):
+        raise BallSstBuildError("WASB run metadata requires runtime object")
+    runtime = dict(runtime_value)
+    checkpoint_value = runtime.get("wasb_checkpoint")
+    if not isinstance(checkpoint_value, Mapping):
+        raise BallSstBuildError("WASB runtime checkpoint binding is malformed")
+    checkpoint_binding = dict(checkpoint_value)
+    normalized["predictions_csv"] = str(predictions_csv)
+    normalized["out"] = str(ball_track)
+    runtime["video"] = str(source_video)
+    runtime["wasb_repo"] = str(wasb_repo)
+    checkpoint_binding["path"] = str(checkpoint)
+    runtime["wasb_checkpoint"] = checkpoint_binding
+    normalized["runtime"] = runtime
+    return normalized
+
+
+def _normalize_sample_video_paths(
+    samples: Sequence[dict[str, Any]],
+    *,
+    source_media: Path,
+) -> None:
+    for sample in samples:
+        frame_ref = sample.get("frame_ref")
+        if not isinstance(frame_ref, dict):
+            raise BallSstBuildError("built sample requires frame_ref object")
+        frame_ref["video"] = str(source_media)
+
+
+def _publish_snapshot_file(source: Path, destination: Path) -> None:
+    if source.stat().st_mode & 0o222:
+        raise BallSstSnapshotPathError(
+            f"publication source is not an immutable snapshot file: {source}"
+        )
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(
+        prefix=f".{destination.name}.",
+        dir=str(destination.parent),
+        delete=False,
+    ) as handle:
+        temporary = Path(handle.name)
+    try:
+        shutil.copyfile(source, temporary)
+        if _sha256_file(temporary) != _sha256_file(source):
+            raise BallSstDependencyStabilityError(
+                f"publication copy verification failed: {destination}"
+            )
+        temporary.replace(destination)
+    finally:
+        temporary.unlink(missing_ok=True)
+
+
+def _remove_private_tree(root: Path) -> None:
+    if not root.exists():
+        return
+    for path in sorted(root.rglob("*"), key=lambda item: len(item.parts), reverse=True):
+        try:
+            if path.is_dir() and not path.is_symlink():
+                path.chmod(0o700)
+            elif not path.is_symlink():
+                path.chmod(0o600)
+        except FileNotFoundError:
+            pass
+    root.chmod(0o700)
+    shutil.rmtree(root)
+
+
+def _dependency_artifacts_reusable(
+    *,
+    frame_times: Path,
+    ball_track: Path,
+    metadata: Path,
+    predictions_csv: Path,
+    source_video: Path,
+    source_video_sha256: str,
+    expected_frame_times_sha256: str,
+    wasb_checkpoint_sha256: str,
+    wasb_repo_commit: str,
+    wasb_adapter_code_sha256: str,
+) -> ReusableDependencyIdentity | None:
+    """Accept reuse only from one already-sealed immutable dependency snapshot."""
+
+    dependency_paths = (frame_times, ball_track, metadata, predictions_csv)
+    paths_by_identity = {
+        "source_video_sha256": source_video,
+        "frame_times_sha256": frame_times,
+        "wasb_predictions_csv_sha256": predictions_csv,
+        "wasb_ball_track_sha256": ball_track,
+        "wasb_metadata_sha256": metadata,
+    }
+    try:
+        if any(not path.is_file() or path.stat().st_size <= 0 for path in dependency_paths):
+            return None
+        checked_sha256 = {
+            key: _sha256_file(path) for key, path in paths_by_identity.items()
+        }
+        payload = _read_json(metadata)
+        expected_bindings = {
+            "source_video_sha256": source_video_sha256,
+            "frame_times_sha256": checked_sha256["frame_times_sha256"],
+            "wasb_predictions_csv_sha256": checked_sha256[
+                "wasb_predictions_csv_sha256"
+            ],
+            "wasb_ball_track_sha256": checked_sha256["wasb_ball_track_sha256"],
+            "wasb_checkpoint_sha256": wasb_checkpoint_sha256,
+            "wasb_repo_commit": wasb_repo_commit,
+            "wasb_adapter_code_sha256": wasb_adapter_code_sha256,
+        }
+        if checked_sha256["source_video_sha256"] != source_video_sha256:
+            return None
+        if checked_sha256["frame_times_sha256"] != expected_frame_times_sha256:
+            return None
+        if not _dependency_builder_bindings_match(payload, expected_bindings):
+            return None
+        return ReusableDependencyIdentity(
+            metadata=dict(payload),
+            expected_bindings=expected_bindings,
+        )
+    except Exception:
+        return None
+
+
+def _dependency_builder_bindings_match(
+    metadata: Mapping[str, Any],
+    expected_bindings: Mapping[str, str],
+) -> bool:
+    bindings = metadata.get("builder_bindings")
+    return (
+        isinstance(bindings, Mapping)
+        and WASB_BUILDER_BINDING_KEYS.issubset(bindings)
+        and all(bindings.get(key) == value for key, value in expected_bindings.items())
+    )
+
+
 def _validate_wasb_run_metadata(
     payload: Mapping[str, Any],
     *,
@@ -727,6 +1496,11 @@ def _validate_wasb_run_metadata(
     timing: MediaTiming,
     visible_threshold: float,
     expected_bindings: Mapping[str, str],
+    declared_predictions_csv: str | Path | None = None,
+    declared_ball_track: str | Path | None = None,
+    declared_source_video: str | Path | None = None,
+    declared_checkpoint: str | Path | None = None,
+    declared_wasb_repo: str | Path | None = None,
 ) -> None:
     expected_top_keys = {
         "schema_version",
@@ -766,8 +1540,18 @@ def _validate_wasb_run_metadata(
     for key, expected in expected_scalars.items():
         if payload.get(key) != expected or type(payload.get(key)) is not type(expected):
             raise BallSstBuildError(f"WASB run metadata {key} is not production-authentic")
-    _require_path_identity(payload.get("predictions_csv"), predictions_csv, "WASB predictions_csv")
-    _require_path_identity(payload.get("out"), ball_track, "WASB out")
+    _require_consumed_or_recorded_path_identity(
+        payload.get("predictions_csv"),
+        consumed=predictions_csv,
+        recorded=declared_predictions_csv,
+        field="WASB predictions_csv",
+    )
+    _require_consumed_or_recorded_path_identity(
+        payload.get("out"),
+        consumed=ball_track,
+        recorded=declared_ball_track,
+        field="WASB out",
+    )
     metadata_fps = _positive_float(payload.get("fps"), "WASB metadata fps")
     if not math.isclose(metadata_fps, timing.fps, rel_tol=0.0, abs_tol=1e-12):
         raise BallSstBuildError("WASB run metadata fps differs from bound timing")
@@ -819,15 +1603,28 @@ def _validate_wasb_run_metadata(
     }
     if set(runtime) != expected_runtime_keys:
         raise BallSstBuildError("WASB runtime schema is not the bounded official-inference schema")
-    _require_path_identity(runtime.get("wasb_repo"), wasb_repo, "WASB runtime repo")
-    _require_path_identity(runtime.get("video"), source_video, "WASB runtime source video")
+    _require_consumed_or_recorded_path_identity(
+        runtime.get("wasb_repo"),
+        consumed=wasb_repo,
+        recorded=declared_wasb_repo,
+        field="WASB runtime repo",
+    )
+    _require_consumed_or_recorded_path_identity(
+        runtime.get("video"),
+        consumed=source_video,
+        recorded=declared_source_video,
+        field="WASB runtime source video",
+    )
     if runtime.get("wasb_repo_commit") != expected_bindings.get("wasb_repo_commit"):
         raise BallSstBuildError("WASB runtime repo commit mismatch")
     checkpoint_binding = runtime.get("wasb_checkpoint")
     if not isinstance(checkpoint_binding, Mapping) or set(checkpoint_binding) != {"path", "sha256"}:
         raise BallSstBuildError("WASB runtime checkpoint binding is malformed")
-    _require_path_identity(
-        checkpoint_binding.get("path"), checkpoint, "WASB runtime checkpoint"
+    _require_consumed_or_recorded_path_identity(
+        checkpoint_binding.get("path"),
+        consumed=checkpoint,
+        recorded=declared_checkpoint,
+        field="WASB runtime checkpoint",
     )
     if checkpoint_binding.get("sha256") != expected_bindings.get("wasb_checkpoint_sha256"):
         raise BallSstBuildError("WASB runtime checkpoint SHA mismatch")
@@ -874,7 +1671,23 @@ def _validate_wasb_run_metadata(
 def _require_path_identity(value: Any, expected: Path, field: str) -> None:
     if not isinstance(value, str) or not value:
         raise BallSstBuildError(f"{field} must be a path string")
-    if Path(value).resolve(strict=False) != expected.resolve(strict=True):
+    if Path(value).resolve(strict=False) != expected.resolve(strict=False):
+        raise BallSstBuildError(f"{field} path mismatch")
+
+
+def _require_consumed_or_recorded_path_identity(
+    value: Any,
+    *,
+    consumed: Path,
+    recorded: str | Path | None,
+    field: str,
+) -> None:
+    if recorded is None:
+        _require_path_identity(value, consumed, field)
+        return
+    if not isinstance(value, str) or not value:
+        raise BallSstBuildError(f"{field} must be a path string")
+    if value != str(recorded):
         raise BallSstBuildError(f"{field} path mismatch")
 
 
@@ -1054,6 +1867,8 @@ def assemble_sst_manifest(
     pseudo_weight: float,
     policy_overrides: Sequence[str],
     decode_failures: int,
+    dependencies_reused_count: int | None = None,
+    verification_snapshot: SnapshotVerificationContext | None = None,
 ) -> dict[str, Any]:
     computed_policy_overrides = _production_policy_overrides(
         teacher_confidence_min=teacher_confidence_min,
@@ -1063,6 +1878,19 @@ def assemble_sst_manifest(
     declared_policy_overrides = list(policy_overrides)
     policy_declaration_matches = declared_policy_overrides == computed_policy_overrides
     clip_rows = [dict(clip) for clip in clips]
+    if dependencies_reused_count is not None:
+        reused_count = _strict_nonnegative_int(
+            dependencies_reused_count, "dependencies_reused_count"
+        )
+        reuse_values = [clip.get("dependency_reused") for clip in clip_rows]
+        if any(type(value) is not bool for value in reuse_values):
+            raise BallSstBuildError(
+                "resume-enabled clips require boolean dependency_reused telemetry"
+            )
+        if reused_count != sum(value is True for value in reuse_values):
+            raise BallSstBuildError(
+                "dependencies_reused_count differs from per-clip reuse telemetry"
+            )
     samples = _validate_manifest_clips(
         clip_rows,
         media_root=media_root,
@@ -1076,6 +1904,11 @@ def assemble_sst_manifest(
         builder_code_sha256=str(builder_identity.get("builder_code_sha256") or ""),
         wasb_adapter_code_sha256=str(
             builder_identity.get("wasb_adapter_code_sha256") or ""
+        ),
+        recorded_source_video_by_id=(
+            verification_snapshot.inputs.declarations.source_video_by_id
+            if verification_snapshot is not None
+            else None
         ),
     )
     holdout_rows = [
@@ -1111,6 +1944,7 @@ def assemble_sst_manifest(
             wasb_checkpoint=wasb_checkpoint,
             wasb_identity=wasb_identity,
             builder_identity=builder_identity,
+            verification_snapshot=verification_snapshot,
         )
     production_eligible = (
         structural_prerequisites and artifact_verification.get("verified") is True
@@ -1163,7 +1997,7 @@ def assemble_sst_manifest(
             builder_identity["wasb_adapter_git_commit"]
         ),
     }
-    return {
+    manifest = {
         "schema_version": 1,
         "artifact_type": ARTIFACT_TYPE,
         "production_eligible": production_eligible,
@@ -1245,6 +2079,9 @@ def assemble_sst_manifest(
         },
         "clips": clip_rows,
     }
+    if dependencies_reused_count is not None:
+        manifest["dependencies_reused_count"] = dependencies_reused_count
+    return manifest
 
 
 def _validate_manifest_clips(
@@ -1260,6 +2097,7 @@ def _validate_manifest_clips(
     models_manifest_sha256: str,
     builder_code_sha256: str,
     wasb_adapter_code_sha256: str,
+    recorded_source_video_by_id: Mapping[str, str] | None = None,
 ) -> list[dict[str, Any]]:
     """Rebuild the manifest counts from authenticated rows; never trust caller counts."""
 
@@ -1288,10 +2126,30 @@ def _validate_manifest_clips(
             raise BallSstBuildError(f"clip {clip_id} must remain train-only")
         if clip.get("teacher_derived") is not True or clip.get("ground_truth") is not False:
             raise BallSstBuildError(f"clip {clip_id} authority flags are invalid")
-        expected_media = _canonical_media_path(media_root, clip_id).resolve(strict=False)
-        rally_video = Path(str(clip.get("rally_video") or "")).resolve(strict=False)
-        if rally_video != expected_media:
-            raise BallSstBuildError(f"clip {clip_id} rally_video is not its canonical max.mp4")
+        recorded_source_video = (
+            recorded_source_video_by_id.get(clip_id)
+            if recorded_source_video_by_id is not None
+            else None
+        )
+        if recorded_source_video is None:
+            expected_media = _canonical_media_path(
+                media_root,
+                clip_id,
+            ).resolve(strict=False)
+            rally_video = Path(
+                str(clip.get("rally_video") or "")
+            ).resolve(strict=False)
+            if rally_video != expected_media:
+                raise BallSstBuildError(
+                    f"clip {clip_id} rally_video is not its canonical max.mp4"
+                )
+        else:
+            _require_consumed_or_recorded_path_identity(
+                clip.get("rally_video"),
+                consumed=Path(recorded_source_video),
+                recorded=recorded_source_video,
+                field=f"clip {clip_id} rally_video",
+            )
         expected_media_sha = EXPECTED_SOURCE_VIDEO_SHA256[clip_id]
         if clip.get("source_video_sha256") != expected_media_sha:
             raise BallSstBuildError(f"clip {clip_id} source-video SHA is not preregistered")
@@ -1354,8 +2212,23 @@ def _validate_manifest_clips(
                 raise BallSstBuildError(f"sample {sample_id} frame_ref must be an object")
             if frame_ref.get("frame_index") != frame_index:
                 raise BallSstBuildError(f"sample {sample_id} frame_ref index mismatch")
-            if Path(str(frame_ref.get("video") or "")).resolve(strict=False) != expected_media:
-                raise BallSstBuildError(f"sample {sample_id} frame_ref is not canonical media")
+            if recorded_source_video is None:
+                if (
+                    Path(
+                        str(frame_ref.get("video") or "")
+                    ).resolve(strict=False)
+                    != expected_media
+                ):
+                    raise BallSstBuildError(
+                        f"sample {sample_id} frame_ref is not canonical media"
+                    )
+            else:
+                _require_consumed_or_recorded_path_identity(
+                    frame_ref.get("video"),
+                    consumed=Path(recorded_source_video),
+                    recorded=recorded_source_video,
+                    field=f"sample {sample_id} frame_ref",
+                )
             if frame_ref.get("source_video_sha256") != expected_media_sha:
                 raise BallSstBuildError(f"sample {sample_id} frame_ref media SHA mismatch")
             dependencies = sample.get("dependency_hashes")
@@ -1601,6 +2474,7 @@ def _verify_production_artifacts(
     wasb_checkpoint: Path,
     wasb_identity: Mapping[str, Any],
     builder_identity: Mapping[str, str],
+    verification_snapshot: SnapshotVerificationContext | None = None,
 ) -> dict[str, Any]:
     """Recompute every production identity and every accepted row from bound artifacts."""
 
@@ -1614,6 +2488,7 @@ def _verify_production_artifacts(
             wasb_checkpoint=wasb_checkpoint,
             wasb_identity=wasb_identity,
             builder_identity=builder_identity,
+            verification_snapshot=verification_snapshot,
         )
     except (
         BallSstBuildError,
@@ -1639,11 +2514,31 @@ def _verify_production_artifacts_or_raise(
     wasb_checkpoint: Path,
     wasb_identity: Mapping[str, Any],
     builder_identity: Mapping[str, str],
+    verification_snapshot: SnapshotVerificationContext | None = None,
 ) -> dict[str, Any]:
-    canonical_gallery = _canonical_gallery_root(
-        gallery_root, require_production_identity=True
-    )
-    canonical_media = _canonical_root(media_root, field="media_root")
+    if verification_snapshot is None:
+        canonical_gallery = _canonical_gallery_root(
+            gallery_root,
+            require_production_identity=True,
+        )
+        canonical_media = _canonical_root(media_root, field="media_root")
+        verification_split = split_manifest
+    else:
+        canonical_gallery = _require_snapshot_path(
+            verification_snapshot.inputs.root,
+            verification_snapshot.inputs.gallery_root,
+            context="production gallery verification",
+        )
+        canonical_media = _require_snapshot_path(
+            verification_snapshot.inputs.root,
+            verification_snapshot.inputs.media_root,
+            context="production media verification",
+        )
+        verification_split = _require_snapshot_path(
+            verification_snapshot.inputs.root,
+            verification_snapshot.inputs.split_manifest,
+            context="production split verification",
+        )
     verified_gallery_hashes_by_source: dict[str, dict[str, str]] = {}
     for clip in clips:
         clip_id = str(clip.get("clip_id") or "")
@@ -1655,12 +2550,17 @@ def _verify_production_artifacts_or_raise(
             )
         )
 
-    expected_split = (ROOT / FROZEN_SPLIT_RELATIVE_PATH).resolve(strict=True)
-    split_resolved = split_manifest.resolve(strict=True)
-    if split_manifest.is_symlink() or split_manifest.absolute() != split_resolved:
-        raise BallSstBuildError("production split_manifest must be a non-symlink canonical path")
-    if split_resolved != expected_split:
-        raise BallSstBuildError(f"production split_manifest must be canonical {expected_split}")
+    split_resolved = verification_split.resolve(strict=True)
+    if verification_snapshot is None:
+        expected_split = (ROOT / FROZEN_SPLIT_RELATIVE_PATH).resolve(strict=True)
+        if split_manifest.is_symlink() or split_manifest.absolute() != split_resolved:
+            raise BallSstBuildError(
+                "production split_manifest must be a non-symlink canonical path"
+            )
+        if split_resolved != expected_split:
+            raise BallSstBuildError(
+                f"production split_manifest must be canonical {expected_split}"
+            )
     observed_split_sha = _sha256_file(split_resolved)
     if (
         observed_split_sha != FROZEN_SPLIT_SHA256
@@ -1669,7 +2569,27 @@ def _verify_production_artifacts_or_raise(
         raise BallSstBuildError("production split_manifest SHA differs from the frozen identity")
     _validate_frozen_split(_read_json(split_resolved), split_resolved)
 
-    current_builder_identity = _builder_identity()
+    current_builder_identity = (
+        _builder_identity()
+        if verification_snapshot is None
+        else {
+            **builder_identity,
+            "builder_code_sha256": _sha256_file(
+                _require_snapshot_path(
+                    verification_snapshot.inputs.root,
+                    verification_snapshot.inputs.builder_code,
+                    context="builder-code verification",
+                )
+            ),
+            "wasb_adapter_code_sha256": _sha256_file(
+                _require_snapshot_path(
+                    verification_snapshot.inputs.root,
+                    verification_snapshot.inputs.wasb_adapter_code,
+                    context="adapter-code verification",
+                )
+            ),
+        }
+    )
     if any(
         builder_identity.get(key) != current_builder_identity[key]
         for key in (
@@ -1683,25 +2603,53 @@ def _verify_production_artifacts_or_raise(
     ):
         raise BallSstBuildError("builder identity changed or was fabricated")
 
-    repo_path = Path(str(wasb_identity.get("repo_path") or ""))
-    current_wasb_identity = _resolve_wasb_identity(
-        checkpoint_path=wasb_checkpoint,
-        repo_path=repo_path,
-        require_production_identity=True,
-    )
+    if verification_snapshot is None:
+        repo_path = Path(str(wasb_identity.get("repo_path") or ""))
+        current_wasb_identity = _resolve_wasb_identity(
+            checkpoint_path=wasb_checkpoint,
+            repo_path=repo_path,
+            require_production_identity=True,
+        )
+    else:
+        current_wasb_identity = {
+            **wasb_identity,
+            "models_manifest_path": str(
+                verification_snapshot.inputs.models_manifest
+            ),
+            "checkpoint_path": str(verification_snapshot.inputs.checkpoint),
+            "repo_path": str(verification_snapshot.inputs.wasb_repo),
+        }
     identity_keys = (
-        "manifest_model_id",
-        "models_manifest_path",
-        "models_manifest_sha256",
-        "checkpoint_path",
-        "checkpoint_sha256",
-        "repo_path",
-        "repo_commit",
-        "repo_clean",
-        "production_identity_verified",
+        (
+            "manifest_model_id",
+            "models_manifest_path",
+            "models_manifest_sha256",
+            "checkpoint_path",
+            "checkpoint_sha256",
+            "repo_path",
+            "repo_commit",
+            "repo_clean",
+            "production_identity_verified",
+        )
+        if verification_snapshot is None
+        else (
+            "manifest_model_id",
+            "models_manifest_sha256",
+            "checkpoint_sha256",
+            "repo_commit",
+            "repo_clean",
+            "production_identity_verified",
+        )
     )
     if any(wasb_identity.get(key) != current_wasb_identity[key] for key in identity_keys):
         raise BallSstBuildError("WASB identity changed or was fabricated")
+    if verification_snapshot is not None and (
+        _sha256_file(verification_snapshot.inputs.models_manifest)
+        != str(wasb_identity["models_manifest_sha256"])
+        or _sha256_file(verification_snapshot.inputs.checkpoint)
+        != str(wasb_identity["checkpoint_sha256"])
+    ):
+        raise BallSstBuildError("WASB snapshot bytes changed after verification")
 
     verified_sample_count = 0
     replayed_prediction_sha256_by_clip: dict[str, str] = {}
@@ -1709,6 +2657,12 @@ def _verify_production_artifacts_or_raise(
         clip_id = str(clip.get("clip_id") or "")
         _assert_training_source_id(clip_id)
         source_media = _canonical_media_path(canonical_media, clip_id)
+        if verification_snapshot is not None:
+            source_media = _require_snapshot_path(
+                verification_snapshot.inputs.root,
+                source_media,
+                context=f"{clip_id} verification source-video consumption",
+            )
         media_sha = _validate_media_identity(
             source_media,
             video_id=clip_id,
@@ -1741,23 +2695,48 @@ def _verify_production_artifacts_or_raise(
         dependencies = clip.get("dependencies")
         if not isinstance(dependencies, Mapping):
             raise BallSstBuildError(f"clip {clip_id} requires dependency bindings")
-        frame_times_path = _bound_dependency_file(
-            dependencies.get("frame_times_path"), f"clip {clip_id} frame_times_path"
-        )
+        if verification_snapshot is None:
+            frame_times_path = _bound_dependency_file(
+                dependencies.get("frame_times_path"),
+                f"clip {clip_id} frame_times_path",
+            )
+            wasb_track_path = _bound_dependency_file(
+                dependencies.get("wasb_ball_track"),
+                f"clip {clip_id} wasb_ball_track",
+            )
+            wasb_metadata_path = _bound_dependency_file(
+                dependencies.get("wasb_metadata_path"),
+                f"clip {clip_id} wasb_metadata_path",
+            )
+            wasb_predictions_csv_path = _bound_dependency_file(
+                dependencies.get("wasb_predictions_csv_path"),
+                f"clip {clip_id} wasb_predictions_csv_path",
+            )
+        else:
+            snapshot_artifacts = verification_snapshot.artifacts[clip_id]
+            frame_times_path = _require_snapshot_path(
+                snapshot_artifacts.frame_times.parent,
+                snapshot_artifacts.frame_times,
+                context=f"{clip_id} verification frame-times consumption",
+            )
+            wasb_track_path = _require_snapshot_path(
+                snapshot_artifacts.ball_track.parent,
+                snapshot_artifacts.ball_track,
+                context=f"{clip_id} verification ball-track consumption",
+            )
+            wasb_metadata_path = _require_snapshot_path(
+                snapshot_artifacts.metadata.parent,
+                snapshot_artifacts.metadata,
+                context=f"{clip_id} verification metadata consumption",
+            )
+            wasb_predictions_csv_path = _require_snapshot_path(
+                snapshot_artifacts.predictions_csv.parent,
+                snapshot_artifacts.predictions_csv,
+                context=f"{clip_id} verification prediction-CSV consumption",
+            )
         expected_frame_times = _frame_times_payload(timing, media_sha256=media_sha)
         if _read_json(frame_times_path) != expected_frame_times:
             raise BallSstBuildError(f"clip {clip_id} frame-times payload is not reproducible")
-        wasb_track_path = _bound_dependency_file(
-            dependencies.get("wasb_ball_track"), f"clip {clip_id} wasb_ball_track"
-        )
-        wasb_metadata_path = _bound_dependency_file(
-            dependencies.get("wasb_metadata_path"),
-            f"clip {clip_id} wasb_metadata_path",
-        )
-        wasb_predictions_csv_path = _bound_dependency_file(
-            dependencies.get("wasb_predictions_csv_path"),
-            f"clip {clip_id} wasb_predictions_csv_path",
-        )
 
         _validate_wasb_predictions_csv(
             wasb_predictions_csv_path,
@@ -1811,6 +2790,37 @@ def _verify_production_artifacts_or_raise(
             timing=timing,
             visible_threshold=PRODUCTION_TEACHER_CONFIDENCE_MIN,
             expected_bindings=expected_wasb_bindings,
+            declared_predictions_csv=(
+                verification_snapshot.publication_artifacts_by_video[
+                    clip_id
+                ].predictions_csv
+                if verification_snapshot is not None
+                else None
+            ),
+            declared_ball_track=(
+                verification_snapshot.publication_artifacts_by_video[
+                    clip_id
+                ].ball_track
+                if verification_snapshot is not None
+                else None
+            ),
+            declared_source_video=(
+                verification_snapshot.inputs.declarations.source_video_by_id[
+                    clip_id
+                ]
+                if verification_snapshot is not None
+                else None
+            ),
+            declared_checkpoint=(
+                verification_snapshot.inputs.declarations.checkpoint
+                if verification_snapshot is not None
+                else None
+            ),
+            declared_wasb_repo=(
+                verification_snapshot.inputs.declarations.wasb_repo
+                if verification_snapshot is not None
+                else None
+            ),
         )
         if dependencies.get("wasb_runtime") != wasb_metadata_payload:
             raise BallSstBuildError(f"clip {clip_id} embedded WASB runtime metadata mismatch")
@@ -1876,6 +2886,15 @@ def _verify_production_artifacts_or_raise(
             pseudo_weight=PRODUCTION_PSEUDO_WEIGHT,
             dependency_hashes=actual_dependencies,
         )
+        if verification_snapshot is not None:
+            _normalize_sample_video_paths(
+                expected_samples,
+                source_media=Path(
+                    verification_snapshot.inputs.declarations.source_video_by_id[
+                        clip_id
+                    ]
+                ),
+            )
         actual_samples = clip.get("samples")
         if not isinstance(actual_samples, list) or actual_samples != expected_samples:
             raise BallSstBuildError(
@@ -2728,6 +3747,11 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pseudo-weight", type=float, default=PRODUCTION_PSEUDO_WEIGHT)
     parser.add_argument("--device", choices=("cuda", "cpu"), default="cuda")
     parser.add_argument("--wasb-batch-size", type=int, default=8)
+    parser.add_argument(
+        "--resume-dependencies",
+        action="store_true",
+        help="reuse only fully hash-bound per-video WASB dependencies; default is fresh inference",
+    )
     parser.add_argument("--out", type=Path, required=True)
     return parser
 
