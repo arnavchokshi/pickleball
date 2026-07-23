@@ -1,0 +1,111 @@
+{
+  "review_id": "trackE_methodrules_review_20260722_round4",
+  "round": 4,
+  "review_date": "2026-07-22",
+  "review_type": "BOUNDED_MICRO_REVIEW",
+  "verdict": "ADOPT_COMMIT",
+  "base_revision": {
+    "commit": "bd9fb1ebafac5f262e0bd64d51f550fb804851a3",
+    "skill_sha256": "cda6295d97ace988f6d14be6e5beec2b1941fbf6b23fe3d8e075c712ea4822f4"
+  },
+  "reviewed_snapshot": {
+    "skill_path": ".claude/skills/run-lane/SKILL.md",
+    "skill_sha256": "038ac07f51661b72ac6db1355b1892b421cf7a0e8f72773fa4333c29bd406ccb",
+    "skill_delta_vs_base": "+9/-0",
+    "spec_path": "runs/lanes/trackE_methodrules_review_20260722/spec.md",
+    "spec_sha256": "c2c245d892052d7f058f3f0f1e86e49d050d80f6797c354b4fcc6a648694d116",
+    "spec_delta_vs_base": "+9/-0"
+  },
+  "scope": {
+    "reviewed": [
+      "STANDING METHOD RULE 7: SHARED-MANIFEST WRITE LOCK",
+      "STANDING METHOD RULE 8: SUITE MANIFEST GUARD",
+      "Only their interaction with committed rule 5 attribution, committed rule 6 immutable-revision evidence, file-disjoint dispatch, BEST-STACK DELTA, and the structured-report requirement"
+    ],
+    "not_reopened": [
+      "Rules 1-6",
+      "Round 1 findings and attribution spot checks",
+      "Round 2 fix verification",
+      "Round 3 current-hash verification",
+      "The historical wide-suite failure set"
+    ],
+    "wide_suite_rerun": false
+  },
+  "checks": [
+    {
+      "id": "R7",
+      "verdict": "PASS",
+      "evidence": [
+        "SKILL.md:81-86 gives the named shared manifests one coordinator-granted, fleet-wide active writer and requires manifest-editing lanes to declare that scope at dispatch.",
+        "The lock strengthens the committed file-disjoint rule at SKILL.md:12-15 and is compatible with the mandatory BEST-STACK DELTA declaration at SKILL.md:114-118.",
+        "Grant-and-release wording makes the authorization lifecycle explicit; it does not grant lanes implicit write authority."
+      ]
+    },
+    {
+      "id": "R8",
+      "verdict": "PASS",
+      "evidence": [
+        "SKILL.md:87-89 requires start and end sha256 values for every governing shared manifest on any wide-suite run cited as evidence.",
+        "A mismatch invalidates the measurement and requires a rerun; it is therefore not booked as a test red and never enters rule 5 failure attribution."
+      ]
+    },
+    {
+      "id": "R5_INTERACTION",
+      "verdict": "PASS",
+      "evidence": [
+        "Rule 5 at SKILL.md:62-73 applies to failures from a valid wide-suite measurement. Rule 8 rejects a manifest-contaminated measurement before any failure ruling, so its no-attribution instruction does not bypass rule 5.",
+        "On the required stable rerun, any remaining out-of-lane failures still require rule 5 attribution and the report-schema honesty constraints still apply."
+      ]
+    },
+    {
+      "id": "R6_INTERACTION",
+      "verdict": "PASS",
+      "evidence": [
+        "Rule 6 at SKILL.md:74-80 controls evidence grade and execution location; rule 8 adds an orthogonal input-stability check.",
+        "Promotion evidence must satisfy both immutable-revision execution and matching manifest hashes. Working-tree iteration runs remain iteration-only even when their hashes match."
+      ]
+    },
+    {
+      "id": "DELTA_BOUNDARY",
+      "verdict": "PASS",
+      "evidence": [
+        "The SKILL.md diff from bd9fb1eb is exactly +9/-0 and contains only rules 7-8.",
+        "git diff --check passed for the SKILL.md delta and the Round 4 spec addition.",
+        "No new contradiction was found within the bounded interaction surface."
+      ]
+    }
+  ],
+  "findings": [],
+  "verdict_rationale": "Rules 7-8 are operationally clear and compose correctly with the committed evidence hierarchy. Rule 7 prevents concurrent shared-manifest writers; rule 8 rejects a run whose governing manifest changed before rule 5 attribution or rule 6 evidence grading can be applied. The stable rerun remains fully subject to rules 5-6 and the report schema. No blocker remains in the bounded Round 4 delta.",
+  "commit_authorization": {
+    "authorized": true,
+    "authorization_scope": "Round 4 delta only",
+    "base_commit": "bd9fb1ebafac5f262e0bd64d51f550fb804851a3",
+    "exact_files": [
+      ".claude/skills/run-lane/SKILL.md",
+      "runs/lanes/trackE_methodrules_review_20260722/spec.md",
+      "runs/lanes/trackE_methodrules_review_20260722/review_fix3.json",
+      "runs/lanes/trackE_methodrules_review_20260722/report.json"
+    ],
+    "reason": "Authorize the two-rule skill delta, its bounded Round 4 dispatch record, and the two deciding review records. No other dirty-worktree path is authorized.",
+    "excluded": [
+      "Every path outside exact_files",
+      "All lane logs and pid files",
+      "All unrelated dirty-worktree changes"
+    ]
+  },
+  "suite_record": {
+    "rerun": false,
+    "reason": "Round 4 is a bounded governance micro-review; the prior suite and passed items were not reopened.",
+    "recorded_passed": 4432,
+    "recorded_failed": 43,
+    "recorded_skipped": 25,
+    "failures_all_preexisting": false,
+    "evidence_grade": "ITERATION_ONLY"
+  },
+  "honest_issues": [
+    "The historical shared-working-tree suite remains red and iteration-only; this ruling is not promotion evidence.",
+    "VERIFIED=0 remains binding.",
+    "review_fix3.json is under an ignored run directory and will require explicit force-add if Track E stages the authorized delta."
+  ]
+}

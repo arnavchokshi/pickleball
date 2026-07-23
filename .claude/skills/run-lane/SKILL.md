@@ -78,6 +78,15 @@ stand: no single signal decides irreversibly; raw immutable; provenance carried.
    convention), but they are iteration evidence only. Motivating incident: Track A's A2 documented
    a test node renamed mid-collection by a concurrent lane's worktree mutation, with failures
    vanishing on targeted rerun — a shared-tree wide run is not a stable measurement.
+7. **SHARED-MANIFEST WRITE LOCK.** `configs/racketsport/best_stack.json` and equivalent shared
+   manifests (models/MANIFEST.json, runs/manager/data_ledger.json) have exactly ONE authorized
+   in-flight writer fleet-wide, granted and released through the coordinator. Lanes whose scope
+   includes manifest edits MUST declare it at dispatch so the lock can be sequenced. Motivating
+   incident: 2026-07-22 second manifest race — a rebuild re-added its best_stack entry mid-flight
+   and aborted another track's suite collection.
+8. **SUITE MANIFEST GUARD.** Any wide-suite run cited as evidence records the sha256 of the
+   governing shared manifest(s) at start AND end; a mismatch AUTO-INVALIDATES the run — rerun it,
+   never book it as a red, never spend attribution effort on it.
 
 ## The spec (write to `runs/lanes/<lane>_<date>/spec.md`)
 1. **HARD RULES block:** no branches/commits (owner joint-commit rule); read NORTH_STAR_ROADMAP.md, AGENTS.md, the relevant

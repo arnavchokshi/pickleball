@@ -61,3 +61,12 @@ binds to review.json + review_fix.json + this round's record), F7 (objective_res
 as PASS | BLOCKED | PARTIAL; PASS/FAIL reserved for acceptance rows). Scope: verify these four on
 the CURRENT hashes only — no wide rerun, no reopening PASSed items. Write review_fix2.json with
 final verdict + confirm/amend the 13-file commit whitelist. Overwrite report.json (schema-valid).
+
+## ROUND 4 — MICRO-REVIEW of rules 7-8 only (post-commit bd9fb1eb coordination edit)
+The reviewed snapshot was COMMITTED as bd9fb1eb per your ADOPT_COMMIT. Two coordinator rules were
+then added as the next coordination edit (STANDING METHOD RULES items 7 SHARED-MANIFEST WRITE
+LOCK + 8 SUITE MANIFEST GUARD — from tonight's second manifest race). Bounded scope: verify ONLY
+that items 7-8 are correctly worded, consistent with the rest of the committed text (esp. rule 6
+and the attribution convention — rule 8's auto-invalidate must not conflict with them), and
+introduce no new contradictions. Write review_fix3.json (verdict + commit authorization for the
+delta) + overwrite report.json schema-valid.
