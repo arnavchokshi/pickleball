@@ -1,0 +1,29 @@
+{
+  "artifact_type": "racketsport_court_external_source_admission",
+  "schema_version": 1,
+  "status": "OWNER_REVIEW_COMPLETE_CONDITIONAL_KEEP",
+  "owner_decision": {
+    "reviewed_source_count": 9,
+    "keep_source_count": 9,
+    "drop_source_count": 0,
+    "court_floor_geometry": "KEEP",
+    "external_net_keypoints": "NULL_BEFORE_TRAINING",
+    "required_net_semantic": "top_of_net"
+  },
+  "owner_observation": "All reviewed sources have accurate court-floor geometry. External net markers, where present, sit at the bottom of the net where it meets the ground rather than at the required top-of-net location.",
+  "normalization": {
+    "roboflow_rows_kept_for_floor_supervision": 2833,
+    "roboflow_rows_with_all_net_channels_already_null": 2390,
+    "roboflow_rows_requiring_net_channel_nulling": 443,
+    "net_keypoint_values_to_null": 921,
+    "pbvision_pending_cameras_kept_for_floor_supervision": 2,
+    "pbvision_net_channels_already_null": true,
+    "human_top_of_net_labels_unchanged": true
+  },
+  "review_act": {
+    "path": "runs/court_unified_training_20260723/review_pack/results/final_ca86b21250fa.json",
+    "sha256": "ca86b21250faea4bb350b34e7a17b3fa8f4877122792c11f9e577250b1e66adf"
+  },
+  "training_started": false,
+  "next_action": "Materialize the kept external rows with all three net channels null, pass the positive-owner-act loader gate, then freeze the train and validation manifests before training."
+}

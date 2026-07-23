@@ -422,6 +422,18 @@ OWNER_ELIGIBILITY_ACT_RELATIVE_PATH = (
     "runs/lanes/court_owner_pack_20260722/results/batch_01_answers_final.json"
 )
 OWNER_ELIGIBILITY_ACT_SHA256 = "334c60e63ea4ec51b099e443154c0068e9e89922c1acbb9f080d9da7e3c2d723"
+FLOOR_ONLY_OWNER_ELIGIBILITY_ACT_RELATIVE_PATH = (
+    "runs/court_unified_training_20260723/external_training_owner_act_final.json"
+)
+FLOOR_ONLY_OWNER_ELIGIBILITY_ACT_SHA256 = (
+    "e0f8935c5d42a531d144f74f0c527fc51b0cdd7c18e6c59ed5c5faca26893f29"
+)
+FLOOR_ONLY_TRAINING_CONDITION = "FLOOR_ONLY_ALL_NET_CHANNELS_NULL"
+EXTERNAL_NET_KEYPOINT_NAMES = (
+    "net_left_sideline",
+    "net_center",
+    "net_right_sideline",
+)
 
 
 def _require_training_eligible(
@@ -499,57 +511,163 @@ def _require_training_eligible(
                 clip = payload.get("clip")
                 if not isinstance(clip, str) or not clip:
                     denial_reasons.append("owner adjudication requires a non-empty payload clip")
-                if owner_adjudication.get("path") != OWNER_ELIGIBILITY_ACT_RELATIVE_PATH:
-                    denial_reasons.append(
-                        "owner adjudication path must equal "
-                        + OWNER_ELIGIBILITY_ACT_RELATIVE_PATH
-                    )
-                if owner_adjudication.get("sha256") != OWNER_ELIGIBILITY_ACT_SHA256:
-                    denial_reasons.append(
-                        "owner adjudication SHA-256 does not match the pinned final act"
-                    )
-                if owner_adjudication.get("video_id") != clip:
-                    denial_reasons.append(
-                        "owner adjudication video_id must match the payload clip"
-                    )
-                if owner_adjudication.get("decision") != "APPROVE":
-                    denial_reasons.append("owner adjudication decision must be APPROVE")
-
-                act_path = ROOT / OWNER_ELIGIBILITY_ACT_RELATIVE_PATH
-                try:
-                    act_bytes = act_path.read_bytes()
-                except OSError as exc:
-                    denial_reasons.append(
-                        f"owner adjudication act is unavailable at {act_path}: {exc}"
-                    )
-                else:
-                    import hashlib
-
-                    act_sha256 = hashlib.sha256(act_bytes).hexdigest()
-                    if act_sha256 != OWNER_ELIGIBILITY_ACT_SHA256:
+                act_relative_path = owner_adjudication.get("path")
+                if act_relative_path == FLOOR_ONLY_OWNER_ELIGIBILITY_ACT_RELATIVE_PATH:
+                    if owner_adjudication.get("sha256") != FLOOR_ONLY_OWNER_ELIGIBILITY_ACT_SHA256:
                         denial_reasons.append(
-                            "owner adjudication act bytes do not match the pinned SHA-256"
+                            "owner adjudication SHA-256 does not match the pinned floor-only act"
                         )
-                    try:
-                        act_payload = json.loads(act_bytes)
-                    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-                        denial_reasons.append(f"owner adjudication act is not valid JSON: {exc}")
-                    else:
-                        final_decisions = (
-                            act_payload.get("final_decisions")
-                            if isinstance(act_payload, dict)
-                            else None
+                    if owner_adjudication.get("decision") != "APPROVE":
+                        denial_reasons.append("owner adjudication decision must be APPROVE")
+                    if owner_adjudication.get("training_condition") != FLOOR_ONLY_TRAINING_CONDITION:
+                        denial_reasons.append(
+                            "owner adjudication must require " + FLOOR_ONLY_TRAINING_CONDITION
                         )
-                        final_decision = (
-                            final_decisions.get(clip)
-                            if isinstance(final_decisions, dict) and isinstance(clip, str)
-                            else None
-                        )
-                        if final_decision != "APPROVE":
+
+                    scope_type = owner_adjudication.get("scope_type")
+                    scope_id = owner_adjudication.get("scope_id")
+                    decision_key: str | None = None
+                    if scope_type == "pbvision_video":
+                        if payload.get("provenance") != PBVISION_PSEUDO_PROVENANCE:
                             denial_reasons.append(
-                                f"owner adjudication final decision for {clip!r} is "
-                                f"{final_decision!r}, not APPROVE"
+                                "pbvision_video owner scope requires pbvision pseudo provenance"
                             )
+                        if scope_id != clip:
+                            denial_reasons.append(
+                                "owner adjudication pbvision scope_id must match the payload clip"
+                            )
+                        if isinstance(scope_id, str):
+                            decision_key = f"pbvision::{scope_id}"
+                    elif scope_type == "roboflow_dataset":
+                        item_datasets = [
+                            provenance.get("dataset")
+                            if isinstance(item, dict)
+                            and isinstance((provenance := item.get("provenance")), dict)
+                            and isinstance(provenance.get("dataset"), str)
+                            else None
+                            for item in items
+                        ]
+                        datasets = {dataset for dataset in item_datasets if dataset is not None}
+                        if len(datasets) != 1 or any(dataset is None for dataset in item_datasets):
+                            denial_reasons.append(
+                                "roboflow_dataset owner scope requires every item to name exactly one provenance dataset"
+                            )
+                        else:
+                            dataset = next(iter(datasets))
+                            if scope_id != dataset:
+                                denial_reasons.append(
+                                    "owner adjudication roboflow scope_id must match item provenance dataset"
+                                )
+                            if isinstance(clip, str) and not (
+                                clip == dataset or clip.startswith(f"{dataset}__")
+                            ):
+                                denial_reasons.append(
+                                    "roboflow payload clip must match its owner-approved dataset"
+                                )
+                            decision_key = f"roboflow::{dataset}"
+                    else:
+                        denial_reasons.append(
+                            "owner adjudication floor-only scope_type must be pbvision_video or roboflow_dataset"
+                        )
+
+                    nonnull_net = [
+                        f"{index}:{name}"
+                        for index, item in enumerate(items)
+                        if isinstance(item, dict) and isinstance(item.get("keypoints"), dict)
+                        for name in EXTERNAL_NET_KEYPOINT_NAMES
+                        if item["keypoints"].get(name) is not None
+                    ]
+                    if nonnull_net:
+                        denial_reasons.append(
+                            "floor-only owner act requires every external net channel to be null; got "
+                            + ",".join(nonnull_net)
+                        )
+
+                    act_path = ROOT / FLOOR_ONLY_OWNER_ELIGIBILITY_ACT_RELATIVE_PATH
+                    try:
+                        act_bytes = act_path.read_bytes()
+                    except OSError as exc:
+                        denial_reasons.append(
+                            f"owner adjudication act is unavailable at {act_path}: {exc}"
+                        )
+                    else:
+                        import hashlib
+
+                        if hashlib.sha256(act_bytes).hexdigest() != FLOOR_ONLY_OWNER_ELIGIBILITY_ACT_SHA256:
+                            denial_reasons.append(
+                                "owner adjudication act bytes do not match the pinned floor-only SHA-256"
+                            )
+                        try:
+                            act_payload = json.loads(act_bytes)
+                        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                            denial_reasons.append(f"owner adjudication act is not valid JSON: {exc}")
+                        else:
+                            final_decisions = (
+                                act_payload.get("final_decisions")
+                                if isinstance(act_payload, dict)
+                                else None
+                            )
+                            final_decision = (
+                                final_decisions.get(decision_key)
+                                if isinstance(final_decisions, dict) and decision_key is not None
+                                else None
+                            )
+                            if final_decision != "APPROVE":
+                                denial_reasons.append(
+                                    f"owner adjudication final decision for {decision_key!r} is "
+                                    f"{final_decision!r}, not APPROVE"
+                                )
+                else:
+                    if act_relative_path != OWNER_ELIGIBILITY_ACT_RELATIVE_PATH:
+                        denial_reasons.append(
+                            "owner adjudication path is not one of the pinned final acts"
+                        )
+                    if owner_adjudication.get("sha256") != OWNER_ELIGIBILITY_ACT_SHA256:
+                        denial_reasons.append(
+                            "owner adjudication SHA-256 does not match the pinned final act"
+                        )
+                    if owner_adjudication.get("video_id") != clip:
+                        denial_reasons.append(
+                            "owner adjudication video_id must match the payload clip"
+                        )
+                    if owner_adjudication.get("decision") != "APPROVE":
+                        denial_reasons.append("owner adjudication decision must be APPROVE")
+
+                    act_path = ROOT / OWNER_ELIGIBILITY_ACT_RELATIVE_PATH
+                    try:
+                        act_bytes = act_path.read_bytes()
+                    except OSError as exc:
+                        denial_reasons.append(
+                            f"owner adjudication act is unavailable at {act_path}: {exc}"
+                        )
+                    else:
+                        import hashlib
+
+                        act_sha256 = hashlib.sha256(act_bytes).hexdigest()
+                        if act_sha256 != OWNER_ELIGIBILITY_ACT_SHA256:
+                            denial_reasons.append(
+                                "owner adjudication act bytes do not match the pinned SHA-256"
+                            )
+                        try:
+                            act_payload = json.loads(act_bytes)
+                        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                            denial_reasons.append(f"owner adjudication act is not valid JSON: {exc}")
+                        else:
+                            final_decisions = (
+                                act_payload.get("final_decisions")
+                                if isinstance(act_payload, dict)
+                                else None
+                            )
+                            final_decision = (
+                                final_decisions.get(clip)
+                                if isinstance(final_decisions, dict) and isinstance(clip, str)
+                                else None
+                            )
+                            if final_decision != "APPROVE":
+                                denial_reasons.append(
+                                    f"owner adjudication final decision for {clip!r} is "
+                                    f"{final_decision!r}, not APPROVE"
+                                )
     if denial_reasons and not allow_pending_diagnostic_only:
         raise ValueError(
             "court_keypoints labels are diagnostic-only and not training eligible: "

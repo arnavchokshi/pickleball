@@ -1,0 +1,80 @@
+{
+  "artifact_type": "racketsport_court_external_training_owner_act",
+  "completed_at": "2026-07-23T07:12:44Z",
+  "evidence": {
+    "admission_summary": {
+      "path": "runs/court_unified_training_20260723/external_source_admission_final.json",
+      "sha256": "7650335c7bcc3572e7e19496e46f244ad3ab06ed4779d4d446c434cc9a759862"
+    },
+    "current_nine_source_review": {
+      "covers": [
+        "roboflow::chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+        "roboflow::n-do-tran__pickleball-court-p3chl__v4",
+        "roboflow::necromancer__pickleball-court-vbmkq__v2",
+        "roboflow::nigh-workspace__pickleball-court-vhpgp__v11",
+        "roboflow::pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+        "roboflow::ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+        "roboflow::stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1",
+        "pbvision::st0epgnab7dr",
+        "pbvision::xkadsq9bli3h"
+      ],
+      "path": "runs/court_unified_training_20260723/review_pack/results/final_ca86b21250fa.json",
+      "sha256": "ca86b21250faea4bb350b34e7a17b3fa8f4877122792c11f9e577250b1e66adf"
+    },
+    "incorporated_prior_pbvision_approvals": {
+      "path": "runs/lanes/court_owner_pack_20260722/results/batch_01_answers_final.json",
+      "sha256": "334c60e63ea4ec51b099e443154c0068e9e89922c1acbb9f080d9da7e3c2d723",
+      "video_ids": [
+        "143sf3gdwxsa",
+        "98z43hspqz13",
+        "td2szayjwtrj",
+        "tqjlrcntpjvt"
+      ]
+    }
+  },
+  "final_decisions": {
+    "pbvision::143sf3gdwxsa": "APPROVE",
+    "pbvision::98z43hspqz13": "APPROVE",
+    "pbvision::st0epgnab7dr": "APPROVE",
+    "pbvision::td2szayjwtrj": "APPROVE",
+    "pbvision::tqjlrcntpjvt": "APPROVE",
+    "pbvision::xkadsq9bli3h": "APPROVE",
+    "roboflow::chetan-rajagiri-9abfm__pickleball-court-v2__v1": "APPROVE",
+    "roboflow::n-do-tran__pickleball-court-p3chl__v4": "APPROVE",
+    "roboflow::necromancer__pickleball-court-vbmkq__v2": "APPROVE",
+    "roboflow::nigh-workspace__pickleball-court-vhpgp__v11": "APPROVE",
+    "roboflow::pickleball-ball-detection__pickleball-court-keypoints-syncz__v6": "APPROVE",
+    "roboflow::ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3": "APPROVE",
+    "roboflow::stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1": "APPROVE"
+  },
+  "promotion_status": "not_promoted",
+  "schema_version": 1,
+  "scopes": {
+    "pbvision_video_ids": [
+      "143sf3gdwxsa",
+      "98z43hspqz13",
+      "td2szayjwtrj",
+      "tqjlrcntpjvt",
+      "st0epgnab7dr",
+      "xkadsq9bli3h"
+    ],
+    "roboflow_dataset_ids": [
+      "chetan-rajagiri-9abfm__pickleball-court-v2__v1",
+      "n-do-tran__pickleball-court-p3chl__v4",
+      "necromancer__pickleball-court-vbmkq__v2",
+      "nigh-workspace__pickleball-court-vhpgp__v11",
+      "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6",
+      "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3",
+      "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1"
+    ],
+    "row_scope": "only rows materialized in the hash-pinned final external corpus"
+  },
+  "status": "OWNER_APPROVED_CONDITIONAL_FLOOR_ONLY",
+  "training_condition": {
+    "court_floor_keypoints": "TRAIN",
+    "external_net_keypoints": "NULL_ALL_THREE_CHANNELS",
+    "reason": "Reviewed external net markers use bottom-of-net semantics and must not supervise top-of-net channels.",
+    "required_net_semantic": "top_of_net"
+  },
+  "training_started": false
+}

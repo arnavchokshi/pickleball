@@ -1,0 +1,60 @@
+{
+  "admission_policy": {
+    "external_net_keypoints": "NULL_BEFORE_TRAINING",
+    "floor_keypoints": "KEEP",
+    "required_net_semantic": "top_of_net"
+  },
+  "answers": {
+    "pbvision::st0epgnab7dr": {
+      "choice": "KEEP",
+      "reason": null,
+      "ts": "2026-07-23T07:11:33.304Z"
+    },
+    "pbvision::xkadsq9bli3h": {
+      "choice": "KEEP",
+      "reason": null,
+      "ts": "2026-07-23T07:12:44Z"
+    },
+    "roboflow::chetan-rajagiri-9abfm__pickleball-court-v2__v1": {
+      "choice": "KEEP",
+      "reason": null,
+      "ts": "2026-07-23T07:11:29.387Z"
+    },
+    "roboflow::n-do-tran__pickleball-court-p3chl__v4": {
+      "choice": "KEEP",
+      "reason": null,
+      "ts": "2026-07-23T07:11:29.770Z"
+    },
+    "roboflow::necromancer__pickleball-court-vbmkq__v2": {
+      "choice": "KEEP",
+      "reason": null,
+      "ts": "2026-07-23T07:11:30.312Z"
+    },
+    "roboflow::nigh-workspace__pickleball-court-vhpgp__v11": {
+      "choice": "KEEP",
+      "reason": null,
+      "ts": "2026-07-23T07:11:30.637Z"
+    },
+    "roboflow::pickleball-ball-detection__pickleball-court-keypoints-syncz__v6": {
+      "choice": "KEEP",
+      "reason": null,
+      "ts": "2026-07-23T07:11:31.104Z"
+    },
+    "roboflow::ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3": {
+      "choice": "KEEP",
+      "reason": null,
+      "ts": "2026-07-23T07:11:31.562Z"
+    },
+    "roboflow::stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1": {
+      "choice": "KEEP",
+      "reason": null,
+      "ts": "2026-07-23T07:11:32.145Z"
+    }
+  },
+  "completed_at": "2026-07-23T07:12:44Z",
+  "owner_note": "Keep all nine reviewed sources for accurate court-floor geometry. External net markers, where present, are at the bottom/ground intersection rather than the required top-of-net semantic.",
+  "pack": "court_external_source_review_20260723",
+  "schema_version": 1,
+  "server_saved_at": "2026-07-23T07:12:44.236168+00:00",
+  "started_at": "2026-07-23T07:09:35.500Z"
+}

@@ -1,0 +1,48 @@
+{
+  "artifact_type": "racketsport_court_external_corpus_materialization_report",
+  "checks": {
+    "all_external_net_channels_null": true,
+    "all_images_symlinked_and_resolve": true,
+    "exact_pbvision_rows_6": true,
+    "exact_roboflow_rows_2833": true,
+    "owner_scope_count_13": true,
+    "training_not_started": true
+  },
+  "counts": {
+    "pbvision_rows": 6,
+    "pbvision_video_count": 6,
+    "roboflow_dataset_count": 7,
+    "roboflow_net_values_removed": 921,
+    "roboflow_rows": 2833,
+    "roboflow_rows_with_net_values_removed": 443,
+    "total_rows": 2839
+  },
+  "immutable": {
+    "canonical_owner_act_sha256": "e0f8935c5d42a531d144f74f0c527fc51b0cdd7c18e6c59ed5c5faca26893f29",
+    "manifest_sha256": "8693e56d39b776f725704ee0abcd5f32dfe55908fcbde061af583ab8cf3a977a",
+    "row_digest_sha256": "b7375141d1e56aa06b66f8cbf685f435ece3b86e00d861fa763944b97090a13c"
+  },
+  "schema_version": 1,
+  "status": "PASS",
+  "verification": {
+    "broken_image_symlinks": 0,
+    "image_symlinks": 2839,
+    "label_rows": 2839,
+    "non_null_external_net_values": 0,
+    "rows_by_owner_scope": {
+      "143sf3gdwxsa": 1,
+      "98z43hspqz13": 1,
+      "chetan-rajagiri-9abfm__pickleball-court-v2__v1": 35,
+      "n-do-tran__pickleball-court-p3chl__v4": 120,
+      "necromancer__pickleball-court-vbmkq__v2": 1772,
+      "nigh-workspace__pickleball-court-vhpgp__v11": 292,
+      "pickleball-ball-detection__pickleball-court-keypoints-syncz__v6": 41,
+      "ping-pong-paddle-ai-with-images__pickleball-court-p3chl-7tufp__v3": 288,
+      "st0epgnab7dr": 1,
+      "stump-detection-front-view-mj39q__pickle-ball-court-keypoints__v1": 285,
+      "td2szayjwtrj": 1,
+      "tqjlrcntpjvt": 1,
+      "xkadsq9bli3h": 1
+    }
+  }
+}
