@@ -1,0 +1,207 @@
+{
+  "artifact_type": "event_ev2_design_control_results",
+  "created_utc": "2026-07-22",
+  "objective_result": "PARTIAL",
+  "verified": false,
+  "registered_experiment_training_runs": 0,
+  "synthetic_direct_cli_training_paths_exercised_by_tests": true,
+  "gpu_runs": 0,
+  "owner41_score_calls": 0,
+  "protected50_score_calls": 0,
+  "controls": {
+    "focused_event_suite": {
+      "status": "pass",
+      "command": "MPLBACKEND=Agg .venv/bin/python -m pytest -q tests/racketsport/test_event_head_assignment.py tests/racketsport/test_event_head_model.py tests/racketsport/test_event_head_dataset.py tests/racketsport/test_event_head_training.py tests/racketsport/test_event_head_finetune.py tests/racketsport/test_event_head_stage_p_ev2.py tests/racketsport/test_finetune_event_head_ev2.py tests/racketsport/test_event_head_training_controls.py tests/racketsport/test_event_head_ev2_judge_control.py tests/racketsport/test_event_head_recipe_utils.py tests/racketsport/test_event_head_ev2_repair.py",
+      "passed": 101,
+      "failed": 0,
+      "skipped": 0,
+      "elapsed_s": 49.39
+    },
+    "repair_round_2_boundary_suite": {
+      "status": "pass",
+      "command": "MPLBACKEND=Agg .venv/bin/python -m pytest -q tests/racketsport/test_event_head_ev2_repair.py",
+      "passed": 38,
+      "failed": 0,
+      "skipped": 0,
+      "elapsed_s": 14.83,
+      "boundary_evidence": [
+        "R4 executes sixteen single-divergent values, four single-absent values, legacy-wholesale, exact-recipe, and omitted CLI steps/seed/workers adversaries with instrumented zero input opens before rejection",
+        "F3 executes the exact 38+2 synthetic inventory and rejects the 35/1/1/1 adversarial cardinality",
+        "F4 controlled monotonic clock executes typed exit 31 at the exact post-optimizer cap",
+        "F5 executes frozen-commit git-show hashing in a temporary git repository and rejects a stale sums commit",
+        "F6 executes both pre-ID setup failure and captured-ID later finalizer paths through fake provider delete plus absence confirmation",
+        "F9 executes the exact plan heredoc for PASS and non-PASS inputs and proves atomic handoff/no temporary/no production mutation"
+      ]
+    },
+    "required_wide_suite": {
+      "status": "not_run_policy_conflict",
+      "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/",
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "reason": "Existing tests directly or transitively open sealed protected-answer JSONs, so executing the exact suite would violate the lane's no-touch rule. Acceptance item 4 is not met."
+    },
+    "reduced_wide_suite_attempt": {
+      "status": "interrupted_after_policy_conflict",
+      "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/ --ignore=tests/racketsport/test_owner_event_manifest.py --ignore=tests/racketsport/test_event_review_session.py --ignore=tests/racketsport/test_finetune_event_head.py",
+      "collected": 4488,
+      "passed_before_interrupt": 1634,
+      "failed_before_interrupt": 11,
+      "skipped_before_interrupt": 3,
+      "elapsed_s": 2168.52,
+      "failures_all_preexisting": false,
+      "failures": [
+        "tests/racketsport/test_ball_arc_solver.py::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds",
+        "tests/racketsport/test_best_stack_manifest.py::test_best_stack_manifest_integrity",
+        "tests/racketsport/test_build_person_fewshot_pack.py::test_direct_cli_reference_exposes_plan_materialize_validate_and_emit_review",
+        "tests/racketsport/test_cli_help.py::test_python_cli_help_runs_from_repo_root[scripts/racketsport/build_person_fewshot_pack.py]",
+        "tests/racketsport/test_compare_court_proposals.py::test_compare_img1605_partial_labels_rejects_current_bad_proposal",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_or_distance_mask_selector_scores_candidate_combination",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_or_refined_regulation_selector_uses_guarded_refinement_when_it_improves_median",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_hough_lsd_regulation_selector_scores_and_improves_mean_floor_error",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_hough_lsd_line_adapter_uses_available_frame_sequence",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_persistent_line_adapter_reports_frame_support",
+        "tests/racketsport/test_court_finding_technology_benchmark.py::test_temporal_hough_lsd_regulation_scores_without_claiming_verified"
+      ],
+      "note": "This attempt is not accepted as a substitute for the exact suite. It was stopped after test_audit_data_utilization.py transitively byte-read sealed JSONs."
+    },
+    "judge_identity": {
+      "status": "pass",
+      "e1_code_commit": "9bbd8011828631b4cc7df4afdf3b1932e758914a",
+      "git_diff_exit_code": 0,
+      "files": {
+        "scripts/racketsport/eval_event_head.py": "a0c172f73231113af3c14bcfb8b91dd83415e5406ab89d0439b697d27848e22f",
+        "threed/racketsport/event_head/matcher.py": "2272a01d94a02d6663764b3fc7018f43b70bec428a8ad7c2c3fc125373149b62"
+      },
+      "fixture_sha256": "2425e016a022466776166aab64d938f942b0f7ec34f9d9e5eaf1a12b4f84cfb2",
+      "banked_checkpoint_fixture_logits": {
+        "A": {
+          "checkpoint_sha256": "e38f7c1be382a4e781f0a96b22383bd8636817304443ddb7ca343f2e51837005",
+          "logits_sha256": "ed6473fc302f11fac978b0ff72f656a3bc8a9bcd66c91fc26b2fc08d0c6b43c0",
+          "match": true
+        },
+        "B": {
+          "checkpoint_sha256": "64559c3836108412cbe8ed085f9547aa557c2196b194d17ecbedead5ce9dc2e1",
+          "logits_sha256": "d255898723b72df4bcf8ff977a7fbd1bd99a946658c6e8bbfb229c93725b150c",
+          "match": true
+        },
+        "C": {
+          "checkpoint_sha256": "691b0f2b680fb4b266a67778c39298d9223df8036692142516d906fa7fff0f7b",
+          "logits_sha256": "34d9f9d03d240d153e91e6ef80bedccf59af10086969ddf905eaf0dd2f4e0675",
+          "match": true
+        }
+      },
+      "owner_data_used": false
+    },
+    "dataloader_inference_tensor_parity": {
+      "status": "pass",
+      "test": "tests/racketsport/test_event_head_training_controls.py::test_dataloader_tensor_is_bit_identical_to_production_inference_preprocessor",
+      "comparison": "torch.equal"
+    },
+    "deterministic_construction": {
+      "status": "pass",
+      "test": "tests/racketsport/test_event_head_training_controls.py::test_same_seed_source_split_and_window_construction_are_byte_identical",
+      "seed": 20260722,
+      "comparison": "byte-identical canonical JSON"
+    },
+    "static_checks": {
+      "python_compile": "pass",
+      "git_diff_check": "pass",
+      "code_sha256sum_check": "pass",
+      "vm_plan_bash_blocks": 13,
+      "vm_plan_bash_syntax": "pass",
+      "vm_plan_embedded_shell_programs": 4,
+      "vm_plan_embedded_shell_syntax": "pass",
+      "vm_plan_embedded_python_programs": 21,
+      "vm_plan_embedded_python_compile": "pass",
+      "vm_plan_controller_zsh_syntax": "pass",
+      "vm_plan_logical_shellcheck_warning_severity": "pass",
+      "precreate_registered_input_sha256": "pass",
+      "precreate_runtime_code_sha256": "pass",
+      "stage_p_media_ids_urls_and_sha_match_manifest": "pass",
+      "registered_train_side_rate_media_mp4_count": 38,
+      "gcloud_create_flag_surface_sdk_572": "pass"
+    },
+    "repository_structure": {
+      "scaffold_index": {
+        "status": "pass",
+        "tool_count": 314,
+        "missing_direct_cli_reference_tests": 0,
+        "missing_related_tests": 0
+      },
+      "dead_code_audit": {
+        "last_completed_status": "pass",
+      "python_sources": 609,
+        "unknown": 0,
+        "fresh_repeat": "interrupted after it exceeded the remaining reporting window; the earlier completed pass may be stale because other lanes changed the shared worktree concurrently"
+      },
+      "storage_policy": {
+        "status": "fail",
+        "unknown_large_tracked_files": 6,
+        "unknown_large_untracked_source_files": 1,
+        "missing_allowed_large_tracked_files": 1,
+        "missing_allowed_large_untracked_source_files": 78,
+        "attribution": "pre-existing or concurrent unrelated dirty-worktree state; no lane-owned runtime or report file appears in these lists"
+      }
+    }
+  },
+  "registered_recipe": {
+    "adopted_elements": [
+      "sqrt-frequency class weighting from constructed training-window dense class mass",
+      "+/-1-frame soft label dilation",
+      "Stage-P Hungarian confidence-plus-temporal assignment",
+      "additive HIT/BOUNCE sub-frame offset regression head",
+      "NMS radius 2 with Stage-P source-held threshold lock",
+      "train-side full-video rate and negative-fire guards"
+    ],
+    "named_exclusions": [
+      "GAUSSIAN_SOFT_LABEL_FALLBACK_NOT_USED",
+      "track/wrist/pose/ball-state/audio conditioning channels are follow-up work, not part of this RGB-only experiment"
+    ],
+    "stage_p_train_dense_class_mass": [57563.0, 1035.5, 888.5],
+    "stage_p_sqrt_frequency_weights": [1.0, 7.45584135131073, 8.049019765763125],
+    "hard_negative_audio_only_raw_rows": 292,
+    "hard_negative_heldout_source_rows_removed": 30,
+    "hard_negative_audio_only_candidates": 262,
+    "hard_negative_selected": 96
+  },
+  "repair_round_1": {
+    "review": "trackD_ev2_review_20260722",
+    "status": "implemented_and_focused_controls_pass",
+    "findings": {
+      "EV2-R1": "standalone p90 row removed; +/-2 matched-error subsumption and 64-frame no-match sentinel registered; judge unchanged",
+      "EV2-R2": "actual pinned derivation asserts raw=292, heldout-source removed=30, eligible=262, selected=96, and no eligible source_video_id equals st0epgnab7dr",
+      "EV2-R3": "seeded wrapped sampler supplies exactly 8 owner plus 4 hard-negative windows for all 1000 Stage-F steps",
+      "EV2-R4": "final-step mode rejects any absent or divergent registered recipe value with typed argparse errors",
+      "EV2-F1": "owner JSON is projected by split and validation-row event fields are deleted before recursive provenance/token scans; envelope SHA is content-blind",
+      "EV2-F2": "Stage-F validates the complete Stage-P threshold-lock/train-manifest/checkpoint cross-contract before window construction",
+      "EV2-F3": "rate inventory is label-independent: all 38 MP4s from four registered train-side source directories",
+      "EV2-F4": "Stage-F max wall starts before hard-negative mining and covers mining through optimizer completion",
+      "EV2-F5": "VM preflight validates committed blobs for all reviewed code and lane artifacts and checks out that exact reachable commit",
+      "EV2-F6": "every post-create exit uses identity-bound watchdog cancellation, tolerant evidence pull, fallback verdict, deletion, and absence verification",
+      "EV2-F7": "price proof is mechanically computed from authoritative Cloud Billing Catalog SKU data with exact registered SKU IDs and freshness checks",
+      "EV2-F8": "every probe/train/stage-V timeout uses TERM followed by a 30-second KILL wall",
+      "EV2-F9": "GPU PASS atomically emits only BEST_STACK_PENDING.json for serialized integration ownership; the GPU plan cannot mutate production best_stack.json"
+    }
+  },
+  "repair_round_2": {
+    "review": "trackD_ev2_review_20260722 rescore residuals",
+    "status": "six_residuals_implemented_and_executable_boundaries_pass",
+    "findings": {
+      "EV2-R4": "final-step recipe validation is the first mode-specific act; the complete registered hyperparameter/cardinality/guard set rejects before all input boundaries",
+      "EV2-F3": "RATE_MEDIA_LOCK.json pins exact 38 train plus 2 validation paths/bytes, 8/8/19/3 train counts, 57025 frames, and 2063.1827083333333 seconds independent of owner manifests",
+      "EV2-F4": "the internal optimizer/mining wall raises typed exit 31 immediately after optimizer.step and before terminal guards",
+      "EV2-F5": "preflight reads CODE_SHA256SUMS and every listed target from RUN_COMMIT with git show and binds every formal lane artifact",
+      "EV2-F6": "stale state is rejected, first provider ID capture is atomic, and both setup-era and later finalizers delete plus confirm VM/disk absence",
+      "EV2-F9": "the exact PASS heredoc imports os, fsyncs a temp handoff, atomically replaces once, cleans temp on failure, and never mutates production"
+    }
+  },
+  "protected_access_disclosure": [
+    "The combined owner_102_manifest.json envelope was SHA-hashed and JSON-parsed, and validation split markers were counted to isolate the 61 train rows; no owner-41 event field was inspected, printed, scored, selected on, or tuned against.",
+    "A pre-existing legacy finetune focused test parsed runs/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json for overlap validation before the conflict was identified.",
+    "The reduced wide-suite attempt then byte-read spot_check_tier_a_50.json and owner_spot_check_results_20260715.json through test_audit_data_utilization.py's ledger SHA verifier before the transitive access was identified.",
+    "No protected scoring, training, threshold selection, hyperparameter tuning, manual label inspection, or owner-41 scoring occurred."
+  ],
+  "code_hash_manifest": "runs/lanes/trackD_ev2_design_20260722/CODE_SHA256SUMS",
+  "vm_run_plan": "runs/lanes/trackD_ev2_design_20260722/VM_RUN_PLAN.md"
+}

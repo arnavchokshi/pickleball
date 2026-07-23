@@ -1,0 +1,161 @@
+{
+  "objective_result": "PARTIAL",
+  "acceptance": [
+    {
+      "metric": "EV2-R1 vacuous p90 gate",
+      "baseline": "standalone timing-p90 <=2f PASS row duplicated the frozen +/-2 matcher tolerance",
+      "after": "standalone row removed; registration proves positive macro-F1@+/-2 subsumes matched p90<=2f and documents the 64-frame no-match sentinel and E1 comparison",
+      "target": "manager R1 ruling; no judge edit and no invented tolerance",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-R2 held-out-source leak",
+      "baseline": "292 raw audio-only difference rows included 30 rows from Stage-P held-out source st0epgnab7dr",
+      "after": "292 raw - 30 held-out = 262 eligible; hard assertion proves no eligible row uses st0epgnab7dr; top-96 ranking unchanged",
+      "target": "exact eligible cardinality 262 and zero held-out-source rows",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-R3 Stage-F batch composition",
+      "baseline": "last epoch batch could contain 5 owner + 4 hard-negative windows",
+      "after": "all 1000 steps contain exactly 8 owner + 4 hard-negative windows via seeded deterministic reshuffle/wrap",
+      "target": "8+4 on every step without changing 1000-step exposure",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-R4 final-step recipe enforcement",
+      "baseline": "legacy defaults could silently enter final-step mode",
+      "after": "final-step mode hard-validates every registered recipe value before input reads and raises FineTuneInputError on absence or divergence",
+      "target": "registered final-step recipe must be impossible to omit or alter",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-F1 validation-field sanitization",
+      "baseline": "owner envelope could be scanned before validation event fields were removed",
+      "after": "split-only projection deletes raw validation rows before recursive provenance/token scans; raw bytes are used only for a documented content-blind SHA check",
+      "target": "no validation-row event-field scan or inspection",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-F2 threshold-lock contract",
+      "baseline": "Stage F accepted an incompletely cross-checked threshold lock",
+      "after": "artifact type/status, owner exclusion, held-out source, grid, tie-break, NMS/tolerance, threshold, step, checkpoint SHA, data SHA, and train-manifest links are hard-validated before windows",
+      "target": "complete threshold-lock hard assertion",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-F3 rate-media inventory",
+      "baseline": "inventory was conditioned by owner-manifest membership",
+      "after": "label-independent filesystem inventory contains all 38 MP4s from four registered train-side source directories, with zero validation-path overlap",
+      "target": "inventory independent of owner-manifest conditioning",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-F4 Stage-F wall scope",
+      "baseline": "max-wall clock began after mining",
+      "after": "clock begins before hard-negative derivation/mining and covers mining through optimizer completion",
+      "target": "mining cannot borrow wall time",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-F5 reviewed-byte commit preflight",
+      "baseline": "fresh VM was not proven to run the exact reviewed artifact bytes",
+      "after": "preflight byte-compares every lane artifact to its commit blob, hashes every reviewed runtime worktree/blob against committed CODE_SHA256SUMS, requires origin/main reachability, and checks out the exact commit",
+      "target": "reviewed bytes in the execution commit",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-F6 teardown coverage",
+      "baseline": "some post-create failure routes lacked complete teardown",
+      "after": "one identity-bound tolerant finalizer covers every post-create exit with pull, spend fallback, watchdog cancel, verdict fallback, delete, and absence verification",
+      "target": "complete teardown for every post-create route",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-F7 price-proof source",
+      "baseline": "operator-entered price quote could satisfy the spend proof",
+      "after": "mechanical authoritative Cloud Billing Catalog proof uses exact registered IDs cross-checked against the [Spot A2 SKU group](https://cloud.google.com/skus/sku-groups/spot-preemptible-a2-vms), [balanced-disk SKU group](https://cloud.google.com/skus/sku-groups/on-demand-balanced-persistent-disk), and [IPv4 pricing notice](https://cloud.google.com/vpc/pricing-announce-external-ips), with currency, region, description, usage, retrieval-freshness, and completeness assertions",
+      "target": "authoritative mechanical price proof; no operator-entered rates",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-F8 kill-backed hard walls",
+      "baseline": "timeouts could stop at TERM without an enforced KILL",
+      "after": "all six probe/train/guard/Stage-V timeout sites use TERM plus --kill-after=30s",
+      "target": "KILL-backed hard walls",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "EV2-F9 atomic PASS-only best-stack handoff",
+      "baseline": "GPU PASS path could mutate production best_stack.json",
+      "after": "GPU plan leaves production files unchanged and atomically emits only BEST_STACK_PENDING.json for the serialized integration owner",
+      "target": "PASS-only atomic handoff; no GPU-lane production mutation",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Original acceptance 1 registration completeness",
+      "baseline": "pre-repair registration had review-blocking cardinality, gate, guard, and execution-policy mismatches",
+      "after": "REGISTRATION.md, INPUT_LOCK.json, VM_RUN_PLAN.md, and reports now freeze the repaired code path consistently and the GPU commands are statically executable",
+      "target": "complete internally consistent verbatim GPU registration",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Original acceptance 2 adopted recipe implementation",
+      "baseline": "recipe implementation existed but final-step enforcement and repaired guards were incomplete",
+      "after": "every adopted recipe element and all 13 repair controls are flagged, hard-required where registered, and covered by the 76-test focused suite",
+      "target": "all adopted elements implemented and tested; drops named",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Original acceptance 3 mandatory controls",
+      "baseline": "judge identity, parity, and determinism passed before repair",
+      "after": "judge identity remains byte-identical; old-checkpoint fixture, dataloader/inference parity, and deterministic construction remain green",
+      "target": "judge identity, parity, and determinism PASS",
+      "verdict": "PASS"
+    },
+    {
+      "metric": "Original acceptance 4 wide suite",
+      "baseline": "exact suite not run because protected-answer files are opened by repository tests; reduced run had 11 unproven failures",
+      "after": "unchanged: exact suite was not rerun and the earlier reduced failures are not proven pre-existing",
+      "target": "exact wide suite green or every failure proven pre-existing",
+      "verdict": "FAIL"
+    },
+    {
+      "metric": "Original acceptance 5 GPU run plan",
+      "baseline": "probe/cap schedule existed but had teardown, price, timeout, commit-byte, and integration defects",
+      "after": "VM_RUN_PLAN.md now freezes probe-then-cap math, sequential execution, exact commit bytes, mechanical price proof, KILL walls, complete teardown route, and PASS-only handoff",
+      "target": "verbatim probe-then-cap sequential VM plan",
+      "verdict": "PASS"
+    }
+  ],
+  "changes": [
+    "scripts/racketsport/finetune_event_head.py:424 split-first owner sanitization; complete threshold contract, held-out-source-clean pool, exact sampler, final-step recipe requirements, inventory, and wall scope",
+    "scripts/racketsport/finetune_event_head.py:617 exclude and account for Stage-P held-out-source hard negatives",
+    "scripts/racketsport/finetune_event_head.py:1804 validate the complete Stage-P threshold-lock cross-contract",
+    "scripts/racketsport/finetune_event_head.py:1902 deterministically wrap/reshuffle exact owner batches",
+    "tests/racketsport/test_event_head_ev2_repair.py:38 add direct proofs for EV2-R1..R4 and EV2-F1..F9",
+    "runs/lanes/trackD_ev2_design_20260722/REGISTRATION.md:109 freeze 292-30=262 pool, exact 8+4 sampling, repaired guards, p90 subsumption, teardown, and PASS handoff",
+    "runs/lanes/trackD_ev2_design_20260722/VM_RUN_PLAN.md:28 bind reviewed commit bytes, authoritative price proof, sequential exact commands, KILL walls, teardown, and atomic PASS-only handoff; the price lookup follows the [official Catalog API](https://docs.cloud.google.com/billing/docs/reference/rest/v1/services.skus/list) and exact [Spot A2 SKU group](https://cloud.google.com/skus/sku-groups/spot-preemptible-a2-vms)",
+    "runs/lanes/trackD_ev2_design_20260722/INPUT_LOCK.json:31 pin repaired cardinalities and label-independent media inventory",
+    "runs/lanes/trackD_ev2_design_20260722/CODE_SHA256SUMS:1 refresh runtime SHA-256 pins",
+    "runs/lanes/trackD_ev2_design_20260722/CONTROL_RESULTS.json:1 record repair controls and focused-suite evidence",
+    "runs/lanes/trackD_ev2_design_20260722/REPORT.md:1 synchronize the human report and per-finding closure table"
+  ],
+  "full_suite": {
+    "command": "MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/",
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "failures_all_preexisting": false,
+    "failure_notes": "Not rerun: repository tests directly or transitively open the sealed protected-answer files that this lane is forbidden to touch. The earlier reduced attempt is not a substitute and stopped at 1634 passed, 11 failed, 3 skipped with failures not proven pre-existing. The protected-safe focused repair suite passed 76/76."
+  },
+  "honest_issues": [
+    "The exact wide suite remains unexecuted because doing so conflicts with the sealed protected-answer no-touch rule; acceptance item 4 of the original lane remains unmet, so this repair report is PARTIAL despite all 13 review findings being fixed.",
+    "A legacy focused test and a transitive reduced-wide-suite ledger test had already byte-read sealed files earlier in the lane. No protected values were scored, tuned against, or used for training, but the access incident remains reportable.",
+    "No E-v2 corpus training, GPU run, owner-41 score, or protected-50 score was run. VERIFIED=0 and REGISTERED_NOT_RUN remain binding.",
+    "The Cloud Billing proof procedure is statically validated but has not been executed against live billing data in this CPU/no-training lane.",
+    "The shared worktree contains extensive unrelated and concurrent changes; this lane did not revert or commit them."
+  ],
+  "next": "Run the same unmodified Track-D repair-review harness. If it accepts the fixes, the manager can include the reviewed artifacts in the exact execution commit; the GPU handoff is runs/lanes/trackD_ev2_design_20260722/VM_RUN_PLAN.md, but do not authorize it until that byte preflight and the unresolved protected/wide-suite policy are handled.",
+  "session_id": null
+}

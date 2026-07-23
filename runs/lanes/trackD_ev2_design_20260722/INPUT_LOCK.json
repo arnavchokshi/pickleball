@@ -1,0 +1,124 @@
+{
+  "artifact_type": "event_ev2_input_lock",
+  "created_utc": "2026-07-22",
+  "verified": false,
+  "owner_val_access_in_this_lane": "the combined owner_102_manifest.json envelope was SHA-hashed and JSON-parsed, and validation split markers were counted while isolating the 61 train rows; no owner-41 event field was inspected, printed, scored, selected on, or tuned against",
+  "protected_50_access_in_this_lane": "pre-existing legacy finetune tests parsed spot_check_tier_a_50.json for overlap validation before the access conflict was caught; the first reduced wide-suite attempt then byte-read spot_check_tier_a_50.json and owner_spot_check_results_20260715.json through test_audit_data_utilization.py's ledger SHA verifier before that transitive access was discovered. No protected scoring, training, thresholding, tuning, or manual label inspection occurred",
+  "transport_notes_20260723": {
+    "pins_changed": false,
+    "zone": "us-central1-f",
+    "cache_image": "pickleball-cache-image-20260722",
+    "cache_image_family": "pickleball-cache",
+    "cache_disk": "pickleball-cache-data-usc1f",
+    "cache_mount": "/cache",
+    "cache_mode": "read_only",
+    "eligibility_rule": "swap only CACHE_MANIFEST rows whose flags include exact sha256_matches; SHA256_MISMATCH, QUARANTINED*, and COMPARE_ONLY_NEVER_TRAIN are ineligible regardless of any earlier snapshot claim",
+    "cache_swapped_stage_p_video_ids": [
+      "143sf3gdwxsa",
+      "98z43hspqz13",
+      "st0epgnab7dr",
+      "td2szayjwtrj",
+      "utasf5hnozwz",
+      "xkadsq9bli3h"
+    ],
+    "cache_swapped_path_contract": "/cache/media/pbvision/<video_id>/max.mp4 symlinked to the unchanged registered /home/arnavchokshi/pbv_media_root/<video_id>/max.mp4 path and rehashed against sha256_by_video_id before use",
+    "explicitly_ineligible_example": "83gyqyc10y8f is not an E-v2 teacher clip and is excluded by its SHA256_MISMATCH plus COMPARE_ONLY_NEVER_TRAIN/quarantine posture",
+    "registered_transport_retained_verbatim": [
+      "40-MP4 owner rally-media universe via controller tar/SCP",
+      "owner_102_manifest.json via SCP",
+      "Stage-P agreement manifest and agreement_decisions.jsonl via SCP",
+      "hard-negative candidate manifest via SCP",
+      "frozen T20 checkpoint via SCP"
+    ],
+    "step_0_gate": "before any training input read, RUN_COMMIT runs scripts/racketsport/verify_training_inputs.py from the separately reviewed Track-E safety revision and preserves a passing gate_proof.json with run artifacts; the exact reviewed revision SHA is filled by the serialized integration owner at dispatch time"
+  },
+  "inputs": {
+    "stage_p_agreement_manifest": {
+      "path": "runs/lanes/abc_experiment_20260721/vm_pull_v2/abc_out_v2/arm_b_manifest.json",
+      "sha256": "f5c1e3d89d072c4a770ef776378596921ae2e2fa7a91395ca2315df27b53a2a7",
+      "rows": 1189,
+      "classes": {
+        "HIT": 636,
+        "BOUNCE": 553
+      },
+      "agreement_families": {
+        "ball_velocity_kink_only": 773,
+        "audio_onset_plus_ball_velocity_kink": 416
+      },
+      "effective_sample_weights": {
+        "0.25": 803,
+        "0.5": 386
+      }
+    },
+    "stage_f_owner_manifest": {
+      "path": "runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json",
+      "sha256": "84a0062c776029bc33b01381add8c0b6ecbe9fc018732d6cff2bb8bdcd194e9b",
+      "registered_use": "split=train only during training; split=val only once through frozen judge later"
+    },
+    "hard_negative_candidate_manifest": {
+      "path": "runs/lanes/abc_experiment_20260721/vm_pull/abc_out/arm_b_manifest.json",
+      "sha256": "9d3d31aa12bb97369d934c30ebda4ee41663ca65a0527717e1482681180022f5",
+      "rows": 1481,
+      "derivation": "subtract the repaired Stage-P row identities",
+      "raw_derived_audio_only_rows": 292,
+      "stage_p_held_out_source_video_id": "st0epgnab7dr",
+      "held_out_source_rows_removed": 30,
+      "stage_f_candidate_rows": 262,
+      "stage_f_selected_rows": 96
+    },
+    "stage_p_init_checkpoint": {
+      "path": "runs/lanes/abc_experiment_20260721/vm_pull/inputs/frozen_t20_event_head.pt",
+      "sha256": "f7b61b25d7e147e3d6353c8ec2bdf6a86e41721455398c23b9c617e065316082",
+      "load_mode": "model_only_fresh_optimizer_and_step_zero"
+    },
+    "agreement_decisions": {
+      "path": "runs/lanes/abc_experiment_20260721/vm_pull_v2/abc_out_v2/agreement_decisions.jsonl",
+      "sha256": "81df518a85ce891b4b2da1b494f8b123979367d9b70432b4c9af850f4a88792c"
+    },
+    "stage_p_public_media": {
+      "path_template": "/home/arnavchokshi/pbv_media_root/<video_id>/max.mp4",
+      "provenance_url_template": "https://storage.googleapis.com/pbv-pro/<video_id>/max.mp4",
+      "sha256_by_video_id": {
+        "143sf3gdwxsa": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c",
+        "98z43hspqz13": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f",
+        "st0epgnab7dr": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04",
+        "td2szayjwtrj": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79",
+        "utasf5hnozwz": "614580f5b3a2f634a76f5483e10b8c1f7919fd5affbd3ee86532a539f3f58197",
+        "xkadsq9bli3h": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181"
+      }
+    },
+    "owner_media_universe": {
+      "path": "data/online_harvest_20260706/rallies",
+      "inventory_lock_path": "runs/lanes/trackD_ev2_design_20260722/RATE_MEDIA_LOCK.json",
+      "inventory_lock_sha256": "79ecae3a6bb57af0b1d3a2548c05b0be70ac42600a50c22c2586752c111de5ee",
+      "mp4_count": 40,
+      "staging_policy": "validate the SHA-pinned exact 38-train plus 2-validation RATE_MEDIA_LOCK before provisioning and after transfer, independent of owner-manifest fields; Stage F decodes all 38 train entries and verifies their frozen frame/duration facts; after token consumption Stage V manifest-verifies and decodes the same 2 validation media objects",
+      "stage_f_train_source_video_ids": ["73VurrTKCZ8", "Ezz6HDNHlnk", "_L0HVmAlCQI", "wBu8bC4OfUY"],
+      "stage_f_validation_source_video_ids_for_overlap_only": ["HyUqT7zFiwk", "zwCtH_i1_S4"],
+      "stage_f_train_mp4_count": 38,
+      "stage_f_train_frame_count": 57025,
+      "stage_f_train_duration_s": 2063.1827083333333
+    }
+  },
+  "stage_p_internal_validation": {
+    "seed": 20260722,
+    "policy": "sha256_seeded_source_video_holdout",
+    "held_out_source_videos": [
+      "st0epgnab7dr"
+    ],
+    "train_rows": 963,
+    "validation_rows": 226
+  },
+  "historical_e1_baseline": {
+    "source": "runs/lanes/abc_experiment_20260721/e1_screen.json",
+    "verdict": "EVENT_PBV_SEED1_NO_LIFT",
+    "arm_B": {
+      "macro_f1_at_2": 0.13043478260869568,
+      "negative_fp": "4/22",
+      "timing_p90_frames": 2.0,
+      "full_video_event_rate_per_s": 0.1065,
+      "selected_step": 800
+    }
+  },
+  "sample_weight_discrepancy": "The pinned repaired manifest has the requested 773 kink-only and 416 audio+kink family rows, but its effective weights are 803 at 0.25 and 386 at 0.5 because 30 audio matches did not pass the preregistered time-shift-null eligibility check. E-v2 consumes the pinned row sample_weight values and does not relabel those 30 as two-cue evidence."
+}
