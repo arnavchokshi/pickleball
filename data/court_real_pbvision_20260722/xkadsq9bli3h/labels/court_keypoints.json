@@ -1,0 +1,139 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "camera_segment": {
+          "conversion_applied": true,
+          "index": 0,
+          "native_frame_end": 11160,
+          "native_frame_start": 0,
+          "pbv_tick_end": 5585,
+          "pbv_tick_rate": 30.0,
+          "pbv_tick_start": 0,
+          "source_fps": 60.0
+        },
+        "frame": "frame_005822.jpg",
+        "keypoint_confidence": {
+          "far_baseline_center": 0.914766,
+          "far_left_corner": 0.976069,
+          "far_nvz_center": 0.927763,
+          "far_nvz_left": 0.950394,
+          "far_nvz_right": 0.912475,
+          "far_right_corner": 0.931666,
+          "near_baseline_center": 0.979452,
+          "near_left_corner": 0.970274,
+          "near_nvz_center": 0.968135,
+          "near_nvz_left": 0.966771,
+          "near_nvz_right": 0.973604,
+          "near_right_corner": 0.973395,
+          "net_center": null,
+          "net_left_sideline": null,
+          "net_right_sideline": null
+        },
+        "keypoint_spread_normalized": {
+          "far_baseline_center": 0.00093877,
+          "far_left_corner": 0.000316126,
+          "far_nvz_center": 0.000882669,
+          "far_nvz_left": 0.000229276,
+          "far_nvz_right": 0.001720467,
+          "far_right_corner": 0.001488774,
+          "near_baseline_center": 0.000104472,
+          "near_left_corner": 0.000162941,
+          "near_nvz_center": 0.000631193,
+          "near_nvz_left": 0.00012875,
+          "near_nvz_right": 0.001477176,
+          "near_right_corner": 0.001262213,
+          "net_center": null,
+          "net_left_sideline": null,
+          "net_right_sideline": null
+        },
+        "keypoints": {
+          "far_baseline_center": [
+            950.0064,
+            258.08004
+          ],
+          "far_left_corner": [
+            765.1008,
+            261.49392
+          ],
+          "far_nvz_center": [
+            956.21568,
+            315.55008
+          ],
+          "far_nvz_left": [
+            716.76864,
+            318.92616
+          ],
+          "far_nvz_right": [
+            1186.1088,
+            312.05412
+          ],
+          "far_right_corner": [
+            1116.6144000000002,
+            257.11128
+          ],
+          "near_baseline_center": [
+            1077.10272,
+            855.55116
+          ],
+          "near_left_corner": [
+            243.43104000000002,
+            899.3894399999999
+          ],
+          "near_nvz_center": [
+            974.8742399999999,
+            436.82436
+          ],
+          "near_nvz_left": [
+            608.98752,
+            443.91564
+          ],
+          "near_nvz_right": [
+            1330.0550400000002,
+            425.4606
+          ],
+          "near_right_corner": [
+            1838.6515200000001,
+            812.16432
+          ],
+          "net_center": null,
+          "net_left_sideline": null,
+          "net_right_sideline": null
+        },
+        "provenance": "pbvision_cv_export_rev190",
+        "pseudo_label_status": "PENDING_SPOTCHECK",
+        "status": "reviewed_external_dataset"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "xkadsq9bli3h",
+  "frames": {
+    "available_review_frame_count": 0,
+    "frame_count": 1,
+    "frame_dir": "xkadsq9bli3h/frames",
+    "label_coordinate_space": [
+      1920,
+      1080
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      1920,
+      1080
+    ]
+  },
+  "provenance": "pbvision_cv_export_rev190",
+  "review": {
+    "independent_reviewed_count": 0,
+    "note": "Structural sentinel required by the legacy review enum. The shared loader default-deny gate enforces top-level status=PENDING_SPOTCHECK, training_eligibility.queued=false, and item pseudo_label_status=PENDING_SPOTCHECK.",
+    "pending_spotcheck_count": 1,
+    "reviewer": "LOADER_COMPATIBILITY_SENTINEL_NOT_A_HUMAN_REVIEW",
+    "status": "reviewed"
+  },
+  "schema_version": 1,
+  "status": "PENDING_SPOTCHECK",
+  "training_eligibility": {
+    "queued": false,
+    "reason": "mandatory owner/Fable spot-check has not ruled these pseudo-labels usable"
+  }
+}

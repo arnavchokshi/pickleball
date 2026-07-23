@@ -238,12 +238,34 @@ def _label_status_counts(rows: list[dict[str, Any]]) -> dict[str, int]:
     }
 
 
-def load_real_court_keypoint_labels(root: Path) -> list[dict[str, Any]]:
+def load_real_court_keypoint_labels(
+    root: Path,
+    *,
+    allow_pending_diagnostic_only: bool = False,
+) -> list[dict[str, Any]]:
+    """Load court-label rows through the shared positive-act eligibility gate.
+
+    ``allow_pending_diagnostic_only`` exists only for quarantine inspection and tests.  Training
+    CLIs intentionally do not expose or pass it, so an external/pseudo row needs the pinned owner
+    adjudication and cannot become trainable merely because frames are materialized beneath it.
+    """
     labels: list[dict[str, Any]] = []
     for path in sorted(root.glob("*/labels/court_keypoints.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
-        for row in court_keypoint_label_rows(payload, clip_root=path.parent.parent, corpus_root=root):
-            row["clip"] = path.parent.parent.name
+        loader_clip = path.parent.parent.name
+        declared_clip = payload.get("clip") if isinstance(payload, dict) else None
+        if declared_clip is not None and declared_clip != loader_clip:
+            raise ValueError(
+                f"court_keypoints payload clip {declared_clip!r} does not match "
+                f"loader directory {loader_clip!r}"
+            )
+        for row in court_keypoint_label_rows(
+            payload,
+            clip_root=path.parent.parent,
+            corpus_root=root,
+            allow_pending_diagnostic_only=allow_pending_diagnostic_only,
+        ):
+            row["clip"] = loader_clip
             labels.append(row)
     if not labels:
         raise ValueError(f"no reviewed 15-keypoint court labels found under {root}")
@@ -274,8 +296,14 @@ def court_keypoint_label_rows(
     *,
     clip_root: Path | None = None,
     corpus_root: Path | None = None,
+    allow_pending_diagnostic_only: bool = False,
 ) -> list[dict[str, Any]]:
     items = _items(payload)
+    _require_training_eligible(
+        payload,
+        items=items,
+        allow_pending_diagnostic_only=allow_pending_diagnostic_only,
+    )
     _require_reviewed(payload, items=items)
     return [
         _court_keypoint_label_row_from_item(
@@ -293,8 +321,14 @@ def court_keypoint_label_row(
     *,
     clip_root: Path | None = None,
     corpus_root: Path | None = None,
+    allow_pending_diagnostic_only: bool = False,
 ) -> dict[str, Any]:
     items = _items(payload)
+    _require_training_eligible(
+        payload,
+        items=items,
+        allow_pending_diagnostic_only=allow_pending_diagnostic_only,
+    )
     _require_reviewed(payload, items=items)
     return _court_keypoint_label_row_from_item(
         payload,
@@ -380,6 +414,148 @@ def _require_reviewed(payload: dict[str, Any], *, items: list[Any] | None = None
                 "court_keypoints item status must be one of "
                 f"{sorted(ACCEPTED_ITEM_STATUSES)}; got {status!r}"
             )
+
+
+OWNER_APPROVED_STATUS = "OWNER_APPROVED"
+PBVISION_PSEUDO_PROVENANCE = "pbvision_cv_export_rev190"
+OWNER_ELIGIBILITY_ACT_RELATIVE_PATH = (
+    "runs/lanes/court_owner_pack_20260722/results/batch_01_answers_final.json"
+)
+OWNER_ELIGIBILITY_ACT_SHA256 = "334c60e63ea4ec51b099e443154c0068e9e89922c1acbb9f080d9da7e3c2d723"
+
+
+def _require_training_eligible(
+    payload: dict[str, Any],
+    *,
+    items: list[Any],
+    allow_pending_diagnostic_only: bool,
+) -> None:
+    """Require positive owner adjudication for external/pseudo rows.
+
+    Legacy independently reviewed human rows predate eligibility metadata and remain compatible.
+    External or pseudo-labeled rows are different: all three positive payload markers and the
+    immutable owner-adjudication binding are mandatory. Diagnostic inspection may bypass this
+    training gate only through the explicit Python-only opt-in.
+    """
+
+    denial_reasons: list[str] = []
+    if payload.get("status") == "PENDING_SPOTCHECK":
+        denial_reasons.append("top-level status=PENDING_SPOTCHECK")
+    eligibility = payload.get("training_eligibility")
+    if isinstance(eligibility, dict) and eligibility.get("queued") is False:
+        denial_reasons.append("training_eligibility.queued=false")
+    pending_item_indices = [
+        index
+        for index, item in enumerate(items)
+        if isinstance(item, dict) and item.get("pseudo_label_status") == "PENDING_SPOTCHECK"
+    ]
+    if pending_item_indices:
+        denial_reasons.append(
+            "item pseudo_label_status=PENDING_SPOTCHECK at indices "
+            + ",".join(str(index) for index in pending_item_indices)
+        )
+
+    external_or_pseudo = (
+        payload.get("provenance") == PBVISION_PSEUDO_PROVENANCE
+        or any(
+            isinstance(item, dict)
+            and (
+                item.get("status") == EXTERNAL_DATASET_STATUS
+                or "pseudo_label_status" in item
+                or item.get("provenance") == PBVISION_PSEUDO_PROVENANCE
+            )
+            for item in items
+        )
+    )
+    if external_or_pseudo:
+        missing_positive: list[str] = []
+        if payload.get("status") != OWNER_APPROVED_STATUS:
+            missing_positive.append(f"top-level status={OWNER_APPROVED_STATUS}")
+        if not isinstance(eligibility, dict) or eligibility.get("queued") is not True:
+            missing_positive.append("training_eligibility.queued=true")
+        nonapproved_item_indices = [
+            index
+            for index, item in enumerate(items)
+            if isinstance(item, dict)
+            and item.get("pseudo_label_status") != OWNER_APPROVED_STATUS
+        ]
+        if nonapproved_item_indices:
+            missing_positive.append(
+                f"item pseudo_label_status={OWNER_APPROVED_STATUS} at indices "
+                + ",".join(str(index) for index in nonapproved_item_indices)
+            )
+        if missing_positive:
+            denial_reasons.append(
+                "missing positive training-eligibility act: " + "; ".join(missing_positive)
+            )
+        else:
+            owner_adjudication = eligibility.get("owner_adjudication")
+            if not isinstance(owner_adjudication, dict):
+                denial_reasons.append(
+                    "missing positive training-eligibility act: "
+                    "training_eligibility.owner_adjudication"
+                )
+            else:
+                clip = payload.get("clip")
+                if not isinstance(clip, str) or not clip:
+                    denial_reasons.append("owner adjudication requires a non-empty payload clip")
+                if owner_adjudication.get("path") != OWNER_ELIGIBILITY_ACT_RELATIVE_PATH:
+                    denial_reasons.append(
+                        "owner adjudication path must equal "
+                        + OWNER_ELIGIBILITY_ACT_RELATIVE_PATH
+                    )
+                if owner_adjudication.get("sha256") != OWNER_ELIGIBILITY_ACT_SHA256:
+                    denial_reasons.append(
+                        "owner adjudication SHA-256 does not match the pinned final act"
+                    )
+                if owner_adjudication.get("video_id") != clip:
+                    denial_reasons.append(
+                        "owner adjudication video_id must match the payload clip"
+                    )
+                if owner_adjudication.get("decision") != "APPROVE":
+                    denial_reasons.append("owner adjudication decision must be APPROVE")
+
+                act_path = ROOT / OWNER_ELIGIBILITY_ACT_RELATIVE_PATH
+                try:
+                    act_bytes = act_path.read_bytes()
+                except OSError as exc:
+                    denial_reasons.append(
+                        f"owner adjudication act is unavailable at {act_path}: {exc}"
+                    )
+                else:
+                    import hashlib
+
+                    act_sha256 = hashlib.sha256(act_bytes).hexdigest()
+                    if act_sha256 != OWNER_ELIGIBILITY_ACT_SHA256:
+                        denial_reasons.append(
+                            "owner adjudication act bytes do not match the pinned SHA-256"
+                        )
+                    try:
+                        act_payload = json.loads(act_bytes)
+                    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+                        denial_reasons.append(f"owner adjudication act is not valid JSON: {exc}")
+                    else:
+                        final_decisions = (
+                            act_payload.get("final_decisions")
+                            if isinstance(act_payload, dict)
+                            else None
+                        )
+                        final_decision = (
+                            final_decisions.get(clip)
+                            if isinstance(final_decisions, dict) and isinstance(clip, str)
+                            else None
+                        )
+                        if final_decision != "APPROVE":
+                            denial_reasons.append(
+                                f"owner adjudication final decision for {clip!r} is "
+                                f"{final_decision!r}, not APPROVE"
+                            )
+    if denial_reasons and not allow_pending_diagnostic_only:
+        raise ValueError(
+            "court_keypoints labels are diagnostic-only and not training eligible: "
+            + "; ".join(denial_reasons)
+            + "; pass allow_pending_diagnostic_only=True only for explicit diagnostic inspection"
+        )
 
 
 def _label_coordinate_space(payload: dict[str, Any]) -> tuple[int, int] | None:

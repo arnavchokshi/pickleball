@@ -1,0 +1,146 @@
+{
+  "annotation": {
+    "items": [
+      {
+        "camera_segment": {
+          "conversion_applied": false,
+          "index": 0,
+          "native_frame_end": 34226,
+          "native_frame_start": 0,
+          "pbv_tick_end": 34240,
+          "pbv_tick_rate": 29.97,
+          "pbv_tick_start": 0,
+          "source_fps": 29.97
+        },
+        "frame": "frame_017862.jpg",
+        "keypoint_confidence": {
+          "far_baseline_center": 0.957393,
+          "far_left_corner": 0.958869,
+          "far_nvz_center": 0.969577,
+          "far_nvz_left": 0.927092,
+          "far_nvz_right": 0.943331,
+          "far_right_corner": 0.93557,
+          "near_baseline_center": 0.971487,
+          "near_left_corner": 0.973882,
+          "near_nvz_center": 0.964063,
+          "near_nvz_left": 0.975405,
+          "near_nvz_right": 0.963206,
+          "near_right_corner": 0.972152,
+          "net_center": null,
+          "net_left_sideline": null,
+          "net_right_sideline": null
+        },
+        "keypoint_spread_normalized": {
+          "far_baseline_center": 0.000798913,
+          "far_left_corner": 0.00027055,
+          "far_nvz_center": 0.000867137,
+          "far_nvz_left": 0.001170142,
+          "far_nvz_right": 0.002583095,
+          "far_right_corner": 0.00191082,
+          "near_baseline_center": 0.000848642,
+          "near_left_corner": 0.001031879,
+          "near_nvz_center": 0.001115278,
+          "near_nvz_left": 0.000361842,
+          "near_nvz_right": 0.001222688,
+          "near_right_corner": 0.002947561,
+          "net_center": null,
+          "net_left_sideline": null,
+          "net_right_sideline": null
+        },
+        "keypoints": {
+          "far_baseline_center": [
+            411.3216,
+            288.72936000000004
+          ],
+          "far_left_corner": [
+            152.31936,
+            315.58680000000004
+          ],
+          "far_nvz_center": [
+            573.90336,
+            359.0838
+          ],
+          "far_nvz_left": [
+            282.15552,
+            399.43152000000003
+          ],
+          "far_nvz_right": [
+            822.5952,
+            326.0034
+          ],
+          "far_right_corner": [
+            617.64864,
+            268.26552
+          ],
+          "near_baseline_center": [
+            1389.22368,
+            676.8576
+          ],
+          "near_left_corner": [
+            963.24864,
+            863.10792
+          ],
+          "near_nvz_center": [
+            848.71296,
+            460.76795999999996
+          ],
+          "near_nvz_left": [
+            477.66336,
+            538.27632
+          ],
+          "near_nvz_right": [
+            1107.59808,
+            405.42984
+          ],
+          "near_right_corner": [
+            1652.69184,
+            558.80172
+          ],
+          "net_center": null,
+          "net_left_sideline": null,
+          "net_right_sideline": null
+        },
+        "provenance": "pbvision_cv_export_rev190",
+        "pseudo_label_status": "OWNER_APPROVED",
+        "status": "reviewed_external_dataset"
+      }
+    ]
+  },
+  "artifact_type": "racketsport_court_keypoint_labels",
+  "clip": "tqjlrcntpjvt",
+  "frames": {
+    "available_review_frame_count": 0,
+    "frame_count": 1,
+    "frame_dir": "tqjlrcntpjvt/frames",
+    "label_coordinate_space": [
+      1920,
+      1080
+    ],
+    "path_base": "corpus_root",
+    "source_resolution": [
+      1920,
+      1080
+    ]
+  },
+  "provenance": "pbvision_cv_export_rev190",
+  "review": {
+    "independent_reviewed_count": 0,
+    "note": "Structural sentinel required by the legacy review enum. Positive training eligibility is bound separately to the final owner-adjudication act.",
+    "owner_approved_external_count": 1,
+    "pending_spotcheck_count": 0,
+    "reviewer": "LOADER_COMPATIBILITY_SENTINEL_NOT_A_HUMAN_REVIEW",
+    "status": "reviewed"
+  },
+  "schema_version": 1,
+  "status": "OWNER_APPROVED",
+  "training_eligibility": {
+    "owner_adjudication": {
+      "decision": "APPROVE",
+      "path": "runs/lanes/court_owner_pack_20260722/results/batch_01_answers_final.json",
+      "sha256": "334c60e63ea4ec51b099e443154c0068e9e89922c1acbb9f080d9da7e3c2d723",
+      "video_id": "tqjlrcntpjvt"
+    },
+    "queued": true,
+    "reason": "final owner adjudication approves this PBV pseudo-label for the court training pool"
+  }
+}

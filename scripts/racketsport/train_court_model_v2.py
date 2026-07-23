@@ -708,14 +708,25 @@ def load_real_training_rows(
     real_roots: list[Path] | None,
     *,
     split_proposal: Path | None = None,
+    allow_pending_diagnostic_only: bool = False,
 ) -> list[dict[str, Any]]:
+    """Load V2 rows through the shared positive-act eligibility gate.
+
+    The diagnostic opt-in is deliberately a Python-only argument; the training CLI never passes
+    it, so pending or unadjudicated external/pseudo rows cannot enter a default training run.
+    """
     if not real_roots:
         return []
     from scripts.racketsport.train_court_keypoint_heatmap import load_real_court_keypoint_labels
 
     rows: list[dict[str, Any]] = []
     for root in real_roots:
-        rows.extend(load_real_court_keypoint_labels(Path(root)))
+        rows.extend(
+            load_real_court_keypoint_labels(
+                Path(root),
+                allow_pending_diagnostic_only=allow_pending_diagnostic_only,
+            )
+        )
     if split_proposal is not None:
         payload = json.loads(Path(split_proposal).read_text(encoding="utf-8"))
         train_datasets = payload.get("train_datasets")

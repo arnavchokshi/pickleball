@@ -1,0 +1,68 @@
+{
+  "0tmdeghtfvjx": {
+    "corpus_eligible": true,
+    "family": "pbv_0tmdeghtfvjx",
+    "title": "Chris Olson Match"
+  },
+  "143sf3gdwxsa": {
+    "corpus_eligible": true,
+    "family": "pbv_143sf3gdwxsa",
+    "title": "Tustin 4.5 Match"
+  },
+  "83gyqyc10y8f": {
+    "corpus_eligible": false,
+    "family": "pbv_83gyqyc10y8f",
+    "title": "Demo Vid"
+  },
+  "98z43hspqz13": {
+    "corpus_eligible": true,
+    "family": "pbv_98z43hspqz13",
+    "title": "Pro Training"
+  },
+  "bewqc0glhgpq": {
+    "corpus_eligible": false,
+    "family": "pbv_bewqc0glhgpq",
+    "reason": "dropped_entire_video: bad multi-point planar solve; no single-point filtering; re-admission requires rectification or manual reannotation plus stable robust evidence",
+    "title": "Side View GoPro"
+  },
+  "iottnc0h3ekn": {
+    "corpus_eligible": false,
+    "family": "pbv_iottnc0h3ekn",
+    "title": "Wood Floor Court"
+  },
+  "o4dee9dn0ccr": {
+    "corpus_eligible": false,
+    "family": "pbv_o4dee9dn0ccr",
+    "title": "Outdoor Shadows"
+  },
+  "pldtjpw3h0jw": {
+    "corpus_eligible": true,
+    "family": "pbv_pldtjpw3h0jw",
+    "title": "MLP Mixed Match"
+  },
+  "st0epgnab7dr": {
+    "corpus_eligible": true,
+    "family": "pbv_st0epgnab7dr",
+    "title": "Lower-Level Doubles"
+  },
+  "td2szayjwtrj": {
+    "corpus_eligible": true,
+    "family": "pbv_td2szayjwtrj",
+    "title": "Singles Match"
+  },
+  "tqjlrcntpjvt": {
+    "corpus_eligible": true,
+    "family": "pbv_tqjlrcntpjvt",
+    "title": "Facility Camera"
+  },
+  "utasf5hnozwz": {
+    "corpus_eligible": true,
+    "family": "pbv_utasf5hnozwz",
+    "title": "Multi-Line Court"
+  },
+  "xkadsq9bli3h": {
+    "corpus_eligible": true,
+    "family": "pbv_xkadsq9bli3h",
+    "title": "Drill Session"
+  }
+}

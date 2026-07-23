@@ -9,6 +9,8 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+import scripts.racketsport.train_court_keypoint_heatmap as trainer_module
+
 from scripts.racketsport.train_court_keypoint_heatmap import (
     choose_torch_device_name,
     court_keypoint_label_rows,
@@ -237,7 +239,8 @@ def _partial_external_payload() -> dict:
 def _write_mixed_partial_training_fixture(tmp_path: Path) -> Path:
     cv2 = __import__("cv2")
     real_root = tmp_path / "real_corpus"
-    clip_root = real_root / "external_partial_clip"
+    clip_id = "0tmdeghtfvjx"
+    clip_root = real_root / clip_id
     clip_root.mkdir(parents=True)
     video = clip_root / "source.mp4"
     writer = cv2.VideoWriter(str(video), cv2.VideoWriter_fourcc(*"mp4v"), 30.0, (64, 36))
@@ -253,6 +256,19 @@ def _write_mixed_partial_training_fixture(tmp_path: Path) -> Path:
     )
     partial_item = _partial_external_payload()["annotation"]["items"][0]
     payload["annotation"]["items"].append(partial_item)
+    payload["clip"] = clip_id
+    payload["status"] = trainer_module.OWNER_APPROVED_STATUS
+    payload["training_eligibility"] = {
+        "queued": True,
+        "owner_adjudication": {
+            "path": trainer_module.OWNER_ELIGIBILITY_ACT_RELATIVE_PATH,
+            "sha256": trainer_module.OWNER_ELIGIBILITY_ACT_SHA256,
+            "video_id": clip_id,
+            "decision": "APPROVE",
+        },
+    }
+    for item in payload["annotation"]["items"]:
+        item["pseudo_label_status"] = trainer_module.OWNER_APPROVED_STATUS
     _write_json(clip_root / "labels" / "court_keypoints.json", payload)
     return real_root
 
@@ -424,7 +440,7 @@ def test_load_real_court_keypoint_labels_accepts_synthetic_status(tmp_path: Path
 def test_partial_null_schema_loads_only_labeled_keypoints_and_builds_channel_mask() -> None:
     payload = _partial_external_payload()
 
-    row = court_keypoint_label_rows(payload)[0]
+    row = court_keypoint_label_rows(payload, allow_pending_diagnostic_only=True)[0]
 
     assert row["label_status"] == "reviewed_external_dataset"
     assert row["label_source"] == "reviewed_partial_court_keypoint_labels"
@@ -460,7 +476,7 @@ def test_loader_rejects_malformed_partial_schemas_fail_loud(mutate: object, matc
     mutate(payload["annotation"]["items"][0]["keypoints"])
 
     with pytest.raises(ValueError, match=match):
-        court_keypoint_label_rows(payload)
+        court_keypoint_label_rows(payload, allow_pending_diagnostic_only=True)
 
 
 def test_training_summary_counts_external_dataset_rows_separately(tmp_path: Path) -> None:

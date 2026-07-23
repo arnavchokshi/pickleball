@@ -238,13 +238,15 @@ def test_partial_cli_emits_exact_null_schema_external_status_and_loader_proofs(t
             str(guard_root),
         ],
         cwd=ROOT,
-        check=True,
+        check=False,
         capture_output=True,
         text=True,
     )
 
-    assert json.loads(completed.stdout)["corpus_rows"] == 15
-    rows = load_real_court_keypoint_labels(corpus_root)
+    assert completed.returncode == 1
+    assert "missing positive training-eligibility act" in completed.stderr
+    assert not (lane_dir / "loader_contract_proof.json").exists()
+    rows = load_real_court_keypoint_labels(corpus_root, allow_pending_diagnostic_only=True)
     assert len(rows) == 15
     assert {row["label_status"] for row in rows} == {"reviewed_external_dataset"}
     assert sorted({len(row["keypoints"]) for row in rows}) == [12, 15]
@@ -261,15 +263,6 @@ def test_partial_cli_emits_exact_null_schema_external_status_and_loader_proofs(t
         "net_center": None,
         "net_right_sideline": None,
     }
-    proof = json.loads((lane_dir / "loader_contract_proof.json").read_text(encoding="utf-8"))
-    assert proof["loaded_rows"] == 15
-    assert proof["labeled_keypoint_histogram"] == {"12": 10, "15": 5}
-    assert proof["schema_errors"] == 0
-    assert proof["training_summary_label_buckets"]["labels_external_dataset_frame_count"] == 15
-    assert proof["training_summary_label_buckets"]["labels_independent_human_frames"] == 0
-    assert proof["partial_roundtrip"]["loader_omits_null_channels"] is True
-    assert len(proof["random_12_point_net_null_spot_proof"]) == 5
-    split = json.loads((lane_dir / "split_proposal.json").read_text(encoding="utf-8"))
-    assert split["method"] == "by_dataset"
-    assert len(split["val_datasets"]) == 2
-    assert all(len(paths) == 5 for paths in json.loads((lane_dir / "corpus_stats.json").read_text())["emission_overlays"].values())
+    assert sum(len(row["keypoints"]) == 12 for row in rows) == 10
+    assert sum(len(row["keypoints"]) == 15 for row in rows) == 5
+    assert len(list((lane_dir / "emission_overlays").rglob("*.jpg"))) == 15

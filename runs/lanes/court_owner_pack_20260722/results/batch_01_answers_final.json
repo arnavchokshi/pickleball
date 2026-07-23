@@ -1,0 +1,54 @@
+{
+ "pack": "court_pbv_batch_01",
+ "answers": {
+  "0tmdeghtfvjx": {
+   "choice": "APPROVE",
+   "ts": "2026-07-22T23:33:38.212Z"
+  },
+  "143sf3gdwxsa": {
+   "choice": "APPROVE",
+   "ts": "2026-07-22T23:33:44.534Z"
+  },
+  "98z43hspqz13": {
+   "choice": "APPROVE",
+   "ts": "2026-07-22T23:33:47.786Z"
+  },
+  "pldtjpw3h0jw": {
+   "choice": "APPROVE",
+   "ts": "2026-07-22T23:33:51.382Z"
+  },
+  "st0epgnab7dr": {
+   "choice": "APPROVE",
+   "ts": "2026-07-22T23:33:56.262Z"
+  },
+  "td2szayjwtrj": {
+   "choice": "APPROVE",
+   "ts": "2026-07-22T23:33:58.914Z"
+  },
+  "tqjlrcntpjvt": {
+   "choice": "APPROVE",
+   "ts": "2026-07-22T23:34:00.902Z"
+  },
+  "utasf5hnozwz": {
+   "choice": "APPROVE",
+   "ts": "2026-07-22T23:34:04.783Z"
+  }
+ },
+ "completed_at": "2026-07-22T23:34:07.917Z",
+ "manager_correction": {
+  "video_id": "utasf5hnozwz",
+  "raw_choice": "APPROVE",
+  "final_choice": "DROP",
+  "basis": "Owner confirmed DROP via explicit structured question in the main session (2026-07-22 eve) after the manager surfaced the conflict with the pre-filled DROP recommendation (visual evidence: wide-angle distortion, near-baseline grid drift). Raw export preserved unmodified above."
+ },
+ "final_decisions": {
+  "0tmdeghtfvjx": "APPROVE",
+  "143sf3gdwxsa": "APPROVE",
+  "98z43hspqz13": "APPROVE",
+  "pldtjpw3h0jw": "APPROVE",
+  "st0epgnab7dr": "APPROVE",
+  "td2szayjwtrj": "APPROVE",
+  "tqjlrcntpjvt": "APPROVE",
+  "utasf5hnozwz": "DROP"
+ }
+}
