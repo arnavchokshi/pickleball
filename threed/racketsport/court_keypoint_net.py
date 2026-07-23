@@ -363,6 +363,101 @@ PICKLEBALL_KEYPOINTS: tuple[CourtKeypoint, ...] = (
     CourtKeypoint("far_nvz_right", tuple(xyz_ft_to_m(10.0, 7.0)), "far NVZ line at right sideline"),
 )
 
+AUX_PICKLEBALL_KEYPOINTS: tuple[CourtKeypoint, ...] = (
+    CourtKeypoint(
+        "near_baseline_left_quarter",
+        tuple(xyz_ft_to_m(-5.0, -22.0)),
+        "near baseline left quarter point",
+    ),
+    CourtKeypoint(
+        "near_baseline_right_quarter",
+        tuple(xyz_ft_to_m(5.0, -22.0)),
+        "near baseline right quarter point",
+    ),
+    CourtKeypoint(
+        "far_baseline_left_quarter",
+        tuple(xyz_ft_to_m(-5.0, 22.0)),
+        "far baseline left quarter point",
+    ),
+    CourtKeypoint(
+        "far_baseline_right_quarter",
+        tuple(xyz_ft_to_m(5.0, 22.0)),
+        "far baseline right quarter point",
+    ),
+    CourtKeypoint(
+        "near_nvz_left_quarter",
+        tuple(xyz_ft_to_m(-5.0, -7.0)),
+        "near NVZ line left quarter point",
+    ),
+    CourtKeypoint(
+        "near_nvz_right_quarter",
+        tuple(xyz_ft_to_m(5.0, -7.0)),
+        "near NVZ line right quarter point",
+    ),
+    CourtKeypoint(
+        "far_nvz_left_quarter",
+        tuple(xyz_ft_to_m(-5.0, 7.0)),
+        "far NVZ line left quarter point",
+    ),
+    CourtKeypoint(
+        "far_nvz_right_quarter",
+        tuple(xyz_ft_to_m(5.0, 7.0)),
+        "far NVZ line right quarter point",
+    ),
+    CourtKeypoint(
+        "left_sideline_near_service_mid",
+        tuple(xyz_ft_to_m(-10.0, -14.5)),
+        "midpoint of the left sideline near service segment",
+    ),
+    CourtKeypoint(
+        "left_sideline_near_nvz_mid",
+        tuple(xyz_ft_to_m(-10.0, -3.5)),
+        "midpoint of the left sideline near NVZ segment",
+    ),
+    CourtKeypoint(
+        "left_sideline_far_nvz_mid",
+        tuple(xyz_ft_to_m(-10.0, 3.5)),
+        "midpoint of the left sideline far NVZ segment",
+    ),
+    CourtKeypoint(
+        "left_sideline_far_service_mid",
+        tuple(xyz_ft_to_m(-10.0, 14.5)),
+        "midpoint of the left sideline far service segment",
+    ),
+    CourtKeypoint(
+        "right_sideline_near_service_mid",
+        tuple(xyz_ft_to_m(10.0, -14.5)),
+        "midpoint of the right sideline near service segment",
+    ),
+    CourtKeypoint(
+        "right_sideline_near_nvz_mid",
+        tuple(xyz_ft_to_m(10.0, -3.5)),
+        "midpoint of the right sideline near NVZ segment",
+    ),
+    CourtKeypoint(
+        "right_sideline_far_nvz_mid",
+        tuple(xyz_ft_to_m(10.0, 3.5)),
+        "midpoint of the right sideline far NVZ segment",
+    ),
+    CourtKeypoint(
+        "right_sideline_far_service_mid",
+        tuple(xyz_ft_to_m(10.0, 14.5)),
+        "midpoint of the right sideline far service segment",
+    ),
+    CourtKeypoint(
+        "near_centerline_mid",
+        tuple(xyz_ft_to_m(0.0, -14.5)),
+        "midpoint of the painted near center service line",
+    ),
+    CourtKeypoint(
+        "far_centerline_mid",
+        tuple(xyz_ft_to_m(0.0, 14.5)),
+        "midpoint of the painted far center service line",
+    ),
+)
+
+ALL_PICKLEBALL_KEYPOINTS: tuple[CourtKeypoint, ...] = PICKLEBALL_KEYPOINTS + AUX_PICKLEBALL_KEYPOINTS
+
 PICKLEBALL_KEYPOINT_BY_NAME: dict[str, CourtKeypoint] = {point.name: point for point in PICKLEBALL_KEYPOINTS}
 COURT_CORNER_LABEL_TO_KEYPOINT: dict[str, str] = {
     "near_left": "near_left_corner",
