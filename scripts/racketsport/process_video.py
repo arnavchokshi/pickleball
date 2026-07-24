@@ -1190,11 +1190,14 @@ class ProcessVideoPipeline:
         values = [*outcome.artifacts]
         if name == "ingest":
             values.append(f"source{self.options.video.suffix.lower()}")
-        # BODY monoliths are rewritten by later BODY post-processing. Tracking
-        # tracks.json is intentionally *not* excluded: a detector selection may
-        # never reuse an out-of-band or wrong-detector tracks artifact.
+        # These public artifacts are intentionally rewritten by later canonical
+        # stages. Fingerprint the immutable same-stage evidence instead, or a
+        # normal placement pass makes tracking/player selection look stale on
+        # every resume and repeats expensive model work.
         mutable_later = {
             "body": {"smpl_motion.json", "skeleton3d.json"},
+            "tracking": {"tracks.json"},
+            "player_selection": {"tracks.json"},
         }.get(name, set())
         artifacts: list[Path] = []
         seen: set[Path] = set()

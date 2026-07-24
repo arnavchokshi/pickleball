@@ -1879,6 +1879,52 @@ def test_player_selection_keeps_unbound_diagnostics_out_of_tracks_contract(
     assert saved_report["unbound_observation_ids"] == [7]
 
 
+def test_stage_identity_uses_immutable_tracking_and_selection_evidence(
+    tmp_path: Path,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    for name in (
+        "tracks.json",
+        "raw_tracked_detections.json",
+        "tracks_preselection.json",
+        "selection_report.json",
+    ):
+        (options.clip_dir / name).write_text("{}", encoding="utf-8")
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    tracking = pipeline._identity_artifacts(
+        "tracking",
+        process_video.StageOutcome(
+            stage="tracking",
+            status="ran",
+            wall_seconds=0.0,
+            artifacts=["tracks.json", "raw_tracked_detections.json"],
+        ),
+    )
+    selection = pipeline._identity_artifacts(
+        "player_selection",
+        process_video.StageOutcome(
+            stage="player_selection",
+            status="ran",
+            wall_seconds=0.0,
+            artifacts=[
+                "tracks_preselection.json",
+                "selection_report.json",
+                "tracks.json",
+            ],
+        ),
+    )
+
+    assert [path.name for path in tracking] == ["raw_tracked_detections.json"]
+    assert [path.name for path in selection] == [
+        "tracks_preselection.json",
+        "selection_report.json",
+    ]
+
+
 def test_body_summary_populates_postchain_bypassed_stages_from_phase_timing(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     video.write_bytes(b"fake-video")
