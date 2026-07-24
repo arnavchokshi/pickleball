@@ -102,7 +102,9 @@ only from I4.
   documented in the sidecar manifest. **Contract extension request
   (non-blocking): add `not_evaluated` to `SOLVER_VERDICTS` in v2.**
 - **O3 Event labels**: emitted as `AnchorEvent` rows on the frames they occur
-  (`kind ∈ {paddle_hit, bounce, net_crossing, net_contact, apex, dead}`,
+  (`anchor_id` = deterministic non-empty string `"synth_<rally_id>_<event_seq>"`
+  per the contract's required field, `kind ∈ {paddle_hit, bounce, net_crossing,
+  net_contact, apex, dead}`,
   `status = "synthetic_truth"`, `source = "pose_conditioned_generator"`) plus a
   sidecar `events.json` with continuous sub-frame times, hitter id, and contact
   point — the per-event supervision (hit logits, sub-frame offsets) B3 needs.

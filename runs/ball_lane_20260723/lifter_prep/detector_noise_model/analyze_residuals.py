@@ -53,6 +53,8 @@ GAP_BUCKETS = [(1, 2), (3, 5), (6, 11), (12, 29), (30, 59), (60, 10**9)]
 #   clip_metadata  = eval_clips clip_metadata.json `environment` field
 #   visual_screen  = one screening thumbnail per harvest video, visually
 #                    classified during WS5 (approximate, unverified)
+# fps values transcribed from `frame_rate_fps` in each clip's registered
+# eval_clips clip_metadata.json (verified against the ledger-registered files).
 # ---------------------------------------------------------------------------
 SET_A = [
     # clip, regime, regime_source, fps
