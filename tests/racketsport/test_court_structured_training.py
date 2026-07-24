@@ -41,6 +41,24 @@ def test_low_weight_outlier_does_not_move_weighted_fit_materially() -> None:
     assert torch.median(torch.linalg.vector_norm(reconstructed - image, dim=-1)).item() < 1e-3
 
 
+def test_zero_weight_masked_point_has_exactly_no_effect_on_dlt() -> None:
+    world = structured_floor_world_xy(dtype=torch.float64)
+    truth = torch.tensor(
+        [[[35.0, 2.0, 300.0], [1.0, -28.0, 220.0], [0.002, -0.004, 1.0]]],
+        dtype=torch.float64,
+    )
+    image = project_homography(truth, world)
+    corrupted = image.clone()
+    corrupted[0, 0] = torch.tensor([1.0e8, -1.0e8], dtype=torch.float64)
+    weights = torch.ones((1, world.shape[0]), dtype=torch.float64)
+    weights[0, 0] = 0.0
+
+    fit = weighted_homography_dlt(world, corrupted, weights)
+    reconstructed = project_homography(fit, world)
+
+    assert torch.max(torch.abs(reconstructed[:, 1:] - image[:, 1:])).item() < 1e-6
+
+
 def test_structured_loss_backpropagates_through_heatmaps_and_covariance() -> None:
     batch = 1
     count = STRUCTURED_FLOOR_KEYPOINT_COUNT

@@ -722,21 +722,24 @@
   },
   "court.court_unet_v2": {
    "stage": "calibration",
-   "selection": "confidence-aware structured court v3 review-only best candidate",
+   "selection": "v2 evidence with DARK decode plus confidence-aware structured court v3.1 solver",
    "value": {
     "kind": "local_path",
     "path": "models/checkpoints/court_unet_v2/court_model_v2.pt",
-    "sha256": "31da51630b82a85ee39384e65eb705b045adcdda900dd025ca15784a2edd3ffe"
+    "sha256": "31da51630b82a85ee39384e65eb705b045adcdda900dd025ca15784a2edd3ffe",
+    "heatmap_decoder": "dark",
+    "coordinate_transform": "legacy_stride",
+    "structured_solver": "confidence_aware_floor_only_robust_homography_v1"
    },
    "status": "PENDING",
    "gate": {
-    "name": "calv1_fusedefault_decisive_eval",
+    "name": "calv1_independent_measurement_authority",
     "metric_key": "court_pck_at_5px",
     "bar": ">=0.95",
-    "evidence_path": "runs/court_structured_v3_20260723/diagnostic_eval/curated264_pack3_task88/court_model_v2_epoch_0006-court-keypoint-metrics.json"
+    "evidence_path": "runs/lanes/court_v31_impl_20260723/selection_summary.json"
    },
    "provenance": {
-    "lane": "court_structured_v3_20260723",
+    "lane": "court_v31_impl_20260723",
     "commit": "worktree",
     "date": "2026-07-23",
     "evidence_paths": [
@@ -744,23 +747,40 @@
      "runs/court_structured_v3_20260723/diagnostic_eval/curated264_pack3_task88/court_model_v2_epoch_0006-court-keypoint-metrics.json",
      "runs/court_structured_v3_20260723/diagnostic_eval/curated264_pack3_extension_task88/",
      "runs/court_structured_v3_20260723/pack3_selection_summary.json",
-     "runs/lanes/court_labelpack3_owner_ingest_20260723/finetune_gate_proof_remote.json"
+     "runs/lanes/court_labelpack3_owner_ingest_20260723/finetune_gate_proof_remote.json",
+     "runs/lanes/court_v31_protocol_20260723/source_grouped_five_fold_manifest.json",
+     "runs/lanes/court_v31_impl_20260723/selection_summary.json",
+     "runs/lanes/court_v31_impl_20260723/v3_fold0_seed13_eval/"
     ]
    },
    "proven_against": {
+    "source_grouped_fold0_validation_frames": 74,
+    "source_grouped_fold0_labeled_floor_points": 869,
+    "structured_pck_at_2px": 0.6075949367088608,
+    "structured_pck_at_5px": 0.9516685845799769,
+    "structured_pck_at_10px": 0.9873417721518988,
+    "structured_median_px": 1.6672723309187805,
+    "structured_p90_px": 3.9819862110370123,
+    "structured_p95_px": 4.931018322063191,
+    "structured_max_px": 47.98658160932075,
+    "structured_confidence_ece_uncalibrated": 0.6688690735326225,
+    "source_grouped_topology_valid_samples": 74,
+    "source_grouped_duplicate_or_collapsed_outputs": 0,
     "task88_labeled_floor_points": 71,
-    "structured_pck_at_5px": 0.7183098591549296,
-    "structured_pck_at_10px": 0.9295774647887324,
-    "structured_median_px": 3.6313174256843372,
-    "structured_p95_px": 10.3190035506857,
+    "task88_structured_pck_at_5px": 0.7183098591549296,
+    "task88_structured_pck_at_10px": 0.9295774647887324,
+    "task88_structured_median_px": 3.6313174256843372,
+    "task88_structured_p95_px": 10.3190035506857,
     "baseline_structured_pck_at_5px": 0.6901408450704225,
     "baseline_structured_median_px": 3.868393393312045,
     "baseline_structured_p95_px": 10.218114970671461,
-    "topology_valid_samples": 6,
-    "duplicate_or_collapsed_outputs": 0,
+    "task88_topology_valid_samples": 6,
+    "v3_seed13_epoch4_structured_pck_at_5px": 0.238204833141542,
+    "v3_seed13_epoch4_structured_p95_px": 36.570626002811586,
+    "v3_seed13_decision": "rejected",
     "checkpoint_sha256": "31da51630b82a85ee39384e65eb705b045adcdda900dd025ca15784a2edd3ffe"
    },
-   "notes": "Best measured running candidate is installed and committed to the manifest. Selection scored final solver-projected floor points, not raw heatmap argmax. The 0.95 goal is not a commit blocker. It remains PENDING/review-only with measurement_valid=false and VERIFIED=0; confidence is not calibrated for authority."
+   "notes": "Best reproducibly measured running method is selected even below an authority goal. The grouped fold score uses final solver-projected points with exact semantic names, not nearest-neighbor matching. The 30-point v3 seed-13 screen regressed and was rejected after two consecutive non-improvements. PCK>=0.95 is an accuracy and measurement-authority target, not a landing gate. This default remains PENDING/review-only with measurement_valid=false and VERIFIED=0 because the fold is development evidence and confidence is uncalibrated."
   },
   "court.e4_fusion_default": {
    "stage": "calibration",

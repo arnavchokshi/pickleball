@@ -26,13 +26,14 @@ self-consistency versus the emitted ``keypoints_xy`` is exact to floating-point 
 
 from __future__ import annotations
 
+import colorsys
 from dataclasses import dataclass, field
 import math
 import random
 from typing import Any, Sequence
 
 from threed.racketsport.court_calibration import homography_from_planar_points
-from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_keypoint_net import AUX_PICKLEBALL_KEYPOINTS, PICKLEBALL_KEYPOINTS
 from threed.racketsport.court_templates import CourtTemplate, get_court_template
 
 Vector2 = tuple[float, float]
@@ -58,7 +59,16 @@ SURFACE_CLASSES: dict[str, int] = {"background": 0, "apron": 1, "interior": 2}
 KEYPOINT_VIS_CLASSES: dict[str, int] = {"off_frame": 0, "occluded": 1, "visible": 2}
 
 CANONICAL_KEYPOINT_NAMES: tuple[str, ...] = tuple(point.name for point in PICKLEBALL_KEYPOINTS)
+AUX_KEYPOINT_NAMES: tuple[str, ...] = tuple(point.name for point in AUX_PICKLEBALL_KEYPOINTS)
+ALL_KEYPOINT_NAMES: tuple[str, ...] = CANONICAL_KEYPOINT_NAMES + AUX_KEYPOINT_NAMES
 _KEYPOINT_WORLD_XYZ_M: dict[str, Vector3] = {point.name: point.world_xyz_m for point in PICKLEBALL_KEYPOINTS}
+_AUX_KEYPOINT_WORLD_XYZ_M: dict[str, Vector3] = {
+    point.name: point.world_xyz_m for point in AUX_PICKLEBALL_KEYPOINTS
+}
+_ALL_KEYPOINT_WORLD_XYZ_M: dict[str, Vector3] = {
+    **_KEYPOINT_WORLD_XYZ_M,
+    **_AUX_KEYPOINT_WORLD_XYZ_M,
+}
 _PRIMARY_CORNER_NAMES = ("near_left_corner", "near_right_corner", "far_right_corner", "far_left_corner")
 
 
@@ -80,6 +90,24 @@ class SceneRenderConfig:
     distortion_p_range: tuple[float, float] = (0.0, 0.0)
     jpeg_quality_range: tuple[int, int] = (78, 96)
     line_width_px_range: tuple[int, int] = (2, 7)
+    # A2 (2026-07-22): every field below is dormant unless the corresponding boolean is true.
+    # Keeping the booleans false is part of the pre-A2 byte-identity contract: the renderer must
+    # not even sample these ranges on the legacy path because doing so would advance its RNG.
+    paint_texture_randomization: bool = False
+    aux_partial_visibility: bool = False
+    aux_min_visible_canonical: int = 1
+    aux_min_visible_combined: int = 6
+    paint_hue_jitter_deg_range: tuple[float, float] = (-15.0, 15.0)
+    paint_saturation_scale_range: tuple[float, float] = (0.35, 1.65)
+    paint_value_scale_range: tuple[float, float] = (0.35, 1.10)
+    line_wear_range: tuple[float, float] = (0.0, 0.55)
+    line_fade_alpha_range: tuple[float, float] = (0.20, 1.0)
+    surface_hue_jitter_deg_range: tuple[float, float] = (-30.0, 30.0)
+    surface_saturation_scale_range: tuple[float, float] = (0.55, 1.45)
+    surface_value_scale_range: tuple[float, float] = (0.60, 1.25)
+    surface_texture_strength_range: tuple[float, float] = (0.0, 0.18)
+    surface_texture_scale_px_range: tuple[float, float] = (8.0, 96.0)
+    apron_independent_palette_probability_range: tuple[float, float] = (0.0, 0.75)
     scenario_weights: dict[str, float] = field(default_factory=lambda: {name: 1.0 for name in SCENARIO_NAMES})
 
     def weight_for(self, scenario: str) -> float:
@@ -174,6 +202,21 @@ def resolve_scenario_config(
         "distortion_p_range": base.distortion_p_range,
         "jpeg_quality_range": base.jpeg_quality_range,
         "line_width_px_range": base.line_width_px_range,
+        "paint_texture_randomization": base.paint_texture_randomization,
+        "aux_partial_visibility": base.aux_partial_visibility,
+        "aux_min_visible_canonical": base.aux_min_visible_canonical,
+        "aux_min_visible_combined": base.aux_min_visible_combined,
+        "paint_hue_jitter_deg_range": base.paint_hue_jitter_deg_range,
+        "paint_saturation_scale_range": base.paint_saturation_scale_range,
+        "paint_value_scale_range": base.paint_value_scale_range,
+        "line_wear_range": base.line_wear_range,
+        "line_fade_alpha_range": base.line_fade_alpha_range,
+        "surface_hue_jitter_deg_range": base.surface_hue_jitter_deg_range,
+        "surface_saturation_scale_range": base.surface_saturation_scale_range,
+        "surface_value_scale_range": base.surface_value_scale_range,
+        "surface_texture_strength_range": base.surface_texture_strength_range,
+        "surface_texture_scale_px_range": base.surface_texture_scale_px_range,
+        "apron_independent_palette_probability_range": base.apron_independent_palette_probability_range,
         "scenario_weights": base.scenario_weights,
     }
     fields.update(overrides)
@@ -355,8 +398,43 @@ def _is_visible_projection(projected: dict[str, Vector2], *, width: int, height:
     return True
 
 
+def _is_aux_partial_projection(
+    canonical_projected: dict[str, Vector2],
+    aux_projected: dict[str, Vector2],
+    *,
+    width: int,
+    height: int,
+    scenario: str,
+    min_visible_canonical: int,
+    min_visible_combined: int,
+) -> bool:
+    """Flag-on pose gate for owner-style partial views.
+
+    The ordinary `_is_visible_projection` policy remains untouched. This alternative accepts a
+    crop only when the canonical subset still contributes at least one anchor and the combined
+    taxonomy reaches the six-correspondence design margin. The existing projected-extent guard is
+    retained so a degenerate cluster cannot satisfy the gate merely by being in frame.
+    """
+
+    def _inside(values: Sequence[Vector2]) -> list[Vector2]:
+        return [(x, y) for x, y in values if 4.0 <= x <= width - 4.0 and 4.0 <= y <= height - 4.0]
+
+    canonical_in_frame = _inside(tuple(canonical_projected.values()))
+    combined_in_frame = _inside(tuple(canonical_projected.values()) + tuple(aux_projected.values()))
+    if len(canonical_in_frame) < min_visible_canonical or len(combined_in_frame) < min_visible_combined:
+        return False
+    xs = [point[0] for point in combined_in_frame]
+    ys = [point[1] for point in combined_in_frame]
+    min_w_frac, min_h_frac = _SCENARIO_BBOX_MIN_FRACTION.get(scenario, _DEFAULT_BBOX_MIN_FRACTION)
+    return (max(xs) - min(xs)) >= width * min_w_frac and (max(ys) - min(ys)) >= height * min_h_frac
+
+
 def sample_visible_camera_pose(
-    config: SceneRenderConfig, rng: random.Random, *, scenario: str
+    config: SceneRenderConfig,
+    rng: random.Random,
+    *,
+    scenario: str,
+    include_aux_keypoints: bool = False,
 ) -> tuple[CameraPose, dict[str, Vector2]]:
     width, height = config.image_size
     for _ in range(1200):
@@ -365,7 +443,25 @@ def sample_visible_camera_pose(
             projected = {name: project_world_point(xyz, pose) for name, xyz in _KEYPOINT_WORLD_XYZ_M.items()}
         except ValueError:
             continue
-        if _is_visible_projection(projected, width=width, height=height, scenario=scenario):
+        if config.aux_partial_visibility and include_aux_keypoints:
+            try:
+                aux_projected = {
+                    name: project_world_point(xyz, pose) for name, xyz in _AUX_KEYPOINT_WORLD_XYZ_M.items()
+                }
+            except ValueError:
+                continue
+            accepted = _is_aux_partial_projection(
+                projected,
+                aux_projected,
+                width=width,
+                height=height,
+                scenario=scenario,
+                min_visible_canonical=config.aux_min_visible_canonical,
+                min_visible_combined=config.aux_min_visible_combined,
+            )
+        else:
+            accepted = _is_visible_projection(projected, width=width, height=height, scenario=scenario)
+        if accepted:
             return pose, projected
     raise RuntimeError(f"could not sample a visible synthetic court camera pose for scenario={scenario!r}")
 
@@ -406,6 +502,35 @@ def reproject_canonical_keypoints(meta: dict[str, Any]) -> dict[str, Vector2]:
     return {name: project_world_point(xyz, pose) for name, xyz in _KEYPOINT_WORLD_XYZ_M.items()}
 
 
+def reproject_scene_keypoints(meta: dict[str, Any]) -> dict[str, Vector2]:
+    """Replay every keypoint declared by a rendered scene, including flag-on aux points."""
+
+    canonical = reproject_canonical_keypoints(meta)
+    names = tuple(str(name) for name in meta.get("keypoint_names", CANONICAL_KEYPOINT_NAMES))
+    if names == CANONICAL_KEYPOINT_NAMES:
+        return canonical
+    homography = meta["homography"]
+    distortion = meta["distortion"]
+    pose = CameraPose(
+        position_m=tuple(homography["camera_position_m"]),  # type: ignore[arg-type]
+        right=tuple(homography["camera_right"]),  # type: ignore[arg-type]
+        down=tuple(homography["camera_down"]),  # type: ignore[arg-type]
+        forward=tuple(homography["camera_forward"]),  # type: ignore[arg-type]
+        fx_px=homography["fx_px"],
+        fy_px=homography["fy_px"],
+        cx_px=homography["cx_px"],
+        cy_px=homography["cy_px"],
+        distortion_k1=distortion["k1"],
+        distortion_p1=distortion.get("p1", 0.0),
+        distortion_p2=distortion.get("p2", 0.0),
+    )
+    world_by_name = meta.get("keypoint_world_xyz_m", {})
+    return {
+        name: project_world_point(world_by_name[name], pose)
+        for name in names
+    }
+
+
 # ---------------------------------------------------------------------------------------------
 # Court layout (scenario -> list of court instances)
 # ---------------------------------------------------------------------------------------------
@@ -423,7 +548,25 @@ class CourtInstance:
     line_width_scale: float = 1.0
 
 
-def build_court_instances(scenario: str, rng: random.Random) -> list[CourtInstance]:
+def _sample_line_wear(
+    rng: random.Random,
+    legacy_range: tuple[float, float],
+    config: SceneRenderConfig | None,
+) -> float:
+    active_range = (
+        config.line_wear_range
+        if config is not None and config.paint_texture_randomization
+        else legacy_range
+    )
+    return rng.uniform(*active_range)
+
+
+def build_court_instances(
+    scenario: str,
+    rng: random.Random,
+    *,
+    config: SceneRenderConfig | None = None,
+) -> list[CourtInstance]:
     if scenario == "tennis_overlay":
         return [
             CourtInstance(
@@ -431,7 +574,7 @@ def build_court_instances(scenario: str, rng: random.Random) -> list[CourtInstan
                 offset_m=(0.0, 0.0),
                 line_family="tennis_line",
                 is_primary=False,
-                wear=rng.uniform(0.18, 0.5),
+                wear=_sample_line_wear(rng, (0.18, 0.5), config),
                 kitchen_two_tone=False,
                 fill_interior=True,
                 line_width_scale=0.7,
@@ -441,7 +584,7 @@ def build_court_instances(scenario: str, rng: random.Random) -> list[CourtInstan
                 offset_m=(0.0, 0.0),
                 line_family="pickleball_line",
                 is_primary=True,
-                wear=rng.uniform(0.0, 0.12),
+                wear=_sample_line_wear(rng, (0.0, 0.12), config),
                 kitchen_two_tone=rng.random() < 0.35,
                 fill_interior=False,  # same physical surface as the tennis instance above -- only
                                       # its (fresher, wider) lines get painted on top of it.
@@ -462,7 +605,7 @@ def build_court_instances(scenario: str, rng: random.Random) -> list[CourtInstan
                     offset_m=((idx - primary_index) * span, 0.0),
                     line_family="pickleball_line",
                     is_primary=(idx == primary_index),
-                    wear=rng.uniform(0.0, 0.28),
+                    wear=_sample_line_wear(rng, (0.0, 0.28), config),
                     kitchen_two_tone=rng.random() < 0.3,
                 )
             )
@@ -473,7 +616,7 @@ def build_court_instances(scenario: str, rng: random.Random) -> list[CourtInstan
             offset_m=(0.0, 0.0),
             line_family="pickleball_line",
             is_primary=True,
-            wear=rng.uniform(0.0, 0.26),
+            wear=_sample_line_wear(rng, (0.0, 0.26), config),
             kitchen_two_tone=rng.random() < 0.3,
         )
     ]
@@ -552,7 +695,29 @@ _KITCHEN_ACCENT_PALETTE: tuple[tuple[int, int, int], ...] = (
 )
 
 
-def _sample_palette(rng: random.Random, scenario: str) -> dict[str, Any]:
+def _randomize_hsv(
+    color: tuple[int, int, int],
+    rng: random.Random,
+    *,
+    hue_deg_range: tuple[float, float],
+    saturation_scale_range: tuple[float, float],
+    value_scale_range: tuple[float, float],
+) -> tuple[int, int, int]:
+    red, green, blue = (channel / 255.0 for channel in color)
+    hue, saturation, value = colorsys.rgb_to_hsv(red, green, blue)
+    hue = (hue + rng.uniform(*hue_deg_range) / 360.0) % 1.0
+    saturation = max(0.0, min(1.0, saturation * rng.uniform(*saturation_scale_range)))
+    value = max(0.0, min(1.0, value * rng.uniform(*value_scale_range)))
+    randomized = colorsys.hsv_to_rgb(hue, saturation, value)
+    return tuple(_clamp_color(channel * 255.0) for channel in randomized)  # type: ignore[return-value]
+
+
+def _sample_palette(
+    rng: random.Random,
+    scenario: str,
+    *,
+    config: SceneRenderConfig | None = None,
+) -> dict[str, Any]:
     court_base, court_alt = rng.choice(_COURT_PALETTES)
     court = _jitter_color(court_base, rng, 22)
     apron = _jitter_color(court_alt, rng, 26)
@@ -565,7 +730,7 @@ def _sample_palette(rng: random.Random, scenario: str) -> dict[str, Any]:
         floor = _jitter_color((176, 150, 108), rng, 20)  # gym wood tone
     else:
         floor = _jitter_color((86, 118, 70), rng, 26)  # grass/ground tone
-    return {
+    palette = {
         "court": court,
         "apron": apron,
         "kitchen": kitchen,
@@ -573,6 +738,32 @@ def _sample_palette(rng: random.Random, scenario: str) -> dict[str, Any]:
         "tennis_line": tennis_line,
         "floor_base": floor,
     }
+    if config is None or not config.paint_texture_randomization:
+        return palette
+
+    independent_probability = rng.uniform(*config.apron_independent_palette_probability_range)
+    if rng.random() < independent_probability:
+        independent_pair = rng.choice(_COURT_PALETTES)
+        palette["apron"] = _jitter_color(rng.choice(independent_pair), rng, 26)
+
+    for name in ("court", "apron", "kitchen"):
+        palette[name] = _randomize_hsv(
+            palette[name],
+            rng,
+            hue_deg_range=config.surface_hue_jitter_deg_range,
+            saturation_scale_range=config.surface_saturation_scale_range,
+            value_scale_range=config.surface_value_scale_range,
+        )
+    for name in ("pickleball_line", "tennis_line"):
+        palette[name] = _randomize_hsv(
+            palette[name],
+            rng,
+            hue_deg_range=config.paint_hue_jitter_deg_range,
+            saturation_scale_range=config.paint_saturation_scale_range,
+            value_scale_range=config.paint_value_scale_range,
+        )
+    palette["apron_independent_probability"] = independent_probability
+    return palette
 
 
 # ---------------------------------------------------------------------------------------------
@@ -693,6 +884,7 @@ def render_synthetic_court_sample(
     scenario: str | None = None,
     apply_jpeg_roundtrip: bool = False,
     force_image_size: tuple[int, int] | None = None,
+    include_aux_keypoints: bool = False,
 ) -> RenderedScene:
     from io import BytesIO
 
@@ -705,10 +897,27 @@ def render_synthetic_court_sample(
     scene_config = resolve_scenario_config(config, scenario, force_image_size=force_image_size)
     width, height = scene_config.image_size
 
-    pose, keypoints_xy = sample_visible_camera_pose(scene_config, rng, scenario=scenario)
-    instances = build_court_instances(scenario, rng)
+    pose, keypoints_xy = sample_visible_camera_pose(
+        scene_config,
+        rng,
+        scenario=scenario,
+        include_aux_keypoints=include_aux_keypoints,
+    )
+    if include_aux_keypoints:
+        keypoints_xy = {
+            **keypoints_xy,
+            **{
+                name: project_world_point(xyz, pose)
+                for name, xyz in _AUX_KEYPOINT_WORLD_XYZ_M.items()
+            },
+        }
+    active_keypoint_names = ALL_KEYPOINT_NAMES if include_aux_keypoints else CANONICAL_KEYPOINT_NAMES
+    active_keypoint_world_xyz_m = (
+        _ALL_KEYPOINT_WORLD_XYZ_M if include_aux_keypoints else _KEYPOINT_WORLD_XYZ_M
+    )
+    instances = build_court_instances(scenario, rng, config=scene_config)
     primary = next(instance for instance in instances if instance.is_primary)
-    palette = _sample_palette(rng, scenario)
+    palette = _sample_palette(rng, scenario, config=scene_config)
     line_width = rng.randint(*scene_config.line_width_px_range)
 
     image = Image.new("RGB", (width, height), palette["floor_base"])
@@ -755,10 +964,31 @@ def render_synthetic_court_sample(
             projected = [_safe_project(point, pose) for point in samples]
             is_net = name == "net"
             draw_color = color if not is_net else _jitter_color((235, 235, 238), rng, 8)
+            if is_net and scene_config.paint_texture_randomization:
+                draw_color = _randomize_hsv(
+                    draw_color,
+                    rng,
+                    hue_deg_range=scene_config.paint_hue_jitter_deg_range,
+                    saturation_scale_range=scene_config.paint_saturation_scale_range,
+                    value_scale_range=scene_config.paint_value_scale_range,
+                )
             draw_family = mask_class if not is_net else LINE_FAMILY_CLASSES["net"]
             draw_width = instance_line_width if not is_net else line_width
-            _draw_worn_polyline(draw, projected, draw_color, draw_width, instance.wear, rng)
-            _draw_worn_polyline_mask(line_mask_draw, projected, draw_family, draw_width, instance.wear, rng)
+            if scene_config.paint_texture_randomization:
+                _draw_randomized_worn_polyline_with_mask(
+                    draw,
+                    line_mask_draw,
+                    projected,
+                    draw_color,
+                    draw_family,
+                    draw_width,
+                    instance.wear,
+                    scene_config.line_fade_alpha_range,
+                    rng,
+                )
+            else:
+                _draw_worn_polyline(draw, projected, draw_color, draw_width, instance.wear, rng)
+                _draw_worn_polyline_mask(line_mask_draw, projected, draw_family, draw_width, instance.wear, rng)
 
     # -- portable net stand (visual clutter + naturally occludes net keypoints) --------------
     occluder_polygons: list[list[Vector2]] = []
@@ -805,6 +1035,16 @@ def render_synthetic_court_sample(
             occ_draw_line.polygon(polygon, fill=LINE_FAMILY_CLASSES["other"])
             occ_draw_surface.polygon(polygon, fill=SURFACE_CLASSES["background"])
 
+    if scene_config.paint_texture_randomization:
+        image = _apply_surface_texture(
+            image,
+            surface_mask_img,
+            line_mask_img,
+            rng,
+            np,
+            strength_range=scene_config.surface_texture_strength_range,
+            scale_px_range=scene_config.surface_texture_scale_px_range,
+        )
     image = _apply_lighting_and_sensor_artifacts(image, rng, np)
     jpeg_quality = rng.randint(*scene_config.jpeg_quality_range)
     if apply_jpeg_roundtrip:
@@ -856,8 +1096,8 @@ def render_synthetic_court_sample(
             }
             for instance in instances
         ],
-        "keypoint_names": list(CANONICAL_KEYPOINT_NAMES),
-        "keypoint_world_xyz_m": {name: list(xyz) for name, xyz in _KEYPOINT_WORLD_XYZ_M.items()},
+        "keypoint_names": list(active_keypoint_names),
+        "keypoint_world_xyz_m": {name: list(xyz) for name, xyz in active_keypoint_world_xyz_m.items()},
         "line_family_classes": dict(LINE_FAMILY_CLASSES),
         "surface_classes": dict(SURFACE_CLASSES),
         "keypoint_vis_classes": dict(KEYPOINT_VIS_CLASSES),
@@ -865,6 +1105,34 @@ def render_synthetic_court_sample(
         "line_width_px": line_width,
         "occluder_count": len(occluder_polygons),
     }
+    if scene_config.paint_texture_randomization:
+        meta["paint_texture_randomization"] = {
+            "paint_hue_jitter_deg_range": list(scene_config.paint_hue_jitter_deg_range),
+            "paint_saturation_scale_range": list(scene_config.paint_saturation_scale_range),
+            "paint_value_scale_range": list(scene_config.paint_value_scale_range),
+            "line_wear_range": list(scene_config.line_wear_range),
+            "line_fade_alpha_range": list(scene_config.line_fade_alpha_range),
+            "surface_hue_jitter_deg_range": list(scene_config.surface_hue_jitter_deg_range),
+            "surface_saturation_scale_range": list(scene_config.surface_saturation_scale_range),
+            "surface_value_scale_range": list(scene_config.surface_value_scale_range),
+            "surface_texture_strength_range": list(scene_config.surface_texture_strength_range),
+            "surface_texture_scale_px_range": list(scene_config.surface_texture_scale_px_range),
+            "apron_independent_palette_probability_range": list(
+                scene_config.apron_independent_palette_probability_range
+            ),
+            "sampled_apron_independent_probability": palette.get("apron_independent_probability"),
+            "visual_mask_erosion_coupled": True,
+        }
+    if include_aux_keypoints:
+        meta["aux_keypoints"] = {
+            "enabled": True,
+            "canonical_count": len(CANONICAL_KEYPOINT_NAMES),
+            "aux_count": len(AUX_KEYPOINT_NAMES),
+            "combined_count": len(active_keypoint_names),
+            "partial_visibility_gate": scene_config.aux_partial_visibility,
+            "min_visible_canonical": scene_config.aux_min_visible_canonical,
+            "min_visible_combined": scene_config.aux_min_visible_combined,
+        }
 
     return RenderedScene(
         image=image,
@@ -929,6 +1197,73 @@ def _draw_worn_polyline_mask(
         if rng.random() < wear:
             continue
         draw.line([start, end], fill=mask_class, width=mask_width)
+
+
+def _draw_randomized_worn_polyline_with_mask(
+    draw: Any,
+    mask_draw: Any,
+    points: Sequence[Vector2 | None],
+    color: tuple[int, int, int],
+    mask_class: int,
+    width: int,
+    wear: float,
+    fade_alpha_range: tuple[float, float],
+    rng: random.Random,
+) -> None:
+    """Draw one coupled erosion field into pixels and segmentation support.
+
+    The legacy renderer intentionally remains in the two functions above. Aux/randomization mode
+    uses one dropout decision per microsegment so the line mask cannot claim a segment that the
+    image independently erased. Retained segments receive an exposed partial-alpha fade.
+    """
+
+    if len(points) < 2:
+        return
+    for start, end in zip(points[:-1], points[1:], strict=True):
+        if start is None or end is None or rng.random() < wear:
+            continue
+        alpha = _clamp_color(255.0 * rng.uniform(*fade_alpha_range))
+        draw.line([start, end], fill=(*color, alpha), width=width)
+        mask_draw.line([start, end], fill=mask_class, width=max(1, width))
+
+
+def _apply_surface_texture(
+    image: Any,
+    surface_mask_image: Any,
+    line_mask_image: Any,
+    rng: random.Random,
+    np: Any,
+    *,
+    strength_range: tuple[float, float],
+    scale_px_range: tuple[float, float],
+) -> Any:
+    """Apply low-frequency coating variation only to non-line court/apron pixels."""
+
+    from PIL import Image
+
+    strength = rng.uniform(*strength_range)
+    correlation_scale_px = rng.uniform(*scale_px_range)
+    if strength <= 0.0:
+        return image
+    arr = np.asarray(image, dtype=np.float32).copy()
+    height, width = arr.shape[:2]
+    grid_width = max(2, int(math.ceil(width / max(correlation_scale_px, 1.0))) + 1)
+    grid_height = max(2, int(math.ceil(height / max(correlation_scale_px, 1.0))) + 1)
+    texture_rng = np.random.default_rng(rng.randrange(2**32))
+    coarse = texture_rng.normal(0.0, 1.0, (grid_height, grid_width)).astype(np.float32)
+    coarse = np.clip(coarse, -2.5, 2.5)
+    encoded = np.clip((coarse / 5.0 + 0.5) * 255.0, 0.0, 255.0).astype(np.uint8)
+    resampling = getattr(Image, "Resampling", Image)
+    smooth = np.asarray(
+        Image.fromarray(encoded, mode="L").resize((width, height), resample=resampling.BICUBIC),
+        dtype=np.float32,
+    )
+    variation = ((smooth / 255.0) - 0.5) * 2.0 * strength
+    surface_mask = np.asarray(surface_mask_image, dtype=np.uint8) != SURFACE_CLASSES["background"]
+    no_line = np.asarray(line_mask_image, dtype=np.uint8) == LINE_FAMILY_CLASSES["other"]
+    active = surface_mask & no_line
+    arr[active] *= (1.0 + variation[active, None])
+    return Image.fromarray(np.clip(arr, 0.0, 255.0).astype(np.uint8), mode="RGB")
 
 
 def _draw_portable_net_stand(

@@ -507,9 +507,21 @@ def generate_neural_seed_hypotheses(
     if width <= 0 or height <= 0:
         raise ValueError("image_size must contain positive width and height")
 
-    keypoints_xy = neural_inference.get("keypoints_xy") or neural_inference.get("keypoints") or {}
-    keypoints_conf = neural_inference.get("keypoints_conf") or {}
-    keypoints_vis = neural_inference.get("keypoints_vis") or {}
+    best_court = neural_inference.get("best_court")
+    structured_selected = isinstance(best_court, Mapping) and isinstance(
+        best_court.get("keypoints_xy"), Mapping
+    )
+    if structured_selected:
+        keypoints_xy = best_court.get("keypoints_xy") or {}
+        keypoints_conf = best_court.get("point_confidence") or {}
+        # A structured court projects occluded points from one template.  Its
+        # per-point confidence already incorporates observation/inference state;
+        # do not gate those regenerated points on raw visibility again.
+        keypoints_vis = {str(name): 1.0 for name in keypoints_xy}
+    else:
+        keypoints_xy = neural_inference.get("keypoints_xy") or neural_inference.get("keypoints") or {}
+        keypoints_conf = neural_inference.get("keypoints_conf") or {}
+        keypoints_vis = neural_inference.get("keypoints_vis") or {}
     if not isinstance(keypoints_xy, Mapping):
         return []
 
@@ -556,7 +568,11 @@ def generate_neural_seed_hypotheses(
     ]
     fit_median = _median_float(residuals)
     fit_p95 = _p95_float(residuals)
-    model_confidence = _mean_float(confidence_values)
+    model_confidence = (
+        _probability_from_mapping({"court": best_court.get("court_confidence")}, "court", default=0.0)
+        if structured_selected
+        else _mean_float(confidence_values)
+    )
     model_visibility = _mean_float(visibility_values)
     combined_confidence = _mean_float([c * v for c, v in zip(confidence_values, visibility_values, strict=True)])
     fit_quality = max(0.0, min(1.0, 1.0 - fit_p95 / 35.0))
@@ -570,8 +586,12 @@ def generate_neural_seed_hypotheses(
             "evidence_score": float(evidence_score),
             "template": "pickleball",
             "promotable_as_pickleball": False,
-            "source": "neural_seeded_court_unet_v2",
-            "source_tag": "neural_seeded",
+            "source": (
+                "structured_best_court_seed"
+                if structured_selected
+                else "neural_seeded_court_unet_v2"
+            ),
+            "source_tag": "structured_best_court" if structured_selected else "neural_seeded",
             "model_confidence": round(float(model_confidence), 6),
             "model_visibility": round(float(model_visibility), 6),
             "model_combined_confidence": round(float(combined_confidence), 6),
@@ -580,7 +600,10 @@ def generate_neural_seed_hypotheses(
             "required_lines_present": bool(required_lines_present),
             "line_assignment": {},
             "neural_seed": {
-                "provider": "court_unet_v2",
+                "provider": "structured_best_court" if structured_selected else "court_unet_v2",
+                "structured_solver_source": (
+                    str(best_court.get("source")) if structured_selected else None
+                ),
                 "floor_correspondence_count": len(used_names),
                 "floor_correspondence_names": list(used_names),
                 "fit_residual_median_px": round(float(fit_median), 4),

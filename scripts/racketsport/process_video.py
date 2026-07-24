@@ -7087,7 +7087,12 @@ def _court_proposals_preview_from_video(
     from scripts.racketsport.build_court_proposals import build_court_proposal_report
     from threed.racketsport.court_proposals import write_court_proposal_report
 
-    report = build_court_proposal_report(video=str(video_path), clip=clip, max_frames=max_frames)
+    report = build_court_proposal_report(
+        video=str(video_path),
+        clip=clip,
+        max_frames=min(8, max_frames),
+        court_lock_path=out_path.with_name("court_lock.json"),
+    )
     write_court_proposal_report(out_path, report)
     return out_path
 

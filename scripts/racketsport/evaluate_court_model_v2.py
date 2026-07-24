@@ -26,6 +26,7 @@ resolution.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import math
 import sys
@@ -40,8 +41,16 @@ from scripts.racketsport.train_court_keypoint_heatmap import (  # noqa: E402
     load_label_image,
     load_real_court_keypoint_labels,
 )
-from threed.racketsport.court_model_infer import infer_court_model  # noqa: E402
-from threed.racketsport.court_structured_metrics import evaluate_structured_court_outputs  # noqa: E402
+from scripts.racketsport.build_court_v31_protocol import load_protocol_partition_rows  # noqa: E402
+from threed.racketsport.court_model_infer import (  # noqa: E402
+    infer_court_model,
+    load_court_model_checkpoint,
+    make_court_model_infer_provider,
+)
+from threed.racketsport.court_structured_metrics import (  # noqa: E402
+    evaluate_raw_vs_structured_court_outputs,
+    evaluate_structured_court_outputs,
+)
 
 INDEPENDENT_REVIEWED_STATUS = "reviewed"
 
@@ -66,13 +75,63 @@ def _row_native_image_bgr(row: dict[str, Any]) -> tuple[Any, tuple[float, float]
     return image_bgr, scale_to_source
 
 
-def predict_row_keypoints_source_px(row: dict[str, Any], checkpoint_path: Path, *, device: str) -> dict[str, list[float]]:
-    image_bgr, (scale_x, scale_y) = _row_native_image_bgr(row)
-    result = infer_court_model(image_bgr, checkpoint_path, device=device)
+def predict_row_keypoints_source_px(
+    row: dict[str, Any],
+    checkpoint_path: Path,
+    *,
+    device: str,
+    heatmap_decoder: str | None = None,
+    coordinate_transform: str | None = None,
+    infer_provider: Any | None = None,
+    inference_cache: dict[int, tuple[dict[str, Any], tuple[float, float]]] | None = None,
+) -> dict[str, list[float]]:
+    result, (scale_x, scale_y) = _infer_row(
+        row,
+        checkpoint_path,
+        device=device,
+        heatmap_decoder=heatmap_decoder,
+        coordinate_transform=coordinate_transform,
+        infer_provider=infer_provider,
+        inference_cache=inference_cache,
+    )
     return {
         name: [xy[0] * scale_x, xy[1] * scale_y]
         for name, xy in result["keypoints_xy"].items()
     }
+
+
+def _infer_row(
+    row: dict[str, Any],
+    checkpoint_path: Path,
+    *,
+    device: str,
+    heatmap_decoder: str | None,
+    coordinate_transform: str | None,
+    infer_provider: Any | None,
+    inference_cache: dict[int, tuple[dict[str, Any], tuple[float, float]]] | None,
+) -> tuple[dict[str, Any], tuple[float, float]]:
+    cache_key = id(row)
+    if inference_cache is not None and cache_key in inference_cache:
+        return inference_cache[cache_key]
+    image_bgr, scale = _row_native_image_bgr(row)
+    if infer_provider is not None:
+        result = dict(infer_provider(image_bgr))
+    else:
+        optional: dict[str, str] = {}
+        if heatmap_decoder is not None:
+            optional["heatmap_decoder"] = heatmap_decoder
+        if coordinate_transform is not None:
+            optional["coordinate_transform"] = coordinate_transform
+        result = infer_court_model(
+            image_bgr,
+            checkpoint_path,
+            device=device,
+            **optional,
+        )
+    value = (result, scale)
+    if inference_cache is not None:
+        inference_cache[cache_key] = value
+    return value
 
 
 def evaluate_structured_checkpoint_against_real_labels(
@@ -80,13 +139,24 @@ def evaluate_structured_checkpoint_against_real_labels(
     rows: list[dict[str, Any]],
     *,
     device: str = "cpu",
+    heatmap_decoder: str | None = None,
+    coordinate_transform: str | None = None,
+    infer_provider: Any | None = None,
+    inference_cache: dict[int, tuple[dict[str, Any], tuple[float, float]]] | None = None,
 ) -> dict[str, Any]:
     """Score the review-only regulation-template ``best_court`` output on exact floor names."""
 
     records: list[dict[str, Any]] = []
     for row in rows:
-        image_bgr, (scale_x, scale_y) = _row_native_image_bgr(row)
-        result = infer_court_model(image_bgr, checkpoint_path, device=device)
+        result, (scale_x, scale_y) = _infer_row(
+            row,
+            checkpoint_path,
+            device=device,
+            heatmap_decoder=heatmap_decoder,
+            coordinate_transform=coordinate_transform,
+            infer_provider=infer_provider,
+            inference_cache=inference_cache,
+        )
         best = result["best_court"]
         prediction = {
             name: [float(xy[0]) * scale_x, float(xy[1]) * scale_y]
@@ -139,6 +209,124 @@ def evaluate_structured_checkpoint_against_real_labels(
     return report
 
 
+def evaluate_raw_vs_structured_checkpoint_against_real_labels(
+    checkpoint_path: Path,
+    rows: list[dict[str, Any]],
+    *,
+    device: str = "cpu",
+    bootstrap_resamples: int = 2000,
+    bootstrap_seed: int = 13,
+    heatmap_decoder: str | None = None,
+    coordinate_transform: str | None = None,
+    infer_provider: Any | None = None,
+    inference_cache: dict[int, tuple[dict[str, Any], tuple[float, float]]] | None = None,
+) -> dict[str, Any]:
+    """Run inference once per row and compare raw versus solved floor points by exact name."""
+
+    records: list[dict[str, Any]] = []
+    for row in rows:
+        result, (scale_x, scale_y) = _infer_row(
+            row,
+            checkpoint_path,
+            device=device,
+            heatmap_decoder=heatmap_decoder,
+            coordinate_transform=coordinate_transform,
+            infer_provider=infer_provider,
+            inference_cache=inference_cache,
+        )
+        best = result["best_court"]
+        truth = {
+            name: [float(xy[0]), float(xy[1])]
+            for name, xy in row["keypoints"].items()
+            if xy is not None and not name.startswith("net_")
+        }
+        raw_prediction = {
+            name: [float(xy[0]) * scale_x, float(xy[1]) * scale_y]
+            for name, xy in result["keypoints_xy"].items()
+            if not name.startswith("net_")
+        }
+        structured_prediction = {
+            name: [float(xy[0]) * scale_x, float(xy[1]) * scale_y]
+            for name, xy in best["keypoints_xy"].items()
+            if not name.startswith("net_")
+        }
+        clip = str(row.get("clip") or "unknown")
+        visible_count = len(truth)
+        visibility = str(
+            row.get("visibility")
+            or ("full_floor_12" if visible_count == 12 else "partial_floor")
+        )
+        viewpoint = str(row.get("viewpoint") or clip)
+        subgroup = str(
+            row.get("subgroup")
+            or (
+                "independent_human_reviewed"
+                if row.get("label_status", INDEPENDENT_REVIEWED_STATUS)
+                == INDEPENDENT_REVIEWED_STATUS
+                else "non_independent_or_external"
+            )
+        )
+        ignored: list[dict[str, Any]] = []
+        for item in best.get("ignored_observations") or []:
+            if not isinstance(item, dict):
+                continue
+            normalized = dict(item)
+            semantic = normalized.get("name", normalized.get("semantic"))
+            if not isinstance(semantic, str) or semantic not in truth:
+                continue
+            normalized["name"] = semantic
+            xy = normalized.get("xy")
+            if isinstance(xy, (list, tuple)) and len(xy) == 2:
+                normalized["xy"] = [float(xy[0]) * scale_x, float(xy[1]) * scale_y]
+            ignored.append(normalized)
+        records.append(
+            {
+                "sample_id": f"{clip}/frame_{int(row.get('frame_index') or 0):06d}",
+                "viewpoint": viewpoint,
+                "strata": {
+                    "subgroup": subgroup,
+                    "source": str(row.get("source") or clip),
+                    "source_group": str(row.get("source_group") or clip),
+                    "visibility": visibility,
+                },
+                "ground_truth": truth,
+                "raw_prediction": {
+                    "keypoints": raw_prediction,
+                    "confidences": {
+                        str(name): float(value)
+                        for name, value in dict(result.get("keypoints_conf") or {}).items()
+                        if name in truth
+                    },
+                },
+                "structured_prediction": {
+                    "keypoints": structured_prediction,
+                    "confidences": {
+                        str(name): float(value)
+                        for name, value in dict(best.get("point_confidence") or {}).items()
+                        if name in truth
+                    },
+                    "ignored_observations": ignored,
+                    "whole_court_confidence": float(best.get("court_confidence") or 0.0),
+                },
+            }
+        )
+    report = evaluate_raw_vs_structured_court_outputs(
+        records,
+        bootstrap_resamples=bootstrap_resamples,
+        bootstrap_seed=bootstrap_seed,
+    )
+    report.update(
+        {
+            "checkpoint": str(checkpoint_path),
+            "status": "diagnostic_only",
+            "promotion_allowed": False,
+            "measurement_valid": False,
+            "authority_state": "review_only",
+        }
+    )
+    return report
+
+
 def _row_errors(row: dict[str, Any], predicted: dict[str, list[float]]) -> list[float]:
     errors: list[float] = []
     for name, xy in row["keypoints"].items():
@@ -151,12 +339,20 @@ def _row_errors(row: dict[str, Any], predicted: dict[str, list[float]]) -> list[
 
 def _error_summary(values: list[float]) -> dict[str, Any]:
     if not values:
-        return {"count": 0, "mean": None, "median": None, "p95": None, "max": None}
+        return {
+            "count": 0,
+            "mean": None,
+            "median": None,
+            "p90": None,
+            "p95": None,
+            "max": None,
+        }
     ordered = sorted(values)
     return {
         "count": len(ordered),
         "mean": float(sum(ordered) / len(ordered)),
         "median": _percentile(ordered, 50.0),
+        "p90": _percentile(ordered, 90.0),
         "p95": _percentile(ordered, 95.0),
         "max": float(ordered[-1]),
     }
@@ -187,6 +383,10 @@ def evaluate_checkpoint_against_real_labels(
     device: str = "cpu",
     pck_threshold_px: float = 5.0,
     secondary_pck_threshold_px: float = 10.0,
+    heatmap_decoder: str | None = None,
+    coordinate_transform: str | None = None,
+    infer_provider: Any | None = None,
+    inference_cache: dict[int, tuple[dict[str, Any], tuple[float, float]]] | None = None,
 ) -> dict[str, Any]:
     """Score one `court_unet_v2` checkpoint against `rows` (read-only). Returns raw per-frame
     errors split into independent-human-reviewed rows (PRIMARY) and all rows including
@@ -199,7 +399,15 @@ def evaluate_checkpoint_against_real_labels(
     independent_errors_by_clip: dict[str, list[float]] = {}
 
     for row in rows:
-        predicted = predict_row_keypoints_source_px(row, checkpoint_path, device=device)
+        predicted = predict_row_keypoints_source_px(
+            row,
+            checkpoint_path,
+            device=device,
+            heatmap_decoder=heatmap_decoder,
+            coordinate_transform=coordinate_transform,
+            infer_provider=infer_provider,
+            inference_cache=inference_cache,
+        )
         row_errors = _row_errors(row, predicted)
         clip = str(row.get("clip") or "unknown")
         all_errors.extend(row_errors)
@@ -211,11 +419,13 @@ def evaluate_checkpoint_against_real_labels(
     def _mode_summary(errors: list[float], by_clip: dict[str, list[float]]) -> dict[str, Any]:
         return {
             "keypoint_error_summary": _error_summary(errors),
+            "pck_at_2px": _pck(errors, 2.0),
             "pck_at_5px": _pck(errors, pck_threshold_px),
             "pck_at_10px": _pck(errors, secondary_pck_threshold_px),
             "per_clip": {
                 clip: {
                     **_error_summary(clip_errors),
+                    "pck_at_2px": _pck(clip_errors, 2.0),
                     "pck_at_5px": _pck(clip_errors, pck_threshold_px),
                     "pck_at_10px": _pck(clip_errors, secondary_pck_threshold_px),
                 }
@@ -256,11 +466,73 @@ def main(argv: list[str] | None = None) -> int:
             "The result remains diagnostic/review-only and cannot satisfy CAL promotion."
         ),
     )
+    parser.add_argument(
+        "--include-raw-vs-structured",
+        action="store_true",
+        help=(
+            "Add paired exact-semantic floor metrics for raw heatmap points versus best_court, "
+            "including PCK@2/5/10 and sample-cluster bootstrap deltas."
+        ),
+    )
+    parser.add_argument("--paired-bootstrap-resamples", type=int, default=2000)
+    parser.add_argument("--paired-bootstrap-seed", type=int, default=13)
+    parser.add_argument("--heatmap-decoder", choices=("parabolic", "dark"))
+    parser.add_argument("--coordinate-transform", choices=("legacy_stride", "udp"))
+    parser.add_argument(
+        "--protocol-manifest",
+        type=Path,
+        help="Optional frozen court v3.1 five-fold manifest; loads only the selected partition.",
+    )
+    parser.add_argument("--protocol-fold-index", type=int, default=0)
+    parser.add_argument(
+        "--protocol-partition",
+        choices=("train", "validation", "test"),
+        default="test",
+    )
     args = parser.parse_args(argv)
 
-    rows = load_real_court_keypoint_labels(args.real_root)
+    checkpoint_payload = load_court_model_checkpoint(args.checkpoint, device="cpu")
+    architecture_name = str(
+        checkpoint_payload.get("model_architecture")
+        or checkpoint_payload.get("architecture")
+        or "court_unet_v2"
+    )
+    decoder_name = str(
+        args.heatmap_decoder or checkpoint_payload.get("heatmap_decoder") or "parabolic"
+    )
+    coordinate_transform = str(
+        args.coordinate_transform
+        or checkpoint_payload.get("coordinate_transform")
+        or "legacy_stride"
+    )
+
+    rows = (
+        load_protocol_partition_rows(
+            args.protocol_manifest,
+            fold_index=args.protocol_fold_index,
+            partition=args.protocol_partition,
+        )
+        if args.protocol_manifest is not None
+        else load_real_court_keypoint_labels(args.real_root)
+    )
+    infer_provider = make_court_model_infer_provider(
+        checkpoint_path=args.checkpoint,
+        device=args.device,
+        heatmap_decoder=args.heatmap_decoder,
+        coordinate_transform=args.coordinate_transform,
+    )
+    if infer_provider is None:
+        raise ValueError(f"could not load court inference provider: {args.checkpoint}")
+    inference_cache: dict[int, tuple[dict[str, Any], tuple[float, float]]] = {}
     scored = evaluate_checkpoint_against_real_labels(
-        args.checkpoint, rows, device=args.device, pck_threshold_px=args.pck_threshold_px
+        args.checkpoint,
+        rows,
+        device=args.device,
+        pck_threshold_px=args.pck_threshold_px,
+        heatmap_decoder=args.heatmap_decoder,
+        coordinate_transform=args.coordinate_transform,
+        infer_provider=infer_provider,
+        inference_cache=inference_cache,
     )
 
     def _gate_passed_per_viewpoint(mode: dict[str, Any]) -> bool:
@@ -302,16 +574,20 @@ def main(argv: list[str] | None = None) -> int:
         "after": {
             "real_keypoint_median_px": scored["independent"]["keypoint_error_summary"]["median"],
             "real_keypoint_mean_px": scored["independent"]["keypoint_error_summary"]["mean"],
+            "real_keypoint_p90_px": scored["independent"]["keypoint_error_summary"]["p90"],
             "real_keypoint_p95_px": scored["independent"]["keypoint_error_summary"]["p95"],
+            "real_keypoint_max_px": scored["independent"]["keypoint_error_summary"]["max"],
+            "real_keypoint_pck_at_2px": scored["independent"]["pck_at_2px"],
             "real_keypoint_pck_at_5px": scored["independent"]["pck_at_5px"],
             "real_keypoint_pck_at_10px": scored["independent"]["pck_at_10px"],
             "real_keypoint_count": scored["independent"]["keypoint_error_summary"]["count"],
             "real_keypoint_pck_per_clip": scored["independent"]["per_clip"],
         },
-        "architecture": {"name": "court_unet_v2", "network_architecture": "court_unet_v2"},
+        "architecture": {"name": architecture_name, "network_architecture": architecture_name},
         "postprocess": {
-            "prediction_mode": "keypoint_heatmap_subpixel_argmax",
-            "decode": "parabolic_subpixel_refine",
+            "prediction_mode": "raw_heatmap_and_structured_best_court",
+            "decode": decoder_name,
+            "coordinate_transform": coordinate_transform,
         },
         "real_holdout_count": scored["independent_frame_count"],
         "holdout_artifacts": [],
@@ -325,11 +601,35 @@ def main(argv: list[str] | None = None) -> int:
             "pck_threshold_px, not just the pooled-across-clips average (gate_passed aliases it).",
         ],
     }
+    if args.protocol_manifest is not None:
+        report["evaluation_protocol"] = {
+            "manifest": str(args.protocol_manifest),
+            "manifest_sha256": hashlib.sha256(args.protocol_manifest.read_bytes()).hexdigest(),
+            "fold_index": args.protocol_fold_index,
+            "partition": args.protocol_partition,
+            "task88_role": "historical_development_only_not_protocol_evidence",
+        }
     if args.include_structured_best_court:
         report["structured_best_court"] = evaluate_structured_checkpoint_against_real_labels(
             args.checkpoint,
             rows,
             device=args.device,
+            heatmap_decoder=args.heatmap_decoder,
+            coordinate_transform=args.coordinate_transform,
+            infer_provider=infer_provider,
+            inference_cache=inference_cache,
+        )
+    if args.include_raw_vs_structured:
+        report["raw_vs_structured"] = evaluate_raw_vs_structured_checkpoint_against_real_labels(
+            args.checkpoint,
+            rows,
+            device=args.device,
+            bootstrap_resamples=args.paired_bootstrap_resamples,
+            bootstrap_seed=args.paired_bootstrap_seed,
+            heatmap_decoder=args.heatmap_decoder,
+            coordinate_transform=args.coordinate_transform,
+            infer_provider=infer_provider,
+            inference_cache=inference_cache,
         )
 
     args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -30,6 +30,7 @@ and the two NVZ intersections must occur in order along both sidelines and the c
 from __future__ import annotations
 
 import math
+import random
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -68,7 +69,7 @@ TEMPLATE_ORDERED_LINES = (
 def evaluate_structured_court_outputs(
     records: Sequence[Mapping[str, Any]],
     *,
-    pck_thresholds_px: tuple[float, float] = (5.0, 10.0),
+    pck_thresholds_px: tuple[float, ...] = (2.0, 5.0, 10.0),
     collapse_distance_px: float = 1.0,
     topology_tolerance_px: float = 3.0,
     outlier_threshold_px: float = 5.0,
@@ -79,8 +80,8 @@ def evaluate_structured_court_outputs(
     if isinstance(records, (str, bytes)) or not isinstance(records, Sequence):
         raise TypeError("records must be a sequence of mappings")
     thresholds = tuple(_positive_float(value, "pck_thresholds_px") for value in pck_thresholds_px)
-    if len(thresholds) != 2 or thresholds[0] >= thresholds[1]:
-        raise ValueError("pck_thresholds_px must contain two increasing positive thresholds")
+    if not thresholds or any(left >= right for left, right in zip(thresholds, thresholds[1:])):
+        raise ValueError("pck_thresholds_px must contain increasing positive thresholds")
     collapse_distance_px = _nonnegative_float(collapse_distance_px, "collapse_distance_px")
     topology_tolerance_px = _nonnegative_float(topology_tolerance_px, "topology_tolerance_px")
     outlier_threshold_px = _nonnegative_float(outlier_threshold_px, "outlier_threshold_px")
@@ -112,6 +113,26 @@ def evaluate_structured_court_outputs(
         )
         for viewpoint, grouped in sorted(by_viewpoint.items())
     }
+    strata: dict[str, Any] = {}
+    for dimension in ("subgroup", "source", "source_group", "viewpoint", "visibility"):
+        grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for record in normalized:
+            value = record["strata"].get(dimension)
+            if value is not None:
+                grouped[value].append(record)
+        strata[dimension] = {
+            value: _summarize_records(
+                rows,
+                thresholds=thresholds,
+                collapse_distance_px=collapse_distance_px,
+                topology_tolerance_px=topology_tolerance_px,
+                outlier_threshold_px=outlier_threshold_px,
+                ece_bin_count=ece_bin_count,
+                include_samples=False,
+            )
+            for value, rows in sorted(grouped.items())
+        }
+    overall["strata"] = strata
     overall["configuration"] = {
         "pck_thresholds_px": list(thresholds),
         "collapse_distance_px": collapse_distance_px,
@@ -122,6 +143,208 @@ def evaluate_structured_court_outputs(
         "missing_prediction_pck_policy": "incorrect",
     }
     return overall
+
+
+def evaluate_raw_vs_structured_court_outputs(
+    records: Sequence[Mapping[str, Any]],
+    *,
+    bootstrap_resamples: int = 2000,
+    bootstrap_seed: int = 13,
+) -> dict[str, Any]:
+    """Compare raw and structured floor predictions using exact semantic identities.
+
+    PCK includes every labeled point in its denominator, so a missing prediction is a miss.
+    Pixel-error deltas use only points available from both methods. Bootstrap confidence intervals
+    resample complete samples to preserve the within-frame correlation among court points.
+    """
+
+    if isinstance(records, (str, bytes)) or not isinstance(records, Sequence):
+        raise TypeError("records must be a sequence of mappings")
+    if (
+        isinstance(bootstrap_resamples, bool)
+        or not isinstance(bootstrap_resamples, int)
+        or bootstrap_resamples < 0
+    ):
+        raise ValueError("bootstrap_resamples must be a nonnegative integer")
+    if isinstance(bootstrap_seed, bool) or not isinstance(bootstrap_seed, int):
+        raise ValueError("bootstrap_seed must be an integer")
+
+    normalized_pairs = [_normalize_paired_record(record, index=index) for index, record in enumerate(records)]
+    raw_records = [_method_record(record, "raw_prediction") for record in normalized_pairs]
+    structured_records = [_method_record(record, "structured_prediction") for record in normalized_pairs]
+    raw = evaluate_structured_court_outputs(raw_records)
+    structured = evaluate_structured_court_outputs(structured_records)
+    paired = _paired_delta_summary(
+        normalized_pairs,
+        bootstrap_resamples=bootstrap_resamples,
+        bootstrap_seed=bootstrap_seed,
+    )
+
+    strata: dict[str, Any] = {}
+    for dimension in ("subgroup", "source", "source_group", "viewpoint", "visibility"):
+        grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for record in normalized_pairs:
+            value = record["strata"].get(dimension)
+            if value is not None:
+                grouped[value].append(record)
+        strata[dimension] = {
+            value: {
+                "sample_count": len(group),
+                "raw": evaluate_structured_court_outputs(
+                    [_method_record(record, "raw_prediction") for record in group]
+                )["point_metrics"],
+                "structured": evaluate_structured_court_outputs(
+                    [_method_record(record, "structured_prediction") for record in group]
+                )["point_metrics"],
+                "paired_point_estimates": _paired_delta_summary(
+                    group,
+                    bootstrap_resamples=0,
+                    bootstrap_seed=bootstrap_seed,
+                )["point_estimates"],
+            }
+            for value, group in sorted(grouped.items())
+        }
+
+    return {
+        "schema_version": 1,
+        "artifact_type": "racketsport_court_raw_vs_structured_exact_semantic_metrics",
+        "sample_count": len(normalized_pairs),
+        "evaluated_taxonomy": "canonical_floor_points_exact_semantic_name",
+        "raw": raw,
+        "structured": structured,
+        "paired_deltas": paired,
+        "strata": strata,
+        "task88_policy": "historical_development_only_not_fold_or_promotion_evidence",
+    }
+
+
+def _normalize_paired_record(record: Mapping[str, Any], *, index: int) -> dict[str, Any]:
+    if not isinstance(record, Mapping):
+        raise TypeError(f"record {index} must be a mapping")
+    raw_prediction = record.get("raw_prediction")
+    structured_prediction = record.get("structured_prediction")
+    if not isinstance(raw_prediction, Mapping) or not isinstance(structured_prediction, Mapping):
+        raise ValueError(
+            f"record {index} requires raw_prediction and structured_prediction mappings"
+        )
+
+    base = {
+        key: value
+        for key, value in record.items()
+        if key not in {"raw_prediction", "structured_prediction"}
+    }
+    raw = _normalize_record({**base, "prediction": raw_prediction}, index=index)
+    structured = _normalize_record({**base, "prediction": structured_prediction}, index=index)
+    if raw["ground_truth"] != structured["ground_truth"]:
+        raise AssertionError("paired normalization changed ground truth")
+    return {
+        "sample_id": raw["sample_id"],
+        "viewpoint": raw["viewpoint"],
+        "strata": raw["strata"],
+        "ground_truth": raw["ground_truth"],
+        "raw_prediction": {
+            "keypoints": raw["keypoints"],
+            "confidences": raw["confidences"],
+            "whole_court_confidence": raw["whole_court_confidence"],
+            "ignored_observations": raw["ignored_observations"],
+        },
+        "structured_prediction": {
+            "keypoints": structured["keypoints"],
+            "confidences": structured["confidences"],
+            "whole_court_confidence": structured["whole_court_confidence"],
+            "ignored_observations": structured["ignored_observations"],
+        },
+    }
+
+
+def _method_record(record: Mapping[str, Any], method: str) -> dict[str, Any]:
+    return {
+        "sample_id": record["sample_id"],
+        "viewpoint": record["viewpoint"],
+        "strata": record["strata"],
+        "ground_truth": record["ground_truth"],
+        "prediction": record[method],
+    }
+
+
+def _paired_point_estimates(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    thresholds = (2.0, 5.0, 10.0)
+    labeled_count = 0
+    hit_deltas = [0 for _threshold in thresholds]
+    error_reductions: list[float] = []
+    for record in records:
+        ground_truth = record["ground_truth"]
+        raw = record["raw_prediction"]["keypoints"]
+        structured = record["structured_prediction"]["keypoints"]
+        labeled_count += len(ground_truth)
+        for name, gt_xy in ground_truth.items():
+            raw_error = math.dist(gt_xy, raw[name]) if name in raw else None
+            structured_error = math.dist(gt_xy, structured[name]) if name in structured else None
+            for index, threshold in enumerate(thresholds):
+                raw_hit = raw_error is not None and raw_error <= threshold
+                structured_hit = structured_error is not None and structured_error <= threshold
+                hit_deltas[index] += int(structured_hit) - int(raw_hit)
+            if raw_error is not None and structured_error is not None:
+                error_reductions.append(raw_error - structured_error)
+    return {
+        "labeled_count": labeled_count,
+        "paired_error_count": len(error_reductions),
+        **{
+            f"{_pck_key(threshold)}_structured_minus_raw": hit_deltas[index] / labeled_count
+            if labeled_count
+            else None
+            for index, threshold in enumerate(thresholds)
+        },
+        "mean_paired_error_reduction_px": _mean_or_none(error_reductions),
+        "median_paired_error_reduction_px": _percentile_or_none(error_reductions, 0.5),
+    }
+
+
+def _paired_delta_summary(
+    records: Sequence[Mapping[str, Any]],
+    *,
+    bootstrap_resamples: int,
+    bootstrap_seed: int,
+) -> dict[str, Any]:
+    point_estimates = _paired_point_estimates(records)
+    metric_names = [
+        "pck_at_2px_structured_minus_raw",
+        "pck_at_5px_structured_minus_raw",
+        "pck_at_10px_structured_minus_raw",
+        "mean_paired_error_reduction_px",
+        "median_paired_error_reduction_px",
+    ]
+    sampled_values: dict[str, list[float]] = {name: [] for name in metric_names}
+    if records and bootstrap_resamples:
+        rng = random.Random(bootstrap_seed)
+        for _iteration in range(bootstrap_resamples):
+            sample = [records[rng.randrange(len(records))] for _row in records]
+            estimates = _paired_point_estimates(sample)
+            for name in metric_names:
+                value = estimates[name]
+                if value is not None:
+                    sampled_values[name].append(float(value))
+    intervals = {
+        name: {
+            "available": bool(values),
+            "lower_95": _percentile_or_none(values, 0.025),
+            "upper_95": _percentile_or_none(values, 0.975),
+        }
+        for name, values in sampled_values.items()
+    }
+    return {
+        "available": bool(records),
+        "pairing": "same_sample_same_semantic_name",
+        "bootstrap_unit": "sample",
+        "bootstrap_resamples": bootstrap_resamples,
+        "bootstrap_seed": bootstrap_seed,
+        "direction": {
+            "pck": "positive_means_structured_better",
+            "error_reduction": "positive_means_structured_lower_error",
+        },
+        "point_estimates": point_estimates,
+        "bootstrap_95_intervals": intervals,
+    }
 
 
 def _normalize_record(record: Mapping[str, Any], *, index: int) -> dict[str, Any]:
@@ -142,6 +365,19 @@ def _normalize_record(record: Mapping[str, Any], *, index: int) -> dict[str, Any
         raise ValueError(f"record {index} sample_id must be a non-empty string")
     if not isinstance(viewpoint, str) or not viewpoint:
         raise ValueError(f"record {index} viewpoint must be a non-empty string")
+
+    raw_strata = record.get("strata", {})
+    if not isinstance(raw_strata, Mapping):
+        raise ValueError(f"record {index} strata must be a mapping")
+    normalized_strata: dict[str, str] = {}
+    for dimension in ("subgroup", "source", "source_group", "visibility"):
+        value = raw_strata.get(dimension, record.get(dimension))
+        if value is None:
+            continue
+        if not isinstance(value, str) or not value:
+            raise ValueError(f"record {index} {dimension} must be a non-empty string")
+        normalized_strata[dimension] = value
+    normalized_strata["viewpoint"] = viewpoint
 
     normalized_gt = {str(name): _xy(value, f"ground_truth.{name}") for name, value in ground_truth.items() if value is not None}
     normalized_prediction = {
@@ -167,6 +403,7 @@ def _normalize_record(record: Mapping[str, Any], *, index: int) -> dict[str, Any
     return {
         "sample_id": sample_id,
         "viewpoint": viewpoint,
+        "strata": normalized_strata,
         "ground_truth": normalized_gt,
         "keypoints": normalized_prediction,
         "confidences": normalized_confidences,
@@ -189,11 +426,11 @@ def _summarize_records(
     point_denominator = 0
     missing_predictions = 0
     unexpected_predictions = 0
-    threshold_hits = [0, 0]
+    threshold_hits = [0 for _threshold in thresholds]
     errors_by_name: dict[str, list[float]] = defaultdict(list)
     denominators_by_name: CounterLike = defaultdict(int)
     missing_by_name: CounterLike = defaultdict(int)
-    hits_by_name: dict[str, list[int]] = defaultdict(lambda: [0, 0])
+    hits_by_name: dict[str, list[int]] = defaultdict(lambda: [0 for _threshold in thresholds])
     point_calibration_pairs: list[tuple[float, bool]] = []
     whole_court_pairs: list[tuple[float, bool]] = []
     sample_outputs: list[dict[str, Any]] = []
@@ -232,7 +469,7 @@ def _summarize_records(
                         hits_by_name[name][index] += 1
             if name in record["confidences"]:
                 point_calibration_pairs.append(
-                    (record["confidences"][name], error is not None and error <= thresholds[0])
+                    (record["confidences"][name], error is not None and error <= 5.0)
                 )
 
         collapse_pairs = _collapse_pairs(predicted, threshold_px=collapse_distance_px)
@@ -261,8 +498,7 @@ def _summarize_records(
         ignored_inliers += recovered["ignored_inlier_count"]
 
         all_within_5 = bool(gt) and all(
-            sample_errors[name] is not None and float(sample_errors[name]) <= thresholds[0]
-            for name in gt
+            sample_errors[name] is not None and float(sample_errors[name]) <= 5.0 for name in gt
         )
         topology_ok = not topology["topology_available"] or topology["topology_valid"]
         whole_court_correct = all_within_5 and topology_ok
@@ -274,7 +510,14 @@ def _summarize_records(
                 {
                     "sample_id": record["sample_id"],
                     "viewpoint": record["viewpoint"],
+                    "strata": dict(record["strata"]),
                     "point_errors_px": sample_errors,
+                    "point_confidence": {
+                        name: record["confidences"][name]
+                        for name in sorted(gt)
+                        if name in record["confidences"]
+                    },
+                    "whole_court_confidence": record["whole_court_confidence"],
                     "missing_prediction_names": sorted(set(gt) - set(predicted)),
                     "unexpected_prediction_names": sorted(set(predicted) - set(gt)),
                     "collapse_pairs": [list(pair) for pair in collapse_pairs],
@@ -294,9 +537,13 @@ def _summarize_records(
             "missing_prediction_count": missing_by_name[name],
             "mean_error_px": _mean_or_none(errors),
             "median_error_px": _percentile_or_none(errors, 0.5),
+            "p90_error_px": _percentile_or_none(errors, 0.9),
             "p95_error_px": _percentile_or_none(errors, 0.95),
-            "pck_at_5px": hits_by_name[name][0] / denominator,
-            "pck_at_10px": hits_by_name[name][1] / denominator,
+            "max_error_px": max(errors) if errors else None,
+            **{
+                _pck_key(threshold): hits_by_name[name][index] / denominator
+                for index, threshold in enumerate(thresholds)
+            },
         }
 
     result = {
@@ -308,9 +555,15 @@ def _summarize_records(
             "unexpected_prediction_name_count": unexpected_predictions,
             "mean_error_px": _mean_or_none(all_errors),
             "median_error_px": _percentile_or_none(all_errors, 0.5),
+            "p90_error_px": _percentile_or_none(all_errors, 0.9),
             "p95_error_px": _percentile_or_none(all_errors, 0.95),
-            "pck_at_5px": threshold_hits[0] / point_denominator if point_denominator else None,
-            "pck_at_10px": threshold_hits[1] / point_denominator if point_denominator else None,
+            "max_error_px": max(all_errors) if all_errors else None,
+            **{
+                _pck_key(threshold): threshold_hits[index] / point_denominator
+                if point_denominator
+                else None
+                for index, threshold in enumerate(thresholds)
+            },
             "per_semantic_name": per_name,
         },
         "structure": {
@@ -626,6 +879,11 @@ def _finite_float(value: Any, field: str) -> float:
 
 def _mean_or_none(values: Sequence[float]) -> float | None:
     return sum(values) / len(values) if values else None
+
+
+def _pck_key(threshold: float) -> str:
+    value = str(int(threshold)) if float(threshold).is_integer() else str(threshold).replace(".", "_")
+    return f"pck_at_{value}px"
 
 
 def _percentile_or_none(values: Sequence[float], quantile: float) -> float | None:

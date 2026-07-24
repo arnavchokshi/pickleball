@@ -27,7 +27,21 @@ STRUCTURED_FLOOR_KEYPOINTS = tuple(
 )
 STRUCTURED_FLOOR_KEYPOINT_NAMES = tuple(point.name for point in STRUCTURED_FLOOR_KEYPOINTS)
 STRUCTURED_FLOOR_KEYPOINT_COUNT = len(STRUCTURED_FLOOR_KEYPOINT_NAMES)
-STRUCTURED_DISTANCE_CLASS_NAMES = COURT_UNET_V2_SEG_CLASS_NAMES
+# Dense distance supervision is semantic rather than a duplicate of the five-class
+# segmentation head.  Each channel represents one regulation painted segment.  Keeping the
+# service centerlines split is important: each terminates at its own NVZ and neither may cross
+# the kitchen.  The net is deliberately absent because it is not a painted floor segment.
+STRUCTURED_DISTANCE_SEGMENTS: tuple[tuple[str, str, str], ...] = (
+    ("near_baseline", "near_left_corner", "near_right_corner"),
+    ("far_baseline", "far_left_corner", "far_right_corner"),
+    ("left_sideline", "near_left_corner", "far_left_corner"),
+    ("right_sideline", "near_right_corner", "far_right_corner"),
+    ("near_nvz", "near_nvz_left", "near_nvz_right"),
+    ("far_nvz", "far_nvz_left", "far_nvz_right"),
+    ("near_centerline", "near_baseline_center", "near_nvz_center"),
+    ("far_centerline", "far_nvz_center", "far_baseline_center"),
+)
+STRUCTURED_DISTANCE_CLASS_NAMES = tuple(segment[0] for segment in STRUCTURED_DISTANCE_SEGMENTS)
 
 
 def covariance_matrices_from_params(params: Any) -> Any:
@@ -101,9 +115,7 @@ def make_court_structured_v3_model(*, encoder_weights_path: Any = None) -> Any:
             self.up2 = _UpBlock(256, 128, 128)
             self.up1 = _UpBlock(128, 64, trunk_channels)
 
-            # Each semantic point owns a query vector.  Dotting normalized queries with the
-            # shared spatial feature map is the lightweight keypoint-identity conditioning used
-            # here instead of 30 unrelated fixed 1x1 filters.
+            # Each semantic point owns a dynamic 1x1-filter query over the shared spatial map.
             self.keypoint_queries = nn.Parameter(torch.empty(STRUCTURED_FLOOR_KEYPOINT_COUNT, trunk_channels))
             self.keypoint_bias = nn.Parameter(torch.zeros(STRUCTURED_FLOOR_KEYPOINT_COUNT))
             nn.init.normal_(self.keypoint_queries, mean=0.0, std=0.02)
@@ -114,6 +126,16 @@ def make_court_structured_v3_model(*, encoder_weights_path: Any = None) -> Any:
             self.vis_head = nn.Linear(trunk_channels, STRUCTURED_FLOOR_KEYPOINT_COUNT)
             self.covariance_head = nn.Linear(trunk_channels, STRUCTURED_FLOOR_KEYPOINT_COUNT * 3)
             self.supported_view_head = nn.Linear(trunk_channels, 1)
+            # These heads have no v2 counterpart. Neutral initialization keeps
+            # warm-started feature magnitudes from becoming fake certainty on
+            # the first optimization step: new auxiliary visibility starts low,
+            # covariance at identity in heatmap pixels, and view support at 0.5.
+            nn.init.zeros_(self.vis_head.weight)
+            nn.init.constant_(self.vis_head.bias, -2.0)
+            nn.init.zeros_(self.covariance_head.weight)
+            nn.init.zeros_(self.covariance_head.bias)
+            nn.init.zeros_(self.supported_view_head.weight)
+            nn.init.zeros_(self.supported_view_head.bias)
 
         def forward(self, x: Any) -> dict[str, Any]:
             c1 = self.layer1(self.stem(x))
@@ -122,9 +144,10 @@ def make_court_structured_v3_model(*, encoder_weights_path: Any = None) -> Any:
             c4 = self.layer4(c3)
             trunk = self.up1(self.up2(self.up3(c4, c3), c2), c1)
 
-            normalized_trunk = F.normalize(trunk, dim=1, eps=1e-6)
-            normalized_queries = F.normalize(self.keypoint_queries, dim=1, eps=1e-6)
-            heatmaps = torch.einsum("bchw,kc->bkhw", normalized_trunk, normalized_queries)
+            # Preserve the exact v2 1x1-convolution math for warm-started
+            # canonical queries. Cosine normalization would constrain logits
+            # to [-1,1] and erase the selected v2 head's learned magnitude.
+            heatmaps = torch.einsum("bchw,kc->bkhw", trunk, self.keypoint_queries)
             heatmaps = heatmaps + self.keypoint_bias[None, :, None, None]
             pooled = self.global_pool(trunk).flatten(1)
             covariance_params = self.covariance_head(pooled).reshape(
@@ -165,6 +188,8 @@ def initialize_structured_v3_from_v2(model: Any, v2_state_dict: Mapping[str, Any
     initialized_queries: list[str] = []
     v2_weight = v2_state_dict.get("keypoint_head.weight")
     v2_bias = v2_state_dict.get("keypoint_head.bias")
+    v2_vis_weight = v2_state_dict.get("vis_head.2.weight")
+    v2_vis_bias = v2_state_dict.get("vis_head.2.bias")
     if isinstance(v2_weight, torch.Tensor) and v2_weight.ndim == 4 and v2_weight.shape[-2:] == (1, 1):
         canonical_index = {
             point.name: index
@@ -179,6 +204,15 @@ def initialize_structured_v3_from_v2(model: Any, v2_state_dict: Mapping[str, Any
                 model.keypoint_queries[floor_index].copy_(v2_weight[old_index, :, 0, 0])
                 if isinstance(v2_bias, torch.Tensor) and old_index < v2_bias.shape[0]:
                     model.keypoint_bias[floor_index].copy_(v2_bias[old_index])
+                if (
+                    isinstance(v2_vis_weight, torch.Tensor)
+                    and v2_vis_weight.ndim == 2
+                    and old_index < v2_vis_weight.shape[0]
+                    and v2_vis_weight.shape[1] == model.vis_head.weight.shape[1]
+                ):
+                    model.vis_head.weight[floor_index].copy_(v2_vis_weight[old_index])
+                if isinstance(v2_vis_bias, torch.Tensor) and old_index < v2_vis_bias.shape[0]:
+                    model.vis_head.bias[floor_index].copy_(v2_vis_bias[old_index])
                 initialized_queries.append(name)
 
     return {
@@ -193,6 +227,7 @@ def initialize_structured_v3_from_v2(model: Any, v2_state_dict: Mapping[str, Any
 __all__ = [
     "COURT_STRUCTURED_V3_ARCHITECTURE",
     "STRUCTURED_DISTANCE_CLASS_NAMES",
+    "STRUCTURED_DISTANCE_SEGMENTS",
     "STRUCTURED_FLOOR_KEYPOINT_COUNT",
     "STRUCTURED_FLOOR_KEYPOINT_NAMES",
     "STRUCTURED_FLOOR_KEYPOINTS",

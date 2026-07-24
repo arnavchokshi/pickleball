@@ -744,3 +744,17 @@ is now standard for Track F lanes.
   $6.9-9.4; ABC VM cumulative ≈ $18-21 — at the approved $20 relief / $21 hard-stop boundary,
   stopped exactly on schedule. Live VMs remaining: pickleball-gpu-ball-f (B1/B2 lane),
   pickleball-gpu-person (mixed-pool lane).
+
+## 2026-07-23T16:33-17:27 PDT court_v31_impl_20260723 — TRAINED, SCREENED, VM DELETED
+
+- `pickleball-gpu-courtv31` used one `a2-highgpu-1g` A100-40GB SPOT VM in `us-central1-f` for
+  the structured-v3 seed-13 screen (6 epochs x 100 steps) and source-grouped fold-0 validation.
+- The selected v2+DARK+legacy structured result was `0.9516686` PCK@5 / `4.9310 px` p95 over
+  74 frames and 869 exact-semantic labels. The full 30-point v3 run regressed (epoch 4:
+  `0.2382048` / `36.5706 px`; epoch 6: `0.2094361` / `63.4119 px`) and was stopped under the
+  two-consecutive-non-improvement rule. It did not replace the incumbent.
+- Metrics, training summary, and checkpoint hashes were pulled locally. Rejected 287MB checkpoint
+  binaries were intentionally not retained. The VM was deleted, and both instance and auto-delete
+  boot-disk absence were list-confirmed. Approximate wall was 0.90h; A100 SPOT band implies about
+  `$1.0-1.4` compute, not invoice-backed.
+- Evidence: `runs/lanes/court_v31_impl_20260723/selection_summary.json`.

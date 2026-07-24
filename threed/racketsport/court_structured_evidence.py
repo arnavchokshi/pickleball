@@ -1,9 +1,9 @@
 """Deterministic structured floor-keypoint evidence from court heatmaps.
 
-The learned court model has 15 canonical channels, but three of those channels describe the
-physical *top* of the net.  A planar court solver must never consume those elevated points as
-floor observations.  This module therefore emits only the 12 canonical Z=0 court points and
-keeps the filtering structural rather than relying on caller discipline.
+The v2 model has 15 canonical channels and the v3 model has 30 floor channels. Three v2
+channels describe the physical *top* of the net. A planar court solver must never consume those
+elevated points as floor observations. This module therefore emits every recognized Z=0 point
+while keeping the net filtering structural rather than relying on caller discipline.
 
 Inputs are per-keypoint spatial probability maps plus per-keypoint visibility probabilities.
 Each output record is composed only of JSON-native values and carries two separated subpixel
@@ -15,11 +15,12 @@ fixed evidence combiner intended for downstream weighting and later empirical ca
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 import math
 from numbers import Real
 from typing import Any
 
-from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_keypoint_net import ALL_PICKLEBALL_KEYPOINTS, PICKLEBALL_KEYPOINTS
 
 
 NET_TOP_KEYPOINT_NAMES: frozenset[str] = frozenset(
@@ -28,11 +29,44 @@ NET_TOP_KEYPOINT_NAMES: frozenset[str] = frozenset(
 CANONICAL_FLOOR_KEYPOINT_NAMES: tuple[str, ...] = tuple(
     point.name for point in PICKLEBALL_KEYPOINTS if point.name not in NET_TOP_KEYPOINT_NAMES
 )
-_CANONICAL_BY_NAME = {point.name: point for point in PICKLEBALL_KEYPOINTS}
+EVIDENCE_FLOOR_KEYPOINT_NAMES: tuple[str, ...] = tuple(
+    point.name
+    for point in ALL_PICKLEBALL_KEYPOINTS
+    if abs(float(point.world_xyz_m[2])) <= 1.0e-12
+)
+_EVIDENCE_BY_NAME = {
+    point.name: point
+    for point in ALL_PICKLEBALL_KEYPOINTS
+    if abs(float(point.world_xyz_m[2])) <= 1.0e-12
+}
+_CANONICAL_INDEX_BY_NAME = {
+    name: index for index, name in enumerate(CANONICAL_FLOOR_KEYPOINT_NAMES)
+}
 
 DEFAULT_MIN_PEAK_SEPARATION_HEATMAP_PX = 2.0
 DEFAULT_COVARIANCE_RADIUS_HEATMAP_PX = 2.0
 DEFAULT_COVARIANCE_FLOOR_HEATMAP_PX2 = 0.25
+SUPPORTED_HEATMAP_DECODERS: tuple[str, ...] = ("parabolic", "dark")
+SUPPORTED_COORDINATE_TRANSFORMS: tuple[str, ...] = ("legacy_stride", "udp")
+
+
+@dataclass(frozen=True)
+class CourtEvidenceBundle:
+    """Immutable inputs consumed by the structured court solver.
+
+    Arrays remain in source-image coordinates.  The bundle deliberately keeps
+    raw observations separate from derived dense evidence so hypothesis search
+    can report which signal actually selected the final court.
+    """
+
+    observations: tuple[Mapping[str, Any], ...]
+    image_size: tuple[int, int]
+    line_distance_maps: Mapping[str, Any]
+    surface_probability: Any | None = None
+    homography_candidates: tuple[Mapping[str, Any], ...] = ()
+    frame_id: str | None = None
+    temporal_support: float | None = None
+    camera_metadata: Mapping[str, Any] | None = None
 
 __all__ = [
     "CANONICAL_FLOOR_KEYPOINT_NAMES",
@@ -40,8 +74,71 @@ __all__ = [
     "DEFAULT_COVARIANCE_RADIUS_HEATMAP_PX",
     "DEFAULT_MIN_PEAK_SEPARATION_HEATMAP_PX",
     "NET_TOP_KEYPOINT_NAMES",
+    "EVIDENCE_FLOOR_KEYPOINT_NAMES",
+    "CourtEvidenceBundle",
+    "SUPPORTED_COORDINATE_TRANSFORMS",
+    "SUPPORTED_HEATMAP_DECODERS",
+    "build_court_evidence_bundle",
     "extract_court_structured_evidence",
 ]
+
+
+def build_court_evidence_bundle(
+    observations: Sequence[Mapping[str, Any]],
+    *,
+    image_size: Sequence[int],
+    line_distance_maps: Mapping[str, Any] | None = None,
+    surface_probability: Any | None = None,
+    homography_candidates: Sequence[Mapping[str, Any]] = (),
+    frame_id: str | None = None,
+    temporal_support: float | None = None,
+    camera_metadata: Mapping[str, Any] | None = None,
+) -> CourtEvidenceBundle:
+    """Validate and freeze the dense/sparse evidence passed to the solver."""
+
+    import numpy as np
+
+    parsed_size = _optional_size(image_size, "image_size")
+    assert parsed_size is not None
+    width, height = parsed_size
+    parsed_maps: dict[str, Any] = {}
+    for raw_name, raw_map in dict(line_distance_maps or {}).items():
+        name = str(raw_name)
+        array = np.asarray(raw_map, dtype=np.float64)
+        if array.shape != (height, width) or not np.isfinite(array).all() or np.any(array < 0.0):
+            raise ValueError(
+                f"line_distance_maps.{name} must be a finite non-negative {height}x{width} array"
+            )
+        frozen = np.array(array, copy=True)
+        frozen.setflags(write=False)
+        parsed_maps[name] = frozen
+    parsed_surface = None
+    if surface_probability is not None:
+        array = np.asarray(surface_probability, dtype=np.float64)
+        if (
+            array.shape != (height, width)
+            or not np.isfinite(array).all()
+            or np.any(array < 0.0)
+            or np.any(array > 1.0)
+        ):
+            raise ValueError(
+                f"surface_probability must be a finite [0,1] {height}x{width} array"
+            )
+        parsed_surface = np.array(array, copy=True)
+        parsed_surface.setflags(write=False)
+    parsed_temporal = None
+    if temporal_support is not None:
+        parsed_temporal = _unit_float(temporal_support, "temporal_support")
+    return CourtEvidenceBundle(
+        observations=tuple(dict(row) for row in observations),
+        image_size=parsed_size,
+        line_distance_maps=parsed_maps,
+        surface_probability=parsed_surface,
+        homography_candidates=tuple(dict(row) for row in homography_candidates),
+        frame_id=None if frame_id is None else str(frame_id),
+        temporal_support=parsed_temporal,
+        camera_metadata=None if camera_metadata is None else dict(camera_metadata),
+    )
 
 
 def extract_court_structured_evidence(
@@ -53,13 +150,15 @@ def extract_court_structured_evidence(
     min_peak_separation_heatmap_px: float = DEFAULT_MIN_PEAK_SEPARATION_HEATMAP_PX,
     covariance_radius_heatmap_px: float = DEFAULT_COVARIANCE_RADIUS_HEATMAP_PX,
     covariance_floor_heatmap_px2: float = DEFAULT_COVARIANCE_FLOOR_HEATMAP_PX2,
+    decoder: str = "parabolic",
+    coordinate_transform: str = "legacy_stride",
 ) -> list[dict[str, Any]]:
-    """Extract canonical floor observations in deterministic taxonomy order.
+    """Extract recognized floor observations in deterministic taxonomy order.
 
-    ``heatmap_probabilities`` may contain the canonical 15 channels, an auxiliary architecture's
-    extra channels, or a partial canonical mapping.  Only canonical floor names are emitted;
-    auxiliary and net-top channels are ignored.  Every present floor channel must have a matching
-    visibility probability in ``[0, 1]``.
+    ``heatmap_probabilities`` may contain v2's canonical channels, v3's auxiliary channels, or a
+    partial recognized mapping. Every present floor channel is emitted; unknown and net-top
+    channels are ignored. Every emitted floor channel must have a matching visibility probability
+    in ``[0, 1]``.
 
     Sizes use ``[width, height]`` ordering.  Heatmap coordinates are scaled independently to the
     model-input image and original source sizes.  ``observation_xy`` and ``covariance_px2`` use
@@ -83,33 +182,43 @@ def extract_court_structured_evidence(
         covariance_floor_heatmap_px2,
         "covariance_floor_heatmap_px2",
     )
+    if decoder not in SUPPORTED_HEATMAP_DECODERS:
+        raise ValueError(f"decoder must be one of {SUPPORTED_HEATMAP_DECODERS}")
+    if coordinate_transform not in SUPPORTED_COORDINATE_TRANSFORMS:
+        raise ValueError(
+            f"coordinate_transform must be one of {SUPPORTED_COORDINATE_TRANSFORMS}"
+        )
     parsed_image_size = _optional_size(image_size, "image_size")
     parsed_source_size = _optional_size(source_size, "source_size")
 
     present_floor_names = [
-        name for name in CANONICAL_FLOOR_KEYPOINT_NAMES if name in heatmap_probabilities
+        name for name in EVIDENCE_FLOOR_KEYPOINT_NAMES if name in heatmap_probabilities
     ]
     if not present_floor_names:
-        raise ValueError("no canonical floor heatmap channels were provided")
+        raise ValueError("no recognized floor heatmap channels were provided")
 
     records: list[dict[str, Any]] = []
     expected_shape: tuple[int, int] | None = None
-    for canonical_index, name in enumerate(CANONICAL_FLOOR_KEYPOINT_NAMES):
+    for evidence_index, name in enumerate(EVIDENCE_FLOOR_KEYPOINT_NAMES):
         if name not in heatmap_probabilities:
             continue
         if name not in visibility:
-            raise ValueError(f"visibility is missing canonical floor keypoint {name}")
+            raise ValueError(f"visibility is missing floor keypoint {name}")
         probability = _normalized_probability_map(heatmap_probabilities[name], name=name)
         height, width = probability.shape
         if expected_shape is None:
             expected_shape = (height, width)
         elif (height, width) != expected_shape:
             raise ValueError(
-                "all canonical floor probability maps must share one shape; "
+                "all floor probability maps must share one shape; "
                 f"expected {expected_shape}, got {(height, width)} for {name}"
             )
         visible_probability = _unit_float(visibility[name], f"visibility.{name}")
-        primary, secondary = _two_separated_peaks(probability, min_separation=separation)
+        primary, secondary = _two_separated_peaks(
+            probability,
+            min_separation=separation,
+            decoder=decoder,
+        )
         normalized_entropy = _normalized_entropy(probability)
         peak_margin = max(0.0, primary["probability"] - secondary["probability"])
         relative_peak_margin = peak_margin / max(primary["probability"], 1.0e-12)
@@ -126,8 +235,18 @@ def extract_court_structured_evidence(
             radius=covariance_radius,
             variance_floor=covariance_floor,
         )
-        image_scale = _scale_for_size(parsed_image_size, heatmap_width=width, heatmap_height=height)
-        source_scale = _scale_for_size(parsed_source_size, heatmap_width=width, heatmap_height=height)
+        image_scale = _scale_for_size(
+            parsed_image_size,
+            heatmap_width=width,
+            heatmap_height=height,
+            coordinate_transform=coordinate_transform,
+        )
+        source_scale = _scale_for_size(
+            parsed_source_size,
+            heatmap_width=width,
+            heatmap_height=height,
+            coordinate_transform=coordinate_transform,
+        )
         if source_scale is not None:
             observation_scale = source_scale
             coordinate_space = "source_pixels"
@@ -139,13 +258,14 @@ def extract_court_structured_evidence(
             coordinate_space = "heatmap_pixels"
         covariance_px2 = _scale_covariance(heatmap_covariance, observation_scale)
 
-        point = _CANONICAL_BY_NAME[name]
+        point = _EVIDENCE_BY_NAME[name]
         records.append(
             {
                 "schema_version": 1,
-                "observation_type": "canonical_court_floor_keypoint_heatmap",
+                "observation_type": "court_floor_keypoint_heatmap",
                 "keypoint_name": name,
-                "canonical_floor_index": canonical_index,
+                "evidence_floor_index": evidence_index,
+                "canonical_floor_index": _CANONICAL_INDEX_BY_NAME.get(name),
                 "world_xy_m": [float(point.world_xyz_m[0]), float(point.world_xyz_m[1])],
                 "coordinate_space": coordinate_space,
                 "heatmap_size": [width, height],
@@ -181,6 +301,8 @@ def extract_court_structured_evidence(
                     "visibility * primary_probability * (1 - normalized_entropy) "
                     "* relative_peak_margin"
                 ),
+                "decoder": decoder,
+                "coordinate_transform": coordinate_transform,
                 "covariance_px2": covariance_px2,
                 "covariance_policy": {
                     "kind": "local_probability_second_moment",
@@ -220,11 +342,16 @@ def _normalized_probability_map(value: Any, *, name: str) -> Any:
     return array / total
 
 
-def _two_separated_peaks(probability: Any, *, min_separation: float) -> tuple[dict[str, Any], dict[str, Any]]:
+def _two_separated_peaks(
+    probability: Any,
+    *,
+    min_separation: float,
+    decoder: str,
+) -> tuple[dict[str, Any], dict[str, Any]]:
     import numpy as np
 
     primary_y, primary_x = np.unravel_index(int(np.argmax(probability)), probability.shape)
-    primary = _decode_peak_at(probability, x=int(primary_x), y=int(primary_y))
+    primary = _decode_peak_at(probability, x=int(primary_x), y=int(primary_y), decoder=decoder)
     height, width = probability.shape
     candidates: list[tuple[float, int, int]] = []
     for y in range(height):
@@ -237,7 +364,7 @@ def _two_separated_peaks(probability: Any, *, min_separation: float) -> tuple[di
     # Probability descending, then row/column ascending: deterministic even for flat/tied maps.
     candidates.sort(key=lambda item: (-item[0], item[1], item[2]))
     for _, y, x in candidates:
-        candidate = _decode_peak_at(probability, x=x, y=y)
+        candidate = _decode_peak_at(probability, x=x, y=y, decoder=decoder)
         if math.hypot(
             candidate["xy"][0] - primary["xy"][0],
             candidate["xy"][1] - primary["xy"][1],
@@ -248,27 +375,69 @@ def _two_separated_peaks(probability: Any, *, min_separation: float) -> tuple[di
     )
 
 
-def _decode_peak_at(probability: Any, *, x: int, y: int) -> dict[str, Any]:
+def _decode_peak_at(
+    probability: Any,
+    *,
+    x: int,
+    y: int,
+    decoder: str,
+) -> dict[str, Any]:
     height, width = probability.shape
     x_offset = 0.0
     y_offset = 0.0
-    if 0 < x < width - 1:
-        x_offset = _parabolic_offset(
-            float(probability[y, x - 1]),
-            float(probability[y, x]),
-            float(probability[y, x + 1]),
-        )
-    if 0 < y < height - 1:
-        y_offset = _parabolic_offset(
-            float(probability[y - 1, x]),
-            float(probability[y, x]),
-            float(probability[y + 1, x]),
-        )
+    if decoder == "dark" and 0 < x < width - 1 and 0 < y < height - 1:
+        x_offset, y_offset = _dark_offset(probability, x=x, y=y)
+    else:
+        if 0 < x < width - 1:
+            x_offset = _parabolic_offset(
+                float(probability[y, x - 1]),
+                float(probability[y, x]),
+                float(probability[y, x + 1]),
+            )
+        if 0 < y < height - 1:
+            y_offset = _parabolic_offset(
+                float(probability[y - 1, x]),
+                float(probability[y, x]),
+                float(probability[y + 1, x]),
+            )
     return {
         "xy": (float(x) + x_offset, float(y) + y_offset),
         "discrete_xy": (x, y),
         "probability": float(probability[y, x]),
     }
+
+
+def _dark_offset(probability: Any, *, x: int, y: int) -> tuple[float, float]:
+    """Distribution-aware Taylor refinement around a discrete heatmap peak."""
+
+    import numpy as np
+
+    log_map = np.log(np.maximum(np.asarray(probability, dtype=np.float64), 1.0e-12))
+    gradient = np.asarray(
+        [
+            0.5 * (log_map[y, x + 1] - log_map[y, x - 1]),
+            0.5 * (log_map[y + 1, x] - log_map[y - 1, x]),
+        ],
+        dtype=np.float64,
+    )
+    dxx = log_map[y, x + 1] - 2.0 * log_map[y, x] + log_map[y, x - 1]
+    dyy = log_map[y + 1, x] - 2.0 * log_map[y, x] + log_map[y - 1, x]
+    dxy = 0.25 * (
+        log_map[y + 1, x + 1]
+        - log_map[y - 1, x + 1]
+        - log_map[y + 1, x - 1]
+        + log_map[y - 1, x - 1]
+    )
+    hessian = np.asarray([[dxx, dxy], [dxy, dyy]], dtype=np.float64)
+    if not np.isfinite(hessian).all() or abs(float(np.linalg.det(hessian))) <= 1.0e-9:
+        return (0.0, 0.0)
+    offset = -np.linalg.solve(hessian, gradient)
+    if not np.isfinite(offset).all():
+        return (0.0, 0.0)
+    return (
+        float(np.clip(offset[0], -1.0, 1.0)),
+        float(np.clip(offset[1], -1.0, 1.0)),
+    )
 
 
 def _parabolic_offset(left: float, center: float, right: float) -> float:
@@ -358,9 +527,15 @@ def _scale_for_size(
     *,
     heatmap_width: int,
     heatmap_height: int,
+    coordinate_transform: str,
 ) -> tuple[float, float] | None:
     if size is None:
         return None
+    if coordinate_transform == "udp" and heatmap_width > 1 and heatmap_height > 1:
+        return (
+            (size[0] - 1) / float(heatmap_width - 1),
+            (size[1] - 1) / float(heatmap_height - 1),
+        )
     return (size[0] / float(heatmap_width), size[1] / float(heatmap_height))
 
 

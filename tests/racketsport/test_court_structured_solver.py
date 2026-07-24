@@ -2,13 +2,17 @@ from __future__ import annotations
 
 import math
 
+import cv2
 import numpy as np
 import pytest
 
+from threed.racketsport.court_structured_evidence import build_court_evidence_bundle
 from threed.racketsport.court_structured_solver import (
+    EVIDENCE_WORLD_XY_M,
     FLOOR_KEYPOINT_NAMES,
     FLOOR_WORLD_XY_M,
     NET_TOP_KEYPOINT_NAMES,
+    SEMANTIC_FLOOR_SEGMENTS,
     solve_best_floor_court,
 )
 
@@ -236,6 +240,27 @@ def test_prior_only_with_no_observations_is_explicitly_low_confidence_best_effor
     assert result["measurement_valid"] is False
 
 
+def test_auxiliary_v3_points_participate_in_fit_but_public_output_stays_canonical() -> None:
+    homography = _perspective_homography()
+    auxiliary_names = [name for name in EVIDENCE_WORLD_XY_M if name not in FLOOR_WORLD_XY_M]
+    observations = {
+        name: {
+            "xy": _project(homography, EVIDENCE_WORLD_XY_M[name]),
+            "confidence": 0.9,
+            "visibility": 1.0,
+            "covariance": 1.0,
+        }
+        for name in auxiliary_names
+    }
+
+    result = solve_best_floor_court(observations)
+
+    assert result["status"] == "solved_best_effort"
+    assert {row["semantic"] for row in result["inliers"]} <= set(auxiliary_names)
+    assert len(result["inliers"]) >= 4
+    assert set(result["projected_floor_keypoints"]) == set(FLOOR_KEYPOINT_NAMES)
+
+
 def test_insufficient_observations_without_prior_fail_closed_without_inventing_points() -> None:
     observations = {
         "near_left_corner": {
@@ -297,3 +322,61 @@ def test_projective_diagnostics_do_not_assume_axis_aligned_or_equal_image_length
     )
     assert diagnostics["order"]["all_passed"] is True
     assert "no image-angle or image-length equality assumptions" in diagnostics["diagnostic_note"]
+
+
+def test_line_and_surface_evidence_select_a_coherent_line_only_candidate() -> None:
+    homography = _perspective_homography()
+    wrong = homography.copy()
+    wrong[0, 2] += 120.0
+    line_mask = np.zeros((720, 1280), dtype=np.uint8)
+    for start_name, end_name in SEMANTIC_FLOOR_SEGMENTS.values():
+        start = _project(homography, FLOOR_WORLD_XY_M[start_name])
+        end = _project(homography, FLOOR_WORLD_XY_M[end_name])
+        cv2.line(
+            line_mask,
+            tuple(int(round(value)) for value in start),
+            tuple(int(round(value)) for value in end),
+            1,
+            thickness=5,
+        )
+    line_distance = cv2.distanceTransform(1 - line_mask, cv2.DIST_L2, 5)
+    surface = np.zeros_like(line_mask, dtype=np.float64)
+    corners = np.asarray(
+        [
+            _project(homography, FLOOR_WORLD_XY_M[name])
+            for name in ("near_left_corner", "near_right_corner", "far_right_corner", "far_left_corner")
+        ],
+        dtype=np.int32,
+    )
+    cv2.fillConvexPoly(surface, corners, 1.0)
+    bundle = build_court_evidence_bundle(
+        [],
+        image_size=(1280, 720),
+        line_distance_maps={"pickleball_line": line_distance},
+        surface_probability=surface,
+        homography_candidates=[
+            {"source": "line_only_true", "homography": homography.tolist()},
+            {"source": "line_only_shifted", "homography": wrong.tolist()},
+        ],
+    )
+
+    result = solve_best_floor_court(bundle)
+
+    assert result["status"] == "line_only_best_effort"
+    assert result["selected_hypothesis"]["source"].startswith("line_only_true")
+    assert result["score_components"]["line_alignment"] > 0.9
+    assert result["score_components"]["surface_overlap"] > 0.9
+    assert set(result["projected_floor_keypoints"]) == set(FLOOR_KEYPOINT_NAMES)
+    assert result["measurement_valid"] is False
+
+
+def test_transform_covariance_is_propagated_from_floor_inliers() -> None:
+    result = solve_best_floor_court(_observations(_perspective_homography()))
+
+    covariance = np.asarray(result["transform_covariance"], dtype=np.float64)
+    assert covariance.shape == (8, 8)
+    assert np.isfinite(covariance).all()
+    for point in result["projected_floor_keypoints"].values():
+        point_covariance = np.asarray(point["covariance_px2"], dtype=np.float64)
+        assert point_covariance.shape == (2, 2)
+        assert np.linalg.eigvalsh(point_covariance).min() >= -1.0e-8

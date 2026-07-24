@@ -117,6 +117,25 @@ def _patch_frame_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(detector, "compute_tennis_overlay_rejection", lambda _hypothesis: {"passed": True})
 
 
+def test_neural_seed_prefers_final_structured_court_over_raw_argmax_points() -> None:
+    gt = _projected_court()
+    inference = _mock_inference(_projected_court(dx=180.0), confidence=0.99)
+    inference["best_court"] = {
+        "keypoints_xy": {name: list(xy) for name, xy in gt.items() if not name.startswith("net_")},
+        "point_confidence": {name: 0.88 for name in gt if not name.startswith("net_")},
+        "court_confidence": 0.84,
+        "source": "observation_hypothesis_dense_refined",
+    }
+
+    hypotheses = generate_neural_seed_hypotheses(inference, image_size=(720, 540))
+
+    assert len(hypotheses) == 1
+    assert hypotheses[0]["source_tag"] == "structured_best_court"
+    assert hypotheses[0]["model_confidence"] == pytest.approx(0.84)
+    floor_gt = {name: xy for name, xy in gt.items() if not name.startswith("net_")}
+    assert _median_reprojection_px(hypotheses[0]["keypoints"], floor_gt) <= 1.0e-5
+
+
 def test_e4_mock_neural_seed_adds_true_candidate_and_geor3_vote_selects_it(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,

@@ -606,6 +606,48 @@ class CourtKeypoints(StrictArtifact):
         return self
 
 
+class CourtLock(StrictArtifact):
+    """Versioned static structured-court lock.
+
+    The detailed invariants live beside the solver serializer so the runtime
+    writer and public artifact validator cannot silently drift apart.
+    """
+
+    artifact_type: Literal["racketsport_court_lock"]
+    coordinate_space: Literal["pixels_raw_native", "pixels_undistorted_native"]
+    homography_image_from_court: Matrix3
+    camera_parameters: dict[str, Any]
+    distortion: dict[str, Any]
+    transform_covariance: list[list[FiniteFloat]] | None
+    source: Literal[
+        "owner_metric_15pt_reviewed",
+        "multi_frame_point_and_line",
+        "clearest_frame_point_and_line",
+        "dense_line_only",
+        "previous_static_lock",
+        "camera_profile_prior",
+    ]
+    evidence: dict[str, Any]
+    static_motion: dict[str, Any]
+    residual_px: dict[str, Any]
+    score_components: dict[str, FiniteFloat]
+    scorer_version: str = Field(min_length=1)
+    calibration_version: str = Field(min_length=1)
+    checkpoint_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+    measurement_valid: bool
+    authority_state: Literal["best_effort", "review_only", "authoritative"]
+    verified: bool
+
+    @model_validator(mode="after")
+    def _must_match_runtime_contract(self) -> "CourtLock":
+        # Import lazily so the general schema registry does not make the court
+        # geometry stack a startup dependency for unrelated artifacts.
+        from threed.racketsport.court_static_lock import CourtLockArtifact
+
+        CourtLockArtifact.from_dict(self.model_dump(mode="python"))
+        return self
+
+
 class TrackFrame(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -2757,6 +2799,7 @@ ARTIFACT_MODELS: dict[str, type[BaseModel]] = {
     "court_calibration": CourtCalibration,
     "court_line_evidence": CourtLineEvidence,
     "court_keypoints": CourtKeypoints,
+    "court_lock": CourtLock,
     "court_zones": CourtZones,
     "net_plane": NetPlane,
     "tracks": Tracks,

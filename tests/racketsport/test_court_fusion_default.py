@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import time
 from pathlib import Path
@@ -49,8 +50,11 @@ def test_default_checkpoint_resolution_precedence_and_sha_logging(
     assert resolved_default is not None
     assert resolved_default.path == Path("models/checkpoints/court_unet_v2/court_model_v2.pt")
     assert resolved_default.source == "promoted_default"
-    assert resolved_default.sha256.startswith("cdf0555d49")
-    assert "cdf0555d49" in caplog.text
+    selected_sha = json.loads(
+        Path("models/checkpoints/court_unet_v2/PROVENANCE.json").read_text(encoding="utf-8")
+    )["sha256"]
+    assert resolved_default.sha256 == selected_sha
+    assert selected_sha in caplog.text
 
 
 def test_missing_env_checkpoint_fails_safe_instead_of_falling_back_to_default(

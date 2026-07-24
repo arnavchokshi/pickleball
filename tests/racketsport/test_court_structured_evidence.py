@@ -5,10 +5,13 @@ import json
 import numpy as np
 import pytest
 
-from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_keypoint_net import ALL_PICKLEBALL_KEYPOINTS, PICKLEBALL_KEYPOINTS
 from threed.racketsport.court_structured_evidence import (
     CANONICAL_FLOOR_KEYPOINT_NAMES,
+    CourtEvidenceBundle,
+    EVIDENCE_FLOOR_KEYPOINT_NAMES,
     NET_TOP_KEYPOINT_NAMES,
+    build_court_evidence_bundle,
     extract_court_structured_evidence,
 )
 
@@ -143,3 +146,60 @@ def test_all_three_net_top_channels_are_structurally_excluded() -> None:
     assert observed == set(CANONICAL_FLOOR_KEYPOINT_NAMES)
     assert observed.isdisjoint(NET_TOP_KEYPOINT_NAMES)
     assert all(row["provenance"]["net_top_channels_excluded"] is True for row in records)
+
+
+def test_v3_auxiliary_floor_channels_are_emitted_in_taxonomy_order() -> None:
+    heatmaps: dict[str, np.ndarray] = {}
+    visibility: dict[str, float] = {}
+    for point in reversed(ALL_PICKLEBALL_KEYPOINTS):
+        heatmap = np.full((5, 5), 0.001, dtype=np.float64)
+        heatmap[1, 1] = 0.7
+        heatmap[4, 4] = 0.2
+        heatmaps[point.name] = heatmap
+        visibility[point.name] = 0.9
+
+    records = extract_court_structured_evidence(heatmaps, visibility)
+
+    assert [row["keypoint_name"] for row in records] == list(EVIDENCE_FLOOR_KEYPOINT_NAMES)
+    assert len(records) == 30
+    assert records[0]["canonical_floor_index"] == 0
+    assert records[-1]["canonical_floor_index"] is None
+    assert {row["keypoint_name"] for row in records}.isdisjoint(NET_TOP_KEYPOINT_NAMES)
+
+
+def test_dark_decoder_and_udp_coordinate_mapping_are_explicit() -> None:
+    yy, xx = np.mgrid[:9, :9]
+    heatmap = np.exp(-((xx - 3.35) ** 2 + (yy - 4.20) ** 2) / (2.0 * 0.9**2))
+    heatmap[1, 7] += 0.2
+    record = extract_court_structured_evidence(
+        {"near_left_corner": heatmap},
+        {"near_left_corner": 1.0},
+        source_size=(81, 81),
+        decoder="dark",
+        coordinate_transform="udp",
+    )[0]
+
+    assert record["decoder"] == "dark"
+    assert record["coordinate_transform"] == "udp"
+    assert record["primary_peak"]["heatmap_xy"] == pytest.approx([3.35, 4.20], abs=0.08)
+    assert record["primary_peak"]["source_xy"] == pytest.approx([33.5, 42.0], abs=0.8)
+
+
+def test_evidence_bundle_validates_shapes_and_freezes_dense_arrays() -> None:
+    distance = np.ones((12, 20), dtype=np.float64)
+    surface = np.full((12, 20), 0.75, dtype=np.float64)
+    bundle = build_court_evidence_bundle(
+        [{"semantic": "near_left_corner", "xy": [1.0, 2.0], "confidence": 0.9}],
+        image_size=(20, 12),
+        line_distance_maps={"near_baseline": distance},
+        surface_probability=surface,
+        temporal_support=0.8,
+    )
+
+    assert isinstance(bundle, CourtEvidenceBundle)
+    assert bundle.line_distance_maps["near_baseline"].flags.writeable is False
+    assert bundle.surface_probability.flags.writeable is False
+    distance[:] = 9.0
+    assert float(bundle.line_distance_maps["near_baseline"][0, 0]) == 1.0
+    with pytest.raises(ValueError, match="12x20"):
+        build_court_evidence_bundle([], image_size=(20, 12), line_distance_maps={"bad": np.ones((2, 2))})

@@ -17,6 +17,7 @@ from threed.racketsport.court_keypoint_net import make_court_keypoint_heatmap_mo
 from scripts.racketsport.evaluate_court_model_v2 import (  # noqa: E402
     _row_native_image_bgr,
     evaluate_checkpoint_against_real_labels,
+    evaluate_raw_vs_structured_checkpoint_against_real_labels,
     evaluate_structured_checkpoint_against_real_labels,
     predict_row_keypoints_source_px,
 )
@@ -157,6 +158,9 @@ def test_evaluate_checkpoint_against_real_labels_reports_independent_and_all_mod
     assert report["independent_frame_count"] == 2  # 1 independent-reviewed row per clip
     assert report["all_frame_count"] == 8
     assert report["independent"]["keypoint_error_summary"]["count"] > 0
+    assert report["independent"]["pck_at_2px"] is not None
+    assert report["independent"]["keypoint_error_summary"]["p90"] is not None
+    assert report["independent"]["keypoint_error_summary"]["max"] is not None
     assert set(report["independent"]["per_clip"]) == {"clip_a", "clip_b"}
     assert set(report["all"]["per_clip"]) == {"clip_a", "clip_b"}
 
@@ -176,6 +180,59 @@ def test_structured_eval_scores_floor_names_and_stays_review_only(tmp_path: Path
     assert report["authority_state"] == "review_only"
     assert report["measurement_valid"] is False
     assert report["promotion_allowed"] is False
+
+
+def test_paired_eval_runs_inference_once_and_preserves_protocol_strata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import scripts.racketsport.evaluate_court_model_v2 as evaluator
+
+    calls = []
+
+    monkeypatch.setattr(
+        evaluator,
+        "_row_native_image_bgr",
+        lambda _row: (np.zeros((36, 64, 3), dtype=np.uint8), (2.0, 2.0)),
+    )
+
+    def _infer(_image: np.ndarray, _checkpoint: Path, *, device: str) -> dict:
+        calls.append(device)
+        return {
+            "keypoints_xy": {"near_left_corner": [6.0, 5.0]},
+            "keypoints_conf": {"near_left_corner": 0.7},
+            "best_court": {
+                "keypoints_xy": {"near_left_corner": [5.5, 5.0]},
+                "point_confidence": {"near_left_corner": 0.8},
+                "ignored_observations": [],
+                "court_confidence": 0.6,
+            },
+        }
+
+    monkeypatch.setattr(evaluator, "infer_court_model", _infer)
+    report = evaluate_raw_vs_structured_checkpoint_against_real_labels(
+        Path("checkpoint.pt"),
+        [
+            {
+                "clip": "clip_a",
+                "frame_index": 1,
+                "label_status": "reviewed",
+                "keypoints": {"near_left_corner": [10.0, 10.0], "net_center": [10.0, 5.0]},
+                "subgroup": "owner",
+                "source": "camera_a",
+                "source_group": "venue_a",
+                "viewpoint": "diagonal",
+                "visibility": "partial_floor",
+            }
+        ],
+        bootstrap_resamples=10,
+    )
+
+    assert calls == ["cpu"]
+    assert report["raw"]["point_metrics"]["median_error_px"] == 2.0
+    assert report["structured"]["point_metrics"]["median_error_px"] == 1.0
+    assert report["paired_deltas"]["point_estimates"]["mean_paired_error_reduction_px"] == 1.0
+    assert set(report["strata"]["source"]) == {"camera_a"}
+    assert report["authority_state"] == "review_only"
 
 
 def test_evaluate_court_model_v2_cli_writes_scanner_compatible_report(tmp_path: Path) -> None:
@@ -217,6 +274,9 @@ def test_evaluate_court_model_v2_cli_writes_scanner_compatible_report(tmp_path: 
     assert report["gate"]["threshold"] == pytest.approx(0.95)
     assert "value" in report["gate"] and "passed" in report["gate"]
     assert report["after"]["real_keypoint_median_px"] is not None
+    assert report["after"]["real_keypoint_p90_px"] is not None
+    assert report["after"]["real_keypoint_max_px"] is not None
+    assert report["after"]["real_keypoint_pck_at_2px"] is not None
     assert report["independent_frame_count"] == 1
     assert report["all_frame_count"] == 4
     expected_modes = {"independent", "all"}

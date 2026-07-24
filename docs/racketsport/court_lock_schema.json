@@ -1,0 +1,268 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/racketsport/court_lock_schema.json",
+  "title": "Static Camera Court Lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "artifact_type",
+    "coordinate_space",
+    "homography_image_from_court",
+    "camera_parameters",
+    "distortion",
+    "transform_covariance",
+    "source",
+    "evidence",
+    "static_motion",
+    "residual_px",
+    "score_components",
+    "scorer_version",
+    "calibration_version",
+    "checkpoint_sha256",
+    "measurement_valid",
+    "authority_state",
+    "verified"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "artifact_type": {"const": "racketsport_court_lock"},
+    "coordinate_space": {
+      "enum": ["pixels_raw_native", "pixels_undistorted_native"]
+    },
+    "homography_image_from_court": {"$ref": "#/$defs/matrix3"},
+    "camera_parameters": {"$ref": "#/$defs/camera_parameters"},
+    "distortion": {"$ref": "#/$defs/distortion"},
+    "transform_covariance": {
+      "oneOf": [
+        {"$ref": "#/$defs/matrix8"},
+        {"type": "null"}
+      ]
+    },
+    "source": {
+      "enum": [
+        "owner_metric_15pt_reviewed",
+        "multi_frame_point_and_line",
+        "clearest_frame_point_and_line",
+        "dense_line_only",
+        "previous_static_lock",
+        "camera_profile_prior"
+      ]
+    },
+    "evidence": {"$ref": "#/$defs/evidence"},
+    "static_motion": {"$ref": "#/$defs/static_motion"},
+    "residual_px": {"$ref": "#/$defs/residual"},
+    "score_components": {
+      "type": "object",
+      "additionalProperties": {"type": "number"}
+    },
+    "scorer_version": {"type": "string", "minLength": 1},
+    "calibration_version": {"type": "string", "minLength": 1},
+    "checkpoint_sha256": {
+      "type": ["string", "null"],
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "measurement_valid": {"type": "boolean"},
+    "authority_state": {
+      "enum": ["best_effort", "review_only", "authoritative"]
+    },
+    "verified": {"type": "boolean"}
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {"measurement_valid": {"const": true}},
+        "required": ["measurement_valid"]
+      },
+      "then": {
+        "properties": {
+          "static_motion": {
+            "properties": {"status": {"const": "static"}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {"verified": {"const": true}},
+        "required": ["verified"]
+      },
+      "then": {
+        "properties": {"authority_state": {"const": "authoritative"}}
+      }
+    }
+  ],
+  "$defs": {
+    "finite_number": {"type": "number"},
+    "nonnegative_number": {"type": "number", "minimum": 0.0},
+    "unit_number": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+    "row3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/finite_number"}
+    },
+    "matrix3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/row3"}
+    },
+    "row8": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/finite_number"}
+    },
+    "matrix8": {
+      "type": "array",
+      "minItems": 8,
+      "maxItems": 8,
+      "items": {"$ref": "#/$defs/row8"}
+    },
+    "vector3": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {"$ref": "#/$defs/finite_number"}
+    },
+    "camera_parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "model",
+        "fx",
+        "fy",
+        "cx",
+        "cy",
+        "source",
+        "rotation_world_to_camera",
+        "translation_world_to_camera_m"
+      ],
+      "properties": {
+        "model": {"const": "pinhole"},
+        "fx": {"type": "number", "exclusiveMinimum": 0.0},
+        "fy": {"type": "number", "exclusiveMinimum": 0.0},
+        "cx": {"$ref": "#/$defs/finite_number"},
+        "cy": {"$ref": "#/$defs/finite_number"},
+        "source": {"type": "string", "minLength": 1},
+        "rotation_world_to_camera": {
+          "oneOf": [
+            {"$ref": "#/$defs/matrix3"},
+            {"type": "null"}
+          ]
+        },
+        "translation_world_to_camera_m": {
+          "oneOf": [
+            {"$ref": "#/$defs/vector3"},
+            {"type": "null"}
+          ]
+        }
+      }
+    },
+    "distortion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["model", "k1", "k1_bounds", "k1_variance", "source", "optimized"],
+      "properties": {
+        "model": {"const": "bounded_radial_k1"},
+        "k1": {"$ref": "#/$defs/finite_number"},
+        "k1_bounds": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"$ref": "#/$defs/finite_number"}
+        },
+        "k1_variance": {"$ref": "#/$defs/nonnegative_number"},
+        "source": {"type": "string", "minLength": 1},
+        "optimized": {"type": "boolean"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_frame_count",
+        "selected_frame_indices",
+        "pooled_semantic_count",
+        "selection_algorithm",
+        "pooling_algorithm"
+      ],
+      "properties": {
+        "candidate_frame_count": {"type": "integer", "minimum": 0},
+        "selected_frame_indices": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 0}
+        },
+        "pooled_semantic_count": {"type": "integer", "minimum": 0},
+        "selection_algorithm": {"type": "string", "minLength": 1},
+        "pooling_algorithm": {"type": "string", "minLength": 1}
+      }
+    },
+    "static_motion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "camera_motion_suspected",
+        "static_lock_usable",
+        "reference_frame_index",
+        "frame_indices",
+        "valid_frame_count",
+        "invalid_frame_count",
+        "median_corner_drift_px",
+        "p95_corner_drift_px",
+        "max_corner_drift_px",
+        "net_center_displacement_px",
+        "monotonic_trend_px_per_frame",
+        "drift_uncertainty_px",
+        "reasons"
+      ],
+      "properties": {
+        "status": {
+          "enum": ["static", "moving", "ambiguous", "insufficient_evidence"]
+        },
+        "camera_motion_suspected": {"type": "boolean"},
+        "static_lock_usable": {"type": "boolean"},
+        "reference_frame_index": {
+          "type": ["integer", "null"],
+          "minimum": 0
+        },
+        "frame_indices": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"type": "integer", "minimum": 0}
+        },
+        "valid_frame_count": {"type": "integer", "minimum": 0},
+        "invalid_frame_count": {"type": "integer", "minimum": 0},
+        "median_corner_drift_px": {"$ref": "#/$defs/nullable_nonnegative"},
+        "p95_corner_drift_px": {"$ref": "#/$defs/nullable_nonnegative"},
+        "max_corner_drift_px": {"$ref": "#/$defs/nullable_nonnegative"},
+        "net_center_displacement_px": {"$ref": "#/$defs/nullable_nonnegative"},
+        "monotonic_trend_px_per_frame": {"$ref": "#/$defs/nullable_nonnegative"},
+        "drift_uncertainty_px": {"$ref": "#/$defs/nullable_nonnegative"},
+        "reasons": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "nullable_nonnegative": {
+      "oneOf": [
+        {"$ref": "#/$defs/nonnegative_number"},
+        {"type": "null"}
+      ]
+    },
+    "residual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["median_px", "p95_px"],
+      "properties": {
+        "median_px": {"$ref": "#/$defs/nonnegative_number"},
+        "p95_px": {"$ref": "#/$defs/nonnegative_number"}
+      }
+    }
+  }
+}

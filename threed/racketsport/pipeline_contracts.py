@@ -197,6 +197,7 @@ _ARTIFACT_SCHEMA_BY_FILENAME = {
     "net_plane.json": "net_plane",
     "court_line_evidence.json": "court_line_evidence",
     "court_keypoints.json": "court_keypoints",
+    "court_lock.json": "court_lock",
     "tracks.json": "tracks",
     "player_ground.json": "player_ground",
     "calls.json": "court_calls",

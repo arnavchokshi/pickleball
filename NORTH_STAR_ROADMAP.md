@@ -403,6 +403,35 @@ are not weakened to hit a headline.
 
 ## 5. Active queue for the next agents
 
+### 2026-07-23 court v3.1 implementation and selection
+
+The confidence-aware floor-only v3.1 solver, exact-semantic raw/structured evaluator, source-grouped
+five-fold protocol, 30-point evidence-network trainer, eight-frame static lock, bounded radial-k1
+fit, confidence-calibration tooling, separate regulation-net projection, and versioned
+`court_lock.json` review artifact are implemented on `main`. The protocol contains 370 usable
+rows in 67 source/camera groups; every fold is 222 train / 74 validation / 74 test with zero exact,
+perceptual, or source-group leakage. Task 88 remains historical development evidence only.
+
+The selected running method is the existing v2 evidence checkpoint with DARK decoding in legacy
+stride coordinates, feeding the v3.1 regulation-template solver. On fold-0 validation it scored
+exact-semantic structured PCK@5 `0.9516686`, median `1.6673 px`, p95 `4.9310 px`, with 74/74 valid
+topologies and zero duplicate/collapsed outputs over 869 visible labels. This is the best measured
+development result and is selected even though it is not independent authority evidence.
+
+The first full 30-point v3 seed-13 screen regressed: epoch 4 scored structured PCK@5 `0.2382048`
+and p95 `36.5706 px`; epoch 6 scored `0.2094361` and `63.4119 px`. It was stopped after two
+consecutive non-improvements and did not replace the incumbent. The likely next training ablation
+is warm-start preservation (selected legacy coordinate convention, lower/shared-layer learning
+rate or staged freezing) before another full-head run; seeds 29/47 remain forbidden until a seed-13
+candidate beats the incumbent.
+
+`VERIFIED=0`, `authority_state=review_only`, and `measurement_valid=false` remain binding. The
+current fold-0 whole-court confidence ECE is `0.6689`, so the numeric confidence is explicitly
+uncalibrated. Next order: complete out-of-fold predictions for folds 1-4, fit calibration only from
+those source-disjoint predictions, then build/label the independent 20-camera-setup pack and run
+the static-lock/net-height gates. The 0.95 target controls measurement authority, not whether a
+better reproducible implementation lands.
+
 Do not start another broad model search. The next executable goals are:
 
 Scoped passes since 2026-07-09 (named lane dirs; none are promotions): NS-01.1 sidecar contract;

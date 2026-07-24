@@ -4,7 +4,10 @@ import math
 
 import pytest
 
-from threed.racketsport.court_structured_metrics import evaluate_structured_court_outputs
+from threed.racketsport.court_structured_metrics import (
+    evaluate_raw_vs_structured_court_outputs,
+    evaluate_structured_court_outputs,
+)
 
 
 def _template_points() -> dict[str, list[float]]:
@@ -57,7 +60,10 @@ def test_exact_name_error_pck_missing_policy_p95_and_per_viewpoint() -> None:
     assert point["missing_prediction_count"] == 1
     assert point["pck_at_5px"] == pytest.approx(0.75)
     assert point["pck_at_10px"] == pytest.approx(0.75)
+    assert point["pck_at_2px"] == pytest.approx(0.5)
+    assert point["p90_error_px"] == pytest.approx(4.0)
     assert point["p95_error_px"] == pytest.approx(4.5)
+    assert point["max_error_px"] == pytest.approx(5.0)
     assert metrics["samples"][0]["point_errors_px"] == {"left": 5.0, "right": None}
     assert metrics["configuration"]["semantic_matching"] == "exact_name_only"
 
@@ -230,3 +236,66 @@ def test_empty_input_reports_unavailable_metrics_without_dividing_by_zero() -> N
     assert metrics["whole_court_calibration"]["available"] is False
     assert metrics["per_viewpoint"] == {}
     assert math.isfinite(metrics["configuration"]["pck_thresholds_px"][0])
+
+
+def test_paired_raw_vs_structured_metrics_report_strata_and_sample_bootstrap() -> None:
+    records = [
+        {
+            "sample_id": "owner/frame_1",
+            "viewpoint": "straight",
+            "strata": {
+                "subgroup": "owner",
+                "source": "camera_a",
+                "source_group": "venue_a",
+                "visibility": "full_floor_12",
+            },
+            "ground_truth": {"left": [0.0, 0.0], "right": [10.0, 0.0]},
+            "raw_prediction": {
+                "keypoints": {"left": [1.0, 0.0], "right": [18.0, 0.0]}
+            },
+            "structured_prediction": {
+                "keypoints": {"left": [2.0, 0.0], "right": [14.0, 0.0]}
+            },
+        },
+        {
+            "sample_id": "external/frame_1",
+            "viewpoint": "diagonal",
+            "strata": {
+                "subgroup": "external",
+                "source": "dataset_b",
+                "source_group": "venue_b",
+                "visibility": "partial_floor",
+            },
+            "ground_truth": {"center": [0.0, 0.0]},
+            "raw_prediction": {"keypoints": {}},
+            "structured_prediction": {"keypoints": {"center": [20.0, 0.0]}},
+        },
+    ]
+
+    metrics = evaluate_raw_vs_structured_court_outputs(
+        records,
+        bootstrap_resamples=200,
+        bootstrap_seed=13,
+    )
+
+    assert metrics["evaluated_taxonomy"] == "canonical_floor_points_exact_semantic_name"
+    assert metrics["raw"]["point_metrics"]["pck_at_2px"] == pytest.approx(1 / 3)
+    assert metrics["raw"]["point_metrics"]["pck_at_5px"] == pytest.approx(1 / 3)
+    assert metrics["raw"]["point_metrics"]["pck_at_10px"] == pytest.approx(2 / 3)
+    assert metrics["structured"]["point_metrics"]["pck_at_5px"] == pytest.approx(2 / 3)
+    assert metrics["structured"]["point_metrics"]["p90_error_px"] == pytest.approx(16.8)
+    assert metrics["structured"]["point_metrics"]["max_error_px"] == 20.0
+    point = metrics["paired_deltas"]["point_estimates"]
+    assert point["pck_at_5px_structured_minus_raw"] == pytest.approx(1 / 3)
+    assert point["paired_error_count"] == 2
+    assert point["mean_paired_error_reduction_px"] == pytest.approx(1.5)
+    assert metrics["paired_deltas"]["bootstrap_unit"] == "sample"
+    assert metrics["paired_deltas"]["bootstrap_resamples"] == 200
+    assert metrics["paired_deltas"]["bootstrap_95_intervals"][
+        "pck_at_5px_structured_minus_raw"
+    ]["available"] is True
+    assert set(metrics["strata"]["subgroup"]) == {"external", "owner"}
+    assert set(metrics["strata"]["source"]) == {"camera_a", "dataset_b"}
+    assert set(metrics["strata"]["viewpoint"]) == {"diagonal", "straight"}
+    assert set(metrics["strata"]["visibility"]) == {"full_floor_12", "partial_floor"}
+    assert metrics["task88_policy"].startswith("historical_development_only")

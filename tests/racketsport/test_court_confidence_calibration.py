@@ -4,8 +4,12 @@ import pytest
 
 from threed.racketsport.court_confidence_calibration import (
     IsotonicConfidenceCalibrator,
+    TemperatureConfidenceCalibrator,
     apply_point_calibration,
+    confidence_calibration_report,
     fit_isotonic_confidence,
+    fit_temperature_confidence,
+    select_zero_false_accept_threshold,
 )
 
 
@@ -42,3 +46,26 @@ def test_invalid_serialized_calibration_is_rejected() -> None:
                 "positive_count": 1,
             }
         )
+
+
+def test_temperature_scaling_round_trip_and_probability_order() -> None:
+    fitted = fit_temperature_confidence([-3.0, -1.0, 1.0, 3.0], [0, 0, 1, 1])
+    loaded = TemperatureConfidenceCalibrator.from_dict(fitted.to_dict())
+
+    assert loaded == fitted
+    assert loaded.temperature > 0.0
+    assert loaded.predict_probability(0.1) < loaded.predict_probability(0.9)
+
+
+def test_calibration_report_and_zero_false_accept_threshold() -> None:
+    report = confidence_calibration_report([0.1, 0.3, 0.8, 0.9], [0, 0, 1, 1], bin_count=4)
+    threshold = select_zero_false_accept_threshold(
+        [0.1, 0.3, 0.8, 0.9],
+        [0, 0, 1, 1],
+        [1, 0, 0, 0],
+    )
+
+    assert report["sample_count"] == 4
+    assert 0.0 <= report["brier_score"] <= 1.0
+    assert 0.0 <= report["ece"] <= 1.0
+    assert threshold == pytest.approx(0.8)

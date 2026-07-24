@@ -835,6 +835,7 @@ def test_safe_relative_path_rejects_absolute_and_parent_traversal() -> None:
 
 def test_court_positioning_artifact_filenames_are_schema_mapped() -> None:
     assert _ARTIFACT_SCHEMA_BY_FILENAME["court_keypoints.json"] == "court_keypoints"
+    assert _ARTIFACT_SCHEMA_BY_FILENAME["court_lock.json"] == "court_lock"
     assert _ARTIFACT_SCHEMA_BY_FILENAME["player_ground.json"] == "player_ground"
     assert _ARTIFACT_SCHEMA_BY_FILENAME["calls.json"] == "court_calls"
     assert _ARTIFACT_SCHEMA_BY_FILENAME["drift_log.json"] == "drift_log"

@@ -1,0 +1,117 @@
+{
+  "schema_version": 1,
+  "artifact_type": "racketsport_court_v31_selection_summary",
+  "created": "2026-07-23",
+  "authority_state": "review_only",
+  "measurement_valid": false,
+  "verified": false,
+  "protocol": {
+    "manifest": "runs/lanes/court_v31_protocol_20260723/source_grouped_five_fold_manifest.json",
+    "manifest_sha256": "fb6d232ed2c8e74982ecf68ea8f40cb4c8a93ada896ecfc3d0591ca67c0eada1",
+    "usable_rows": 370,
+    "source_camera_groups": 67,
+    "fold_count": 5,
+    "fold_sizes": {
+      "train": 222,
+      "validation": 74,
+      "test": 74
+    },
+    "selection_partition": "fold_0.validation",
+    "selection_frame_count": 74,
+    "selection_visible_floor_labels": 869,
+    "semantic_matching": "exact_name_only",
+    "task88_role": "historical_development_only"
+  },
+  "selected": {
+    "method": "court_unet_v2_dark_legacy_plus_confidence_aware_floor_solver_v31",
+    "checkpoint": "models/checkpoints/court_unet_v2/court_model_v2.pt",
+    "checkpoint_sha256": "31da51630b82a85ee39384e65eb705b045adcdda900dd025ca15784a2edd3ffe",
+    "heatmap_decoder": "dark",
+    "coordinate_transform": "legacy_stride",
+    "evaluation_artifact": "runs/lanes/court_v31_impl_20260723/v2_dark_legacy_fold0_validation.json",
+    "raw": {
+      "pck_at_5px": 0.9482163406214039
+    },
+    "structured": {
+      "pck_at_2px": 0.6075949367088608,
+      "pck_at_5px": 0.9516685845799769,
+      "pck_at_10px": 0.9873417721518988,
+      "median_error_px": 1.6672723309187805,
+      "p90_error_px": 3.9819862110370123,
+      "p95_error_px": 4.931018322063191,
+      "max_error_px": 47.98658160932075,
+      "missing_prediction_count": 0,
+      "topology_valid_samples": 74,
+      "duplicate_or_collapse_pair_count": 0
+    },
+    "confidence": {
+      "status": "uncalibrated",
+      "whole_court_ece": 0.6688690735326225,
+      "whole_court_brier_score": 0.6663511855261813
+    }
+  },
+  "decoder_ablations": [
+    {
+      "name": "v2_parabolic_legacy",
+      "structured_pck_at_5px": 0.9436133486766398,
+      "structured_p95_px": 5.411534394273904,
+      "decision": "rejected"
+    },
+    {
+      "name": "v2_dark_udp",
+      "structured_pck_at_5px": 0.7008055235903338,
+      "structured_p95_px": 8.974713523756941,
+      "decision": "rejected"
+    }
+  ],
+  "structured_v3_seed13_screen": {
+    "training_status": "trained_not_phase_verified",
+    "training_epochs": 6,
+    "steps_per_epoch": 100,
+    "coordinate_transform": "udp",
+    "heatmap_decoder": "dark",
+    "epoch_1": {
+      "structured_pck_at_5px": 0.20713463751438435,
+      "structured_p95_px": 23.32184507516964,
+      "evaluation_sha256": "655411bf4336973b40e333771e38ce0a184e7d6a9edf3ec375796161ba1447a5"
+    },
+    "epoch_4": {
+      "structured_pck_at_5px": 0.238204833141542,
+      "structured_p95_px": 36.570626002811586,
+      "evaluation_sha256": "b0c65393327d1251e30875270e4b8fd47af455ad493f908a959f709b70fba44e"
+    },
+    "epoch_6": {
+      "structured_pck_at_5px": 0.2094361334867664,
+      "structured_p95_px": 63.41190710668231,
+      "evaluation_sha256": "c363723f95144a4ffe18cd9bfa3fd1df3a74ba5d7bf6fe82e328d59d1e05e07a"
+    },
+    "decision": "rejected_and_stopped_after_two_consecutive_non_improvements",
+    "selected_checkpoint_changed": false
+  },
+  "selection_policy_result": {
+    "primary_metric": "structured_exact_semantic_pck_at_5px",
+    "winner": "court_unet_v2_dark_legacy_plus_confidence_aware_floor_solver_v31",
+    "accuracy_target_is_commit_blocker": false,
+    "authority_target_remains_binding": true,
+    "reason": "highest reproducibly measured grouped exact-semantic structured PCK@5 with zero topology and duplicate violations"
+  },
+  "next_order": [
+    "complete folds 1-4 out-of-fold predictions",
+    "fit point and court confidence calibration only from source-disjoint predictions",
+    "ablate warm-start preservation before another 30-point full-head run",
+    "build and label the independent 20-camera-setup pack",
+    "run static-lock and separate net-height promotion gates"
+  ],
+  "gpu_run": {
+    "vm": "pickleball-gpu-courtv31",
+    "zone": "us-central1-f",
+    "machine_type": "a2-highgpu-1g",
+    "gpu": "A100-40GB",
+    "provisioning_model": "SPOT",
+    "created_at": "2026-07-23T16:33:25-07:00",
+    "deleted_and_list_confirmed": true,
+    "boot_disk_auto_deleted_and_list_confirmed": true,
+    "rejected_checkpoints_pulled": false,
+    "reason_rejected_checkpoints_not_pulled": "metrics, training summary, and checkpoint hashes were preserved locally; 287MB rejected checkpoint binaries were not retained"
+  }
+}

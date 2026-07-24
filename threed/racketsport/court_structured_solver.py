@@ -10,13 +10,20 @@ but always remains ``measurement_valid=false`` and ``review_only``.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import heapq
 from itertools import combinations, product
 import math
 from typing import Any, Mapping, Sequence
 
 import numpy as np
 
-from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_keypoint_net import ALL_PICKLEBALL_KEYPOINTS, PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_structured_evidence import CourtEvidenceBundle
+from threed.racketsport.court_camera_geometry import (
+    PinholeIntrinsics,
+    distort_pixels_radial_k1,
+)
+from threed.racketsport.court_distortion_fit import refine_planar_homography_and_k1
 
 
 FLOOR_KEYPOINT_NAMES: tuple[str, ...] = tuple(
@@ -28,6 +35,11 @@ NET_TOP_KEYPOINT_NAMES: frozenset[str] = frozenset(
 FLOOR_WORLD_XY_M: dict[str, tuple[float, float]] = {
     point.name: (float(point.world_xyz_m[0]), float(point.world_xyz_m[1]))
     for point in PICKLEBALL_KEYPOINTS
+    if abs(float(point.world_xyz_m[2])) <= 1.0e-12
+}
+EVIDENCE_WORLD_XY_M: dict[str, tuple[float, float]] = {
+    point.name: (float(point.world_xyz_m[0]), float(point.world_xyz_m[1]))
+    for point in ALL_PICKLEBALL_KEYPOINTS
     if abs(float(point.world_xyz_m[2])) <= 1.0e-12
 }
 
@@ -47,6 +59,16 @@ _SIDELINE_SEQUENCES = (
     ("near_left_corner", "near_nvz_left", "far_nvz_left", "far_left_corner"),
     ("near_right_corner", "near_nvz_right", "far_nvz_right", "far_right_corner"),
 )
+SEMANTIC_FLOOR_SEGMENTS: dict[str, tuple[str, str]] = {
+    "near_baseline": ("near_left_corner", "near_right_corner"),
+    "far_baseline": ("far_left_corner", "far_right_corner"),
+    "left_sideline": ("near_left_corner", "far_left_corner"),
+    "right_sideline": ("near_right_corner", "far_right_corner"),
+    "near_nvz": ("near_nvz_left", "near_nvz_right"),
+    "far_nvz": ("far_nvz_left", "far_nvz_right"),
+    "near_centerline": ("near_baseline_center", "near_nvz_center"),
+    "far_centerline": ("far_nvz_center", "far_baseline_center"),
+}
 
 
 @dataclass(frozen=True)
@@ -60,6 +82,9 @@ class _Observation:
     sigma_px: float
     quality: float
     input_index: int
+    frame_indices: tuple[int, ...]
+    line_support: float
+    temporal_support: float
 
 
 @dataclass(frozen=True)
@@ -74,12 +99,39 @@ class _ScoredModel:
     seed_semantics: tuple[str, ...]
 
 
+@dataclass(frozen=True)
+class _DenseEvidence:
+    image_size: tuple[int, int]
+    line_distance_maps: Mapping[str, np.ndarray]
+    surface_probability: np.ndarray | None
+    temporal_support: float | None
+
+
+def _dense_evidence_from_bundle(bundle: CourtEvidenceBundle | None) -> _DenseEvidence | None:
+    if bundle is None:
+        return None
+    return _DenseEvidence(
+        image_size=bundle.image_size,
+        line_distance_maps={
+            str(name): np.asarray(value, dtype=np.float64)
+            for name, value in bundle.line_distance_maps.items()
+        },
+        surface_probability=(
+            None
+            if bundle.surface_probability is None
+            else np.asarray(bundle.surface_probability, dtype=np.float64)
+        ),
+        temporal_support=bundle.temporal_support,
+    )
+
+
 def solve_best_floor_court(
-    observations: Mapping[str, Any] | Sequence[Mapping[str, Any]],
+    observations: Mapping[str, Any] | Sequence[Mapping[str, Any]] | CourtEvidenceBundle,
     *,
     prior_homography: Sequence[Sequence[float]] | None = None,
     max_hypotheses: int = 256,
-    shortlist_size: int = 8,
+    shortlist_size: int = 16,
+    refine_size: int = 4,
     inlier_threshold_px: float = 10.0,
     duplicate_tolerance_px: float = 2.0,
 ) -> dict[str, Any]:
@@ -96,12 +148,24 @@ def solve_best_floor_court(
         raise ValueError("max_hypotheses must be a positive integer")
     if isinstance(shortlist_size, bool) or not isinstance(shortlist_size, int) or shortlist_size <= 0:
         raise ValueError("shortlist_size must be a positive integer")
+    if isinstance(refine_size, bool) or not isinstance(refine_size, int) or refine_size <= 0:
+        raise ValueError("refine_size must be a positive integer")
     if not math.isfinite(float(inlier_threshold_px)) or float(inlier_threshold_px) <= 0.0:
         raise ValueError("inlier_threshold_px must be positive and finite")
     if not math.isfinite(float(duplicate_tolerance_px)) or float(duplicate_tolerance_px) < 0.0:
         raise ValueError("duplicate_tolerance_px must be non-negative and finite")
 
-    candidates, initially_ignored, observation_counts = _normalize_observations(observations)
+    bundle = observations if isinstance(observations, CourtEvidenceBundle) else None
+    raw_observations: Mapping[str, Any] | Sequence[Mapping[str, Any]] = (
+        list(bundle.observations) if bundle is not None else observations
+    )
+    dense_evidence = _dense_evidence_from_bundle(bundle)
+    if prior_homography is None and bundle is not None:
+        for candidate in bundle.homography_candidates:
+            if str(candidate.get("source", "")).startswith("previous_static_lock"):
+                prior_homography = candidate.get("homography")
+                break
+    candidates, initially_ignored, observation_counts = _normalize_observations(raw_observations)
     hypothesis_specs, hypothesis_diagnostics = _prioritized_hypotheses(
         candidates,
         max_hypotheses=max_hypotheses,
@@ -112,7 +176,7 @@ def solve_best_floor_court(
         del priority
         try:
             homography = _fit_homography(
-                [FLOOR_WORLD_XY_M[name] for name in semantics],
+                [EVIDENCE_WORLD_XY_M[name] for name in semantics],
                 [candidate.xy for candidate in selected],
                 [max(candidate.quality / (candidate.sigma_px**2), 1.0e-6) for candidate in selected],
             )
@@ -126,8 +190,27 @@ def solve_best_floor_court(
                 seed_semantics=semantics,
                 inlier_threshold_px=float(inlier_threshold_px),
                 duplicate_tolerance_px=float(duplicate_tolerance_px),
+                dense_evidence=dense_evidence,
             )
         )
+
+    if bundle is not None:
+        for raw_candidate in bundle.homography_candidates:
+            try:
+                candidate_homography = _validated_homography(raw_candidate.get("homography"))
+            except (TypeError, ValueError):
+                continue
+            scored.append(
+                _score_model(
+                    candidate_homography,
+                    candidates,
+                    source=str(raw_candidate.get("source") or "line_only_candidate"),
+                    seed_semantics=(),
+                    inlier_threshold_px=float(inlier_threshold_px),
+                    duplicate_tolerance_px=float(duplicate_tolerance_px),
+                    dense_evidence=dense_evidence,
+                )
+            )
 
     prior_error: str | None = None
     if prior_homography is not None:
@@ -144,6 +227,7 @@ def solve_best_floor_court(
                     seed_semantics=(),
                     inlier_threshold_px=float(inlier_threshold_px),
                     duplicate_tolerance_px=float(duplicate_tolerance_px),
+                    dense_evidence=dense_evidence,
                 )
             )
 
@@ -162,13 +246,21 @@ def solve_best_floor_court(
     scored.sort(key=_model_sort_key)
     shortlisted = scored[: min(shortlist_size, len(scored))]
     refined: list[_ScoredModel] = []
-    for model in shortlisted:
+    for model in shortlisted[: min(refine_size, len(shortlisted))]:
+        point_refined = _refine_model(
+            model,
+            candidates,
+            inlier_threshold_px=float(inlier_threshold_px),
+            duplicate_tolerance_px=float(duplicate_tolerance_px),
+            dense_evidence=dense_evidence,
+        )
         refined.append(
-            _refine_model(
-                model,
+            _refine_dense_model(
+                point_refined,
                 candidates,
                 inlier_threshold_px=float(inlier_threshold_px),
                 duplicate_tolerance_px=float(duplicate_tolerance_px),
+                dense_evidence=dense_evidence,
             )
         )
     finalists = scored + refined
@@ -184,13 +276,37 @@ def solve_best_floor_court(
     )
     margin = None if alternate is None else max(0.0, float(best.score - alternate.score))
 
-    projected = _project_floor(best.homography)
+    distortion_fit = _camera_distortion_refinement(best, candidates, bundle)
+    if distortion_fit is None:
+        projected = _project_floor(best.homography)
+        diagnostic_homography = best.homography
+        diagnostic_projected = projected
+    else:
+        diagnostic_homography = np.asarray(
+            distortion_fit["homography_undistorted_from_court"], dtype=np.float64
+        )
+        diagnostic_projected = _project_floor(diagnostic_homography)
+        intrinsics = distortion_fit.pop("_intrinsics")
+        undistorted_points = np.asarray(
+            [diagnostic_projected[name] for name in FLOOR_KEYPOINT_NAMES],
+            dtype=np.float64,
+        )
+        distorted_points = distort_pixels_radial_k1(
+            undistorted_points,
+            intrinsics,
+            k1=float(distortion_fit["k1"]),
+        )
+        projected = {
+            name: (float(distorted_points[index, 0]), float(distorted_points[index, 1]))
+            for index, name in enumerate(FLOOR_KEYPOINT_NAMES)
+        }
     inlier_by_semantic = {str(item["semantic"]): item for item in best.inliers}
     court_confidence = _court_confidence(
         best,
         margin=margin,
         has_alternate=alternate is not None,
     )
+    transform_covariance, projected_covariance = _estimate_transform_covariance(best, candidates)
     point_confidence: dict[str, float] = {}
     projected_points: dict[str, dict[str, Any]] = {}
     for name in FLOOR_KEYPOINT_NAMES:
@@ -204,11 +320,14 @@ def solve_best_floor_court(
         else:
             confidence = court_confidence * 0.35
         confidence = float(min(max(confidence, 0.0), 0.99))
+        if distortion_fit is not None:
+            confidence *= math.exp(-math.sqrt(float(distortion_fit["k1_variance"])) / 0.15)
         point_confidence[name] = confidence
         projected_points[name] = {
             "xy": [float(value) for value in projected[name]],
             "confidence": confidence,
             "source": "single_regulation_floor_homography",
+            "covariance_px2": projected_covariance.get(name),
         }
 
     evaluation_by_id = {
@@ -231,12 +350,18 @@ def solve_best_floor_court(
             )
             ignored.append(_ignored_record(candidate, reason, evaluation=evaluation))
 
-    diagnostics = _geometry_diagnostics(best.homography, projected)
+    diagnostics = _geometry_diagnostics(diagnostic_homography, diagnostic_projected)
+    diagnostics["distortion_refinement"] = (
+        {key: value for key, value in distortion_fit.items() if not key.startswith("_")}
+        if distortion_fit is not None
+        else {"status": "not_run_no_explicit_intrinsics"}
+    )
     diagnostics["hypothesis_search"] = {
         **hypothesis_diagnostics,
         "valid_homographies_scored": len(scored),
         "shortlist_size": len(shortlisted),
         "refined_models_scored": len(refined),
+        "refine_size": min(refine_size, len(shortlisted)),
     }
     if prior_error is not None:
         diagnostics["prior_homography"] = {"accepted": False, "reason": prior_error}
@@ -249,7 +374,11 @@ def solve_best_floor_court(
         "status": (
             "prior_only_best_effort"
             if best.source == "prior_homography" and not best.inliers
-            else "solved_best_effort"
+            else (
+                "line_only_best_effort"
+                if not best.inliers and float(best.score_components.get("line_alignment", 0.0)) > 0.0
+                else "solved_best_effort"
+            )
         ),
         "measurement_valid": False,
         "authority_state": "review_only",
@@ -258,6 +387,30 @@ def solve_best_floor_court(
         "floor_only": True,
         "excluded_semantics": sorted(NET_TOP_KEYPOINT_NAMES),
         "homography_image_from_court": best.homography.tolist(),
+        "camera_parameters": (
+            None
+            if distortion_fit is None
+            else {
+                "intrinsics": distortion_fit["intrinsics"],
+                "intrinsics_source": distortion_fit["intrinsics_source"],
+                "homography_undistorted_from_court": distortion_fit[
+                    "homography_undistorted_from_court"
+                ],
+            }
+        ),
+        "distortion": (
+            {"model": "not_estimated", "k1": None, "source": "not_available"}
+            if distortion_fit is None
+            else {
+                "model": "radial_k1",
+                "k1": distortion_fit["k1"],
+                "k1_variance": distortion_fit["k1_variance"],
+                "bounds": distortion_fit["bounds"],
+                "source": "joint_point_camera_refinement",
+                "uncertainty_status": distortion_fit["uncertainty_status"],
+            }
+        ),
+        "transform_covariance": transform_covariance,
         "projected_floor_keypoints": projected_points,
         "point_confidence": point_confidence,
         "court_confidence": court_confidence,
@@ -322,7 +475,7 @@ def _normalize_observations(
                     )
                 )
             continue
-        if semantic not in FLOOR_WORLD_XY_M:
+        if semantic not in EVIDENCE_WORLD_XY_M:
             for index, value in enumerate(values):
                 ignored.append(_raw_ignored_record(semantic, value, index, "unknown_semantic"))
             continue
@@ -379,6 +532,12 @@ def _parse_observation(semantic: str, value: Any, index: int) -> _Observation:
         visibility_raw = value.get("visibility", 1.0)
         covariance_raw = value.get("covariance", value.get("covariance_px2", 4.0))
         candidate_id = str(value.get("candidate_id", value.get("id", f"{semantic}:{index}")))
+        line_support_raw = value.get("line_support", 0.0)
+        temporal_support_raw = value.get("temporal_support", 0.0)
+        frames_raw = value.get("contributing_frame_indices")
+        if frames_raw is None:
+            frame = value.get("frame", value.get("frame_index"))
+            frames_raw = [] if frame is None else [frame]
     elif (
         isinstance(value, Sequence)
         and not isinstance(value, (str, bytes, bytearray))
@@ -389,6 +548,9 @@ def _parse_observation(semantic: str, value: Any, index: int) -> _Observation:
         visibility_raw = 1.0
         covariance_raw = 4.0
         candidate_id = f"{semantic}:{index}"
+        frames_raw = []
+        line_support_raw = 0.0
+        temporal_support_raw = 0.0
     else:
         raise ValueError("candidate must be a mapping or xy pair")
     if (
@@ -414,7 +576,19 @@ def _parse_observation(semantic: str, value: Any, index: int) -> _Observation:
         raise ValueError("covariance must be positive semidefinite")
     sigma_px = math.sqrt(max(float(np.trace(covariance)) * 0.5, 0.25))
     covariance_reliability = 1.0 / (1.0 + sigma_px / 12.0)
-    quality = confidence * visibility * covariance_reliability
+    if not _is_finite_number(line_support_raw) or not _is_finite_number(temporal_support_raw):
+        raise ValueError("line and temporal support must be finite")
+    line_support = min(max(float(line_support_raw), 0.0), 1.0)
+    temporal_support = min(max(float(temporal_support_raw), 0.0), 1.0)
+    evidence_factor = 0.75 + 0.15 * line_support + 0.10 * temporal_support
+    quality = confidence * visibility * covariance_reliability * evidence_factor
+    if (
+        not isinstance(frames_raw, Sequence)
+        or isinstance(frames_raw, (str, bytes, bytearray))
+        or any(isinstance(value, bool) or not isinstance(value, int) or value < 0 for value in frames_raw)
+    ):
+        raise ValueError("frame indices must be non-negative integers")
+    frame_indices = tuple(sorted(set(int(value) for value in frames_raw)))
     return _Observation(
         semantic=semantic,
         candidate_id=candidate_id,
@@ -425,6 +599,9 @@ def _parse_observation(semantic: str, value: Any, index: int) -> _Observation:
         sigma_px=sigma_px,
         quality=quality,
         input_index=index,
+        frame_indices=frame_indices,
+        line_support=line_support,
+        temporal_support=temporal_support,
     )
 
 
@@ -459,37 +636,99 @@ def _prioritized_hypotheses(
     list[tuple[float, tuple[str, ...], tuple[_Observation, ...]]],
     dict[str, int],
 ]:
+    # A full materialization is combinatorial: 30 semantics with two peaks can
+    # exceed 400k candidate tuples even though the solver consumes at most 256.
+    # Use a deterministic best-first merge instead.  Each semantic group enters
+    # the heap with an admissible upper bound; candidate products are expanded
+    # only when that group can still contribute to the global top-k.  This is
+    # the confidence-prioritized, progressively widened behavior intended by
+    # the PROSAC-style contract.
     specs: list[tuple[float, tuple[str, ...], tuple[_Observation, ...]]] = []
     world_degenerate = 0
     image_degenerate = 0
+    semantic_group_count = 0
+    candidate_products_expanded = 0
+    heap: list[tuple[float, int, tuple[str, ...], tuple[str, ...], int]] = []
+    local_specs: dict[
+        tuple[str, ...],
+        list[tuple[float, tuple[_Observation, ...]]],
+    ] = {}
+
     for semantics in combinations(sorted(candidates), 4):
-        world_points = [FLOOR_WORLD_XY_M[name] for name in semantics]
+        world_points = [EVIDENCE_WORLD_XY_M[name] for name in semantics]
         if not _nondegenerate_four_points(world_points):
             world_degenerate += 1
             continue
-        for selected in product(*(candidates[name] for name in semantics)):
-            if not _nondegenerate_four_points([candidate.xy for candidate in selected]):
-                image_degenerate += 1
-                continue
-            quality = sum(math.log(max(candidate.quality, 1.0e-6)) for candidate in selected)
-            covariance = sum(math.log1p(candidate.sigma_px) for candidate in selected)
-            priority = quality - 0.05 * covariance
-            specs.append((priority, semantics, tuple(selected)))
-    specs.sort(
-        key=lambda item: (
-            -item[0],
-            item[1],
-            tuple(candidate.candidate_id for candidate in item[2]),
+        semantic_group_count += 1
+        upper_bound = sum(
+            max(_hypothesis_candidate_priority(candidate) for candidate in candidates[name])
+            for name in semantics
         )
-    )
-    retained = specs[:max_hypotheses]
-    return retained, {
+        heapq.heappush(heap, (-upper_bound, 0, semantics, (), 0))
+
+    while heap and len(specs) < max_hypotheses:
+        negative_priority, kind, semantics, candidate_ids, index = heapq.heappop(heap)
+        if kind == 0:
+            expanded: list[tuple[float, tuple[_Observation, ...]]] = []
+            for selected in product(*(candidates[name] for name in semantics)):
+                candidate_products_expanded += 1
+                if not _nondegenerate_four_points([candidate.xy for candidate in selected]):
+                    image_degenerate += 1
+                    continue
+                priority = sum(_hypothesis_candidate_priority(candidate) for candidate in selected)
+                expanded.append((priority, tuple(selected)))
+            expanded.sort(
+                key=lambda item: (
+                    -item[0],
+                    tuple(candidate.candidate_id for candidate in item[1]),
+                )
+            )
+            if not expanded:
+                continue
+            local_specs[semantics] = expanded
+            priority, selected = expanded[0]
+            heapq.heappush(
+                heap,
+                (
+                    -priority,
+                    1,
+                    semantics,
+                    tuple(candidate.candidate_id for candidate in selected),
+                    0,
+                ),
+            )
+            continue
+
+        expanded = local_specs[semantics]
+        priority, selected = expanded[index]
+        specs.append((priority, semantics, selected))
+        next_index = index + 1
+        if next_index < len(expanded):
+            next_priority, next_selected = expanded[next_index]
+            heapq.heappush(
+                heap,
+                (
+                    -next_priority,
+                    1,
+                    semantics,
+                    tuple(candidate.candidate_id for candidate in next_selected),
+                    next_index,
+                ),
+            )
+
+    return specs, {
         "candidate_hypotheses_nondegenerate": len(specs),
-        "hypotheses_retained_cap": len(retained),
+        "hypotheses_retained_cap": len(specs),
         "hypothesis_cap": max_hypotheses,
         "world_degenerate_groups_ignored": world_degenerate,
         "image_degenerate_hypotheses_ignored": image_degenerate,
+        "semantic_groups_queued": semantic_group_count,
+        "candidate_products_expanded": candidate_products_expanded,
     }
+
+
+def _hypothesis_candidate_priority(candidate: _Observation) -> float:
+    return math.log(max(candidate.quality, 1.0e-6)) - 0.05 * math.log1p(candidate.sigma_px)
 
 
 def _nondegenerate_four_points(points: Sequence[Sequence[float]]) -> bool:
@@ -599,7 +838,7 @@ def _validated_homography(value: Sequence[Sequence[float]] | np.ndarray) -> np.n
         or condition > 1.0e14
     ):
         raise ValueError("homography is non-invertible or ill-conditioned")
-    _project_xy(homography, list(FLOOR_WORLD_XY_M.values()))
+    _project_xy(homography, list(EVIDENCE_WORLD_XY_M.values()))
     return homography
 
 
@@ -611,8 +850,9 @@ def _score_model(
     seed_semantics: tuple[str, ...],
     inlier_threshold_px: float,
     duplicate_tolerance_px: float,
+    dense_evidence: _DenseEvidence | None,
 ) -> _ScoredModel:
-    projected = _project_floor(homography)
+    projected = _project_evidence(homography)
     evaluations: list[dict[str, Any]] = []
     selected: list[dict[str, Any]] = []
     for semantic in sorted(candidates):
@@ -621,8 +861,15 @@ def _score_model(
         for candidate in candidates[semantic]:
             residual = math.dist(expected, candidate.xy)
             threshold = max(inlier_threshold_px, 2.5 * candidate.sigma_px)
-            ratio = residual / threshold
-            support = candidate.quality * math.exp(-0.5 * ratio * ratio)
+            delta = np.asarray(expected, dtype=np.float64) - np.asarray(candidate.xy, dtype=np.float64)
+            covariance = np.asarray(candidate.covariance, dtype=np.float64) + np.eye(2) * 1.0e-6
+            mahalanobis = float(delta.T @ np.linalg.pinv(covariance) @ delta)
+            # A bounded covariance likelihood ranks precise evidence, while the
+            # explicit uniform outlier component prevents one overconfident bad
+            # observation from driving the posterior to numerical zero.
+            gaussian_likelihood = math.exp(-0.5 * min(mahalanobis, 80.0))
+            mixture_likelihood = 0.95 * gaussian_likelihood + 0.05 * 1.0e-3
+            support = candidate.quality * gaussian_likelihood
             row = {
                 "semantic": semantic,
                 "candidate_id": candidate.candidate_id,
@@ -630,7 +877,12 @@ def _score_model(
                 "residual_px": float(residual),
                 "threshold_px": float(threshold),
                 "effective_confidence": float(candidate.quality),
+                "frame_indices": list(candidate.frame_indices),
+                "line_support": float(candidate.line_support),
+                "temporal_support": float(candidate.temporal_support),
                 "support": float(support),
+                "mahalanobis_squared": mahalanobis,
+                "outlier_mixture_likelihood": mixture_likelihood,
                 "preliminary_inlier": bool(residual <= threshold),
                 "selected_for_semantic": False,
                 "ignore_reason": None,
@@ -679,7 +931,16 @@ def _score_model(
     residuals = [float(row["residual_px"]) for row in accepted]
     weighted_consensus = sum(float(row["support"]) for row in accepted)
     confidence_support = sum(float(row["effective_confidence"]) for row in accepted)
-    coverage = len(accepted) / len(FLOOR_KEYPOINT_NAMES)
+    outlier_log_likelihood = sum(
+        float(row["effective_confidence"])
+        * math.log(max(float(row["outlier_mixture_likelihood"]), 1.0e-12))
+        for row in selected
+    ) / max(len(selected), 1)
+    # Four independent correspondences are the minimum for a point-derived
+    # planar solve. A three-point result backed only by a prior must therefore
+    # retain visibly lower confidence even if all three available observations
+    # agree with that prior.
+    coverage = len(accepted) / max(len(candidates), 4)
     if accepted:
         residual_penalty = sum(
             float(row["effective_confidence"])
@@ -688,10 +949,15 @@ def _score_model(
         ) / max(confidence_support, 1.0e-9)
     else:
         residual_penalty = 4.0
+    dense_scores = _score_dense_evidence(homography, dense_evidence)
     score = (
         4.0 * weighted_consensus
         + 8.0 * coverage
         + 1.5 * confidence_support
+        + 3.0 * float(dense_scores["line_alignment"])
+        + 2.0 * float(dense_scores["surface_overlap"])
+        + 1.0 * float(dense_scores["temporal_support"])
+        + 0.5 * outlier_log_likelihood
         - 2.0 * residual_penalty
         - 2.5 * duplicate_penalty
     )
@@ -706,6 +972,8 @@ def _score_model(
             "confidence_support": float(confidence_support),
             "residual_penalty": float(residual_penalty),
             "duplicate_penalty": float(duplicate_penalty),
+            "outlier_mixture_log_likelihood": float(outlier_log_likelihood),
+            **dense_scores,
         },
         evaluations=tuple(evaluations),
         inliers=tuple(
@@ -715,6 +983,7 @@ def _score_model(
                 "xy": list(row["xy"]),
                 "residual_px": float(row["residual_px"]),
                 "effective_confidence": float(row["effective_confidence"]),
+                "frame_indices": list(row.get("frame_indices") or []),
             }
             for row in sorted(accepted, key=lambda item: str(item["semantic"]))
         ),
@@ -723,12 +992,120 @@ def _score_model(
     )
 
 
+def _score_dense_evidence(
+    homography: np.ndarray,
+    evidence: _DenseEvidence | None,
+) -> dict[str, float]:
+    if evidence is None:
+        return {
+            "line_alignment": 0.0,
+            "surface_overlap": 0.0,
+            "temporal_support": 0.0,
+            "line_mean_distance_px": 0.0,
+            "line_visible_fraction": 0.0,
+            "surface_visible_fraction": 0.0,
+        }
+
+    line_distances: list[float] = []
+    requested_line_samples = 0
+    for segment_name, (start_name, end_name) in SEMANTIC_FLOOR_SEGMENTS.items():
+        distance_map = evidence.line_distance_maps.get(segment_name)
+        if distance_map is None:
+            distance_map = evidence.line_distance_maps.get("pickleball_line")
+        if distance_map is None:
+            distance_map = evidence.line_distance_maps.get("all_pickleball_lines")
+        if distance_map is None:
+            continue
+        start = np.asarray(FLOOR_WORLD_XY_M[start_name], dtype=np.float64)
+        end = np.asarray(FLOOR_WORLD_XY_M[end_name], dtype=np.float64)
+        world_samples = [
+            tuple((start * (1.0 - alpha) + end * alpha).tolist())
+            for alpha in np.linspace(0.0, 1.0, 33)
+        ]
+        try:
+            projected = _project_xy(homography, world_samples)
+        except ValueError:
+            continue
+        requested_line_samples += len(projected)
+        line_distances.extend(_sample_image(distance_map, projected))
+    if line_distances:
+        mean_line_distance = float(np.mean(line_distances))
+        visible_line_fraction = len(line_distances) / max(requested_line_samples, 1)
+        line_alignment = math.exp(-mean_line_distance / 8.0) * math.sqrt(visible_line_fraction)
+    else:
+        mean_line_distance = 0.0
+        visible_line_fraction = 0.0
+        line_alignment = 0.0
+
+    surface_overlap = 0.0
+    surface_visible_fraction = 0.0
+    if evidence.surface_probability is not None:
+        xs = np.linspace(-3.048, 3.048, 13)
+        ys = np.linspace(-6.7056, 6.7056, 25)
+        world_grid = [(float(x), float(y)) for y in ys for x in xs]
+        try:
+            projected_grid = _project_xy(homography, world_grid)
+        except ValueError:
+            projected_grid = []
+        surface_values = _sample_image(evidence.surface_probability, projected_grid)
+        surface_visible_fraction = len(surface_values) / len(projected_grid)
+        if surface_values:
+            coverage_factor = min(1.0, surface_visible_fraction / 0.25)
+            surface_overlap = float(np.mean(surface_values)) * coverage_factor
+
+    return {
+        "line_alignment": float(min(max(line_alignment, 0.0), 1.0)),
+        "surface_overlap": float(min(max(surface_overlap, 0.0), 1.0)),
+        "temporal_support": float(evidence.temporal_support or 0.0),
+        "line_mean_distance_px": mean_line_distance,
+        "line_visible_fraction": float(visible_line_fraction),
+        "surface_visible_fraction": float(surface_visible_fraction),
+    }
+
+
+def _sample_image(image: np.ndarray, points: Sequence[Sequence[float]]) -> list[float]:
+    height, width = image.shape
+    if len(points) == 0:
+        return []
+    coordinates = np.asarray(points, dtype=np.float64)
+    if coordinates.ndim != 2 or coordinates.shape[1] != 2:
+        raise ValueError("sample points must be an Nx2 array")
+    x = coordinates[:, 0]
+    y = coordinates[:, 1]
+    keep = (
+        np.isfinite(x)
+        & np.isfinite(y)
+        & (x >= 0.0)
+        & (x <= width - 1)
+        & (y >= 0.0)
+        & (y <= height - 1)
+    )
+    if not bool(np.any(keep)):
+        return []
+    x = x[keep]
+    y = y[keep]
+    x0 = np.floor(x).astype(np.intp)
+    y0 = np.floor(y).astype(np.intp)
+    x1 = np.minimum(x0 + 1, width - 1)
+    y1 = np.minimum(y0 + 1, height - 1)
+    dx = x - x0
+    dy = y - y0
+    values = (
+        (1.0 - dx) * (1.0 - dy) * image[y0, x0]
+        + dx * (1.0 - dy) * image[y0, x1]
+        + (1.0 - dx) * dy * image[y1, x0]
+        + dx * dy * image[y1, x1]
+    )
+    return [float(value) for value in values]
+
+
 def _refine_model(
     model: _ScoredModel,
     candidates: Mapping[str, tuple[_Observation, ...]],
     *,
     inlier_threshold_px: float,
     duplicate_tolerance_px: float,
+    dense_evidence: _DenseEvidence | None,
 ) -> _ScoredModel:
     current = model
     candidate_lookup = {
@@ -743,7 +1120,7 @@ def _refine_model(
         ]
         if len(observations) < 4:
             break
-        world = [FLOOR_WORLD_XY_M[item.semantic] for item in observations]
+        world = [EVIDENCE_WORLD_XY_M[item.semantic] for item in observations]
         image = [item.xy for item in observations]
         if not _point_set_supports_homography(world) or not _point_set_supports_homography(image):
             break
@@ -762,10 +1139,100 @@ def _refine_model(
             seed_semantics=model.seed_semantics,
             inlier_threshold_px=inlier_threshold_px,
             duplicate_tolerance_px=duplicate_tolerance_px,
+            dense_evidence=dense_evidence,
         )
         if _model_sort_key(candidate_model) < _model_sort_key(current):
             current = candidate_model
         else:
+            break
+    return current
+
+
+def _refine_dense_model(
+    model: _ScoredModel,
+    candidates: Mapping[str, tuple[_Observation, ...]],
+    *,
+    inlier_threshold_px: float,
+    duplicate_tolerance_px: float,
+    dense_evidence: _DenseEvidence | None,
+) -> _ScoredModel:
+    if dense_evidence is None or (
+        not dense_evidence.line_distance_maps and dense_evidence.surface_probability is None
+    ):
+        return model
+    current = model
+    base = np.asarray(
+        [
+            model.homography[0, 0],
+            model.homography[0, 1],
+            model.homography[0, 2],
+            model.homography[1, 0],
+            model.homography[1, 1],
+            model.homography[1, 2],
+            model.homography[2, 0],
+            model.homography[2, 1],
+        ],
+        dtype=np.float64,
+    )
+    initial_steps = np.asarray(
+        [
+            max(abs(base[0]) * 0.01, 0.1),
+            max(abs(base[1]) * 0.01, 0.1),
+            2.0,
+            max(abs(base[3]) * 0.01, 0.1),
+            max(abs(base[4]) * 0.01, 0.1),
+            2.0,
+            max(abs(base[6]) * 0.05, 1.0e-5),
+            max(abs(base[7]) * 0.05, 1.0e-5),
+        ],
+        dtype=np.float64,
+    )
+    for scale in (1.0, 0.5, 0.25):
+        improved = True
+        while improved:
+            improved = False
+            current_parameters = np.asarray(
+                [
+                    current.homography[0, 0],
+                    current.homography[0, 1],
+                    current.homography[0, 2],
+                    current.homography[1, 0],
+                    current.homography[1, 1],
+                    current.homography[1, 2],
+                    current.homography[2, 0],
+                    current.homography[2, 1],
+                ],
+                dtype=np.float64,
+            )
+            for index, step in enumerate(initial_steps * scale):
+                for direction in (-1.0, 1.0):
+                    proposal = current_parameters.copy()
+                    proposal[index] += direction * step
+                    homography = np.asarray(
+                        [
+                            proposal[0:3],
+                            proposal[3:6],
+                            [proposal[6], proposal[7], 1.0],
+                        ],
+                        dtype=np.float64,
+                    )
+                    try:
+                        homography = _validated_homography(homography)
+                    except ValueError:
+                        continue
+                    candidate_model = _score_model(
+                        homography,
+                        candidates,
+                        source=f"{model.source}_dense_refined",
+                        seed_semantics=model.seed_semantics,
+                        inlier_threshold_px=inlier_threshold_px,
+                        duplicate_tolerance_px=duplicate_tolerance_px,
+                        dense_evidence=dense_evidence,
+                    )
+                    if _model_sort_key(candidate_model) < _model_sort_key(current):
+                        current = candidate_model
+                        improved = True
+            # One complete coordinate pass per scale keeps runtime bounded and deterministic.
             break
     return current
 
@@ -809,6 +1276,163 @@ def _project_floor(homography: np.ndarray) -> dict[str, tuple[float, float]]:
     return dict(zip(FLOOR_KEYPOINT_NAMES, projected, strict=True))
 
 
+def _project_evidence(homography: np.ndarray) -> dict[str, tuple[float, float]]:
+    names = tuple(EVIDENCE_WORLD_XY_M)
+    projected = _project_xy(homography, [EVIDENCE_WORLD_XY_M[name] for name in names])
+    return dict(zip(names, projected, strict=True))
+
+
+def _homography_projection_jacobian(
+    homography: np.ndarray,
+    world_xy: tuple[float, float],
+) -> np.ndarray:
+    x, y = world_xy
+    denominator = homography[2, 0] * x + homography[2, 1] * y + 1.0
+    if abs(float(denominator)) <= 1.0e-10:
+        raise ValueError("homography covariance projection is singular")
+    u, v = _project_xy(homography, [world_xy])[0]
+    inverse_denominator = 1.0 / denominator
+    return np.asarray(
+        [
+            [
+                x * inverse_denominator,
+                y * inverse_denominator,
+                inverse_denominator,
+                0.0,
+                0.0,
+                0.0,
+                -u * x * inverse_denominator,
+                -u * y * inverse_denominator,
+            ],
+            [
+                0.0,
+                0.0,
+                0.0,
+                x * inverse_denominator,
+                y * inverse_denominator,
+                inverse_denominator,
+                -v * x * inverse_denominator,
+                -v * y * inverse_denominator,
+            ],
+        ],
+        dtype=np.float64,
+    )
+
+
+def _estimate_transform_covariance(
+    model: _ScoredModel,
+    candidates: Mapping[str, tuple[_Observation, ...]],
+) -> tuple[list[list[float]] | None, dict[str, list[list[float]]]]:
+    if len(model.inliers) < 4:
+        return None, {}
+    lookup = {
+        (candidate.semantic, candidate.candidate_id): candidate
+        for semantic_candidates in candidates.values()
+        for candidate in semantic_candidates
+    }
+    information = np.zeros((8, 8), dtype=np.float64)
+    squared_residuals: list[float] = []
+    for row in model.inliers:
+        key = (str(row["semantic"]), str(row["candidate_id"]))
+        candidate = lookup.get(key)
+        if candidate is None:
+            continue
+        jacobian = _homography_projection_jacobian(
+            model.homography,
+            EVIDENCE_WORLD_XY_M[candidate.semantic],
+        )
+        covariance = np.asarray(candidate.covariance, dtype=np.float64) + np.eye(2) * 1.0e-6
+        information += jacobian.T @ np.linalg.pinv(covariance) @ jacobian
+        squared_residuals.append(float(row["residual_px"]) ** 2)
+    if np.linalg.matrix_rank(information, tol=1.0e-10) < 8:
+        return None, {}
+    residual_variance = max(float(np.mean(squared_residuals or [1.0])), 1.0)
+    covariance_h = np.linalg.pinv(information) * residual_variance
+    if not np.isfinite(covariance_h).all():
+        return None, {}
+    point_covariance: dict[str, list[list[float]]] = {}
+    for name in FLOOR_KEYPOINT_NAMES:
+        jacobian = _homography_projection_jacobian(model.homography, FLOOR_WORLD_XY_M[name])
+        covariance_xy = jacobian @ covariance_h @ jacobian.T
+        covariance_xy = 0.5 * (covariance_xy + covariance_xy.T)
+        values, vectors = np.linalg.eigh(covariance_xy)
+        covariance_xy = vectors @ np.diag(np.maximum(values, 0.0)) @ vectors.T
+        point_covariance[name] = covariance_xy.tolist()
+    return covariance_h.tolist(), point_covariance
+
+
+def _camera_distortion_refinement(
+    model: _ScoredModel,
+    candidates: Mapping[str, tuple[_Observation, ...]],
+    bundle: CourtEvidenceBundle | None,
+) -> dict[str, Any] | None:
+    if bundle is None or len(model.inliers) < 4:
+        return None
+    metadata = bundle.camera_metadata
+    if not isinstance(metadata, Mapping):
+        return None
+    intrinsics_payload = metadata.get("intrinsics")
+    if not isinstance(intrinsics_payload, Mapping):
+        return None
+    if not all(key in intrinsics_payload for key in ("fx", "fy", "cx", "cy")):
+        return None
+    try:
+        intrinsics = PinholeIntrinsics(
+            fx=float(intrinsics_payload["fx"]),
+            fy=float(intrinsics_payload["fy"]),
+            cx=float(intrinsics_payload["cx"]),
+            cy=float(intrinsics_payload["cy"]),
+        )
+    except (TypeError, ValueError):
+        return None
+    distortion_payload = metadata.get("distortion")
+    if not isinstance(distortion_payload, Mapping):
+        distortion_payload = {}
+    bounds_raw = distortion_payload.get("k1_bounds", (-0.45, 0.25))
+    if (
+        not isinstance(bounds_raw, Sequence)
+        or isinstance(bounds_raw, (str, bytes))
+        or len(bounds_raw) != 2
+    ):
+        return None
+    lookup = {
+        (candidate.semantic, candidate.candidate_id): candidate
+        for semantic_candidates in candidates.values()
+        for candidate in semantic_candidates
+    }
+    selected = [
+        lookup.get((str(row["semantic"]), str(row["candidate_id"])))
+        for row in model.inliers
+    ]
+    observations = [candidate for candidate in selected if candidate is not None]
+    if len(observations) < 4:
+        return None
+    try:
+        result = refine_planar_homography_and_k1(
+            [EVIDENCE_WORLD_XY_M[candidate.semantic] for candidate in observations],
+            [candidate.xy for candidate in observations],
+            intrinsics,
+            weights=[candidate.quality for candidate in observations],
+            k1_bounds=(float(bounds_raw[0]), float(bounds_raw[1])),
+            k1_initial=float(distortion_payload.get("k1", 0.0)),
+            grid_steps=int(distortion_payload.get("grid_steps", 41)),
+        )
+    except (TypeError, ValueError, np.linalg.LinAlgError):
+        return None
+    result["intrinsics"] = {
+        "fx": intrinsics.fx,
+        "fy": intrinsics.fy,
+        "cx": intrinsics.cx,
+        "cy": intrinsics.cy,
+    }
+    result["intrinsics_source"] = str(
+        intrinsics_payload.get("source") or metadata.get("source") or "explicit_camera_metadata"
+    )
+    result["_intrinsics"] = intrinsics
+    result["status"] = "jointly_refined"
+    return result
+
+
 def _court_confidence(
     model: _ScoredModel,
     *,
@@ -817,8 +1441,12 @@ def _court_confidence(
 ) -> float:
     inlier_count = len(model.inliers)
     if inlier_count == 0:
+        line = float(model.score_components.get("line_alignment", 0.0))
+        surface = float(model.score_components.get("surface_overlap", 0.0))
+        if line > 0.0 or surface > 0.0:
+            return float(min(0.35, 0.25 * line + 0.10 * surface))
         return 0.05 if model.source.startswith("prior_homography") else 0.0
-    coverage = inlier_count / len(FLOOR_KEYPOINT_NAMES)
+    coverage = float(model.score_components.get("semantic_coverage", 0.0))
     support = float(model.score_components["weighted_consensus"]) / inlier_count
     median = float(model.residual_stats.get("median") or 0.0)
     residual_factor = math.exp(-median / 10.0)
@@ -991,6 +1619,7 @@ def _empty_result(
         "floor_only": True,
         "excluded_semantics": sorted(NET_TOP_KEYPOINT_NAMES),
         "homography_image_from_court": None,
+        "transform_covariance": None,
         "projected_floor_keypoints": {},
         "point_confidence": {},
         "court_confidence": 0.0,
@@ -1005,6 +1634,13 @@ def _empty_result(
             "confidence_support": 0.0,
             "residual_penalty": 0.0,
             "duplicate_penalty": 0.0,
+            "outlier_mixture_log_likelihood": 0.0,
+            "line_alignment": 0.0,
+            "surface_overlap": 0.0,
+            "temporal_support": 0.0,
+            "line_mean_distance_px": 0.0,
+            "line_visible_fraction": 0.0,
+            "surface_visible_fraction": 0.0,
             "total": 0.0,
         },
         "selected_hypothesis": None,
@@ -1027,6 +1663,10 @@ def _ignored_record(
         "confidence": float(candidate.confidence),
         "visibility": float(candidate.visibility),
         "effective_confidence": float(candidate.quality),
+        "frame_indices": list(candidate.frame_indices),
+        "frame": candidate.frame_indices[0] if len(candidate.frame_indices) == 1 else None,
+        "line_support": float(candidate.line_support),
+        "temporal_support": float(candidate.temporal_support),
     }
     if evaluation is not None and evaluation.get("residual_px") is not None:
         record["residual_px"] = float(evaluation["residual_px"])
@@ -1044,10 +1684,16 @@ def _raw_ignored_record(
         if isinstance(value, Mapping)
         else f"{semantic}:{index}"
     )
+    frame = (
+        value.get("frame", value.get("frame_index"))
+        if isinstance(value, Mapping)
+        else None
+    )
     return {
         "semantic": semantic,
         "candidate_id": candidate_id,
         "reason": reason,
+        "frame": frame if isinstance(frame, int) and not isinstance(frame, bool) else None,
     }
 
 
@@ -1100,9 +1746,11 @@ def _is_finite_number(value: Any) -> bool:
 
 
 __all__ = [
+    "EVIDENCE_WORLD_XY_M",
     "FLOOR_KEYPOINT_NAMES",
     "FLOOR_WORLD_XY_M",
     "NET_TOP_KEYPOINT_NAMES",
+    "SEMANTIC_FLOOR_SEGMENTS",
     "solve_best_floor_court",
     "solve_structured_court",
 ]

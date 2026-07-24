@@ -1,26 +1,221 @@
 from __future__ import annotations
 
+import hashlib
 import itertools
+import json
 import math
 import time
 
 import numpy as np
 import pytest
 
-from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_keypoint_net import ALL_PICKLEBALL_KEYPOINTS, AUX_PICKLEBALL_KEYPOINTS, PICKLEBALL_KEYPOINTS
 from threed.racketsport.court_synth_scenes import (
+    ALL_KEYPOINT_NAMES,
     KEYPOINT_VIS_CLASSES,
     LINE_FAMILY_CLASSES,
     SCENARIO_NAMES,
     SURFACE_CLASSES,
 )
-from threed.racketsport.court_synth_stream import iter_synthetic_court_samples, reproject_canonical_keypoints
+from threed.racketsport.court_synth_stream import (
+    iter_synthetic_court_samples,
+    reproject_canonical_keypoints,
+    reproject_scene_keypoints,
+)
 
 CANONICAL_NAMES = [point.name for point in PICKLEBALL_KEYPOINTS]
 
 
 def _take(config, seed, count):
     return list(itertools.islice(iter_synthetic_court_samples(config, seed=seed), count))
+
+
+def _array_sha256(value: np.ndarray) -> str:
+    return hashlib.sha256(np.ascontiguousarray(value).tobytes()).hexdigest()
+
+
+def test_default_off_matches_pre_a2_golden_and_explicit_false_is_identical() -> None:
+    """Stamp the legacy six-key sample before any A2 RNG draw or target-channel change."""
+
+    config = {
+        "count": 1,
+        "image_size": [160, 90],
+        "scenarios": ["dedicated_indoor"],
+        "focal_px_range": [125, 500],
+        "apply_jpeg_roundtrip": False,
+    }
+    implicit = _take(config, seed=20260722, count=1)[0]
+    explicit = _take(
+        {
+            **config,
+            "aux_keypoints": False,
+            "paint_texture_randomization": False,
+            "aux_partial_visibility": False,
+        },
+        seed=20260722,
+        count=1,
+    )[0]
+
+    assert set(implicit) == {
+        "image_bgr",
+        "keypoints_xy",
+        "keypoints_vis",
+        "line_family_mask",
+        "surface_mask",
+        "meta",
+    }
+    expected_hashes = {
+        "image_bgr": "085e0e6d31440d1bd5c3b887a700b4c0e69c74dfd465c5f188661ad5bb9f5038",
+        "keypoints_xy": "42b46e78b6f2b5f2981bf03d766fbe1811fee5bcfa51aa016eb072540bd0f5f5",
+        "keypoints_vis": "a1c8eb44beeb0c6e4ba983416ef7a86807c8f77110974fd4979c28c315f28ea0",
+        "line_family_mask": "4e03417b660f9dcf13c466eb29cc1866b161f00d62935db728ed343fcb4d8694",
+        "surface_mask": "e02f8f85ecc7d17e692dec5205739e0656888525353fab2e071b41bbf5c56559",
+    }
+    for name, expected_hash in expected_hashes.items():
+        assert _array_sha256(implicit[name]) == expected_hash
+        assert np.array_equal(implicit[name], explicit[name])
+    implicit_meta_sha256 = hashlib.sha256(
+        json.dumps(implicit["meta"], sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
+    assert implicit_meta_sha256 == "62ebcb39ea91f26512647f2c4fc11d2104b101682b9d1e909429dd270d383f44"
+    assert implicit["meta"] == explicit["meta"]
+
+
+def test_aux_contract_is_canonical_first_and_emits_stride_four_masked_targets() -> None:
+    sample = _take(
+        {
+            "count": 1,
+            "image_size": [160, 92],
+            "scenarios": ["dedicated_outdoor"],
+            "aux_keypoints": True,
+        },
+        seed=17,
+        count=1,
+    )[0]
+
+    assert len(PICKLEBALL_KEYPOINTS) == 15
+    assert len(AUX_PICKLEBALL_KEYPOINTS) == 18
+    assert len(ALL_PICKLEBALL_KEYPOINTS) == 33
+    assert sample["meta"]["keypoint_names"] == list(ALL_KEYPOINT_NAMES)
+    assert [point.name for point in ALL_PICKLEBALL_KEYPOINTS] == list(ALL_KEYPOINT_NAMES)
+    assert sample["keypoints_xy"].shape == (33, 2)
+    assert sample["keypoints_vis"].shape == (33,)
+    assert sample["keypoint_heatmaps"].shape == (33, 23, 40)
+    assert sample["keypoint_heatmap_mask"].shape == (33, 23, 40)
+    assert sample["keypoint_heatmaps"].dtype == np.float32
+    assert sample["keypoint_heatmap_mask"].dtype == np.float32
+
+    reprojected = reproject_scene_keypoints(sample["meta"])
+    for index, name in enumerate(ALL_KEYPOINT_NAMES):
+        assert np.linalg.norm(np.asarray(reprojected[name]) - sample["keypoints_xy"][index]) < 1e-4
+        channel_mask = sample["keypoint_heatmap_mask"][index]
+        channel_target = sample["keypoint_heatmaps"][index]
+        if sample["keypoints_vis"][index] == KEYPOINT_VIS_CLASSES["off_frame"]:
+            assert not np.any(channel_mask)
+            assert not np.any(channel_target)
+        elif index >= len(PICKLEBALL_KEYPOINTS) and not np.any(channel_mask):
+            assert not np.any(channel_target)
+        else:
+            assert np.all(channel_mask == 1.0)
+            assert float(channel_target.max()) > 0.0
+
+
+def test_aux_partial_visibility_sampler_reaches_six_point_margin() -> None:
+    samples = _take(
+        {
+            "count": 12,
+            "image_size": [640, 360],
+            "scenarios": ["harsh_shadow"],
+            "focal_px_range": [1400.0, 2000.0],
+            "aux_keypoints": True,
+            "paint_texture_randomization": False,
+        },
+        seed=20260722,
+        count=12,
+    )
+    in_frame_counts = [
+        (
+            int(np.count_nonzero(sample["keypoints_vis"][:15])),
+            int(np.count_nonzero(sample["keypoints_vis"])),
+        )
+        for sample in samples
+    ]
+
+    assert min(canonical for canonical, _ in in_frame_counts) < 9
+    assert min(combined for _, combined in in_frame_counts) >= 6
+
+
+def test_paint_texture_randomization_is_opt_in_deterministic_and_changes_pixels() -> None:
+    base = {
+        "count": 1,
+        "image_size": [160, 92],
+        "scenarios": ["dedicated_outdoor"],
+        "aux_keypoints": True,
+    }
+    dormant = _take({**base, "paint_texture_randomization": False}, seed=31, count=1)[0]
+    active_a = _take({**base, "paint_texture_randomization": True}, seed=31, count=1)[0]
+    active_b = _take({**base, "paint_texture_randomization": True}, seed=31, count=1)[0]
+
+    assert np.array_equal(dormant["keypoints_xy"], active_a["keypoints_xy"])
+    assert not np.array_equal(dormant["image_bgr"], active_a["image_bgr"])
+    assert np.array_equal(active_a["image_bgr"], active_b["image_bgr"])
+    assert active_a["meta"] == active_b["meta"]
+    audit = active_a["meta"]["paint_texture_randomization"]
+    assert audit["line_wear_range"] == [0.0, 0.55]
+    assert audit["line_fade_alpha_range"] == [0.2, 1.0]
+    assert audit["surface_texture_strength_range"] == [0.0, 0.18]
+    assert audit["visual_mask_erosion_coupled"] is True
+
+
+def test_worn_away_aux_paint_is_unsupervised() -> None:
+    sample = _take(
+        {
+            "count": 1,
+            "image_size": [320, 180],
+            "scenarios": ["dedicated_indoor"],
+            "aux_keypoints": True,
+            "aux_partial_visibility": False,
+            "paint_texture_randomization": True,
+            "line_wear_range": [1.0, 1.0],
+        },
+        seed=20260722,
+        count=1,
+    )[0]
+
+    aux_vis = sample["keypoints_vis"][len(PICKLEBALL_KEYPOINTS) :]
+    aux_targets = sample["keypoint_heatmaps"][len(PICKLEBALL_KEYPOINTS) :]
+    aux_masks = sample["keypoint_heatmap_mask"][len(PICKLEBALL_KEYPOINTS) :]
+    in_frame = aux_vis != KEYPOINT_VIS_CLASSES["off_frame"]
+    assert np.any(in_frame)
+    assert not np.any(aux_targets[in_frame])
+    assert not np.any(aux_masks[in_frame])
+    assert sample["meta"]["aux_keypoints"]["paint_unsupported_in_frame_count"] == int(in_frame.sum())
+    assert sample["meta"]["aux_keypoints"]["target_mask_rule"] == (
+        "off_frame_or_no_local_pickleball_paint_support_is_unsupervised"
+    )
+
+
+def test_aux_randomization_config_fails_closed_on_invalid_values() -> None:
+    with pytest.raises(ValueError, match="aux_partial_visibility requires"):
+        _take({"aux_partial_visibility": True}, seed=0, count=1)
+    with pytest.raises(ValueError, match="line_wear_range"):
+        _take(
+            {
+                "aux_keypoints": True,
+                "line_wear_range": [-0.1, 0.2],
+            },
+            seed=0,
+            count=1,
+        )
+    with pytest.raises(ValueError, match="requires heatmap_stride=4"):
+        _take(
+            {
+                "aux_keypoints": True,
+                "heatmap_stride": 2,
+            },
+            seed=0,
+            count=1,
+        )
 
 
 def test_contract_keys_shapes_and_dtypes_hold_for_every_scenario() -> None:

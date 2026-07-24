@@ -54,6 +54,7 @@ def test_infer_court_model_returns_stable_contract_keys_and_shapes(tmp_path: Pat
         "keypoints_conf",
         "keypoints_vis",
         "line_family_mask",
+        "line_distance_maps",
         "surface_mask",
         "structured_observations",
         "best_court",
@@ -151,6 +152,34 @@ def test_build_adapter_accepts_review_only_structured_v3_checkpoint(tmp_path: Pa
     assert image_size == (160, 96)
 
 
+def test_v3_inference_uses_all_30_floor_channels_and_learned_covariance(tmp_path: Path) -> None:
+    model = make_court_structured_v3_model()
+    checkpoint_path = tmp_path / "court_structured_v3.pt"
+    torch.save(
+        {
+            "model": model.state_dict(),
+            "image_size": [160, 96],
+            "model_architecture": COURT_STRUCTURED_V3_ARCHITECTURE,
+            "keypoint_names": list(STRUCTURED_FLOOR_KEYPOINT_NAMES),
+            "heatmap_decoder": "dark",
+            "coordinate_transform": "udp",
+        },
+        checkpoint_path,
+    )
+    image_bgr = (np.random.RandomState(11).rand(96, 160, 3) * 255).astype(np.uint8)
+
+    result = infer_court_model(image_bgr, checkpoint_path, device="cpu")
+
+    assert len(result["structured_observations"]) == 30
+    assert all(
+        row["covariance_policy"]["kind"] == "learned_positive_definite_head"
+        for row in result["structured_observations"]
+    )
+    assert set(result["best_court"]["keypoints_xy"]) == {
+        point.name for point in PICKLEBALL_KEYPOINTS if not point.name.startswith("net_")
+    }
+
+
 def test_infer_applies_serialized_point_confidence_calibration(tmp_path: Path) -> None:
     checkpoint_path = _write_checkpoint(tmp_path, image_size=(160, 96))
     payload = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
@@ -169,6 +198,24 @@ def test_infer_applies_serialized_point_confidence_calibration(tmp_path: Path) -
     assert set(result["best_court"]["point_confidence"]) == set(
         result["best_court"]["point_confidence_raw"]
     )
+
+
+def test_checkpoint_sidecar_selects_measured_decoder_without_rewriting_weights(
+    tmp_path: Path,
+) -> None:
+    checkpoint_path = _write_checkpoint(tmp_path, image_size=(160, 96))
+    (tmp_path / "PROVENANCE.json").write_text(
+        '{"inference_defaults":{"heatmap_decoder":"dark",'
+        '"coordinate_transform":"legacy_stride"}}',
+        encoding="utf-8",
+    )
+
+    payload = load_court_model_checkpoint(checkpoint_path, device="cpu")
+    model, _names, _size = build_court_model_from_checkpoint(payload, device="cpu")
+
+    assert model._heatmap_decoder == "dark"
+    assert model._coordinate_transform == "legacy_stride"
+    assert payload["inference_defaults_provenance"].endswith("PROVENANCE.json")
 
 
 def test_infer_court_model_rejects_malformed_image(tmp_path: Path) -> None:
