@@ -1,0 +1,181 @@
+{
+  "artifact_type": "racketsport_ball_solver_characterization_manifest",
+  "clips": {
+    "burlington_gold_0300_low_steep_corner": {
+      "artifacts": {
+        "ball_chain_manifest": {
+          "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_chain_manifest.json",
+          "sha256": "f5638b1a536c1362477a8049886e6a0d06ea1c541b33314c96bd4c15b895fe03"
+        },
+        "ball_flight_sanity": {
+          "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_flight_sanity.json",
+          "sha256": "d3af23be5fd1948d0c7d3b86e49dab356c6ecc9848f8bbefa4741d31468697f7"
+        },
+        "ball_track_arc_solved": {
+          "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_track_arc_solved.json",
+          "sha256": "df7a6a835946b6891a0d536d6b438c106fd1d3232c6d29f1712ddef30266cad6"
+        },
+        "court_calibration": {
+          "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/court_calibration.json",
+          "sha256": "aec27ecc0f377ee930f363173032316332811ac573199a633ebe499747abed1d"
+        }
+      },
+      "calibration_sha_matches_solver_input": true,
+      "clip_dir": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner"
+    },
+    "outdoor_webcam_iynbd_1500_long_high_baseline": {
+      "artifacts": {
+        "ball_chain_manifest": {
+          "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_chain_manifest.json",
+          "sha256": "8abdee1f1de7ab98bdbc4143578a27f08572812d96f5afe3c63e44e4178747da"
+        },
+        "ball_flight_sanity": {
+          "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_flight_sanity.json",
+          "sha256": "8de76cfa0ee69e1d8e424d806bc265b09df895ea9f6d435f67f519cc595fec7d"
+        },
+        "ball_track_arc_solved": {
+          "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_track_arc_solved.json",
+          "sha256": "5edae44643529609f832a5e564ae21f26c7d210c0a6ef8fe14cb4af699c8a2a2"
+        },
+        "court_calibration": {
+          "path": "runs/lanes/ball_f1_three_clip_runs_20260705/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration.json",
+          "sha256": "bb7bb05b55af2799f49308be6e5b5e5b184af4862c1de8efe05e794f71e8dbd9"
+        }
+      },
+      "calibration_sha_matches_solver_input": true,
+      "clip_dir": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline"
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "artifacts": {
+        "ball_chain_manifest": {
+          "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/wolverine_mixed_0200_mid_steep_corner/ball_chain_manifest.json",
+          "sha256": "e5b5711f65d01e20f02f32686753b57634d5194579a02b573a0b145430ff434c"
+        },
+        "ball_flight_sanity": {
+          "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/wolverine_mixed_0200_mid_steep_corner/ball_flight_sanity.json",
+          "sha256": "db422be886129f04fbc069bf824bfd4bd8e714c554f7aea2ac1bd8de47b88885"
+        },
+        "ball_track_arc_solved": {
+          "path": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json",
+          "sha256": "7a91c7ed28974cc586b76920f3fe1c4bcf3ee5d874c3ae36424bef01b5da22f3"
+        },
+        "court_calibration": {
+          "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+          "sha256": "fb4e6f7f54d2c40e2c7b491e436261f747240945a6f0d154c4dd943e28edbacf"
+        }
+      },
+      "calibration_sha_matches_solver_input": true,
+      "clip_dir": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/wolverine_mixed_0200_mid_steep_corner"
+    }
+  },
+  "label": "ball_lane_20260723_dormant_flags_archived_20260705",
+  "policy": {
+    "deterministic_report_bytes": true,
+    "measurement_only": true,
+    "physics_fill_reported_separately": true,
+    "promotion": false,
+    "reprojection_blind_to_depth": true,
+    "verified_gate": "VERIFIED=0 unaffected; this report is measurement, not verification"
+  },
+  "schema_version": 1,
+  "solver_config_echo": {
+    "default_chain_configs": {
+      "product_veto": {
+        "veto_px": 40.0,
+        "weak_support_required": true
+      },
+      "solver_a_free": {
+        "candidate_association_mode": "free",
+        "candidate_score_floors": {},
+        "candidate_selection_max_iterations": 5,
+        "enable_event_discovery": true,
+        "enable_event_subset_selection": true,
+        "max_candidates_per_frame": 12
+      },
+      "solver_b_rescue_tn05": {
+        "candidate_association_mode": "rescue_only",
+        "candidate_score_floors": {
+          "tracknet": 0.5,
+          "wasb": 0.0
+        },
+        "candidate_selection_max_iterations": 5,
+        "enable_event_discovery": false,
+        "enable_event_subset_selection": false,
+        "max_candidates_per_frame": 12
+      }
+    },
+    "default_solver_config": {
+      "anchor_relax_sigma_multiplier": 3.0,
+      "baseline_loo_median_m": null,
+      "bounce_bounce_discovery_on_gate_failure": true,
+      "bvp_shooting_fallback_to_free_fit": true,
+      "bvp_shooting_fd_eps_mps": 0.05,
+      "bvp_shooting_max_backtracks": 4,
+      "bvp_shooting_max_iterations": 6,
+      "bvp_shooting_tolerance_m": 0.005,
+      "candidate_association_mode": "free",
+      "candidate_score_floors": {},
+      "candidate_selection_max_iterations": 5,
+      "contact_anchor_sigma_m": 0.35,
+      "contact_reach_offset_m": 0.15,
+      "court_margin_m": 4.0,
+      "court_sport": "pickleball",
+      "court_z_min_m": -0.15,
+      "discovery_anchor_separation_frames": 4,
+      "discovery_min_interior_observations": 4,
+      "discovery_min_neighbor_px": 18.0,
+      "discovery_reprojection_px": 60.0,
+      "enable_both_ends_pinning_inlier_pass": false,
+      "enable_event_discovery": true,
+      "enable_event_subset_selection": true,
+      "enable_size_depth_residual": true,
+      "enable_weak_segments": true,
+      "endpoint_anchor_weight": 1.0,
+      "endpoint_refinement_bounce_cap_m": 0.2,
+      "endpoint_refinement_contact_cap_m": 0.5,
+      "endpoint_refinement_default_cap_m": 1.0,
+      "endpoint_refinement_max_nfev": 60,
+      "endpoint_refinement_time_corridor_frames": 1.0,
+      "fit_spin_scalar": false,
+      "integrator_max_step_s": 0.004166666666666667,
+      "loo_max_nfev": 600,
+      "max_candidates_per_frame": 12,
+      "max_physical_violation_fraction": 0.2,
+      "max_plausible_apex_m": 8.0,
+      "max_plausible_speed_mps": 35.0,
+      "max_reprojection_inlier_px": 18.0,
+      "min_anchor_sigma_m": 0.01,
+      "min_joint_confidence": 0.2,
+      "min_plausible_speed_mps": 3.0,
+      "min_segment_dt_s": 0.045,
+      "min_segment_observations": 3,
+      "net_clearance_slack_m": 0.08,
+      "pinning_min_inliers": 3,
+      "proposed_bounce_sigma_m": 0.18,
+      "rally_endpoint_sigma_m": 2.0,
+      "reviewed_bounce_base_sigma_m": 0.05,
+      "robust_f_scale": 1.0,
+      "robust_loss": "huber",
+      "robust_pixel_sigma": 6.0,
+      "selection_max_nfev": 350,
+      "selection_max_speed_mps": 35.0,
+      "selection_min_residual_reduction": 0.05,
+      "selection_split_penalty": 0.25,
+      "size_confidence_floor": 0.1,
+      "size_depth_relative_sigma": 0.18,
+      "size_depth_sigma_m": 200.0,
+      "visible_confidence_min": 0.5,
+      "weak_segment_anchor_sigma_multiplier": 8.0,
+      "weak_segment_max_gap_s": 0.25,
+      "weak_segment_max_nfev": 800,
+      "weak_segment_min_observations": 4,
+      "weak_segment_pixel_sigma_multiplier": 2.5,
+      "weak_size_depth_sigma_m": 6.0
+    },
+    "fail_closed": {
+      "max_reprojection_error_px": 40.0,
+      "min_inlier_count": 3,
+      "policy": "arc_segment_fail_closed_v1"
+    }
+  }
+}

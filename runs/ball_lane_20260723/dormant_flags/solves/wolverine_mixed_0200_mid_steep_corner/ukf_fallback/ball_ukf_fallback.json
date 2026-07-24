@@ -1,0 +1,98 @@
+{
+  "artifact_type": "racketsport_ball_ukf_fallback_candidate",
+  "candidate_flag_default": false,
+  "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+  "config": {
+    "court_x_max_m": 7.048,
+    "court_x_min_m": -7.048,
+    "court_y_max_m": 10.7056,
+    "court_y_min_m": -10.7056,
+    "drag_per_s": 0.0,
+    "gravity_mps2": 9.80665,
+    "max_gap_frames": 12,
+    "max_height_m": 12.0,
+    "max_one_sided_horizon_frames": 12,
+    "max_position_covariance_m2": 0.25,
+    "max_speed_mps": 45.0,
+    "min_height_m": -0.05,
+    "net_clearance_slack_m": 0.0,
+    "net_height_m": 0.864,
+    "net_y_m": 0.0,
+    "process_accel_std_mps2": 2.0,
+    "seed_position_std_m": 0.04,
+    "seed_velocity_std_mps": 0.4,
+    "terminal_position_std_m": 0.08,
+    "terminal_velocity_std_mps": 0.8
+  },
+  "generated_at": "2026-07-24T00:00:00Z",
+  "measurement_covariance_policy": {
+    "future_source": "persist connected-component extent from WASB raw candidate_frames into a dedicated ball-size observation sidecar before BallTrack schema validation",
+    "seed_position_std_m": 0.04,
+    "seed_velocity_std_mps": 0.4,
+    "terminal_position_std_m": 0.08,
+    "terminal_velocity_std_mps": 0.8,
+    "wasb_heatmap_footprint": "not_persisted"
+  },
+  "not_for_detection_metrics": true,
+  "refused_gaps": [
+    {
+      "frame_count": 14,
+      "frame_end": 13,
+      "frame_start": 0,
+      "reason": "no_adjacent_accepted_fit_seed",
+      "segment_id": 0
+    },
+    {
+      "frame_count": 24,
+      "frame_end": 36,
+      "frame_start": 13,
+      "reason": "no_adjacent_accepted_fit_seed",
+      "segment_id": 1
+    },
+    {
+      "frame_count": 34,
+      "frame_end": 69,
+      "frame_start": 36,
+      "reason": "gap_above_short_gap_ceiling",
+      "segment_id": 2
+    },
+    {
+      "frame_count": 52,
+      "frame_end": 156,
+      "frame_start": 105,
+      "reason": "gap_above_short_gap_ceiling",
+      "segment_id": 4
+    },
+    {
+      "frame_count": 34,
+      "frame_end": 250,
+      "frame_start": 217,
+      "reason": "no_adjacent_accepted_fit_seed",
+      "segment_id": 6
+    },
+    {
+      "frame_count": 23,
+      "frame_end": 272,
+      "frame_start": 250,
+      "reason": "no_adjacent_accepted_fit_seed",
+      "segment_id": 7
+    }
+  ],
+  "render_only": true,
+  "samples": [],
+  "schema_version": 1,
+  "source_policy": "accepted fit states seed predictions; recovered samples are never measured",
+  "summary": {
+    "attempted_gap_count": 6,
+    "contact_refused_gap_count": 0,
+    "hard_gate_violation_count": 0,
+    "hard_gate_violations_emitted": 0,
+    "one_sided_gap_count": 0,
+    "recovered_gap_count": 0,
+    "recovered_sample_count": 0,
+    "refused_gap_count": 6,
+    "rts_smoothed_gap_count": 0,
+    "trusted_non_fit_skipped_count": 2
+  },
+  "verified": false
+}

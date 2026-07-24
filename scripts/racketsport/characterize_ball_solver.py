@@ -94,9 +94,31 @@ def main(argv: list[str] | None = None) -> int:
         help="--solve only: optional per-clip frame_times.json input.",
     )
     parser.add_argument("--ball-type", default="outdoor", help="--solve only: physics ball type (default: outdoor).")
+    parser.add_argument(
+        "--enable-joint-anchor-search",
+        action="store_true",
+        help=(
+            "--solve only: enable the dormant joint-anchor search evidence source for the re-solve "
+            "(candidate-only, default off; measurement only, never a promotion)."
+        ),
+    )
+    parser.add_argument(
+        "--enable-ukf-fallback",
+        action="store_true",
+        help=(
+            "--solve only: enable the dormant conservative UKF fallback sidecar for the re-solve "
+            "(physics_interpolated trust-band sidecar, default off; measurement only, never counted as accepted)."
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
+        if (args.enable_joint_anchor_search or args.enable_ukf_fallback) and not args.solve:
+            raise ValueError(
+                "--enable-joint-anchor-search/--enable-ukf-fallback require --solve "
+                "(read mode never re-solves; experiment flags cannot alter read-mode reports)"
+            )
+
         clips = _parse_named_paths(args.clip, flag="--clip")
         calibrations = _parse_named_paths(args.calibration, flag="--calibration")
         ball_tracks = _parse_named_paths(args.ball_track, flag="--ball-track")
@@ -112,6 +134,8 @@ def main(argv: list[str] | None = None) -> int:
                 frame_times=frame_times,
                 ball_type=args.ball_type,
                 out_dir=args.out_dir,
+                enable_joint_anchor_search=args.enable_joint_anchor_search,
+                enable_ukf_fallback=args.enable_ukf_fallback,
             )
 
         clip_inputs = [
@@ -156,6 +180,8 @@ def _solve_clips(
     frame_times: dict[str, Path],
     ball_type: str,
     out_dir: Path,
+    enable_joint_anchor_search: bool = False,
+    enable_ukf_fallback: bool = False,
 ) -> dict[str, Path]:
     """Re-run the default chain per clip; returns the fresh solve directories."""
 
@@ -178,6 +204,8 @@ def _solve_clips(
             net_plane_path=net_planes.get(name),
             frame_times_path=frame_times.get(name),
             ball_type=ball_type,
+            enable_joint_anchor_search=enable_joint_anchor_search,
+            enable_ukf_fallback=enable_ukf_fallback,
         )
         solved[name] = solve_dir
     return solved

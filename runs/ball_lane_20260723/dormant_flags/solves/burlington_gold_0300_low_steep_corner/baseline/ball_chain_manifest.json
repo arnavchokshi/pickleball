@@ -1,0 +1,119 @@
+{
+  "artifact_type": "racketsport_ball_chain_run_manifest",
+  "chain_config_degraded": "no_candidate_sidecars",
+  "clip": "burlington_gold_0300_low_steep_corner",
+  "configs": {
+    "product_veto": {
+      "veto_px": 40.0,
+      "weak_support_required": true
+    },
+    "solver_a_free": {
+      "candidate_association_mode": "free",
+      "candidate_score_floors": {},
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": true,
+      "enable_event_subset_selection": true,
+      "max_candidates_per_frame": 12
+    },
+    "solver_b_rescue_tn05": {
+      "candidate_association_mode": "rescue_only",
+      "candidate_score_floors": {
+        "tracknet": 0.5,
+        "wasb": 0.0
+      },
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": false,
+      "enable_event_subset_selection": false,
+      "max_candidates_per_frame": 12
+    }
+  },
+  "degraded_reasons": [
+    {
+      "evidence_provenance": "missing",
+      "reason": "segment_budget_exceeded",
+      "segment_ids": [
+        0,
+        10
+      ]
+    }
+  ],
+  "generated_at": "2026-07-24T00:00:00Z",
+  "heldout_authorized": false,
+  "inputs": {
+    "ball_track": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/ball_track.json",
+      "sha256": "813f7f52ecca9383a8d866b463d214a3ce43485369a6ea18d6a01a4b5d5f4128"
+    },
+    "court_calibration": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/court_calibration.json",
+      "sha256": "aec27ecc0f377ee930f363173032316332811ac573199a633ebe499747abed1d"
+    },
+    "net_plane": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    }
+  },
+  "net_plane_provenance": {
+    "consumed_net_plane": true,
+    "reason": "consumed"
+  },
+  "outputs": {
+    "auto_bounce_candidates": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/burlington_gold_0300_low_steep_corner/baseline/ball_bounce_candidates.json",
+      "sha256": "c87056f332884522bcc93813059f25dfa1ff155350590c804e6c5569258ebc4e"
+    },
+    "ball_arc_render": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/burlington_gold_0300_low_steep_corner/baseline/ball_arc_render.json",
+      "sha256": "3494529e3d32cb477cdaa60953330a11f1fcc3d69db108f11c6f1610089006ae"
+    },
+    "ball_flight_sanity": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/burlington_gold_0300_low_steep_corner/baseline/ball_flight_sanity.json",
+      "sha256": "a43bb7b195db1deec61c42ad112e6d0987ffcffa0ed722575fd2ac16e8c3f8e4"
+    },
+    "ball_track_arc_solved": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/burlington_gold_0300_low_steep_corner/baseline/ball_track_arc_solved.json",
+      "sha256": "45a65c2df0a08a446ab874bbde4766b6e91b19f96e20e274f29f0d7684772723"
+    },
+    "seed_anchor_ball_track_arc_solved": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/burlington_gold_0300_low_steep_corner/baseline/ball_arc_seed/ball_track_arc_solved.json",
+      "sha256": "f808b4961c67f714935188c6ad6c25190ad8aa8e5bd5c60b741316ebb28fffa5"
+    },
+    "seed_anchor_flight_sanity": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/burlington_gold_0300_low_steep_corner/baseline/ball_arc_seed/ball_flight_sanity.json",
+      "sha256": "35ccdf63348f49fa9d75add841c15583bc7723113cd64f0eb1606f688003b1bd"
+    }
+  },
+  "policy": {
+    "ball_arc_render_only": true,
+    "candidate_sidecars_consumed_when_present": true,
+    "net_plane_consumed_when_valid": true,
+    "outdoor_indoor_labels_read": false,
+    "render_only_3d": true,
+    "seed_anchor_prepass": true
+  },
+  "schema_version": 1,
+  "summary": {
+    "auto_bounce_candidate_count": 6,
+    "ball_arc_render_bridge_sample_count": 0,
+    "ball_arc_render_sample_count": 0,
+    "chain_config_degraded": "no_candidate_sidecars",
+    "coverage_world_xyz_count": 428,
+    "degraded_segment_count": 2,
+    "missing_segment_count": 2,
+    "missing_segment_reasons": {
+      "segment_budget_exceeded": 2
+    },
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 14,
+    "segment_budget_exceeded_count": 2,
+    "segment_budget_exceeded_ids": [
+      0,
+      10
+    ],
+    "segment_count": 18,
+    "solver_status": "degraded"
+  }
+}
