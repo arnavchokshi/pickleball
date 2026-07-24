@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -74,32 +75,49 @@ def _scheduled_frame_indexes(execution: Mapping[str, Any]) -> list[int]:
 
 def _extract_frames_batch(video: Path, *, frame_indexes: list[int], out_dir: Path) -> None:
     select_expr = _select_expression(frame_indexes)
-    output_pattern = out_dir / "frame_%06d.jpg"
-    command = [
-        "ffmpeg",
-        "-nostdin",
-        "-hide_banner",
-        "-loglevel",
-        "error",
-        "-y",
-        "-i",
-        str(video),
-        "-vf",
-        f"select='{select_expr}'",
-        "-frames:v",
-        str(len(frame_indexes)),
-        "-vsync",
-        "0",
-        "-frame_pts",
-        "1",
-        str(output_pattern),
-    ]
-    try:
-        completed = subprocess.run(command, check=False, capture_output=True, text=True)
-    except FileNotFoundError as exc:
-        raise RuntimeError("ffmpeg is required to materialize BODY frames") from exc
-    if completed.returncode != 0:
-        raise RuntimeError(f"ffmpeg failed to extract BODY frames: {completed.stderr.strip()}")
+    # Do not use ``-frame_pts 1`` as the output filename. Some valid MP4 files
+    # begin with a non-zero video-stream timestamp, so frame n=0 can have PTS=2
+    # in the stream time base. Naming by that PTS silently shifts every BODY
+    # JPEG even though the select filter correctly addresses frames by ``n``.
+    # Extract an ordered, zero-based temporary sequence and map it back to the
+    # requested source-frame identities explicitly.
+    with tempfile.TemporaryDirectory(prefix="body_frame_extract_", dir=out_dir) as temp_dir_name:
+        temp_dir = Path(temp_dir_name)
+        output_pattern = temp_dir / "selected_%06d.jpg"
+        command = [
+            "ffmpeg",
+            "-nostdin",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-i",
+            str(video),
+            "-vf",
+            f"select='{select_expr}'",
+            "-frames:v",
+            str(len(frame_indexes)),
+            "-vsync",
+            "0",
+            "-start_number",
+            "0",
+            str(output_pattern),
+        ]
+        try:
+            completed = subprocess.run(command, check=False, capture_output=True, text=True)
+        except FileNotFoundError as exc:
+            raise RuntimeError("ffmpeg is required to materialize BODY frames") from exc
+        if completed.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed to extract BODY frames: {completed.stderr.strip()}")
+
+        extracted = sorted(temp_dir.glob("selected_*.jpg"))
+        if len(extracted) != len(frame_indexes):
+            raise RuntimeError(
+                "ffmpeg produced the wrong number of BODY frames: "
+                f"expected={len(frame_indexes)} actual={len(extracted)}"
+            )
+        for frame_idx, source_path in zip(frame_indexes, extracted, strict=True):
+            source_path.replace(out_dir / f"frame_{frame_idx:06d}.jpg")
 
 
 def _select_expression(frame_indexes: list[int]) -> str:

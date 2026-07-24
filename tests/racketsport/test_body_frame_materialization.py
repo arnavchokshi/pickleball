@@ -76,8 +76,8 @@ def test_materialize_body_frames_batches_ffmpeg_extraction_by_default(tmp_path: 
     def fake_run(command: list[str], check: bool, capture_output: bool, text: bool) -> subprocess.CompletedProcess[str]:
         calls.append(command)
         pattern = Path(command[-1])
-        for frame_idx in (2, 5):
-            (pattern.parent / f"frame_{frame_idx:06d}.jpg").write_bytes(b"jpg")
+        for output_idx in (0, 1):
+            (pattern.parent / f"selected_{output_idx:06d}.jpg").write_bytes(b"jpg")
         return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -88,7 +88,8 @@ def test_materialize_body_frames_batches_ffmpeg_extraction_by_default(tmp_path: 
     assert summary["extracted_frame_count"] == 2
     assert len(calls) == 1
     command = calls[0]
-    assert "-frame_pts" in command
+    assert "-frame_pts" not in command
+    assert command[command.index("-start_number") + 1] == "0"
     assert "eq(n\\,2)" in " ".join(command)
     assert "eq(n\\,5)" in " ".join(command)
     assert (out / "frame_000002.jpg").is_file()
@@ -108,7 +109,7 @@ def test_materialize_body_frames_preserves_manifest_order_when_some_outputs_exis
 
     def fake_run(command: list[str], check: bool, capture_output: bool, text: bool) -> subprocess.CompletedProcess[str]:
         pattern = Path(command[-1])
-        (pattern.parent / "frame_000002.jpg").write_bytes(b"jpg")
+        (pattern.parent / "selected_000000.jpg").write_bytes(b"jpg")
         return subprocess.CompletedProcess(command, 0, "", "")
 
     monkeypatch.setattr(subprocess, "run", fake_run)
@@ -125,6 +126,52 @@ def test_materialize_body_frames_preserves_manifest_order_when_some_outputs_exis
         "frame_000002.jpg",
         "frame_000005.jpg",
     ]
+
+
+def test_materialize_body_frames_ignores_nonzero_stream_start_timestamps(tmp_path: Path) -> None:
+    video = tmp_path / "source.mp4"
+    execution = tmp_path / "body_compute_execution.json"
+    out = tmp_path / "body_frames"
+    _make_tiny_clip(video, rate=30)
+    shifted = tmp_path / "source_shifted.mp4"
+    completed = subprocess.run(
+        [
+            "ffmpeg",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            str(video),
+            "-c",
+            "copy",
+            "-output_ts_offset",
+            "0.052018",
+            str(shifted),
+        ],
+        check=False,
+    )
+    if completed.returncode != 0:
+        pytest.skip("ffmpeg cannot create a timestamp-shifted fixture")
+    execution.write_text(
+        json.dumps(
+            {
+                "artifact_type": "racketsport_body_compute_execution",
+                "scheduled_frames": [
+                    {"frame_idx": 0, "target_player_ids": [1]},
+                    {"frame_idx": 1, "target_player_ids": [1]},
+                    {"frame_idx": 5, "target_player_ids": [1]},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    summary = materialize_body_frames(video_path=shifted, execution_path=execution, out_dir=out)
+
+    assert summary["frame_indexes"] == [0, 1, 5]
+    assert (out / "frame_000000.jpg").is_file()
+    assert (out / "frame_000001.jpg").is_file()
+    assert (out / "frame_000005.jpg").is_file()
 
 
 def test_materialize_body_frames_fails_when_no_frames_are_scheduled(tmp_path: Path) -> None:
