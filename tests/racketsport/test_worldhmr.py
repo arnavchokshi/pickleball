@@ -1507,7 +1507,7 @@ def test_body_artifact_speed_limit_caps_root_motion_and_records_track_residual()
     assert metrics["max_track_anchor_residual_m"] == pytest.approx(9.9)
 
 
-def test_body_artifact_track_anchor_reset_prevents_wrong_player_smoothing() -> None:
+def test_body_artifact_speed_limit_cannot_be_undone_by_identity_reset() -> None:
     samples = [
         {
             "frame_idx": 0,
@@ -1547,15 +1547,21 @@ def test_body_artifact_track_anchor_reset_prevents_wrong_player_smoothing() -> N
     )
 
     second = smpl_motion["players"][0]["frames"][1]
-    assert second["temporal_smoothing_reset"] is True
+    assert second["temporal_smoothing_reset"] is False
     assert second["track_world_xy"] == pytest.approx([2.0, 0.0])
-    assert second["transl_world"] == pytest.approx([2.0, 0.0, 0.0])
-    assert second["joints_world"][0] == pytest.approx([2.0, 0.0, 0.0])
-    assert second["mesh_vertices_world"][0] == pytest.approx([3.0, 0.0, 0.0])
+    assert second["transl_world"] == pytest.approx([0.1, 0.0, 0.0])
+    assert second["joints_world"][0] == pytest.approx([0.1, 0.0, 0.0])
+    assert second["mesh_vertices_world"][0] == pytest.approx([1.1, 0.0, 0.0])
+    assert second["temporal_smoothing_metadata"]["residual"]["status"] == "carried"
+    assert second["temporal_smoothing_metadata"]["residual"]["reason"] == (
+        "root_speed_limited_residual_carried"
+    )
     assert metrics["root_speed_limited_frames"] == 1
-    assert metrics["track_anchor_residual_reset_frames"] == 1
+    assert metrics["track_anchor_residual_reset_frames"] == 0
+    assert metrics["track_anchor_residual_carried_frames"] == 1
+    assert metrics["track_anchor_residual_identity_reset_frames"] == 0
     assert metrics["max_pre_reset_track_anchor_residual_m"] == pytest.approx(1.9)
-    assert metrics["max_track_anchor_residual_m"] == pytest.approx(0.0)
+    assert metrics["max_track_anchor_residual_m"] == pytest.approx(1.9)
 
 
 def test_track_anchor_residual_carry_respects_root_speed_cap_without_reset() -> None:

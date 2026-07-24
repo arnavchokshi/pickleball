@@ -3345,7 +3345,17 @@ def _smooth_grounded_frames(
                 "threshold_m": max_track_anchor_smoothing_residual_m,
                 "identity_reset_m": smoothing_residual_identity_reset_m,
             }
-            if pre_reset_residual > smoothing_residual_identity_reset_m:
+            # A large same-identity target jump is not permission to undo the
+            # physical speed limit.  The previous implementation clamped an
+            # impossible one-frame move and then immediately snapped back to
+            # the noisy target here, reintroducing the exact root-motion jump
+            # the clamp was meant to prevent.  True temporal/identity gaps are
+            # reset before this smoother; a capped contiguous sample carries
+            # the residual until subsequent measured evidence catches up.
+            if (
+                pre_reset_residual > smoothing_residual_identity_reset_m
+                and not root_speed_limited_this_frame
+            ):
                 smoothed_transl = transl
                 temporal_smoothing_reset = True
                 track_anchor_residual_reset_frames += 1
@@ -3356,7 +3366,11 @@ def _smooth_grounded_frames(
             else:
                 track_anchor_residual_carried_frames += 1
                 residual_metadata["status"] = "carried"
-                residual_metadata["reason"] = "track_anchor_residual"
+                residual_metadata["reason"] = (
+                    "root_speed_limited_residual_carried"
+                    if root_speed_limited_this_frame
+                    else "track_anchor_residual"
+                )
             metadata["residual"] = residual_metadata
         if root_speed_limited_this_frame:
             metadata["root_speed_limited"] = True
