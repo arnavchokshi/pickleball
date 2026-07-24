@@ -21,6 +21,13 @@ Rules baked in:
   (``MVP_ACCEPTED_MEDIAN_3D_M``, ``MVP_BOUNCE_MEDIAN_M``). They are internal
   go/no-go markers, NOT promotion gates: ``VERIFIED=0`` stays binding and a
   threshold comparison in a report is a measurement, never a promotion.
+- Inputs must be finite: a NaN/inf candidate position, timestamp, or event
+  raises ``Metric3DEvalError`` loudly — the judge never emits NaN metrics.
+- GT quality policy (frozen pre-first-use): headline metrics (``overall`` +
+  ``slices``) are computed over GT frames WITHOUT disqualifying quality
+  flags (``DISQUALIFYING_QUALITY_FLAGS``; PLAN v2 A-3 marks weak-geometry
+  frames NOT gold). Nothing is hidden: an ``all_quality`` block scores every
+  GT frame and ``gt_quality`` reports per-flag excluded counts.
 - Deterministic output: sorted keys, floats rounded to ``FLOAT_DECIMALS``,
   no timestamps/hostnames/absolute paths.
 
@@ -60,7 +67,22 @@ VARIANT_ORACLE_ANCHORS = "oracle_anchors"
 
 EVENT_KIND_BOUNCE = "bounce"
 EVENT_KIND_APEX = "apex"
-KNOWN_EVENT_KINDS = frozenset({EVENT_KIND_BOUNCE, EVENT_KIND_APEX, "hit", "net_crossing"})
+EVENT_KIND_HIT = "hit"
+EVENT_KIND_NET_CROSSING = "net_crossing"
+KNOWN_EVENT_KINDS = frozenset(
+    {EVENT_KIND_BOUNCE, EVENT_KIND_APEX, EVENT_KIND_HIT, EVENT_KIND_NET_CROSSING}
+)
+
+# GT frames carrying any of these quality flags are excluded from the
+# HEADLINE metrics (``overall`` + ``slices``): they mark the triangulated GT
+# position itself as not gold (PLAN v2 A-3 — weak triangulation geometry is
+# "NOT gold"; interpolated/low-confidence review states likewise).
+# ``partially_occluded`` describes capture conditions, not GT reliability,
+# so it stays in the headline set. Excluded frames are still scored in the
+# ``all_quality`` block and counted per flag in ``gt_quality``.
+DISQUALIFYING_QUALITY_FLAGS = frozenset(
+    {"weak_triangulation_geometry", "interpolated_review", "low_confidence"}
+)
 
 COURT_HALVES = ("y_negative", "y_positive")
 _TIMESTAMP_MATCH_TOLERANCE_S = 1e-6
@@ -69,6 +91,25 @@ _DEFAULT_EVENT_MATCH_MAX_DT_S = 0.25
 
 class Metric3DEvalError(ValueError):
     """Raised when evaluation inputs are malformed or misaligned."""
+
+
+def _require_finite_vec3(value: Any, *, path: str) -> tuple[float, float, float]:
+    """Fail loudly on non-finite or mis-shaped positions (never NaN metrics)."""
+
+    if (
+        not isinstance(value, Sequence)
+        or isinstance(value, (str, bytes))
+        or len(value) != 3
+    ):
+        raise Metric3DEvalError(f"{path}: expected a length-3 vector, got {value!r}")
+    coerced: list[float] = []
+    for index, item in enumerate(value):
+        if isinstance(item, bool) or not isinstance(item, (int, float)) or not math.isfinite(
+            float(item)
+        ):
+            raise Metric3DEvalError(f"{path}[{index}]: expected a finite number, got {item!r}")
+        coerced.append(float(item))
+    return (coerced[0], coerced[1], coerced[2])
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +144,13 @@ class EventEstimate:
             raise Metric3DEvalError(f"{path}.timestamp_s: expected a number")
         if not math.isfinite(float(self.timestamp_s)):
             raise Metric3DEvalError(f"{path}.timestamp_s: expected finite")
+        if self.xyz_world_m is not None:
+            _require_finite_vec3(self.xyz_world_m, path=f"{path}.xyz_world_m")
+        if self.height_m is not None:
+            if not isinstance(self.height_m, (int, float)) or isinstance(self.height_m, bool):
+                raise Metric3DEvalError(f"{path}.height_m: expected a number or None")
+            if not math.isfinite(float(self.height_m)):
+                raise Metric3DEvalError(f"{path}.height_m: expected finite")
 
     @property
     def event_height_m(self) -> float | None:
@@ -160,6 +208,11 @@ def evaluate_candidate(
     court half (``y_negative``/``y_positive``) is nearest the production
     camera; the court-half slice is always emitted by y-sign and annotated
     with near/far only when ``near_half`` is provided (never guessed).
+
+    GT quality policy: ``overall`` and ``slices`` (the HEADLINE numbers)
+    exclude GT frames carrying any ``DISQUALIFYING_QUALITY_FLAGS``;
+    ``all_quality`` scores every GT frame and ``gt_quality`` reports the
+    excluded counts per flag, so exclusion is always visible.
     """
 
     ground_truth.validate()
@@ -173,18 +226,39 @@ def evaluate_candidate(
     for index, event in enumerate(run.events):
         event.validate(path=f"candidate_events[{index}]")
 
-    overall = _metrics_block(frames)
+    headline_frames = [
+        frame
+        for frame in frames
+        if not (set(frame.gt_quality_flags) & DISQUALIFYING_QUALITY_FLAGS)
+    ]
+    excluded_frames = [
+        frame
+        for frame in frames
+        if set(frame.gt_quality_flags) & DISQUALIFYING_QUALITY_FLAGS
+    ]
+    excluded_by_flag: dict[str, int] = {}
+    for frame in excluded_frames:
+        for flag in sorted(set(frame.gt_quality_flags) & DISQUALIFYING_QUALITY_FLAGS):
+            excluded_by_flag[flag] = excluded_by_flag.get(flag, 0) + 1
+
+    overall = _metrics_block(headline_frames)
     slices = {
-        "court_half": _court_half_slice(frames, near_half=near_half),
-        "detection": _detection_slice(frames, observed_mask_provided=observed_mask is not None),
-        "bounce_phase": _bounce_phase_slice(frames, gt_events=gt_events),
-        "acceptance": _acceptance_slice(frames),
+        "court_half": _court_half_slice(headline_frames, near_half=near_half),
+        "detection": _detection_slice(
+            headline_frames, observed_mask_provided=observed_mask is not None
+        ),
+        "bounce_phase": _bounce_phase_slice(headline_frames, gt_events=gt_events),
+        "acceptance": _acceptance_slice(headline_frames),
     }
     events = {
         "bounce": _bounce_event_metrics(
             gt_events, run.events, max_dt_s=event_match_max_dt_s
         ),
         "apex": _apex_event_metrics(gt_events, run.events, max_dt_s=event_match_max_dt_s),
+        # PLAN v2 A-4 requires these eventually; explicit placeholders so
+        # consumers see the gap instead of a silently absent key.
+        EVENT_KIND_HIT: {"status": "not_implemented"},
+        EVENT_KIND_NET_CROSSING: {"status": "not_implemented"},
     }
 
     report = {
@@ -194,7 +268,14 @@ def evaluate_candidate(
         "world_frame": ground_truth.world_frame,
         "frozen_judge": _frozen_judge_block(),
         "frame_count": len(frames),
+        "gt_quality": {
+            "disqualifying_flags": sorted(DISQUALIFYING_QUALITY_FLAGS),
+            "headline_frame_count": len(headline_frames),
+            "excluded_frame_count": len(excluded_frames),
+            "excluded_by_flag": excluded_by_flag,
+        },
         "overall": overall,
+        "all_quality": _metrics_block(frames),
         "slices": slices,
         "events": events,
         "mvp_threshold_check": _mvp_threshold_check(overall, events),
@@ -324,12 +405,17 @@ def _pair_frames(
                 f"frame {index}: candidate timestamp {sample.timestamp_s!r} does not match "
                 f"GT timestamp {observation.timestamp_s!r}"
             )
+        if not isinstance(sample.timestamp_s, (int, float)) or isinstance(
+            sample.timestamp_s, bool
+        ) or not math.isfinite(float(sample.timestamp_s)):
+            raise Metric3DEvalError(
+                f"frame {index}: candidate timestamp must be a finite number, "
+                f"got {sample.timestamp_s!r}"
+            )
         candidate_xyz = sample.xyz_world_m
         if candidate_xyz is not None:
-            candidate_xyz = (
-                float(candidate_xyz[0]),
-                float(candidate_xyz[1]),
-                float(candidate_xyz[2]),
+            candidate_xyz = _require_finite_vec3(
+                candidate_xyz, path=f"frame {index}: candidate xyz_world_m"
             )
         accepted = bool(run.accepted[index])
         if accepted and candidate_xyz is None:

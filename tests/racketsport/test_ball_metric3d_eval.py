@@ -400,3 +400,174 @@ def test_evaluate_variants_requires_at_least_one_run():
     ground_truth = _gt(FOUR_POSITIONS)
     with pytest.raises(Metric3DEvalError, match="at least one"):
         evaluate_variants(ground_truth, {})
+
+
+# ---------------------------------------------------------------------------
+# Non-finite inputs are rejected loudly (never NaN metrics)
+# ---------------------------------------------------------------------------
+
+
+def test_nan_candidate_position_rejected_loudly():
+    ground_truth = _gt(FOUR_POSITIONS)
+    run = _offset_run(ground_truth, (0.0, 0.0, 0.0))
+    poisoned = CandidateRun(
+        samples=run.samples[:1]
+        + (CandidateSample(run.samples[1].timestamp_s, (0.1, float("nan"), 0.2)),)
+        + run.samples[2:],
+        accepted=run.accepted,
+    )
+    with pytest.raises(Metric3DEvalError, match="finite"):
+        evaluate_candidate(ground_truth, poisoned)
+
+
+def test_inf_candidate_position_rejected_loudly():
+    ground_truth = _gt(FOUR_POSITIONS)
+    run = _offset_run(ground_truth, (0.0, 0.0, 0.0))
+    poisoned = CandidateRun(
+        samples=(CandidateSample(run.samples[0].timestamp_s, (float("inf"), 0.0, 0.0)),)
+        + run.samples[1:],
+        accepted=run.accepted,
+    )
+    with pytest.raises(Metric3DEvalError, match="finite"):
+        evaluate_candidate(ground_truth, poisoned)
+
+
+def test_wrong_length_candidate_position_rejected():
+    ground_truth = _gt(FOUR_POSITIONS)
+    run = _offset_run(ground_truth, (0.0, 0.0, 0.0))
+    poisoned = CandidateRun(
+        samples=(CandidateSample(run.samples[0].timestamp_s, (1.0, 2.0)),) + run.samples[1:],
+        accepted=run.accepted,
+    )
+    with pytest.raises(Metric3DEvalError, match="length-3"):
+        evaluate_candidate(ground_truth, poisoned)
+
+
+def test_nan_candidate_timestamp_rejected_loudly():
+    ground_truth = _gt(FOUR_POSITIONS)
+    run = _offset_run(ground_truth, (0.0, 0.0, 0.0))
+    poisoned = CandidateRun(
+        samples=(CandidateSample(float("nan"), run.samples[0].xyz_world_m),) + run.samples[1:],
+        accepted=run.accepted,
+    )
+    with pytest.raises(Metric3DEvalError, match="finite"):
+        evaluate_candidate(ground_truth, poisoned)
+
+
+def test_nan_event_rejected_loudly():
+    ground_truth = _gt(FOUR_POSITIONS)
+    run = _offset_run(ground_truth, (0.0, 0.0, 0.0))
+    with pytest.raises(Metric3DEvalError, match="finite"):
+        evaluate_candidate(
+            ground_truth,
+            run,
+            gt_events=[EventEstimate("bounce", 1.0, (0.0, float("nan"), 0.037))],
+        )
+    with pytest.raises(Metric3DEvalError, match="finite"):
+        evaluate_candidate(
+            ground_truth,
+            CandidateRun(
+                samples=run.samples,
+                accepted=run.accepted,
+                events=(EventEstimate("apex", 0.05, height_m=float("nan")),),
+            ),
+        )
+    with pytest.raises(Metric3DEvalError, match="length-3"):
+        EventEstimate("bounce", 1.0, (0.0, 1.0)).validate()
+
+
+# ---------------------------------------------------------------------------
+# GT quality-flag policy: headline excludes disqualified GT, nothing hidden
+# ---------------------------------------------------------------------------
+
+
+def _gt_with_flags(
+    positions: list[tuple[float, float, float]],
+    flags: list[tuple[str, ...]],
+) -> GroundTruthObservationSet:
+    assert len(positions) == len(flags)
+    return GroundTruthObservationSet(
+        clip="synthetic_eval_clip",
+        observations=tuple(
+            GroundTruthObservation(
+                timestamp_s=index / 30.0,
+                xyz_world_m=xyz,
+                sigma_xyz_m=(0.01, 0.02, 0.01),
+                cameras_used=("dev_side", "dev_corner"),
+                triangulation_residual_px=0.4,
+                quality_flags=frame_flags,
+            )
+            for index, (xyz, frame_flags) in enumerate(zip(positions, flags))
+        ),
+    )
+
+
+def test_disqualified_gt_frames_excluded_from_headline_but_not_all_quality():
+    ground_truth = _gt_with_flags(
+        FOUR_POSITIONS,
+        [("gold",), ("gold",), ("weak_triangulation_geometry",), ("gold",)],
+    )
+    # Perfect candidate everywhere EXCEPT a huge error on the weak-geometry
+    # frame: the headline must not move, all_quality must.
+    samples = tuple(
+        CandidateSample(
+            timestamp_s=obs.timestamp_s,
+            xyz_world_m=(
+                (obs.xyz_world_m[0], obs.xyz_world_m[1] + 5.0, obs.xyz_world_m[2])
+                if "weak_triangulation_geometry" in obs.quality_flags
+                else obs.xyz_world_m
+            ),
+        )
+        for obs in ground_truth.observations
+    )
+    run = CandidateRun(samples=samples, accepted=(True, True, True, True))
+    report = evaluate_candidate(ground_truth, run)
+
+    quality = report["gt_quality"]
+    assert quality["disqualifying_flags"] == [
+        "interpolated_review",
+        "low_confidence",
+        "weak_triangulation_geometry",
+    ]
+    assert quality["headline_frame_count"] == 3
+    assert quality["excluded_frame_count"] == 1
+    assert quality["excluded_by_flag"] == {"weak_triangulation_geometry": 1}
+
+    # Headline: the poisoned frame is excluded -> zero error, 3 frames.
+    assert report["overall"]["frame_count"] == 3
+    assert report["overall"]["accepted_error"]["count"] == 3
+    assert report["overall"]["accepted_error"]["mae_y_m"] == 0.0
+    # All-quality: the same frame is present and visibly moves the error.
+    assert report["all_quality"]["frame_count"] == 4
+    assert report["all_quality"]["accepted_error"]["count"] == 4
+    assert report["all_quality"]["accepted_error"]["mae_y_m"] == pytest.approx(1.25)
+    assert report["all_quality"]["accepted_error"]["err_3d_max_m"] == pytest.approx(5.0)
+    # Slices partition the HEADLINE frames, not the full set.
+    court = report["slices"]["court_half"]["partitions"]
+    assert (
+        court["y_negative"]["frame_count"] + court["y_positive"]["frame_count"]
+        == quality["headline_frame_count"]
+    )
+
+
+def test_all_gold_gt_headline_equals_all_quality():
+    ground_truth = _gt(FOUR_POSITIONS)
+    report = evaluate_candidate(ground_truth, _offset_run(ground_truth, (0.1, 0.0, 0.0)))
+    assert report["gt_quality"]["excluded_frame_count"] == 0
+    assert report["gt_quality"]["excluded_by_flag"] == {}
+    assert report["overall"] == report["all_quality"]
+
+
+# ---------------------------------------------------------------------------
+# Unimplemented event kinds are visible, not silently absent
+# ---------------------------------------------------------------------------
+
+
+def test_hit_and_net_crossing_emit_not_implemented_placeholders():
+    ground_truth = _gt(FOUR_POSITIONS)
+    report = evaluate_candidate(ground_truth, _offset_run(ground_truth, (0.0, 0.0, 0.0)))
+    assert report["events"]["hit"] == {"status": "not_implemented"}
+    assert report["events"]["net_crossing"] == {"status": "not_implemented"}
+    # bounce/apex remain measured scaffolds.
+    assert "gt_count" in report["events"]["bounce"]
+    assert "gt_count" in report["events"]["apex"]

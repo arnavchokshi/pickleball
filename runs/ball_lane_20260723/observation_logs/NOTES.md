@@ -8,13 +8,23 @@ Measurement-only dataset artifacts; `VERIFIED=0` binding. Built with
 ## burlington.observation_log.json
 
 Clip: `burlington_gold_0300_low_steep_corner` (logged under the short name
-`burlington`). 600 frames: 479 observed (pixel + world ray), 121 missing;
-verdicts 181 accepted / 407 rejected_fail_closed / 12 hidden — consistent
-with `runs/ball_lane_20260723/characterization/report.json` for the same
-solve (confident 3D coverage 181, hidden 12).
+`burlington`; the artifact's own identity is preserved in the log's
+`source_clip_id` field, read from the solved artifact's `clip_id`). 600
+frames: 479 observed (pixel + world ray), 121 missing; verdicts 181 accepted
+/ 407 rejected_fail_closed / 12 hidden — consistent with
+`runs/ball_lane_20260723/characterization/report.json` for the same solve
+(confident 3D coverage 181, hidden 12). Note: `accepted` means the owning
+segment is trusted and the frame carries a solver world position — it
+includes solver-interpolated frames with no detector observation.
 
 Output sha256 (byte-identical across re-runs):
-`ccb57dee2ba0dc3aa7ecae271f6c9b5f70ad7a10520bfeab2cd684c8a01f24cd`
+`9016c7795cfbda453dd4160320313552a51c64a8078de8dc5065b139412f59f2`
+
+(Regenerated 2026-07-24 to add `source_clip_id`; verified against the prior
+artifact `ccb57dee…f24cd` that the ONLY byte change is the added
+`"source_clip_id": "burlington_gold_0300_low_steep_corner"` line — all 600
+frames, inputs, and every other byte are identical, and the new bytes are
+again stable across re-runs.)
 
 Source artifacts (main-checkout paths, sha256):
 
@@ -41,3 +51,20 @@ Rebuild command (from repo root; paths relative to the main checkout):
   --calibration burlington=runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/court_calibration.json \
   --out-dir runs/ball_lane_20260723/observation_logs
 ```
+
+## FOLLOWUPS (reviewer minors, documented not yet implemented)
+
+1. **Unknown-key policy (contract)**: `from_json_dict` validates known fields
+   but silently ignores unrecognized extra keys in payloads. Decide and
+   enforce a policy (reject vs warn vs allow-listed extensions) before any
+   second producer writes these artifacts.
+2. **CLI loudness**: `build_ball_observation_log.py` collapses all failures
+   to a single stderr line + exit 2. Fine for tests; for lane use it should
+   distinguish per-clip failures (continue vs abort) and echo which clip
+   failed in multi-clip runs.
+3. **`_relative_posix` fallback**: when a source artifact lies outside
+   `--root`, the recorded provenance path silently falls back to an absolute
+   path, which breaks the "no absolute paths in artifact bytes" determinism
+   stance across machines. Should either fail loudly or require an explicit
+   opt-in. (The committed burlington log is unaffected: all inputs resolve
+   under the main-checkout root.)

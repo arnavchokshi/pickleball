@@ -554,6 +554,10 @@ class SolverObservationLog:
     frames: tuple[SolverFrameObservation, ...]
     inputs: tuple[SourceArtifact, ...] = ()
     calibration_sha_verified: bool | None = None
+    # Clip identity recorded inside the source solved artifact (its
+    # ``clip_id``); ``None`` when the artifact carries none. Distinct from
+    # ``clip``, the caller-chosen log name.
+    source_clip_id: str | None = None
     schema_version: int = SCHEMA_VERSION
     world_frame: str = WORLD_FRAME
 
@@ -561,6 +565,12 @@ class SolverObservationLog:
         _require_schema_version(self.schema_version, path="solver_log.schema_version")
         if not isinstance(self.clip, str) or not self.clip:
             raise ContractValidationError("solver_log.clip: expected non-empty string")
+        if self.source_clip_id is not None and (
+            not isinstance(self.source_clip_id, str) or not self.source_clip_id
+        ):
+            raise ContractValidationError(
+                "solver_log.source_clip_id: expected non-empty string or null"
+            )
         if self.world_frame != WORLD_FRAME:
             raise ContractValidationError(
                 f"solver_log.world_frame: expected {WORLD_FRAME!r}, got {self.world_frame!r}"
@@ -591,6 +601,7 @@ class SolverObservationLog:
                 "artifact_type": SOLVER_LOG_ARTIFACT_TYPE,
                 "world_frame": self.world_frame,
                 "clip": self.clip,
+                "source_clip_id": self.source_clip_id,
                 "calibration_sha_verified": self.calibration_sha_verified,
                 "inputs": [artifact.to_json_dict() for artifact in self.inputs],
                 "frames": [frame.to_json_dict() for frame in self.frames],
@@ -625,6 +636,7 @@ class SolverObservationLog:
                 for index, item in enumerate(raw_inputs)
             ),
             calibration_sha_verified=raw_verified,
+            source_clip_id=_read_optional_str(record, "source_clip_id", path="solver_log"),
             schema_version=_read_int(record, "schema_version", path="solver_log"),
             world_frame=_read_str(record, "world_frame", path="solver_log"),
         )

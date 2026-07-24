@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 import math
 import subprocess
@@ -8,9 +9,25 @@ import sys
 from pathlib import Path
 
 from threed.racketsport.ball_metric3d_contract import read_solver_observation_log
+from threed.racketsport.ball_solver_characterization import (
+    _frame_state as char_frame_state,
+    _frames as char_frames,
+    _untrusted_spans as char_untrusted_spans,
+    discover_clip_inputs,
+)
+from threed.racketsport.virtual_world import ball_arc_segment_fail_closed_verdicts
 
 CLI_PATH = "scripts/racketsport/build_ball_observation_log.py"
 REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
+def _load_script_module():
+    spec = importlib.util.spec_from_file_location(
+        "build_ball_observation_log_under_test", REPO_ROOT / CLI_PATH
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 FX = 1000.0
 FY = 1000.0
@@ -195,6 +212,7 @@ def test_cli_builds_valid_observation_log(tmp_path):
 
     log = read_solver_observation_log(out_dir / "synthetic_mini.observation_log.json")
     assert log.clip == "synthetic_mini"
+    assert log.source_clip_id == "synthetic_mini"  # from the artifact's clip_id
     assert log.calibration_sha_verified is True
 
     # Trusted fit segment frames are accepted; the ray passes through the
@@ -268,3 +286,152 @@ def test_missing_arc_solved_is_an_error(tmp_path):
     result = _run_cli(clip_dir, tmp_path / "out")
     assert result.returncode == 2
     assert "ball_track_arc_solved.json" in result.stderr
+
+
+# ---------------------------------------------------------------------------
+# Verdict cross-consistency vs the characterization module
+# ---------------------------------------------------------------------------
+#
+# The observation log deliberately re-implements (not imports) the frozen
+# characterization module's per-frame accepted/suppressed/hidden policy.
+# These tests run BOTH implementations over one fixture so any drift fails
+# loudly. Known deliberate divergence, asserted explicitly below: when an
+# untrusted segment has no integer frame span, the log fails provenance-less
+# frames closed clip-wide; the characterization module drops such segments
+# from its span list.
+
+
+def _verdict_arc_fixture(*, include_spanless_untrusted: bool) -> dict:
+    """8-frame fixture: trusted span, untrusted span, missing-verdict segment
+    reference, provenance-less frames inside AND outside untrusted spans,
+    and a hidden frame."""
+
+    def _frame(index: int, *, world, segment_id=None, band="anchored_measured", visible=True):
+        frame = {
+            "t": index / 30.0,
+            "visible": visible,
+            "xy": [100.0 + index, 200.0],
+            "conf": 0.9 if visible else 0.0,
+            "band": band,
+            "world_xyz": world,
+        }
+        if segment_id is not None:
+            frame["arc_solver"] = {"segment_id": segment_id}
+        return frame
+
+    frames = [
+        _frame(0, world=[0.0, -4.0, 0.5], segment_id=0),
+        _frame(1, world=[0.1, -3.5, 0.8], segment_id=0),
+        _frame(2, world=[0.2, -3.0, 1.0], segment_id=0),
+        _frame(3, world=[0.4, 2.0, 1.2], segment_id=1),  # untrusted segment
+        _frame(4, world=[0.5, 2.5, 1.1]),  # provenance-less, inside span 3-4
+        _frame(5, world=[0.6, 3.0, 1.0], segment_id=99),  # missing verdict
+        _frame(6, world=[0.7, 3.5, 0.9]),  # provenance-less, outside spans
+        _frame(7, world=None, band="hidden", visible=False),
+    ]
+    segments = [
+        {
+            "segment_id": 0,
+            "status": "fit",
+            "frame_start": 0,
+            "frame_end": 2,
+            "inlier_count": 3,
+            "outlier_count": 0,
+            "max_reprojection_error_px": 5.0,
+        },
+        {
+            "segment_id": 1,
+            "status": "fit_bvp_fallback",
+            "frame_start": 3,
+            "frame_end": 4,
+            "inlier_count": 0,
+            "outlier_count": 4,
+            "max_reprojection_error_px": 90.0,
+        },
+        # segment 99 is intentionally absent: frame 5's verdict is missing.
+    ]
+    if include_spanless_untrusted:
+        segments.append(
+            {
+                "segment_id": 2,
+                "status": "fit_bvp_fallback",
+                "frame_start": None,  # unlocatable untrusted segment
+                "frame_end": None,
+                "inlier_count": 0,
+                "outlier_count": 3,
+                "max_reprojection_error_px": 80.0,
+            }
+        )
+    return {
+        "schema_version": 1,
+        "artifact_type": "ball_track_arc_solved",
+        "clip_id": "verdict_consistency",
+        "status": "ran",
+        "kill_reasons": [],
+        "frames": frames,
+        "segments": segments,
+        "anchors": [],
+    }
+
+
+def _characterization_verdicts(arc_solved: dict) -> list[str]:
+    verdicts = ball_arc_segment_fail_closed_verdicts(arc_solved.get("segments"))
+    spans = char_untrusted_spans(verdicts)
+    result = []
+    for index, frame in enumerate(char_frames(arc_solved)):
+        state = char_frame_state(frame, index, verdicts=verdicts, untrusted_spans=spans)
+        if state.hidden:
+            result.append("hidden")
+        elif state.accepted:
+            result.append("accepted")
+        else:
+            result.append("rejected_fail_closed")
+    return result
+
+
+def _observation_log_verdicts(arc_solved: dict, tmp_path: Path) -> list[str]:
+    clip_dir = tmp_path / "verdict_clip"
+    clip_dir.mkdir(parents=True, exist_ok=True)
+    (clip_dir / "ball_track_arc_solved.json").write_text(
+        json.dumps(arc_solved, indent=2), encoding="utf-8"
+    )
+    module = _load_script_module()
+    inputs = discover_clip_inputs("verdict_consistency", clip_dir)
+    log = module.build_solver_observation_log(inputs, root=tmp_path)
+    return [frame.solver_verdict for frame in log.frames]
+
+
+def test_verdicts_match_characterization_module_per_frame(tmp_path):
+    arc_solved = _verdict_arc_fixture(include_spanless_untrusted=False)
+    char = _characterization_verdicts(arc_solved)
+    log = _observation_log_verdicts(arc_solved, tmp_path)
+    assert log == char
+    # The fixture actually exercises every verdict class.
+    assert char == [
+        "accepted",
+        "accepted",
+        "accepted",
+        "rejected_fail_closed",  # untrusted segment, own provenance
+        "rejected_fail_closed",  # provenance-less inside untrusted span
+        "rejected_fail_closed",  # references a segment with no verdict
+        "accepted",  # provenance-less outside all untrusted spans
+        "hidden",
+    ]
+
+
+def test_spanless_untrusted_segment_fails_closed_and_is_never_more_permissive(tmp_path):
+    arc_solved = _verdict_arc_fixture(include_spanless_untrusted=True)
+    char = _characterization_verdicts(arc_solved)
+    log = _observation_log_verdicts(arc_solved, tmp_path)
+    # Deliberate stricter-than-characterization divergence: the unlocatable
+    # untrusted segment fails ALL provenance-less frames closed in the log.
+    assert char[4] == "rejected_fail_closed" and log[4] == "rejected_fail_closed"
+    assert char[6] == "accepted"  # characterization drops the span-less segment
+    assert log[6] == "rejected_fail_closed"  # the log fails it closed
+    # Everywhere else the implementations agree, and the log is NEVER more
+    # permissive than the characterization module.
+    for index, (char_verdict, log_verdict) in enumerate(zip(char, log)):
+        if index != 6:
+            assert log_verdict == char_verdict, index
+        if log_verdict == "accepted":
+            assert char_verdict == "accepted", index
