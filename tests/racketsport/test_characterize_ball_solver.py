@@ -324,6 +324,52 @@ def test_rally_frame_coverage_and_zero_return() -> None:
     assert zero["segment_zero_return_rate"] == round(1.0 / 3.0, 6)
 
 
+def test_frames_without_provenance_or_verdict_are_suppressed() -> None:
+    """Fail-closed fallbacks: span fallback + missing-verdict segment ids.
+
+    Frame 5 (inside untrusted segment 1's span 4-6) loses its ``arc_solver``
+    provenance -> must fail closed via the span fallback. Frame 6 references
+    segment_id 99, which has no verdict entry -> must fail closed (the
+    harness is deliberately stricter than the production overlay here).
+    """
+
+    arc = _arc_solved_fixture()
+    del arc["frames"][5]["arc_solver"]
+    arc["frames"][6]["arc_solver"]["segment_id"] = 99
+    result = _characterize(arc_solved=arc)
+    coverage = result["coverage"]
+    # Accepted frames unchanged: segments 0 (4 frames) and 2 (2 frames).
+    assert coverage["accepted_3d_frame_count"] == 6
+    assert coverage["accepted_3d_coverage_fraction"] == 0.6
+    # All three segment-1-span frames stay suppressed: frame 4 via its
+    # untrusted verdict, frame 5 via the span fallback, frame 6 via the
+    # missing verdict entry. A regression on either path shows up as
+    # accepted > 6 / suppressed < 3.
+    assert coverage["fail_closed_suppressed_frame_count"] == 3
+    assert coverage["hidden_frame_count"] == 1
+
+
+def test_frame_without_provenance_outside_untrusted_spans_stays_accepted() -> None:
+    """The span fallback only bites inside untrusted spans."""
+
+    arc = _arc_solved_fixture()
+    del arc["frames"][2]["arc_solver"]  # inside trusted segment 0's span
+    result = _characterize(arc_solved=arc)
+    assert result["coverage"]["accepted_3d_frame_count"] == 6
+    assert result["coverage"]["fail_closed_suppressed_frame_count"] == 3
+
+
+def test_malformed_world_xyz_degrades_to_hidden_not_crash() -> None:
+    arc = _arc_solved_fixture()
+    arc["frames"][8]["world_xyz"] = [0.8, "not-a-number", 0.4]
+    result = _characterize(arc_solved=arc)
+    coverage = result["coverage"]
+    # Frame 8 (previously accepted in segment 2) now counts as no-world.
+    assert coverage["accepted_3d_frame_count"] == 5
+    assert coverage["hidden_frame_count"] == 2
+    assert coverage["fail_closed_suppressed_frame_count"] == 3
+
+
 def test_reprojection_percentiles_recomputed_with_verified_calibration() -> None:
     result = _characterize()
     seg0 = _segment_by_id(result, 0)["reprojection"]["raw_track_visible_px"]

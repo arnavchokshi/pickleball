@@ -251,6 +251,11 @@ def characterize_clip_payloads(
     ``world_xyz``, and its owning segment's own fit statistics pass
     ``ball_arc_segment_fail_closed_verdicts``. Frames without per-frame
     segment provenance fail closed inside any untrusted segment span.
+
+    One deliberate divergence: for a frame whose ``segment_id`` has NO
+    verdict entry at all, the harness is STRICTER than the production
+    overlay (production would emit its position; the harness counts it
+    fail-closed suppressed — unattributable evidence is not accepted here).
     """
 
     frames = _frames(arc_solved)
@@ -376,7 +381,9 @@ def _frame_state(
 ) -> _FrameState:
     band = str(frame.get("band") or "")
     world = frame.get("world_xyz")
-    has_world = isinstance(world, Sequence) and not isinstance(world, (str, bytes)) and len(world) == 3
+    # _is_vec also rejects non-numeric contents, so a malformed artifact frame
+    # degrades to "no world position" instead of crashing the run.
+    has_world = _is_vec(world, 3)
     hidden = band == "hidden" or not has_world
     solver_info = frame.get("arc_solver")
     segment_id: int | None = None
