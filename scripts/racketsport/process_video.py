@@ -8305,7 +8305,8 @@ def _build_input_quality_report(
 
     if timing.width < _int_threshold(thresholds, "min_width_px") or timing.height < _int_threshold(thresholds, "min_height_px"):
         reject("resolution_below_floor")
-    if timing.fps < _float_threshold(thresholds, "min_fps"):
+    nominal_min_fps = _float_threshold(thresholds, "min_fps")
+    if not _fps_meets_nominal_floor(timing.fps, nominal_min_fps):
         reject("fps_below_floor")
     if timing.duration_s < _float_threshold(thresholds, "min_duration_s"):
         reject("duration_too_short")
@@ -8357,8 +8358,15 @@ def _build_input_quality_report(
             "required_court_evidence_scope": (
                 "floor_and_visible_net" if require_visible_net_evidence else "floor_only"
             ),
+            "nominal_fps_tolerance": "1000/1001 NTSC rate accepted",
         },
     }
+
+
+def _fps_meets_nominal_floor(fps: float, nominal_floor: float) -> bool:
+    """Accept the standard 1000/1001 realization of a nominal frame rate."""
+
+    return float(fps) + 1e-6 >= float(nominal_floor) * (1000.0 / 1001.0)
 
 
 def _input_quality_stage_metrics(report: Mapping[str, Any]) -> dict[str, Any]:

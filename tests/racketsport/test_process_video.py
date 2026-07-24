@@ -1831,6 +1831,11 @@ def test_court_skeletons_input_quality_requires_floor_but_not_visible_top_net(
     assert payload["policy"]["required_court_evidence_scope"] == "floor_only"
 
 
+def test_input_quality_accepts_ntsc_realization_of_nominal_30_fps() -> None:
+    assert process_video._fps_meets_nominal_floor(30000.0 / 1001.0, 30.0)
+    assert not process_video._fps_meets_nominal_floor(29.9, 30.0)
+
+
 def test_player_selection_keeps_unbound_diagnostics_out_of_tracks_contract(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
