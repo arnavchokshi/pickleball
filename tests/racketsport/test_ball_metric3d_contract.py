@@ -96,6 +96,7 @@ def _solver_log(count: int = 3) -> SolverObservationLog:
             ),
         ),
         calibration_sha_verified=True,
+        source_clip_id="synthetic_source_clip",
     )
 
 
@@ -140,6 +141,11 @@ def test_solver_log_round_trip(tmp_path):
     assert restored.frames[1].anchor_events[0].kind == "bounce"
     assert restored.inputs[0].sha256 == "0" * 64
     assert restored.calibration_sha_verified is True
+    assert restored.source_clip_id == "synthetic_source_clip"
+    # source_clip_id is optional: absent stays None (older logs load fine).
+    payload_without = original.to_json_dict()
+    del payload_without["source_clip_id"]
+    assert SolverObservationLog.from_json_dict(payload_without).source_clip_id is None
 
 
 def test_serialization_is_deterministic_bytes():
@@ -299,6 +305,13 @@ def test_solver_log_unknown_verdict_rejected():
     payload = _solver_log().to_json_dict()
     payload["frames"][0]["solver_verdict"] = "promoted"
     with pytest.raises(ContractValidationError, match="solver_verdict"):
+        SolverObservationLog.from_json_dict(payload)
+
+
+def test_solver_log_empty_source_clip_id_rejected():
+    payload = _solver_log().to_json_dict()
+    payload["source_clip_id"] = ""
+    with pytest.raises(ContractValidationError, match="source_clip_id"):
         SolverObservationLog.from_json_dict(payload)
 
 

@@ -24,7 +24,15 @@ Fail-closed rules:
   ``accepted`` only when it carries a world position, its band is not
   ``hidden``, and its owning segment passes
   ``ball_arc_segment_fail_closed_verdicts``; frames without per-frame
-  segment provenance fail closed inside any untrusted segment span.
+  segment provenance fail closed inside any untrusted segment span. If an
+  untrusted segment lacks an integer frame span, ALL provenance-less frames
+  fail closed (deliberately stricter than the characterization module, which
+  is itself documented as stricter than production; drift between the two is
+  guarded by a cross-consistency test).
+- Note: an ``accepted`` verdict means the owning segment is trusted and the
+  frame carries a solver world position — it INCLUDES solver-interpolated
+  frames with no detector observation (``observation_status: missing``,
+  ``ray_status: no_pixel``); acceptance is segment trust, not detection.
 
 Output bytes are deterministic given the same inputs (sorted keys, rounded
 floats, no timestamps; provenance is root-relative path + sha256).
@@ -83,8 +91,10 @@ def build_solver_observation_log(
 
     frames = _frames(arc_solved)
     verdicts = ball_arc_segment_fail_closed_verdicts(arc_solved.get("segments"))
-    untrusted_spans = _untrusted_spans(verdicts)
+    untrusted_spans, spanless_untrusted = _untrusted_spans(verdicts)
     anchors_by_frame = _anchors_by_frame(arc_solved.get("anchors"))
+    raw_clip_id = arc_solved.get("clip_id")
+    source_clip_id = raw_clip_id if isinstance(raw_clip_id, str) and raw_clip_id else None
 
     observations = tuple(
         _frame_observation(
@@ -94,6 +104,7 @@ def build_solver_observation_log(
             calibration_available=inputs.calibration is not None,
             verdicts=verdicts,
             untrusted_spans=untrusted_spans,
+            spanless_untrusted=spanless_untrusted,
             anchor_events=anchors_by_frame.get(index, ()),
         )
         for index, frame in enumerate(frames)
@@ -103,6 +114,7 @@ def build_solver_observation_log(
         frames=observations,
         inputs=_source_artifacts(inputs, root=Path(root)),
         calibration_sha_verified=verified,
+        source_clip_id=source_clip_id,
     )
 
 
@@ -114,6 +126,7 @@ def _frame_observation(
     calibration_available: bool,
     verdicts: Mapping[int, Mapping[str, Any]],
     untrusted_spans: Sequence[tuple[int, int]],
+    spanless_untrusted: bool,
     anchor_events: Sequence[AnchorEvent],
 ) -> SolverFrameObservation:
     visible = frame.get("visible") is True
@@ -158,6 +171,7 @@ def _frame_observation(
         segment_id=segment_id,
         verdicts=verdicts,
         untrusted_spans=untrusted_spans,
+        spanless_untrusted=spanless_untrusted,
     )
     timestamp = frame.get("t")
     if isinstance(timestamp, bool) or not isinstance(timestamp, (int, float)):
@@ -185,8 +199,19 @@ def _solver_verdict(
     segment_id: int | None,
     verdicts: Mapping[int, Mapping[str, Any]],
     untrusted_spans: Sequence[tuple[int, int]],
+    spanless_untrusted: bool,
 ) -> str:
-    """Mirror of the characterization accepted-frame definition (fail closed)."""
+    """Mirror of the characterization accepted-frame definition (fail closed).
+
+    Drift against ``ball_solver_characterization._frame_state`` is guarded by
+    a per-frame cross-consistency test (tests/racketsport/
+    test_build_ball_observation_log.py). One deliberate divergence, stricter
+    here: when an untrusted segment lacks an integer frame span it cannot be
+    localized, so EVERY provenance-less frame fails closed (the
+    characterization module drops such segments from its span list; it is
+    itself documented as stricter than production, and this log follows that
+    stance one step further rather than silently trusting unlocatable spans).
+    """
 
     band = str(frame.get("band") or "")
     world = frame.get("world_xyz")
@@ -197,21 +222,42 @@ def _solver_verdict(
         verdict = verdicts.get(segment_id)
         untrusted = verdict is None or not bool(verdict.get("trusted"))
     else:
-        # No per-frame provenance: fail closed inside any untrusted span.
-        untrusted = any(start <= index <= end for start, end in untrusted_spans)
+        # No per-frame provenance: fail closed inside any untrusted span —
+        # or everywhere, when an untrusted span cannot be localized.
+        untrusted = spanless_untrusted or any(
+            start <= index <= end for start, end in untrusted_spans
+        )
     return "rejected_fail_closed" if untrusted else "accepted"
 
 
-def _untrusted_spans(verdicts: Mapping[int, Mapping[str, Any]]) -> list[tuple[int, int]]:
+def _untrusted_spans(
+    verdicts: Mapping[int, Mapping[str, Any]],
+) -> tuple[list[tuple[int, int]], bool]:
+    """Frame spans of untrusted segments + whether any span is unlocatable.
+
+    Returns ``(spans, spanless_untrusted)``; ``spanless_untrusted`` is True
+    when an untrusted segment lacks integer ``frame_start``/``frame_end``,
+    which makes provenance-less frames fail closed clip-wide (see
+    ``_solver_verdict``).
+    """
+
     spans: list[tuple[int, int]] = []
+    spanless_untrusted = False
     for verdict in verdicts.values():
         if verdict.get("trusted"):
             continue
         start = verdict.get("frame_start")
         end = verdict.get("frame_end")
-        if isinstance(start, int) and isinstance(end, int):
+        if (
+            isinstance(start, int)
+            and not isinstance(start, bool)
+            and isinstance(end, int)
+            and not isinstance(end, bool)
+        ):
             spans.append((start, end))
-    return spans
+        else:
+            spanless_untrusted = True
+    return spans, spanless_untrusted
 
 
 def _anchors_by_frame(raw_anchors: Any) -> dict[int, tuple[AnchorEvent, ...]]:
