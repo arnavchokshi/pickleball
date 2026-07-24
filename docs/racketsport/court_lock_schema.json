@@ -52,6 +52,26 @@
     "evidence": {"$ref": "#/$defs/evidence"},
     "static_motion": {"$ref": "#/$defs/static_motion"},
     "residual_px": {"$ref": "#/$defs/residual"},
+    "lock_eligible": {"type": "boolean"},
+    "lock_decision_reasons": {
+      "type": "array",
+      "items": {"type": "string", "minLength": 1}
+    },
+    "segment_range": {
+      "oneOf": [
+        {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {"type": "integer", "minimum": 0}
+        },
+        {"type": "null"}
+      ]
+    },
+    "segment_diagnostics": {
+      "type": "object",
+      "additionalProperties": true
+    },
     "score_components": {
       "type": "object",
       "additionalProperties": {"type": "number"}
@@ -69,6 +89,19 @@
     "verified": {"type": "boolean"}
   },
   "allOf": [
+    {
+      "if": {
+        "properties": {"lock_eligible": {"const": true}},
+        "required": ["lock_eligible"]
+      },
+      "then": {
+        "properties": {
+          "static_motion": {
+            "properties": {"status": {"const": "static"}}
+          }
+        }
+      }
+    },
     {
       "if": {
         "properties": {"measurement_valid": {"const": true}},

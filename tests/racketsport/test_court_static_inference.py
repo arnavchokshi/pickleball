@@ -7,6 +7,7 @@ import numpy as np
 
 from threed.racketsport.court_static_inference import (
     _appearance_static_diagnostics,
+    _segment_camera_states,
     infer_static_court_model,
 )
 from threed.racketsport.court_static_lock import read_court_lock
@@ -148,3 +149,23 @@ def test_background_flow_detects_real_camera_translation() -> None:
 
     assert diagnostics["status"] == "moving"
     assert diagnostics["drift_px_p95"] >= 4.0
+
+
+def test_segment_first_inference_detects_camera_transition_and_selects_one_cluster() -> None:
+    rng = np.random.default_rng(47)
+    background = rng.integers(0, 255, size=(360, 640, 3), dtype=np.uint8)
+    frames = [background.copy() for _ in range(4)]
+    shifted = cv2.warpAffine(
+        background,
+        np.asarray([[1.0, 0.0, 42.0], [0.0, 1.0, 8.0]], dtype=np.float32),
+        (640, 360),
+    )
+    frames.extend(shifted.copy() for _ in range(4))
+
+    diagnostics = _segment_camera_states(frames, frame_indices=list(range(8)))
+
+    assert diagnostics["whole_clip_static_eligible"] is False
+    assert diagnostics["status"] == "transition_detected"
+    assert diagnostics["transition_frame_indices"] == [4]
+    assert len(diagnostics["segments"]) == 2
+    assert set(diagnostics["selected_frame_indices"]).issubset({0, 1, 2, 3})

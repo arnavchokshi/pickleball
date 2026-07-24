@@ -25,6 +25,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--stance-phases", type=Path, default=None, help="Optional foot_contact_phases.json or foot_pin_audit.json stance phase artifact.")
     parser.add_argument("--foot-contact-phases-out", type=Path, default=None, help="Optional foot_contact_phases.json output path.")
     parser.add_argument("--camera-motion", type=Path, default=None, help="Optional camera_motion.json used to compensate placement evidence.")
+    parser.add_argument("--court-lock", type=Path, default=None, help="Optional court_lock.json covariance posterior.")
     parser.add_argument("--refine-from-sam3d", action="store_true", help="Run the post-BODY SAM3D refinement pass.")
     parser.add_argument("--no-placement-undistort", action="store_true", help="Disable pixel undistortion before homography projection.")
     parser.add_argument("--keypoint-conf-min", type=float, default=PlacementConfig().keypoint_conf_min)
@@ -41,6 +42,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             stance_phases_path=args.stance_phases,
             foot_contact_phases_out_path=args.foot_contact_phases_out,
             camera_motion_path=args.camera_motion,
+            court_lock_path=args.court_lock,
             refine_from_sam3d=args.refine_from_sam3d,
             config=PlacementConfig(
                 keypoint_conf_min=args.keypoint_conf_min,

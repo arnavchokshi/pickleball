@@ -14,6 +14,7 @@ from threed.racketsport.placement import (
     PlacementConfig,
     bbox_pixel_sigma,
     homography_world_covariance,
+    homography_parameter_world_covariance,
     inverse_covariance_fuse,
     kalman_rts_smooth,
     rewrite_tracks_with_placement,
@@ -343,6 +344,49 @@ def test_homography_covariance_scales_farther_court_more_than_near() -> None:
     assert np.trace(far_cov) > np.trace(near_cov)
 
 
+def test_court_transform_covariance_is_propagated_separately_from_pixel_error() -> None:
+    homography = np.asarray(_calibration_payload()["homography"], dtype=float)
+    no_calibration_uncertainty = homography_parameter_world_covariance(
+        homography,
+        [1050.0, 1050.0],
+        transform_covariance=None,
+    )
+    with_calibration_uncertainty = homography_parameter_world_covariance(
+        homography,
+        [1050.0, 1050.0],
+        transform_covariance=np.eye(8, dtype=float) * 1.0e-4,
+    )
+
+    assert np.trace(no_calibration_uncertainty) == pytest.approx(0.0)
+    assert np.trace(with_calibration_uncertainty) > 0.0
+    assert np.linalg.eigvalsh(with_calibration_uncertainty).min() >= -1.0e-12
+
+
+def test_interpolated_track_frame_never_becomes_a_measured_foot_position(tmp_path: Path) -> None:
+    tracks_path = tmp_path / "tracks.json"
+    calibration_path = tmp_path / "court_calibration.json"
+    keypoints_path = tmp_path / "keypoints_2d.json"
+    placement_path = tmp_path / "placement.json"
+    tracks = _tracks_payload()
+    tracks["players"][0]["frames"][0]["interpolated"] = True  # type: ignore[index]
+    _write_json(tracks_path, tracks)
+    _write_json(calibration_path, _calibration_payload())
+    _write_json(keypoints_path, _native2d_payload())
+
+    rewrite_tracks_with_placement(
+        tracks_path=tracks_path,
+        calibration_path=calibration_path,
+        placement_path=placement_path,
+        native2d_keypoints_path=keypoints_path,
+    )
+
+    payload = json.loads(placement_path.read_text(encoding="utf-8"))
+    first = payload["players"][0]["frames"][0]
+    assert first["measurement_provenance"] == "identity_interpolated_not_measured"
+    assert all(signal["used"] is False for signal in first["signals"])
+    assert first["selected_support_signal"] is None
+
+
 def test_kalman_rts_smoothing_coasts_occlusions_and_tightens_stance() -> None:
     measurements = {
         0: ([0.0, 0.0], [[0.04, 0.0], [0.0, 0.04]], False),
@@ -582,6 +626,26 @@ def test_rewrite_tracks_emits_confident_per_foot_phase_when_keypoint_support_agr
     assert phase["demoted"] is False
     assert all(item["foot_assignment"] != "bilateral_from_player_stance" for item in phases["phases"])
     placement = json.loads(placement_path.read_text(encoding="utf-8"))
+    first_candidates = placement["players"][0]["frames"][0]["foot_candidates"]
+    assert {candidate["source"] for candidate in first_candidates} >= {
+        "bbox_bottom_center",
+        "silhouette_bottom",
+        "native2d",
+    }
+    assert next(
+        candidate for candidate in first_candidates if candidate["source"] == "silhouette_bottom"
+    )["rejection_reason"] == "silhouette_unavailable"
+    left_candidate = next(
+        candidate
+        for candidate in first_candidates
+        if candidate["source"] == "native2d" and candidate["foot"] == "left"
+    )
+    assert {value["semantic_name"] for value in left_candidate["keypoint_candidates"]} == {
+        "left_ankle",
+        "left_heel",
+        "left_big_toe",
+        "left_small_toe",
+    }
     phase_frames = set(phase["frame_indices"])
     assert any(
         frame["stance"] and frame["frame_idx"] in phase_frames

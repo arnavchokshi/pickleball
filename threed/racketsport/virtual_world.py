@@ -90,6 +90,7 @@ def build_virtual_world_state(
     tracks: Tracks | Mapping[str, Any] | None = None,
     smpl_motion: SmplMotion | Mapping[str, Any] | None = None,
     skeleton3d: Skeleton3D | Mapping[str, Any] | None = None,
+    placement: Mapping[str, Any] | None = None,
     ball_track: BallTrack | Mapping[str, Any] | None = None,
     racket_pose: RacketPose | Mapping[str, Any] | None = None,
     trust_bands: Mapping[str, Mapping[str, Any] | None] | None = None,
@@ -146,6 +147,7 @@ def build_virtual_world_state(
 
     fps = _world_fps(tracks_obj, smpl_obj, skeleton_obj, ball_physics_obj, ball_obj, racket_estimate_obj, racket_obj)
     players = _players(tracks_obj=tracks_obj, smpl_obj=smpl_obj, skeleton_obj=skeleton_obj)
+    _apply_placement_diagnostics(players, placement)
     membership_summary = _apply_player_membership_preview(
         players,
         membership_preview=membership_preview,
@@ -211,6 +213,7 @@ def build_virtual_world_state_from_files(
     tracks_path: str | Path | None = None,
     smpl_motion_path: str | Path | None = None,
     skeleton3d_path: str | Path | None = None,
+    placement_path: str | Path | None = None,
     ball_track_path: str | Path | None = None,
     racket_pose_path: str | Path | None = None,
     trust_bands: Mapping[str, Mapping[str, Any] | None] | None = None,
@@ -229,6 +232,7 @@ def build_virtual_world_state_from_files(
         tracks=_optional_artifact("tracks", tracks_path, Tracks),
         smpl_motion=_optional_artifact("smpl_motion", smpl_motion_path, SmplMotion),
         skeleton3d=_optional_skeleton3d_artifact(skeleton3d_path),
+        placement=_optional_json_mapping(placement_path),
         ball_track=_optional_artifact("ball_track", ball_track_path, BallTrack),
         racket_pose=_optional_artifact("racket_pose", racket_pose_path, RacketPose),
         trust_bands=trust_bands,
@@ -241,6 +245,7 @@ def build_virtual_world_state_from_files(
         ball_world_policy=ball_world_policy,
         artifact_paths={
             "tracks": tracks_path,
+            "placement": placement_path,
             "body_mesh_index": _existing_body_mesh_index_path(Path(court_calibration_path).parent),
             "physics_footlock": physics_footlock_path,
             "ball_track_physics_filled": ball_track_physics_filled_path,
@@ -297,6 +302,7 @@ def build_virtual_world_state_from_run_dir(
         tracks_path=_existing_file(root / "tracks.json"),
         smpl_motion_path=_existing_file(root / "smpl_motion.json"),
         skeleton3d_path=_existing_file(root / "skeleton3d.json"),
+        placement_path=_existing_file(root / "placement.json"),
         ball_track_path=_existing_file(root / "ball_track.json"),
         racket_pose_path=_existing_file(root / "racket_pose.json"),
         trust_bands=trust_bands,
@@ -1014,6 +1020,42 @@ def _players(
         }
         for player in tracks_obj.players
     ]
+
+
+def _apply_placement_diagnostics(
+    players: Sequence[dict[str, Any]],
+    placement: Mapping[str, Any] | None,
+) -> None:
+    if not isinstance(placement, Mapping):
+        return
+    by_player: dict[int, dict[str, Mapping[str, Any]]] = {}
+    for raw_player in placement.get("players", []) or []:
+        if not isinstance(raw_player, Mapping):
+            continue
+        try:
+            player_id = int(raw_player["id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        by_player[player_id] = {
+            _time_key(float(frame["t"])): frame
+            for frame in raw_player.get("frames", []) or []
+            if isinstance(frame, Mapping) and isinstance(frame.get("t"), (int, float))
+        }
+    for player in players:
+        lookup = by_player.get(int(player["id"]), {})
+        for frame in player.get("frames", []) or []:
+            placement_frame = lookup.get(_time_key(float(frame["t"])))
+            if placement_frame is None:
+                continue
+            frame["placement_diagnostics"] = {
+                "covariance_m2": placement_frame.get("covariance_m2"),
+                "uncertainty_decomposition": placement_frame.get("uncertainty_decomposition"),
+                "selected_support_signal": placement_frame.get("selected_support_signal"),
+                "foot_candidates": placement_frame.get("foot_candidates") or [],
+                "nearest_regulation_line": placement_frame.get("nearest_regulation_line"),
+                "contact_state": placement_frame.get("contact_state"),
+                "measurement_provenance": placement_frame.get("measurement_provenance"),
+            }
 
 
 def _world_joint_names_from_skeleton(skeleton_obj: Skeleton3D | None) -> list[str] | None:

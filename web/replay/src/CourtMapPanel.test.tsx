@@ -47,6 +47,45 @@ const world = parseVirtualWorld({
           mesh_vertices_world: [],
           joint_count: 0,
           mesh_vertex_count: 0,
+          placement_diagnostics: {
+            covariance_m2: [[0.04, 0.01], [0.01, 0.09]],
+            uncertainty_decomposition: {
+              foot_localization_covariance_m2: [[0.03, 0], [0, 0.05]],
+              court_calibration_covariance_m2: [[0.01, 0.01], [0.01, 0.04]],
+              post_temporal_refinement_covariance_m2: [[0.04, 0.01], [0.01, 0.09]],
+              dominant_input: "foot_localization",
+            },
+            selected_support_signal: {
+              name: "native2d",
+              pixel_xy: [512, 488],
+              court_xy: [1.1, 2.2],
+              confidence: 0.92,
+            },
+            foot_candidates: [
+              {
+                foot: "left",
+                source: "native2d",
+                pixel_xy: [512, 488],
+                court_xy: [1.1, 2.2],
+                confidence: 0.92,
+                accepted: true,
+                rejection_reason: null,
+                keypoint_candidates: [
+                  { semantic_name: "left_heel", pixel_xy: [510, 487], confidence: 0.94 },
+                  { semantic_name: "left_toe", pixel_xy: [514, 489], confidence: 0.9 },
+                ],
+              },
+            ],
+            nearest_regulation_line: {
+              line_name: "far_nvz",
+              distance_m: 0.08,
+              signed_distance_m: 0.08,
+              signed_distance_ci95_m: [-0.02, 0.18],
+              court_zone: "far_backcourt",
+            },
+            contact_state: { state: "planted", support_foot: "left" },
+            measurement_provenance: "measured",
+          },
         },
       ],
     },
@@ -134,6 +173,11 @@ describe("CourtMapPanel", () => {
     expect(html).toContain("court-map-bounce-dot");
     expect(html).toContain("court-map-current-ball");
     expect(html).toContain("court-map-player");
+    expect(html).toContain("court-map-player-uncertainty");
+    expect(html).toContain("court-map-placement-readout");
+    expect(html).toContain("native2d");
+    expect(html).toContain("left_heel+left_toe");
+    expect(html).toContain("foot_localization-dominated");
     expect(html).toContain("aria-label=\"Top-down court map\"");
   });
 });

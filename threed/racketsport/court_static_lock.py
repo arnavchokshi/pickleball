@@ -439,6 +439,10 @@ class CourtLockArtifact:
     evidence: CourtLockEvidenceSummary
     static_motion: StaticMotionDiagnostics
     residual_px: CourtLockResidual
+    lock_eligible: bool = False
+    lock_decision_reasons: tuple[str, ...] = ()
+    segment_range: tuple[int, int] | None = None
+    segment_diagnostics: Mapping[str, Any] = field(default_factory=dict)
     score_components: Mapping[str, float] = field(default_factory=dict)
     scorer_version: str = "court_static_lock_score_v1"
     calibration_version: str = "court_lock_calibration_v1"
@@ -474,6 +478,13 @@ class CourtLockArtifact:
                 raise ValueError("score_components must map nonblank names to finite numbers")
         if self.measurement_valid and not self.static_motion.static_lock_usable:
             raise ValueError("measurement_valid requires a confirmed static camera")
+        if self.lock_eligible and not self.static_motion.static_lock_usable:
+            raise ValueError("lock_eligible requires a confirmed static camera")
+        if self.segment_range is not None:
+            if len(self.segment_range) != 2 or self.segment_range[0] > self.segment_range[1]:
+                raise ValueError("segment_range must be an ordered inclusive frame pair")
+        if any(not str(reason).strip() for reason in self.lock_decision_reasons):
+            raise ValueError("lock_decision_reasons must be nonblank")
         if self.verified and self.authority_state != "authoritative":
             raise ValueError("verified court locks must be authoritative")
 
@@ -490,6 +501,10 @@ class CourtLockArtifact:
             "evidence": self.evidence.to_dict(),
             "static_motion": self.static_motion.to_dict(),
             "residual_px": self.residual_px.to_dict(),
+            "lock_eligible": self.lock_eligible,
+            "lock_decision_reasons": list(self.lock_decision_reasons),
+            "segment_range": None if self.segment_range is None else list(self.segment_range),
+            "segment_diagnostics": dict(self.segment_diagnostics),
             "score_components": {
                 str(key): float(value) for key, value in sorted(self.score_components.items())
             },
@@ -544,6 +559,18 @@ class CourtLockArtifact:
                 median_px=float(residual_payload["median_px"]),
                 p95_px=float(residual_payload["p95_px"]),
             ),
+            lock_eligible=bool(payload.get("lock_eligible", False)),
+            lock_decision_reasons=tuple(str(value) for value in payload.get("lock_decision_reasons", [])),
+            segment_range=(
+                None
+                if payload.get("segment_range") is None
+                else tuple(int(value) for value in payload["segment_range"])
+            ),
+            segment_diagnostics=(
+                dict(payload["segment_diagnostics"])
+                if isinstance(payload.get("segment_diagnostics"), Mapping)
+                else {}
+            ),
             score_components={str(key): float(value) for key, value in payload["score_components"].items()},
             scorer_version=str(payload["scorer_version"]),
             calibration_version=str(payload["calibration_version"]),
@@ -569,6 +596,10 @@ _COURT_LOCK_KEYS = frozenset(
         "evidence",
         "static_motion",
         "residual_px",
+        "lock_eligible",
+        "lock_decision_reasons",
+        "segment_range",
+        "segment_diagnostics",
         "score_components",
         "scorer_version",
         "calibration_version",
@@ -578,7 +609,10 @@ _COURT_LOCK_KEYS = frozenset(
         "verified",
     }
 )
-_COURT_LOCK_REQUIRED_KEYS = _COURT_LOCK_KEYS
+_COURT_LOCK_OPTIONAL_KEYS = frozenset(
+    {"lock_eligible", "lock_decision_reasons", "segment_range", "segment_diagnostics"}
+)
+_COURT_LOCK_REQUIRED_KEYS = _COURT_LOCK_KEYS - _COURT_LOCK_OPTIONAL_KEYS
 
 
 def select_static_frame_evidence(

@@ -429,10 +429,12 @@ def test_court_skeletons_calibration_uses_same_run_static_lock_without_manual_in
         )
         _write_json(
             out_path.with_name("court_lock.json"),
-            {
-                "source": "multi_frame_point_and_line",
-                "evidence": {"selected_frame_indices": [0, 1, 2, 3]},
-            },
+                {
+                    "source": "multi_frame_point_and_line",
+                    "lock_eligible": True,
+                    "lock_decision_reasons": [],
+                    "evidence": {"selected_frame_indices": [0, 1, 2, 3]},
+                },
         )
         return out_path
 
@@ -1829,6 +1831,52 @@ def test_court_skeletons_input_quality_requires_floor_but_not_visible_top_net(
     assert payload["metrics"]["court_visibility_angle"]["missing_required_court_line_count"] == 0
     assert payload["metrics"]["court_visibility_angle"]["visible_net_evidence_required"] is False
     assert payload["policy"]["required_court_evidence_scope"] == "floor_only"
+
+
+def test_structured_lock_reconciles_only_borderline_legacy_preflight_rejections() -> None:
+    report = {
+        "status": "below_acceptance",
+        "band": "degraded_input",
+        "rejection_reasons": ["court_not_fully_visible_low_angle", "motion_blur_gross"],
+        "warning_reasons": [],
+        "metrics": {"video_quality": {"blur_laplacian_var": 24.0}},
+        "thresholds": {"min_blur_laplacian_var": 25.0},
+        "policy": {"owner_policy_rejection_reason": "court_not_fully_visible_low_angle"},
+    }
+
+    reconciled = process_video._reconcile_structured_lock_input_quality(
+        report,
+        court_lock={"lock_eligible": True},
+    )
+
+    assert reconciled["status"] == "accepted"
+    assert reconciled["rejection_reasons"] == []
+    assert set(reconciled["warning_reasons"]) == {
+        "legacy_low_angle_heuristic_overridden_by_structured_lock",
+        "borderline_blur_accepted_for_review_only_skeletons",
+    }
+
+
+def test_structured_lock_reconciliation_does_not_override_bad_angle_or_gross_blur() -> None:
+    report = {
+        "status": "below_acceptance",
+        "band": "degraded_input",
+        "rejection_reasons": ["court_not_fully_visible_low_angle", "motion_blur_gross"],
+        "warning_reasons": [],
+        "metrics": {"video_quality": {"blur_laplacian_var": 10.0}},
+        "thresholds": {"min_blur_laplacian_var": 25.0},
+        "policy": {"owner_policy_rejection_reason": "court_not_fully_visible_low_angle"},
+    }
+
+    without_lock = process_video._reconcile_structured_lock_input_quality(report, court_lock=None)
+    with_lock = process_video._reconcile_structured_lock_input_quality(
+        report,
+        court_lock={"lock_eligible": True},
+    )
+
+    assert without_lock["rejection_reasons"] == report["rejection_reasons"]
+    assert with_lock["status"] == "below_acceptance"
+    assert with_lock["rejection_reasons"] == ["motion_blur_gross"]
 
 
 def test_input_quality_accepts_ntsc_realization_of_nominal_30_fps() -> None:

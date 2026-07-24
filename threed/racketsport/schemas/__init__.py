@@ -660,6 +660,10 @@ class CourtLock(StrictArtifact):
     evidence: dict[str, Any]
     static_motion: dict[str, Any]
     residual_px: dict[str, Any]
+    lock_eligible: bool = False
+    lock_decision_reasons: list[str] = Field(default_factory=list)
+    segment_range: tuple[int, int] | None = None
+    segment_diagnostics: dict[str, Any] = Field(default_factory=dict)
     score_components: dict[str, FiniteFloat]
     scorer_version: str = Field(min_length=1)
     calibration_version: str = Field(min_length=1)
@@ -745,8 +749,13 @@ class PlacementSignal(BaseModel):
 
     name: str
     xy: Vector2 | None = None
+    pixel_xy: Vector2 | None = None
+    pixel_covariance_px2: Matrix2 | None = None
+    confidence: FiniteFloat | None = None
     sigma_m: Vector2 | None = None
     covariance_m2: Matrix2 | None = None
+    localization_covariance_m2: Matrix2 | None = None
+    calibration_covariance_m2: Matrix2 | None = None
     used: bool
     reason: str | None = None
     sidecar_player_id: int | None = None
@@ -762,10 +771,17 @@ class PlacementFrame(BaseModel):
     fused_world_xy: Vector2
     smoothed_world_xy: Vector2
     covariance_m2: Matrix2
+    uncertainty_decomposition: dict[str, Any] = Field(default_factory=dict)
     stance: bool
+    contact_state: dict[str, Any] = Field(default_factory=dict)
+    selected_support_signal: dict[str, Any] | None = None
+    foot_candidates: list[dict[str, Any]] = Field(default_factory=list)
+    nearest_regulation_line: dict[str, Any] | None = None
+    measurement_provenance: str | None = None
     signals: list[PlacementSignal] = Field(default_factory=list)
     source_counts: dict[str, int] = Field(default_factory=dict)
     gap_hold: bool | None = None
+    gap_interpolated: bool | None = None
     output_source: str | None = None
     visual_root_step_bounded: bool | None = None
 
@@ -804,6 +820,7 @@ class PlacementSummary(BaseModel):
     camera_motion_frames_uncompensated: int | None = Field(default=None, ge=0)
     camera_motion_artifact_frame_count: int | None = Field(default=None, ge=0)
     camera_motion_artifact_compensated_frame_count: int | None = Field(default=None, ge=0)
+    calibration_uncertainty_status: str | None = None
 
     @field_validator("source_counts")
     @classmethod
@@ -2294,6 +2311,7 @@ class VirtualWorldPlayerFrame(BaseModel):
     grf: list[Vector3] | None = None
     trust_band: TrustBand | None = None
     confidence_provenance: ConfidenceProvenance | None = None
+    placement_diagnostics: dict[str, Any] | None = None
 
 
 class VirtualWorldJointsSource(BaseModel):

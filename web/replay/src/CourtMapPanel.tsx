@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 
 import { buildCourtMapShots, sampleBallArcRenderAtTime, svgCourtProjector, type BallArcRender, type CourtMapShot } from "./ballArcRender";
-import { frameForTime, type Vec2, type VirtualWorld } from "./viewerData";
+import { frameForTime, type PlayerPlacementDiagnostics, type Vec2, type VirtualWorld } from "./viewerData";
 
 const SVG_WIDTH = 305;
 const SVG_HEIGHT = 520;
@@ -41,9 +41,12 @@ export function CourtMapPanel({
         .map((player) => {
           const frame = frameForTime(player, currentTime);
           const xy = frame?.floor_world_xyz ? ([frame.floor_world_xyz[0], frame.floor_world_xyz[1]] as Vec2) : frame?.track_world_xy ?? null;
-          return xy ? { playerId: player.id, xy } : null;
+          return xy ? { playerId: player.id, xy, diagnostics: frame?.placement_diagnostics ?? null } : null;
         })
-        .filter((entry): entry is { playerId: number; xy: Vec2 } => entry !== null),
+        .filter(
+          (entry): entry is { playerId: number; xy: Vec2; diagnostics: PlayerPlacementDiagnostics | null } =>
+            entry !== null,
+        ),
     [currentTime, world],
   );
   const activeShot = shots.find((shot) => shot.active) ?? null;
@@ -68,12 +71,37 @@ export function CourtMapPanel({
           </g>
         ) : null}
         <g className="court-map-players">
-          {playerPositions.map(({ playerId, xy }) => {
+          {playerPositions.map(({ playerId, xy, diagnostics }) => {
             const [cx, cy] = project(xy);
+            const ellipse = diagnostics?.covarianceM2
+              ? placementUncertaintyEllipse(xy, diagnostics.covarianceM2, project)
+              : null;
+            const line = diagnostics?.nearestRegulationLine;
+            const candidateSummary = diagnostics
+              ? diagnostics.footCandidates
+                .map((candidate) => {
+                  const semanticNames = candidate.keypointCandidates.map((point) => point.semanticName).join("+");
+                  return `${candidate.source}/${candidate.foot}${semanticNames ? `(${semanticNames})` : ""}${candidate.accepted ? " accepted" : ` rejected:${candidate.rejectionReason ?? "not_selected"}`}`;
+                })
+                .join(" | ")
+              : "";
             return (
               <g key={playerId} className="court-map-player" transform={`translate(${cx} ${cy})`}>
+                {ellipse ? (
+                  <ellipse
+                    className="court-map-player-uncertainty"
+                    rx={ellipse.rx}
+                    ry={ellipse.ry}
+                    transform={`rotate(${ellipse.rotationDeg})`}
+                  />
+                ) : null}
                 <circle r="6" />
                 <text x="9" y="4">P{playerId}</text>
+                <title>
+                  {diagnostics
+                    ? `P${playerId} ${diagnostics.measurementProvenance}; contact ${diagnostics.contactState}; support ${diagnostics.supportFoot ?? "--"}; signal ${diagnostics.selectedSupportSignal?.name ?? "--"}; pixel ${diagnostics.selectedSupportSignal?.pixelXY.join(", ") ?? "--"}; uncertainty ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated; candidates ${candidateSummary || "--"}; nearest ${line?.lineName ?? "--"} ${line ? line.signedDistanceM.toFixed(2) : "--"}m`
+                    : `P${playerId} placement diagnostics unavailable`}
+                </title>
               </g>
             );
           })}
@@ -83,9 +111,40 @@ export function CourtMapPanel({
         <span>{shots.length} shots</span>
         <span>{activeShot ? `${activeShot.speedMph.toFixed(1)} mph` : "no active shot"}</span>
         <span>{activeShot?.heightOverNetM === null || activeShot?.heightOverNetM === undefined ? "net --" : `net ${activeShot.heightOverNetM.toFixed(2)}m`}</span>
+        {playerPositions.map(({ playerId, diagnostics }) => diagnostics ? (
+          <span className="court-map-placement-readout" key={`placement-${playerId}`}>
+            {`P${playerId} ${diagnostics.contactState} · ${diagnostics.nearestRegulationLine?.lineName ?? "line --"} ${diagnostics.nearestRegulationLine ? diagnostics.nearestRegulationLine.signedDistanceM.toFixed(2) : "--"}m · ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated · ${diagnostics.measurementProvenance}`}
+          </span>
+        ) : null)}
       </div>
     </div>
   );
+}
+
+function placementUncertaintyEllipse(
+  center: Vec2,
+  covariance: [Vec2, Vec2],
+  project: (point: Vec2) => Vec2,
+): { rx: number; ry: number; rotationDeg: number } {
+  const a = Math.max(0, covariance[0][0]);
+  const b = (covariance[0][1] + covariance[1][0]) * 0.5;
+  const d = Math.max(0, covariance[1][1]);
+  const trace = a + d;
+  const spread = Math.sqrt(Math.max(0, (a - d) * (a - d) + 4 * b * b));
+  const major = Math.max(0, (trace + spread) * 0.5);
+  const minor = Math.max(0, (trace - spread) * 0.5);
+  const theta = 0.5 * Math.atan2(2 * b, a - d);
+  const scale95 = 2.4477;
+  const majorWorld = scale95 * Math.sqrt(major);
+  const minorWorld = scale95 * Math.sqrt(minor);
+  const projectedCenter = project(center);
+  const majorPoint = project([center[0] + majorWorld * Math.cos(theta), center[1] + majorWorld * Math.sin(theta)]);
+  const minorPoint = project([center[0] - minorWorld * Math.sin(theta), center[1] + minorWorld * Math.cos(theta)]);
+  return {
+    rx: Math.max(2, Math.hypot(majorPoint[0] - projectedCenter[0], majorPoint[1] - projectedCenter[1])),
+    ry: Math.max(2, Math.hypot(minorPoint[0] - projectedCenter[0], minorPoint[1] - projectedCenter[1])),
+    rotationDeg: Math.atan2(majorPoint[1] - projectedCenter[1], majorPoint[0] - projectedCenter[0]) * 180 / Math.PI,
+  };
 }
 
 function courtCoordinateBounds(world: VirtualWorld): { xMin: number; xMax: number; yMin: number; yMax: number } {

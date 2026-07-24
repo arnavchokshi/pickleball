@@ -476,9 +476,50 @@ export type VirtualWorldFrame = {
   grf?: Vec3[] | null;
   skeleton_implausible?: boolean;
   trust_band?: TrustBand | null;
+  placement_diagnostics?: PlayerPlacementDiagnostics | null;
   /** Runtime-only render provenance. Persisted virtual-world parsing deliberately drops it. */
   display_interpolated?: boolean;
   display_interpolation?: DisplaySkeletonInterpolation;
+};
+
+export type PlayerPlacementDiagnostics = {
+  covarianceM2: [Vec2, Vec2] | null;
+  uncertaintyDecomposition: {
+    footLocalizationCovarianceM2: [Vec2, Vec2] | null;
+    courtCalibrationCovarianceM2: [Vec2, Vec2] | null;
+    postTemporalRefinementCovarianceM2: [Vec2, Vec2] | null;
+    dominantInput: string;
+  } | null;
+  selectedSupportSignal: {
+    name: string;
+    pixelXY: Vec2;
+    courtXY: Vec2;
+    confidence: number;
+  } | null;
+  footCandidates: Array<{
+    foot: string;
+    source: string;
+    pixelXY: Vec2 | null;
+    courtXY: Vec2 | null;
+    confidence: number;
+    accepted: boolean;
+    rejectionReason: string | null;
+    keypointCandidates: Array<{
+      semanticName: string;
+      pixelXY: Vec2;
+      confidence: number;
+    }>;
+  }>;
+  nearestRegulationLine: {
+    lineName: string;
+    distanceM: number;
+    signedDistanceM: number;
+    signedDistanceCi95M: Vec2;
+    courtZone: string;
+  } | null;
+  contactState: string;
+  supportFoot: string | null;
+  measurementProvenance: string;
 };
 
 export type DisplaySkeletonInterpolation = {
@@ -3276,7 +3317,117 @@ function readFrame(input: unknown, path: string): VirtualWorldFrame {
     skeleton_implausible:
       input.skeleton_implausible === undefined ? false : readBoolean(input.skeleton_implausible, `${path}.skeleton_implausible`),
     trust_band: readTrustBand(input.trust_band, `${path}.trust_band`),
+    placement_diagnostics: readPlayerPlacementDiagnostics(
+      input.placement_diagnostics,
+      `${path}.placement_diagnostics`,
+    ),
   };
+}
+
+function readPlayerPlacementDiagnostics(input: unknown, path: string): PlayerPlacementDiagnostics | null {
+  if (input === null || input === undefined) return null;
+  assertRecord(input, path);
+  let selectedSupportSignal: PlayerPlacementDiagnostics["selectedSupportSignal"] = null;
+  if (input.selected_support_signal !== null && input.selected_support_signal !== undefined) {
+    assertRecord(input.selected_support_signal, `${path}.selected_support_signal`);
+    selectedSupportSignal = {
+      name: readString(input.selected_support_signal.name, `${path}.selected_support_signal.name`),
+      pixelXY: readVec2(input.selected_support_signal.pixel_xy, `${path}.selected_support_signal.pixel_xy`),
+      courtXY: readVec2(input.selected_support_signal.court_xy, `${path}.selected_support_signal.court_xy`),
+      confidence: readNumber(input.selected_support_signal.confidence, `${path}.selected_support_signal.confidence`),
+    };
+  }
+  const footCandidates = readArray(input.foot_candidates ?? [], `${path}.foot_candidates`).map((candidate, index) => {
+    const candidatePath = `${path}.foot_candidates[${index}]`;
+    assertRecord(candidate, candidatePath);
+    return {
+      foot: readString(candidate.foot, `${candidatePath}.foot`),
+      source: readString(candidate.source, `${candidatePath}.source`),
+      pixelXY: candidate.pixel_xy === null || candidate.pixel_xy === undefined || (Array.isArray(candidate.pixel_xy) && candidate.pixel_xy.length === 0)
+        ? null
+        : readVec2(candidate.pixel_xy, `${candidatePath}.pixel_xy`),
+      courtXY: candidate.court_xy === null || candidate.court_xy === undefined || (Array.isArray(candidate.court_xy) && candidate.court_xy.length === 0)
+        ? null
+        : readVec2(candidate.court_xy, `${candidatePath}.court_xy`),
+      confidence: readNumber(candidate.confidence ?? 0, `${candidatePath}.confidence`),
+      accepted: readBoolean(candidate.accepted ?? false, `${candidatePath}.accepted`),
+      rejectionReason: candidate.rejection_reason === null || candidate.rejection_reason === undefined
+        ? null
+        : readString(candidate.rejection_reason, `${candidatePath}.rejection_reason`),
+      keypointCandidates: readArray(candidate.keypoint_candidates ?? [], `${candidatePath}.keypoint_candidates`).map((point, pointIndex) => {
+        const pointPath = `${candidatePath}.keypoint_candidates[${pointIndex}]`;
+        assertRecord(point, pointPath);
+        return {
+          semanticName: readString(point.semantic_name, `${pointPath}.semantic_name`),
+          pixelXY: readVec2(point.pixel_xy, `${pointPath}.pixel_xy`),
+          confidence: readNumber(point.confidence ?? 0, `${pointPath}.confidence`),
+        };
+      }),
+    };
+  });
+  let nearestRegulationLine: PlayerPlacementDiagnostics["nearestRegulationLine"] = null;
+  if (input.nearest_regulation_line !== null && input.nearest_regulation_line !== undefined) {
+    assertRecord(input.nearest_regulation_line, `${path}.nearest_regulation_line`);
+    nearestRegulationLine = {
+      lineName: readString(input.nearest_regulation_line.line_name, `${path}.nearest_regulation_line.line_name`),
+      distanceM: readNumber(input.nearest_regulation_line.distance_m, `${path}.nearest_regulation_line.distance_m`),
+      signedDistanceM: readNumber(input.nearest_regulation_line.signed_distance_m, `${path}.nearest_regulation_line.signed_distance_m`),
+      signedDistanceCi95M: readVec2(input.nearest_regulation_line.signed_distance_ci95_m, `${path}.nearest_regulation_line.signed_distance_ci95_m`),
+      courtZone: readString(input.nearest_regulation_line.court_zone, `${path}.nearest_regulation_line.court_zone`),
+    };
+  }
+  let contactState = "uncertain";
+  let supportFoot: string | null = null;
+  if (input.contact_state !== null && input.contact_state !== undefined) {
+    assertRecord(input.contact_state, `${path}.contact_state`);
+    contactState = readString(input.contact_state.state, `${path}.contact_state.state`);
+    supportFoot = input.contact_state.support_foot === null || input.contact_state.support_foot === undefined
+      ? null
+      : readString(input.contact_state.support_foot, `${path}.contact_state.support_foot`);
+  }
+  const covarianceM2 = input.covariance_m2 === null || input.covariance_m2 === undefined
+    ? null
+    : readMatrix2(input.covariance_m2, `${path}.covariance_m2`);
+  let uncertaintyDecomposition: PlayerPlacementDiagnostics["uncertaintyDecomposition"] = null;
+  if (input.uncertainty_decomposition !== null && input.uncertainty_decomposition !== undefined) {
+    assertRecord(input.uncertainty_decomposition, `${path}.uncertainty_decomposition`);
+    const readOptionalMatrix = (value: unknown, matrixPath: string): [Vec2, Vec2] | null =>
+      value === null || value === undefined ? null : readMatrix2(value, matrixPath);
+    uncertaintyDecomposition = {
+      footLocalizationCovarianceM2: readOptionalMatrix(
+        input.uncertainty_decomposition.foot_localization_covariance_m2,
+        `${path}.uncertainty_decomposition.foot_localization_covariance_m2`,
+      ),
+      courtCalibrationCovarianceM2: readOptionalMatrix(
+        input.uncertainty_decomposition.court_calibration_covariance_m2,
+        `${path}.uncertainty_decomposition.court_calibration_covariance_m2`,
+      ),
+      postTemporalRefinementCovarianceM2: readOptionalMatrix(
+        input.uncertainty_decomposition.post_temporal_refinement_covariance_m2,
+        `${path}.uncertainty_decomposition.post_temporal_refinement_covariance_m2`,
+      ),
+      dominantInput: readString(
+        input.uncertainty_decomposition.dominant_input ?? "unknown",
+        `${path}.uncertainty_decomposition.dominant_input`,
+      ),
+    };
+  }
+  return {
+    covarianceM2,
+    uncertaintyDecomposition,
+    selectedSupportSignal,
+    footCandidates,
+    nearestRegulationLine,
+    contactState,
+    supportFoot,
+    measurementProvenance: readString(input.measurement_provenance ?? "unknown", `${path}.measurement_provenance`),
+  };
+}
+
+function readMatrix2(input: unknown, path: string): [Vec2, Vec2] {
+  const rows = readArray(input, path);
+  if (rows.length !== 2) throw new Error(`${path} must contain exactly two rows`);
+  return [readVec2(rows[0], `${path}[0]`), readVec2(rows[1], `${path}[1]`)];
 }
 
 function readMeshRef(input: unknown, path: string): VirtualWorldFrame["mesh_ref"] {

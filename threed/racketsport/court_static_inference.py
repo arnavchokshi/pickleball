@@ -69,12 +69,18 @@ def infer_static_court_model(
     if any(getattr(frame, "shape", None) != first_shape for frame in frames_bgr):
         raise ValueError("all static frames must share one image shape")
 
+    candidate_frame_count = len(frames_bgr)
+    segment_diagnostics = _segment_camera_states(frames_bgr, frame_indices=indexes)
+    selected_positions = tuple(int(value) for value in segment_diagnostics["selected_positions"])
+    inference_frames = tuple(frames_bgr[position] for position in selected_positions)
+    inference_indexes = tuple(indexes[position] for position in selected_positions)
+
     payload = load_court_model_checkpoint(checkpoint_path, device=device)
     model, keypoint_names, model_size = build_court_model_from_checkpoint(payload, device=device)
     frame_results: list[dict[str, Any]] = []
     frame_evidence: list[StaticFrameEvidence] = []
     transforms: list[FrameCourtTransform] = []
-    for frame_index, frame in zip(indexes, frames_bgr, strict=True):
+    for frame_index, frame in zip(inference_indexes, inference_frames, strict=True):
         result = _infer_court_model_with_loaded_model(
             frame,
             model=model,
@@ -120,11 +126,19 @@ def infer_static_court_model(
 
     pooled = pool_static_frame_evidence(frame_evidence, max_frames=8)
     transform_motion = diagnose_static_camera(transforms)
-    appearance_motion = _appearance_static_diagnostics(frames_bgr, frame_indices=indexes)
-    motion = _resolve_static_motion(transform_motion, appearance_motion)
+    appearance_motion = _appearance_static_diagnostics(
+        inference_frames,
+        frame_indices=inference_indexes,
+    )
+    motion = _resolve_static_motion(
+        transform_motion,
+        appearance_motion,
+        segment_diagnostics=segment_diagnostics,
+    )
     selected_results = [
-        frame_results[indexes.index(index)] for index in pooled.selected_frame_indices
+        frame_results[inference_indexes.index(index)] for index in pooled.selected_frame_indices
     ]
+    fallback_selected_frame_index: int | None = None
     if motion.static_lock_usable and selected_results:
         line_distances = _pooled_line_distances(selected_results)
         surface_probability = np.mean(
@@ -181,9 +195,40 @@ def infer_static_court_model(
             str(best_court.get("source") or ""),
             default="multi_frame_point_and_line",
         )
+
+        # A pooled solve is preferred, but the documented fallback chain must
+        # not turn a stable, supported clip into a false rejection when one of
+        # its clear frames independently satisfies the exact same lock screen.
+        # Camera-transition clips never reach this fallback because the motion
+        # and segment checks remain part of eligibility.
+        pooled_eligible, _ = _lock_eligibility(
+            best_court,
+            source=source,
+            motion=motion,
+            segment_diagnostics=segment_diagnostics,
+        )
+        if not pooled_eligible:
+            ranked_frames = sorted(
+                zip(frame_evidence, frame_results, strict=True),
+                key=lambda pair: (-pair[0].quality_score, pair[0].frame_index),
+            )
+            for evidence, result in ranked_frames:
+                candidate = result["best_court"]
+                candidate_source = "clearest_frame_point_and_line"
+                candidate_eligible, _ = _lock_eligibility(
+                    candidate,
+                    source=candidate_source,
+                    motion=motion,
+                    segment_diagnostics=segment_diagnostics,
+                )
+                if candidate_eligible:
+                    best_court = candidate
+                    source = candidate_source
+                    fallback_selected_frame_index = int(evidence.frame_index)
+                    break
     else:
         clearest = min(frame_evidence, key=lambda item: (-item.quality_score, item.frame_index))
-        best_court = frame_results[indexes.index(clearest.frame_index)]["best_court"]
+        best_court = frame_results[inference_indexes.index(clearest.frame_index)]["best_court"]
         structured = None
         source = "clearest_frame_point_and_line"
         if best_court.get("homography_image_from_court") is None:
@@ -261,8 +306,23 @@ def infer_static_court_model(
                 "source": distortion["source"],
             }
 
+    source = _lock_source(str(source), default="multi_frame_point_and_line")
+    lock_eligible, lock_decision_reasons = _lock_eligibility(
+        best_court,
+        source=source,
+        motion=motion,
+        segment_diagnostics=segment_diagnostics,
+    )
+    best_court = dict(best_court)
+    best_court["lock_eligible"] = lock_eligible
+    best_court["lock_decision_reasons"] = list(lock_decision_reasons)
+
     lock_payload = None
-    if motion.static_lock_usable and best_court.get("homography_image_from_court") is not None:
+    if court_lock_path is not None:
+        stale_path = Path(court_lock_path)
+        if stale_path.is_file():
+            stale_path.unlink()
+    if lock_eligible and best_court.get("homography_image_from_court") is not None:
         lock = _court_lock_artifact(
             best_court,
             source=source,
@@ -271,6 +331,8 @@ def infer_static_court_model(
             image_size=(source_width, source_height),
             camera_profile=camera_profile,
             checkpoint_sha256=_checkpoint_sha(payload, checkpoint_path=Path(checkpoint_path)),
+            lock_decision_reasons=lock_decision_reasons,
+            segment_diagnostics=segment_diagnostics,
         )
         lock_payload = lock.to_dict()
         if court_lock_path is not None:
@@ -282,13 +344,274 @@ def infer_static_court_model(
         "court_lock": lock_payload,
         "static_motion": motion.to_dict(),
         "appearance_motion": appearance_motion,
-        "candidate_frame_count": len(frames_bgr),
+        "candidate_frame_count": candidate_frame_count,
         "selected_frame_indices": list(pooled.selected_frame_indices),
+        "segment_diagnostics": segment_diagnostics,
         "pooled_observation_count": len(pooled.observations),
         "source": source,
+        "fallback_selected_frame_index": fallback_selected_frame_index,
+        "frame_hypotheses": [
+            {"frame_index": int(frame_index), "best_court": result["best_court"]}
+            for frame_index, result in zip(inference_indexes, frame_results, strict=True)
+        ],
         "frame_best_courts": [result["best_court"] for result in frame_results],
         "structured_pool_diagnostics": None if structured is None else structured.get("diagnostics"),
     }
+
+
+def _segment_camera_states(
+    frames_bgr: Sequence[Any],
+    *,
+    frame_indices: Sequence[int],
+    max_selected_frames: int = 8,
+    max_width: int = 640,
+) -> dict[str, Any]:
+    """Split sampled video frames at confident cuts, pans, tilts, or zooms.
+
+    The estimator uses forward/backward-consistent sparse background tracks and
+    RANSAC.  Independently moving people are therefore excluded as transform
+    outliers before a pair can split the camera state.
+    """
+
+    import cv2
+
+    if len(frames_bgr) != len(frame_indices) or not frames_bgr:
+        raise ValueError("segment inputs must be non-empty and aligned")
+    if len(frames_bgr) == 1:
+        return {
+            "status": "single_frame",
+            "whole_clip_static_eligible": True,
+            "segments": [{"segment_id": 0, "frame_indices": [int(frame_indices[0])]}],
+            "pair_transforms": [],
+            "transition_frame_indices": [],
+            "selected_segment_id": 0,
+            "selected_segment_range": [int(frame_indices[0]), int(frame_indices[0])],
+            "selected_positions": [0],
+            "selection_method": "single_frame",
+        }
+
+    height, width = frames_bgr[0].shape[:2]
+    scale = min(1.0, float(max_width) / max(float(width), 1.0))
+
+    def gray(frame: Any) -> np.ndarray:
+        resized = frame if scale == 1.0 else cv2.resize(
+            frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA
+        )
+        return cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+
+    grays = [gray(frame) for frame in frames_bgr]
+    pair_rows: list[dict[str, Any]] = []
+    transition_positions: list[int] = []
+    for position in range(1, len(grays)):
+        previous = grays[position - 1]
+        current = grays[position]
+        features = cv2.goodFeaturesToTrack(
+            previous,
+            maxCorners=1200,
+            qualityLevel=0.01,
+            minDistance=7,
+            blockSize=7,
+        )
+        row: dict[str, Any] = {
+            "from_frame_index": int(frame_indices[position - 1]),
+            "to_frame_index": int(frame_indices[position]),
+            "transition": False,
+            "reason": None,
+        }
+        if features is None or len(features) < 40:
+            row.update({"status": "ambiguous", "reason": "too_few_background_features"})
+            pair_rows.append(row)
+            continue
+        forward, forward_status, _ = cv2.calcOpticalFlowPyrLK(
+            previous,
+            current,
+            features,
+            None,
+            winSize=(21, 21),
+            maxLevel=3,
+            criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01),
+        )
+        if forward is None or forward_status is None:
+            row.update({"status": "ambiguous", "reason": "forward_flow_failed"})
+            pair_rows.append(row)
+            continue
+        backward, backward_status, _ = cv2.calcOpticalFlowPyrLK(
+            current,
+            previous,
+            forward,
+            None,
+            winSize=(21, 21),
+            maxLevel=3,
+            criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01),
+        )
+        if backward is None or backward_status is None:
+            row.update({"status": "ambiguous", "reason": "backward_flow_failed"})
+            pair_rows.append(row)
+            continue
+        source_all = features.reshape(-1, 2)
+        forward_all = forward.reshape(-1, 2)
+        backward_all = backward.reshape(-1, 2)
+        keep = (
+            (forward_status.reshape(-1) == 1)
+            & (backward_status.reshape(-1) == 1)
+            & (np.linalg.norm(backward_all - source_all, axis=1) <= 1.5)
+        )
+        source = source_all[keep]
+        destination = forward_all[keep]
+        if len(source) < 30:
+            row.update(
+                {
+                    "status": "ambiguous",
+                    "reason": "insufficient_forward_backward_consistent_tracks",
+                    "track_count": int(len(source)),
+                }
+            )
+            pair_rows.append(row)
+            continue
+        affine, inliers = cv2.estimateAffinePartial2D(
+            source,
+            destination,
+            method=cv2.RANSAC,
+            ransacReprojThreshold=1.0,
+            maxIters=3000,
+            confidence=0.99,
+            refineIters=10,
+        )
+        if affine is None or inliers is None or int(inliers.sum()) < 24:
+            phase_shift, phase_response = cv2.phaseCorrelate(
+                np.asarray(previous, dtype=np.float32),
+                np.asarray(current, dtype=np.float32),
+            )
+            phase_translation_px = math.hypot(float(phase_shift[0]), float(phase_shift[1])) / scale
+            phase_transition = bool(float(phase_response) >= 0.10 and phase_translation_px > 10.0)
+            row.update(
+                {
+                    "status": "moving" if phase_transition else "ambiguous",
+                    "transition": phase_transition,
+                    "reason": (
+                        "phase_correlation_detected_camera_transition"
+                        if phase_transition
+                        else "background_transform_underconstrained"
+                    ),
+                    "track_count": int(len(source)),
+                    "phase_translation_px": float(phase_translation_px),
+                    "phase_response": float(phase_response),
+                }
+            )
+            if phase_transition:
+                transition_positions.append(position)
+            pair_rows.append(row)
+            continue
+        inlier_ratio = float(inliers.mean())
+        a, b = float(affine[0, 0]), float(affine[1, 0])
+        pair_scale = math.sqrt(a * a + b * b)
+        rotation_deg = math.degrees(math.atan2(b, a))
+        anchors = np.asarray(
+            [
+                [0.0, 0.0, 1.0],
+                [previous.shape[1] - 1.0, 0.0, 1.0],
+                [0.0, previous.shape[0] - 1.0, 1.0],
+                [previous.shape[1] - 1.0, previous.shape[0] - 1.0, 1.0],
+                [previous.shape[1] * 0.5, previous.shape[0] * 0.5, 1.0],
+            ],
+            dtype=np.float64,
+        )
+        transformed = (affine @ anchors.T).T
+        max_drift_px = float(np.max(np.linalg.norm(transformed - anchors[:, :2], axis=1))) / scale
+        translation_px = math.hypot(float(affine[0, 2]), float(affine[1, 2])) / scale
+        transition_reasons: list[str] = []
+        if max_drift_px > 12.0 or translation_px > 10.0:
+            transition_reasons.append("pan_or_tilt")
+        if abs(pair_scale - 1.0) > 0.02:
+            transition_reasons.append("zoom")
+        if abs(rotation_deg) > 1.0:
+            transition_reasons.append("camera_rotation")
+        if inlier_ratio < 0.25 and max_drift_px > 6.0:
+            transition_reasons.append("possible_cut")
+        row.update(
+            {
+                "status": "moving" if transition_reasons else "static",
+                "transition": bool(transition_reasons),
+                "reason": "+".join(transition_reasons) if transition_reasons else "pair_near_identity",
+                "track_count": int(len(source)),
+                "inlier_count": int(inliers.sum()),
+                "inlier_ratio": inlier_ratio,
+                "max_anchor_drift_px": max_drift_px,
+                "translation_px": float(translation_px),
+                "scale": float(pair_scale),
+                "rotation_deg": float(rotation_deg),
+            }
+        )
+        if transition_reasons:
+            transition_positions.append(position)
+        pair_rows.append(row)
+
+    segment_position_groups: list[list[int]] = []
+    start = 0
+    for position in transition_positions:
+        segment_position_groups.append(list(range(start, position)))
+        start = position
+    segment_position_groups.append(list(range(start, len(frames_bgr))))
+    segment_position_groups = [group for group in segment_position_groups if group]
+    ranked_segments = sorted(
+        enumerate(segment_position_groups),
+        key=lambda item: (-len(item[1]), int(frame_indices[item[1][0]]), item[0]),
+    )
+    selected_segment_id, selected_group = ranked_segments[0]
+    selected_positions = _select_segment_positions(
+        frames_bgr,
+        selected_group,
+        max_frames=max_selected_frames,
+    )
+    segments = [
+        {
+            "segment_id": int(segment_id),
+            "frame_indices": [int(frame_indices[position]) for position in group],
+            "sample_count": len(group),
+        }
+        for segment_id, group in enumerate(segment_position_groups)
+    ]
+    return {
+        "status": "transition_detected" if transition_positions else "single_static_cluster",
+        "whole_clip_static_eligible": not transition_positions,
+        "segments": segments,
+        "pair_transforms": pair_rows,
+        "transition_frame_indices": [int(frame_indices[position]) for position in transition_positions],
+        "selected_segment_id": int(selected_segment_id),
+        "selected_segment_range": [
+            int(frame_indices[selected_group[0]]),
+            int(frame_indices[selected_group[-1]]),
+        ],
+        "selected_positions": [int(position) for position in selected_positions],
+        "selected_frame_indices": [int(frame_indices[position]) for position in selected_positions],
+        "selection_method": "sharpest_per_temporal_bin_within_largest_coherent_segment",
+        "person_motion_handling": "forward_backward_tracks_plus_ransac_dynamic_outlier_rejection",
+    }
+
+
+def _select_segment_positions(
+    frames_bgr: Sequence[Any],
+    positions: Sequence[int],
+    *,
+    max_frames: int,
+) -> tuple[int, ...]:
+    import cv2
+
+    ordered = tuple(sorted(int(value) for value in positions))
+    if len(ordered) <= max_frames:
+        return ordered
+    selected: list[int] = []
+    for raw_bin in np.array_split(np.asarray(ordered, dtype=np.int64), max_frames):
+        candidates = [int(value) for value in raw_bin.tolist()]
+        best = min(
+            candidates,
+            key=lambda position: (
+                -float(cv2.Laplacian(frames_bgr[position], cv2.CV_64F).var()),
+                position,
+            ),
+        )
+        selected.append(best)
+    return tuple(sorted(selected))
 
 
 def _appearance_static_diagnostics(
@@ -433,9 +756,45 @@ def _appearance_static_diagnostics(
 def _resolve_static_motion(
     transform_motion: StaticMotionDiagnostics,
     appearance_motion: Mapping[str, Any],
+    *,
+    segment_diagnostics: Mapping[str, Any] | None = None,
 ) -> StaticMotionDiagnostics:
+    if segment_diagnostics is not None and not bool(
+        segment_diagnostics.get("whole_clip_static_eligible", False)
+    ):
+        return replace(
+            transform_motion,
+            status="moving",
+            camera_motion_suspected=True,
+            static_lock_usable=False,
+            reasons=(
+                *transform_motion.reasons,
+                "segment_first_inference_detected_camera_transition",
+            ),
+        )
     appearance_status = str(appearance_motion.get("status") or "ambiguous")
     if appearance_status == "ambiguous":
+        p95 = appearance_motion.get("drift_px_p95")
+        maximum = appearance_motion.get("drift_px_max")
+        inlier_ratio = appearance_motion.get("mean_inlier_ratio")
+        if (
+            isinstance(p95, (int, float))
+            and isinstance(maximum, (int, float))
+            and isinstance(inlier_ratio, (int, float))
+            and float(p95) <= 3.0
+            and float(maximum) <= 3.0
+            and float(inlier_ratio) >= 0.45
+        ):
+            return replace(
+                transform_motion,
+                status="static",
+                camera_motion_suspected=False,
+                static_lock_usable=True,
+                reasons=(
+                    *transform_motion.reasons,
+                    "borderline_background_flow_recovered_by_static_cluster",
+                ),
+            )
         return transform_motion
     if appearance_status == "static":
         return replace(
@@ -458,6 +817,48 @@ def _resolve_static_motion(
             "background_flow_detected_camera_motion",
         ),
     )
+
+
+def _lock_eligibility(
+    best_court: Mapping[str, Any],
+    *,
+    source: str,
+    motion: StaticMotionDiagnostics,
+    segment_diagnostics: Mapping[str, Any],
+) -> tuple[bool, tuple[str, ...]]:
+    reasons: list[str] = []
+    if best_court.get("homography_image_from_court") is None:
+        reasons.append("missing_floor_homography")
+    diagnostics = best_court.get("diagnostics")
+    diagnostics = diagnostics if isinstance(diagnostics, Mapping) else {}
+    hard = diagnostics.get("hard_eligibility")
+    hard = hard if isinstance(hard, Mapping) else {}
+    if not bool(hard.get("eligible", False)):
+        hard_reasons = hard.get("reasons")
+        if isinstance(hard_reasons, Sequence) and not isinstance(hard_reasons, (str, bytes)):
+            reasons.extend(f"hard_geometry:{value}" for value in hard_reasons)
+        else:
+            reasons.append("hard_geometry_not_eligible")
+    if source not in {"multi_frame_point_and_line", "clearest_frame_point_and_line"}:
+        reasons.append(f"source_not_lock_authorizing:{source}")
+    inlier_ratio = best_court.get("inlier_ratio")
+    if not isinstance(inlier_ratio, (int, float)) or float(inlier_ratio) < (2.0 / 3.0):
+        reasons.append("semantic_inlier_ratio_below_two_thirds")
+    residual = best_court.get("residual_stats_px")
+    residual = residual if isinstance(residual, Mapping) else {}
+    p90 = residual.get("p90")
+    if not isinstance(p90, (int, float)) or not math.isfinite(float(p90)) or float(p90) > 10.0:
+        reasons.append("actual_p90_exceeds_10px_or_missing")
+    if best_court.get("supported_view") is False:
+        reasons.append("unsupported_view")
+    if not motion.static_lock_usable:
+        reasons.append(f"camera_motion:{motion.status}")
+    if not bool(segment_diagnostics.get("whole_clip_static_eligible", False)):
+        reasons.append("whole_clip_contains_camera_transition")
+    net_stage = best_court.get("net_stage")
+    if isinstance(net_stage, Mapping) and net_stage.get("status") == "pose_underconstrained":
+        reasons.append("camera_pose_underconstrained")
+    return not reasons, tuple(dict.fromkeys(reasons))
 
 
 def _static_observations(result: Mapping[str, Any]) -> list[StaticCourtObservation]:
@@ -521,6 +922,8 @@ def _court_lock_artifact(
     image_size: tuple[int, int],
     camera_profile: Mapping[str, Any] | None,
     checkpoint_sha256: str | None,
+    lock_decision_reasons: Sequence[str],
+    segment_diagnostics: Mapping[str, Any],
 ) -> CourtLockArtifact:
     width, height = image_size
     profile = dict(camera_profile or {})
@@ -541,7 +944,7 @@ def _court_lock_artifact(
     k1 = float(distortion_payload.get("k1", 0.0))
     residual = best_court.get("residual_stats_px") or {}
     median = float(residual.get("median") or 0.0)
-    p95 = float(residual.get("p90") or residual.get("p95") or median)
+    p95 = float(residual.get("p95") or residual.get("p90") or median)
     pose = solved_camera.get("pose")
     pose = pose if isinstance(pose, Mapping) else {}
     rotation = pose.get("rotation_world_to_camera")
@@ -600,6 +1003,10 @@ def _court_lock_artifact(
             if isinstance(value, (int, float)) and not isinstance(value, bool)
         },
         checkpoint_sha256=checkpoint_sha256,
+        lock_eligible=True,
+        lock_decision_reasons=tuple(str(value) for value in lock_decision_reasons),
+        segment_range=tuple(int(value) for value in segment_diagnostics["selected_segment_range"]),
+        segment_diagnostics=dict(segment_diagnostics),
         scorer_version="confidence_aware_structured_court_v31",
         calibration_version=str(
             (best_court.get("court_confidence_calibration") or {}).get(

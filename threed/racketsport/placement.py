@@ -132,6 +132,7 @@ class _FootPixelObservation:
     reason: str | None = None
     sidecar_player_id: int | None = None
     mapped_player_id: int | None = None
+    keypoint_candidates: tuple[Mapping[str, Any], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -145,9 +146,13 @@ class _CameraMotionObservation:
 class _FrameSignals:
     fused_xy: list[float]
     fused_covariance: list[list[float]]
+    localization_covariance: list[list[float]]
+    calibration_covariance: list[list[float]]
     stance: bool
     signals: list[dict[str, Any]]
     source_counts: dict[str, int]
+    foot_candidates: list[dict[str, Any]]
+    selected_support_signal: dict[str, Any] | None
 
 
 @dataclass(frozen=True)
@@ -186,6 +191,7 @@ def rewrite_tracks_with_placement(
     stance_phases_path: str | Path | None = None,
     foot_contact_phases_out_path: str | Path | None = None,
     camera_motion_path: str | Path | None = None,
+    court_lock_path: str | Path | None = None,
     refine_from_sam3d: bool = False,
     config: PlacementConfig | None = None,
 ) -> PlacementRewriteResult:
@@ -200,9 +206,11 @@ def rewrite_tracks_with_placement(
     stance_phases_path = Path(stance_phases_path) if stance_phases_path is not None else None
     foot_contact_phases_out_path = Path(foot_contact_phases_out_path) if foot_contact_phases_out_path is not None else None
     camera_motion_path = Path(camera_motion_path) if camera_motion_path is not None else None
+    court_lock_path = Path(court_lock_path) if court_lock_path is not None else None
 
     tracks_payload = _read_json(tracks_path)
     calibration_payload = _read_json(calibration_path)
+    court_lock_payload = _read_json(court_lock_path) if court_lock_path is not None and court_lock_path.is_file() else {}
     camera_motion_frames, camera_motion_metadata = (
         _load_camera_motion(camera_motion_path) if camera_motion_path is not None else ({}, {})
     )
@@ -257,6 +265,10 @@ def rewrite_tracks_with_placement(
         _write_json(backup_path, backup_payload)
 
     homography = np.asarray(calibration_payload["homography"], dtype=float)
+    transform_covariance, calibration_uncertainty_status = _compatible_transform_covariance(
+        court_lock_payload,
+        homography=homography,
+    )
     intrinsics = calibration_payload.get("intrinsics", {})
     camera_matrix = _camera_matrix(intrinsics)
     dist = [float(value) for value in intrinsics.get("dist", []) or []]
@@ -304,6 +316,7 @@ def rewrite_tracks_with_placement(
         height95 = float(np.quantile(heights, 0.95)) if heights else 1.0
 
         frame_signals: dict[int, _FrameSignals] = {}
+        foot_candidates_by_frame: dict[int, list[dict[str, Any]]] = defaultdict(list)
         keypoint_xy_for_stance: dict[int, list[float]] = {}
         trajectory_xy_for_stance: dict[int, list[float]] = {}
         foot_keypoint_xy_for_stance: dict[str, dict[int, list[float]]] = {"left": {}, "right": {}}
@@ -322,32 +335,90 @@ def rewrite_tracks_with_placement(
             frame_indices.append(frame_idx)
             original_xy = _xy(frame.get("world_xy"), name="world_xy")
             original_by_frame[frame_idx] = original_xy
-            signals = _signals_for_frame(
-                frame=frame,
-                player_id=player_id,
-                frame_idx=frame_idx,
-                side=side,
-                height95=height95,
-                native2d=native2d,
-                sam3d=sam3d,
-                homography=homography,
-                camera_matrix=camera_matrix,
-                dist=dist,
-                undistort_applied=undistort_applied,
-                homography_pixel_space=homography_pixel_space,
-                pixel_transform=camera_motion.matrix if camera_motion is not None else None,
-                config=config,
+            interpolated_track_frame = bool(frame.get("interpolated", False))
+            signals = (
+                [
+                    {
+                        "name": name,
+                        "xy": None,
+                        "covariance_m2": None,
+                        "localization_covariance_m2": None,
+                        "calibration_covariance_m2": None,
+                        "sigma_m": None,
+                        "used": False,
+                        "reason": "interpolated_track_frame_not_measured",
+                    }
+                    for name in ("bbox", "native2d", "sam3d")
+                ]
+                if interpolated_track_frame
+                else _signals_for_frame(
+                    frame=frame,
+                    player_id=player_id,
+                    frame_idx=frame_idx,
+                    side=side,
+                    height95=height95,
+                    native2d=native2d,
+                    sam3d=sam3d,
+                    homography=homography,
+                    transform_covariance=transform_covariance,
+                    camera_matrix=camera_matrix,
+                    dist=dist,
+                    undistort_applied=undistort_applied,
+                    homography_pixel_space=homography_pixel_space,
+                    pixel_transform=camera_motion.matrix if camera_motion is not None else None,
+                    config=config,
+                )
             )
+            if not interpolated_track_frame:
+                bbox_signal = next(
+                    (signal for signal in signals if signal.get("name") == "bbox"),
+                    None,
+                )
+                if bbox_signal is not None:
+                    foot_candidates_by_frame[frame_idx].append(
+                        _foot_candidate_for_artifact(
+                            {
+                                **bbox_signal,
+                                "foot": "unknown",
+                                "source": "bbox_bottom_center",
+                            }
+                        )
+                    )
+                foot_candidates_by_frame[frame_idx].append(
+                    {
+                        "foot": "unknown",
+                        "source": "silhouette_bottom",
+                        "pixel_xy": [],
+                        "court_xy": [],
+                        "confidence": 0.0,
+                        "covariance_m2": None,
+                        "accepted": False,
+                        "rejection_reason": "silhouette_unavailable",
+                        "keypoint_candidates": [],
+                    }
+                )
             used_signals = [
-                FootSignal(signal["name"], signal["xy"], signal["covariance_m2"], used=signal["used"], reason=signal.get("reason"))
+                FootSignal(
+                    signal["name"],
+                    signal["xy"],
+                    signal.get("localization_covariance_m2") or signal["covariance_m2"],
+                    used=signal["used"],
+                    reason=signal.get("reason"),
+                )
                 for signal in signals
                 if signal["used"] and signal.get("xy") is not None
             ]
             if used_signals:
-                fused_xy, fused_cov = inverse_covariance_fuse(used_signals)
+                fused_xy, fused_local_cov = inverse_covariance_fuse(used_signals)
+                fused_calibration_cov = _fused_calibration_covariance(signals)
+                fused_cov = _psd_covariance(
+                    np.asarray(fused_local_cov, dtype=float) + fused_calibration_cov
+                )
             else:
                 fused_xy = list(original_xy)
-                fused_cov = [[0.5, 0.0], [0.0, 0.5]]
+                fused_local_cov = [[0.5, 0.0], [0.0, 0.5]]
+                fused_calibration_cov = np.zeros((2, 2), dtype=float)
+                fused_cov = np.asarray(fused_local_cov, dtype=float)
             source_counts = Counter(signal["name"] for signal in signals if signal["used"])
             for key, value in source_counts.items():
                 total_source_counts[key] += value
@@ -357,6 +428,8 @@ def rewrite_tracks_with_placement(
             if used_signals:
                 trajectory_xy_for_stance[frame_idx] = [float(fused_xy[0]), float(fused_xy[1])]
             for foot in ("left", "right"):
+                if interpolated_track_frame:
+                    continue
                 foot_signal = _phase_foot_signal_for_frame(
                     player_id=player_id,
                     frame_idx=frame_idx,
@@ -364,6 +437,7 @@ def rewrite_tracks_with_placement(
                     source_maps=(("native2d", native2d_feet), ("sam3d", sam3d_feet)),
                     side=side,
                     homography=homography,
+                    transform_covariance=transform_covariance,
                     camera_matrix=camera_matrix,
                     dist=dist,
                     undistort_applied=undistort_applied,
@@ -375,12 +449,21 @@ def rewrite_tracks_with_placement(
                     foot_keypoint_xy_for_stance[foot][frame_idx] = [float(foot_signal["xy"][0]), float(foot_signal["xy"][1])]
                     foot_keypoint_conf_for_stance[foot][frame_idx] = float(foot_signal["confidence"])
                     foot_keypoint_source_for_stance[foot][frame_idx] = str(foot_signal["source"])
+                    foot_candidates_by_frame[frame_idx].extend(
+                        _foot_candidate_for_artifact(candidate)
+                        for candidate in foot_signal.get("_all_candidates", [foot_signal])
+                    )
+            selected_support = _selected_support_signal(signals)
             frame_signals[frame_idx] = _FrameSignals(
                 fused_xy=[float(fused_xy[0]), float(fused_xy[1])],
                 fused_covariance=_covariance_to_list(fused_cov),
+                localization_covariance=_covariance_to_list(fused_local_cov),
+                calibration_covariance=_covariance_to_list(fused_calibration_cov),
                 stance=False,
                 signals=_signals_for_artifact(signals),
                 source_counts=dict(source_counts),
+                foot_candidates=list(foot_candidates_by_frame.get(frame_idx, [])),
+                selected_support_signal=selected_support,
             )
 
         player_stance_phases = stance_phases.get(player_id, [])
@@ -429,6 +512,13 @@ def rewrite_tracks_with_placement(
             phase for phase in (*player_stance_phases, *per_foot_stance_phases) if _stance_phase_is_body_lock_eligible(phase)
         ]
         body_lock_stance_frames = _phase_frame_set(body_lock_stance_phases, frame_indices=frame_indices)
+        body_lock_frames_by_foot = {
+            foot: _phase_frame_set(
+                [phase for phase in body_lock_stance_phases if phase.foot == foot],
+                frame_indices=frame_indices,
+            )
+            for foot in ("left", "right")
+        }
         if not native_stance_phases and not player_stance_phases:
             stance_detection_warnings.append(
                 f"player {player_id}: emitted zero native stance phases at "
@@ -583,14 +673,52 @@ def rewrite_tracks_with_placement(
             frame_count += 1
             placement_stance = frame_idx in placement_stance_frames
             body_lock_stance = frame_idx in body_lock_stance_frames
+            track_interpolated = bool(frame.get("interpolated", False))
+            if used_measurement and not track_interpolated:
+                measurement_provenance = "measured"
+            elif frame_idx in gap_interpolated_frames:
+                measurement_provenance = "display_interpolated_only"
+            elif track_interpolated:
+                measurement_provenance = "identity_interpolated_not_measured"
+            else:
+                measurement_provenance = "missing"
+            contact_state = _contact_state_for_frame(
+                frame,
+                frame_idx=frame_idx,
+                body_lock_frames_by_foot=body_lock_frames_by_foot,
+                foot_candidates=fs.foot_candidates,
+            )
+            final_covariance = _covariance_after_position_refinement(
+                smoothed_frame.covariance,
+                before_xy=smoothed_frame.xy,
+                after_xy=xy,
+            )
+            line_proximity = _nearest_regulation_line(
+                xy,
+                covariance=final_covariance,
+            )
             placement_frame = {
                 "frame_idx": int(frame_idx),
                 "t": float(frame.get("t", frame_idx / fps)),
                 "original_world_xy": original_by_frame[frame_idx],
                 "fused_world_xy": fs.fused_xy,
                 "smoothed_world_xy": [float(xy[0]), float(xy[1])],
-                "covariance_m2": smoothed_frame.covariance,
+                "covariance_m2": final_covariance,
+                "uncertainty_decomposition": {
+                    "foot_localization_covariance_m2": fs.localization_covariance,
+                    "court_calibration_covariance_m2": fs.calibration_covariance,
+                    "post_temporal_refinement_covariance_m2": final_covariance,
+                    "dominant_input": _dominant_uncertainty_component(
+                        fs.localization_covariance,
+                        fs.calibration_covariance,
+                    ),
+                },
                 "stance": bool(body_lock_stance),
+                "contact_state": contact_state,
+                "selected_support_signal": fs.selected_support_signal,
+                "foot_candidates": fs.foot_candidates,
+                "nearest_regulation_line": line_proximity,
+                "measurement_provenance": measurement_provenance,
                 "signals": fs.signals,
                 "source_counts": fs.source_counts,
                 "output_source": written_source,
@@ -678,6 +806,8 @@ def rewrite_tracks_with_placement(
         "refine_from_sam3d": bool(refine_from_sam3d),
         "homography_pixel_convention": homography_pixel_convention,
         "undistort_applied": undistort_applied,
+        "court_lock": court_lock_path.name if court_lock_path is not None else None,
+        "calibration_uncertainty_status": calibration_uncertainty_status,
         "source_counts": dict(total_source_counts),
         "sidecar_identity": sidecar_identity_summary,
         "boundary_guards": boundary_guard_summary,
@@ -718,6 +848,7 @@ def rewrite_tracks_with_placement(
         "jitter_before_after_mps": jitter_summary,
         "stance_wobble_before_after_m": stance_wobble_summary,
         "court_bounds_violations": total_bounds_violations,
+        "calibration_uncertainty_status": calibration_uncertainty_status,
     }
     if gap_reacquisition_speed_violations:
         placement_summary["gap_reacquisition_speed_violations"] = gap_reacquisition_speed_violations
@@ -949,6 +1080,7 @@ def _reassociate_sidecar_foot_pixels(
                     reason=None,
                     sidecar_player_id=int(sidecar_player_id),
                     mapped_player_id=int(winning_track_id),
+                    keypoint_candidates=observation.keypoint_candidates,
                 )
                 current = remapped.get(key)
                 if current is None or not current.valid or valid_observation.confidence >= current.confidence:
@@ -966,6 +1098,7 @@ def _reassociate_sidecar_foot_pixels(
                     reason="identity_pixel_mismatch",
                     sidecar_player_id=int(sidecar_player_id),
                     mapped_player_id=int(winning_track_id),
+                    keypoint_candidates=observation.keypoint_candidates,
                 )
                 if key not in remapped:
                     remapped[key] = invalid_observation
@@ -1306,6 +1439,18 @@ def _apply_visual_root_step_bound(
         if _distance_xy(old_xy, bounded_xy) <= 1e-12:
             continue
         frame["smoothed_world_xy"] = [float(bounded_xy[0]), float(bounded_xy[1])]
+        frame["covariance_m2"] = _covariance_after_position_refinement(
+            frame.get("covariance_m2", [[0.5, 0.0], [0.0, 0.5]]),
+            before_xy=old_xy,
+            after_xy=bounded_xy,
+        )
+        decomposition = frame.get("uncertainty_decomposition")
+        if isinstance(decomposition, dict):
+            decomposition["post_temporal_refinement_covariance_m2"] = frame["covariance_m2"]
+        frame["nearest_regulation_line"] = _nearest_regulation_line(
+            bounded_xy,
+            covariance=frame["covariance_m2"],
+        )
         frame["visual_root_step_bounded"] = True
         frame["output_source"] = f"{frame.get('output_source', 'smoothed')}_visual_bound"
         rewritten = rewritten_by_frame.get(frame_idx)
@@ -1628,6 +1773,264 @@ def homography_world_covariance(
     return covariance
 
 
+def homography_parameter_world_covariance(
+    homography: Sequence[Sequence[float]] | np.ndarray,
+    pixel_xy: Sequence[float],
+    *,
+    transform_covariance: Sequence[Sequence[float]] | np.ndarray | None,
+    pixel_space: CoordinateSpace = CoordinateSpace.PIXELS_RAW_NATIVE,
+    homography_space: CoordinateSpace | None = None,
+) -> np.ndarray:
+    """Propagate the court-transform posterior into one court-space point."""
+
+    if transform_covariance is None:
+        return np.zeros((2, 2), dtype=float)
+    homography_array = np.asarray(homography, dtype=float)
+    if homography_array.shape != (3, 3) or not np.isfinite(homography_array).all():
+        raise ValueError("homography must be a finite 3x3 matrix")
+    scale = float(homography_array[2, 2])
+    if abs(scale) <= 1e-12:
+        raise ValueError("homography cannot be normalized for uncertainty propagation")
+    normalized = homography_array / scale
+    covariance_h = np.asarray(transform_covariance, dtype=float)
+    if covariance_h.shape != (8, 8) or not np.isfinite(covariance_h).all():
+        raise ValueError("transform_covariance must be a finite 8x8 matrix")
+    covariance_h = _psd_covariance(covariance_h)
+    parameters = np.asarray(
+        [
+            normalized[0, 0], normalized[0, 1], normalized[0, 2],
+            normalized[1, 0], normalized[1, 1], normalized[1, 2],
+            normalized[2, 0], normalized[2, 1],
+        ],
+        dtype=float,
+    )
+    pixel = np.asarray(_xy(pixel_xy, name="pixel_xy"), dtype=float)
+    declared_homography_space = homography_space or pixel_space
+    columns: list[np.ndarray] = []
+    for index, value in enumerate(parameters):
+        epsilon = max(abs(float(value)) * 1.0e-6, 1.0e-7)
+        plus_parameters = parameters.copy()
+        minus_parameters = parameters.copy()
+        plus_parameters[index] += epsilon
+        minus_parameters[index] -= epsilon
+        plus_h = np.asarray(
+            [plus_parameters[0:3], plus_parameters[3:6], [plus_parameters[6], plus_parameters[7], 1.0]],
+            dtype=float,
+        )
+        minus_h = np.asarray(
+            [minus_parameters[0:3], minus_parameters[3:6], [minus_parameters[6], minus_parameters[7], 1.0]],
+            dtype=float,
+        )
+        plus_xy = _unproject_pixel(
+            np.linalg.inv(plus_h),
+            pixel,
+            input_space=pixel_space,
+            homography_space=declared_homography_space,
+        )
+        minus_xy = _unproject_pixel(
+            np.linalg.inv(minus_h),
+            pixel,
+            input_space=pixel_space,
+            homography_space=declared_homography_space,
+        )
+        columns.append((plus_xy - minus_xy) / (2.0 * epsilon))
+    jacobian = np.column_stack(columns)
+    return _psd_covariance(jacobian @ covariance_h @ jacobian.T)
+
+
+def _compatible_transform_covariance(
+    court_lock_payload: Mapping[str, Any],
+    *,
+    homography: np.ndarray,
+) -> tuple[np.ndarray | None, str]:
+    raw_covariance = court_lock_payload.get("transform_covariance")
+    raw_homography = court_lock_payload.get("homography_image_from_court")
+    if raw_covariance is None:
+        return None, "unavailable"
+    try:
+        covariance = np.asarray(raw_covariance, dtype=float)
+        lock_homography = np.asarray(raw_homography, dtype=float)
+        normalized_calibration = homography / float(homography[2, 2])
+        normalized_lock = lock_homography / float(lock_homography[2, 2])
+    except (TypeError, ValueError, ZeroDivisionError, FloatingPointError):
+        return None, "invalid_court_lock_covariance"
+    if covariance.shape != (8, 8) or lock_homography.shape != (3, 3):
+        return None, "invalid_court_lock_covariance_shape"
+    if not np.isfinite(covariance).all() or not np.isfinite(normalized_lock).all():
+        return None, "nonfinite_court_lock_covariance"
+    if not np.allclose(normalized_calibration, normalized_lock, rtol=1.0e-5, atol=1.0e-5):
+        return None, "court_lock_homography_mismatch"
+    return _psd_covariance(covariance), "propagated_from_court_lock"
+
+
+def _fused_calibration_covariance(signals: Sequence[Mapping[str, Any]]) -> np.ndarray:
+    weighted = np.zeros((2, 2), dtype=float)
+    total_weight = 0.0
+    for signal in signals:
+        if not signal.get("used") or signal.get("calibration_covariance_m2") is None:
+            continue
+        calibration = np.asarray(signal["calibration_covariance_m2"], dtype=float)
+        localization = np.asarray(signal.get("localization_covariance_m2"), dtype=float)
+        if calibration.shape != (2, 2) or localization.shape != (2, 2):
+            continue
+        weight = 1.0 / max(float(np.trace(localization)), 1.0e-12)
+        weighted += calibration * weight
+        total_weight += weight
+    if total_weight <= 0.0:
+        return np.zeros((2, 2), dtype=float)
+    return _psd_covariance(weighted / total_weight)
+
+
+def _psd_covariance(covariance: Sequence[Sequence[float]] | np.ndarray) -> np.ndarray:
+    array = np.asarray(covariance, dtype=float)
+    if array.ndim != 2 or array.shape[0] != array.shape[1] or not np.isfinite(array).all():
+        raise ValueError("covariance must be a finite square matrix")
+    symmetric = 0.5 * (array + array.T)
+    values, vectors = np.linalg.eigh(symmetric)
+    projected = vectors @ np.diag(np.maximum(values, 0.0)) @ vectors.T
+    return 0.5 * (projected + projected.T)
+
+
+def _selected_support_signal(signals: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
+    eligible = [
+        signal
+        for signal in signals
+        if signal.get("used") and signal.get("xy") is not None and signal.get("pixel_xy") is not None
+    ]
+    if not eligible:
+        return None
+    preferred = min(
+        eligible,
+        key=lambda signal: (
+            str(signal.get("name")) == "bbox",
+            float(np.trace(np.asarray(signal.get("localization_covariance_m2"), dtype=float))),
+            str(signal.get("name")),
+        ),
+    )
+    return {
+        "name": str(preferred["name"]),
+        "pixel_xy": list(preferred["pixel_xy"]),
+        "court_xy": list(preferred["xy"]),
+        "confidence": float(preferred.get("confidence") or 0.0),
+    }
+
+
+def _foot_candidate_for_artifact(signal: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "foot": str(signal.get("foot") or "unknown"),
+        "source": str(signal.get("source") or signal.get("name") or "unknown"),
+        "pixel_xy": list(signal.get("pixel_xy") or []),
+        "court_xy": list(signal.get("xy") or []),
+        "confidence": float(signal.get("confidence") or 0.0),
+        "covariance_m2": signal.get("covariance_m2"),
+        "accepted": bool(signal.get("used", False)),
+        "rejection_reason": signal.get("reason"),
+        "keypoint_candidates": [dict(value) for value in signal.get("keypoint_candidates") or []],
+    }
+
+
+def _contact_state_for_frame(
+    frame: Mapping[str, Any],
+    *,
+    frame_idx: int,
+    body_lock_frames_by_foot: Mapping[str, set[int]],
+    foot_candidates: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    explicit = str(frame.get("contact_state") or "").lower()
+    if explicit == "airborne":
+        return {"state": "airborne", "support_foot": None, "source": "explicit_body_state"}
+    planted = [foot for foot in ("left", "right") if frame_idx in body_lock_frames_by_foot.get(foot, set())]
+    if planted:
+        return {
+            "state": "planted",
+            "support_foot": planted[0] if len(planted) == 1 else "bilateral",
+            "source": "eligible_body_or_per_foot_stance_phase",
+        }
+    return {
+        "state": "uncertain",
+        "support_foot": None,
+        "source": "visible_foot_evidence_without_confirmed_contact" if foot_candidates else "missing_foot_evidence",
+    }
+
+
+def _covariance_after_position_refinement(
+    covariance: Sequence[Sequence[float]],
+    *,
+    before_xy: Sequence[float],
+    after_xy: Sequence[float],
+) -> list[list[float]]:
+    base = np.asarray(_matrix2(covariance, name="covariance"), dtype=float)
+    displacement = np.asarray(_xy(after_xy, name="after_xy"), dtype=float) - np.asarray(
+        _xy(before_xy, name="before_xy"), dtype=float
+    )
+    if float(np.linalg.norm(displacement)) > 1.0e-12:
+        base = base + np.outer(displacement, displacement)
+    return _covariance_to_list(_psd_covariance(base))
+
+
+def _dominant_uncertainty_component(
+    localization_covariance: Sequence[Sequence[float]],
+    calibration_covariance: Sequence[Sequence[float]],
+) -> str:
+    localization_trace = float(np.trace(np.asarray(localization_covariance, dtype=float)))
+    calibration_trace = float(np.trace(np.asarray(calibration_covariance, dtype=float)))
+    return "court_calibration" if calibration_trace > localization_trace else "foot_localization"
+
+
+def _nearest_regulation_line(
+    xy: Sequence[float],
+    *,
+    covariance: Sequence[Sequence[float]],
+) -> dict[str, Any]:
+    point = np.asarray(_xy(xy, name="xy"), dtype=float)
+    lines = {
+        "near_baseline": ((-COURT_HALF_WIDTH_M, -COURT_HALF_LENGTH_M), (COURT_HALF_WIDTH_M, -COURT_HALF_LENGTH_M)),
+        "far_baseline": ((-COURT_HALF_WIDTH_M, COURT_HALF_LENGTH_M), (COURT_HALF_WIDTH_M, COURT_HALF_LENGTH_M)),
+        "left_sideline": ((-COURT_HALF_WIDTH_M, -COURT_HALF_LENGTH_M), (-COURT_HALF_WIDTH_M, COURT_HALF_LENGTH_M)),
+        "right_sideline": ((COURT_HALF_WIDTH_M, -COURT_HALF_LENGTH_M), (COURT_HALF_WIDTH_M, COURT_HALF_LENGTH_M)),
+        "near_nvz": ((-COURT_HALF_WIDTH_M, -2.1336), (COURT_HALF_WIDTH_M, -2.1336)),
+        "far_nvz": ((-COURT_HALF_WIDTH_M, 2.1336), (COURT_HALF_WIDTH_M, 2.1336)),
+        "near_centerline": ((0.0, -COURT_HALF_LENGTH_M), (0.0, -2.1336)),
+        "far_centerline": ((0.0, 2.1336), (0.0, COURT_HALF_LENGTH_M)),
+        "net_floor": ((-COURT_HALF_WIDTH_M, 0.0), (COURT_HALF_WIDTH_M, 0.0)),
+    }
+    candidates: list[tuple[float, str, float, np.ndarray]] = []
+    for name, (start_raw, end_raw) in lines.items():
+        start = np.asarray(start_raw, dtype=float)
+        end = np.asarray(end_raw, dtype=float)
+        direction = end - start
+        alpha = float(np.dot(point - start, direction) / max(float(np.dot(direction, direction)), 1.0e-12))
+        closest = start + min(max(alpha, 0.0), 1.0) * direction
+        delta = point - closest
+        distance = float(np.linalg.norm(delta))
+        if abs(direction[0]) >= abs(direction[1]):
+            normal = np.asarray([0.0, 1.0], dtype=float)
+            signed = float(point[1] - start[1])
+        else:
+            normal = np.asarray([1.0, 0.0], dtype=float)
+            signed = float(point[0] - start[0])
+        candidates.append((distance, name, signed, normal))
+    distance, name, signed, normal = min(candidates, key=lambda item: (item[0], item[1]))
+    covariance_array = _psd_covariance(covariance)
+    sigma = math.sqrt(max(float(normal.T @ covariance_array @ normal), 0.0))
+    if -2.1336 <= point[1] <= 0.0:
+        zone = "near_kitchen"
+    elif 0.0 <= point[1] <= 2.1336:
+        zone = "far_kitchen"
+    elif point[1] < -2.1336:
+        zone = "near_backcourt"
+    else:
+        zone = "far_backcourt"
+    return {
+        "line_name": name,
+        "distance_m": distance,
+        "signed_distance_m": signed,
+        "signed_distance_ci95_m": [signed - 1.96 * sigma, signed + 1.96 * sigma],
+        "same_side_confident": bool(abs(signed) > 1.96 * sigma),
+        "court_zone": zone,
+    }
+
+
 def kalman_rts_smooth(
     measurements: Mapping[int, tuple[Sequence[float], Sequence[Sequence[float]], bool]],
     *,
@@ -1768,6 +2171,7 @@ def _signals_for_frame(
     native2d: Mapping[tuple[int, int], _PixelObservation],
     sam3d: Mapping[tuple[int, int], _PixelObservation],
     homography: np.ndarray,
+    transform_covariance: np.ndarray | None,
     camera_matrix: np.ndarray,
     dist: Sequence[float],
     undistort_applied: bool,
@@ -1787,6 +2191,7 @@ def _signals_for_frame(
             sigma_px=bbox_pixel_sigma(bbox, side=side, height_norm=height_norm, base_sigma_px=config.bbox_base_sigma_px),
             side=side,
             homography=homography,
+            transform_covariance=transform_covariance,
             camera_matrix=camera_matrix,
             dist=dist,
             undistort_applied=undistort_applied,
@@ -1823,6 +2228,7 @@ def _signals_for_frame(
             sigma_px=sigma,
             side=side,
             homography=homography,
+            transform_covariance=transform_covariance,
             camera_matrix=camera_matrix,
             dist=dist,
             undistort_applied=undistort_applied,
@@ -1843,6 +2249,7 @@ def _phase_foot_signal_for_frame(
     source_maps: Sequence[tuple[str, Mapping[tuple[int, str, int], _FootPixelObservation]]],
     side: str,
     homography: np.ndarray,
+    transform_covariance: np.ndarray | None,
     camera_matrix: np.ndarray,
     dist: Sequence[float],
     undistort_applied: bool,
@@ -1869,6 +2276,7 @@ def _phase_foot_signal_for_frame(
             sigma_px=sigma_px,
             side=side,
             homography=homography,
+            transform_covariance=transform_covariance,
             camera_matrix=camera_matrix,
             dist=dist,
             undistort_applied=undistort_applied,
@@ -1880,10 +2288,23 @@ def _phase_foot_signal_for_frame(
         signal["confidence"] = _normalized_phase_confidence(float(observation.confidence))
         signal["source"] = source_name
         signal["foot"] = foot
+        signal["keypoint_candidates"] = [
+            {
+                **dict(candidate),
+                "pixel_xy": _apply_pixel_transform(candidate["pixel_xy"], pixel_transform),
+            }
+            for candidate in observation.keypoint_candidates
+        ]
         candidates.append(signal)
     if not candidates:
         return None
-    return sorted(candidates, key=lambda item: (float(item["confidence"]), str(item["source"]) == "native2d"), reverse=True)[0]
+    ranked = sorted(
+        candidates,
+        key=lambda item: (float(item["confidence"]), str(item["source"]) == "native2d"),
+        reverse=True,
+    )
+    ranked[0]["_all_candidates"] = ranked
+    return ranked[0]
 
 
 def _signal_from_pixel(
@@ -1894,13 +2315,14 @@ def _signal_from_pixel(
     sigma_px: float,
     side: str,
     homography: np.ndarray,
+    transform_covariance: np.ndarray | None,
     camera_matrix: np.ndarray,
     dist: Sequence[float],
     undistort_applied: bool,
     homography_pixel_space: CoordinateSpace,
     config: PlacementConfig,
 ) -> dict[str, Any]:
-    del side, confidence
+    del side
     pixel = (
         undistort_pixel(
             pixel_xy,
@@ -1918,7 +2340,7 @@ def _signal_from_pixel(
         input_space=homography_pixel_space,
         homography_space=homography_pixel_space,
     )
-    covariance = homography_world_covariance(
+    localization_covariance = homography_world_covariance(
         homography,
         pixel,
         sigma_px=sigma_px,
@@ -1926,11 +2348,24 @@ def _signal_from_pixel(
         pixel_space=homography_pixel_space,
         homography_space=homography_pixel_space,
     )
+    calibration_covariance = homography_parameter_world_covariance(
+        homography,
+        pixel,
+        transform_covariance=transform_covariance,
+        pixel_space=homography_pixel_space,
+        homography_space=homography_pixel_space,
+    )
+    covariance = _psd_covariance(localization_covariance + calibration_covariance)
     sigma_m = [float(math.sqrt(max(covariance[0, 0], 0.0))), float(math.sqrt(max(covariance[1, 1], 0.0)))]
     used = _inside_court_bounds(xy, margin_m=config.court_margin_m)
     return {
         "name": name,
         "xy": [float(xy[0]), float(xy[1])],
+        "pixel_xy": [float(pixel[0]), float(pixel[1])],
+        "pixel_covariance_px2": [[float(sigma_px) ** 2, 0.0], [0.0, float(sigma_px) ** 2]],
+        "confidence": float(confidence),
+        "localization_covariance_m2": _covariance_to_list(localization_covariance),
+        "calibration_covariance_m2": _covariance_to_list(calibration_covariance),
         "covariance_m2": _covariance_to_list(covariance),
         "sigma_m": sigma_m,
         "used": bool(used),
@@ -1957,12 +2392,19 @@ def _signals_for_artifact(signals: Sequence[Mapping[str, Any]]) -> list[dict[str
         artifact_signal = {
             "name": str(signal["name"]),
             "xy": signal.get("xy"),
+            "pixel_xy": signal.get("pixel_xy"),
+            "pixel_covariance_px2": signal.get("pixel_covariance_px2"),
+            "confidence": signal.get("confidence"),
             "sigma_m": sigma if sigma is not None else None,
             "used": bool(signal.get("used", False)),
             "reason": signal.get("reason"),
         }
         if cov is not None:
             artifact_signal["covariance_m2"] = cov
+        if signal.get("localization_covariance_m2") is not None:
+            artifact_signal["localization_covariance_m2"] = signal["localization_covariance_m2"]
+        if signal.get("calibration_covariance_m2") is not None:
+            artifact_signal["calibration_covariance_m2"] = signal["calibration_covariance_m2"]
         if "sidecar_player_id" in signal:
             artifact_signal["sidecar_player_id"] = signal.get("sidecar_player_id")
         if "mapped_player_id" in signal:
@@ -2058,6 +2500,13 @@ def _load_native2d_foot_pixels_by_foot(
                         pixel_xy=point[0],
                         confidence=point[1],
                         sidecar_player_id=player_id,
+                        keypoint_candidates=tuple(
+                            _native2d_named_candidates(
+                                by_name,
+                                names,
+                                conf_min=config.keypoint_conf_min,
+                            )
+                        ),
                     )
     return out
 
@@ -2115,6 +2564,13 @@ def _load_sam3d_foot_pixels_by_foot(
                         pixel_xy=point[0],
                         confidence=point[1],
                         sidecar_player_id=player_id,
+                        keypoint_candidates=tuple(
+                            _sam3d_named_candidates(
+                                by_name,
+                                names,
+                                conf_min=config.sam3d_conf_min,
+                            )
+                        ),
                     )
     return out
 
@@ -2450,6 +2906,30 @@ def _weighted_named_pixel(
     return _combine_weighted_pixels(weighted)
 
 
+def _native2d_named_candidates(
+    by_name: Mapping[str, Mapping[str, Any]],
+    names: Sequence[str],
+    *,
+    conf_min: float,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for name in names:
+        item = by_name.get(name)
+        if item is None:
+            continue
+        confidence = float(item.get("conf", 0.0))
+        if confidence < conf_min:
+            continue
+        rows.append(
+            {
+                "semantic_name": name,
+                "pixel_xy": [float(item["x_px"]), float(item["y_px"])],
+                "confidence": confidence,
+            }
+        )
+    return rows
+
+
 def _weighted_sidecar_pixel(
     by_name: Mapping[str, Mapping[str, Any]],
     names: Sequence[str],
@@ -2466,6 +2946,30 @@ def _weighted_sidecar_pixel(
             continue
         weighted.append((_xy(item["xy_px"], name=f"{name}.xy_px"), conf))
     return _combine_weighted_pixels(weighted)
+
+
+def _sam3d_named_candidates(
+    by_name: Mapping[str, Mapping[str, Any]],
+    names: Sequence[str],
+    *,
+    conf_min: float,
+) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for name in names:
+        item = by_name.get(name)
+        if item is None:
+            continue
+        confidence = float(item.get("conf", 1.0))
+        if confidence < conf_min:
+            continue
+        rows.append(
+            {
+                "semantic_name": name,
+                "pixel_xy": _xy(item["xy_px"], name=f"{name}.xy_px"),
+                "confidence": confidence,
+            }
+        )
+    return rows
 
 
 def _combine_weighted_pixels(weighted: Sequence[tuple[Sequence[float], float]]) -> tuple[list[float], float] | None:

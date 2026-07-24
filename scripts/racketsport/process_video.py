@@ -942,6 +942,35 @@ class ProcessVideoPipeline:
                 COURT_LINE_POOL_DEFAULT_OFF_CALLABLE_SHA256[name]
             )
         code_identity = {"callable_sha256": callable_sha256}
+        if name == "calibration":
+            code_identity.update(
+                {
+                    "court_proposal_builder_sha256": str(
+                        _content_hash(ROOT / "scripts/racketsport/build_court_proposals.py")
+                    ),
+                    "court_static_inference_sha256": str(
+                        _content_hash(ROOT / "threed/racketsport/court_static_inference.py")
+                    ),
+                    "court_static_lock_sha256": str(
+                        _content_hash(ROOT / "threed/racketsport/court_static_lock.py")
+                    ),
+                    "court_structured_solver_sha256": str(
+                        _content_hash(ROOT / "threed/racketsport/court_structured_solver.py")
+                    ),
+                }
+            )
+        elif name == "input_quality":
+            code_identity["structured_lock_quality_reconciliation_sha256"] = hashlib.sha256(
+                inspect.getsource(_reconcile_structured_lock_input_quality).encode("utf-8")
+            ).hexdigest()
+        elif name == "placement":
+            code_identity["placement_module_sha256"] = str(
+                _content_hash(ROOT / "threed/racketsport/placement.py")
+            )
+        elif name == "world":
+            code_identity["virtual_world_module_sha256"] = str(
+                _content_hash(ROOT / "threed/racketsport/virtual_world.py")
+            )
         if name == "player_selection":
             code_identity["player_selection_module_sha256"] = str(
                 _content_hash(ROOT / "threed/racketsport/player_selection.py")
@@ -1771,6 +1800,11 @@ class ProcessVideoPipeline:
                 if not lock_path.is_file():
                     raise ValueError("selected court inference did not produce a static court_lock.json")
                 lock_payload = _read_json(lock_path)
+                if lock_payload.get("lock_eligible") is not True:
+                    raise ValueError(
+                        "automatic skeleton preset requires a lock-eligible structured court; "
+                        f"reasons={lock_payload.get('lock_decision_reasons')}"
+                    )
                 if lock_payload.get("source") not in {
                     "multi_frame_point_and_line",
                     "clearest_frame_point_and_line",
@@ -2420,6 +2454,11 @@ class ProcessVideoPipeline:
             config=config,
             require_visible_net_evidence=self.options.pipeline_preset != "court_skeletons",
         )
+        if self.options.pipeline_preset == "court_skeletons":
+            report = _reconcile_structured_lock_input_quality(
+                report,
+                court_lock=_read_optional_json(self.clip_dir / "court_lock.json"),
+            )
         self._input_quality_report = report
         _write_json(self.clip_dir / "input_quality.json", report)
 
@@ -3440,6 +3479,9 @@ class ProcessVideoPipeline:
             stance_phases_path=stance_phases_path,
             foot_contact_phases_out_path=self.clip_dir / "foot_contact_phases.json",
             camera_motion_path=camera_motion_path,
+            court_lock_path=(self.clip_dir / "court_lock.json")
+            if (self.clip_dir / "court_lock.json").is_file()
+            else None,
             refine_from_sam3d=refine_from_sam3d,
             config=PlacementConfig(undistort=self.options.placement_undistort),
         )
@@ -5900,6 +5942,7 @@ class ProcessVideoPipeline:
             tracks=tracks,
             smpl_motion=smpl_motion,
             skeleton3d=skeleton3d,
+            placement=_read_optional_json(self.clip_dir / "placement.json"),
             ball_track=ball_track,
             racket_pose=_read_optional_json(racket_pose_path),
             trust_bands=self.trust_bands,
@@ -8381,6 +8424,67 @@ def _build_input_quality_report(
             "nominal_fps_tolerance": "1000/1001 NTSC rate accepted",
         },
     }
+
+
+def _reconcile_structured_lock_input_quality(
+    report: Mapping[str, Any],
+    *,
+    court_lock: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    """Prevent legacy image heuristics from vetoing a valid structured lock.
+
+    This is intentionally narrow: a clip without a lock-eligible structured
+    point-and-line solve receives no override, and blur is tolerated only when
+    it falls within five percent of the existing strict threshold.
+    """
+
+    reconciled = copy.deepcopy(dict(report))
+    if not isinstance(court_lock, Mapping) or court_lock.get("lock_eligible") is not True:
+        return reconciled
+    rejection_reasons = list(reconciled.get("rejection_reasons") or [])
+    warning_reasons = list(reconciled.get("warning_reasons") or [])
+
+    low_angle_reason = str(
+        (reconciled.get("policy") or {}).get(
+            "owner_policy_rejection_reason",
+            "court_not_fully_visible_low_angle",
+        )
+    )
+    if low_angle_reason in rejection_reasons:
+        rejection_reasons.remove(low_angle_reason)
+        warning_reasons.append("legacy_low_angle_heuristic_overridden_by_structured_lock")
+
+    metrics = reconciled.get("metrics")
+    metrics = metrics if isinstance(metrics, Mapping) else {}
+    video_quality = metrics.get("video_quality")
+    video_quality = video_quality if isinstance(video_quality, Mapping) else {}
+    thresholds = reconciled.get("thresholds")
+    thresholds = thresholds if isinstance(thresholds, Mapping) else {}
+    blur = _float_or_none(video_quality.get("blur_laplacian_var"))
+    blur_floor = _float_or_none(thresholds.get("min_blur_laplacian_var"))
+    if (
+        "motion_blur_gross" in rejection_reasons
+        and blur is not None
+        and blur_floor is not None
+        and blur >= 0.95 * blur_floor
+    ):
+        rejection_reasons.remove("motion_blur_gross")
+        warning_reasons.append("borderline_blur_accepted_for_review_only_skeletons")
+
+    reconciled["rejection_reasons"] = list(dict.fromkeys(rejection_reasons))
+    reconciled["warning_reasons"] = list(dict.fromkeys(warning_reasons))
+    reconciled["status"] = "below_acceptance" if rejection_reasons else "accepted"
+    reconciled["band"] = (
+        str(reconciled.get("band") or "degraded_input")
+        if rejection_reasons
+        else "accepted_input"
+    )
+    policy = dict(reconciled.get("policy") or {})
+    policy["structured_lock_reconciliation"] = (
+        "lock_eligible required; blur override limited to within five percent"
+    )
+    reconciled["policy"] = policy
+    return reconciled
 
 
 def _fps_meets_nominal_floor(fps: float, nominal_floor: float) -> bool:

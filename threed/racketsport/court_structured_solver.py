@@ -172,6 +172,34 @@ def solve_best_floor_court(
     )
 
     scored: list[_ScoredModel] = []
+    hard_rejection_counts: dict[str, int] = {}
+
+    def score_if_eligible(
+        homography: np.ndarray,
+        *,
+        source: str,
+        seed_semantics: tuple[str, ...],
+    ) -> None:
+        eligibility = _hard_geometry_eligibility(
+            homography,
+            image_size=None if dense_evidence is None else dense_evidence.image_size,
+        )
+        if not bool(eligibility["eligible"]):
+            for reason in eligibility["reasons"]:
+                hard_rejection_counts[str(reason)] = hard_rejection_counts.get(str(reason), 0) + 1
+            return
+        scored.append(
+            _score_model(
+                homography,
+                candidates,
+                source=source,
+                seed_semantics=seed_semantics,
+                inlier_threshold_px=float(inlier_threshold_px),
+                duplicate_tolerance_px=float(duplicate_tolerance_px),
+                dense_evidence=dense_evidence,
+            )
+        )
+
     for priority, semantics, selected in hypothesis_specs:
         del priority
         try:
@@ -182,16 +210,10 @@ def solve_best_floor_court(
             )
         except ValueError:
             continue
-        scored.append(
-            _score_model(
-                homography,
-                candidates,
-                source="observation_hypothesis",
-                seed_semantics=semantics,
-                inlier_threshold_px=float(inlier_threshold_px),
-                duplicate_tolerance_px=float(duplicate_tolerance_px),
-                dense_evidence=dense_evidence,
-            )
+        score_if_eligible(
+            homography,
+            source="observation_hypothesis",
+            seed_semantics=semantics,
         )
 
     if bundle is not None:
@@ -200,16 +222,10 @@ def solve_best_floor_court(
                 candidate_homography = _validated_homography(raw_candidate.get("homography"))
             except (TypeError, ValueError):
                 continue
-            scored.append(
-                _score_model(
-                    candidate_homography,
-                    candidates,
-                    source=str(raw_candidate.get("source") or "line_only_candidate"),
-                    seed_semantics=(),
-                    inlier_threshold_px=float(inlier_threshold_px),
-                    duplicate_tolerance_px=float(duplicate_tolerance_px),
-                    dense_evidence=dense_evidence,
-                )
+            score_if_eligible(
+                candidate_homography,
+                source=str(raw_candidate.get("source") or "line_only_candidate"),
+                seed_semantics=(),
             )
 
     prior_error: str | None = None
@@ -219,16 +235,10 @@ def solve_best_floor_court(
         except ValueError as exc:
             prior_error = str(exc)
         else:
-            scored.append(
-                _score_model(
-                    prior,
-                    candidates,
-                    source="prior_homography",
-                    seed_semantics=(),
-                    inlier_threshold_px=float(inlier_threshold_px),
-                    duplicate_tolerance_px=float(duplicate_tolerance_px),
-                    dense_evidence=dense_evidence,
-                )
+            score_if_eligible(
+                prior,
+                source="prior_homography",
+                seed_semantics=(),
             )
 
     if not scored:
@@ -239,7 +249,11 @@ def solve_best_floor_court(
         return _empty_result(
             ignored=ignored,
             observation_counts=observation_counts,
-            hypothesis_diagnostics=hypothesis_diagnostics,
+            hypothesis_diagnostics={
+                **hypothesis_diagnostics,
+                "hard_geometry_rejection_count": sum(hard_rejection_counts.values()),
+                "hard_geometry_rejection_reasons": hard_rejection_counts,
+            },
             prior_error=prior_error,
         )
 
@@ -351,6 +365,10 @@ def solve_best_floor_court(
             ignored.append(_ignored_record(candidate, reason, evaluation=evaluation))
 
     diagnostics = _geometry_diagnostics(diagnostic_homography, diagnostic_projected)
+    diagnostics["hard_eligibility"] = _hard_geometry_eligibility(
+        diagnostic_homography,
+        image_size=None if dense_evidence is None else dense_evidence.image_size,
+    )
     diagnostics["distortion_refinement"] = (
         {key: value for key, value in distortion_fit.items() if not key.startswith("_")}
         if distortion_fit is not None
@@ -358,6 +376,8 @@ def solve_best_floor_court(
     )
     diagnostics["hypothesis_search"] = {
         **hypothesis_diagnostics,
+        "hard_geometry_rejection_count": sum(hard_rejection_counts.values()),
+        "hard_geometry_rejection_reasons": hard_rejection_counts,
         "valid_homographies_scored": len(scored),
         "shortlist_size": len(shortlisted),
         "refined_models_scored": len(refined),
@@ -1010,11 +1030,16 @@ def _score_dense_evidence(
             "temporal_support": 0.0,
             "line_mean_distance_px": 0.0,
             "line_visible_fraction": 0.0,
+            "line_unique_footprint_fraction": 0.0,
+            "line_semantic_collision_fraction": 0.0,
             "surface_visible_fraction": 0.0,
+            "surface_unique_footprint_fraction": 0.0,
         }
 
     line_distances: list[float] = []
     requested_line_samples = 0
+    retained_unique_line_samples = 0
+    semantic_pixel_owners: dict[tuple[int, int], set[str]] = {}
     for segment_name, (start_name, end_name) in SEMANTIC_FLOOR_SEGMENTS.items():
         distance_map = evidence.line_distance_maps.get(segment_name)
         if distance_map is None:
@@ -1025,20 +1050,38 @@ def _score_dense_evidence(
             continue
         start = np.asarray(FLOOR_WORLD_XY_M[start_name], dtype=np.float64)
         end = np.asarray(FLOOR_WORLD_XY_M[end_name], dtype=np.float64)
+        # Endpoints are omitted from dense scoring because legitimate court
+        # lines meet there.  Interior samples must occupy a real, unique image
+        # footprint; otherwise a collapsed homography can repeatedly sample a
+        # single painted ridge and receive artificial support.
         world_samples = [
             tuple((start * (1.0 - alpha) + end * alpha).tolist())
-            for alpha in np.linspace(0.0, 1.0, 33)
+            for alpha in np.linspace(0.0, 1.0, 33)[1:-1]
         ]
         try:
             projected = _project_xy(homography, world_samples)
         except ValueError:
             continue
         requested_line_samples += len(projected)
-        line_distances.extend(_sample_image(distance_map, projected))
+        unique_projected = _unique_raster_points(projected)
+        retained_unique_line_samples += len(unique_projected)
+        for point in unique_projected:
+            semantic_pixel_owners.setdefault(_raster_key(point), set()).add(segment_name)
+        line_distances.extend(_sample_image(distance_map, unique_projected))
+    unique_line_fraction = retained_unique_line_samples / max(requested_line_samples, 1)
+    collision_count = sum(max(0, len(owners) - 1) for owners in semantic_pixel_owners.values())
+    semantic_collision_fraction = collision_count / max(retained_unique_line_samples, 1)
     if line_distances:
         mean_line_distance = float(np.mean(line_distances))
         visible_line_fraction = len(line_distances) / max(requested_line_samples, 1)
-        line_alignment = math.exp(-mean_line_distance / 8.0) * math.sqrt(visible_line_fraction)
+        footprint_factor = math.sqrt(min(max(unique_line_fraction, 0.0), 1.0))
+        collision_factor = math.exp(-4.0 * semantic_collision_fraction)
+        line_alignment = (
+            math.exp(-mean_line_distance / 8.0)
+            * math.sqrt(visible_line_fraction)
+            * footprint_factor
+            * collision_factor
+        )
     else:
         mean_line_distance = 0.0
         visible_line_fraction = 0.0
@@ -1046,6 +1089,7 @@ def _score_dense_evidence(
 
     surface_overlap = 0.0
     surface_visible_fraction = 0.0
+    surface_unique_fraction = 0.0
     if evidence.surface_probability is not None:
         xs = np.linspace(-3.048, 3.048, 13)
         ys = np.linspace(-6.7056, 6.7056, 25)
@@ -1054,11 +1098,17 @@ def _score_dense_evidence(
             projected_grid = _project_xy(homography, world_grid)
         except ValueError:
             projected_grid = []
-        surface_values = _sample_image(evidence.surface_probability, projected_grid)
-        surface_visible_fraction = len(surface_values) / len(projected_grid)
+        unique_projected_grid = _unique_raster_points(projected_grid)
+        surface_unique_fraction = len(unique_projected_grid) / max(len(projected_grid), 1)
+        surface_values = _sample_image(evidence.surface_probability, unique_projected_grid)
+        surface_visible_fraction = len(surface_values) / max(len(projected_grid), 1)
         if surface_values:
             coverage_factor = min(1.0, surface_visible_fraction / 0.25)
-            surface_overlap = float(np.mean(surface_values)) * coverage_factor
+            surface_overlap = (
+                float(np.mean(surface_values))
+                * coverage_factor
+                * math.sqrt(surface_unique_fraction)
+            )
 
     return {
         "line_alignment": float(min(max(line_alignment, 0.0), 1.0)),
@@ -1066,8 +1116,25 @@ def _score_dense_evidence(
         "temporal_support": float(evidence.temporal_support or 0.0),
         "line_mean_distance_px": mean_line_distance,
         "line_visible_fraction": float(visible_line_fraction),
+        "line_unique_footprint_fraction": float(unique_line_fraction),
+        "line_semantic_collision_fraction": float(semantic_collision_fraction),
         "surface_visible_fraction": float(surface_visible_fraction),
+        "surface_unique_footprint_fraction": float(surface_unique_fraction),
     }
+
+
+def _raster_key(point: Sequence[float]) -> tuple[int, int]:
+    return (int(round(float(point[0]))), int(round(float(point[1]))))
+
+
+def _unique_raster_points(points: Sequence[Sequence[float]]) -> list[tuple[float, float]]:
+    unique: dict[tuple[int, int], tuple[float, float]] = {}
+    for point in points:
+        if len(point) != 2 or not all(math.isfinite(float(value)) for value in point):
+            continue
+        key = _raster_key(point)
+        unique.setdefault(key, (float(point[0]), float(point[1])))
+    return list(unique.values())
 
 
 def _sample_image(image: np.ndarray, points: Sequence[Sequence[float]]) -> list[float]:
@@ -1138,6 +1205,11 @@ def _refine_model(
                 [max(item.quality / (item.sigma_px**2), 1.0e-6) for item in observations],
             )
         except ValueError:
+            break
+        if not _hard_geometry_eligibility(
+            homography,
+            image_size=None if dense_evidence is None else dense_evidence.image_size,
+        )["eligible"]:
             break
         candidate_model = _score_model(
             homography,
@@ -1226,6 +1298,11 @@ def _refine_dense_model(
                     try:
                         homography = _validated_homography(homography)
                     except ValueError:
+                        continue
+                    if not _hard_geometry_eligibility(
+                        homography,
+                        image_size=None if dense_evidence is None else dense_evidence.image_size,
+                    )["eligible"]:
                         continue
                     candidate_model = _score_model(
                         homography,
@@ -1481,6 +1558,7 @@ def _residual_stats(values: Sequence[float]) -> dict[str, float | int | None]:
             "min": None,
             "median": None,
             "p90": None,
+            "p95": None,
             "max": None,
             "mean": None,
         }
@@ -1490,6 +1568,7 @@ def _residual_stats(values: Sequence[float]) -> dict[str, float | int | None]:
         "min": float(np.min(array)),
         "median": float(np.median(array)),
         "p90": float(np.percentile(array, 90)),
+        "p95": float(np.percentile(array, 95)),
         "max": float(np.max(array)),
         "mean": float(np.mean(array)),
     }
@@ -1580,6 +1659,7 @@ def _geometry_diagnostics(
             else float(math.dist(diagonal_intersection, projected_center))
         ),
     }
+    eligibility = _hard_geometry_eligibility(homography, image_size=None)
     return {
         "projective": projective,
         "order": {
@@ -1596,10 +1676,140 @@ def _geometry_diagnostics(
         },
         "convexity": convexity,
         "diagonal_center": diagonal_center,
+        "hard_eligibility": eligibility,
         "diagnostic_note": (
             "Projective incidence/order/convexity diagnostics only; no image-angle or "
             "image-length equality assumptions are used."
         ),
+    }
+
+
+def _hard_geometry_eligibility(
+    homography: np.ndarray,
+    *,
+    image_size: tuple[int, int] | None,
+) -> dict[str, Any]:
+    """Apply perspective-validity rules before a court hypothesis can compete."""
+
+    reasons: list[str] = []
+    world = np.asarray([FLOOR_WORLD_XY_M[name] for name in FLOOR_KEYPOINT_NAMES], dtype=np.float64)
+    homogeneous = np.column_stack([world, np.ones(len(world), dtype=np.float64)])
+    projected_h = (homography @ homogeneous.T).T
+    denominators = projected_h[:, 2]
+    if not np.isfinite(projected_h).all() or np.any(np.abs(denominators) <= 1.0e-8):
+        reasons.append("non_finite_or_near_horizon_projection")
+        return {"eligible": False, "reasons": reasons}
+    # A projective horizon crosses the convex regulation rectangle iff the
+    # linear homogeneous denominator changes sign over its vertices.
+    outer_denominators = np.asarray(
+        [denominators[FLOOR_KEYPOINT_NAMES.index(name)] for name in _OUTER_CORNERS],
+        dtype=np.float64,
+    )
+    if float(np.min(outer_denominators)) < 0.0 < float(np.max(outer_denominators)):
+        reasons.append("projective_horizon_crosses_court")
+    projected = {
+        name: (float(projected_h[index, 0] / denominators[index]), float(projected_h[index, 1] / denominators[index]))
+        for index, name in enumerate(FLOOR_KEYPOINT_NAMES)
+    }
+    diagnostics = _geometry_diagnostics_unchecked(homography, projected)
+    if not bool(diagnostics["order"]["all_passed"]):
+        reasons.append("semantic_order_not_preserved")
+    convexity = diagnostics["convexity"]
+    if not bool(convexity["outer_court_convex"]):
+        reasons.append("outer_court_not_convex")
+    if bool(convexity["self_intersecting"]):
+        reasons.append("outer_court_self_intersecting")
+    corners = [projected[name] for name in _OUTER_CORNERS]
+    area_px2 = abs(float(convexity["outer_court_signed_area_px2"]))
+    minimum_corner_separation = min(
+        math.dist(corners[index], corners[other])
+        for index in range(4)
+        for other in range(index + 1, 4)
+    )
+    minimum_area_px2 = None
+    minimum_separation_px = None
+    if image_size is not None:
+        width, height = image_size
+        minimum_area_px2 = 0.005 * float(width) * float(height)
+        minimum_separation_px = 0.01 * math.hypot(float(width), float(height))
+        if area_px2 < minimum_area_px2:
+            reasons.append("outer_court_area_below_minimum")
+        if minimum_corner_separation < minimum_separation_px:
+            reasons.append("outer_corner_separation_below_minimum")
+    return {
+        "eligible": not reasons,
+        "reasons": reasons,
+        "outer_court_area_px2": area_px2,
+        "minimum_outer_corner_separation_px": float(minimum_corner_separation),
+        "minimum_required_area_px2": minimum_area_px2,
+        "minimum_required_corner_separation_px": minimum_separation_px,
+        "minimum_floor_denominator_abs": float(np.min(np.abs(denominators))),
+        "outer_denominator_signs": [int(np.sign(value)) for value in outer_denominators],
+    }
+
+
+def _geometry_diagnostics_unchecked(
+    homography: np.ndarray,
+    projected: Mapping[str, tuple[float, float]],
+) -> dict[str, Any]:
+    """Internal geometry diagnostics without recursively computing eligibility."""
+
+    world = [FLOOR_WORLD_XY_M[name] for name in FLOOR_KEYPOINT_NAMES]
+    homogeneous = np.column_stack([np.asarray(world), np.ones(len(world), dtype=np.float64)])
+    denominators = (homography @ homogeneous.T).T[:, 2]
+    projective = {
+        "finite": bool(np.isfinite(homography).all()),
+        "determinant": float(np.linalg.det(homography)),
+        "condition_number": float(np.linalg.cond(homography)),
+        "minimum_floor_denominator_abs": float(np.min(np.abs(denominators))),
+        "invertible": bool(abs(float(np.linalg.det(homography))) > 1.0e-12),
+    }
+    order_checks: list[dict[str, Any]] = []
+    for left, center, right in _TRANSVERSE_TRIPLES:
+        a, b, c = projected[left], projected[center], projected[right]
+        gap = abs((math.dist(a, b) + math.dist(b, c)) - math.dist(a, c))
+        order_checks.append({
+            "semantics": [left, center, right],
+            "middle_between_endpoints": bool(gap <= max(1.0e-6, 1.0e-6 * math.dist(a, c))),
+            "collinearity_error_px": float(abs(_orientation(a, b, c)) / max(math.dist(a, c), 1.0e-9)),
+        })
+    for sequence in _SIDELINE_SEQUENCES:
+        points = [projected[name] for name in sequence]
+        direction = np.asarray(points[-1]) - np.asarray(points[0])
+        denominator = float(np.dot(direction, direction))
+        parameters = [0.0 for _ in points] if denominator <= 1.0e-12 else [
+            float(np.dot(np.asarray(point) - np.asarray(points[0]), direction) / denominator)
+            for point in points
+        ]
+        order_checks.append({
+            "semantics": list(sequence),
+            "projective_parameter_order_preserved": bool(
+                all(parameters[index] < parameters[index + 1] for index in range(len(parameters) - 1))
+            ),
+            "projective_parameters": parameters,
+        })
+    corners = [projected[name] for name in _OUTER_CORNERS]
+    turns = [_orientation(corners[index], corners[(index + 1) % 4], corners[(index + 2) % 4]) for index in range(4)]
+    signed_area_twice = sum(
+        corners[index][0] * corners[(index + 1) % 4][1]
+        - corners[(index + 1) % 4][0] * corners[index][1]
+        for index in range(4)
+    )
+    convexity = {
+        "outer_court_convex": bool(all(value > 0.0 for value in turns) or all(value < 0.0 for value in turns)),
+        "outer_court_signed_area_px2": float(0.5 * signed_area_twice),
+        "self_intersecting": bool(
+            _segments_properly_intersect(corners[0], corners[1], corners[2], corners[3])
+            or _segments_properly_intersect(corners[1], corners[2], corners[3], corners[0])
+        ),
+    }
+    return {
+        "projective": projective,
+        "order": {
+            "checks": order_checks,
+            "all_passed": all(bool(row.get("middle_between_endpoints", row.get("projective_parameter_order_preserved", False))) for row in order_checks),
+        },
+        "convexity": convexity,
     }
 
 

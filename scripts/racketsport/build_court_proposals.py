@@ -99,6 +99,7 @@ def build_court_proposal_report(
                     "checkpoint_path": str(resolution.path),
                     "checkpoint_sha256": resolution.sha256,
                     "selected_frame_indices": list(structured.get("selected_frame_indices") or []),
+                    "segment_diagnostics": structured.get("segment_diagnostics"),
                     "court_lock_written": bool(court_lock_path and structured.get("court_lock")),
                 }
             }
@@ -172,9 +173,16 @@ def _structured_proposal(result: dict[str, object]) -> CourtProposal | None:
             "appearance_motion": result.get("appearance_motion"),
             "court_lock": result.get("court_lock"),
             "selected_frame_indices": result.get("selected_frame_indices"),
+            "segment_diagnostics": result.get("segment_diagnostics"),
+            "frame_hypotheses": result.get("frame_hypotheses"),
+            "selected_solution_source": result.get("source"),
+            "fallback_selected_frame_index": result.get("fallback_selected_frame_index"),
+            "lock_eligible": bool(best.get("lock_eligible", False)),
+            "lock_decision_reasons": list(best.get("lock_decision_reasons") or []),
             "inlier_observation_count": len(inliers) if isinstance(inliers, list) else 0,
             "ignored_observation_count": len(ignored) if isinstance(ignored, list) else 0,
-            "fallback_used": str(best.get("source") or "").endswith("prior"),
+            "fallback_used": bool(result.get("fallback_selected_frame_index") is not None)
+            or str(result.get("source") or "").endswith("prior"),
         },
     )
 
@@ -197,7 +205,8 @@ def _load_preview_frame(video: str, *, max_frames: int) -> tuple[object | None, 
     if not cap.isOpened():
         return None, {"input_kind": "unreadable", "frame_indices": []}
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
-    count = max(1, min(max_frames, total if total > 0 else max_frames))
+    analysis_target = max(24, min(32, max(int(max_frames), 1) * 4))
+    count = max(1, min(analysis_target, total if total > 0 else analysis_target))
     if total > 0 and count > 1:
         positions = [int(round(value)) for value in np.linspace(0, max(0, total - 1), count)]
     else:
@@ -213,10 +222,14 @@ def _load_preview_frame(video: str, *, max_frames: int) -> tuple[object | None, 
     cap.release()
     if not frames:
         return None, {"input_kind": "video", "frame_indices": []}
-    return np.median(np.stack(frames, axis=0), axis=0).astype(np.uint8), {
+    sharpness = [float(cv2.Laplacian(frame, cv2.CV_64F).var()) for frame in frames]
+    preview_index = max(range(len(frames)), key=lambda index: (sharpness[index], -used[index]))
+    return frames[preview_index], {
         "input_kind": "video",
         "frame_indices": used,
         "frames": frames,
+        "analysis_sample_count": len(frames),
+        "preview_frame_index": int(used[preview_index]),
     }
 
 

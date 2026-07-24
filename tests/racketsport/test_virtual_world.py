@@ -97,6 +97,50 @@ def _tracks_two_frames() -> dict:
     return payload
 
 
+def test_virtual_world_carries_placement_uncertainty_for_viewer_diagnostics() -> None:
+    placement = {
+        "players": [
+            {
+                "id": 7,
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "covariance_m2": [[0.04, 0.01], [0.01, 0.09]],
+                        "uncertainty_decomposition": {"dominant_input": "court_calibration"},
+                        "selected_support_signal": {
+                            "name": "native2d",
+                            "pixel_xy": [120.0, 240.0],
+                            "court_xy": [0.25, -2.0],
+                            "confidence": 0.9,
+                        },
+                        "foot_candidates": [],
+                        "nearest_regulation_line": {
+                            "line_name": "near_nvz",
+                            "distance_m": 0.13,
+                            "signed_distance_m": 0.13,
+                            "signed_distance_ci95_m": [-0.02, 0.28],
+                            "court_zone": "near_kitchen",
+                        },
+                        "contact_state": {"state": "planted", "support_foot": "left"},
+                        "measurement_provenance": "measured",
+                    }
+                ],
+            }
+        ]
+    }
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=_tracks(),
+        placement=placement,
+    )
+
+    diagnostics = world["players"][0]["frames"][0]["placement_diagnostics"]
+    assert diagnostics["covariance_m2"] == placement["players"][0]["frames"][0]["covariance_m2"]
+    assert diagnostics["selected_support_signal"]["pixel_xy"] == [120.0, 240.0]
+    assert diagnostics["measurement_provenance"] == "measured"
+
+
 def _tracks_ten_frame_clip() -> dict:
     return {
         "schema_version": 1,

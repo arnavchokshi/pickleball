@@ -407,3 +407,46 @@ def test_transform_covariance_is_propagated_from_floor_inliers() -> None:
         point_covariance = np.asarray(point["covariance_px2"], dtype=np.float64)
         assert point_covariance.shape == (2, 2)
         assert np.linalg.eigvalsh(point_covariance).min() >= -1.0e-8
+
+
+@pytest.mark.parametrize(
+    ("homography", "reason"),
+    [
+        (
+            np.asarray([[100.0, 0.0, 500.0], [0.0, 100.0, 350.0], [0.0, 0.30, 1.0]]),
+            "projective_horizon_crosses_court",
+        ),
+        (
+            np.asarray([[0.10, 0.0, 500.0], [0.0, 0.10, 350.0], [0.0, 0.0, 1.0]]),
+            "outer_court_area_below_minimum",
+        ),
+    ],
+)
+def test_hard_geometry_rejects_horizon_crossing_and_collapsed_candidates(
+    homography: np.ndarray,
+    reason: str,
+) -> None:
+    bundle = build_court_evidence_bundle(
+        [],
+        image_size=(1280, 720),
+        homography_candidates=[{"source": "adversarial", "homography": homography.tolist()}],
+    )
+
+    result = solve_best_floor_court(bundle)
+
+    assert result["homography_image_from_court"] is None
+    search = result["diagnostics"]["hypothesis_search"]
+    assert search["hard_geometry_rejection_count"] >= 1
+    assert search["hard_geometry_rejection_reasons"][reason] >= 1
+
+
+def test_residual_statistics_publish_distinct_true_p90_and_p95() -> None:
+    homography = _perspective_homography()
+    observations = _observations(homography)
+    for index, name in enumerate(FLOOR_KEYPOINT_NAMES):
+        observations[name][0]["xy"][0] += float(index) * 0.25
+
+    result = solve_best_floor_court(observations)
+
+    residual = result["residual_stats_px"]
+    assert residual["p95"] >= residual["p90"] >= residual["median"]
