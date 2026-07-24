@@ -126,6 +126,7 @@ from threed.racketsport.ball_arc_chain import run_default_ball_arc_chain  # noqa
 from threed.racketsport.best_stack import load_best_stack_manifest  # noqa: E402
 from threed.racketsport.ball_inflections import build_ball_inflections_from_ball_track  # noqa: E402
 from threed.racketsport.court_calibration import calibration_image_size  # noqa: E402
+from threed.racketsport.court_auto_evidence import build_auto_court_line_evidence_from_video  # noqa: E402
 from threed.racketsport.court_corner_review import SIDECAR_CORNER_ORDER  # noqa: E402
 from threed.racketsport.confidence_gate import (  # noqa: E402
     ConfidenceGateConfig,
@@ -1794,6 +1795,46 @@ class ProcessVideoPipeline:
                 )
                 for filename, payload in adapted.artifact_payloads().items():
                     _write_json(self.clip_dir / filename, payload)
+                try:
+                    line_evidence = build_auto_court_line_evidence_from_video(
+                        opts.video,
+                        adapted.court_calibration,
+                        net_plane=adapted.net_plane,
+                        sample_count=7,
+                    ).model_dump(mode="json")
+                except Exception as evidence_exc:  # noqa: BLE001 - lock remains explicit review-only evidence
+                    line_evidence = {
+                        "schema_version": 1,
+                        "sport": opts.sport,
+                        "source": "structured_lock_auto_video_evidence_failed",
+                        "line_observations": [],
+                        "keypoint_observations": [],
+                        "net_observations": [],
+                        "aggregate": {
+                            "accepted_line_ids": [],
+                            "rejected_line_ids": [],
+                            "missing_required_line_ids": [
+                                "near_baseline",
+                                "far_baseline",
+                                "left_sideline",
+                                "right_sideline",
+                                "near_nvz",
+                                "far_nvz",
+                                "near_centerline",
+                                "far_centerline",
+                            ],
+                            "missing_required_net_ids": ["top_net"],
+                            "mean_residual_px": 1000000.0,
+                            "p95_residual_px": 1000000.0,
+                            "temporal_stability_px": 1000000.0,
+                            "auto_calibration_ready": False,
+                            "reasons": [
+                                f"video_evidence_failed:{type(evidence_exc).__name__}",
+                                "structured_court_lock_remains_visualization_only",
+                            ],
+                        },
+                    }
+                _write_json(self.clip_dir / "court_line_evidence.json", line_evidence)
                 _write_json(
                     self.clip_dir / "court_lock_visualization_adapter.json",
                     adapted.metadata_payload(),
@@ -1821,6 +1862,7 @@ class ProcessVideoPipeline:
                     "court_calibration.json",
                     "court_zones.json",
                     "net_plane.json",
+                    "court_line_evidence.json",
                 ],
                 trust_badge="preview",
                 metrics={
@@ -1831,6 +1873,9 @@ class ProcessVideoPipeline:
                     ),
                     "measurement_valid": False,
                     "authority_state": "review_only",
+                    "line_evidence_ready": bool(
+                        line_evidence.get("aggregate", {}).get("auto_calibration_ready", False)
+                    ),
                 },
             )
         external_calibration_path = self._resolved_court_calibration_path()

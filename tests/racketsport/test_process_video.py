@@ -446,6 +446,8 @@ def test_court_skeletons_calibration_uses_same_run_static_lock_without_manual_in
         }
     )
     adapted = SimpleNamespace(
+        court_calibration=SimpleNamespace(),
+        net_plane=SimpleNamespace(),
         artifact_payloads=lambda: {
             "court_calibration.json": calibration,
             "court_zones.json": {"schema_version": 1, "zones": {}},
@@ -462,6 +464,31 @@ def test_court_skeletons_calibration_uses_same_run_static_lock_without_manual_in
     )
     monkeypatch.setattr(process_video, "_court_proposals_preview_from_video", fake_proposals)
     monkeypatch.setattr(
+        process_video,
+        "build_auto_court_line_evidence_from_video",
+        lambda *_args, **_kwargs: SimpleNamespace(
+            model_dump=lambda **_dump_kwargs: {
+                "schema_version": 1,
+                "sport": "pickleball",
+                "source": "test_auto_video",
+                "line_observations": [],
+                "keypoint_observations": [],
+                "net_observations": [],
+                "aggregate": {
+                    "accepted_line_ids": [],
+                    "rejected_line_ids": [],
+                    "missing_required_line_ids": [],
+                    "missing_required_net_ids": [],
+                    "mean_residual_px": 0.0,
+                    "p95_residual_px": 0.0,
+                    "temporal_stability_px": 0.0,
+                    "auto_calibration_ready": False,
+                    "reasons": ["test_review_only"],
+                },
+            }
+        ),
+    )
+    monkeypatch.setattr(
         "threed.racketsport.court_lock_visualization.adapt_court_lock_for_visualization",
         lambda lock, image_size: adapted,
     )
@@ -473,6 +500,7 @@ def test_court_skeletons_calibration_uses_same_run_static_lock_without_manual_in
     assert written["usage"] == "visualization_only"
     assert written["authority_state"] == "review_only"
     assert written["measurement_valid"] is False
+    assert (pipeline.clip_dir / "court_line_evidence.json").is_file()
 
 
 def _base_options(tmp_path: Path, *, video: Path, court_corners: Path | None) -> process_video.PipelineOptions:
