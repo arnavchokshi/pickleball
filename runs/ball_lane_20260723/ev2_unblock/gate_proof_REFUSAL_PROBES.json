@@ -1,0 +1,114 @@
+{
+  "artifact_type": "training_input_gate_proof",
+  "expires_at_utc": "2026-07-24T07:18:45Z",
+  "generated_at_utc": "2026-07-24T07:03:45Z",
+  "global_reasons": [],
+  "inputs": [
+    {
+      "actual_sha256": "9d3d31aa12bb97369d934c30ebda4ee41663ca65a0527717e1482681180022f5",
+      "asset_id": "event_abc_vm_pull_20260721",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": null,
+      "index": 0,
+      "input_bytes_read_for_integrity": true,
+      "input_manifest_sha256": "9d3d31aa12bb97369d934c30ebda4ee41663ca65a0527717e1482681180022f5",
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_PATH_UNBOUND",
+          "detail": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/abc_experiment_20260721/vm_pull/abc_out/arm_b_manifest.json is outside asset event_abc_vm_pull_20260721's registered paths"
+        }
+      ],
+      "requested_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/abc_experiment_20260721/vm_pull/abc_out/arm_b_manifest.json",
+      "resolved_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/abc_experiment_20260721/vm_pull/abc_out/arm_b_manifest.json",
+      "sha256_kind": "file_bytes",
+      "source_id": null,
+      "verdict": "FAIL"
+    },
+    {
+      "actual_sha256": null,
+      "asset_id": "pbvision_gallery_20260719",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": null,
+      "index": 1,
+      "input_bytes_read_for_integrity": false,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_PROVENANCE_FORBIDS_TRAINING",
+          "detail": "source 83gyqyc10y8f has a training-refusal provenance posture in asset pbvision_gallery_20260719"
+        },
+        {
+          "code": "LEDGER_PROVENANCE_FORBIDS_TRAINING",
+          "detail": "source 83gyqyc10y8f is absent from asset pbvision_gallery_20260719's training allowlist"
+        }
+      ],
+      "requested_path": "/Users/arnavchokshi/Desktop/pickleball/data/pbvision_11min_20260713/source_video.mp4",
+      "resolved_path": "/Users/arnavchokshi/Desktop/pickleball/data/pbvision_11min_20260713/source_video.mp4",
+      "sha256_kind": null,
+      "source_id": "83gyqyc10y8f",
+      "verdict": "FAIL"
+    },
+    {
+      "actual_sha256": null,
+      "asset_id": "eval_clips_ball_protected_4",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": null,
+      "index": 2,
+      "input_bytes_read_for_integrity": false,
+      "input_manifest_sha256": "1efe76ed15c6fb2fe4eedfbdb7ad6e4cd567af4c08a58e87cc35a859daa15762",
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_PROVENANCE_FORBIDS_TRAINING",
+          "detail": "asset eval_clips_ball_protected_4 is marked trainer_forbidden"
+        },
+        {
+          "code": "LEDGER_PROVENANCE_FORBIDS_TRAINING",
+          "detail": "asset eval_clips_ball_protected_4 mixes training-refusal identities and requires an explicit source_id"
+        },
+        {
+          "code": "LEDGER_QUEUE_NOT_AUTHORIZED",
+          "detail": "asset eval_clips_ball_protected_4 has no queue-authorized training disposition"
+        },
+        {
+          "code": "LEDGER_STATE_FORBIDS_TRAINING",
+          "detail": "asset eval_clips_ball_protected_4 has training-refusal state QUARANTINED"
+        }
+      ],
+      "requested_path": "/Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/manifest.json",
+      "resolved_path": "/Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/manifest.json",
+      "sha256_kind": null,
+      "source_id": null,
+      "verdict": "FAIL"
+    }
+  ],
+  "manifest_sha256s": {
+    "cache_manifest": null,
+    "data_ledger": "e3fcba22bb1281e0c2e257f6d96cbbdf45e03a595c7bd22827dc06b06310ae70",
+    "training_inputs": "a5014093334274da64577e56d5dfa3e7241dd991284a1a207a5f6d0610282e08"
+  },
+  "proof_sha256": "a287b4dafabec7474ed7aca63a3a032db7097b81bc22eab203368a08ee127e48",
+  "repo_head_sha": "6478b753d8a810c50ec1739f73ed79fb5ef7192b",
+  "repo_root": "/Users/arnavchokshi/Desktop/pickleball",
+  "schema_version": 1,
+  "source_manifests": {
+    "cache_manifest": null,
+    "data_ledger": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/.claude/worktrees/ball-lane-20260723/runs/manager/data_ledger.json",
+      "sha256": "e3fcba22bb1281e0c2e257f6d96cbbdf45e03a595c7bd22827dc06b06310ae70"
+    },
+    "training_inputs": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/trackE_event_ledger_auth_20260723/refusal_probes.json",
+      "sha256": "a5014093334274da64577e56d5dfa3e7241dd991284a1a207a5f6d0610282e08"
+    }
+  },
+  "status": "FAIL"
+}
