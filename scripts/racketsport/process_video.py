@@ -134,7 +134,11 @@ from threed.racketsport.confidence_gate import (  # noqa: E402
     summarize_bands,
 )
 from threed.racketsport.body_grounding_refine import GroundingRefineConfig, refine_body_grounding  # noqa: E402
-from threed.racketsport.body_compute import build_body_compute_execution, write_body_compute_execution  # noqa: E402
+from threed.racketsport.body_compute import (  # noqa: E402
+    build_body_compute_execution,
+    build_court_skeletons_body_compute_execution,
+    write_body_compute_execution,
+)
 from threed.racketsport.event_fusion import fuse_contact_windows_from_cue_payloads  # noqa: E402
 from threed.racketsport.contact_provenance import (  # noqa: E402
     DEPENDENCY_HASH_MISMATCH,
@@ -3719,13 +3723,20 @@ class ProcessVideoPipeline:
                 int(opts.max_frames) if opts.max_frames is not None else DEFAULT_MAX_SCHEDULED_FRAMES,
                 DEFAULT_MAX_SCHEDULED_FRAMES,
             )
-            body_execution = build_body_compute_execution(
-                tracks,
-                frame_plan_path=frame_plan_path,
-                max_frames=body_frame_cap,
-                include_tier2_body_joints=True,
-                skeleton_stride=opts.body_skeleton_stride,
-            )
+            if opts.pipeline_preset == "court_skeletons":
+                body_execution = build_court_skeletons_body_compute_execution(
+                    tracks,
+                    max_frames=body_frame_cap,
+                    skeleton_stride=opts.body_skeleton_stride,
+                )
+            else:
+                body_execution = build_body_compute_execution(
+                    tracks,
+                    frame_plan_path=frame_plan_path,
+                    max_frames=body_frame_cap,
+                    include_tier2_body_joints=True,
+                    skeleton_stride=opts.body_skeleton_stride,
+                )
             write_body_compute_execution(self.clip_dir / "body_compute_execution.json", body_execution)
             required_frame_indexes = body_execution_frame_indexes(body_execution)
 

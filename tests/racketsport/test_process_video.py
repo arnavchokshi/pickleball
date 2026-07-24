@@ -4099,6 +4099,55 @@ def test_frames_stage_extracts_real_jpegs_from_tracked_frames(tmp_path: Path) ->
     assert any("extracted 1 scheduled JPEG" in note for note in outcome.notes)
 
 
+def test_court_skeletons_frames_exclude_interpolated_player_crops(tmp_path: Path) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.pipeline_preset = "court_skeletons"
+    options.body_skeleton_stride = 1
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline._stage_ingest()
+    tracks = _tracks_payload()
+    tracks["players"][0]["frames"] = [
+        {
+            "t": 0.0,
+            "bbox": [100.0, 100.0, 200.0, 300.0],
+            "world_xy": [-1.0, -3.0],
+            "conf": 0.9,
+        },
+        {
+            "t": 1.0 / 30.0,
+            "bbox": [101.0, 100.0, 201.0, 300.0],
+            "world_xy": [-0.9, -3.0],
+            "conf": 0.35,
+            "interpolated": True,
+        },
+        {
+            "t": 2.0 / 30.0,
+            "bbox": [102.0, 100.0, 202.0, 300.0],
+            "world_xy": [-0.8, -3.0],
+            "conf": 0.9,
+        },
+    ]
+    tracks["players"] = tracks["players"][:1]
+    _write_json(options.clip_dir / "tracks.json", tracks)
+
+    outcome = pipeline._stage_frames()
+    execution = json.loads(
+        (options.clip_dir / "body_compute_execution.json").read_text(encoding="utf-8")
+    )
+
+    assert outcome.status == "ran"
+    assert execution["pipeline_preset"] == "court_skeletons"
+    assert execution["summary"]["interpolated_player_frame_excluded_count"] == 1
+    assert [row["frame_idx"] for row in execution["scheduled_frames"]] == [0, 2]
+    assert sorted(path.name for path in (options.clip_dir / "body_frames").glob("*.jpg")) == [
+        "frame_000000.jpg",
+        "frame_000002.jpg",
+    ]
+
+
 def test_frames_stage_passes_max_frames_and_frame_compute_plan_path(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
