@@ -6146,6 +6146,15 @@ class ProcessVideoPipeline:
             reviewed_bounces_path=reviewed_bounces_path if reviewed_bounces_path.is_file() else None,
             coaching_card_facts_path=coaching_card_facts_path,
             rally_spans_path=rally_spans_path if rally_spans_path.is_file() else None,
+            court_evidence_path=(self.clip_dir / "court_lock_visualization_adapter.json")
+            if (self.clip_dir / "court_lock_visualization_adapter.json").is_file()
+            else None,
+            court_calibration_path=(self.clip_dir / "court_calibration.json")
+            if (self.clip_dir / "court_calibration.json").is_file()
+            else None,
+            skeleton_evidence_path=(self.clip_dir / "sam3d_keypoints_2d.json")
+            if (self.clip_dir / "sam3d_keypoints_2d.json").is_file()
+            else None,
             annotation_sources=[],
             vite_allow_root=self.options.vite_allow_root,
             mesh_status=mesh_status,

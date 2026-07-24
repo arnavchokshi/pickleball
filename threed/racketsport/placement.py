@@ -37,9 +37,11 @@ NATIVE2D_FOOT_NAMES: dict[str, tuple[str, ...]] = {
 SAM3D_FOOT_KEYPOINT_INDICES: dict[str, int] = {
     "left_ankle": 13,
     "right_ankle": 14,
-    "left_toe": 15,
-    "right_toe": 16,
+    "left_big_toe_tip": 15,
+    "left_small_toe_tip": 16,
     "left_heel": 17,
+    "right_big_toe_tip": 18,
+    "right_small_toe_tip": 19,
     "right_heel": 20,
 }
 
@@ -2071,7 +2073,10 @@ def _load_sam3d_foot_pixels(path: Path | None, *, config: PlacementConfig) -> di
             frame_idx = int(frame["frame_idx"])
             by_name = {str(item.get("name")): item for item in frame.get("keypoints", []) or [] if isinstance(item, Mapping)}
             foot_points = []
-            for names in (("left_ankle", "left_heel", "left_toe"), ("right_ankle", "right_heel", "right_toe")):
+            for names in (
+                ("left_ankle", "left_heel", "left_toe", "left_big_toe_tip", "left_small_toe_tip"),
+                ("right_ankle", "right_heel", "right_toe", "right_big_toe_tip", "right_small_toe_tip"),
+            ):
                 point = _weighted_sidecar_pixel(by_name, names, conf_min=config.sam3d_conf_min)
                 if point is not None:
                     foot_points.append(point)
@@ -2093,8 +2098,8 @@ def _load_sam3d_foot_pixels_by_foot(
     payload = _read_json(path)
     out: dict[tuple[int, str, int], _FootPixelObservation] = {}
     foot_names = {
-        "left": ("left_ankle", "left_heel", "left_toe"),
-        "right": ("right_ankle", "right_heel", "right_toe"),
+        "left": ("left_ankle", "left_heel", "left_toe", "left_big_toe_tip", "left_small_toe_tip"),
+        "right": ("right_ankle", "right_heel", "right_toe", "right_big_toe_tip", "right_small_toe_tip"),
     }
     for player in payload.get("players", []) or []:
         player_id = int(player["id"])

@@ -89,6 +89,9 @@ export type ViewerManifest = {
   contact_surfaces_url?: string;
   target_zones_url?: string;
   ghost_positions_url?: string;
+  court_evidence_url: string | null;
+  court_calibration_url: string | null;
+  skeleton_evidence_url: string | null;
   label_overlays: LabelOverlay[];
   annotation_sources: AnnotationSource[];
   notes: string[];
@@ -757,6 +760,18 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
       value.events_selected_url === null || value.events_selected_url === undefined
         ? null
         : readString(value.events_selected_url, "manifest.events_selected_url"),
+    court_evidence_url:
+      value.court_evidence_url === null || value.court_evidence_url === undefined
+        ? null
+        : readString(value.court_evidence_url, "manifest.court_evidence_url"),
+    court_calibration_url:
+      value.court_calibration_url === null || value.court_calibration_url === undefined
+        ? null
+        : readString(value.court_calibration_url, "manifest.court_calibration_url"),
+    skeleton_evidence_url:
+      value.skeleton_evidence_url === null || value.skeleton_evidence_url === undefined
+        ? null
+        : readString(value.skeleton_evidence_url, "manifest.skeleton_evidence_url"),
     label_overlays: readArray(value.label_overlays, "manifest.label_overlays").map(readLabelOverlay),
     annotation_sources: readArray(value.annotation_sources, "manifest.annotation_sources").map(readAnnotationSource),
     notes: readArray(value.notes, "manifest.notes").map((entry, index) => readString(entry, `manifest.notes[${index}]`)),
@@ -822,6 +837,9 @@ export function resolveViewerManifestUrls(manifest: ViewerManifest, manifestUrl:
     reviewed_bounces_url: resolveNullableManifestChildUrl(manifestUrl, manifest.reviewed_bounces_url),
     ball_inflections_url: resolveNullableManifestChildUrl(manifestUrl, manifest.ball_inflections_url),
     events_selected_url: resolveNullableManifestChildUrl(manifestUrl, manifest.events_selected_url),
+    court_evidence_url: resolveNullableManifestChildUrl(manifestUrl, manifest.court_evidence_url),
+    court_calibration_url: resolveNullableManifestChildUrl(manifestUrl, manifest.court_calibration_url),
+    skeleton_evidence_url: resolveNullableManifestChildUrl(manifestUrl, manifest.skeleton_evidence_url),
     label_overlays: manifest.label_overlays.map((overlay) => ({ ...overlay, url: resolveManifestChildUrl(manifestUrl, overlay.url) })),
     annotation_sources: manifest.annotation_sources.map((source) => ({ ...source, url: resolveManifestChildUrl(manifestUrl, source.url) })),
   };

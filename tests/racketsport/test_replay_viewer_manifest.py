@@ -108,6 +108,18 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
             "summary": {"window_count": 0, "mesh_frame_count": 0, "player_count": 0, "faces_count": 0},
         },
     )
+    court_evidence = _write_json(
+        run_dir / "court_lock_visualization_adapter.json",
+        {"schema_version": 1, "artifact_type": "racketsport_court_lock_visualization_adapter"},
+    )
+    court_calibration = _write_json(
+        run_dir / "court_calibration.json",
+        {"schema_version": 1, "sport": "pickleball"},
+    )
+    skeleton_evidence = _write_json(
+        run_dir / "sam3d_keypoints_2d.json",
+        {"schema_version": 1, "artifact_type": "racketsport_sam3d_keypoints_2d"},
+    )
 
     manifest = build_replay_viewer_manifest(
         clip="clip_a",
@@ -120,6 +132,9 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
         ball_inflections_path=ball_inflections,
         body_mesh_path=body_mesh,
         body_mesh_index_path=body_mesh_index,
+        court_evidence_path=court_evidence,
+        court_calibration_path=court_calibration,
+        skeleton_evidence_path=skeleton_evidence,
         annotation_sources=[person_gt],
         vite_allow_root=tmp_path,
     )
@@ -131,6 +146,9 @@ def test_build_replay_viewer_manifest_links_video_world_and_non_promoting_labels
     assert manifest["replay_scene_url"].startswith("/@fs/")
     assert manifest["body_mesh_url"].startswith("/@fs/")
     assert manifest["body_mesh_index_url"].startswith("/@fs/")
+    assert manifest["court_evidence_url"].startswith("/@fs/")
+    assert manifest["court_calibration_url"].startswith("/@fs/")
+    assert manifest["skeleton_evidence_url"].startswith("/@fs/")
     assert manifest["physics_refinement_url"].startswith("/@fs/")
     assert manifest["contact_windows_url"].startswith("/@fs/")
     assert manifest["ball_inflections_url"].startswith("/@fs/")

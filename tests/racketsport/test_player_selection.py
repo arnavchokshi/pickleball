@@ -4,6 +4,7 @@ import hashlib
 import json
 import math
 import os
+from collections import defaultdict
 from pathlib import Path
 import subprocess
 import sys
@@ -174,6 +175,84 @@ def test_measured_association_fallback_preserves_ids_and_excludes_interpolation(
     assert unbound == []
     assert counts["interpolated_frames"] == 0
     assert len(decisions) == 4
+
+
+def test_measured_association_fallback_recovers_one_identity_supported_baseline_candidate() -> None:
+    fps = 30.0
+    basis = {
+        1: (1.0, 0.0, 0.0, 0.0),
+        2: (0.0, 1.0, 0.0, 0.0),
+        3: (0.0, 0.0, 1.0, 0.0),
+        4: (0.0, 0.0, 0.0, 1.0),
+    }
+    players: list[dict[str, object]] = []
+    detections: list[SelectionDetection] = []
+    for source in (1, 2, 3, 4):
+        x = -1.0 if source % 2 else 1.0
+        y = -2.0 if source <= 2 else 2.0
+        frames = []
+        for frame_idx in range(10):
+            detection_y = 9.5 if source == 4 and frame_idx == 5 else y
+            detection = _detection(
+                frame_idx,
+                source,
+                (x, detection_y),
+                basis[source],
+                bbox=(source * 10.0, 20.0, source * 10.0 + 5.0, 40.0),
+                raw_detection_uid=f"raw:{frame_idx}:{source}",
+            )
+            detections.append(detection)
+            if source == 4 and frame_idx == 5:
+                continue
+            frames.append(
+                {
+                    "t": frame_idx / fps,
+                    "bbox": list(detection.bbox),
+                    "world_xy": list(detection.world_xy),
+                    "conf": detection.conf,
+                }
+            )
+        players.append(
+            {
+                "id": source,
+                "side": "near" if y < 0.0 else "far",
+                "role": "left" if x < 0.0 else "right",
+                "frames": frames,
+            }
+        )
+    real_by_frame: dict[int, list[SelectionDetection]] = defaultdict(list)
+    for detection in detections:
+        real_by_frame[detection.frame_idx].append(detection)
+    fragments = [
+        TrackFragment(
+            fragment_id=f"pool-{source}-1-0-9",
+            source_track_id=source,
+            detections=tuple(detection for detection in detections if detection.source_track_id == source),
+        )
+        for source in (1, 2, 3, 4)
+    ]
+
+    result = player_selection_module._select_measured_association_fallback(
+        players,
+        real_by_frame=real_by_frame,
+        pool_fragments=fragments,
+        fps=fps,
+        config=PlayerSelectionConfig(expected_players=4),
+    )
+
+    assert result is not None
+    selected, _unbound, decisions, _rows, counts = result
+    player_four = next(player for player in selected if player["id"] == 4)
+    recovered = next(frame for frame in player_four["frames"] if frame["frame_idx"] == 5)
+    assert recovered["world_xy"] == [1.0, 9.5]
+    assert recovered.get("interpolated") is not True
+    assert counts["recovered_real_detections"] == 1
+    assert any(
+        decision.get("action") == "recover_measured_enrolled_player"
+        and decision.get("player_id") == 4
+        and decision.get("frame_idx") == 5
+        for decision in decisions
+    )
 
 
 def _fragment(

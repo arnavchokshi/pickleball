@@ -172,6 +172,9 @@ const manifest = {
   ball_inflections_url: null,
   events_selected_url: null,
   rally_spans_url: "/@fs/tmp/clip_a/rally_spans.json",
+  court_evidence_url: null,
+  court_calibration_url: null,
+  skeleton_evidence_url: null,
   label_overlays: [
     {
       kind: "player_boxes",

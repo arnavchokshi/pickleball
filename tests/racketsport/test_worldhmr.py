@@ -55,6 +55,50 @@ def _camera_y_to_court_z_calibration() -> CourtCalibration:
     )
 
 
+def test_sam3d_foot_pixels_override_bbox_anchor_per_safe_axis() -> None:
+    sample = {
+        "frame_idx": 0,
+        "player_id": 3,
+        "t": 0.0,
+        "confidence": 0.9,
+        "track_world_xy": [0.0, 1.5],
+        "joints_camera": [[0.0, 0.0, 1.0] for _idx in range(21)],
+        "vertices_camera": [],
+        "pred_foot_keypoints_2d": [
+            {"name": "left_heel", "index": 17, "xy_px": [1020.0, 1250.0], "conf": 0.9},
+            {"name": "right_heel", "index": 20, "xy_px": [1040.0, 1250.0], "conf": 0.9},
+        ],
+    }
+
+    grounded = worldhmr._ground_fast_sam_sample(sample, calibration=_identity_calibration())
+
+    assert grounded["placement_track_world_xy"] == pytest.approx([0.0, 1.5])
+    assert grounded["track_world_xy"] == pytest.approx([0.3, 2.5])
+    assert grounded["grounding_target_source"] == "sam3d_foot_pixels_xy"
+    assert grounded["grounding_target_correction_xy_m"] == pytest.approx([0.3, 1.0])
+    assert grounded["transl_world"] == pytest.approx([0.3, 2.5, 0.0])
+
+
+def test_sam3d_foot_grounding_rejects_legacy_mislabeled_right_toe_and_unsafe_axis() -> None:
+    sample = {
+        "pred_foot_keypoints_2d": [
+            {"name": "left_heel", "index": 17, "xy_px": [1020.0, 1200.0], "conf": 0.9},
+            {"name": "right_heel", "index": 20, "xy_px": [1040.0, 1200.0], "conf": 0.9},
+            {"name": "right_toe", "index": 16, "xy_px": [1900.0, 1200.0], "conf": 0.9},
+        ]
+    }
+
+    target = worldhmr._sam3d_foot_grounding_target(
+        sample,
+        calibration=_identity_calibration(),
+        placement_track_world_xy=[0.0, 1.5],
+        camera_motion=None,
+    )
+
+    assert target["world_xy"] == pytest.approx([0.3, 2.0])
+    assert target["candidate_count"] == 2
+
+
 def test_snap_player_translation_to_court_projects_root_and_mesh_without_mutating_input() -> None:
     sample = worldhmr.WorldTranslationSample(
         frame_idx=12,
@@ -544,11 +588,12 @@ def test_camera_motion_warps_sam3d_foot_pixels_before_world_grounding(
 
     assert static_foot_span_m == pytest.approx(1.0)
     assert motion_foot_span_m == pytest.approx(1.2)
-    assert motion_joints[13][0] == pytest.approx(-0.6)
-    assert motion_joints[14][0] == pytest.approx(0.6)
+    assert motion_joints[13][0] == pytest.approx(-0.4)
+    assert motion_joints[14][0] == pytest.approx(0.8)
     assert "camera_motion_frames_used" not in static_metrics
     assert motion_metrics["camera_motion_frames_used"] == 1
     assert motion_metrics["camera_motion_frames_uncompensated"] == 0
+    assert motion_metrics["grounding_target_source_counts"] == {"sam3d_foot_pixels_xy": 1}
     assert motion_skeleton["provenance"]["camera_motion"]["frames_used"] == 1
     assert motion_skeleton["provenance"]["camera_motion"]["frames_uncompensated"] == 0
 

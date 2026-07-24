@@ -34,6 +34,8 @@ from .foot_contact import (
 )
 from .foot_pin import FootPinSettings, apply_foot_pin_to_payload
 from .body_postchain import BodyPostChainConfig, RAW_GROUNDED_JOINTS_ARTIFACT
+from .coordinates import CoordinateSpace
+from .court_calibration import undistort_pixels_with_camera_matrix_typed
 from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 from .hmr_deep import MeshTopology, MeshTopologyInterner
 from .pose_temporal import apply_sam3d_wrist_bone_lock, compare_wrist_peak_timing, refine_sam3d_skeleton3d
@@ -66,6 +68,14 @@ CAMERA_MOTION_ARTIFACT = "camera_motion.json"
 DEFAULT_SMOOTHING_GAP_CARRY_FRAMES = 8
 DEFAULT_SMOOTHING_RESIDUAL_IDENTITY_RESET_M = 1.0
 WORLD_JOINT_VISUAL_SMOOTHING_WEIGHTS = (0.30, 0.40, 0.30)
+PICKLEBALL_HALF_WIDTH_M = 3.048
+PICKLEBALL_HALF_LENGTH_M = 6.7056
+TENNIS_HALF_WIDTH_M = 5.485
+TENNIS_HALF_LENGTH_M = 11.887
+BODY_FOOT_LONGITUDINAL_APRON_M = 4.0
+BODY_FOOT_LATERAL_APRON_M = 1.0
+BODY_FOOT_MAX_X_CORRECTION_M = 1.25
+BODY_FOOT_MAX_Y_CORRECTION_M = 2.0
 WORLD_JOINT_VISUAL_SMOOTHING_BONE_PAIRS = (
     ("left_shoulder", "left_elbow"),
     ("left_elbow", "left_wrist"),
@@ -85,9 +95,11 @@ WORLD_JOINT_VISUAL_SMOOTHING_BONE_PAIRS = (
 SAM3D_FOOT_KEYPOINT_INDICES = {
     "left_ankle": 13,
     "right_ankle": 14,
-    "left_toe": 15,
-    "right_toe": 16,
+    "left_big_toe_tip": 15,
+    "left_small_toe_tip": 16,
     "left_heel": 17,
+    "right_big_toe_tip": 18,
+    "right_small_toe_tip": 19,
     "right_heel": 20,
 }
 FOOT_LOCK_CONTACT_HYSTERESIS = ContactHysteresis(
@@ -442,6 +454,13 @@ def compute_body_skeleton_and_metrics(
                             "source": "sam3d_body_joints",
                             "model": model,
                             "grounding_anchor_source": anchor_source,
+                            "grounding_target_source": str(frame.get("grounding_target_source", anchor_source)),
+                            "placement_track_world_xy": list(
+                                frame.get("placement_track_world_xy", frame["track_world_xy"])
+                            ),
+                            "grounding_target_correction_xy_m": list(
+                                frame.get("grounding_target_correction_xy_m", [0.0, 0.0])
+                            ),
                         },
                         **_temporal_smoothing_metadata_export(frame),
                     }
@@ -472,6 +491,13 @@ def compute_body_skeleton_and_metrics(
                             "source": "sam3d_body_joints",
                             "model": model,
                             "grounding_anchor_source": anchor_source,
+                            "grounding_target_source": str(frame.get("grounding_target_source", anchor_source)),
+                            "placement_track_world_xy": list(
+                                frame.get("placement_track_world_xy", frame["track_world_xy"])
+                            ),
+                            "grounding_target_correction_xy_m": list(
+                                frame.get("grounding_target_correction_xy_m", [0.0, 0.0])
+                            ),
                         },
                         **_temporal_smoothing_metadata_export(frame),
                     }
@@ -553,6 +579,13 @@ def compute_body_skeleton_and_metrics(
     sam3d_lock = dict(skeleton3d.get("provenance", {}).get("sam3d_wrist_bone_lock", {}))
     temporal_refine = dict(skeleton3d.get("provenance", {}).get("temporal_refine", {}))
     physical_plausibility = dict(temporal_refine.get("physical_plausibility", {}))
+    grounding_target_counts: dict[str, int] = {}
+    grounding_target_corrections: list[float] = []
+    for frame in grounded:
+        source = str(frame.get("grounding_target_source", anchor_source))
+        grounding_target_counts[source] = grounding_target_counts.get(source, 0) + 1
+        correction = frame.get("grounding_target_correction_xy_m", [0.0, 0.0])
+        grounding_target_corrections.append(_distance2(correction, [0.0, 0.0]))
     metrics = {
         "body_samples": len(samples),
         "players": len(players),
@@ -560,6 +593,11 @@ def compute_body_skeleton_and_metrics(
         "world_frame": "court_Z0",
         "grounding": "camera_offset_row_times_R_plus_track_footpoint_court_z0",
         "grounding_anchor_source": anchor_source,
+        "grounding_target_source_counts": grounding_target_counts,
+        "sam3d_foot_pixel_grounding_frames": sum(
+            count for source, count in grounding_target_counts.items() if source.startswith("sam3d_foot_pixels_")
+        ),
+        "sam3d_foot_pixel_grounding_correction_m": _distribution_m(grounding_target_corrections),
         "stance_aware_grounding": bool(stance_aware_grounding),
         "camera_offset_rotation_convention": ROTATION_CONVENTION_OFFSET_ROW_TIMES_R,
         "grounding_anchor": _common_grounding_anchor(smoothed),
@@ -2688,7 +2726,7 @@ def _ground_fast_sam_sample(
     vertices_camera = _vector3_list(sample.get("vertices_camera", []), name="vertices_camera")
     if not joints_camera and not vertices_camera:
         raise ValueError("Fast SAM-3D-Body sample must include joints_camera or vertices_camera")
-    track_world_xy = _vector2(sample.get("track_world_xy"), name="track_world_xy")
+    placement_track_world_xy = _vector2(sample.get("track_world_xy"), name="track_world_xy")
     t = float(sample["t"])
     confidence = float(sample.get("confidence", 0.0))
     if confidence < 0.0 or confidence > 1.0:
@@ -2710,6 +2748,13 @@ def _ground_fast_sam_sample(
     anchor_xy, anchor_name = _low_grounding_anchor_xy(anchor_candidates)
     all_world = joints_world_raw + vertices_world_raw
     min_z = min(point[2] for point in all_world)
+    grounding_target = _sam3d_foot_grounding_target(
+        sample,
+        calibration=calibration,
+        placement_track_world_xy=placement_track_world_xy,
+        camera_motion=camera_motion,
+    )
+    track_world_xy = grounding_target["world_xy"]
     dx = track_world_xy[0] - anchor_xy[0]
     dy = track_world_xy[1] - anchor_xy[1]
     dz = -min_z
@@ -2721,6 +2766,10 @@ def _ground_fast_sam_sample(
         "confidence": confidence,
         "grounding_anchor": anchor_name,
         "track_world_xy": track_world_xy,
+        "placement_track_world_xy": placement_track_world_xy,
+        "grounding_target_source": grounding_target["source"],
+        "grounding_target_correction_xy_m": grounding_target["correction_xy_m"],
+        "grounding_target_candidate_count": grounding_target["candidate_count"],
         "global_orient": _float_list(sample.get("global_orient", [0.0, 0.0, 0.0]), name="global_orient"),
         "body_pose": _float_list(sample.get("body_pose", []), name="body_pose"),
         "left_hand_pose": _float_list(sample.get("left_hand_pose", []), name="left_hand_pose"),
@@ -2740,6 +2789,122 @@ def _ground_fast_sam_sample(
             topology_interner=mesh_topology_interner,
         ),
     }
+
+
+def _sam3d_foot_grounding_target(
+    sample: Mapping[str, Any],
+    *,
+    calibration: CourtCalibration,
+    placement_track_world_xy: Sequence[float],
+    camera_motion: _CameraMotionObservation | None,
+) -> dict[str, Any]:
+    """Resolve visible SAM foot pixels onto the court without mutating tracks.
+
+    The detector-box anchor remains the per-axis fallback. Surface contacts
+    (heels and toe tips) take priority over ankles, and a known legacy sidecar
+    bug that labeled MHR70 index 16 as a right toe is explicitly ignored.
+    """
+
+    placement_xy = _vector2(placement_track_world_xy, name="placement_track_world_xy")
+    raw_by_foot: dict[str, list[list[float]]] = {"left": [], "right": []}
+    ankle_by_foot: dict[str, list[list[float]]] = {"left": [], "right": []}
+    for item in sample.get("pred_foot_keypoints_2d", []) or []:
+        if not isinstance(item, Mapping):
+            continue
+        name = str(item.get("name", ""))
+        try:
+            index = int(item.get("index"))
+        except (TypeError, ValueError):
+            index = SAM3D_FOOT_KEYPOINT_INDICES.get(name, -1)
+        if name == "right_toe" and index == 16:
+            # Historical artifacts assigned left_small_toe_tip to right_toe.
+            continue
+        if name.startswith("left_"):
+            foot = "left"
+        elif name.startswith("right_"):
+            foot = "right"
+        else:
+            continue
+        try:
+            pixel = _vector2(item.get("xy_px"), name=f"pred_foot_keypoints_2d/{name}/xy_px")
+        except (TypeError, ValueError):
+            continue
+        if camera_motion is not None:
+            pixel = _apply_homography_xy(camera_motion.matrix, pixel)
+        if _calibration_homography_uses_undistorted_pixels(calibration):
+            intrinsics = calibration.intrinsics
+            pixel = undistort_pixels_with_camera_matrix_typed(
+                [pixel],
+                [
+                    [float(intrinsics.fx), 0.0, float(intrinsics.cx)],
+                    [0.0, float(intrinsics.fy), float(intrinsics.cy)],
+                    [0.0, 0.0, 1.0],
+                ],
+                [float(value) for value in intrinsics.dist],
+                input_space=CoordinateSpace.PIXELS_RAW_NATIVE,
+                output_space=CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+            )[0]
+        target = _apply_homography_xy(
+            _invert_matrix3(_matrix3(calibration.homography, name="calibration.homography")),
+            pixel,
+        )
+        if name.endswith("ankle"):
+            ankle_by_foot[foot].append(target)
+        else:
+            raw_by_foot[foot].append(target)
+
+    per_foot: list[list[float]] = []
+    for foot in ("left", "right"):
+        candidates = raw_by_foot[foot] or ankle_by_foot[foot]
+        if candidates:
+            per_foot.append(
+                [
+                    float(np.median([point[0] for point in candidates])),
+                    float(np.median([point[1] for point in candidates])),
+                ]
+            )
+    if not per_foot:
+        return {
+            "world_xy": placement_xy,
+            "source": "placement_track_world_xy",
+            "correction_xy_m": [0.0, 0.0],
+            "candidate_count": 0,
+        }
+
+    candidate = [
+        float(np.median([point[0] for point in per_foot])),
+        float(np.median([point[1] for point in per_foot])),
+    ]
+    half_width, half_length = _court_half_extents(calibration)
+    same_half = placement_xy[1] * candidate[1] >= 0.0 or abs(placement_xy[1]) <= 0.5
+    use_x = (
+        abs(candidate[0]) <= half_width + BODY_FOOT_LATERAL_APRON_M
+        and abs(candidate[0] - placement_xy[0]) <= BODY_FOOT_MAX_X_CORRECTION_M
+    )
+    use_y = (
+        same_half
+        and abs(candidate[1]) <= half_length + BODY_FOOT_LONGITUDINAL_APRON_M
+        and abs(candidate[1] - placement_xy[1]) <= BODY_FOOT_MAX_Y_CORRECTION_M
+    )
+    resolved = [candidate[0] if use_x else placement_xy[0], candidate[1] if use_y else placement_xy[1]]
+    applied_axes = ("x" if use_x else "") + ("y" if use_y else "")
+    return {
+        "world_xy": resolved,
+        "source": f"sam3d_foot_pixels_{applied_axes}" if applied_axes else "placement_track_world_xy_rejected_sam3d",
+        "correction_xy_m": [resolved[0] - placement_xy[0], resolved[1] - placement_xy[1]],
+        "candidate_count": len(per_foot),
+    }
+
+
+def _calibration_homography_uses_undistorted_pixels(calibration: CourtCalibration) -> bool:
+    contract = calibration.coordinate_contract
+    return bool(contract is not None and contract.homography_pixel_convention == "undistorted_pixels")
+
+
+def _court_half_extents(calibration: CourtCalibration) -> tuple[float, float]:
+    if calibration.sport == "tennis":
+        return TENNIS_HALF_WIDTH_M, TENNIS_HALF_LENGTH_M
+    return PICKLEBALL_HALF_WIDTH_M, PICKLEBALL_HALF_LENGTH_M
 
 
 def _camera_offsets_to_world(

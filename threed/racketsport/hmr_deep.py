@@ -65,9 +65,11 @@ CORE_FAST_SAM_MODEL_IDS = (
 SAM3D_FOOT_KEYPOINT_INDICES = {
     "left_ankle": 13,
     "right_ankle": 14,
-    "left_toe": 15,
-    "right_toe": 16,
+    "left_big_toe_tip": 15,
+    "left_small_toe_tip": 16,
     "left_heel": 17,
+    "right_big_toe_tip": 18,
+    "right_small_toe_tip": 19,
     "right_heel": 20,
 }
 

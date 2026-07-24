@@ -30,6 +30,7 @@ class OpenSetDecision(str, Enum):
 
 EXACTLY_FOUR_HARD_CAP = 4
 COURT_REGION_HARD_BOUND_M = 1.0
+ENROLLED_PLAYER_LONGITUDINAL_CONTINUATION_M = 4.0
 
 
 @dataclass(frozen=True)
@@ -508,39 +509,62 @@ def _apply_selective_reid_policy(
                 )
                 continue
 
-            missing_identity = (
-                not provider_available
-                or not candidates
-                or any(candidate.embedding is None for candidate in candidates)
-            )
-            action = _REID_UNAVAILABLE if missing_identity else _REID_ELIGIBLE
-            if missing_identity:
+            if not candidates:
                 audit.frames_unavailable.add(frame_idx)
-            reason = (
-                "embedding_provider_unavailable"
-                if not provider_available
-                else "zero_in_court_candidates_for_slot"
-                if not candidates
-                else "embedding_absent_for_ambiguous_slot_frame"
-                if any(candidate.embedding is None for candidate in candidates)
-                else "two_or_more_in_court_candidates_for_slot"
-                if len(candidates) >= 2
-                else "frame_ambiguous_for_another_slot"
-            )
+                audit.decisions.append(
+                    {
+                        "action": _REID_UNAVAILABLE,
+                        "policy_scope": _REID_POLICY_SCOPE,
+                        "frame_idx": frame_idx,
+                        "slot_side": side,
+                        "slot_role": role,
+                        "candidate_real_detections": 0,
+                        "raw_detection_uids": [],
+                        "reasons": ["zero_in_court_candidates_for_slot"],
+                    }
+                )
+                continue
+
+            eligible_uids: list[str] = []
+            unavailable_uids: list[str] = []
             for candidate in candidates:
-                policy_by_uid[_required_raw_uid(candidate)] = action
-            audit.decisions.append(
-                {
-                    "action": action,
-                    "policy_scope": _REID_POLICY_SCOPE,
-                    "frame_idx": frame_idx,
-                    "slot_side": side,
-                    "slot_role": role,
-                    "candidate_real_detections": len(candidates),
-                    "raw_detection_uids": candidate_uids,
-                    "reasons": [reason],
-                }
-            )
+                uid = _required_raw_uid(candidate)
+                if provider_available and candidate.embedding is not None:
+                    policy_by_uid[uid] = _REID_ELIGIBLE
+                    eligible_uids.append(uid)
+                else:
+                    policy_by_uid[uid] = _REID_UNAVAILABLE
+                    unavailable_uids.append(uid)
+            if unavailable_uids:
+                audit.frames_unavailable.add(frame_idx)
+            for action, uids, reason in (
+                (
+                    _REID_ELIGIBLE,
+                    eligible_uids,
+                    "candidate_embedding_available_on_ambiguous_frame",
+                ),
+                (
+                    _REID_UNAVAILABLE,
+                    unavailable_uids,
+                    "embedding_provider_unavailable"
+                    if not provider_available
+                    else "candidate_embedding_absent_on_ambiguous_frame",
+                ),
+            ):
+                if not uids:
+                    continue
+                audit.decisions.append(
+                    {
+                        "action": action,
+                        "policy_scope": _REID_POLICY_SCOPE,
+                        "frame_idx": frame_idx,
+                        "slot_side": side,
+                        "slot_role": role,
+                        "candidate_real_detections": len(uids),
+                        "raw_detection_uids": uids,
+                        "reasons": [reason],
+                    }
+                )
 
         for detection in frame_detections:
             uid = _required_raw_uid(detection)
@@ -1358,6 +1382,7 @@ def select_players_payload(
                 pool_fragments=pool_fragments,
                 fps=fps,
                 config=cfg,
+                reid_audit=reid_audit,
             )
             if auto_player_count and inferred_player_count in {2, 4}
             else None
@@ -1678,6 +1703,7 @@ def _select_measured_association_fallback(
     pool_fragments: Sequence[TrackFragment],
     fps: float,
     config: PlayerSelectionConfig,
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> tuple[
     list[dict[str, Any]],
     list[dict[str, Any]],
@@ -1756,9 +1782,19 @@ def _select_measured_association_fallback(
         selected_indexes = ranked[:4]
     selected_indexes.sort(key=lambda index: int(players[index].get("id", index + 1)))
 
+    recovered_count, recovery_decisions = _recover_identity_supported_measured_gaps(
+        players,
+        selected_indexes=selected_indexes,
+        matched_by_player=matched_by_player,
+        real_by_frame=real_by_frame,
+        fps=fps,
+        config=config,
+        reid_audit=reid_audit,
+    )
+
     output_players: list[dict[str, Any]] = []
     track_rows: list[dict[str, Any]] = []
-    decisions: list[dict[str, Any]] = []
+    decisions: list[dict[str, Any]] = list(recovery_decisions)
     used_uids: set[str] = set()
     for player_index in selected_indexes:
         source_player = players[player_index]
@@ -1845,9 +1881,135 @@ def _select_measured_association_fallback(
             "interpolated_frames": 0,
             "unbound_real_detections": len(unbound_uids),
             "dropped_real_detections": 0,
-            "recovered_real_detections": 0,
+            "recovered_real_detections": recovered_count,
         },
     )
+
+
+def _recover_identity_supported_measured_gaps(
+    players: Sequence[Mapping[str, Any]],
+    *,
+    selected_indexes: Sequence[int],
+    matched_by_player: Mapping[int, dict[int, SelectionDetection]],
+    real_by_frame: Mapping[int, Sequence[SelectionDetection]],
+    fps: float,
+    config: PlayerSelectionConfig,
+    reid_audit: _SelectiveReIDAudit | None,
+) -> tuple[int, list[dict[str, Any]]]:
+    """Recover measured detections for enrolled IDs without inventing bridges.
+
+    Initial enrollment retains the strict one-metre court region. Once an ID is
+    established, a measured detection may continue farther behind a baseline,
+    where real players routinely wait, but never farther laterally. Recovery is
+    intentionally one-to-one: one identity-accepted candidate for one missing
+    side/role slot. Ambiguity remains a visible gap.
+    """
+
+    del fps
+    template = get_court_template(config.sport)
+    lateral_limit = template.width_m / 2.0 + COURT_REGION_HARD_BOUND_M
+    longitudinal_limit = template.length_m / 2.0 + ENROLLED_PLAYER_LONGITUDINAL_CONTINUATION_M
+    centroids: dict[int, tuple[float, ...]] = {}
+    slot_keys: dict[int, tuple[str, str]] = {}
+    for player_index in selected_indexes:
+        detections = tuple(matched_by_player.get(player_index, {}).values())
+        centroid = _gallery_embedding_centroid(detections)
+        if centroid is not None:
+            centroids[player_index] = centroid
+        source_player = players[player_index]
+        side = str(source_player.get("side", ""))
+        role = str(source_player.get("role", ""))
+        if side not in {"near", "far"} or role not in {"left", "right"}:
+            x, y = _median_world_xy(detections)
+            side = "near" if y < 0.0 else "far"
+            role = "left" if x < 0.0 else "right"
+        slot_keys[player_index] = (side, role)
+
+    recovered = 0
+    decisions: list[dict[str, Any]] = []
+    for frame_idx in sorted(real_by_frame):
+        used_uids = {
+            _required_raw_uid(detection)
+            for player_index in selected_indexes
+            for detection in [matched_by_player.get(player_index, {}).get(frame_idx)]
+            if detection is not None
+        }
+        candidates_by_player: dict[int, list[tuple[float, SelectionDetection]]] = defaultdict(list)
+        owners_by_uid: dict[str, list[int]] = defaultdict(list)
+        candidate_rows: dict[tuple[int, str], tuple[float, SelectionDetection]] = {}
+        for detection in real_by_frame.get(frame_idx, ()):
+            uid = _required_raw_uid(detection)
+            embedding = _consultable_embedding(detection)
+            if uid in used_uids or embedding is None:
+                continue
+            x, y = detection.world_xy
+            if abs(x) > lateral_limit or abs(y) > longitudinal_limit:
+                continue
+            candidate_slot = _provisional_slot_key(detection)
+            for player_index in selected_indexes:
+                if frame_idx in matched_by_player.get(player_index, {}):
+                    continue
+                if slot_keys.get(player_index) != candidate_slot:
+                    continue
+                centroid = centroids.get(player_index)
+                if centroid is None:
+                    continue
+                distance = _identity_distance(
+                    centroid,
+                    embedding,
+                    reid_audit=reid_audit,
+                    trigger_frames=(frame_idx,) if reid_audit is not None else (),
+                    comparison="measured_gap_recovery",
+                    context={
+                        "player_id": int(players[player_index].get("id", player_index + 1)),
+                        "raw_detection_uid": uid,
+                    },
+                )
+                if open_set_decision(distance, config) is not OpenSetDecision.ACCEPT:
+                    continue
+                assert distance is not None
+                owners_by_uid[uid].append(player_index)
+                candidate_rows[(player_index, uid)] = (distance, detection)
+
+        for (player_index, uid), row in candidate_rows.items():
+            if len(owners_by_uid[uid]) == 1:
+                candidates_by_player[player_index].append(row)
+        for player_index in selected_indexes:
+            candidates = candidates_by_player.get(player_index, [])
+            if len(candidates) != 1:
+                if len(candidates) > 1:
+                    decisions.append(
+                        {
+                            "action": "preserve_missing_gap",
+                            "player_id": int(players[player_index].get("id", player_index + 1)),
+                            "frame_idx": frame_idx,
+                            "candidate_count": len(candidates),
+                            "reasons": ["multiple_identity_accepted_measured_candidates"],
+                        }
+                    )
+                continue
+            distance, detection = candidates[0]
+            matched_by_player[player_index][frame_idx] = detection
+            recovered += 1
+            decisions.append(
+                {
+                    "action": "recover_measured_enrolled_player",
+                    "player_id": int(players[player_index].get("id", player_index + 1)),
+                    "frame_idx": frame_idx,
+                    "raw_detection_uid": _required_raw_uid(detection),
+                    "source_track_id": detection.source_track_id,
+                    "embedding_distance": distance,
+                    "interpolated": False,
+                    "reasons": [
+                        "established_player_identity_accept",
+                        "same_side_and_role",
+                        "inside_lateral_one_metre_bound",
+                        "inside_longitudinal_continuation_apron",
+                        "single_measured_candidate",
+                    ],
+                }
+            )
+    return recovered, decisions
 
 
 def _pool_fragments(

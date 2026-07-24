@@ -836,7 +836,16 @@ def _keypoint_index(payload: Mapping[str, Any] | None) -> dict[tuple[str, int], 
             weights = []
             for point in frame.get("keypoints", []):
                 if not isinstance(point, Mapping) or point.get("name") not in {
-                    "left_ankle", "right_ankle", "left_toe", "right_toe", "left_heel", "right_heel"
+                    "left_ankle",
+                    "right_ankle",
+                    "left_toe",
+                    "right_toe",
+                    "left_big_toe_tip",
+                    "left_small_toe_tip",
+                    "right_big_toe_tip",
+                    "right_small_toe_tip",
+                    "left_heel",
+                    "right_heel",
                 }:
                     continue
                 xy = _finite_vector(point.get("xy_px"), 2, "keypoint.xy_px")

@@ -41,6 +41,9 @@ def build_replay_viewer_manifest(
     reviewed_bounces_path: str | Path | None = None,
     coaching_card_facts_path: str | Path | None = None,
     rally_spans_path: str | Path | None = None,
+    court_evidence_path: str | Path | None = None,
+    court_calibration_path: str | Path | None = None,
+    skeleton_evidence_path: str | Path | None = None,
     annotation_sources: Iterable[str | Path] = (),
     vite_allow_root: str | Path | None = None,
     mesh_status: str | None = None,
@@ -73,6 +76,9 @@ def build_replay_viewer_manifest(
     reviewed_bounces = _optional_existing_file(reviewed_bounces_path, "reviewed_bounces", allow_root=allow_root)
     coaching_card_facts = _optional_existing_file(coaching_card_facts_path, "coaching_card_facts", allow_root=allow_root)
     rally_spans = _optional_existing_file(rally_spans_path, "rally_spans", allow_root=allow_root)
+    court_evidence = _optional_existing_file(court_evidence_path, "court_evidence", allow_root=allow_root)
+    court_calibration = _optional_existing_file(court_calibration_path, "court_calibration", allow_root=allow_root)
+    skeleton_evidence = _optional_existing_file(skeleton_evidence_path, "skeleton_evidence", allow_root=allow_root)
     player_labels = _optional_existing_file(player_labels_path, "player_labels", allow_root=allow_root)
 
     label_overlays = []
@@ -99,6 +105,9 @@ def build_replay_viewer_manifest(
         "reviewed_bounces_url": _vite_file_url(reviewed_bounces) if reviewed_bounces is not None else None,
         "coaching_card_facts_url": _vite_file_url(coaching_card_facts) if coaching_card_facts is not None else None,
         "rally_spans_url": _vite_file_url(rally_spans) if rally_spans is not None else None,
+        "court_evidence_url": _vite_file_url(court_evidence) if court_evidence is not None else None,
+        "court_calibration_url": _vite_file_url(court_calibration) if court_calibration is not None else None,
+        "skeleton_evidence_url": _vite_file_url(skeleton_evidence) if skeleton_evidence is not None else None,
         "label_overlays": label_overlays,
         "annotation_sources": [_annotation_source(path, allow_root=allow_root) for path in annotation_sources],
         "mesh_status": mesh_status,

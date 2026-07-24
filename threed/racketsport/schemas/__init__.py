@@ -2210,6 +2210,9 @@ class ReplayViewerManifest(StrictArtifact):
     reviewed_bounces_url: str | None = None
     coaching_card_facts_url: str | None = None
     rally_spans_url: str | None = None
+    court_evidence_url: str | None = None
+    court_calibration_url: str | None = None
+    skeleton_evidence_url: str | None = None
     label_overlays: list[ReplayViewerLabelOverlay] = Field(default_factory=list)
     annotation_sources: list[ReplayViewerAnnotationSource] = Field(default_factory=list)
     mesh_status: Literal["windowed_index", "monolithic_unverified", "skeleton_only"] | None = None

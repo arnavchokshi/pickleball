@@ -71,7 +71,7 @@ describe("camera preference and motion contract", () => {
 
   it("keeps canonical playback time out of Follow camera React effect inputs", () => {
     const source = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
-    const orbitRig = source.slice(source.indexOf("function OrbitRig("), source.indexOf("function applyCameraPan("));
+    const orbitRig = source.slice(source.indexOf("function OrbitRig("), source.indexOf("const COURT_RENDER_COLORS"));
 
     expect(orbitRig).not.toContain("currentTime");
     expect(orbitRig).toContain("playbackClock.getTime()");
@@ -230,6 +230,18 @@ describe("optional capability isolation", () => {
 });
 
 describe("viewer truth wiring", () => {
+  it("shows three synchronized evidence views and never fabricates a fallback pose", () => {
+    const source = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
+
+    expect(source).toContain('aria-label="Base video"');
+    expect(source).toContain('title="Court evidence"');
+    expect(source).toContain('title="BODY evidence"');
+    expect(source).toContain("new OrbitControls(camera, gl.domElement)");
+    expect(source).toContain("Right-drag move");
+    expect(source).not.toContain("function skeletonForFrame");
+    expect(source).not.toContain("CameraDragPads");
+  });
+
   it("mounts missing-evidence, trust, marker-empty, and review-only paddle-normal surfaces", () => {
     const source = readFileSync(resolve(process.cwd(), "src/App.tsx"), "utf8");
     expect(source).toContain("<NoDetectionPlaceholder");

@@ -1,12 +1,23 @@
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { BufferAttribute, BufferGeometry, Color, DoubleSide, Quaternion, Spherical, Vector3 as ThreeVector3, type Camera } from "three";
-import { MapControls } from "three/examples/jsm/controls/MapControls.js";
+import { BufferAttribute, BufferGeometry, Color, DoubleSide, Quaternion, Vector3 as ThreeVector3 } from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { activeReplayPointForTime, parseReplayScene, resolveReplaySceneAssetUrl, type ReplayScene } from "./replayScene";
 import { CourtMapPanel } from "./CourtMapPanel";
+import {
+  courtEvidenceSegments,
+  parseCourtCalibrationEvidence,
+  parseCourtEvidence,
+  parseSam3DKeypointEvidence,
+  projectCourtWorldPoint,
+  sam3DKeypointFramesForTime,
+  type CourtCalibrationEvidence,
+  type CourtEvidence,
+  type Sam3DKeypointEvidence,
+} from "./evidenceData";
 import {
   fetchJsonWithManifestRelativeRecovery,
   fetchWithManifestRelativeRecovery,
@@ -62,8 +73,6 @@ import {
   effectiveTrustBadge,
   fetchBodyMeshChunk,
   frameForTime,
-  labelOverlayForTime,
-  labelViewBox,
   parseBallArcEventsSelected,
   parseBallInflections,
   parseBodyMesh,
@@ -79,6 +88,7 @@ import {
   parseVirtualWorld,
   resolveCanonicalPlaybackTime,
   resolveViewerManifestUrls,
+  resolveManifestChildUrl,
   activePaddleFramesForTime,
   playerPresenceForTime,
   playerTrailPointsForTime,
@@ -107,7 +117,6 @@ import {
   type CoachingCardFacts,
   type ContactWindows,
   type DisplayFpsReplayData,
-  type LabelOverlayPayload,
   type PhysicsRefinement,
   type ReviewedBounces,
   type RallySpans,
@@ -116,8 +125,8 @@ import {
   type TrustBand,
   type TrustBadge,
   type Vec3,
-  type VideoBallOverlay,
   type ViewerManifest,
+  type VideoBallOverlay,
   type VirtualWorld,
   type VirtualWorldFrame,
   type VirtualWorldPaddleFrame,
@@ -144,10 +153,8 @@ import {
 
 export { CoachingCardPanel, coachingCardForTimeline } from "./CoachingCard";
 
-export type ProductCameraPreset = "court" | "follow_player" | "free_orbit";
-export type CameraPreset = ProductCameraPreset | "broadcast" | "behind_baseline" | "top_down" | "paddle_review" | "shot_trails";
-type CameraDragKind = "pan" | "orbit";
-type CameraDragCommand = { kind: CameraDragKind; dx: number; dy: number; seq: number };
+export type ProductCameraPreset = "court" | "top_down" | "behind_baseline" | "far_baseline" | "follow_player";
+export type CameraPreset = ProductCameraPreset | "free_orbit" | "broadcast" | "paddle_review" | "shot_trails";
 
 export function hasExplicitReviewStartTime(search: string): boolean {
   const params = new URLSearchParams(search);
@@ -532,17 +539,18 @@ export function shotsEmptyText(degraded: readonly DegradedReason[]): string {
 }
 
 const CAMERA_PRESET_LABELS: Record<CameraPreset, string> = {
-  court: "Court",
-  follow_player: "Follow player",
+  court: "Whole court",
+  follow_player: "Follow",
   free_orbit: "Free orbit",
   broadcast: "Broadcast",
-  behind_baseline: "Behind",
+  behind_baseline: "Near end",
+  far_baseline: "Far end",
   top_down: "Top",
   paddle_review: "Paddles",
   shot_trails: "Trails",
 };
 
-const PRODUCT_CAMERA_PRESETS: readonly ProductCameraPreset[] = ["court", "follow_player", "free_orbit"];
+const PRODUCT_CAMERA_PRESETS: readonly ProductCameraPreset[] = ["court", "top_down", "behind_baseline", "far_baseline", "follow_player"];
 const CAMERA_PREFERENCE_STORAGE_KEY = "pickleball.replay.camera.v2";
 
 export type CameraPreference = { preset: ProductCameraPreset; playerId: number | null };
@@ -654,7 +662,10 @@ export default function App() {
   const initialCameraPreference = useMemo(() => loadCameraPreference(viewerStorage()), []);
   const [manifest, setManifest] = useState<ViewerManifest | null>(null);
   const [world, setWorld] = useState<VirtualWorld>(() => parseVirtualWorld(sampleWorld));
-  const [labelOverlay, setLabelOverlay] = useState<LabelOverlayPayload>(() => parseLabelOverlayPayload(null));
+  const [courtEvidence, setCourtEvidence] = useState<CourtEvidence | null>(null);
+  const [courtCalibrationEvidence, setCourtCalibrationEvidence] = useState<CourtCalibrationEvidence | null>(null);
+  const [sam3DKeypointEvidence, setSam3DKeypointEvidence] = useState<Sam3DKeypointEvidence | null>(null);
+  const [, setLabelOverlay] = useState(() => parseLabelOverlayPayload(null));
   const [physics, setPhysics] = useState<PhysicsRefinement | null>(null);
   const [contactWindows, setContactWindows] = useState<ContactWindows | null>(null);
   const [ballInflections, setBallInflections] = useState<BallInflections | null>(null);
@@ -694,7 +705,6 @@ export default function App() {
   );
   const [replayViewMode, setReplayViewMode] = useState<ReplayViewMode>(() => replayViewFromSearch(window.location.search));
   const [cameraResetToken, setCameraResetToken] = useState(0);
-  const [cameraDragCommand, setCameraDragCommand] = useState<CameraDragCommand | null>(null);
   const [showShotsPanel, setShowShotsPanel] = useState(false);
   const [viewState, setViewState] = useState<ViewState>(() => loadPersistedViewState(window.location.search, viewerStorage()));
   const [fps, setFps] = useState(0);
@@ -706,7 +716,6 @@ export default function App() {
   const uiTimePublisherRef = useRef<ReturnType<typeof createThrottledTimePublisher> | null>(null);
   const playbackDirectionRef = useRef<1 | -1>(1);
   const preferredInitialTimeRef = useRef(initialTime);
-  const cameraDragSeqRef = useRef(0);
   const initialSeekAppliedRef = useRef(false);
   const recoveredAssetUrlsRef = useRef(new Set<string>());
   const attemptedVideoRecoveryRef = useRef(new Set<string>());
@@ -733,6 +742,9 @@ export default function App() {
       recoveredAssetUrlsRef.current.clear();
       setRecoveredAssetCount(0);
       setManifest(null);
+      setCourtEvidence(null);
+      setCourtCalibrationEvidence(null);
+      setSam3DKeypointEvidence(null);
       setVideoSourceUrl(null);
       attemptedVideoRecoveryRef.current.clear();
       pendingVideoRecoveryRef.current = null;
@@ -772,6 +784,24 @@ export default function App() {
           optionalErrors[capability] = error instanceof Error ? error.message : String(error);
         };
         const reviewStartTime = hasExplicitInitialTime ? initialTime : defaultReviewStartTime(worldPayload);
+        const courtEvidenceUrl = manifestPayload.court_evidence_url ?? resolveManifestChildUrl(resolvedManifestUrl, "court_lock_visualization_adapter.json");
+        const courtCalibrationUrl = manifestPayload.court_calibration_url ?? resolveManifestChildUrl(resolvedManifestUrl, "court_calibration.json");
+        const skeletonEvidenceUrl = manifestPayload.skeleton_evidence_url ?? resolveManifestChildUrl(resolvedManifestUrl, "sam3d_keypoints_2d.json");
+        const courtEvidencePayload = await loadOptionalArtifact(
+          "court evidence",
+          async () => parseCourtEvidence(await fetchReplayJson(courtEvidenceUrl)),
+          recordOptionalError,
+        );
+        const courtCalibrationPayload = await loadOptionalArtifact(
+          "court calibration evidence",
+          async () => parseCourtCalibrationEvidence(await fetchReplayJson(courtCalibrationUrl)),
+          recordOptionalError,
+        );
+        const sam3DKeypointPayload = await loadOptionalArtifact(
+          "BODY foot evidence",
+          async () => parseSam3DKeypointEvidence(await fetchReplayJson(skeletonEvidenceUrl)),
+          recordOptionalError,
+        );
         const firstOverlay = manifestPayload.label_overlays.find((overlay) => overlay.kind === "player_boxes");
         const labelPayload = firstOverlay
           ? await loadOptionalArtifact("player labels", () => fetchReplayJson(firstOverlay.url), recordOptionalError)
@@ -849,6 +879,9 @@ export default function App() {
         setVideoSourceUrl(manifestPayload.video_url);
         setManifest(manifestPayload);
         setWorld(worldPayload);
+        setCourtEvidence(courtEvidencePayload);
+        setCourtCalibrationEvidence(courtCalibrationPayload);
+        setSam3DKeypointEvidence(sam3DKeypointPayload);
         preferredInitialTimeRef.current = reviewStartTime;
         currentTimeRef.current = reviewStartTime;
         playbackClockRef.current.setTime(reviewStartTime);
@@ -1079,13 +1112,8 @@ export default function App() {
   const renderBodyMesh = displayFpsEnabled && displayFpsData ? displayFpsData.bodyMesh : bodyMesh;
   const stats = useMemo(() => worldStats(world), [world]);
   const coverage = useMemo(() => playerCoverageStats(world), [world]);
-  const activeLabels = useMemo(() => labelOverlayForTime(labelOverlay, currentTime), [labelOverlay, currentTime]);
   const ballRenderInfo = useMemo(() => ballRenderInfoForTime(world, currentTime), [world, currentTime]);
   const videoBallOverlay = useMemo(() => videoBallOverlayForTime(world, currentTime), [world, currentTime]);
-  const playerBoxOverlay = useMemo(
-    () => manifest?.label_overlays.find((overlay) => overlay.kind === "player_boxes") ?? null,
-    [manifest],
-  );
   const activeContactPlayerIds = useMemo(
     () => activeBallContactPlayerIds(world, contactWindows, currentTime),
     [world, contactWindows, currentTime],
@@ -1113,6 +1141,10 @@ export default function App() {
   const playerPresenceGaps = useMemo(
     () => world.players.filter((player) => playerPresenceForTime(player, currentTime).missingEvidence),
     [currentTime, world.players],
+  );
+  const activeBodyPlayerCount = useMemo(
+    () => bodySkeletonCountForTime(world, currentTime),
+    [currentTime, world],
   );
   const solidGeometryCache = useMemo(() => createSolidBodyMeshGeometryCache(renderBodyMesh), [renderBodyMesh]);
   useEffect(() => () => solidGeometryCache.dispose(), [solidGeometryCache]);
@@ -1180,7 +1212,6 @@ export default function App() {
     () => contactPlayerIdsForViewer(activeContactPlayerIds, activeBodyMeshes),
     [activeContactPlayerIds, activeBodyMeshes],
   );
-  const viewBox = useMemo(() => labelViewBox(labelOverlay), [labelOverlay]);
   const coverageGapActive = coverage.lastTime !== null && currentTime > coverage.lastTime + Math.max(0.12, 1 / (world.fps || 30));
   const contactReadout = contactReadoutText(activeContactPlayerIds, activeBodyMeshes);
   const ballReadout = ballRenderText(ballRenderInfo.mode, videoBallOverlay);
@@ -1367,12 +1398,6 @@ export default function App() {
     setCameraResetToken((token) => token + 1);
   };
 
-  const applyCameraDrag = (kind: CameraDragKind, dx: number, dy: number) => {
-    if (dx === 0 && dy === 0) return;
-    cameraDragSeqRef.current += 1;
-    setCameraDragCommand({ kind, dx, dy, seq: cameraDragSeqRef.current });
-  };
-
   const toggleShotsPanel = () => {
     if (showShotsPanel) {
       setShowShotsPanel(false);
@@ -1411,7 +1436,7 @@ export default function App() {
         {replayLoaded ? (
           <div className="status-grid">
             <Metric label="Players" value={stats.players} title="Players represented anywhere in this bundle." />
-            <Metric label="Coverage gaps now" value={`${playerPresenceGaps.length}/${world.players.length}`} title="Players without defensible detection evidence at the current playback time." />
+            <Metric label="BODY now" value={`${activeBodyPlayerCount}/${world.players.length}`} title="Measured BODY skeletons available at this exact playback time; missing players are never replaced with a default pose." />
             <Metric label="Contacts in clip" value={contactEventCount(contactWindows)} title="Contact windows supplied for the whole bundle; this is not current-frame 3D contact." />
             <Metric label="Ball now" value={ballCoverage} title="Current-frame ball visibility. Clip-level ball trust remains in the entity trust badge." />
             <WarningsMetric
@@ -1507,7 +1532,13 @@ export default function App() {
       {replayLoaded ? (
       <section className="review-layout">
         <div className="video-panel">
-          <div className="video-frame">
+          <div className="evidence-stack" aria-label="Synchronized source evidence">
+          <section className="evidence-card base-evidence" aria-label="Base video">
+          <div className="evidence-card-header">
+            <span><strong>01</strong> Base video</span>
+            <small>unaltered source</small>
+          </div>
+          <div className="video-frame evidence-frame">
             {manifest ? (
               <video
                 ref={videoRef}
@@ -1546,34 +1577,41 @@ export default function App() {
               ))}
               <button type="button" onClick={enterFullscreen} aria-label="Enter replay fullscreen">Full screen</button>
             </div>
-            <svg className="box-overlay" viewBox={viewBox} preserveAspectRatio="xMidYMid meet" aria-hidden="true">
-              {activeLabels.map((item, index) => {
-                const box = item.bbox_xyxy ?? xywhToXyxy(item.bbox);
-                if (!box) return null;
-                const [x1, y1, x2, y2] = box;
-                const className = [
-                  "box",
-                  item.status === "uncertain" ? "uncertain" : "",
-                  labelOverlay.notGroundTruth ? "draft" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ");
-                return (
-                  <g key={`${item.id ?? "box"}-${index}`}>
-                    <rect x={x1} y={y1} width={x2 - x1} height={y2 - y1} className={className} />
-                    <text x={x1 + 4} y={Math.max(12, y1 - 4)}>{item.id ?? "player"}</text>
-                  </g>
-                );
-              })}
-              {videoBallOverlay ? <VideoBallOverlayMark overlay={videoBallOverlay} /> : null}
-            </svg>
+          </div>
+          </section>
+          <EvidenceCanvas
+            index="02"
+            title="Court evidence"
+            subtitle={courtEvidence ? `${courtEvidence.points.length} named lock points` : "evidence unavailable"}
+            kind="court"
+            sourceVideoRef={videoRef}
+            playbackClock={playbackClockRef.current}
+            world={world}
+            currentTime={currentTime}
+            courtEvidence={courtEvidence}
+            calibration={courtCalibrationEvidence}
+            sam3DKeypoints={sam3DKeypointEvidence}
+          />
+          <EvidenceCanvas
+            index="03"
+            title="BODY evidence"
+            subtitle={`${activeBodyPlayerCount}/${world.players.length} measured skeletons now`}
+            kind="body"
+            sourceVideoRef={videoRef}
+            playbackClock={playbackClockRef.current}
+            world={world}
+            currentTime={currentTime}
+            courtEvidence={courtEvidence}
+            calibration={courtCalibrationEvidence}
+            sam3DKeypoints={sam3DKeypointEvidence}
+          />
           </div>
           <div className="timeline-readout">
             <span>{currentTime.toFixed(2)}s</span>
-            <span>{activeLabels.length} boxes</span>
+            <span>{activeBodyPlayerCount}/{world.players.length} BODY measured</span>
             <span>{contactReadout}</span>
             <span title="Current-frame ball render mode; clip-level provenance and authority are in the Ball trust badge.">{ballReadout}</span>
-            <span>{labelTrustText(playerBoxOverlay)}</span>
+            <span>{courtEvidence?.authorityState ?? "court evidence unavailable"}</span>
           </div>
           <TimelineStrip
             durationSeconds={timelineDuration}
@@ -1650,7 +1688,6 @@ export default function App() {
               playbackClock={playbackClockRef.current}
               prefersReducedMotion={prefersReducedMotion}
               resetToken={cameraResetToken}
-              dragCommand={cameraDragCommand}
             />
             <CourtSurface world={renderWorld} />
             <CourtLines world={renderWorld} />
@@ -1738,7 +1775,12 @@ export default function App() {
             {displayFpsEnabled ? <span>{displayFpsControlReadout}</span> : null}
             {sceneLayers.debugPointClouds.visible ? <span data-entity-stale-ages>{entityStaleReadout}</span> : null}
           </div>
-          <CameraDragPads onDrag={applyCameraDrag} onReset={() => selectCameraPreset(cameraPreset)} />
+          <div className="camera-help" aria-label="3D navigation help">
+            <span><strong>Drag</strong> rotate</span>
+            <span><strong>Right-drag</strong> move</span>
+            <span><strong>Scroll</strong> zoom</span>
+            <button type="button" onClick={() => selectCameraPreset(cameraPreset)}>Reset view</button>
+          </div>
           </>
           )}
           <div className="world-honesty-dock">
@@ -1794,6 +1836,243 @@ export default function App() {
 
     </main>
   );
+}
+
+type EvidenceCanvasKind = "court" | "body";
+
+function EvidenceCanvas({
+  index,
+  title,
+  subtitle,
+  kind,
+  sourceVideoRef,
+  playbackClock,
+  world,
+  currentTime,
+  courtEvidence,
+  calibration,
+  sam3DKeypoints,
+}: {
+  index: string;
+  title: string;
+  subtitle: string;
+  kind: EvidenceCanvasKind;
+  sourceVideoRef: React.RefObject<HTMLVideoElement | null>;
+  playbackClock: PlaybackClock;
+  world: VirtualWorld;
+  currentTime: number;
+  courtEvidence: CourtEvidence | null;
+  calibration: CourtCalibrationEvidence | null;
+  sam3DKeypoints: Sam3DKeypointEvidence | null;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const measuredBodyCount = bodySkeletonCountForTime(world, currentTime);
+  const missingBodyCount = Math.max(0, world.players.length - measuredBodyCount);
+  const ready = kind === "court" ? Boolean(courtEvidence) : Boolean(calibration);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const video = sourceVideoRef.current;
+    if (!canvas || !video) return;
+    let drawPending = false;
+    const draw = () => {
+      drawPending = false;
+      if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || video.videoWidth <= 0 || video.videoHeight <= 0) return;
+      const targetWidth = Math.min(960, video.videoWidth);
+      const targetHeight = Math.max(1, Math.round(targetWidth * video.videoHeight / video.videoWidth));
+      if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+      }
+      const context = canvas.getContext("2d");
+      if (!context) return;
+      context.clearRect(0, 0, targetWidth, targetHeight);
+      context.drawImage(video, 0, 0, targetWidth, targetHeight);
+      const sourceWidth = calibration?.imageSize[0] ?? video.videoWidth;
+      const sourceHeight = calibration?.imageSize[1] ?? video.videoHeight;
+      const scaleX = targetWidth / Math.max(1, sourceWidth);
+      const scaleY = targetHeight / Math.max(1, sourceHeight);
+      if (kind === "court" && courtEvidence) {
+        drawCourtEvidenceOverlay(context, courtEvidence, scaleX, scaleY);
+      } else if (kind === "body" && calibration) {
+        drawBodyEvidenceOverlay(
+          context,
+          world,
+          calibration,
+          sam3DKeypoints,
+          playbackClock.getTime(),
+          scaleX,
+          scaleY,
+        );
+      }
+    };
+    const scheduleDraw = () => {
+      if (drawPending) return;
+      drawPending = true;
+      window.requestAnimationFrame(draw);
+    };
+    const unsubscribe = playbackClock.subscribe(scheduleDraw);
+    video.addEventListener("loadeddata", scheduleDraw);
+    video.addEventListener("seeked", scheduleDraw);
+    scheduleDraw();
+    return () => {
+      unsubscribe();
+      video.removeEventListener("loadeddata", scheduleDraw);
+      video.removeEventListener("seeked", scheduleDraw);
+    };
+  }, [calibration, courtEvidence, kind, playbackClock, sam3DKeypoints, sourceVideoRef, world]);
+
+  return (
+    <section className={`evidence-card ${kind}-evidence`} aria-label={`${title} synchronized view`}>
+      <div className="evidence-card-header">
+        <span><strong>{index}</strong> {title}</span>
+        <small>{subtitle}</small>
+      </div>
+      <div className="evidence-canvas-frame">
+        <canvas ref={canvasRef} aria-label={`${title} overlay`} />
+        {!ready ? <div className="evidence-unavailable">Evidence artifact unavailable</div> : null}
+        {kind === "court" && courtEvidence ? (
+          <div className="evidence-legend"><i className="court-dot" /> named floor points · {courtEvidence.authorityState.replaceAll("_", " ")}</div>
+        ) : null}
+        {kind === "body" && calibration ? (
+          <div className={`evidence-legend ${missingBodyCount ? "has-gap" : ""}`}>
+            <i className="body-dot" /> reprojected BODY joints · <i className="foot-dot" /> measured foot anchors
+            {missingBodyCount ? <strong>{missingBodyCount} player{missingBodyCount === 1 ? "" : "s"} missing now</strong> : null}
+          </div>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+const EVIDENCE_PLAYER_COLORS = ["#dfff3d", "#40dbff", "#ff8f70", "#b0ff94"];
+
+function drawCourtEvidenceOverlay(
+  context: CanvasRenderingContext2D,
+  evidence: CourtEvidence,
+  scaleX: number,
+  scaleY: number,
+): void {
+  context.save();
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.strokeStyle = "rgba(64, 219, 255, 0.9)";
+  context.lineWidth = 2.4;
+  context.shadowColor = "rgba(0, 0, 0, 0.85)";
+  context.shadowBlur = 4;
+  for (const [left, right] of courtEvidenceSegments(evidence)) {
+    context.beginPath();
+    context.moveTo(left.imageXY[0] * scaleX, left.imageXY[1] * scaleY);
+    context.lineTo(right.imageXY[0] * scaleX, right.imageXY[1] * scaleY);
+    context.stroke();
+  }
+  evidence.points.forEach((point, index) => {
+    const x = point.imageXY[0] * scaleX;
+    const y = point.imageXY[1] * scaleY;
+    context.beginPath();
+    context.arc(x, y, 4.8, 0, Math.PI * 2);
+    context.fillStyle = "#dfff3d";
+    context.fill();
+    context.strokeStyle = "#07110d";
+    context.lineWidth = 2;
+    context.stroke();
+    context.font = "800 10px ui-monospace, SFMono-Regular, Menlo, monospace";
+    context.fillStyle = "#f8fff3";
+    context.strokeStyle = "rgba(0,0,0,0.9)";
+    context.lineWidth = 3;
+    const label = `${index + 1} ${shortCourtPointName(point.semanticName)}`;
+    context.strokeText(label, x + 7, y - 6);
+    context.fillText(label, x + 7, y - 6);
+  });
+  context.restore();
+}
+
+function drawBodyEvidenceOverlay(
+  context: CanvasRenderingContext2D,
+  world: VirtualWorld,
+  calibration: CourtCalibrationEvidence,
+  sam3DKeypoints: Sam3DKeypointEvidence | null,
+  timeSeconds: number,
+  scaleX: number,
+  scaleY: number,
+): void {
+  context.save();
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  for (const [playerIndex, player] of world.players.entries()) {
+    const presence = playerPresenceForTime(player, timeSeconds);
+    const skeleton = bodyJointSkeletonForFrame(presence.frame, world.joint_names);
+    if (!skeleton) continue;
+    const color = EVIDENCE_PLAYER_COLORS[playerIndex % EVIDENCE_PLAYER_COLORS.length];
+    context.strokeStyle = color;
+    context.fillStyle = color;
+    context.lineWidth = 2.6;
+    context.shadowColor = "rgba(0,0,0,0.9)";
+    context.shadowBlur = 4;
+    for (let index = 1; index < skeleton.bones.length; index += 2) {
+      const left = projectCourtWorldPoint(skeleton.bones[index - 1], calibration);
+      const right = projectCourtWorldPoint(skeleton.bones[index], calibration);
+      if (!left || !right) continue;
+      context.beginPath();
+      context.moveTo(left[0] * scaleX, left[1] * scaleY);
+      context.lineTo(right[0] * scaleX, right[1] * scaleY);
+      context.stroke();
+    }
+    const projectedJoints = skeleton.joints
+      .map((joint) => projectCourtWorldPoint(joint, calibration))
+      .filter((point): point is [number, number] => point !== null);
+    for (const point of projectedJoints) {
+      context.beginPath();
+      context.arc(point[0] * scaleX, point[1] * scaleY, 3.3, 0, Math.PI * 2);
+      context.fill();
+    }
+    const labelPoint = projectedJoints[0];
+    if (labelPoint) {
+      context.font = "900 12px ui-monospace, SFMono-Regular, Menlo, monospace";
+      context.strokeStyle = "rgba(0,0,0,0.92)";
+      context.lineWidth = 4;
+      context.strokeText(`P${player.id}`, labelPoint[0] * scaleX + 7, labelPoint[1] * scaleY - 7);
+      context.fillStyle = color;
+      context.fillText(`P${player.id}`, labelPoint[0] * scaleX + 7, labelPoint[1] * scaleY - 7);
+    }
+  }
+
+  const footFrames = sam3DKeypointFramesForTime(sam3DKeypoints, timeSeconds, world.fps);
+  context.shadowBlur = 3;
+  for (const { playerId, frame } of footFrames) {
+    const playerIndex = Math.max(0, world.players.findIndex((player) => player.id === playerId));
+    const color = EVIDENCE_PLAYER_COLORS[playerIndex % EVIDENCE_PLAYER_COLORS.length];
+    for (const keypoint of frame.keypoints) {
+      const x = keypoint.xyPx[0] * scaleX;
+      const y = keypoint.xyPx[1] * scaleY;
+      context.beginPath();
+      context.arc(x, y, 4.4, 0, Math.PI * 2);
+      context.fillStyle = "#ffffff";
+      context.fill();
+      context.strokeStyle = color;
+      context.lineWidth = 2.4;
+      context.stroke();
+    }
+  }
+  context.restore();
+}
+
+function bodySkeletonCountForTime(world: VirtualWorld, timeSeconds: number): number {
+  return world.players.reduce((count, player) => {
+    const frame = playerPresenceForTime(player, timeSeconds).frame;
+    return count + (bodyJointSkeletonForFrame(frame, world.joint_names) ? 1 : 0);
+  }, 0);
+}
+
+function shortCourtPointName(name: string): string {
+  return name
+    .replace("near_", "N ")
+    .replace("far_", "F ")
+    .replace("baseline_", "BL ")
+    .replace("corner", "C")
+    .replace("nvz_", "NVZ ")
+    .replaceAll("_", " ")
+    .toUpperCase();
 }
 
 function Metric({ label, value, title }: { label: string; value: number | string; title: string }) {
@@ -2442,67 +2721,6 @@ function PlayerTrustBandPanels({ players }: { players: VirtualWorldPlayer[] }) {
   );
 }
 
-function CameraDragPads({
-  onDrag,
-  onReset,
-}: {
-  onDrag: (kind: CameraDragKind, dx: number, dy: number) => void;
-  onReset: () => void;
-}) {
-  return (
-    <div className="camera-drag-pads" aria-label="Camera drag controls">
-      <CameraDragPad kind="pan" label="Move" onDrag={onDrag} />
-      <CameraDragPad kind="orbit" label="Orbit" onDrag={onDrag} />
-      <button type="button" className="camera-reset-pad" onClick={onReset}>
-        Reset
-      </button>
-    </div>
-  );
-}
-
-function CameraDragPad({
-  kind,
-  label,
-  onDrag,
-}: {
-  kind: CameraDragKind;
-  label: string;
-  onDrag: (kind: CameraDragKind, dx: number, dy: number) => void;
-}) {
-  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
-  const startDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    lastPointRef.current = { x: event.clientX, y: event.clientY };
-  };
-  const moveDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
-    const lastPoint = lastPointRef.current;
-    if (!lastPoint) return;
-    const dx = event.clientX - lastPoint.x;
-    const dy = event.clientY - lastPoint.y;
-    lastPointRef.current = { x: event.clientX, y: event.clientY };
-    onDrag(kind, dx, dy);
-  };
-  const endDrag = (event: React.PointerEvent<HTMLButtonElement>) => {
-    lastPointRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-  };
-  return (
-    <button
-      type="button"
-      className={`camera-drag-pad ${kind}`}
-      onPointerDown={startDrag}
-      onPointerMove={moveDrag}
-      onPointerUp={endDrag}
-      onPointerCancel={endDrag}
-    >
-      <span>{label}</span>
-      <small>drag</small>
-    </button>
-  );
-}
-
 function OrbitRig({
   world,
   preset,
@@ -2512,7 +2730,6 @@ function OrbitRig({
   playbackClock,
   prefersReducedMotion,
   resetToken,
-  dragCommand,
 }: {
   world: VirtualWorld;
   preset: CameraPreset;
@@ -2522,10 +2739,9 @@ function OrbitRig({
   playbackClock: PlaybackClock;
   prefersReducedMotion: boolean;
   resetToken: number;
-  dragCommand: CameraDragCommand | null;
 }) {
   const { camera, gl } = useThree();
-  const controlsRef = useRef<MapControls | null>(null);
+  const controlsRef = useRef<OrbitControls | null>(null);
   const transitionRef = useRef<{
     startedAtMs: number;
     durationMs: number;
@@ -2555,16 +2771,16 @@ function OrbitRig({
     followTargetRef.current!.set(...buffer.target);
   }, [followPlayerId, playbackClock, preset, resetToken, selectedPlayerId, world]);
   useEffect(() => {
-    const controls = new MapControls(camera, gl.domElement);
+    const controls = new OrbitControls(camera, gl.domElement);
     camera.up.set(0, 0, 1);
     camera.position.set(...pose.position);
     controls.target.set(...pose.target);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.rotateSpeed = 0.48;
-    controls.panSpeed = 0.78;
-    controls.zoomSpeed = 0.72;
-    controls.screenSpacePanning = false;
+    controls.rotateSpeed = 0.62;
+    controls.panSpeed = 0.72;
+    controls.zoomSpeed = 0.9;
+    controls.screenSpacePanning = true;
     controls.minDistance = preset === "paddle_review" ? 0.35 : 2.2;
     controls.maxDistance = Math.max(24, courtBounds(world).length * 2.1);
     controls.maxPolarAngle = Math.PI * 0.48;
@@ -2598,16 +2814,6 @@ function OrbitRig({
       toTarget: new ThreeVector3(...pose.target),
     };
   }, [camera, poseKey, prefersReducedMotion, preset]);
-  useEffect(() => {
-    const controls = controlsRef.current;
-    if (!controls || !dragCommand) return;
-    if (dragCommand.kind === "pan") {
-      applyCameraPan(camera, controls, dragCommand.dx, dragCommand.dy);
-    } else {
-      applyCameraOrbit(camera, controls, dragCommand.dx, dragCommand.dy);
-    }
-    controls.update();
-  }, [camera, dragCommand]);
   useFrame((_state, deltaSeconds) => {
     const controls = controlsRef.current;
     if (!controls) return;
@@ -2633,27 +2839,6 @@ function OrbitRig({
     controls.update();
   });
   return null;
-}
-
-function applyCameraPan(camera: Camera, controls: MapControls, dx: number, dy: number) {
-  const distance = camera.position.distanceTo(controls.target);
-  const scale = Math.max(0.006, distance * 0.0014);
-  const elements = camera.matrix.elements;
-  const right = new ThreeVector3(elements[0], elements[1], elements[2]);
-  const up = new ThreeVector3(elements[4], elements[5], elements[6]);
-  const delta = right.multiplyScalar(-dx * scale).add(up.multiplyScalar(dy * scale));
-  camera.position.add(delta);
-  controls.target.add(delta);
-}
-
-function applyCameraOrbit(camera: Camera, controls: MapControls, dx: number, dy: number) {
-  const offset = new ThreeVector3().subVectors(camera.position, controls.target);
-  const spherical = new Spherical().setFromVector3(offset);
-  spherical.theta -= dx * 0.006;
-  spherical.phi = Math.min(Math.PI * 0.48, Math.max(0.1, spherical.phi - dy * 0.006));
-  offset.setFromSpherical(spherical);
-  camera.position.copy(controls.target).add(offset);
-  camera.lookAt(controls.target);
 }
 
 const COURT_RENDER_COLORS = {
@@ -2858,7 +3043,6 @@ function Player({
   const bodySkeleton = bodyJointSkeletonForFrame(frame, jointNames, { includeImplausible: showImplausibleSkeletons });
   const handPoints = handJointPointsForFrame(frame, jointNames);
   const implausibleSuppressed = frame?.skeleton_implausible === true && !showImplausibleSkeletons;
-  const proxySkeleton = bodySkeleton || implausibleSuppressed ? null : skeletonForFrame(frame);
   const placeholderAnchor = floor ?? presence.lastKnownFloor;
   const showMissingPlaceholder = presence.missingEvidence || implausibleSuppressed;
   const badge = effectiveTrustBadge(player.trust_band);
@@ -2887,15 +3071,6 @@ function Player({
           <cylinderGeometry args={[0.16, 0.16, 0.025, 28]} />
           <meshStandardMaterial color={isBallContactActive ? "#e8ff34" : baseColor} transparent opacity={dotOpacity} />
         </mesh>
-      ) : null}
-      {showSkeletons && proxySkeleton ? (
-        <SkeletonGraph
-          skeleton={proxySkeleton}
-          active={isBallContactActive || focusStyle.highlighted}
-          baseColor={skeletonColor}
-          opacity={opacityScale}
-          scale={highlightScale}
-        />
       ) : null}
       {showSkeletons && bodySkeleton ? (
         <SkeletonGraph
@@ -2952,20 +3127,6 @@ function NoDetectionPlaceholder({
         <meshBasicMaterial color={color} transparent opacity={opacity * 0.28} depthWrite={false} />
       </mesh>
     </group>
-  );
-}
-
-function VideoBallOverlayMark({ overlay }: { overlay: VideoBallOverlay }) {
-  const [cx, cy] = overlay.point;
-  const classes = ["video-ball", overlay.confidenceClass, overlay.interpolated ? "interpolated" : ""].filter(Boolean).join(" ");
-  return (
-    <g className={classes} opacity={overlay.opacity}>
-      <circle className="video-ball-halo" cx={cx} cy={cy} r={overlay.radius * 1.9} />
-      <circle className="video-ball-dot" cx={cx} cy={cy} r={overlay.radius} />
-      <text className="video-ball-label" x={cx + overlay.radius + 8} y={Math.max(14, cy - overlay.radius - 5)}>
-        ball
-      </text>
-    </g>
   );
 }
 
@@ -3495,12 +3656,6 @@ function LineSegments({ points, color, opacity = 1 }: { points: Vec3[]; color: s
   );
 }
 
-function labelTrustText(overlay: ViewerManifest["label_overlays"][number] | null): string {
-  if (!overlay) return "labels: none";
-  if (overlay.not_ground_truth) return "labels: review only";
-  return overlay.trusted_for_metrics ? "labels: trusted" : "labels: not trusted";
-}
-
 function replaySceneReadout(scene: ReplayScene, activePointId: number | null): string {
   const pointCount = scene.points.length;
   const totalMb = scene.points.reduce((total, point) => total + point.size_mb, 0);
@@ -3809,6 +3964,12 @@ export function cameraPresetPose(
       target: groundTarget,
     };
   }
+  if (preset === "far_baseline") {
+    return {
+      position: [bounds.centerX, bounds.maxY + bounds.length * 0.32, 2.1],
+      target: groundTarget,
+    };
+  }
   return {
     position: [bounds.centerX, bounds.minY - bounds.length * 0.62, Math.max(5.4, bounds.length * 0.5)],
     target: groundTarget,
@@ -3961,42 +4122,6 @@ function paddleReviewPoints(frame: VirtualWorldPaddleFrame): Vec3[] {
 
 function floorWorldForFrame(frame: VirtualWorldFrame | undefined): Vec3 | null {
   return frame?.floor_world_xyz ?? (frame?.track_world_xy ? ([frame.track_world_xy[0], frame.track_world_xy[1], 0] as Vec3) : null);
-}
-
-function skeletonForFrame(frame: VirtualWorldFrame | undefined): BodyJointSkeleton | null {
-  const floor = floorWorldForFrame(frame);
-  if (!floor) return null;
-  const [x, y] = floor;
-  const joints: Vec3[] = [
-    [x, y, 0.92],
-    [x, y, 1.28],
-    [x, y, 1.66],
-    [x - 0.24, y, 1.34],
-    [x + 0.24, y, 1.34],
-    [x - 0.38, y, 1.02],
-    [x + 0.38, y, 1.02],
-    [x - 0.17, y, 0.86],
-    [x + 0.17, y, 0.86],
-    [x - 0.18, y - 0.04, 0.42],
-    [x + 0.18, y - 0.04, 0.42],
-    [x - 0.2, y - 0.08, 0.06],
-    [x + 0.2, y - 0.08, 0.06],
-  ];
-  const bonePairs = [
-    [0, 1],
-    [1, 2],
-    [1, 3],
-    [1, 4],
-    [3, 5],
-    [4, 6],
-    [0, 7],
-    [0, 8],
-    [7, 9],
-    [8, 10],
-    [9, 11],
-    [10, 12],
-  ];
-  return { joints, bones: bonePairs.flatMap(([left, right]) => [joints[left], joints[right]]), boneNames: [] };
 }
 
 export type BodyJointSkeleton = { joints: Vec3[]; bones: Vec3[]; boneNames: Array<[string, string]> };
@@ -4332,11 +4457,6 @@ export async function loadOptionalArtifact<T>(
     onFailure(capability, error);
     return null;
   }
-}
-
-function xywhToXyxy(value?: number[]): [number, number, number, number] | null {
-  if (!Array.isArray(value) || value.length < 4) return null;
-  return [value[0], value[1], value[0] + value[2], value[1] + value[3]];
 }
 
 function isVec3(value: Vec3 | null | undefined): value is Vec3 {

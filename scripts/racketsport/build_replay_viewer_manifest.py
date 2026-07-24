@@ -33,6 +33,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--reviewed-bounces", type=Path, help="Optional reviewed_ball_bounces.json path.")
     parser.add_argument("--coaching-card-facts", type=Path, help="Optional coaching_card_facts.json path.")
     parser.add_argument("--rally-spans", type=Path, help="Optional rally_spans.json path.")
+    parser.add_argument("--court-evidence", type=Path, help="Optional court_lock_visualization_adapter.json path.")
+    parser.add_argument("--court-calibration", type=Path, help="Optional court_calibration.json path used to reproject BODY joints.")
+    parser.add_argument("--skeleton-evidence", type=Path, help="Optional sam3d_keypoints_2d.json measured foot-anchor evidence.")
     parser.add_argument(
         "--annotation-source",
         type=Path,
@@ -65,6 +68,9 @@ def main(argv: list[str] | None = None) -> int:
             reviewed_bounces_path=args.reviewed_bounces,
             coaching_card_facts_path=args.coaching_card_facts,
             rally_spans_path=args.rally_spans,
+            court_evidence_path=args.court_evidence,
+            court_calibration_path=args.court_calibration,
+            skeleton_evidence_path=args.skeleton_evidence,
             annotation_sources=args.annotation_source,
             vite_allow_root=args.vite_allow_root,
         )

@@ -503,7 +503,7 @@ def test_normalize_fast_sam_body_output_keeps_compact_foot_keypoints_only_by_def
         request=request,
     )
 
-    assert sorted(item["index"] for item in normalized["pred_foot_keypoints_2d"]) == [13, 14, 15, 16, 17, 20]
+    assert sorted(item["index"] for item in normalized["pred_foot_keypoints_2d"]) == list(range(13, 21))
     assert "pred_keypoints_2d" not in normalized
 
 
