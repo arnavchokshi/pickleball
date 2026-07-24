@@ -1,0 +1,434 @@
+{
+  "artifact_type": "racketsport_ball_b0_judge_verification",
+  "checks": [
+    {
+      "check": "frozen_split_artifact_sha256[main_checkout]",
+      "detail": {
+        "actual": {
+          "lineage_rows.jsonl": "289a46c4bca3bb08d4df28058836abc3d1b29081f82a9e2c079e1a0f99dd7969",
+          "report.json": "122e65913d54df6be6c3e5c6ca91229fc17d207674edc7a31ea705bafd6eb3a3",
+          "train.jsonl": "b92218d47816e01893a687c6414bdaa5220f02be6d3b1c25b684128d12ee9c20",
+          "validation.jsonl": "39a07ed6d5211cbdc2ccc8a3f1f73b298a1ed262a6cae1f8a6190e5aa1533429"
+        },
+        "expected_source": "scripts/racketsport/ball_loso_validation.py FROZEN_B0_ARTIFACT_SHA256"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "frozen_split_artifact_sha256[worktree_tracked]",
+      "detail": {
+        "actual": {
+          "lineage_rows.jsonl": "289a46c4bca3bb08d4df28058836abc3d1b29081f82a9e2c079e1a0f99dd7969",
+          "report.json": "122e65913d54df6be6c3e5c6ca91229fc17d207674edc7a31ea705bafd6eb3a3",
+          "train.jsonl": "b92218d47816e01893a687c6414bdaa5220f02be6d3b1c25b684128d12ee9c20",
+          "validation.jsonl": "39a07ed6d5211cbdc2ccc8a3f1f73b298a1ed262a6cae1f8a6190e5aa1533429"
+        },
+        "expected_source": "scripts/racketsport/ball_loso_validation.py FROZEN_B0_ARTIFACT_SHA256"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "row_counts[split]",
+      "detail": {
+        "actual": {
+          "lineage_rows": 3376,
+          "old_train": 2066,
+          "scratch_train": 183,
+          "train": 2249,
+          "validation": 167
+        },
+        "report_split_counts": {
+          "old_train": 2066,
+          "scratch_train": 183,
+          "train": 2249,
+          "validation": 167
+        }
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "row_counts[split_fix2]",
+      "detail": {
+        "actual": {
+          "lineage_rows": 3376,
+          "old_train": 2066,
+          "scratch_train": 183,
+          "train": 2249,
+          "validation": 167
+        },
+        "report_split_counts": {
+          "old_train": 2066,
+          "scratch_train": 183,
+          "train": 2249,
+          "validation": 167
+        }
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "validation_scratch_only[split]",
+      "detail": {
+        "per_source_counts": {
+          "Ezz6HDNHlnk": 67,
+          "HyUqT7zFiwk": 100
+        },
+        "source_class_by_family": {
+          "Ezz6HDNHlnk": [
+            "outdoor_night_fenced"
+          ],
+          "HyUqT7zFiwk": [
+            "indoor_court_level"
+          ]
+        },
+        "violations": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "validation_scratch_only[split_fix2]",
+      "detail": {
+        "per_source_counts": {
+          "Ezz6HDNHlnk": 67,
+          "HyUqT7zFiwk": 100
+        },
+        "source_class_by_family": {
+          "Ezz6HDNHlnk": [
+            "outdoor_night_fenced"
+          ],
+          "HyUqT7zFiwk": [
+            "indoor_court_level"
+          ]
+        },
+        "violations": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "train_weight_policy[split]",
+      "detail": {
+        "by_class": {
+          "confirmed_prelabel": {
+            "rows": 1546,
+            "weights": [
+              0.25
+            ]
+          },
+          "corrected_prelabel": {
+            "rows": 520,
+            "weights": [
+              1.0
+            ]
+          },
+          "scratch": {
+            "rows": 183,
+            "weights": [
+              1.0
+            ]
+          }
+        },
+        "weight_violations": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "train_weight_policy[split_fix2]",
+      "detail": {
+        "by_class": {
+          "confirmed_prelabel": {
+            "rows": 1545,
+            "weights": [
+              0.25
+            ]
+          },
+          "corrected_prelabel": {
+            "rows": 521,
+            "weights": [
+              1.0
+            ]
+          },
+          "scratch": {
+            "rows": 183,
+            "weights": [
+              1.0
+            ]
+          }
+        },
+        "weight_violations": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "train_validation_disjoint[split]",
+      "detail": {
+        "intersections": {
+          "clip_id": [],
+          "image_name": [],
+          "parent_source_id": [],
+          "row_key": []
+        },
+        "train_families": [
+          "73VurrTKCZ8",
+          "_L0HVmAlCQI",
+          "wBu8bC4OfUY",
+          "zwCtH_i1_S4"
+        ],
+        "validation_families": [
+          "Ezz6HDNHlnk",
+          "HyUqT7zFiwk"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "train_validation_disjoint[split_fix2]",
+      "detail": {
+        "intersections": {
+          "clip_id": [],
+          "image_name": [],
+          "parent_source_id": [],
+          "row_key": []
+        },
+        "train_families": [
+          "73VurrTKCZ8",
+          "_L0HVmAlCQI",
+          "wBu8bC4OfUY",
+          "zwCtH_i1_S4"
+        ],
+        "validation_families": [
+          "Ezz6HDNHlnk",
+          "HyUqT7zFiwk"
+        ]
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "historical_holdout_excluded[split]",
+      "detail": {
+        "expected": 960,
+        "historical_non_scratch_HyU_Ezz_rows": 960,
+        "leaked_into_train": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "historical_holdout_excluded[split_fix2]",
+      "detail": {
+        "expected": 960,
+        "historical_non_scratch_HyU_Ezz_rows": 960,
+        "leaked_into_train": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "judge_identity_across_rounds[validation]",
+      "detail": {
+        "row_key_delta": {
+          "only_in_fix2": [],
+          "only_in_split": []
+        },
+        "rows_with_field_differences": []
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "train_cross_round_differences[informational]",
+      "detail": {
+        "row_key_set_equal": true,
+        "rows_with_class_or_weight_change": {
+          "wBu8bC4OfUY_rally_0001:000320": {
+            "split": [
+              "confirmed_prelabel",
+              0.25
+            ],
+            "split_fix2": [
+              "corrected_prelabel",
+              1.0
+            ]
+          }
+        }
+      },
+      "verdict": "INFO"
+    },
+    {
+      "check": "validation_image_byte_binding",
+      "detail": {
+        "md5_mismatches": [],
+        "members_checked": 167,
+        "sha256_mismatches": [],
+        "zip_path": "/Users/arnavchokshi/Desktop/pickleball/cvat_upload/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_images.zip",
+        "zip_sha256_actual": "f1b7ba88084c8664202bf19f73e4704599b46bd42e50e2a6c1a29265cff8b653",
+        "zip_sha256_expected": "f1b7ba88084c8664202bf19f73e4704599b46bd42e50e2a6c1a29265cff8b653"
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "input_contract_manifest_digests",
+      "detail": {
+        "scratch_export_sha256": {
+          "actual": "fea4b9529a4020ee577c5702478753fa4ea84f99c51a9e3ef16e87e96d7fc104",
+          "expected": "fea4b9529a4020ee577c5702478753fa4ea84f99c51a9e3ef16e87e96d7fc104"
+        },
+        "scratch_package_sha256": {
+          "actual": "a04fd956ac56c16130643a79344c21298dec6a3e69f507e0788e996a927a9a55",
+          "expected": "a04fd956ac56c16130643a79344c21298dec6a3e69f507e0788e996a927a9a55"
+        },
+        "scratch_sampling_manifest_md5": {
+          "actual": "3dc23a4e73d6bb04a8865f316983aca4",
+          "expected": "3dc23a4e73d6bb04a8865f316983aca4"
+        }
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "frozen_judge_source_videos_local",
+      "detail": {
+        "Ezz6HDNHlnk_rally_0001": {
+          "actual": "582ffbb02098bb8e59afff74ffa25fb178be8ecc7782889b06a0e0aa64bef844",
+          "expected": "582ffbb02098bb8e59afff74ffa25fb178be8ecc7782889b06a0e0aa64bef844",
+          "match": true,
+          "path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4"
+        },
+        "Ezz6HDNHlnk_rally_0002": {
+          "actual": "6ed769d5464d89fee54e29603605cdcac53c3ade29aa1b306f4b1eca50228650",
+          "expected": "6ed769d5464d89fee54e29603605cdcac53c3ade29aa1b306f4b1eca50228650",
+          "match": true,
+          "path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0002.mp4"
+        },
+        "Ezz6HDNHlnk_rally_0004": {
+          "actual": "05fe6312108825bdd51a812dac6dd5a2450f2ee1e20aca62197569b233e906a2",
+          "expected": "05fe6312108825bdd51a812dac6dd5a2450f2ee1e20aca62197569b233e906a2",
+          "match": true,
+          "path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.mp4"
+        },
+        "Ezz6HDNHlnk_rally_0005": {
+          "actual": "e622b1646920f43639d4c076e5e7cc5a10484d83526d5478c18c3836b221819d",
+          "expected": "e622b1646920f43639d4c076e5e7cc5a10484d83526d5478c18c3836b221819d",
+          "match": true,
+          "path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0005.mp4"
+        },
+        "Ezz6HDNHlnk_rally_0006": {
+          "actual": "4f30bc394415f9e7d4de6cf0cc20e493646c266eb83c998f562a0b830e35a355",
+          "expected": "4f30bc394415f9e7d4de6cf0cc20e493646c266eb83c998f562a0b830e35a355",
+          "match": true,
+          "path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0006.mp4"
+        },
+        "Ezz6HDNHlnk_rally_0007": {
+          "actual": "77d02862ffd890e1f2935f56ed66c64bf39eb984f8b7c125723b83db8883b0f8",
+          "expected": "77d02862ffd890e1f2935f56ed66c64bf39eb984f8b7c125723b83db8883b0f8",
+          "match": true,
+          "path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0007.mp4"
+        },
+        "Ezz6HDNHlnk_rally_0008": {
+          "actual": "88e095ca7260226f65d9b24ba2257590ba558a28c777d380daba94390e163c9a",
+          "expected": "88e095ca7260226f65d9b24ba2257590ba558a28c777d380daba94390e163c9a",
+          "match": true,
+          "path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0008.mp4"
+        },
+        "HyUqT7zFiwk_rally_0001": {
+          "actual": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3",
+          "expected": "056f1710d864bf9f5847c896cab8842d34b94da661fa4fd62b59d9ae1219eae3",
+          "match": true,
+          "path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.mp4"
+        }
+      },
+      "verdict": "PASS"
+    },
+    {
+      "check": "protected_collision_guard[reported_not_reexecuted]",
+      "detail": {
+        "collision_count": 0,
+        "collision_hamming_threshold": 3,
+        "hash_type": "decoded_pixel_sha256_plus_dhash_8x8_64bit",
+        "independent_review": "runs/lanes/ball_b0_split_20260721_review/review.json protected_frame_purity PASS (2953 frames, 0 exact, 0 dhash<=3)",
+        "protected_frame_count": 2953
+      },
+      "verdict": "PASS_AS_REPORTED"
+    },
+    {
+      "check": "ledger_holdout_family_scan",
+      "detail": [
+        {
+          "asset_id": "event_bootstrap_audio_20260713",
+          "holdout_families_in_original_sources": [
+            "Ezz6HDNHlnk",
+            "HyUqT7zFiwk"
+          ],
+          "holdout_families_in_test_partition": [],
+          "holdout_families_in_train_partition": [
+            "Ezz6HDNHlnk",
+            "HyUqT7zFiwk"
+          ],
+          "holdout_families_in_val_partition": [],
+          "state": "REJECTED"
+        },
+        {
+          "asset_id": "online_harvest_20260706",
+          "holdout_families_in_original_sources": [
+            "Ezz6HDNHlnk",
+            "HyUqT7zFiwk"
+          ],
+          "holdout_families_in_test_partition": [],
+          "holdout_families_in_train_partition": [
+            "Ezz6HDNHlnk",
+            "HyUqT7zFiwk"
+          ],
+          "holdout_families_in_val_partition": [],
+          "state": "CONSUMED"
+        },
+        {
+          "asset_id": "ball_reviewed_corpus_chain_1121_3026",
+          "holdout_families_in_original_sources": [
+            "Ezz6HDNHlnk",
+            "HyUqT7zFiwk"
+          ],
+          "holdout_families_in_test_partition": [],
+          "holdout_families_in_train_partition": [],
+          "holdout_families_in_val_partition": [],
+          "state": "QUARANTINED"
+        },
+        {
+          "asset_id": "w7_audit_stratum_scratch_350",
+          "holdout_families_in_original_sources": [
+            "Ezz6HDNHlnk",
+            "HyUqT7zFiwk"
+          ],
+          "holdout_families_in_test_partition": [],
+          "holdout_families_in_train_partition": [],
+          "holdout_families_in_val_partition": [],
+          "state": "CONSUMED"
+        },
+        {
+          "asset_id": "court_keypoints_6_20260707",
+          "holdout_families_in_original_sources": [
+            "Ezz6HDNHlnk",
+            "HyUqT7zFiwk"
+          ],
+          "holdout_families_in_test_partition": [],
+          "holdout_families_in_train_partition": [],
+          "holdout_families_in_val_partition": [],
+          "state": "QUARANTINED"
+        }
+      ],
+      "verdict": "INFO"
+    }
+  ],
+  "frozen_judge": {
+    "identity_authority": "FROZEN_B0_ARTIFACT_SHA256 in scripts/racketsport/ball_loso_validation.py (commit 4c27023)",
+    "path": "runs/lanes/ball_b0_split_20260721/split/validation.jsonl",
+    "row_count": 167,
+    "sha256": "39a07ed6d5211cbdc2ccc8a3f1f73b298a1ed262a6cae1f8a6190e5aa1533429"
+  },
+  "lane": "ball_lane_20260723/b0_judge",
+  "language": "measurement-only; no promotion claims",
+  "overall": "PASS",
+  "split_fix2_hashes": {
+    "note": "recorded, not verified: no independent frozen reference exists for the fix2 rebuild",
+    "sha256": {
+      "lineage_rows.jsonl": "6dade710994884b5362189e1050f0c8d9899c819971564558e06ae7fb7c6f7b6",
+      "report.json": "f8a95c81663421daa79f3b78f3cdfa6e373ff5196cf477aa1dafdc7e0fb35537",
+      "train.jsonl": "669df8953756b0fc99110eda710c807400b3800e22892d031a75f3ae70b9fca0",
+      "validation.jsonl": "e20048880674dc21269cde7835e2cdee775eacfd698a699859bd36a55a03a5b6"
+    }
+  },
+  "verified_flag": 0
+}

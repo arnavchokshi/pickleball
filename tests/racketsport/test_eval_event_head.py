@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from scripts.racketsport.eval_event_head import owner_val_metrics_from_predictions
 from threed.racketsport.event_head.matcher import Event
 
@@ -74,3 +76,50 @@ def test_owner_val_synthetic_predictions_emit_every_decision_gate_field_determin
     assert tolerance_two["per_class"]["HIT"]["f1"] == 0.9375
     assert tolerance_two["per_class"]["BOUNCE"]["f1"] == 1.0
     assert first["macro_f1_at_2"] == 0.96875
+
+
+def test_frozen_judge_macro_f1_at_2_protocol_is_unchanged() -> None:
+    """E1 frozen judge: macro-F1 is scored at tolerance ±2 frames, exactly.
+
+    A prediction offset by exactly 2 frames must count as a match; an offset
+    of 3 frames must not. The gate's headline macro_f1_at_2 must equal the
+    hand-computed mean of the per-class F1 values at the tolerance-2 sweep.
+    """
+
+    manifest = _owner_manifest()
+    predictions = {}
+    for row in manifest["rows"]:
+        row_id = row["label_id"]
+        if row["events"]:
+            class_id = 1 if row["events"][0]["class"] == "HIT" else 2
+            predictions[row_id] = [Event(32, class_id, 0.9)]
+        else:
+            predictions[row_id] = []
+    # owner_00 (HIT): offset exactly +2 -> matched at the frozen +/-2 tolerance.
+    predictions["owner_00"] = [Event(34, 1, 0.9)]
+    # owner_01 (HIT): offset +3 -> outside the frozen tolerance, FP + FN.
+    predictions["owner_01"] = [Event(35, 1, 0.9)]
+
+    metrics = owner_val_metrics_from_predictions(
+        manifest,
+        predictions,
+        arm="B",
+        seed=20260721,
+        completed_steps=1000,
+        target_steps=1000,
+        full_video_event_count=6,
+        full_video_duration_s=10.0,
+    )
+    tolerance_two = next(
+        item for item in metrics["tolerance_sweep"] if item["tolerance_frames"] == 2
+    )
+    tolerance_one = next(
+        item for item in metrics["tolerance_sweep"] if item["tolerance_frames"] == 1
+    )
+    # HIT at +/-2: 14 TP (13 exact + the +2 offset), 1 FP, 1 FN -> F1 = 14/15.
+    assert tolerance_two["per_class"]["HIT"]["tp"] == 14
+    assert tolerance_two["per_class"]["HIT"]["f1"] == pytest.approx(14 / 15)
+    assert tolerance_two["per_class"]["BOUNCE"]["f1"] == 1.0
+    # At +/-1 the +2 offset would NOT match; the protocol is +/-2, not +/-1.
+    assert tolerance_one["per_class"]["HIT"]["tp"] == 13
+    assert metrics["macro_f1_at_2"] == pytest.approx((14 / 15 + 1.0) / 2)

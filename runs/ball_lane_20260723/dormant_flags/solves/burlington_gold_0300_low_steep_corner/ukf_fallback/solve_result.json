@@ -1,0 +1,70 @@
+{
+  "ball_type": "outdoor",
+  "clip": "burlington_gold_0300_low_steep_corner",
+  "flags": {
+    "enable_ukf_fallback": true
+  },
+  "generated_at_pinned": "2026-07-24T00:00:00Z",
+  "inputs": {
+    "ball_track": {
+      "archived_sha_recorded": true,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/ball_track.json",
+      "sha256": "813f7f52ecca9383a8d866b463d214a3ce43485369a6ea18d6a01a4b5d5f4128"
+    },
+    "contact_windows": {
+      "archived_sha_recorded": false,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/contact_windows.json",
+      "sha256": "728004dfa99b2453cd9bb9321775c70e151c7d9f79672ccebba13bada6e2b62f"
+    },
+    "court_calibration": {
+      "archived_sha_recorded": true,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/court_calibration.json",
+      "sha256": "aec27ecc0f377ee930f363173032316332811ac573199a633ebe499747abed1d"
+    },
+    "frame_times": null,
+    "net_plane": {
+      "archived_sha_recorded": true,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    },
+    "rally_spans": {
+      "archived_sha_recorded": false,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/rally_spans.json",
+      "sha256": "8de886f07b8f3ddbe8793c5e6a649e85c9d289dbb09e684b7ac302c455becd36"
+    },
+    "skeleton3d": {
+      "archived_sha_recorded": false,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/burlington_gold_0300_low_steep_corner/skeleton3d.json",
+      "sha256": "6da87d66c6696ba136d28af8a00afaea38f781d0d1ec7f551cccbf1ee738bd96"
+    }
+  },
+  "status": "degraded",
+  "summary": {
+    "auto_bounce_candidate_count": 6,
+    "ball_arc_render_bridge_sample_count": 0,
+    "ball_arc_render_sample_count": 0,
+    "chain_config_degraded": "no_candidate_sidecars",
+    "coverage_world_xyz_count": 428,
+    "degraded_segment_count": 2,
+    "flight_sanity_demoted_frame_count": 167,
+    "flight_sanity_failed_segment_count": 3,
+    "missing_segment_count": 2,
+    "missing_segment_reasons": {
+      "segment_budget_exceeded": 2
+    },
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 14,
+    "segment_budget_exceeded_count": 2,
+    "segment_budget_exceeded_ids": [
+      0,
+      10
+    ],
+    "segment_count": 18,
+    "ukf_recovered_sample_count": 0
+  },
+  "variant": "ukf_fallback",
+  "wall_seconds": 143.051
+}

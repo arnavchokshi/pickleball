@@ -479,8 +479,18 @@ def test_finetune_cli_refuses_forged_proof_before_training_input_read(
     shutil.copytree(CODE_ROOT / "threed", trainer_root / "threed")
     shutil.copytree(FIXTURE_ROOT / "data", trainer_root / "data")
     shutil.copytree(FIXTURE_ROOT / "runs", trainer_root / "runs")
+    # Resolve the real git dir instead of assuming CODE_ROOT/.git is a
+    # directory: in a linked git worktree, .git is itself a gitdir pointer
+    # file and a second indirection through it breaks `git rev-parse HEAD`.
+    absolute_git_dir = subprocess.run(
+        ["git", "rev-parse", "--absolute-git-dir"],
+        cwd=CODE_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout.strip()
     (trainer_root / ".git").write_text(
-        f"gitdir: {(CODE_ROOT / '.git').resolve()}\n",
+        f"gitdir: {absolute_git_dir}\n",
         encoding="utf-8",
     )
     trainer_input = trainer_root / "data/allowed_input.json"

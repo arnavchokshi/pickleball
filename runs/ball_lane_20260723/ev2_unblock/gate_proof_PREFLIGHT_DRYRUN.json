@@ -1,0 +1,101 @@
+{
+  "artifact_type": "training_input_gate_proof",
+  "expires_at_utc": "2026-07-24T07:18:26Z",
+  "generated_at_utc": "2026-07-24T07:03:26Z",
+  "global_reasons": [],
+  "inputs": [
+    {
+      "actual_sha256": "f5c1e3d89d072c4a770ef776378596921ae2e2fa7a91395ca2315df27b53a2a7",
+      "asset_id": "event_abc_vm_pull_20260721",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": null,
+      "index": 0,
+      "input_bytes_read_for_integrity": true,
+      "input_manifest_sha256": "f5c1e3d89d072c4a770ef776378596921ae2e2fa7a91395ca2315df27b53a2a7",
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [],
+      "requested_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/abc_experiment_20260721/vm_pull_v2/abc_out_v2/arm_b_manifest.json",
+      "resolved_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/abc_experiment_20260721/vm_pull_v2/abc_out_v2/arm_b_manifest.json",
+      "sha256_kind": "file_bytes",
+      "source_id": null,
+      "verdict": "PASS"
+    },
+    {
+      "actual_sha256": "f7b61b25d7e147e3d6353c8ec2bdf6a86e41721455398c23b9c617e065316082",
+      "asset_id": "event_abc_vm_pull_20260721",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": null,
+      "index": 1,
+      "input_bytes_read_for_integrity": true,
+      "input_manifest_sha256": "f7b61b25d7e147e3d6353c8ec2bdf6a86e41721455398c23b9c617e065316082",
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [],
+      "requested_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/abc_experiment_20260721/vm_pull/inputs/frozen_t20_event_head.pt",
+      "resolved_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/abc_experiment_20260721/vm_pull/inputs/frozen_t20_event_head.pt",
+      "sha256_kind": "file_bytes",
+      "source_id": null,
+      "verdict": "PASS"
+    },
+    {
+      "actual_sha256": "84a0062c776029bc33b01381add8c0b6ecbe9fc018732d6cff2bb8bdcd194e9b",
+      "asset_id": "event_abc_inputs_20260720",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": null,
+      "index": 2,
+      "input_bytes_read_for_integrity": true,
+      "input_manifest_sha256": "84a0062c776029bc33b01381add8c0b6ecbe9fc018732d6cff2bb8bdcd194e9b",
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [],
+      "requested_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json",
+      "resolved_path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json",
+      "sha256_kind": "file_bytes",
+      "source_id": null,
+      "verdict": "PASS"
+    },
+    {
+      "actual_sha256": "a9bb912cb99deac90a5f61240b0aa164125c05d1574a0ca2f87d82e15787ec83",
+      "asset_id": "online_harvest_20260706",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": null,
+      "index": 3,
+      "input_bytes_read_for_integrity": true,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [],
+      "requested_path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies",
+      "resolved_path": "/Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies",
+      "sha256_kind": "directory_tree_v1",
+      "source_id": null,
+      "verdict": "PASS"
+    }
+  ],
+  "manifest_sha256s": {
+    "cache_manifest": null,
+    "data_ledger": "e3fcba22bb1281e0c2e257f6d96cbbdf45e03a595c7bd22827dc06b06310ae70",
+    "training_inputs": "65018a28c3f2a7c5cb35104f05e459985966d0efb604a7942b3241382d18eb95"
+  },
+  "proof_sha256": "663f6d88f1427ebfdb9d13fb463fb1f4c26d6f2f25111f3a540d7d605cd57f0f",
+  "repo_head_sha": "6478b753d8a810c50ec1739f73ed79fb5ef7192b",
+  "repo_root": "/Users/arnavchokshi/Desktop/pickleball",
+  "schema_version": 1,
+  "source_manifests": {
+    "cache_manifest": null,
+    "data_ledger": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/.claude/worktrees/ball-lane-20260723/runs/manager/data_ledger.json",
+      "sha256": "e3fcba22bb1281e0c2e257f6d96cbbdf45e03a595c7bd22827dc06b06310ae70"
+    },
+    "training_inputs": {
+      "path": "/Users/arnavchokshi/Desktop/pickleball/.claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/ev2_unblock/training_inputs_ev2.json",
+      "sha256": "65018a28c3f2a7c5cb35104f05e459985966d0efb604a7942b3241382d18eb95"
+    }
+  },
+  "status": "PASS"
+}

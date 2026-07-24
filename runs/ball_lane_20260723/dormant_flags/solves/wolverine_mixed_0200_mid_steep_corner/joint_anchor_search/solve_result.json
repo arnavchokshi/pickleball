@@ -1,0 +1,71 @@
+{
+  "ball_type": "outdoor",
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "flags": {
+    "enable_joint_anchor_search": true
+  },
+  "generated_at_pinned": "2026-07-24T00:00:00Z",
+  "inputs": {
+    "ball_track": {
+      "archived_sha_recorded": true,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+      "sha256": "bff541ab90db60b2fe6c37b18b5895aecea982da20a5e545e4187c0a6a68e5f2"
+    },
+    "contact_windows": {
+      "archived_sha_recorded": false,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/contact_windows.json",
+      "sha256": "08a162924ac9bdd9f654a927fcf170e4fcb747060ea241a729bbb1f411bd4122"
+    },
+    "court_calibration": {
+      "archived_sha_recorded": true,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+      "sha256": "fb4e6f7f54d2c40e2c7b491e436261f747240945a6f0d154c4dd943e28edbacf"
+    },
+    "frame_times": null,
+    "net_plane": {
+      "archived_sha_recorded": true,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    },
+    "rally_spans": {
+      "archived_sha_recorded": false,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/rally_spans.json",
+      "sha256": "5e242c4a3c35122734769eb5d6dc6700fdb403dd687efeefb037caf0b0bf3ef5"
+    },
+    "skeleton3d": {
+      "archived_sha_recorded": false,
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/skeleton3d.json",
+      "sha256": "5debeeb0dfecf344b62c85ec1ddcdbaf90a1516d7c18e77de380e20dab349956"
+    }
+  },
+  "status": "degraded",
+  "summary": {
+    "auto_bounce_candidate_count": 7,
+    "ball_arc_render_bridge_sample_count": 0,
+    "ball_arc_render_sample_count": 0,
+    "chain_config_degraded": "no_candidate_sidecars",
+    "coverage_world_xyz_count": 229,
+    "degraded_segment_count": 1,
+    "flight_sanity_demoted_frame_count": 40,
+    "flight_sanity_failed_segment_count": 3,
+    "missing_segment_count": 1,
+    "missing_segment_reasons": {
+      "segment_budget_exceeded": 1
+    },
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 11,
+    "segment_budget_exceeded_count": 1,
+    "segment_budget_exceeded_ids": [
+      7
+    ],
+    "segment_count": 11,
+    "tt3d_baseline_fallback_segment_count": 7,
+    "tt3d_candidate_fallback_segment_count": 8,
+    "tt3d_chosen_anchor_count": 1
+  },
+  "variant": "joint_anchor_search",
+  "wall_seconds": 230.063
+}

@@ -1,0 +1,117 @@
+{
+  "artifact_type": "racketsport_ball_chain_run_manifest",
+  "chain_config_degraded": "no_candidate_sidecars",
+  "clip": "wolverine_mixed_0200_mid_steep_corner",
+  "configs": {
+    "product_veto": {
+      "veto_px": 40.0,
+      "weak_support_required": true
+    },
+    "solver_a_free": {
+      "candidate_association_mode": "free",
+      "candidate_score_floors": {},
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": true,
+      "enable_event_subset_selection": true,
+      "max_candidates_per_frame": 12
+    },
+    "solver_b_rescue_tn05": {
+      "candidate_association_mode": "rescue_only",
+      "candidate_score_floors": {
+        "tracknet": 0.5,
+        "wasb": 0.0
+      },
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": false,
+      "enable_event_subset_selection": false,
+      "max_candidates_per_frame": 12
+    }
+  },
+  "degraded_reasons": [
+    {
+      "evidence_provenance": "missing",
+      "reason": "segment_budget_exceeded",
+      "segment_ids": [
+        5
+      ]
+    }
+  ],
+  "generated_at": "2026-07-24T00:00:00Z",
+  "heldout_authorized": false,
+  "inputs": {
+    "ball_track": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+      "sha256": "bff541ab90db60b2fe6c37b18b5895aecea982da20a5e545e4187c0a6a68e5f2"
+    },
+    "court_calibration": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+      "sha256": "fb4e6f7f54d2c40e2c7b491e436261f747240945a6f0d154c4dd943e28edbacf"
+    },
+    "net_plane": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/wolverine_mixed_0200_mid_steep_corner/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    }
+  },
+  "net_plane_provenance": {
+    "consumed_net_plane": true,
+    "reason": "consumed"
+  },
+  "outputs": {
+    "auto_bounce_candidates": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/wolverine_mixed_0200_mid_steep_corner/baseline/ball_bounce_candidates.json",
+      "sha256": "6f20f11468a1a136dc3d852c10d0925e09bc5b94ae3043779d06b5f4a678e1f1"
+    },
+    "ball_arc_render": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/wolverine_mixed_0200_mid_steep_corner/baseline/ball_arc_render.json",
+      "sha256": "d4ad0c064c08c705ccbea6dbd230ef7540843091f042dc95c250b8ff0348d7c3"
+    },
+    "ball_flight_sanity": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/wolverine_mixed_0200_mid_steep_corner/baseline/ball_flight_sanity.json",
+      "sha256": "e0f0a88e23fe349248e81f5c039e3918d8e422c87c4ad85d60111f5c5c9b1439"
+    },
+    "ball_track_arc_solved": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/wolverine_mixed_0200_mid_steep_corner/baseline/ball_track_arc_solved.json",
+      "sha256": "1743fdac4e2176e42f4512998422b5e08ae8e4383da283aa9d61d44cd27bfc91"
+    },
+    "seed_anchor_ball_track_arc_solved": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/wolverine_mixed_0200_mid_steep_corner/baseline/ball_arc_seed/ball_track_arc_solved.json",
+      "sha256": "1317bfd69cb4a681a99c99ca485e0f8741c4f555b0a88ed48a9883f180f1133b"
+    },
+    "seed_anchor_flight_sanity": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/wolverine_mixed_0200_mid_steep_corner/baseline/ball_arc_seed/ball_flight_sanity.json",
+      "sha256": "9d68a37b18d012acb2397de07e523590da12716507bfe7e650610d9345d52785"
+    }
+  },
+  "policy": {
+    "ball_arc_render_only": true,
+    "candidate_sidecars_consumed_when_present": true,
+    "net_plane_consumed_when_valid": true,
+    "outdoor_indoor_labels_read": false,
+    "render_only_3d": true,
+    "seed_anchor_prepass": true
+  },
+  "schema_version": 1,
+  "summary": {
+    "auto_bounce_candidate_count": 7,
+    "ball_arc_render_bridge_sample_count": 0,
+    "ball_arc_render_sample_count": 0,
+    "chain_config_degraded": "no_candidate_sidecars",
+    "coverage_world_xyz_count": 230,
+    "degraded_segment_count": 1,
+    "missing_segment_count": 1,
+    "missing_segment_reasons": {
+      "segment_budget_exceeded": 1
+    },
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 11,
+    "segment_budget_exceeded_count": 1,
+    "segment_budget_exceeded_ids": [
+      5
+    ],
+    "segment_count": 9,
+    "solver_status": "degraded"
+  }
+}

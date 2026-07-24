@@ -1,0 +1,146 @@
+{
+  "artifact_type": "racketsport_ball_chain_run_manifest",
+  "candidate_flags": {
+    "joint_anchor_pinning": false,
+    "joint_anchor_search": true,
+    "ransac_arc_gate": false,
+    "ukf_fallback": false
+  },
+  "chain_config_degraded": "no_candidate_sidecars",
+  "clip": "outdoor_webcam_iynbd_1500_long_high_baseline",
+  "configs": {
+    "product_veto": {
+      "veto_px": 40.0,
+      "weak_support_required": true
+    },
+    "solver_a_free": {
+      "candidate_association_mode": "free",
+      "candidate_score_floors": {},
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": true,
+      "enable_event_subset_selection": true,
+      "max_candidates_per_frame": 12
+    },
+    "solver_b_rescue_tn05": {
+      "candidate_association_mode": "rescue_only",
+      "candidate_score_floors": {
+        "tracknet": 0.5,
+        "wasb": 0.0
+      },
+      "candidate_selection_max_iterations": 5,
+      "enable_event_discovery": false,
+      "enable_event_subset_selection": false,
+      "max_candidates_per_frame": 12
+    }
+  },
+  "degraded_reasons": [
+    {
+      "evidence_provenance": "missing",
+      "reason": "segment_budget_exceeded",
+      "segment_ids": [
+        3,
+        5
+      ]
+    }
+  ],
+  "generated_at": "2026-07-24T00:00:00Z",
+  "heldout_authorized": false,
+  "inputs": {
+    "ball_track": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/outdoor_webcam_iynbd_1500_long_high_baseline/ball_track.json",
+      "sha256": "d6e7e5d722a7028d1e57349ab7b16a0581d2a43fad0dda5f4109d2079eb7f086"
+    },
+    "court_calibration": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration.json",
+      "sha256": "bb7bb05b55af2799f49308be6e5b5e5b184af4862c1de8efe05e794f71e8dbd9"
+    },
+    "net_plane": {
+      "path": "runs/lanes/ball_f1_three_clip_runs_20260705/outdoor_webcam_iynbd_1500_long_high_baseline/net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    }
+  },
+  "net_plane_provenance": {
+    "consumed_net_plane": true,
+    "reason": "consumed"
+  },
+  "outputs": {
+    "auto_bounce_candidates": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/outdoor_webcam_iynbd_1500_long_high_baseline/joint_anchor_search/ball_bounce_candidates.json",
+      "sha256": "13699e14f3943b7b915fdb07c6491d6bfc03363ac235a59c671e04f11e0f4a8a"
+    },
+    "ball_arc_render": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/outdoor_webcam_iynbd_1500_long_high_baseline/joint_anchor_search/ball_arc_render.json",
+      "sha256": "e96885eb31a7ce9b147ea0741e72e18f3f60bf4c0dd024ab1377ae2afa063959"
+    },
+    "ball_flight_sanity": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/outdoor_webcam_iynbd_1500_long_high_baseline/joint_anchor_search/ball_flight_sanity.json",
+      "sha256": "cda0e15aae93e558b20b91bc12b15b01cfdfb18763fa22d9a6f75f4a6d8969ac"
+    },
+    "ball_track_arc_solved": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/outdoor_webcam_iynbd_1500_long_high_baseline/joint_anchor_search/ball_track_arc_solved.json",
+      "sha256": "707fed3ab65c83038fdf446fd913add921b915644bdc7c6ca76330c18c90e745"
+    },
+    "joint_anchor_baseline_ball_track_arc_solved": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/outdoor_webcam_iynbd_1500_long_high_baseline/joint_anchor_search/tt3d_baseline_seed/ball_track_arc_solved.json",
+      "sha256": "50faefa2972fb9df27b4b3ec8853eedbccf1951046e7f3aa8e10f62f7ca8b2cc"
+    },
+    "joint_anchor_baseline_flight_sanity": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/outdoor_webcam_iynbd_1500_long_high_baseline/joint_anchor_search/tt3d_baseline_seed/ball_flight_sanity.json",
+      "sha256": "cda0e15aae93e558b20b91bc12b15b01cfdfb18763fa22d9a6f75f4a6d8969ac"
+    },
+    "joint_anchor_candidates": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/outdoor_webcam_iynbd_1500_long_high_baseline/joint_anchor_search/ball_joint_anchor_candidates.json",
+      "sha256": "43cbfc6e634c853447bba6292b1548d19206fdcf83c0d1e2dad7bddf04291776"
+    },
+    "seed_anchor_ball_track_arc_solved": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/outdoor_webcam_iynbd_1500_long_high_baseline/joint_anchor_search/ball_arc_seed/ball_track_arc_solved.json",
+      "sha256": "dca56a5bcc95d91c1590c3a6334f3cd76f3934fb42df74c196213f1774e36a7a"
+    },
+    "seed_anchor_flight_sanity": {
+      "path": ".claude/worktrees/ball-lane-20260723/runs/ball_lane_20260723/dormant_flags/solves/outdoor_webcam_iynbd_1500_long_high_baseline/joint_anchor_search/ball_arc_seed/ball_flight_sanity.json",
+      "sha256": "48019156cbad76af6d86a371f89f72363916bcc4f9289eda4802be88c485cf4a"
+    }
+  },
+  "policy": {
+    "ball_arc_render_only": true,
+    "candidate_flags_default_off": true,
+    "candidate_sidecars_consumed_when_present": true,
+    "joint_anchor_candidates_default_off": true,
+    "joint_anchor_hypotheses_never_measured": true,
+    "joint_anchor_pinning_separately_killable": true,
+    "joint_anchor_raw_observations_immutable": true,
+    "joint_anchor_samples_use_existing_fail_closed_gates": true,
+    "net_plane_consumed_when_valid": true,
+    "outdoor_indoor_labels_read": false,
+    "render_only_3d": true,
+    "seed_anchor_prepass": true
+  },
+  "schema_version": 1,
+  "summary": {
+    "auto_bounce_candidate_count": 8,
+    "ball_arc_render_bridge_sample_count": 0,
+    "ball_arc_render_sample_count": 0,
+    "chain_config_degraded": "no_candidate_sidecars",
+    "coverage_world_xyz_count": 203,
+    "degraded_segment_count": 2,
+    "missing_segment_count": 2,
+    "missing_segment_reasons": {
+      "segment_budget_exceeded": 2
+    },
+    "net_plane_provenance": {
+      "consumed_net_plane": true,
+      "reason": "consumed"
+    },
+    "seed_anchor_count": 9,
+    "segment_budget_exceeded_count": 2,
+    "segment_budget_exceeded_ids": [
+      3,
+      5
+    ],
+    "segment_count": 8,
+    "solver_status": "degraded",
+    "tt3d_baseline_fallback_segment_count": 2,
+    "tt3d_candidate_fallback_segment_count": 2,
+    "tt3d_chosen_anchor_count": 0
+  }
+}
