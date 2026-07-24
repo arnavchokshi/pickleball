@@ -70,7 +70,7 @@ def _eligible_stance_info(*, stance: bool = True, phase_id: str = "3:left:0") ->
     return info
 
 
-def test_stance_aware_grounding_anchors_transitions_to_placement_without_speed_clamp() -> None:
+def test_stance_aware_grounding_keeps_placement_target_without_breaking_speed_cap() -> None:
     samples = [_sample(0, 0.0), _sample(1, 1.0), _sample(2, 2.0)]
     stance_index = {
         (3, 0): _eligible_stance_info(phase_id="3:left:0"),
@@ -89,15 +89,21 @@ def test_stance_aware_grounding_anchors_transitions_to_placement_without_speed_c
     )
 
     frames = smpl_motion["players"][0]["frames"]
-    assert [frame["transl_world"][0] for frame in frames] == pytest.approx([0.0, 1.0, 2.0], abs=1e-9)
-    assert [frame["joints_world"][0][0] for frame in frames] == pytest.approx([0.0, 1.0, 2.0], abs=1e-9)
-    assert [frame["mesh_vertices_world"][0][0] for frame in frames] == pytest.approx([0.2, 1.2, 2.2], abs=1e-9)
+    expected_root_x = [0.0, 0.1 / 30.0, 0.2 / 30.0]
+    assert [frame["transl_world"][0] for frame in frames] == pytest.approx(expected_root_x, abs=1e-9)
+    assert [frame["joints_world"][0][0] for frame in frames] == pytest.approx(expected_root_x, abs=1e-9)
+    assert [frame["mesh_vertices_world"][0][0] for frame in frames] == pytest.approx(
+        [value + 0.2 for value in expected_root_x], abs=1e-9
+    )
     assert metrics["grounding_anchor_source"] == "placement_track_world_xy"
     assert metrics["stance_aware_grounding"]["stance_frame_count"] == 2
     assert metrics["stance_aware_grounding"]["transition_frame_count"] == 1
-    assert metrics["stance_aware_grounding"]["transition_anchor_lag_p95_m"] <= 0.10
-    assert metrics["stance_aware_grounding"]["transition_anchor_lag_median_m"] <= 0.05
-    assert metrics["root_speed_limited_frames"] == 0
+    assert metrics["stance_aware_grounding"]["transition_anchor_lag_p95_m"] > 0.90
+    assert metrics["root_speed_limited_frames"] == 2
+    assert all(
+        frame.get("temporal_smoothing_metadata", {}).get("root_speed_limited") is True
+        for frame in frames[1:]
+    )
     assert skeleton3d["provenance"]["grounding_anchor_source"] == "placement_track_world_xy"
 
 
@@ -121,7 +127,7 @@ def test_stance_aware_grounding_reports_speed_engagement_known_answer() -> None:
         (3, 2): _eligible_stance_info(),
     }
 
-    _smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
+    smpl_motion, _skeleton3d, metrics = worldhmr.build_body_artifacts_from_fast_sam(
         samples,
         calibration=_identity_calibration(),
         fps=30.0,
@@ -130,7 +136,9 @@ def test_stance_aware_grounding_reports_speed_engagement_known_answer() -> None:
         grounding_anchor_source="placement_track_world_xy",
     )
 
-    assert metrics["root_speed_limited_frames"] == 0
+    frames = smpl_motion["players"][0]["frames"]
+    assert [frame["transl_world"][0] for frame in frames] == pytest.approx([0.0, 0.1, 0.2])
+    assert metrics["root_speed_limited_frames"] == 2
     assert metrics["root_speed_anomaly_frames"] == 2
     assert metrics["root_speed_anomaly_fraction_overall"] == pytest.approx(1.0)
     assert metrics["root_speed_clamp_engagement_overall"] == pytest.approx(1.0)

@@ -3133,6 +3133,7 @@ def _smooth_grounded_frames_stance_aware(
         frame_t = float(frame["t"])
         temporal_smoothing_reset = False
         reset_reason = ""
+        residual_reason = ""
         residual_status = "ok"
         residual_threshold_m = STANCE_AWARE_STANCE_RESIDUAL_RESET_M if is_stance else residual_reset_m
         root_speed_limited_this_frame = False
@@ -3149,9 +3150,11 @@ def _smooth_grounded_frames_stance_aware(
                     track_anchor_residual_reset_frames += 1
                     track_anchor_residual_identity_reset_frames += 1
                     residual_status = "reset"
+                    residual_reason = "stance_anchor_identity_reset"
                 else:
                     track_anchor_residual_carried_frames += 1
                     residual_status = "carried"
+                    residual_reason = "stance_anchor_residual"
         elif previous is None:
             smoothed_xy = track_xy
             pre_reset_residual = 0.0
@@ -3180,9 +3183,11 @@ def _smooth_grounded_frames_stance_aware(
                     track_anchor_residual_reset_frames += 1
                     track_anchor_residual_identity_reset_frames += 1
                     residual_status = "reset"
+                    residual_reason = "transition_anchor_identity_reset"
                 else:
                     track_anchor_residual_carried_frames += 1
                     residual_status = "carried"
+                    residual_reason = "transition_anchor_residual"
 
         smoothed_transl = [smoothed_xy[0], smoothed_xy[1], transl[2]]
         if previous is not None and max_root_speed_mps is not None and previous_t is not None:
@@ -3192,6 +3197,24 @@ def _smooth_grounded_frames_stance_aware(
                 if _distance2(previous[:2], smoothed_transl[:2]) > max_root_speed_mps * dt + 1e-12:
                     root_speed_anomaly_frames += 1
                     root_speed_anomaly_by_player[player_id] = root_speed_anomaly_by_player.get(player_id, 0) + 1
+                    smoothed_transl, limited = _limit_step(
+                        previous,
+                        smoothed_transl,
+                        max_distance=max_root_speed_mps * dt,
+                    )
+                    if limited:
+                        root_speed_limited_frames += 1
+                        root_speed_limited_this_frame = True
+                        if temporal_smoothing_reset:
+                            temporal_smoothing_reset = False
+                            track_anchor_residual_reset_frames -= 1
+                            track_anchor_residual_identity_reset_frames -= 1
+                            track_anchor_residual_carried_frames += 1
+                            reset_reason = ""
+                        if residual_status == "ok":
+                            track_anchor_residual_carried_frames += 1
+                        residual_status = "carried"
+                        residual_reason = "root_speed_limited_residual_carried"
         previous_by_player[player_id] = smoothed_transl
         previous_t_by_player[player_id] = frame_t
         previous_track_by_player[player_id] = track_xy
@@ -3210,7 +3233,7 @@ def _smooth_grounded_frames_stance_aware(
         if residual_status != "ok":
             metadata["residual"] = {
                 "status": residual_status,
-                "reason": reset_reason or "stance_anchor_residual",
+                "reason": residual_reason or reset_reason or "stance_anchor_residual",
                 "pre_reset_anchor_residual_m": pre_reset_residual,
                 "threshold_m": residual_threshold_m,
                 "identity_reset_m": smoothing_residual_identity_reset_m,
