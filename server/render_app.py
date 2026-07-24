@@ -9,7 +9,7 @@ import uuid
 from dataclasses import replace
 from pathlib import Path
 from threading import Lock
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Literal, Mapping
 
 from fastapi import BackgroundTasks, Body, FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
@@ -327,6 +327,7 @@ def create_app(
             video: UploadFile = File(...),
             clip: str | None = Form(default=None),
             max_frames: int | None = Form(default=None),
+            pipeline_preset: Literal["full", "court_skeletons"] = Form(default="court_skeletons"),
             capture_sidecar: UploadFile | None = File(default=None),
             court_corners: UploadFile | None = File(default=None),
             court_calibration: UploadFile | None = File(default=None),
@@ -337,6 +338,7 @@ def create_app(
             except ValueError as exc:
                 raise HTTPException(status_code=400, detail=str(exc)) from None
             job = store.create(clip=clip_id, video_name=video.filename or "video")
+            job = store.update(job["id"], pipeline_preset=pipeline_preset)
             job_dir = upload_root / job["id"]
             input_dir = job_dir / "input"
             artifacts_dir = job_dir / "artifacts"
@@ -368,6 +370,7 @@ def create_app(
                 court_calibration_path=court_calibration_path,
                 court_review_path=court_review_path,
                 max_frames=max_frames,
+                pipeline_preset=pipeline_preset,
             )
             if run_jobs_inline:
                 _execute_job(store, gpu_runner, request)

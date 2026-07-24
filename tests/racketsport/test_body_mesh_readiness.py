@@ -221,6 +221,30 @@ def test_body_mesh_readiness_keeps_joints_only_fail_closed() -> None:
     assert payload["warnings"] == ["missing_mesh_vertices", "joints_preview_only"]
 
 
+def test_body_mesh_readiness_does_not_treat_body_joints_only_schedule_as_mesh_demand() -> None:
+    execution = _body_execution(scheduled_frames=2, scheduled_player_frames=2)
+    execution["summary"].update(
+        {
+            "scheduled_by_target_representation": {"body_joints": 2},
+            "tier1_mesh_player_frame_count": 0,
+            "tier2_body_joint_player_frame_count": 2,
+        }
+    )
+
+    payload = build_body_mesh_readiness(
+        clip="clip_001",
+        smpl_motion=_smpl_motion(include_mesh=False),
+        skeleton3d=_skeleton3d(),
+        body_compute_execution=execution,
+        body_full_clip_gate=_full_clip_gate(passed=True),
+    )
+
+    assert payload["representation_decision"] == "no_world_mesh_requested"
+    assert payload["representation_plan"]["scheduled_world_mesh_frame_count"] == 0
+    assert payload["representation_plan"]["scheduled_world_mesh_player_frame_count"] == 0
+    assert "world_mesh_required_but_missing" not in payload["blockers"]
+
+
 def test_body_mesh_readiness_reports_missing_body_output() -> None:
     payload = build_body_mesh_readiness(clip="clip_001")
 

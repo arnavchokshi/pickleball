@@ -267,6 +267,42 @@ def test_materialize_process_video_frames_extracts_real_jpegs(tmp_path: Path) ->
     assert result["schedule"]["source"] == "tracks_union"
 
 
+def test_frame_schedule_excludes_purely_interpolated_track_samples() -> None:
+    tracks = Tracks.model_validate(
+        {
+            "schema_version": 1,
+            "fps": 10.0,
+            "players": [
+                {
+                    "id": 1,
+                    "side": "near",
+                    "role": "left",
+                    "frames": [
+                        {
+                            "t": 0.2,
+                            "bbox": [1, 1, 5, 5],
+                            "world_xy": [0, 0],
+                            "conf": 0.9,
+                        },
+                        {
+                            "t": 0.5,
+                            "bbox": [1, 1, 5, 5],
+                            "world_xy": [0, 0],
+                            "conf": 0.9,
+                            "interpolated": True,
+                        },
+                    ],
+                }
+            ],
+            "rally_spans": [],
+        }
+    )
+
+    schedule, _notes = build_frame_schedule(tracks)
+
+    assert [item["frame_idx"] for item in schedule["scheduled_frames"]] == [2]
+
+
 def test_materialize_process_video_frames_replaces_stale_cache_with_exact_schedule(tmp_path: Path) -> None:
     video = tmp_path / "source.mp4"
     _make_tiny_clip(video, rate=10, duration_s=1.0)

@@ -380,6 +380,18 @@ class CourtCalibration(StrictArtifact):
         default=None,
         exclude_if=lambda value: value is None,
     )
+    usage: Literal["visualization_only"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    authority_state: Literal["review_only"] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
+    measurement_valid: Literal[False] | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+    )
 
     @model_validator(mode="after")
     def _point_lists_must_be_paired(self) -> CourtCalibration:
@@ -422,6 +434,24 @@ class CourtCalibration(StrictArtifact):
             }[self.coordinate_contract.homography_pixel_convention]
             if self.coordinate_contract.homography_output_space != expected_homography_output:
                 raise ValueError("coordinate_contract homography declarations conflict")
+        trust_fields = {
+            "usage": self.usage,
+            "authority_state": self.authority_state,
+            "measurement_valid": self.measurement_valid,
+        }
+        if any(value is not None for value in trust_fields.values()):
+            missing_trust = [name for name, value in trust_fields.items() if value is None]
+            if missing_trust:
+                raise ValueError(
+                    "court calibration trust fields must be complete; missing "
+                    + ", ".join(missing_trust)
+                )
+            if self.measurement_valid is not False or self.authority_state != "review_only":
+                raise ValueError(
+                    "visualization_only court calibration must be review_only and measurement_valid=false"
+                )
+            if self.trust_band != "preview":
+                raise ValueError("visualization_only court calibration requires trust_band=preview")
         return self
 
 

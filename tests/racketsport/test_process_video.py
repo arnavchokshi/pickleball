@@ -384,6 +384,97 @@ def _make_video(path: Path, *, frame_count: int = 5, fps: float = 30.0) -> None:
     writer.release()
 
 
+def test_court_skeletons_options_pin_reduced_path_and_30hz_cadence(tmp_path: Path) -> None:
+    video = tmp_path / "sixty_fps.mp4"
+    _make_video(video, frame_count=6, fps=60.0)
+    args = process_video.build_arg_parser().parse_args(
+        ["--video", str(video), "--pipeline-preset", "court_skeletons"]
+    )
+    options = process_video.build_options_from_args(args)
+    assert options.pipeline_preset == "court_skeletons"
+    assert options.body_skeleton_stride == 2
+    assert options.player_selection is True
+    assert options.input_quality_mode == "strict"
+    assert options.skip_ball is True
+    assert options.skip_audio is True
+    assert options.paddle_pose is False
+    assert options.match_stats is False
+    assert options.scene_points is False
+
+
+def test_court_skeletons_calibration_uses_same_run_static_lock_without_manual_inputs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video, frame_count=4)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.pipeline_preset = "court_skeletons"
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    def fake_proposals(video_path: Path, *, clip: str, out_path: Path, max_frames: int) -> Path:
+        assert video_path == video
+        assert clip == "test_clip"
+        assert max_frames == 8
+        _write_json(
+            out_path,
+            {
+                "proposals": [
+                    {
+                        "source": "confidence_aware_structured_court_v31",
+                        "gate": {"warnings": []},
+                    }
+                ]
+            },
+        )
+        _write_json(
+            out_path.with_name("court_lock.json"),
+            {
+                "source": "multi_frame_point_and_line",
+                "evidence": {"selected_frame_indices": [0, 1, 2, 3]},
+            },
+        )
+        return out_path
+
+    calibration = _court_calibration_payload()
+    calibration.update(
+        {
+            "trust_band": "preview",
+            "usage": "visualization_only",
+            "authority_state": "review_only",
+            "measurement_valid": False,
+        }
+    )
+    adapted = SimpleNamespace(
+        artifact_payloads=lambda: {
+            "court_calibration.json": calibration,
+            "court_zones.json": {"schema_version": 1, "zones": {}},
+            "net_plane.json": {"schema_version": 1, "plane": {}},
+        },
+        metadata_payload=lambda: {
+            "artifact_type": "racketsport_court_lock_visualization_adapter",
+            "trust": {
+                "usage": "visualization_only",
+                "authority_state": "review_only",
+                "measurement_valid": False,
+            },
+        },
+    )
+    monkeypatch.setattr(process_video, "_court_proposals_preview_from_video", fake_proposals)
+    monkeypatch.setattr(
+        "threed.racketsport.court_lock_visualization.adapt_court_lock_for_visualization",
+        lambda lock, image_size: adapted,
+    )
+
+    outcome = pipeline._stage_calibration()
+    assert outcome.status == "ran"
+    assert outcome.metrics["court_lock_source"] == "multi_frame_point_and_line"
+    written = json.loads((pipeline.clip_dir / "court_calibration.json").read_text())
+    assert written["usage"] == "visualization_only"
+    assert written["authority_state"] == "review_only"
+    assert written["measurement_valid"] is False
+
+
 def _base_options(tmp_path: Path, *, video: Path, court_corners: Path | None) -> process_video.PipelineOptions:
     return process_video.PipelineOptions(
         video=video,
@@ -1808,6 +1899,7 @@ def test_pipeline_runs_all_stages_in_order_with_mocked_heavy_runners(tmp_path: P
         process_video.authoritative_stage_names(
             rally_gating=False,
             verify_viewer=False,
+            player_selection=options.player_selection,
             body_schedule="serial",
         )
     )
@@ -2392,23 +2484,25 @@ def test_placement_stage_rewrites_tracks_after_tracking(tmp_path: Path, monkeypa
     assert "foot_contact_phases=foot_contact_phases.json" in outcome.notes
 
 
-def test_default_stage_order_runs_camera_motion_before_placement(tmp_path: Path) -> None:
+def test_selection_enabled_stage_order_runs_selection_before_camera_motion(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     options = _base_options(tmp_path, video=video, court_corners=None)
+    options.player_selection = True
     pipeline = process_video.ProcessVideoPipeline(options)
 
     names = pipeline._authoritative_stage_names(body_schedule="serial")
-    assert names[:6] == (
+    assert names[:7] == (
         "ingest",
         "calibration",
         "input_quality",
         "tracking",
+        "player_selection",
         "camera_motion",
         "placement",
     )
-    assert names[6:10] == ("ball", "ball_arc", "events", "ball_fill")
-    assert names[13:16] == ("grounding_refine", "placement_trajectory_refine", "paddle_pose")
-    assert names[16:19] == ("events_refined", "ball_arc_refined", "world")
+    assert names[7:11] == ("ball", "ball_arc", "events", "ball_fill")
+    assert names[14:17] == ("grounding_refine", "placement_trajectory_refine", "paddle_pose")
+    assert names[17:20] == ("events_refined", "ball_arc_refined", "world")
 
 
 def test_camera_motion_auto_default_skips_static_probe_without_writing_artifact(
@@ -5070,6 +5164,31 @@ def test_body_stage_reuses_sam3d_skeleton_and_gate_without_smpl_monolith(
     joined_notes = " ".join(outcome.notes)
     assert "reusing completed BODY evidence without smpl_motion.json" in joined_notes
     assert "skeleton3d.json + body_full_clip_gate.json" in joined_notes
+
+
+def test_court_skeletons_body_does_not_reuse_a_stale_mesh_monolith(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.pipeline_preset = "court_skeletons"
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(
+        options.clip_dir / "smpl_motion.json",
+        {
+            "schema_version": 1,
+            "model": "sam3dbody_world_joints",
+            "fps": 30.0,
+            "world_frame": "court_Z0",
+            "players": [],
+        },
+    )
+    pipeline = process_video.ProcessVideoPipeline(options)
+    monkeypatch.setattr(pipeline, "_identity_allows_reuse", lambda _stage: True)
+
+    assert pipeline._body_stage_reuse_skip() is None
 
 
 def test_body_stage_remote_dispatch_passes_body_frames_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -149,6 +149,32 @@ def test_body_full_clip_gate_passes_when_every_tracked_player_frame_has_quality_
     assert payload["blockers"] == []
 
 
+def test_body_full_clip_gate_uses_eligible_scheduled_measured_denominator() -> None:
+    execution = _body_compute_execution(scheduled_player_frames=2)
+    execution["summary"].update(
+        {
+            "coverage_denominator_policy": "eligible_scheduled_measured_samples",
+            "coverage_denominator_player_frame_count": 2,
+            "interpolated_player_frame_excluded_count": 1,
+        }
+    )
+
+    payload = build_body_full_clip_gate(
+        clip="clip_001",
+        tracks=_tracks(frames=3),
+        body_compute_execution=execution,
+        body_joint_quality=_body_joint_quality(joint_frames=2),
+        min_coverage=0.95,
+    )
+
+    assert payload["passed"] is True
+    assert payload["coverage"] == pytest.approx(1.0)
+    assert payload["tracked_player_frame_count"] == 3
+    assert payload["coverage_denominator_policy"] == "eligible_scheduled_measured_samples"
+    assert payload["coverage_denominator_player_frame_count"] == 2
+    assert payload["warnings"] == []
+
+
 def test_body_full_clip_gate_uses_lane_a_skeleton_coverage_when_mesh_is_contact_only() -> None:
     payload = build_body_full_clip_gate(
         clip="clip_001",

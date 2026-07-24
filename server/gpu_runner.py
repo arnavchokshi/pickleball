@@ -78,6 +78,7 @@ class GpuRunRequest:
     court_calibration_path: Path | None = None
     court_review_path: Path | None = None
     max_frames: int | None = None
+    pipeline_preset: str = "court_skeletons"
     allow_auto_court_corners_preview: bool = field(default_factory=default_allow_auto_court_corners_preview)
     progress_callback: ProgressCallback | None = field(default=None, compare=False, repr=False)
 
@@ -324,6 +325,7 @@ class SshGpuRunner(GpuRunner):
             wasb_repo=self.wasb_repo,
             wasb_checkpoint=self.wasb_checkpoint,
             allow_auto_court=request.allow_auto_court_corners_preview,
+            pipeline_preset=request.pipeline_preset,
         )
         # SSH-only extras: the queue path has no court-corners/calibration
         # inputs, so these stay here rather than in the shared builder.
@@ -402,6 +404,8 @@ class LocalPipelineRunner(GpuRunner):
             str(out_dir),
             "--clip",
             safe_slug(request.clip),
+            "--pipeline-preset",
+            request.pipeline_preset,
             "--vite-allow-root",
             str(request.input_dir.parent),
             "--json",

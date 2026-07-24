@@ -473,6 +473,18 @@ export type VirtualWorldFrame = {
   grf?: Vec3[] | null;
   skeleton_implausible?: boolean;
   trust_band?: TrustBand | null;
+  /** Runtime-only render provenance. Persisted virtual-world parsing deliberately drops it. */
+  display_interpolated?: boolean;
+  display_interpolation?: DisplaySkeletonInterpolation;
+};
+
+export type DisplaySkeletonInterpolation = {
+  kind: "skeleton_midpoint";
+  player_id: number;
+  from_t: number;
+  to_t: number;
+  alpha: 0.5;
+  max_gap_s: 0.05;
 };
 
 export type VirtualWorldPlayer = EntityCoverage & {
@@ -1565,7 +1577,9 @@ export function playerCoverageStats(world: VirtualWorld): {
   playerCount: number;
   coveredFrameCount: number;
 } {
-  const times = world.players.flatMap((player) => player.frames.map((frame) => frame.t));
+  const times = world.players.flatMap((player) =>
+    player.frames.filter((frame) => frame.display_interpolated !== true).map((frame) => frame.t),
+  );
   if (!times.length) {
     return { firstTime: null, lastTime: null, playerCount: world.players.length, coveredFrameCount: 0 };
   }
@@ -1831,7 +1845,7 @@ export function rallySpanFromContactWindows(contactWindows: ContactWindows | nul
  */
 export function playerCoverageDistanceM(player: VirtualWorldPlayer, t0: number, t1: number): number {
   const points = player.frames
-    .filter((frame) => frame.t >= t0 && frame.t <= t1)
+    .filter((frame) => frame.display_interpolated !== true && frame.t >= t0 && frame.t <= t1)
     .map((frame) => frame.floor_world_xyz ?? (frame.track_world_xy ? ([frame.track_world_xy[0], frame.track_world_xy[1], 0] as Vec3) : null))
     .filter((point): point is Vec3 => point !== null);
   let total = 0;
@@ -2273,6 +2287,7 @@ function readSmplxParams(input: unknown, path: string): Record<string, number[]>
 const BODY_MESH_INTERPOLATION_MAX_GAP_SECONDS = 0.066;
 const BODY_MESH_HOLD_MAX_GAP_SECONDS = ENTITY_HOLD_TOLERANCES_SECONDS.mesh;
 const DISPLAY_FPS_MESH_MAX_GAP_SECONDS = 0.15;
+const DISPLAY_SKELETON_INTERPOLATION_MAX_GAP_SECONDS = 0.05;
 const MESH_INTERPOLATION_REASON = "client_midpoint_interpolation";
 const DISPLAY_FPS_INTERPOLATION_REASON = "user_enabled_2x_display";
 
@@ -2617,7 +2632,7 @@ export function displayFpsReplayData(
   };
   if (!enabled) return { world, bodyMesh, stats: baseStats };
 
-  const doubledWorld = doubleFpsWorld(world);
+  const doubledWorld = doubleFpsWorld(world, bodyMesh === null);
   const doubledBodyMesh = doubleFpsBodyMesh(bodyMesh, options.meshMaxGapSeconds ?? DISPLAY_FPS_MESH_MAX_GAP_SECONDS);
   return {
     world: doubledWorld.world,
@@ -2644,9 +2659,14 @@ export function displayFpsReadout(stats: DisplayFpsStats): string {
   return `${stats.displayFps}fps display: computed ${stats.sourceFps} + interpolated ${stats.worldInterpolatedFrameCount} ${skeletonWord}, ${meshText}${cadenceText}`;
 }
 
-function doubleFpsWorld(world: VirtualWorld): { world: VirtualWorld; interpolatedFrameCount: number } {
+function doubleFpsWorld(
+  world: VirtualWorld,
+  skeletonOnlyReplay: boolean,
+): { world: VirtualWorld; interpolatedFrameCount: number } {
+  if (!skeletonOnlyReplay) return { world, interpolatedFrameCount: 0 };
   let interpolatedFrameCount = 0;
   const players = world.players.map((player) => {
+    if (player.representation !== "joints") return player;
     const frames: VirtualWorldFrame[] = [];
     const sorted = [...player.frames].sort((left, right) => left.t - right.t);
     for (let index = 0; index < sorted.length; index += 1) {
@@ -2654,7 +2674,7 @@ function doubleFpsWorld(world: VirtualWorld): { world: VirtualWorld; interpolate
       frames.push(current);
       const next = sorted[index + 1];
       if (!next) continue;
-      const midpoint = interpolatedWorldFrame(current, next);
+      const midpoint = interpolatedWorldSkeletonFrame(player.id, current, next);
       if (midpoint) {
         frames.push(midpoint);
         interpolatedFrameCount += 1;
@@ -2663,61 +2683,43 @@ function doubleFpsWorld(world: VirtualWorld): { world: VirtualWorld; interpolate
     return { ...player, frames };
   });
   return {
-    world: {
-      ...world,
-      fps: (world.fps || 30) * 2,
-      players,
-      summary: {
-        ...world.summary,
-        joint_player_frame_count: players.reduce(
-          (total, player) => total + player.frames.filter((frame) => frame.joints_world.length > 0).length,
-          0,
-        ),
-        floor_placed_player_frame_count: players.reduce(
-          (total, player) => total + player.frames.filter((frame) => frame.floor_world_xyz || frame.track_world_xy).length,
-          0,
-        ),
-      },
-    },
+    // This is a render-only view. Keep source FPS and every persisted coverage/measurement
+    // summary unchanged; the separate DisplayFpsStats object owns the display-rate readout.
+    world: interpolatedFrameCount ? { ...world, players } : world,
     interpolatedFrameCount,
   };
 }
 
-function interpolatedWorldFrame(from: VirtualWorldFrame, to: VirtualWorldFrame): VirtualWorldFrame | null {
+function interpolatedWorldSkeletonFrame(
+  playerId: number,
+  from: VirtualWorldFrame,
+  to: VirtualWorldFrame,
+): VirtualWorldFrame | null {
   const gapSeconds = to.t - from.t;
-  if (gapSeconds <= 0) return null;
+  if (gapSeconds <= 0 || gapSeconds > DISPLAY_SKELETON_INTERPOLATION_MAX_GAP_SECONDS + 1e-9) return null;
+  if (from.display_interpolated === true || to.display_interpolated === true) return null;
+  if (from.skeleton_implausible === true || to.skeleton_implausible === true) return null;
+  if (from.mesh_ref?.player_id !== undefined && from.mesh_ref.player_id !== playerId) return null;
+  if (to.mesh_ref?.player_id !== undefined && to.mesh_ref.player_id !== playerId) return null;
   if (from.joints_world.length !== to.joints_world.length || from.joints_world.length === 0) return null;
   const alpha = 0.5;
   const joints_world = interpolateVec3Array(from.joints_world, to.joints_world, alpha);
-  const mesh_vertices_world =
-    from.mesh_vertices_world.length === to.mesh_vertices_world.length
-      ? interpolateVec3Array(from.mesh_vertices_world, to.mesh_vertices_world, alpha)
-      : [];
   return {
-    ...from,
     t: cleanInterpolatedNumber(from.t + gapSeconds * alpha),
-    mesh_ref:
-      from.mesh_ref && to.mesh_ref && from.mesh_ref.player_id === to.mesh_ref.player_id
-        ? {
-            ...from.mesh_ref,
-            t: cleanInterpolatedNumber(from.mesh_ref.t + ((to.mesh_ref.t ?? to.t) - from.mesh_ref.t) * alpha),
-            frame_idx: Math.round(from.mesh_ref.frame_idx + (to.mesh_ref.frame_idx - from.mesh_ref.frame_idx) * alpha),
-          }
-        : from.mesh_ref ?? null,
-    track_world_xy:
-      from.track_world_xy && to.track_world_xy
-        ? interpolateVec2(from.track_world_xy, to.track_world_xy, alpha)
-        : from.track_world_xy ?? null,
-    transl_world: from.transl_world && to.transl_world ? interpolateVec3(from.transl_world, to.transl_world, alpha) : from.transl_world ?? null,
     joints_world,
     joint_conf: interpolateNumberArray(from.joint_conf, to.joint_conf, alpha),
-    mesh_vertices_world,
+    mesh_vertices_world: [],
     joint_count: joints_world.length,
-    mesh_vertex_count: mesh_vertices_world.length,
-    floor_world_xyz:
-      from.floor_world_xyz && to.floor_world_xyz
-        ? interpolateVec3(from.floor_world_xyz, to.floor_world_xyz, alpha)
-        : from.floor_world_xyz ?? null,
+    mesh_vertex_count: 0,
+    display_interpolated: true,
+    display_interpolation: {
+      kind: "skeleton_midpoint",
+      player_id: playerId,
+      from_t: from.t,
+      to_t: to.t,
+      alpha: 0.5,
+      max_gap_s: 0.05,
+    },
   };
 }
 
@@ -2836,15 +2838,14 @@ function interpolatedBodyMeshFrame(
 }
 
 function countWorldPlayerFrames(world: VirtualWorld): number {
-  return world.players.reduce((total, player) => total + player.frames.length, 0);
+  return world.players.reduce(
+    (total, player) => total + player.frames.filter((frame) => frame.display_interpolated !== true).length,
+    0,
+  );
 }
 
 function countBodyMeshFrames(bodyMesh: BodyMesh | null): number {
   return bodyMesh?.players.reduce((total, player) => total + player.frames.length, 0) ?? 0;
-}
-
-function interpolateVec2(from: Vec2, to: Vec2, alpha: number): Vec2 {
-  return [cleanInterpolatedNumber(from[0] + (to[0] - from[0]) * alpha), cleanInterpolatedNumber(from[1] + (to[1] - from[1]) * alpha)];
 }
 
 function interpolateVec3(from: Vec3, to: Vec3, alpha: number): Vec3 {

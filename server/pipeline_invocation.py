@@ -81,6 +81,7 @@ def build_process_video_args(
     wasb_repo: str | None = None,
     wasb_checkpoint: str | None = None,
     allow_auto_court: bool = False,
+    pipeline_preset: str = "court_skeletons",
 ) -> list[str]:
     """Build the `process_video.py` argv, minus the caller's own extras
     (SSH appends `--court-corners`/`--court-calibration` itself; the daemon
@@ -88,6 +89,8 @@ def build_process_video_args(
     whatever namespace it runs in (remote SSH paths, or local worker paths)
     before calling this -- this function is a pure string/list builder.
     """
+    if pipeline_preset not in {"full", "court_skeletons"}:
+        raise ValueError(f"unsupported pipeline preset: {pipeline_preset}")
     args = [
         python,
         script,
@@ -97,6 +100,8 @@ def build_process_video_args(
         out,
         "--clip",
         safe_slug(clip),
+        "--pipeline-preset",
+        pipeline_preset,
         "--body-local",
         "--device",
         "cuda:0",

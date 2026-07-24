@@ -22,6 +22,10 @@ DEFAULT_BODY_SKELETON_STRIDE = int(load_best_stack_manifest().value("body.skelet
 UNSAFE_TRACK_CONTINUITY_REASON = "unsafe_track_continuity"
 MISSING_FRAME_COMPUTE_PLAN_REASON = "missing_frame_compute_plan"
 BODY_SKELETON_STRIDE_SKIP_REASON = "body_skeleton_stride_skip"
+COURT_SKELETONS_EXECUTION_MODE = "court_skeletons_measured_body_joints"
+COURT_SKELETONS_PIPELINE_PRESET = "court_skeletons"
+ELIGIBLE_SCHEDULED_MEASURED_COVERAGE_POLICY = "eligible_scheduled_measured_samples"
+INTERPOLATED_TRACK_FRAME_SKIP_REASON = "purely_interpolated_track_frame"
 SAM3D_BODY_JOINTS_ALL_TRACKED_REASON = "sam3d_body_joints_all_tracked"
 SAM3D_BODY_JOINTS_SOURCE = "sam3d_body_joints"
 TIER2_BODY_JOINTS_TIER = "tier2_body_joints"
@@ -107,6 +111,146 @@ def build_body_compute_execution(
         include_tier2_body_joints=include_tier2_body_joints,
         skeleton_stride=int(skeleton_stride),
     )
+
+
+def build_court_skeletons_body_compute_execution(
+    tracks: Tracks,
+    *,
+    max_frames: int | None = None,
+    skeleton_stride: int = DEFAULT_BODY_SKELETON_STRIDE,
+    max_track_speed_for_body_mps: float = DEFAULT_MAX_TRACK_SPEED_FOR_BODY_MPS,
+    max_bbox_center_speed_for_body_diag_s: float = DEFAULT_MAX_BBOX_CENTER_SPEED_FOR_BODY_DIAG_S,
+    max_bbox_center_step_for_body_px: float = DEFAULT_MAX_BBOX_CENTER_STEP_FOR_BODY_PX,
+    max_track_world_step_for_bbox_jitter_m: float = DEFAULT_MAX_TRACK_WORLD_STEP_FOR_BBOX_JITTER_M,
+) -> dict[str, Any]:
+    """Schedule measured BODY-joint samples for the ``court_skeletons`` preset.
+
+    Purely interpolated track frames are evidence-free predictions, so they are
+    retained as explicit skip records but never become crops, measurements, or
+    coverage obligations. The schedule contains only ``body_joints`` targets.
+    """
+
+    if max_frames is not None and max_frames < 0:
+        raise ValueError("max_frames must be non-negative")
+    if skeleton_stride <= 0:
+        raise ValueError("skeleton_stride must be positive")
+    if max_track_speed_for_body_mps <= 0.0:
+        raise ValueError("max_track_speed_for_body_mps must be positive")
+    if max_bbox_center_speed_for_body_diag_s <= 0.0:
+        raise ValueError("max_bbox_center_speed_for_body_diag_s must be positive")
+    if max_bbox_center_step_for_body_px <= 0.0:
+        raise ValueError("max_bbox_center_step_for_body_px must be positive")
+    if max_track_world_step_for_bbox_jitter_m <= 0.0:
+        raise ValueError("max_track_world_step_for_bbox_jitter_m must be positive")
+
+    track_lookup = _track_lookup(tracks)
+    measured_track_lookup = {
+        frame_idx: [
+            (player_id, track_frame)
+            for player_id, track_frame in active
+            if not bool(getattr(track_frame, "interpolated", False))
+        ]
+        for frame_idx, active in track_lookup.items()
+    }
+    measured_track_lookup = {frame_idx: active for frame_idx, active in measured_track_lookup.items() if active}
+    safe_track_lookup, track_continuity = _body_safe_track_lookup(
+        tracks,
+        track_lookup=measured_track_lookup,
+        max_track_speed_for_body_mps=max_track_speed_for_body_mps,
+        max_bbox_center_speed_for_body_diag_s=max_bbox_center_speed_for_body_diag_s,
+        max_bbox_center_step_for_body_px=max_bbox_center_step_for_body_px,
+        max_track_world_step_for_bbox_jitter_m=max_track_world_step_for_bbox_jitter_m,
+    )
+    base_frame_indexes = _base_skeleton_frame_indexes(
+        measured_track_lookup,
+        skeleton_stride=int(skeleton_stride),
+    )
+    scheduled: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    interpolated_player_frame_excluded_count = 0
+
+    for frame_idx, active in sorted(track_lookup.items()):
+        measured_active = [
+            (player_id, track_frame)
+            for player_id, track_frame in active
+            if not bool(getattr(track_frame, "interpolated", False))
+        ]
+        interpolated_active = [
+            (player_id, track_frame)
+            for player_id, track_frame in active
+            if bool(getattr(track_frame, "interpolated", False))
+        ]
+        if interpolated_active:
+            interpolated_player_frame_excluded_count += len(interpolated_active)
+            skipped.append(
+                _body_joints_skipped_frame(
+                    tracks,
+                    frame_idx=frame_idx,
+                    active=active,
+                    skipped_active=interpolated_active,
+                    reason=INTERPOLATED_TRACK_FRAME_SKIP_REASON,
+                )
+            )
+        if not measured_active:
+            continue
+        safe_ids = {player_id for player_id, _frame in safe_track_lookup.get(frame_idx, [])}
+        safe_active = [(player_id, track_frame) for player_id, track_frame in measured_active if player_id in safe_ids]
+        unsafe_active = [
+            (player_id, track_frame) for player_id, track_frame in measured_active if player_id not in safe_ids
+        ]
+        if unsafe_active:
+            skipped.append(
+                _body_joints_skipped_frame(
+                    tracks,
+                    frame_idx=frame_idx,
+                    active=active,
+                    skipped_active=unsafe_active,
+                    reason=UNSAFE_TRACK_CONTINUITY_REASON,
+                )
+            )
+        if safe_active and frame_idx in base_frame_indexes:
+            scheduled.append(
+                _tier2_body_joint_frame(
+                    tracks,
+                    frame_idx=frame_idx,
+                    active=active,
+                    safe_active=safe_active,
+                    frame_plan={},
+                )
+            )
+        elif safe_active:
+            skipped.append(
+                _skeleton_stride_skipped_frame(
+                    tracks,
+                    frame_idx=frame_idx,
+                    active=active,
+                    skipped_active=safe_active,
+                )
+            )
+
+    scheduled, limit_skipped = _apply_max_frames(scheduled, max_frames=max_frames)
+    skipped.extend(limit_skipped)
+    payload = _execution_payload(
+        tracks,
+        mode=COURT_SKELETONS_EXECUTION_MODE,
+        source_plan=None,
+        scheduled=scheduled,
+        skipped=sorted(skipped, key=lambda item: (int(item["frame_idx"]), str(item["skip_reason"]))),
+        track_continuity=track_continuity,
+        skeleton_stride=int(skeleton_stride),
+    )
+    scheduled_measured_count = int(payload["summary"]["scheduled_player_frame_count"])
+    payload["pipeline_preset"] = COURT_SKELETONS_PIPELINE_PRESET
+    payload["summary"].update(
+        {
+            "pipeline_preset": COURT_SKELETONS_PIPELINE_PRESET,
+            "coverage_denominator_policy": ELIGIBLE_SCHEDULED_MEASURED_COVERAGE_POLICY,
+            "coverage_denominator_player_frame_count": scheduled_measured_count,
+            "eligible_scheduled_measured_player_frame_count": scheduled_measured_count,
+            "interpolated_player_frame_excluded_count": interpolated_player_frame_excluded_count,
+        }
+    )
+    return payload
 
 
 def build_empty_body_compute_execution(
@@ -910,6 +1054,39 @@ def _skeleton_stride_skipped_frame(
     }
 
 
+def _body_joints_skipped_frame(
+    tracks: Tracks,
+    *,
+    frame_idx: int,
+    active: list[tuple[int, Any]],
+    skipped_active: list[tuple[int, Any]],
+    reason: str,
+) -> dict[str, Any]:
+    target_ids = [int(player_id) for player_id, _frame in skipped_active]
+    return {
+        "frame_idx": frame_idx,
+        "t": frame_idx / tracks.fps,
+        "recommended_tier": TIER2_BODY_JOINTS_TIER,
+        "target_representation": TIER2_BODY_JOINTS_REPRESENTATION,
+        "skip_reason": reason,
+        "reasons": [reason],
+        "target_player_ids": target_ids,
+        "active_player_ids": [int(player_id) for player_id, _frame in active],
+        "player_targets": [
+            {
+                "player_id": int(player_id),
+                "track_conf": round(float(track_frame.conf), 3),
+                "score": 0.0,
+                "recommended_tier": TIER2_BODY_JOINTS_TIER,
+                "target_representation": TIER2_BODY_JOINTS_REPRESENTATION,
+                "source": SAM3D_BODY_JOINTS_SOURCE,
+                "reasons": [reason],
+            }
+            for player_id, track_frame in skipped_active
+        ],
+    }
+
+
 def _tier2_body_joint_frame(
     tracks: Tracks,
     *,
@@ -1372,6 +1549,7 @@ def _all_player_targets(frame_plan: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 __all__ = [
     "build_body_compute_execution",
+    "build_court_skeletons_body_compute_execution",
     "build_empty_body_compute_execution",
     "body_frame_batches_from_execution",
     "write_body_compute_execution",

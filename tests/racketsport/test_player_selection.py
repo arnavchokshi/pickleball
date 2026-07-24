@@ -14,7 +14,10 @@ from scripts.racketsport import select_players_from_pool as selection_cli
 from tests.racketsport.json_schema_assertions import assert_matches_json_schema
 from threed.racketsport import player_selection as player_selection_module
 from threed.racketsport.player_selection import (
+    COURT_REGION_HARD_BOUND_M,
     DROP_TRIGGER_REASON_VOCABULARY,
+    EXACTLY_FOUR_HARD_CAP,
+    HardConstraintConfig,
     OpenSetDecision,
     PlayerSelectionConfig,
     SelectionDetection,
@@ -24,10 +27,13 @@ from threed.racketsport.player_selection import (
     enroll_slots,
     evaluate_stitch,
     fusion_score,
+    infer_active_player_count,
     mark_micro_fill_provenance,
+    median_real_footpoint_court_excess_m,
     micro_fill_allowed,
     open_set_decision,
     recover_identity_conditioned_pool,
+    registered_hard_constraint_exclusions,
     select_players_payload,
 )
 from threed.racketsport.schemas import CourtCalibration, PlayerTrack, TrackFrame, Tracks
@@ -61,6 +67,32 @@ def _detection(
         embedding=embedding,
         interpolated=interpolated,
     )
+
+
+def test_auto_player_count_selects_singles_or_doubles_without_interpolation_backfill() -> None:
+    singles = [
+        _detection(frame, source, (-1.0 if source == 1 else 1.0, -2.0), (1.0, 0.0))
+        for frame in range(10)
+        for source in (1, 2)
+    ]
+    assert infer_active_player_count(singles, fps=30.0) == 2
+
+    doubles = [
+        _detection(
+            frame,
+            source,
+            (-1.0 if source % 2 else 1.0, -2.0 if source <= 2 else 2.0),
+            (1.0, 0.0),
+        )
+        for frame in range(10)
+        for source in (1, 2, 3, 4)
+    ]
+    doubles.extend(
+        _detection(frame, source, (0.0, 0.0), None, interpolated=True)
+        for frame in range(10)
+        for source in (5, 6)
+    )
+    assert infer_active_player_count(doubles, fps=30.0) == 4
 
 
 def _fragment(
@@ -228,8 +260,229 @@ def test_registered_defaults_are_frozen_values() -> None:
     assert cfg.fusion_weights == (0.4, 0.4, 0.2)
     assert cfg.selection_score_min == 0.5
     assert cfg.recovery_max_speed_m_s == 7.0
+    assert EXACTLY_FOUR_HARD_CAP == 4
+    assert COURT_REGION_HARD_BOUND_M == 1.0
+    assert HardConstraintConfig().exactly_four_hard_cap == 4
+    assert HardConstraintConfig().court_region_hard_bound_m == 1.0
     with pytest.raises(Exception):
         cfg.identity_accept_distance = 0.36  # type: ignore[misc]
+
+
+def test_hard_court_median_uses_real_detections_only() -> None:
+    detections = (
+        _detection(0, 1, (0.0, -2.0), (1.0, 0.0)),
+        _detection(1, 1, (0.0, -2.0), (1.0, 0.0)),
+        _detection(2, 1, (20.0, -2.0), None, interpolated=True),
+    )
+    assert median_real_footpoint_court_excess_m(detections) == 0.0
+    excluded, decisions = registered_hard_constraint_exclusions(detections)
+    assert excluded == frozenset()
+    assert decisions[0]["real_detection_count"] == 2
+
+
+def _run_mutation_sensitive_six_track_fixture() -> tuple[dict[str, object], dict[str, object]]:
+    positions = {
+        1: (-1.5, -3.0),
+        2: (1.5, -3.0),
+        3: (-1.5, 3.0),
+        4: (1.5, 3.0),
+    }
+    basis = {
+        1: (1.0, 0.0, 0.0, 0.0, 0.0),
+        2: (0.0, 1.0, 0.0, 0.0, 0.0),
+        3: (0.0, 0.0, 1.0, 0.0, 0.0),
+        4: (0.0, 0.0, 0.0, 1.0, 0.0),
+    }
+    records = [
+        {
+            "frame": frame_idx,
+            "source": source,
+            "xy": positions[source],
+            "embedding": basis[source],
+        }
+        for frame_idx in range(31)
+        for source in sorted(positions)
+    ]
+    for frame_idx in range(31, 81):
+        records.append(
+            {
+                "frame": frame_idx,
+                "source": 51,
+                "xy": (-1.5 - 0.2 * (frame_idx - 31), -3.0),
+                "embedding": basis[1],
+            }
+        )
+    for frame_idx in range(45, 48):
+        records.append(
+            {
+                "frame": frame_idx,
+                "source": 52,
+                "xy": (0.0, -2.0),
+                "embedding": (0.0, 0.0, 0.0, 0.0, 1.0),
+            }
+        )
+    raw_pool, embedding_payload = _raw_selection_inputs(records, feature_dim=5)
+    return select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload=raw_pool,
+        embedding_payload=embedding_payload,
+        calibration=_identity_calibration(),
+        enabled=True,
+    )
+
+
+def _assert_mutation_sensitive_six_track_fixture(
+    selected: dict[str, object], report: dict[str, object]
+) -> None:
+    players = selected["players"]
+    assert isinstance(players, list)
+    assert len(players) == EXACTLY_FOUR_HARD_CAP
+    assert all(
+        len(
+            [
+                player
+                for player in players
+                if isinstance(player, dict)
+                and any(
+                    isinstance(frame, dict) and frame.get("frame_idx") == frame_idx
+                    for frame in player.get("frames", [])
+                )
+            ]
+        )
+        <= EXACTLY_FOUR_HARD_CAP
+        for frame_idx in range(81)
+    )
+    decisions = report["decisions"]
+    assert isinstance(decisions, list)
+    hard_rows = [
+        row
+        for row in decisions
+        if isinstance(row, dict)
+        and row.get("action") == "hard_exclude_court_region"
+        and row.get("source_track_id") == 51
+    ]
+    assert hard_rows
+    hard = hard_rows[0]
+    assert hard["median_real_footpoint_court_excess_m"] > COURT_REGION_HARD_BOUND_M
+    assert any(
+        isinstance(row, dict)
+        and row.get("action") == "hard_drop_bound_detection"
+        and row.get("source_track_id") == 51
+        for row in decisions
+    )
+    bound_uids = {
+        uid
+        for row in report["tracks"]  # type: ignore[index]
+        if isinstance(row, dict) and row.get("selection_state") == "bound_slot"
+        for uid in row.get("raw_detection_uids", [])
+    }
+    walk_through_uids = {
+        uid
+        for row in decisions
+        if isinstance(row, dict)
+        and str(row.get("fragment_id", "")).startswith("pool-52-")
+        for uid in row.get("raw_detection_uids", [])
+    }
+    assert walk_through_uids
+    assert not (walk_through_uids & bound_uids)
+
+
+def test_hard_cap_six_track_fixture_is_caused_by_registered_post_filter() -> None:
+    selected, report = _run_mutation_sensitive_six_track_fixture()
+    _assert_mutation_sensitive_six_track_fixture(selected, report)
+
+
+def test_hard_cap_fixture_rejects_disabled_filter_mutation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        player_selection_module,
+        "registered_hard_constraint_exclusions",
+        lambda *args, **kwargs: (frozenset(), []),
+    )
+    selected, report = _run_mutation_sensitive_six_track_fixture()
+    with pytest.raises(AssertionError):
+        _assert_mutation_sensitive_six_track_fixture(selected, report)
+
+
+def _selective_reid_summary(report: dict[str, object]) -> dict[str, object]:
+    decisions = report["decisions"]
+    assert isinstance(decisions, list)
+    summaries = [
+        row
+        for row in decisions
+        if isinstance(row, dict)
+        and row.get("action") == "selective_reid_policy_summary"
+    ]
+    assert len(summaries) == 1
+    return summaries[0]
+
+
+def test_exact_four_unambiguous_frames_never_call_cosine(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    records, _positions, _embeddings = _four_slot_records()
+    raw_pool, embedding_payload = _raw_selection_inputs(records)
+    calls = 0
+    original = player_selection_module.cosine_distance
+
+    def instrumented(left: object, right: object) -> float | None:
+        nonlocal calls
+        calls += 1
+        return original(left, right)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(player_selection_module, "cosine_distance", instrumented)
+    _selected, report = select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload=raw_pool,
+        embedding_payload=embedding_payload,
+        calibration=_identity_calibration(),
+        enabled=True,
+    )
+    summary = _selective_reid_summary(report)
+    assert calls == 0
+    assert summary["frames_ambiguous"] == 0
+    assert summary["reid_invoked"] == 0
+    assert summary["reid_skipped_unambiguous"] == 30
+    assert summary["reid_unavailable"] == 0
+
+
+def test_provider_absence_is_loud_on_empty_input() -> None:
+    selected, report = select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload={"schema_version": 1, "fps": 30.0, "frames": []},
+        embedding_payload=None,
+        calibration=_identity_calibration(),
+        enabled=True,
+        reid_provider_available=False,
+        reid_provider_reason="embedding_provider_checkpoint_absent",
+    )
+    assert selected["players"] == []
+    summary = _selective_reid_summary(report)
+    assert summary["reid_unavailable"] == 1
+    assert summary["provider_available"] is False
+    assert summary["warning_codes"] == ["reid_unavailable"]
+
+
+def test_provider_absence_is_loud_on_exactly_four_unambiguous_frames() -> None:
+    records, _positions, _embeddings = _four_slot_records()
+    for record in records:
+        record["embedding"] = None
+    raw_pool, _embedding_payload = _raw_selection_inputs(records)
+    _selected, report = select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload=raw_pool,
+        embedding_payload=None,
+        calibration=_identity_calibration(),
+        enabled=True,
+        reid_provider_available=False,
+        reid_provider_reason="embedding_provider_checkpoint_absent",
+    )
+    summary = _selective_reid_summary(report)
+    assert summary["frames_ambiguous"] == 0
+    assert summary["reid_invoked"] == 0
+    assert summary["reid_skipped_unambiguous"] == 30
+    assert summary["reid_unavailable"] == 1
 
 
 @pytest.mark.parametrize(

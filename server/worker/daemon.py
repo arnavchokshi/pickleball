@@ -54,6 +54,7 @@ class WorkerJob:
     s3_sidecar_key: str | None
     video_filename: str
     max_frames: int | None
+    pipeline_preset: str
     attempts: int
 
 
@@ -119,6 +120,7 @@ def run_once(
         s3_sidecar_key=(str(job_payload["s3_sidecar_key"]) if job_payload.get("s3_sidecar_key") else None),
         video_filename=str(job_payload["video_filename"]),
         max_frames=job_payload.get("max_frames"),
+        pipeline_preset=str(job_payload.get("pipeline_preset", "court_skeletons")),
         attempts=int(job_payload.get("attempts", 1)),
     )
 
@@ -405,6 +407,7 @@ def _real_process_runner(
         sidecar=str(sidecar_path) if sidecar_path is not None else None,
         max_frames=job.max_frames,
         allow_auto_court=default_allow_auto_court_corners_preview(),
+        pipeline_preset=job.pipeline_preset,
     )
     clip_out_dir = out_dir / clip
     clip_out_dir.mkdir(parents=True, exist_ok=True)

@@ -118,6 +118,7 @@ describe("uploadClipAndQueueJob", () => {
   it("drives POST /api/clips -> PUT part(s) to S3 -> complete -> POST /api/jobs -> poll GET /api/jobs/{id}, in order", async () => {
     const calls: string[] = [];
     let pollCount = 0;
+    let jobRequestBody: unknown = null;
     const fetchImpl: typeof fetch = async (url, init) => {
       const method = (init?.method ?? "GET").toUpperCase();
       const urlStr = String(url);
@@ -144,6 +145,7 @@ describe("uploadClipAndQueueJob", () => {
         return jsonResponse({ id: "clip_1", status: "uploaded", key: "raw/u/clip_1/drill.mp4" });
       }
       if (urlStr === "/api/jobs" && method === "POST") {
+        jobRequestBody = JSON.parse(String(init?.body));
         return jsonResponse(
           {
             id: "job_1",
@@ -181,6 +183,7 @@ describe("uploadClipAndQueueJob", () => {
 
     expect(clip.id).toBe("clip_1");
     expect(job.status).toBe("complete");
+    expect(jobRequestBody).toEqual({ clip_id: "clip_1", pipeline_preset: "court_skeletons" });
     expect(calls).toEqual([
       "POST /api/clips",
       "PUT https://s3.example.com/bucket/key?part=1",

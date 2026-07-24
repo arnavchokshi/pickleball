@@ -151,6 +151,7 @@ def build_worker_router(*, db: Any, worker_token: str, with_dynamic_eta: WithDyn
                     "s3_sidecar_key": claimed["s3"].get("sidecar_key"),
                     "video_filename": claimed["video_name"],
                     "max_frames": claimed.get("max_frames"),
+                    "pipeline_preset": claimed.get("pipeline_preset", "court_skeletons"),
                     "attempts": claimed["attempts"],
                 }
             if _now() >= deadline:

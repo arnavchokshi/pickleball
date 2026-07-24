@@ -226,7 +226,11 @@ def _representation_plan(
     requested_world_mesh_frame_count = _int_summary(plan_summary, "deep_mesh_frame_count")
     requested_world_mesh_player_target_count = _int_mapping_value(by_player_target, "world_mesh")
     scheduled_world_mesh_frame_count = _scheduled_world_mesh_frame_count(execution_summary)
-    scheduled_world_mesh_player_frame_count = _int_summary(execution_summary, "scheduled_player_frame_count")
+    scheduled_world_mesh_player_frame_count = (
+        _int_summary(execution_summary, "tier1_mesh_player_frame_count")
+        if isinstance(execution_summary, Mapping) and "tier1_mesh_player_frame_count" in execution_summary
+        else _int_summary(execution_summary, "scheduled_player_frame_count")
+    )
     available_mesh_frame_count = int(mesh_stats.get("mesh_frame_count", 0))
     available_joint_frame_count = int(joints_stats.get("joints_frame_count", 0))
     lane_a_skeleton_target_count = _int_mapping_value(by_player_target, "lane_a_skeleton") + _int_mapping_value(
@@ -297,9 +301,8 @@ def _scheduled_world_mesh_frame_count(summary: Any) -> int:
     if not isinstance(summary, Mapping):
         return 0
     scheduled_by_target = summary.get("scheduled_by_target_representation")
-    value = _int_mapping_value(scheduled_by_target, "world_mesh")
-    if value:
-        return value
+    if isinstance(scheduled_by_target, Mapping):
+        return _int_mapping_value(scheduled_by_target, "world_mesh")
     return _int_summary(summary, "scheduled_frame_count")
 
 

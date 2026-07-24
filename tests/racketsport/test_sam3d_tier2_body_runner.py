@@ -235,6 +235,101 @@ class _LiteSam3DRuntime:
         return outputs
 
 
+class _SkeletonOnlySam3DRuntime:
+    def __init__(self) -> None:
+        self.requests: list[Any] = []
+        self.batch_kwargs: dict[str, Any] = {}
+
+    def process_frame_batches(self, requests: list[Any], **kwargs: Any) -> list[list[dict[str, Any]]]:
+        self.requests = requests
+        self.batch_kwargs = dict(kwargs)
+        return [
+            [
+                {
+                    "pred_keypoints_3d": [
+                        [0.02 * idx, 0.0, 0.2 + 0.05 * (idx % 12)] for idx in range(70)
+                    ],
+                    "confidence": 0.9,
+                }
+            ]
+            for _request in requests
+        ]
+
+
+def test_court_skeletons_preset_excludes_interpolation_and_emits_no_mesh_artifacts(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:  # noqa: ANN001
+    run_dir = tmp_path / "clip"
+    (run_dir / "body_frames").mkdir(parents=True)
+    (run_dir / "body_frames" / "frame_000000.jpg").write_bytes(b"not-a-real-jpeg")
+    (run_dir / "body_frames" / "frame_000002.jpg").write_bytes(b"not-a-real-jpeg")
+    tracks = _tracks_payload()
+    tracks["players"][0]["frames"] = [
+        {"t": 0.0, "bbox": [100.0, 100.0, 200.0, 300.0], "world_xy": [1.0, 2.0], "conf": 0.9},
+        {
+            "t": 1.0 / 30.0,
+            "bbox": [101.0, 100.0, 201.0, 300.0],
+            "world_xy": [1.05, 2.0],
+            "conf": 0.9,
+            "interpolated": True,
+        },
+        {"t": 2.0 / 30.0, "bbox": [102.0, 100.0, 202.0, 300.0], "world_xy": [1.1, 2.0], "conf": 0.9},
+    ]
+    _write_json(run_dir / "tracks.json", tracks)
+    _write_json(run_dir / "court_calibration.json", _calibration_payload())
+    monkeypatch.setattr(
+        orchestrator,
+        "verify_fast_sam_manifest_assets",
+        lambda *args, **kwargs: {"fast_sam_3d_body_dinov3": SimpleNamespace(path=tmp_path / "model.ckpt")},
+    )
+    monkeypatch.setattr(orchestrator, "_read_image_size", lambda _path: (1920, 1080))
+
+    runtime = _SkeletonOnlySam3DRuntime()
+    result = orchestrator.BodyStageRunner(
+        pipeline_preset="court_skeletons",
+        runtime=runtime,
+        body_skeleton_stride=1,
+    ).run(
+        orchestrator.StageContext(
+            clip="clip",
+            inputs_dir=run_dir,
+            run_dir=run_dir,
+            sport="pickleball",
+            expected_players=1,
+        )
+    )
+
+    assert result.status == "ran"
+    assert result.metrics["pipeline_preset"] == "court_skeletons"
+    assert result.metrics["body_joint_builder"] == "court_skeletons_shared_worldhmr_compute"
+    assert [request["frame_idx"] for request in runtime.requests] == [0, 2]
+    assert {request["target_representation"] for request in runtime.requests} == {"body_joints"}
+    assert runtime.batch_kwargs["tier2_output_lite"] is True
+    assert not (run_dir / "smpl_motion.json").exists()
+    assert not (run_dir / "body_mesh.json").exists()
+    assert not (run_dir / "body_mesh_index").exists()
+    for artifact in (
+        "skeleton3d.json",
+        "body_grounding_quality.json",
+        "body_joint_quality.json",
+        "body_full_clip_gate.json",
+        "body_mesh_readiness.json",
+        "body_serialization_timing.json",
+        "body_stage_phase_timing.json",
+    ):
+        assert (run_dir / artifact).is_file(), artifact
+    assert not any(path.startswith("body_mesh_index/") for path in result.produced_artifacts)
+
+    execution = json.loads((run_dir / "body_compute_execution.json").read_text(encoding="utf-8"))
+    assert execution["summary"]["coverage_denominator_player_frame_count"] == 2
+    assert execution["summary"]["interpolated_player_frame_excluded_count"] == 1
+    gate = json.loads((run_dir / "body_full_clip_gate.json").read_text(encoding="utf-8"))
+    assert gate["coverage_denominator_policy"] == "eligible_scheduled_measured_samples"
+    assert gate["coverage_denominator_player_frame_count"] == 2
+    assert gate["coverage"] == 1.0
+
+
 def test_body_runner_output_lite_tolerates_tier2_without_dense_mesh_fields(tmp_path: Path, monkeypatch) -> None:  # noqa: ANN001
     run_dir = tmp_path / "clip"
     (run_dir / "body_frames").mkdir(parents=True)

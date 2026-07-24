@@ -28,7 +28,7 @@ import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
-from typing import Any, Callable
+from typing import Any, Callable, Literal
 from urllib.parse import unquote, urlsplit
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
@@ -50,6 +50,7 @@ _PRIVATE_JOB_FIELDS = ("_id", "user_id")
 class CreateJobBody(BaseModel):
     clip_id: str
     max_frames: int | None = None
+    pipeline_preset: Literal["full", "court_skeletons"] = "court_skeletons"
 
 
 def _public_job(doc: dict[str, Any]) -> dict[str, Any]:
@@ -112,6 +113,7 @@ def build_jobs_v2_router(
         video_key: str,
         sidecar_key: str | None,
         max_frames: int | None,
+        pipeline_preset: Literal["full", "court_skeletons"],
     ) -> None:
         job_dir = upload_root / job_id
         input_dir = job_dir / "input"
@@ -157,6 +159,7 @@ def build_jobs_v2_router(
             artifacts_dir=artifacts_dir,
             capture_sidecar_path=sidecar_path,
             max_frames=max_frames,
+            pipeline_preset=pipeline_preset,
         )
         execute_job(store, runner, request)
 
@@ -192,6 +195,7 @@ def build_jobs_v2_router(
             "worker_id": None,
             "heartbeat_at": None,
             "max_frames": body.max_frames,
+            "pipeline_preset": body.pipeline_preset,
             "s3": {"video_key": clip["video_key"], "sidecar_key": clip.get("sidecar_key")},
             "links": {
                 "status": f"/api/jobs/{job_id}",
@@ -215,6 +219,7 @@ def build_jobs_v2_router(
             "video_key": clip["video_key"],
             "sidecar_key": clip.get("sidecar_key"),
             "max_frames": body.max_frames,
+            "pipeline_preset": body.pipeline_preset,
         }
         if run_jobs_inline:
             _stage_inputs_and_execute(**kwargs)

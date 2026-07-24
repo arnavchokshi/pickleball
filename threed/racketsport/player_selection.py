@@ -8,8 +8,8 @@ No labels are consumed here.
 
 from __future__ import annotations
 
-from collections import defaultdict
-from dataclasses import asdict, dataclass, field
+from collections import Counter, defaultdict
+from dataclasses import asdict, dataclass, field, replace
 from enum import Enum
 import copy
 import math
@@ -26,6 +26,42 @@ class OpenSetDecision(str, Enum):
     ACCEPT = "accept"
     DEFER = "defer"
     REJECT = "reject"
+
+
+EXACTLY_FOUR_HARD_CAP = 4
+COURT_REGION_HARD_BOUND_M = 1.0
+
+
+@dataclass(frozen=True)
+class HardConstraintConfig:
+    """Pre-registered, non-tunable player-export constraints."""
+
+    exactly_four_hard_cap: int = EXACTLY_FOUR_HARD_CAP
+    court_region_hard_bound_m: float = COURT_REGION_HARD_BOUND_M
+
+    def __post_init__(self) -> None:
+        if self.exactly_four_hard_cap != EXACTLY_FOUR_HARD_CAP:
+            raise ValueError(
+                f"exactly_four_hard_cap is frozen at {EXACTLY_FOUR_HARD_CAP}"
+            )
+        if not math.isclose(
+            self.court_region_hard_bound_m,
+            COURT_REGION_HARD_BOUND_M,
+            rel_tol=0.0,
+            abs_tol=0.0,
+        ):
+            raise ValueError(
+                "court_region_hard_bound_m is frozen at "
+                f"{COURT_REGION_HARD_BOUND_M}"
+            )
+
+
+_REID_POLICY_SCOPE = "player_selection_post_association"
+_REID_GALLERY = "gallery_only_not_consulted"
+_REID_ELIGIBLE = "reid_eligible_ambiguous"
+_REID_INVOKED = "reid_invoked_ambiguous"
+_REID_SKIPPED = "reid_skipped_unambiguous"
+_REID_UNAVAILABLE = "reid_unavailable"
 
 
 @dataclass(frozen=True)
@@ -87,6 +123,7 @@ class SelectionDetection:
     interpolated: bool = False
     raw_detection_uid: str | None = None
     payload: Mapping[str, Any] | None = field(default=None, compare=False)
+    reid_policy: str = field(default=_REID_GALLERY, compare=False)
 
 
 @dataclass(frozen=True)
@@ -160,6 +197,100 @@ class _SlotCandidate:
     feasible: bool
 
 
+@dataclass
+class _SelectiveReIDAudit:
+    """Mutable run audit for ambiguity-triggered identity comparisons."""
+
+    provider_available: bool = True
+    provider_reason: str | None = None
+    frames_ambiguous: set[int] = field(default_factory=set)
+    frames_invoked: set[int] = field(default_factory=set)
+    frames_skipped: set[int] = field(default_factory=set)
+    frames_unavailable: set[int] = field(default_factory=set)
+    decisions: list[dict[str, Any]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if not self.provider_available:
+            self.decisions.append(
+                {
+                    "action": _REID_UNAVAILABLE,
+                    "policy_scope": _REID_POLICY_SCOPE,
+                    "level": "provider",
+                    "reasons": [self.provider_reason or "embedding_provider_unavailable"],
+                }
+            )
+
+    def identity_distance(
+        self,
+        left: Sequence[float] | None,
+        right: Sequence[float] | None,
+        *,
+        trigger_frames: Iterable[int],
+        comparison: str,
+        context: Mapping[str, Any] | None = None,
+    ) -> float | None:
+        """Run one comparison only when an ambiguity trigger names its frames."""
+
+        frames = tuple(sorted({int(frame_idx) for frame_idx in trigger_frames}))
+        if not frames:
+            return None
+        non_ambiguous = set(frames) - self.frames_ambiguous
+        if non_ambiguous:
+            raise ValueError(
+                "selective ReID comparison attributed to non-ambiguous frame(s): "
+                + ", ".join(str(frame_idx) for frame_idx in sorted(non_ambiguous))
+            )
+        distance = (
+            cosine_distance(left, right)
+            if self.provider_available and left is not None and right is not None
+            else None
+        )
+        action = _REID_INVOKED if distance is not None else _REID_UNAVAILABLE
+        target = self.frames_invoked if distance is not None else self.frames_unavailable
+        target.update(frames)
+        for frame_idx in frames:
+            decision: dict[str, Any] = copy.deepcopy(dict(context or {}))
+            decision.update(
+                {
+                    "action": action,
+                    "policy_scope": _REID_POLICY_SCOPE,
+                    "frame_idx": frame_idx,
+                    "comparison": comparison,
+                    "reasons": [
+                        "identity_comparison_executed_on_ambiguous_frame"
+                        if distance is not None
+                        else "identity_evidence_unavailable_on_ambiguous_frame"
+                    ],
+                }
+            )
+            if distance is not None:
+                decision["embedding_distance"] = distance
+            self.decisions.append(decision)
+        return distance
+
+    def summary_decision(self) -> dict[str, Any]:
+        if self.frames_invoked - self.frames_ambiguous:
+            raise ValueError("ReID invoked outside the registered ambiguous-frame set")
+        if self.frames_skipped & self.frames_ambiguous:
+            raise ValueError("ReID frame cannot be both ambiguous and unambiguous")
+        unavailable_count = len(self.frames_unavailable)
+        if not self.provider_available:
+            unavailable_count = max(1, unavailable_count)
+        return {
+            "action": "selective_reid_policy_summary",
+            "policy_scope": _REID_POLICY_SCOPE,
+            "policy": "consult_only_on_zero_or_two_plus_in_court_slot_candidates",
+            "counter_unit": "unique_frame_plus_provider_event",
+            "frames_ambiguous": len(self.frames_ambiguous),
+            "reid_invoked": len(self.frames_invoked),
+            "reid_skipped_unambiguous": len(self.frames_skipped),
+            "reid_unavailable": unavailable_count,
+            "provider_available": self.provider_available,
+            "provider_reason": self.provider_reason,
+            "warning_codes": [_REID_UNAVAILABLE] if unavailable_count else [],
+        }
+
+
 _DESTRUCTIVE_EVIDENCE_CLASSES = frozenset({"appearance", "geometry"})
 
 DROP_TRIGGER_REASON_VOCABULARY = (
@@ -201,14 +332,54 @@ def cosine_distance(
     return max(0.0, min(2.0, 1.0 - similarity))
 
 
+def _identity_distance(
+    left: Sequence[float] | None,
+    right: Sequence[float] | None,
+    *,
+    reid_audit: _SelectiveReIDAudit | None,
+    trigger_frames: Iterable[int] = (),
+    comparison: str,
+    context: Mapping[str, Any] | None = None,
+) -> float | None:
+    if reid_audit is None:
+        return cosine_distance(left, right)
+    return reid_audit.identity_distance(
+        left,
+        right,
+        trigger_frames=trigger_frames,
+        comparison=comparison,
+        context=context,
+    )
+
+
 def embedding_centroid(
     detections: Sequence[SelectionDetection],
 ) -> tuple[float, ...] | None:
+    vectors = [
+        _consultable_embedding(detection)
+        for detection in detections
+        if _consultable_embedding(detection) is not None
+        and not detection.interpolated
+    ]
+    return _normalized_embedding_centroid(vectors)
+
+
+def _gallery_embedding_centroid(
+    detections: Sequence[SelectionDetection],
+) -> tuple[float, ...] | None:
+    """Build enrollment/reference state without making an identity decision."""
+
     vectors = [
         detection.embedding
         for detection in detections
         if detection.embedding is not None and not detection.interpolated
     ]
+    return _normalized_embedding_centroid(vectors)
+
+
+def _normalized_embedding_centroid(
+    vectors: Sequence[Sequence[float]],
+) -> tuple[float, ...] | None:
     if not vectors:
         return None
     dimension = len(vectors[0])
@@ -235,6 +406,232 @@ def off_court_excess_m(
     dx = max(0.0, abs(float(world_xy[0])) - template.width_m / 2.0)
     dy = max(0.0, abs(float(world_xy[1])) - template.length_m / 2.0)
     return math.hypot(dx, dy)
+
+
+def median_real_footpoint_court_excess_m(
+    detections: Sequence[SelectionDetection],
+    *,
+    sport: Sport = "pickleball",
+) -> float | None:
+    """Return lifetime median excess over measured footpoints only."""
+
+    excesses = sorted(
+        off_court_excess_m(detection.world_xy, sport=sport)
+        for detection in detections
+        if not detection.interpolated
+    )
+    return _median(excesses) if excesses else None
+
+
+def _consultable_embedding(
+    detection: SelectionDetection,
+) -> tuple[float, ...] | None:
+    if detection.reid_policy in {_REID_SKIPPED, _REID_UNAVAILABLE}:
+        return None
+    return detection.embedding
+
+
+def _provisional_slot_key(detection: SelectionDetection) -> tuple[str, str]:
+    x, y = detection.world_xy
+    return ("near" if y < 0.0 else "far", "left" if x < 0.0 else "right")
+
+
+def _apply_selective_reid_policy(
+    detections: Sequence[SelectionDetection],
+    *,
+    hard_config: HardConstraintConfig,
+    sport: Sport,
+    frame_indexes: Iterable[int],
+    provider_available: bool,
+    provider_reason: str | None,
+) -> tuple[tuple[SelectionDetection, ...], _SelectiveReIDAudit]:
+    """Classify appearance consultability using geometry/cardinality only."""
+
+    audit = _SelectiveReIDAudit(
+        provider_available=provider_available,
+        provider_reason=provider_reason,
+    )
+    by_frame: dict[int, list[SelectionDetection]] = defaultdict(list)
+    for frame_idx in frame_indexes:
+        by_frame[int(frame_idx)]
+    for detection in detections:
+        if not detection.interpolated:
+            by_frame[detection.frame_idx].append(detection)
+
+    slot_keys = (
+        ("near", "left"),
+        ("near", "right"),
+        ("far", "left"),
+        ("far", "right"),
+    )
+    policy_by_uid: dict[str, str] = {}
+    for frame_idx in sorted(by_frame):
+        frame_detections = by_frame[frame_idx]
+        in_region = [
+            detection
+            for detection in frame_detections
+            if off_court_excess_m(detection.world_xy, sport=sport)
+            <= hard_config.court_region_hard_bound_m
+        ]
+        by_slot: dict[tuple[str, str], list[SelectionDetection]] = {
+            key: [] for key in slot_keys
+        }
+        for detection in in_region:
+            by_slot[_provisional_slot_key(detection)].append(detection)
+
+        frame_is_ambiguous = any(len(by_slot[key]) != 1 for key in slot_keys)
+        if frame_is_ambiguous:
+            audit.frames_ambiguous.add(frame_idx)
+        else:
+            audit.frames_skipped.add(frame_idx)
+
+        for side, role in slot_keys:
+            candidates = sorted(
+                by_slot[(side, role)],
+                key=lambda item: item.raw_detection_uid or "",
+            )
+            candidate_uids = [_required_raw_uid(item) for item in candidates]
+            if len(candidates) == 1 and not frame_is_ambiguous:
+                candidate = candidates[0]
+                policy_by_uid[_required_raw_uid(candidate)] = _REID_SKIPPED
+                audit.decisions.append(
+                    {
+                        "action": _REID_SKIPPED,
+                        "policy_scope": _REID_POLICY_SCOPE,
+                        "frame_idx": frame_idx,
+                        "slot_side": side,
+                        "slot_role": role,
+                        "candidate_real_detections": 1,
+                        "raw_detection_uids": candidate_uids,
+                        "reasons": ["exactly_one_in_court_candidate_for_slot"],
+                    }
+                )
+                continue
+
+            missing_identity = (
+                not provider_available
+                or not candidates
+                or any(candidate.embedding is None for candidate in candidates)
+            )
+            action = _REID_UNAVAILABLE if missing_identity else _REID_ELIGIBLE
+            if missing_identity:
+                audit.frames_unavailable.add(frame_idx)
+            reason = (
+                "embedding_provider_unavailable"
+                if not provider_available
+                else "zero_in_court_candidates_for_slot"
+                if not candidates
+                else "embedding_absent_for_ambiguous_slot_frame"
+                if any(candidate.embedding is None for candidate in candidates)
+                else "two_or_more_in_court_candidates_for_slot"
+                if len(candidates) >= 2
+                else "frame_ambiguous_for_another_slot"
+            )
+            for candidate in candidates:
+                policy_by_uid[_required_raw_uid(candidate)] = action
+            audit.decisions.append(
+                {
+                    "action": action,
+                    "policy_scope": _REID_POLICY_SCOPE,
+                    "frame_idx": frame_idx,
+                    "slot_side": side,
+                    "slot_role": role,
+                    "candidate_real_detections": len(candidates),
+                    "raw_detection_uids": candidate_uids,
+                    "reasons": [reason],
+                }
+            )
+
+        for detection in frame_detections:
+            uid = _required_raw_uid(detection)
+            if uid in policy_by_uid:
+                continue
+            action = (
+                _REID_UNAVAILABLE
+                if frame_is_ambiguous
+                and (not provider_available or detection.embedding is None)
+                else _REID_ELIGIBLE
+                if frame_is_ambiguous
+                else _REID_SKIPPED
+            )
+            policy_by_uid[uid] = action
+            if action == _REID_UNAVAILABLE:
+                audit.frames_unavailable.add(frame_idx)
+            audit.decisions.append(
+                {
+                    "action": action,
+                    "policy_scope": _REID_POLICY_SCOPE,
+                    "frame_idx": frame_idx,
+                    "candidate_scope": "off_court_not_competing_for_slot",
+                    "candidate_real_detections": 0,
+                    "raw_detection_uids": [uid],
+                    "reasons": [
+                        "off_court_detection_consultable_only_because_in_court_slot_is_ambiguous"
+                        if frame_is_ambiguous and action == _REID_ELIGIBLE
+                        else "embedding_unavailable_on_ambiguous_frame"
+                        if frame_is_ambiguous
+                        else "off_court_detection_cannot_trigger_reid"
+                    ],
+                }
+            )
+
+    classified = tuple(
+        replace(
+            detection,
+            reid_policy=policy_by_uid.get(
+                _required_raw_uid(detection),
+                _REID_UNAVAILABLE if not provider_available else _REID_GALLERY,
+            ),
+        )
+        for detection in detections
+    )
+    return classified, audit
+
+
+def registered_hard_constraint_exclusions(
+    detections: Sequence[SelectionDetection],
+    *,
+    hard_config: HardConstraintConfig | None = None,
+    sport: Sport = "pickleball",
+) -> tuple[frozenset[int], list[dict[str, Any]]]:
+    """Register lifetime court-bound exclusions without changing soft fusion."""
+
+    cfg = hard_config or HardConstraintConfig()
+    by_source: dict[int, list[SelectionDetection]] = defaultdict(list)
+    for detection in detections:
+        if not detection.interpolated:
+            by_source[detection.source_track_id].append(detection)
+    excluded: set[int] = set()
+    decisions: list[dict[str, Any]] = []
+    for source_track_id in sorted(by_source):
+        median_excess = median_real_footpoint_court_excess_m(
+            by_source[source_track_id],
+            sport=sport,
+        )
+        assert median_excess is not None
+        hard_excluded = median_excess > cfg.court_region_hard_bound_m
+        if hard_excluded:
+            excluded.add(source_track_id)
+        decisions.append(
+            {
+                "action": (
+                    "hard_exclude_court_region"
+                    if hard_excluded
+                    else "hard_constraint_court_region_pass"
+                ),
+                "source_track_id": source_track_id,
+                "real_detection_count": len(by_source[source_track_id]),
+                "median_real_footpoint_court_excess_m": median_excess,
+                "court_region_hard_bound_m": cfg.court_region_hard_bound_m,
+                "comparison": "strictly_greater_than",
+                "reasons": [
+                    "lifetime_real_detection_median_excess_above_registered_bound"
+                    if hard_excluded
+                    else "lifetime_real_detection_median_excess_not_above_registered_bound"
+                ],
+            }
+        )
+    return frozenset(excluded), decisions
 
 
 def frame_court_evidence(
@@ -329,13 +726,25 @@ def _destructive_drop_evidence(
     slots: Sequence[SelectionSlot],
     presence: PresenceEvidence,
     config: PlayerSelectionConfig,
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> tuple[dict[str, bool], tuple[str, ...]]:
     """Collapse every world-derived signal into one geometry evidence class."""
 
     appearance_rejected = all(
-        all(
+        _consultable_embedding(detection) is not None
+        and all(
             open_set_decision(
-                cosine_distance(slot.embedding_centroid, detection.embedding),
+                _identity_distance(
+                    slot.embedding_centroid,
+                    _consultable_embedding(detection),
+                    reid_audit=reid_audit,
+                    trigger_frames=(detection.frame_idx,),
+                    comparison="destructive_drop",
+                    context={
+                        "slot_id": slot.slot_id,
+                        "raw_detection_uid": detection.raw_detection_uid,
+                    },
+                ),
                 config,
             )
             is OpenSetDecision.REJECT
@@ -370,14 +779,25 @@ def evaluate_stitch(
     *,
     real_support_in_gap: Sequence[SelectionDetection] = (),
     config: PlayerSelectionConfig | None = None,
+    ambiguity_triggered: bool = True,
+    reid_audit: _SelectiveReIDAudit | None = None,
+    trigger_frames: Iterable[int] = (),
 ) -> StitchDecision:
     cfg = config or PlayerSelectionConfig()
     left_endpoint = left.detections[-1]
     right_endpoint = right.detections[0]
     if right_endpoint.frame_idx <= left_endpoint.frame_idx:
         raise ValueError("right fragment must start after left fragment")
-    distance = cosine_distance(
-        embedding_centroid(left.detections), embedding_centroid(right.detections)
+    distance = _identity_distance(
+        _gallery_embedding_centroid(left.detections),
+        _gallery_embedding_centroid(right.detections),
+        reid_audit=reid_audit,
+        trigger_frames=trigger_frames if ambiguity_triggered else (),
+        comparison="fragment_stitch",
+        context={
+            "left_fragment_id": left.fragment_id,
+            "right_fragment_id": right.fragment_id,
+        },
     )
     open_set = open_set_decision(distance, cfg)
     displacement = _point_distance(left_endpoint.world_xy, right_endpoint.world_xy)
@@ -475,13 +895,56 @@ def mark_micro_fill_provenance(
     return output
 
 
+def infer_active_player_count(
+    detections: Sequence[SelectionDetection],
+    *,
+    fps: float,
+    config: PlayerSelectionConfig | None = None,
+) -> int | None:
+    """Infer singles or doubles from measured, persistent on-court evidence.
+
+    Doubles requires four distinct measured identities to coexist for either
+    one source second or 20 percent of accepted frames (whichever is smaller).
+    Otherwise two-player evidence selects singles.  This never invents a
+    missing third or fourth identity.
+    """
+
+    cfg = config or PlayerSelectionConfig()
+    if fps <= 0.0:
+        raise ValueError("fps must be positive")
+    identities_by_frame: dict[int, set[int]] = defaultdict(set)
+    for detection in detections:
+        if detection.interpolated:
+            continue
+        if (
+            frame_court_evidence(detection.world_xy, cfg)
+            < cfg.enrollment_court_presence_min
+        ):
+            continue
+        identities_by_frame[detection.frame_idx].add(detection.source_track_id)
+    accepted_frames = [
+        identities
+        for identities in identities_by_frame.values()
+        if len(identities) >= 2
+    ]
+    if not accepted_frames:
+        return None
+    one_second = max(1, int(math.ceil(fps)))
+    twenty_percent = max(1, int(math.ceil(0.2 * len(accepted_frames))))
+    doubles_threshold = min(one_second, twenty_percent)
+    doubles_frames = sum(len(identities) >= 4 for identities in accepted_frames)
+    if doubles_frames >= doubles_threshold:
+        return 4
+    return 2
+
+
 def enroll_slots(
     fragments: Sequence[TrackFragment],
     *,
     fps: float,
     config: PlayerSelectionConfig | None = None,
 ) -> tuple[SelectionSlot, ...]:
-    """Deterministically enroll exactly four slots from the earliest valid window."""
+    """Deterministically enroll the configured two or four active-player slots."""
 
     cfg = config or PlayerSelectionConfig()
     if fps <= 0.0:
@@ -534,7 +997,7 @@ def enroll_slots(
             for fragment in alive
         }
         enrollment_centroids = {
-            fragment.fragment_id: embedding_centroid(
+            fragment.fragment_id: _gallery_embedding_centroid(
                 enrollment_detections[fragment.fragment_id]
             )
             for fragment in alive
@@ -608,6 +1071,7 @@ def recover_identity_conditioned_pool(
     next_detection: SelectionDetection | None = None,
     preferred_source_track_ids: Iterable[int] = (),
     config: PlayerSelectionConfig | None = None,
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> tuple[SelectionDetection, ...]:
     """Recover measured detections one frame at a time; never create geometry."""
 
@@ -650,7 +1114,20 @@ def recover_identity_conditioned_pool(
                     > cfg.recovery_max_speed_m_s * remaining_s
                 ):
                     continue
-            distance = cosine_distance(slot.embedding_centroid, detection.embedding)
+            consultable = _consultable_embedding(detection)
+            if consultable is None:
+                continue
+            distance = _identity_distance(
+                slot.embedding_centroid,
+                consultable,
+                reid_audit=reid_audit,
+                trigger_frames=(detection.frame_idx,),
+                comparison="identity_conditioned_pool_recovery",
+                context={
+                    "slot_id": slot.slot_id,
+                    "raw_detection_uid": detection.raw_detection_uid,
+                },
+            )
             if open_set_decision(distance, cfg) is not OpenSetDecision.ACCEPT:
                 continue
             feasible.append(
@@ -682,6 +1159,11 @@ def select_players_payload(
     calibration: CourtCalibration | None = None,
     enabled: bool = False,
     config: PlayerSelectionConfig | None = None,
+    hard_config: HardConstraintConfig | None = None,
+    embedding_bbox_scale: float = 1.0,
+    reid_provider_available: bool | None = None,
+    reid_provider_reason: str | None = None,
+    auto_player_count: bool = False,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
     """Clean association output and emit a decision-complete preview report.
 
@@ -690,6 +1172,7 @@ def select_players_payload(
     """
 
     cfg = config or PlayerSelectionConfig()
+    hard_cfg = hard_config or HardConstraintConfig()
     if not enabled:
         report = _base_report(cfg, status="disabled_noop")
         players = tracks_payload.get("players")
@@ -706,10 +1189,23 @@ def select_players_payload(
             report["output_counts"]["players"] = player_count
             report["output_counts"]["track_frames"] = track_frame_count
         return copy.deepcopy(dict(tracks_payload)), report
-    if raw_pool_payload is None or embedding_payload is None or calibration is None:
-        raise ValueError(
-            "enabled selection requires raw pool, embeddings, and calibration"
-        )
+    if raw_pool_payload is None or calibration is None:
+        raise ValueError("enabled selection requires raw pool and calibration")
+    if not math.isfinite(embedding_bbox_scale) or embedding_bbox_scale <= 0.0:
+        raise ValueError("embedding_bbox_scale must be finite and positive")
+    provider_available = (
+        embedding_payload is not None
+        if reid_provider_available is None
+        else bool(reid_provider_available)
+    )
+    if embedding_payload is None:
+        embedding_payload = {
+            "source_only": True,
+            "uses_cvat_labels": False,
+            "promote_trk": False,
+            "feature_dim": None,
+            "detections": [],
+        }
     attestations = _validate_source_only_embeddings(embedding_payload)
 
     real_pool = _raw_pool_detections(
@@ -717,6 +1213,7 @@ def select_players_payload(
         embedding_payload=embedding_payload,
         calibration=calibration,
         config=cfg,
+        embedding_bbox_scale=embedding_bbox_scale,
     )
     raw_uids = [detection.raw_detection_uid for detection in real_pool]
     if any(uid is None for uid in raw_uids) or len(raw_uids) != len(set(raw_uids)):
@@ -737,11 +1234,57 @@ def select_players_payload(
         if not isinstance(player.get("frames"), list):
             raise ValueError("track player frames must be a list")
 
+    frame_indexes = {
+        _frame_index(frame, fps=fps)
+        for player in players
+        for frame in player.get("frames", [])
+        if isinstance(frame, Mapping)
+    }
+    real_pool, reid_audit = _apply_selective_reid_policy(
+        real_pool,
+        hard_config=hard_cfg,
+        sport=cfg.sport,
+        frame_indexes=frame_indexes,
+        provider_available=provider_available,
+        provider_reason=reid_provider_reason,
+    )
+    real_by_frame = defaultdict(list)
+    for detection in real_pool:
+        real_by_frame[detection.frame_idx].append(detection)
+    hard_excluded_source_ids, hard_decisions = registered_hard_constraint_exclusions(
+        real_pool,
+        hard_config=hard_cfg,
+        sport=cfg.sport,
+    )
+    inferred_player_count: int | None = None
+    if auto_player_count:
+        inferred_player_count = infer_active_player_count(
+            [
+                detection
+                for detection in real_pool
+                if detection.source_track_id not in hard_excluded_source_ids
+            ],
+            fps=fps,
+            config=cfg,
+        )
+        cfg = replace(cfg, expected_players=inferred_player_count or 2)
+
     output = copy.deepcopy(dict(tracks_payload))
     report = _base_report(cfg, status="preview_selection_complete")
     report["source_attestations"] = attestations
     report["source_only"] = True
-    report["selection_mode"] = "enrolled_four_slot"
+    report["selection_mode"] = (
+        f"auto_{cfg.expected_players}_player_enrollment"
+        if auto_player_count
+        else "enrolled_four_slot"
+    )
+    if auto_player_count:
+        report["player_cardinality"] = {
+            "mode": "auto_two_or_four",
+            "inferred_players": inferred_player_count,
+            "selected_target": cfg.expected_players,
+            "hard_maximum": hard_cfg.exactly_four_hard_cap,
+        }
     association_join_count = _association_raw_join_count(
         players,
         fps=fps,
@@ -759,16 +1302,29 @@ def select_players_payload(
         "association_frames_joined_to_raw": association_join_count,
     }
 
-    pool_fragments = _pool_fragments(real_pool, config=cfg)
-    slots = enroll_slots(pool_fragments, fps=fps, config=cfg)
+    pool_fragments = _pool_fragments(real_pool, config=cfg, reid_audit=reid_audit)
+    enrollment_fragments = tuple(
+        fragment
+        for fragment in pool_fragments
+        if fragment.source_track_id not in hard_excluded_source_ids
+    )
+    slots = enroll_slots(enrollment_fragments, fps=fps, config=cfg)
     stitch_decisions, stitch_vetoes = _fragment_stitch_audit(
         pool_fragments,
         real_by_frame=real_by_frame,
         config=cfg,
+        reid_audit=reid_audit,
     )
     report["decisions"].extend(stitch_decisions)
+    report["decisions"].extend(hard_decisions)
     report["enrollment"] = {
-        "status": "enrolled" if slots else "no_valid_exact_four_window",
+        "status": (
+            "enrolled"
+            if slots
+            else f"no_valid_exact_{cfg.expected_players}_window"
+            if auto_player_count
+            else "no_valid_exact_four_window"
+        ),
         "slot_count": len(slots),
         "slots": [asdict(slot) for slot in slots],
     }
@@ -787,6 +1343,8 @@ def select_players_payload(
             stitch_vetoes=stitch_vetoes,
             fps=fps,
             config=cfg,
+            hard_excluded_source_ids=hard_excluded_source_ids,
+            reid_audit=reid_audit,
         )
         report["decisions"].extend(binding_decisions)
         report["tracks"] = track_rows
@@ -811,6 +1369,9 @@ def select_players_payload(
 
     output["players"] = output_players
     output["unbound_observations"] = unbound_observations
+    _enforce_hard_export_invariants(output_players, hard_config=hard_cfg)
+    report["decisions"].extend(reid_audit.decisions)
+    report["decisions"].append(reid_audit.summary_decision())
     input_track_frames = report["input_counts"]["track_frames"]
     report["output_counts"] = {
         "players": len(output_players),
@@ -831,6 +1392,7 @@ def _raw_pool_detections(
     embedding_payload: Mapping[str, Any],
     calibration: CourtCalibration,
     config: PlayerSelectionConfig,
+    embedding_bbox_scale: float = 1.0,
 ) -> tuple[SelectionDetection, ...]:
     embedding_index = _selection_embedding_index(embedding_payload)
     frames = raw_pool_payload.get("frames")
@@ -871,9 +1433,16 @@ def _raw_pool_detections(
             if record is not None:
                 embedding, embedding_bbox = record
                 if embedding_bbox is not None:
+                    bbox_in_embedding_space = tuple(
+                        value * embedding_bbox_scale for value in bbox
+                    )
                     delta = max(
                         abs(left - right)
-                        for left, right in zip(bbox, embedding_bbox, strict=True)
+                        for left, right in zip(
+                            bbox_in_embedding_space,
+                            embedding_bbox,
+                            strict=True,
+                        )
                     )
                     if delta > config.raw_match_bbox_delta_px:
                         raise ValueError(
@@ -1061,6 +1630,7 @@ def _pool_fragments(
     detections: Sequence[SelectionDetection],
     *,
     config: PlayerSelectionConfig,
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> list[TrackFragment]:
     by_source: dict[int, list[SelectionDetection]] = defaultdict(list)
     for detection in detections:
@@ -1102,15 +1672,16 @@ def _pool_fragments(
 
         def accumulate_embedding(detection: SelectionDetection) -> None:
             nonlocal embedding_count, embedding_sum
-            if detection.embedding is None:
+            embedding = detection.embedding
+            if embedding is None:
                 return
-            if not detection.embedding:
+            if not embedding:
                 raise ValueError("fragment embeddings must have one non-zero dimension")
             if embedding_sum is None:
-                embedding_sum = [0.0] * len(detection.embedding)
-            if len(detection.embedding) != len(embedding_sum):
+                embedding_sum = [0.0] * len(embedding)
+            if len(embedding) != len(embedding_sum):
                 raise ValueError("fragment embeddings must have one non-zero dimension")
-            for index, value in enumerate(detection.embedding):
+            for index, value in enumerate(embedding):
                 embedding_sum[index] += float(value)
             embedding_count += 1
 
@@ -1124,6 +1695,7 @@ def _pool_fragments(
                     previous=run[-1],
                     detection=detection,
                     config=config,
+                    reid_audit=reid_audit,
                 )
             ):
                 flush()
@@ -1139,12 +1711,32 @@ def _appearance_discontinuity(
     previous: SelectionDetection,
     detection: SelectionDetection,
     config: PlayerSelectionConfig,
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> bool:
-    if centroid is None or detection.embedding is None:
+    detection_embedding = _consultable_embedding(detection)
+    if centroid is None or detection_embedding is None:
         return False
-    distances = [cosine_distance(centroid, detection.embedding)]
+    distances = [
+        _identity_distance(
+            centroid,
+            detection_embedding,
+            reid_audit=reid_audit,
+            trigger_frames=(detection.frame_idx,),
+            comparison="fragment_centroid_discontinuity",
+            context={"raw_detection_uid": detection.raw_detection_uid},
+        )
+    ]
     if previous.embedding is not None:
-        distances.append(cosine_distance(previous.embedding, detection.embedding))
+        distances.append(
+            _identity_distance(
+                previous.embedding,
+                detection_embedding,
+                reid_audit=reid_audit,
+                trigger_frames=(detection.frame_idx,),
+                comparison="fragment_previous_detection_discontinuity",
+                context={"raw_detection_uid": detection.raw_detection_uid},
+            )
+        )
     return any(
         open_set_decision(distance, config) is not OpenSetDecision.ACCEPT
         for distance in distances
@@ -1157,6 +1749,7 @@ def _fragment_stitch_audit(
     *,
     real_by_frame: Mapping[int, Sequence[SelectionDetection]],
     config: PlayerSelectionConfig,
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> tuple[list[dict[str, Any]], set[tuple[str, str]]]:
     by_source: dict[int, list[TrackFragment]] = defaultdict(list)
     for fragment in fragments:
@@ -1181,11 +1774,23 @@ def _fragment_stitch_audit(
                 for detection in real_by_frame.get(frame_idx, ())
                 if detection.source_track_id == source_track_id
             ]
+            trigger_frames = (
+                tuple(
+                    frame_idx
+                    for frame_idx in range(left.end_frame + 1, right.start_frame + 1)
+                    if frame_idx in reid_audit.frames_ambiguous
+                )
+                if reid_audit is not None
+                else tuple(range(left.end_frame + 1, right.start_frame + 1))
+            )
             stitch = evaluate_stitch(
                 left,
                 right,
                 real_support_in_gap=support,
                 config=config,
+                ambiguity_triggered=bool(trigger_frames),
+                reid_audit=reid_audit,
+                trigger_frames=trigger_frames,
             )
             decision = {
                 "action": "stitch_refused" if stitch.refused else "stitch_retained",
@@ -1196,6 +1801,8 @@ def _fragment_stitch_audit(
                 "right_raw_detection_uid": right.detections[0].raw_detection_uid,
                 **asdict(stitch),
                 "open_set": stitch.open_set.value,
+                "reid_trigger_frames": list(trigger_frames),
+                "reid_policy_scope": _REID_POLICY_SCOPE,
             }
             decisions.append(decision)
             if stitch.refused:
@@ -1283,6 +1890,8 @@ def _select_slot_players(
     stitch_vetoes: set[tuple[str, str]],
     fps: float,
     config: PlayerSelectionConfig,
+    hard_excluded_source_ids: frozenset[int] = frozenset(),
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> tuple[
     list[dict[str, Any]],
     list[dict[str, Any]],
@@ -1372,10 +1981,7 @@ def _select_slot_players(
                     "fragment_id": fragment_id,
                     "slot_id": slot.slot_id,
                     "open_set": OpenSetDecision.ACCEPT.value,
-                    "embedding_distance": cosine_distance(
-                        slot.embedding_centroid,
-                        embedding_centroid(registered_fragment.detections),
-                    ),
+                    "embedding_distance": None,
                     "court_presence": presence_evidence(
                         registered_fragment.detections,
                         fps=fps,
@@ -1440,6 +2046,7 @@ def _select_slot_players(
                 fps=fps,
                 config=config,
                 owner_source_ids_by_slot=owner_source_ids_by_slot,
+                reid_audit=reid_audit,
             )
             owner_candidate = next(
                 candidate
@@ -1467,6 +2074,7 @@ def _select_slot_players(
                 fps=fps,
                 config=config,
                 owner_source_ids_by_slot=owner_source_ids_by_slot,
+                reid_audit=reid_audit,
             )
             for fragment in generic_batch
         }
@@ -1509,6 +2117,7 @@ def _select_slot_players(
                         slots=slots,
                         presence=evidence,
                         config=config,
+                        reid_audit=reid_audit,
                     )
                 )
                 if destructive_action_allowed(destructive_evidence):
@@ -1626,6 +2235,7 @@ def _select_slot_players(
                     detection,
                     slots=slots,
                     config=config,
+                    reid_audit=reid_audit,
                 )
                 == slot.slot_id
                 for detection in fragment.detections
@@ -1721,6 +2331,7 @@ def _select_slot_players(
                     detection,
                     slots=slots,
                     config=config,
+                    reid_audit=reid_audit,
                 )
                 if accepted_slot_id == slot.slot_id:
                     candidate_pool.append(detection)
@@ -1733,6 +2344,7 @@ def _select_slot_players(
                 occupied_frames=measured_by_slot[slot.slot_id],
                 preferred_source_track_ids=owner_source_ids_by_slot[slot.slot_id],
                 config=config,
+                reid_audit=reid_audit,
             )
             for detection in recovered:
                 uid = _required_raw_uid(detection)
@@ -1759,6 +2371,26 @@ def _select_slot_players(
                     }
                 )
 
+    hard_dropped_uids: set[str] = set()
+    for slot_id in sorted(measured_by_slot):
+        for frame_idx, detection in list(measured_by_slot[slot_id].items()):
+            if detection.source_track_id not in hard_excluded_source_ids:
+                continue
+            uid = _required_raw_uid(detection)
+            del measured_by_slot[slot_id][frame_idx]
+            used_uids.remove(uid)
+            hard_dropped_uids.add(uid)
+            decisions.append(
+                {
+                    "action": "hard_drop_bound_detection",
+                    "slot_id": slot_id,
+                    "source_track_id": detection.source_track_id,
+                    "frame_idx": frame_idx,
+                    "raw_detection_uid": uid,
+                    "reasons": ["source_track_hard_excluded_after_soft_binding"],
+                }
+            )
+
     slot_players: list[dict[str, Any]] = []
     track_rows: list[dict[str, Any]] = []
     interpolated_total = 0
@@ -1779,7 +2411,27 @@ def _select_slot_players(
                 continue
             left = measured[left_index]
             right = measured[right_index]
-            distance = cosine_distance(left.embedding, right.embedding)
+            trigger_frames = (
+                tuple(
+                    frame_idx
+                    for frame_idx in range(left_index + 1, right_index)
+                    if frame_idx in reid_audit.frames_ambiguous
+                )
+                if reid_audit is not None
+                else tuple(range(left_index + 1, right_index))
+            )
+            distance = _identity_distance(
+                left.embedding,
+                right.embedding,
+                reid_audit=reid_audit,
+                trigger_frames=trigger_frames,
+                comparison="micro_fill_endpoint",
+                context={
+                    "slot_id": slot.slot_id,
+                    "left_frame": left_index,
+                    "right_frame": right_index,
+                },
+            )
             allowed, reasons = micro_fill_allowed(
                 left,
                 right,
@@ -1794,6 +2446,7 @@ def _select_slot_players(
                         "left_frame": left_index,
                         "right_frame": right_index,
                         "reasons": list(reasons),
+                        "reid_trigger_frames": list(trigger_frames),
                     }
                 )
                 continue
@@ -1805,6 +2458,7 @@ def _select_slot_players(
                 current_slot_uids=current_slot_uids,
                 fps=fps,
                 config=config,
+                reid_audit=reid_audit,
             )
             if ambiguous:
                 decisions.append(
@@ -1847,6 +2501,7 @@ def _select_slot_players(
                     "left_frame": left_index,
                     "right_frame": right_index,
                     "interpolated_frames": right_index - left_index - 1,
+                    "reid_trigger_frames": list(trigger_frames),
                     "reasons": [
                         "identity_accept",
                         "within_12_frame_2_5m_no_net_caps",
@@ -1905,6 +2560,7 @@ def _select_slot_players(
         for fragment in dropped_fragments
         for detection in fragment.detections
     }
+    dropped_uids.update(hard_dropped_uids)
     residual_uids = {
         uid for row in unbound_track_rows for uid in row["raw_detection_uids"]
     }
@@ -1942,13 +2598,42 @@ def _binding_candidates(
     fps: float,
     config: PlayerSelectionConfig,
     owner_source_ids_by_slot: Mapping[int, frozenset[int]] | None = None,
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> list[_SlotCandidate]:
     evidence = presence_evidence(fragment.detections, fps=fps, config=config)
     role = _fragment_role(fragment)
-    centroid = embedding_centroid(fragment.detections)
+    trigger_frames = tuple(
+        detection.frame_idx
+        for detection in fragment.detections
+        if not detection.interpolated
+        and _consultable_embedding(detection) is not None
+    )
+    centroid = (
+        _gallery_embedding_centroid(fragment.detections)
+        if trigger_frames
+        else None
+    )
+    appearance_skipped_unambiguous = bool(fragment.detections) and all(
+        detection.reid_policy == _REID_SKIPPED
+        for detection in fragment.detections
+    )
     candidates: list[_SlotCandidate] = []
     for slot in slots:
-        distance = cosine_distance(slot.embedding_centroid, centroid)
+        distance = (
+            _identity_distance(
+                slot.embedding_centroid,
+                centroid,
+                reid_audit=reid_audit,
+                trigger_frames=trigger_frames,
+                comparison="fragment_slot_binding",
+                context={
+                    "fragment_id": fragment.fragment_id,
+                    "slot_id": slot.slot_id,
+                },
+            )
+            if trigger_frames
+            else None
+        )
         open_set = open_set_decision(distance, config)
         score = fusion_score(
             court_presence=evidence.court_presence,
@@ -1982,9 +2667,14 @@ def _binding_candidates(
                 and _fragment_is_incoming_stitch_veto(fragment, stitch_vetoes)
             )
         )
+        unambiguous_geometry_for_slot = (
+            appearance_skipped_unambiguous and role_consistent
+        )
         common_feasible = (
-            centroid is not None
-            and open_set is OpenSetDecision.ACCEPT
+            (
+                (centroid is not None and open_set is OpenSetDecision.ACCEPT)
+                or unambiguous_geometry_for_slot
+            )
             and not stitch_vetoed
             and score >= config.selection_score_min
         )
@@ -2087,12 +2777,34 @@ def _uniquely_accepts_slot(
     *,
     slots: Sequence[SelectionSlot],
     config: PlayerSelectionConfig,
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> int | None:
+    if detection.reid_policy == _REID_SKIPPED:
+        side, role = _provisional_slot_key(detection)
+        matches = [
+            slot.slot_id
+            for slot in slots
+            if (slot.side, slot.role) == (side, role)
+        ]
+        return matches[0] if len(matches) == 1 else None
+    consultable = _consultable_embedding(detection)
+    if consultable is None:
+        return None
     accepted = [
         slot.slot_id
         for slot in slots
         if open_set_decision(
-            cosine_distance(slot.embedding_centroid, detection.embedding),
+            _identity_distance(
+                slot.embedding_centroid,
+                consultable,
+                reid_audit=reid_audit,
+                trigger_frames=(detection.frame_idx,),
+                comparison="single_detection_slot_acceptance",
+                context={
+                    "slot_id": slot.slot_id,
+                    "raw_detection_uid": detection.raw_detection_uid,
+                },
+            ),
             config,
         )
         is OpenSetDecision.ACCEPT
@@ -2109,6 +2821,7 @@ def _ambiguous_real_observations(
     current_slot_uids: set[str],
     fps: float,
     config: PlayerSelectionConfig,
+    reid_audit: _SelectiveReIDAudit | None = None,
 ) -> tuple[SelectionDetection, ...]:
     ambiguous: list[SelectionDetection] = []
     for detection in pool:
@@ -2129,12 +2842,27 @@ def _ambiguous_real_observations(
             > config.recovery_max_speed_m_s * reverse_s
         ):
             continue
-        identity = open_set_decision(
-            cosine_distance(slot.embedding_centroid, detection.embedding),
-            config,
-        )
-        if identity is OpenSetDecision.REJECT:
-            continue
+        if detection.reid_policy != _REID_SKIPPED:
+            consultable = _consultable_embedding(detection)
+            if consultable is None:
+                ambiguous.append(detection)
+                continue
+            identity = open_set_decision(
+                _identity_distance(
+                    slot.embedding_centroid,
+                    consultable,
+                    reid_audit=reid_audit,
+                    trigger_frames=(detection.frame_idx,),
+                    comparison="micro_fill_ambiguous_observation",
+                    context={
+                        "slot_id": slot.slot_id,
+                        "raw_detection_uid": detection.raw_detection_uid,
+                    },
+                ),
+                config,
+            )
+            if identity is OpenSetDecision.REJECT:
+                continue
         ambiguous.append(detection)
     return tuple(
         sorted(
@@ -2362,6 +3090,47 @@ def _detection_payload(detection: SelectionDetection, *, fps: float) -> dict[str
     }
 
 
+def _enforce_hard_export_invariants(
+    players: Sequence[Mapping[str, Any]],
+    *,
+    hard_config: HardConstraintConfig,
+) -> None:
+    if len(players) > hard_config.exactly_four_hard_cap:
+        raise ValueError(
+            "EXACTLY_FOUR_HARD_CAP invariant violated: "
+            f"exported {len(players)} bound players"
+        )
+    player_ids: list[int] = []
+    per_frame: Counter[int] = Counter()
+    for player in players:
+        if not isinstance(player.get("id"), int):
+            raise ValueError("player export contains a non-bound-slot player")
+        player_id = int(player["id"])
+        if not 1 <= player_id <= hard_config.exactly_four_hard_cap:
+            raise ValueError(f"player {player_id} is not a registered bound slot")
+        player_ids.append(player_id)
+        frames = player.get("frames")
+        if not isinstance(frames, list):
+            raise ValueError("bound-slot player export requires a frames list")
+        for payload in frames:
+            if not isinstance(payload, Mapping):
+                raise ValueError("bound-slot player frames must be objects")
+            per_frame[_frame_index(payload, fps=1.0)] += 1
+    if len(player_ids) != len(set(player_ids)):
+        raise ValueError("player export contains duplicate bound slot IDs")
+    violating = [
+        (frame_idx, count)
+        for frame_idx, count in sorted(per_frame.items())
+        if count > hard_config.exactly_four_hard_cap
+    ]
+    if violating:
+        frame_idx, count = violating[0]
+        raise ValueError(
+            "EXACTLY_FOUR_HARD_CAP frame invariant violated: "
+            f"frame {frame_idx} carries {count} player detections"
+        )
+
+
 def _base_report(config: PlayerSelectionConfig, *, status: str) -> dict[str, Any]:
     return {
         "schema_version": 1,
@@ -2545,7 +3314,10 @@ def _bbox_iou(left: Sequence[float], right: Sequence[float]) -> float:
 
 
 __all__ = [
+    "COURT_REGION_HARD_BOUND_M",
     "DROP_TRIGGER_REASON_VOCABULARY",
+    "EXACTLY_FOUR_HARD_CAP",
+    "HardConstraintConfig",
     "OpenSetDecision",
     "PlayerSelectionConfig",
     "PresenceEvidence",
@@ -2561,11 +3333,14 @@ __all__ = [
     "frame_court_evidence",
     "fusion_score",
     "identity_match_score",
+    "infer_active_player_count",
     "mark_micro_fill_provenance",
+    "median_real_footpoint_court_excess_m",
     "micro_fill_allowed",
     "off_court_excess_m",
     "open_set_decision",
     "presence_evidence",
     "recover_identity_conditioned_pool",
+    "registered_hard_constraint_exclusions",
     "select_players_payload",
 ]

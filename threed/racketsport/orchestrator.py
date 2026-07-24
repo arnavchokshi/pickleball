@@ -23,6 +23,7 @@ from .body_compute import (
     DEFAULT_BODY_SKELETON_STRIDE,
     TIER2_BODY_JOINTS_REPRESENTATION,
     build_body_compute_execution,
+    build_court_skeletons_body_compute_execution,
     build_empty_body_compute_execution,
     body_frame_batches_from_execution,
     write_body_compute_execution,
@@ -1023,6 +1024,7 @@ class BodyStageRunner:
     def __init__(
         self,
         *,
+        pipeline_preset: Literal["full", "court_skeletons"] = "full",
         manifest_path: str | Path = DEFAULT_BODY_MODEL_MANIFEST,
         fast_sam_repo: str | Path = DEFAULT_FAST_SAM_REPO,
         runtime: Any | None = None,
@@ -1056,6 +1058,12 @@ class BodyStageRunner:
         body_world_joint_visual_smoothing: bool = True,
         experimental_body_array_native: bool = DEFAULT_BODY_ARRAY_NATIVE,
     ) -> None:
+        if pipeline_preset not in {"full", "court_skeletons"}:
+            raise ValueError("pipeline_preset must be 'full' or 'court_skeletons'")
+        if pipeline_preset == "court_skeletons" and write_body_monoliths:
+            raise ValueError("court_skeletons does not serialize BODY monoliths")
+        self.pipeline_preset = pipeline_preset
+        self.skeleton_only = pipeline_preset == "court_skeletons"
         self.manifest_path = Path(manifest_path)
         self.fast_sam_repo = Path(fast_sam_repo)
         self._runtime = runtime
@@ -1064,12 +1072,12 @@ class BodyStageRunner:
         self.smoothing_alpha = smoothing_alpha
         self.max_root_speed_mps = max_root_speed_mps
         self.max_track_anchor_smoothing_residual_m = max_track_anchor_smoothing_residual_m
-        self.tier2_body_joints_all_tracked = bool(tier2_body_joints_all_tracked)
+        self.tier2_body_joints_all_tracked = bool(tier2_body_joints_all_tracked) or self.skeleton_only
         if int(body_skeleton_stride) <= 0:
             raise ValueError("body_skeleton_stride must be positive")
         self.body_skeleton_stride = int(body_skeleton_stride)
-        self.mesh_vertex_serialization_policy = mesh_vertex_serialization_policy
-        self.write_body_monoliths = bool(write_body_monoliths)
+        self.mesh_vertex_serialization_policy = "tier1_only" if self.skeleton_only else mesh_vertex_serialization_policy
+        self.write_body_monoliths = False if self.skeleton_only else bool(write_body_monoliths)
         self.sam3d_body_input_size_px = normalize_body_input_size(sam3d_body_input_size_px)
         self.sam3d_crop_bucket_sizes = tuple(int(value) for value in sam3d_crop_bucket_sizes)
         self.sam3d_crop_padding_scale = normalize_crop_padding_scale(sam3d_crop_padding_scale)
@@ -1084,13 +1092,13 @@ class BodyStageRunner:
         self.sam3d_steady_state_empty_cache = bool(sam3d_steady_state_empty_cache)
         self.sam3d_inner_bucket_sync = bool(sam3d_inner_bucket_sync)
         self.sam3d_upstream_env = _normalize_sam3d_upstream_env(sam3d_upstream_env or {})
-        self.sam3d_tier2_output_lite = bool(sam3d_tier2_output_lite)
+        self.sam3d_tier2_output_lite = bool(sam3d_tier2_output_lite) or self.skeleton_only
         self.sam3d_wrist_bone_lock = bool(sam3d_wrist_bone_lock)
         self.body_postchain = BodyPostChainConfig(
             temporal_smoothing=bool(body_temporal_smoothing),
             foot_lock=bool(body_foot_lock),
             foot_pin=bool(body_foot_pin),
-            contact_splice=bool(body_contact_splice),
+            contact_splice=bool(body_contact_splice) and not self.skeleton_only,
             wrist_lock=bool(sam3d_wrist_bone_lock),
             world_joint_visual_smoothing=bool(body_world_joint_visual_smoothing),
         )
@@ -1102,6 +1110,8 @@ class BodyStageRunner:
             "artifact_type": "racketsport_sam3d_tier2_config",
             "source": "sam3d_tier2_impl_20260703T0xZ",
             "body_stage": {
+                "pipeline_preset": self.pipeline_preset,
+                "skeleton_only": self.skeleton_only,
                 "skeleton_source": "sam3d_body_joints",
                 "tier2_body_joints_all_tracked": self.tier2_body_joints_all_tracked,
                 "body_skeleton_stride": self.body_skeleton_stride,
@@ -1130,7 +1140,9 @@ class BodyStageRunner:
                 "sam3d_wrist_bone_lock": self.sam3d_wrist_bone_lock,
                 "experimental_body_array_native": self.experimental_body_array_native,
                 "body_joint_builder": (
-                    "array_native_shared_worldhmr_compute"
+                    "court_skeletons_shared_worldhmr_compute"
+                    if self.skeleton_only
+                    else "array_native_shared_worldhmr_compute"
                     if self.experimental_body_array_native
                     else "legacy_worldhmr_build_body_artifacts_from_fast_sam"
                 ),
@@ -1215,11 +1227,19 @@ class BodyStageRunner:
         try:
             assets = verify_fast_sam_manifest_assets(self.manifest_path, required_model_ids=required_model_ids)
         except Exception as exc:
-            body_execution = build_empty_body_compute_execution(
-                tracks,
-                mode="adaptive_frame_compute_plan" if body_plan_path.is_file() else "lane_b_requires_frame_compute_plan",
-                source_plan=str(body_plan_path) if body_plan_path.is_file() else None,
-                skeleton_stride=self.body_skeleton_stride,
+            body_execution = (
+                build_court_skeletons_body_compute_execution(
+                    tracks,
+                    max_frames=context.max_frames,
+                    skeleton_stride=self.body_skeleton_stride,
+                )
+                if self.skeleton_only
+                else build_empty_body_compute_execution(
+                    tracks,
+                    mode="adaptive_frame_compute_plan" if body_plan_path.is_file() else "lane_b_requires_frame_compute_plan",
+                    source_plan=str(body_plan_path) if body_plan_path.is_file() else None,
+                    skeleton_stride=self.body_skeleton_stride,
+                )
             )
             if "sha256 mismatch" in str(exc):
                 body_execution["fail_closed_reason"] = "manifest_asset_preflight_sha256_mismatch"
@@ -1227,12 +1247,25 @@ class BodyStageRunner:
             raise
 
         artifact_io_start = time.perf_counter()
-        lane_b_plan = _ensure_body_frame_plan_from_sam3d(context, tracks)
-        body_execution = _precomputed_process_video_body_execution(
-            context,
-            skeleton_stride=self.body_skeleton_stride,
-        )
-        if body_execution is None:
+        if self.skeleton_only:
+            lane_b_plan = {
+                "source": "court_skeletons_measured_tracks",
+                "contact_event_count": 0,
+                "generated_artifacts": [],
+            }
+            body_execution = build_court_skeletons_body_compute_execution(
+                tracks,
+                max_frames=context.max_frames,
+                skeleton_stride=self.body_skeleton_stride,
+            )
+            write_body_compute_execution(context.run_dir / "body_compute_execution.json", body_execution)
+        else:
+            lane_b_plan = _ensure_body_frame_plan_from_sam3d(context, tracks)
+            body_execution = _precomputed_process_video_body_execution(
+                context,
+                skeleton_stride=self.body_skeleton_stride,
+            )
+        if not self.skeleton_only and body_execution is None:
             body_execution = build_body_compute_execution(
                 tracks,
                 frame_plan_path=body_plan_path,
@@ -1554,7 +1587,27 @@ class BodyStageRunner:
         raw_grounded_joints: dict[str, Any] | None = None
         body_joint_builder = "legacy_worldhmr_build_body_artifacts_from_fast_sam"
         smpl_payload_start = time.perf_counter()
-        if samples and self.experimental_body_array_native:
+        if samples and self.skeleton_only:
+            body_joint_builder = "court_skeletons_shared_worldhmr_compute"
+            computed = compute_body_skeleton_and_metrics(
+                samples,
+                calibration=calibration,
+                fps=tracks.fps,
+                smoothing_alpha=self.smoothing_alpha,
+                max_root_speed_mps=self.max_root_speed_mps,
+                max_track_anchor_smoothing_residual_m=self.max_track_anchor_smoothing_residual_m,
+                sam3d_wrist_bone_lock=self.sam3d_wrist_bone_lock,
+                stance_index=stance_index,
+                grounding_anchor_source=grounding_anchor_source,
+                body_postchain=self.body_postchain,
+            )
+            smpl_motion = computed.smpl_motion_view
+            skeleton3d = computed.skeleton3d
+            grounding_metrics = computed.metrics
+            raw_grounded_joints = computed.raw_grounded_joints
+            phase_timings["smpl_motion_payload_assembly_s"] = 0.0
+            phase_timings["array_native_gate_feed_s"] = max(0.0, time.perf_counter() - smpl_payload_start)
+        elif samples and self.experimental_body_array_native:
             body_joint_builder = "array_native_shared_worldhmr_compute"
             array_native_start = time.perf_counter()
             array_native = build_body_array_native_artifacts_from_fast_sam(
@@ -1637,7 +1690,11 @@ class BodyStageRunner:
         if raw_grounded_joints is not None:
             _write_json_artifact(context.run_dir / RAW_GROUNDED_JOINTS_ARTIFACT, raw_grounded_joints)
             raw_grounded_joints_written = True
-        monolith_skip_reason = "not built (speed default; rerun with --fetch-body-monoliths to produce them)"
+        monolith_skip_reason = (
+            "disabled by pipeline_preset=court_skeletons"
+            if self.skeleton_only
+            else "not built (speed default; rerun with --fetch-body-monoliths to produce them)"
+        )
         serialization_timings = []
         if self.write_body_monoliths:
             serialization_timings.append(_write_compact_json_artifact(context.run_dir / "smpl_motion.json", smpl_motion))
@@ -1666,7 +1723,13 @@ class BodyStageRunner:
             skeleton3d_payload = skeleton3d.model_dump(mode="json") if hasattr(skeleton3d, "model_dump") else skeleton3d
         mesh_export_start = time.perf_counter()
         body_mesh: dict[str, Any] | None = None
-        if self.write_body_monoliths:
+        if self.skeleton_only:
+            body_mesh_summary = {
+                "mesh_frame_count": 0,
+                "player_count": 0,
+                "contact_window_count": 0,
+            }
+        elif self.write_body_monoliths:
             body_mesh = build_body_mesh_export(
                 smpl_motion_payload,
                 clip=context.clip,
@@ -1696,7 +1759,16 @@ class BodyStageRunner:
                 _skipped_compact_json_artifact(context.run_dir / "body_mesh.json", reason=monolith_skip_reason)
             )
         index_build_start = time.perf_counter()
-        if self.write_body_monoliths:
+        if self.skeleton_only:
+            body_mesh_index_result = {
+                "summary": {
+                    "window_count": 0,
+                    "mesh_frame_count": 0,
+                    "player_count": 0,
+                }
+            }
+            body_mesh_for_splice = {}
+        elif self.write_body_monoliths:
             assert body_mesh is not None
             body_mesh_index_result = build_body_mesh_index_from_payload(
                 body_mesh,
@@ -1762,12 +1834,18 @@ class BodyStageRunner:
             clip=context.clip,
             smpl_motion=smpl_motion_payload,
             skeleton3d=skeleton3d_payload,
-            frame_compute_plan=_read_optional_json(context.run_dir / "frame_compute_plan.json"),
+            frame_compute_plan=(
+                None
+                if self.skeleton_only
+                else _read_optional_json(context.run_dir / "frame_compute_plan.json")
+            ),
             body_compute_execution=body_execution,
             body_full_clip_gate=full_clip_gate,
             smpl_motion_path=str(context.run_dir / "smpl_motion.json"),
             skeleton3d_path=str(context.run_dir / "skeleton3d.json"),
-            frame_compute_plan_path=str(context.run_dir / "frame_compute_plan.json"),
+            frame_compute_plan_path=(
+                "" if self.skeleton_only else str(context.run_dir / "frame_compute_plan.json")
+            ),
             body_compute_execution_path=str(context.run_dir / "body_compute_execution.json"),
             body_full_clip_gate_path=str(context.run_dir / "body_full_clip_gate.json"),
         )
@@ -1798,8 +1876,6 @@ class BodyStageRunner:
             "body_compute_execution.json",
             "sam3d_tier2_config.json",
             "sam3d_body_input_prep.json",
-            "body_mesh_index/body_mesh_index.json",
-            "body_mesh_index/body_mesh_faces.json",
             "body_serialization_timing.json",
             "body_stage_phase_timing.json",
             "contact_splice.json",
@@ -1809,6 +1885,11 @@ class BodyStageRunner:
             "body_full_clip_gate.json",
             "body_grounding_quality.json",
         ]
+        if not self.skeleton_only:
+            produced_artifacts[3:3] = [
+                "body_mesh_index/body_mesh_index.json",
+                "body_mesh_index/body_mesh_faces.json",
+            ]
         if self.write_body_monoliths:
             produced_artifacts[3:3] = ["smpl_motion.json", "body_mesh.json"]
         if raw_grounded_joints_written:
@@ -1816,7 +1897,9 @@ class BodyStageRunner:
         notes = [
             "Fast SAM-3D-Body runtime output converted to court/world coordinates with court_calibration.json",
             (
-                "BODY skeleton/joint computation used legacy worldhmr.build_body_artifacts_from_fast_sam; "
+                "BODY skeleton/joint computation used the court_skeletons shared joint compute without mesh assembly"
+                if self.skeleton_only
+                else "BODY skeleton/joint computation used legacy worldhmr.build_body_artifacts_from_fast_sam; "
                 "array-native shared compute was explicitly disabled"
                 if body_joint_builder != "array_native_shared_worldhmr_compute"
                 else "BODY skeleton/joint computation used shared worldhmr.compute_body_skeleton_and_metrics; monolith assembly skipped unless requested"
@@ -1828,7 +1911,9 @@ class BodyStageRunner:
             "spliced scheduled hitter mesh joints into existing skeleton3d.json at contact frames"
             if preserved_existing_skeleton
             else (
-                "kept SAM3D body-mode skeleton3d.json as the skeleton source while body_mesh.json carries tier-1 mesh frames"
+                "kept SAM3D body-mode skeleton3d.json as the skeleton source; court_skeletons intentionally emitted no mesh artifacts"
+                if self.skeleton_only
+                else "kept SAM3D body-mode skeleton3d.json as the skeleton source while body_mesh.json carries tier-1 mesh frames"
                 if self.write_body_monoliths
                 else "kept SAM3D body-mode skeleton3d.json as the skeleton source while body_mesh_index/ carries tier-1 mesh frames"
             ),
@@ -1849,7 +1934,11 @@ class BodyStageRunner:
         if binary_handoff_note:
             notes.append(binary_handoff_note)
         if not self.write_body_monoliths:
-            notes.append("BODY monoliths smpl_motion.json/body_mesh.json were not built (speed default; rerun with --fetch-body-monoliths to produce them)")
+            notes.append(
+                "BODY mesh index and monoliths were intentionally not built by pipeline_preset=court_skeletons"
+                if self.skeleton_only
+                else "BODY monoliths smpl_motion.json/body_mesh.json were not built (speed default; rerun with --fetch-body-monoliths to produce them)"
+            )
         if not self.body_postchain.is_default:
             notes.append(
                 "BODY post-chain bypassed stages: "
@@ -1870,6 +1959,8 @@ class BodyStageRunner:
             wall_seconds=body_stage_wall_seconds,
             metrics={
                 **grounding_metrics,
+                "pipeline_preset": self.pipeline_preset,
+                "skeleton_only": self.skeleton_only,
                 "body_compute_mode": body_execution["mode"],
                 "sam3d_tier2_body_joints_all_tracked": self.tier2_body_joints_all_tracked,
                 "sam3d_mesh_vertex_serialization_policy": self.mesh_vertex_serialization_policy,

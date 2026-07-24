@@ -313,6 +313,8 @@ def _tracked_frame_indexes(tracks: Tracks) -> set[int]:
     indexes: set[int] = set()
     for player in tracks.players:
         for frame in player.frames:
+            if bool(getattr(frame, "interpolated", False)):
+                continue
             indexes.add(int(round(float(frame.t) * tracks.fps)))
     return indexes
 

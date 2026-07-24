@@ -40,6 +40,7 @@ def test_build_process_video_args_produces_expected_arg_list() -> None:
     assert args[args.index("--video") + 1] == "/srv/pickleball/runs/render_jobs/job_1/input/clip.mp4"
     assert args[args.index("--out") + 1] == "/srv/pickleball/runs/render_jobs/job_1/out"
     assert args[args.index("--clip") + 1] == "clip_1"
+    assert args[args.index("--pipeline-preset") + 1] == "court_skeletons"
     assert "--body-local" in args
     assert args[args.index("--device") + 1] == "cuda:0"
     assert "--json" in args
@@ -77,6 +78,22 @@ def test_build_process_video_args_omits_optional_flags_when_absent() -> None:
     assert "--capture-sidecar" not in args
     assert "--court-corners" not in args
     assert "--court-calibration" not in args
+    assert args[args.index("--pipeline-preset") + 1] == "court_skeletons"
+
+
+def test_build_process_video_args_can_explicitly_request_full_pipeline() -> None:
+    args = build_process_video_args(
+        python="python3",
+        script="scripts/racketsport/process_video.py",
+        video="/tmp/in/clip.mp4",
+        out="/tmp/out",
+        clip="clip_1",
+        model_root="/opt/pickleball",
+        sidecar=None,
+        max_frames=None,
+        pipeline_preset="full",
+    )
+    assert args[args.index("--pipeline-preset") + 1] == "full"
 
 
 def test_build_process_video_args_rejects_unsafe_clip_slug() -> None:

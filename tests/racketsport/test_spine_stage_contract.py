@@ -24,7 +24,7 @@ def _frames_pipeline(tmp_path: Path) -> process_video.ProcessVideoPipeline:
     return process_video.ProcessVideoPipeline(options)
 
 
-def test_authoritative_graph_projects_exact_23_24_25_stage_contracts() -> None:
+def test_authoritative_graph_projects_exact_24_25_26_stage_contracts() -> None:
     serial = process_video.authoritative_stage_names(
         rally_gating=False,
         verify_viewer=False,
@@ -36,19 +36,55 @@ def test_authoritative_graph_projects_exact_23_24_25_stage_contracts() -> None:
         body_schedule="overlap",
     )
 
-    assert len(serial) == 23
-    assert len(process_video.authoritative_stage_names(rally_gating=True, verify_viewer=False)) == 24
-    assert len(process_video.authoritative_stage_names(rally_gating=False, verify_viewer=True)) == 24
-    assert len(process_video.authoritative_stage_names(rally_gating=True, verify_viewer=True)) == 25
+    assert len(serial) == 24
+    assert len(process_video.authoritative_stage_names(rally_gating=True, verify_viewer=False)) == 25
+    assert len(process_video.authoritative_stage_names(rally_gating=False, verify_viewer=True)) == 25
+    assert len(process_video.authoritative_stage_names(rally_gating=True, verify_viewer=True)) == 26
     assert set(overlap) == set(serial)
-    assert serial[6:12] == ("ball", "ball_arc", "events", "ball_fill", "frames", "body")
-    assert overlap[6:12] == ("frames", "ball", "ball_arc", "events", "ball_fill", "body")
-    assert serial[13:16] == overlap[13:16] == (
+    assert serial[7:13] == ("ball", "ball_arc", "events", "ball_fill", "frames", "body")
+    assert overlap[7:13] == ("frames", "ball", "ball_arc", "events", "ball_fill", "body")
+    assert serial[14:17] == overlap[14:17] == (
         "grounding_refine",
         "placement_trajectory_refine",
         "paddle_pose",
     )
-    assert serial[16:19] == overlap[16:19] == ("events_refined", "ball_arc_refined", "world")
+    assert serial[17:20] == overlap[17:20] == ("events_refined", "ball_arc_refined", "world")
+
+
+def test_court_skeletons_is_a_reduced_projection_of_the_canonical_graph() -> None:
+    names = process_video.authoritative_stage_names(
+        rally_gating=True,
+        verify_viewer=True,
+        player_selection=True,
+        pipeline_preset="court_skeletons",
+    )
+    assert names == (
+        "ingest",
+        "calibration",
+        "input_quality",
+        "tracking",
+        "player_selection",
+        "camera_motion",
+        "placement",
+        "frames",
+        "body",
+        "placement_refine",
+        "grounding_refine",
+        "placement_trajectory_refine",
+        "world",
+        "confidence_gate",
+        "manifest",
+        "verify",
+    )
+    assert not {
+        "ball",
+        "ball_arc",
+        "events",
+        "ball_fill",
+        "paddle_pose",
+        "match_stats",
+        "coaching_facts",
+    }.intersection(names)
 
 
 def test_typed_optional_absence_degrades_and_execution_continues(tmp_path: Path) -> None:

@@ -168,6 +168,10 @@ from threed.racketsport.camera_motion import (  # noqa: E402
     write_camera_motion_json,
 )
 from threed.racketsport.person_reid_diagnostics import resolve_reid_device  # noqa: E402
+from threed.racketsport.player_selection import (  # noqa: E402
+    EXACTLY_FOUR_HARD_CAP,
+    select_players_payload,
+)
 from threed.racketsport.placement import PlacementConfig, rewrite_tracks_with_placement  # noqa: E402
 from threed.racketsport.placement_trajectory_refine import (  # noqa: E402
     PLACEMENT_REFINED_SCHEMA_VERSION,
@@ -212,7 +216,11 @@ from threed.racketsport.replay_viewer_manifest import (  # noqa: E402
     build_replay_viewer_manifest,
     write_replay_viewer_manifest,
 )
-from threed.racketsport.schemas import validate_artifact_file  # noqa: E402
+from threed.racketsport.schemas import (  # noqa: E402
+    CourtCalibration,
+    Tracks,
+    validate_artifact_file,
+)
 from threed.racketsport.trust_band import (  # noqa: E402
     build_trust_band,
     derive_ball_trust_band,
@@ -234,6 +242,7 @@ from scripts.racketsport.remote_body_dispatch import (  # noqa: E402
     RemoteConfig,
     dispatch_body_stage,
 )
+from scripts.racketsport import select_players_from_pool as player_selection_cli  # noqa: E402
 
 
 VIDEO_SUFFIXES = {".mp4", ".mov", ".m4v", ".avi", ".mkv"}
@@ -243,6 +252,16 @@ INPUT_QUALITY_MODES = tuple(str(mode) for mode in BEST_STACK_MANIFEST.value("inp
 DEFAULT_INPUT_QUALITY_MODE = str(BEST_STACK_MANIFEST.value("input_quality.preflight")["mode"])
 DEFAULT_MATCH_STATS_ENABLED = bool(BEST_STACK_MANIFEST.value("stats.match_stats_v0")["enabled"])
 DEFAULT_REID_MODEL = BEST_STACK_MANIFEST.path_value("tracking.reid_model", must_exist=False)
+PLAYER_SELECTION_STACK_KEY = "tracking.player_selection_layer"
+PLAYER_SELECTION_STACK_VALUE = BEST_STACK_MANIFEST.value(PLAYER_SELECTION_STACK_KEY)
+if (
+    not isinstance(PLAYER_SELECTION_STACK_VALUE, Mapping)
+    or not isinstance(PLAYER_SELECTION_STACK_VALUE.get("enabled"), bool)
+):
+    raise ValueError(
+        f"best_stack entry {PLAYER_SELECTION_STACK_KEY!r} must declare boolean value.enabled"
+    )
+DEFAULT_PLAYER_SELECTION_ENABLED = bool(PLAYER_SELECTION_STACK_VALUE["enabled"])
 DEFAULT_ASSOCIATION_COURT_MARGIN_M = float(
     BEST_STACK_MANIFEST.value("tracking.association_court_margin")["strongest_arm_m"]
 )
@@ -254,6 +273,27 @@ DEFAULT_TARGET_MESH_FRAME_BUDGET = BEST_STACK_MANIFEST.value("mesh.target_frame_
 DEFAULT_MESH_BYTE_BUDGET_MIB = BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib")
 DEFAULT_BODY_SKELETON_STRIDE = int(BEST_STACK_MANIFEST.value("body.skeleton_stride"))
 DEFAULT_BODY_ARRAY_NATIVE = BEST_STACK_MANIFEST.bool_value("body.experimental_body_array_native")
+PIPELINE_PRESETS = ("full", "court_skeletons")
+COURT_SKELETON_STAGE_NAMES = frozenset(
+    {
+        "ingest",
+        "calibration",
+        "input_quality",
+        "tracking",
+        "player_selection",
+        "camera_motion",
+        "placement",
+        "frames",
+        "body",
+        "placement_refine",
+        "grounding_refine",
+        "placement_trajectory_refine",
+        "world",
+        "confidence_gate",
+        "manifest",
+        "verify",
+    }
+)
 PLACEMENT_TRAJECTORY_REFINE_STACK_KEY = "body.placement_trajectory_refine"
 PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE = BEST_STACK_MANIFEST.value(PLACEMENT_TRAJECTORY_REFINE_STACK_KEY)
 if (
@@ -353,7 +393,7 @@ class PipelineStageDefinition:
     name: str
     serial_order: int
     overlap_order: int
-    enabled_by: Literal["rally_gating", "verify_viewer"] | None = None
+    enabled_by: Literal["player_selection", "rally_gating", "verify_viewer"] | None = None
 
 
 # NS-01.6: this is the only ordered stage-graph definition. Serial and overlap
@@ -365,6 +405,7 @@ AUTHORITATIVE_STAGE_GRAPH: tuple[PipelineStageDefinition, ...] = (
     PipelineStageDefinition("calibration", 10, 10),
     PipelineStageDefinition("input_quality", 20, 20),
     PipelineStageDefinition("tracking", 30, 30),
+    PipelineStageDefinition("player_selection", 35, 35, "player_selection"),
     PipelineStageDefinition("camera_motion", 40, 40),
     PipelineStageDefinition("placement", 50, 50),
     PipelineStageDefinition("rally_gating", 60, 60, "rally_gating"),
@@ -393,17 +434,27 @@ def authoritative_stage_names(
     *,
     rally_gating: bool,
     verify_viewer: bool,
+    player_selection: bool = True,
     body_schedule: Literal["serial", "overlap"] = "serial",
+    pipeline_preset: Literal["full", "court_skeletons"] = "full",
 ) -> tuple[str, ...]:
     """Project the canonical graph into the selected runtime schedule."""
 
-    enabled = {"rally_gating": rally_gating, "verify_viewer": verify_viewer}
+    enabled = {
+        "player_selection": player_selection,
+        "rally_gating": rally_gating,
+        "verify_viewer": verify_viewer,
+    }
     order_field = "overlap_order" if body_schedule == "overlap" else "serial_order"
     nodes = [
         node
         for node in AUTHORITATIVE_STAGE_GRAPH
         if node.enabled_by is None or enabled[node.enabled_by]
     ]
+    if pipeline_preset == "court_skeletons":
+        nodes = [node for node in nodes if node.name in COURT_SKELETON_STAGE_NAMES]
+    elif pipeline_preset != "full":
+        raise ValueError(f"unsupported pipeline preset: {pipeline_preset}")
     return tuple(node.name for node in sorted(nodes, key=lambda node: getattr(node, order_field)))
 
 
@@ -493,24 +544,25 @@ RUN_IDENTITY_DEPENDENCIES: dict[str, tuple[str, ...]] = {
     "calibration": ("ingest",),
     "input_quality": ("calibration",),
     "tracking": ("calibration", "input_quality"),
-    "camera_motion": ("ingest", "calibration", "tracking"),
-    "placement": ("calibration", "tracking", "camera_motion"),
-    "rally_gating": ("tracking",),
+    "player_selection": ("calibration", "tracking"),
+    "camera_motion": ("ingest", "calibration", "player_selection"),
+    "placement": ("calibration", "player_selection", "camera_motion"),
+    "rally_gating": ("player_selection",),
     "ball": ("ingest", "calibration"),
     "ball_arc": ("ball", "calibration"),
-    "events": ("ball", "tracking"),
+    "events": ("ball", "player_selection"),
     "ball_fill": ("ball", "events", "calibration"),
-    "frames": ("tracking", "events", "ball"),
-    "body": ("calibration", "tracking", "camera_motion", "frames"),
+    "frames": ("player_selection", "events", "ball"),
+    "body": ("calibration", "player_selection", "camera_motion", "frames"),
     "placement_refine": ("placement", "body"),
-    "grounding_refine": ("calibration", "tracking", "events", "body", "placement_refine"),
-    "placement_trajectory_refine": ("tracking", "placement", "body", "grounding_refine"),
+    "grounding_refine": ("calibration", "player_selection", "events", "body", "placement_refine"),
+    "placement_trajectory_refine": ("player_selection", "placement", "body", "grounding_refine"),
     "paddle_pose": ("body",),
     "events_refined": ("events", "grounding_refine", "paddle_pose"),
     "ball_arc_refined": ("ball_arc", "events_refined"),
     "world": (
         "calibration",
-        "tracking",
+        "player_selection",
         "ball_fill",
         "body",
         "placement_refine",
@@ -533,6 +585,7 @@ RUN_IDENTITY_CONFIG_KEYS: dict[str, tuple[str, ...]] = {
         "tracking.global_association_profile",
         "tracking.association_court_margin",
     ),
+    "player_selection": (PLAYER_SELECTION_STACK_KEY,),
     "camera_motion": ("camera_motion.policy",),
     "placement": ("placement.undistort",),
     "ball": ("ball.wasb_checkpoint", "ball.wasb_repo", "ball.detection_stride"),
@@ -564,6 +617,11 @@ RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
     ),
     "input_quality": ("input_quality.json",),
     "tracking": ("tracks.json",),
+    "player_selection": (
+        "tracks_preselection.json",
+        "selection_report.json",
+        "tracks.json",
+    ),
     "camera_motion": ("camera_motion.json",),
     "placement": ("placement.json", "tracks_prewrite_backup.json"),
     "rally_gating": ("rally_spans.json",),
@@ -616,6 +674,7 @@ class PipelineOptions:
     max_frames: int | None = None
     force: bool = False
     device: str | None = None
+    pipeline_preset: Literal["full", "court_skeletons"] = "full"
 
     court_corners: Path | None = None
     capture_sidecar: Path | None = None
@@ -632,6 +691,8 @@ class PipelineOptions:
     global_association: bool = True
     global_association_profile: str | None = None
     reid_model: Path = DEFAULT_REID_MODEL
+    player_selection: bool = DEFAULT_PLAYER_SELECTION_ENABLED
+    player_selection_explicit: bool = False
 
     ball_track_reuse: Path | None = None
     ball_candidates_reuse: tuple[Path, ...] = ()
@@ -775,6 +836,9 @@ class ProcessVideoPipeline:
                 continue
             if path.is_file():
                 path.unlink()
+        if self.options.player_selection:
+            for name in ("tracks_preselection.json", "selection_report.json"):
+                (self.clip_dir / name).unlink(missing_ok=True)
 
     @staticmethod
     def _camera_motion_auto_decision(
@@ -872,10 +936,25 @@ class ProcessVideoPipeline:
             callable_sha256 = (
                 COURT_LINE_POOL_DEFAULT_OFF_CALLABLE_SHA256[name]
             )
+        code_identity = {"callable_sha256": callable_sha256}
+        if name == "player_selection":
+            code_identity["player_selection_module_sha256"] = str(
+                _content_hash(ROOT / "threed/racketsport/player_selection.py")
+            )
+        dependencies = RUN_IDENTITY_DEPENDENCIES.get(name, ())
+        if not self.options.player_selection:
+            dependencies = tuple(
+                "tracking" if dependency == "player_selection" else dependency
+                for dependency in dependencies
+            )
+        active_stage_names = set(self._authoritative_stage_names())
+        dependencies = tuple(
+            dependency for dependency in dependencies if dependency in active_stage_names
+        )
         return StageSpec(
             name=name,
-            dependencies=RUN_IDENTITY_DEPENDENCIES.get(name, ()),
-            code={"callable_sha256": callable_sha256},
+            dependencies=dependencies,
+            code=code_identity,
             config=config,
             models=models,
             explicit_inputs=explicit_inputs,
@@ -883,7 +962,7 @@ class ProcessVideoPipeline:
 
     def _stage_identity_options(self, name: str) -> dict[str, Any]:
         opts = self.options
-        common = {"sport": opts.sport}
+        common = {"sport": opts.sport, "pipeline_preset": opts.pipeline_preset}
         by_stage: dict[str, dict[str, Any]] = {
             "calibration": {
                 "allow_auto_court_corners_preview": opts.allow_auto_court_corners_preview,
@@ -909,6 +988,14 @@ class ProcessVideoPipeline:
                     self._resolved_person_detector_identity_payload()
                     if name == "tracking"
                     else None
+                ),
+            },
+            "player_selection": {
+                "enabled": opts.player_selection,
+                "enablement_source": (
+                    "explicit_flag"
+                    if opts.player_selection_explicit
+                    else "best_stack"
                 ),
             },
             "rally_gating": {"enabled": opts.rally_gating, "pad_seconds": opts.rally_gating_pad_seconds},
@@ -1039,6 +1126,14 @@ class ProcessVideoPipeline:
                 "tracks": opts.tracks_reuse,
                 "raw_pool": opts.tracking_raw_pool_reuse,
                 "reid_embeddings": opts.tracking_reid_embeddings_reuse,
+            }
+        elif name == "player_selection":
+            candidates = {
+                "tracks_preselection_input": self.clip_dir / "tracks.json",
+                "raw_pool": self._player_selection_raw_pool_path(),
+                "reid_embeddings": self._player_selection_embeddings_path(),
+                "calibration": self.clip_dir / "court_calibration.json",
+                "authority_summary": self._player_selection_authority_summary_path(),
             }
         elif name == "camera_motion":
             candidates = {"camera_motion": opts.camera_motion_path}
@@ -1194,7 +1289,9 @@ class ProcessVideoPipeline:
         return authoritative_stage_names(
             rally_gating=self.options.rally_gating,
             verify_viewer=self.options.verify_viewer,
+            player_selection=self.options.player_selection,
             body_schedule=body_schedule or self.options.body_schedule,
+            pipeline_preset=self.options.pipeline_preset,
         )
 
     def _stage_fns(self, names: Sequence[str]) -> list[tuple[str, Callable[[], StageOutcome]]]:
@@ -1604,11 +1701,28 @@ class ProcessVideoPipeline:
             if self.options.court_line_evidence_pooling
             else False
         )
+        reusable_skeleton_calibration = False
+        if target.is_file() and self.options.pipeline_preset == "court_skeletons":
+            try:
+                reusable_payload = _read_json(target)
+                reusable_skeleton_calibration = (
+                    reusable_payload.get("usage") == "visualization_only"
+                    and reusable_payload.get("authority_state") == "review_only"
+                    and reusable_payload.get("measurement_valid") is False
+                    and (self.clip_dir / "court_lock.json").is_file()
+                    and (self.clip_dir / "court_lock_visualization_adapter.json").is_file()
+                )
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                reusable_skeleton_calibration = False
         if (
             target.is_file()
             and not self.options.force
             and self._identity_allows_reuse("calibration")
             and _valid_artifact("court_calibration", target)
+            and (
+                self.options.pipeline_preset == "full"
+                or reusable_skeleton_calibration
+            )
             and (
                 pooling_artifacts_present
                 if self.options.court_line_evidence_pooling
@@ -1635,6 +1749,90 @@ class ProcessVideoPipeline:
             )
 
         opts = self.options
+        if opts.pipeline_preset == "court_skeletons":
+            proposal_path = self.clip_dir / COURT_PROPOSALS_NAME
+            try:
+                _court_proposals_preview_from_video(
+                    opts.video,
+                    clip=opts.clip,
+                    out_path=proposal_path,
+                    max_frames=min(8, opts.max_frames) if opts.max_frames is not None else 8,
+                )
+                proposal_payload = _read_json(proposal_path)
+                lock_path = self.clip_dir / "court_lock.json"
+                if not lock_path.is_file():
+                    raise ValueError("selected court inference did not produce a static court_lock.json")
+                lock_payload = _read_json(lock_path)
+                if lock_payload.get("source") not in {
+                    "multi_frame_point_and_line",
+                    "clearest_frame_point_and_line",
+                }:
+                    raise ValueError(
+                        "automatic skeleton preset requires point-and-line court evidence; "
+                        f"got source={lock_payload.get('source')}"
+                    )
+                structured_proposals = [
+                    item
+                    for item in proposal_payload.get("proposals", [])
+                    if isinstance(item, Mapping)
+                    and item.get("source") == "confidence_aware_structured_court_v31"
+                ]
+                if not structured_proposals:
+                    raise ValueError("selected structured court proposal is missing")
+                warnings = structured_proposals[0].get("gate", {}).get("warnings", [])
+                if "unsupported_view" in warnings:
+                    raise ValueError("court model classified this as an unsupported view")
+
+                from threed.racketsport.court_lock_visualization import (
+                    adapt_court_lock_for_visualization,
+                )
+
+                width, height, _ = _video_probe(opts.video)
+                adapted = adapt_court_lock_for_visualization(
+                    lock_payload,
+                    image_size=(width, height),
+                )
+                for filename, payload in adapted.artifact_payloads().items():
+                    _write_json(self.clip_dir / filename, payload)
+                _write_json(
+                    self.clip_dir / "court_lock_visualization_adapter.json",
+                    adapted.metadata_payload(),
+                )
+            except Exception as exc:  # noqa: BLE001 - unsupported views fail before expensive people/BODY
+                raise _HardStageFailure(
+                    "automatic court lock refused this video before people/BODY processing: "
+                    f"{type(exc).__name__}: {exc}"
+                ) from exc
+            payload = _read_json(target)
+            self._set_court_trust_band(payload, target)
+            return StageOutcome(
+                stage="calibration",
+                status="ran",
+                wall_seconds=0.0,
+                notes=[
+                    "ran the selected structured court model over up to eight static frames without manual corners, sidecars, or prior calibration",
+                    "accepted a static point-and-line court lock with recoverable pose",
+                    "adapted the lock for visualization only; review_only, measurement_valid=false, VERIFIED=0",
+                ],
+                artifacts=[
+                    COURT_PROPOSALS_NAME,
+                    "court_lock.json",
+                    "court_lock_visualization_adapter.json",
+                    "court_calibration.json",
+                    "court_zones.json",
+                    "net_plane.json",
+                ],
+                trust_badge="preview",
+                metrics={
+                    "pipeline_preset": opts.pipeline_preset,
+                    "court_lock_source": lock_payload.get("source"),
+                    "supporting_frame_count": len(
+                        lock_payload.get("evidence", {}).get("selected_frame_indices", [])
+                    ),
+                    "measurement_valid": False,
+                    "authority_state": "review_only",
+                },
+            )
         external_calibration_path = self._resolved_court_calibration_path()
         if external_calibration_path is not None:
             return self._run_external_calibration(target, external_calibration_path)
@@ -2452,13 +2650,17 @@ class ProcessVideoPipeline:
             raise
 
     def _quarantine_stale_tracking_outputs(self) -> list[str]:
-        stale_names = (
+        stale_names = [
             "tracks.json",
             "raw_tracked_detections.json",
             "tracked_detections.json",
             "metrics.json",
             "global_association",
-        )
+        ]
+        if self.options.player_selection:
+            stale_names.extend(
+                ["tracks_preselection.json", "selection_report.json"]
+            )
         stale_paths = [
             self.clip_dir / name
             for name in stale_names
@@ -2503,6 +2705,18 @@ class ProcessVideoPipeline:
         evidence_path = self.clip_dir / "court_line_evidence.json"
         calibration = _read_optional_json(calibration_path)
         if not isinstance(calibration, Mapping):
+            return None
+        if (
+            self.options.pipeline_preset == "court_skeletons"
+            and calibration.get("usage") == "visualization_only"
+            and calibration.get("authority_state") == "review_only"
+            and calibration.get("measurement_valid") is False
+            and (self.clip_dir / "court_lock.json").is_file()
+        ):
+            # The preset intentionally visualizes a bounded, static automatic
+            # lock without upgrading it to measurement authority.  The generic
+            # correction gate protects measurement pipelines and must not turn
+            # review_only into a request for manual taps here.
             return None
         if self.options.court_line_evidence_pooling:
             evidence, evidence_path = self._court_line_evidence_for_readiness()
@@ -2633,6 +2847,277 @@ class ProcessVideoPipeline:
         raise _HardStageFailure(
             "raw-pool global association ran but produced no valid tracks.json; loose-pool tracks.json "
             "is not an honest substitute for the wired default"
+        )
+
+    def _player_selection_authority_summary_path(self) -> Path:
+        return self.clip_dir / "global_association/raw_pool_authority_summary.json"
+
+    def _player_selection_authority_summary(self) -> Mapping[str, Any]:
+        path = self._player_selection_authority_summary_path()
+        if not path.is_file():
+            return {}
+        payload = _read_json(path)
+        if not isinstance(payload, Mapping):
+            raise _HardStageFailure(
+                "player_selection raw-pool authority summary must be a JSON object"
+            )
+        return payload
+
+    def _player_selection_raw_pool_path(self) -> Path:
+        summary = self._player_selection_authority_summary()
+        declared = summary.get("geometry_path")
+        if isinstance(declared, str) and declared:
+            candidate = Path(declared).expanduser()
+            if candidate.is_file():
+                return candidate.resolve()
+        for name in ("tracked_detections.json", "raw_tracked_detections.json"):
+            candidate = self.clip_dir / name
+            if candidate.is_file():
+                return candidate
+        return self.clip_dir / "tracked_detections.json"
+
+    def _player_selection_embeddings_path(self) -> Path:
+        if self.options.tracking_reid_embeddings_reuse is not None:
+            return self.options.tracking_reid_embeddings_reuse
+        summary = self._player_selection_authority_summary()
+        declared = summary.get("embedding_export_path")
+        if isinstance(declared, str) and declared:
+            candidate = Path(declared).expanduser()
+            if candidate.is_file():
+                return candidate.resolve()
+        return self.clip_dir / "global_association/reid_embeddings.json"
+
+    def _player_selection_embedding_bbox_scale(self) -> tuple[float, str]:
+        summary = self._player_selection_authority_summary()
+        value = summary.get("embedding_bbox_scale")
+        if (
+            isinstance(value, (int, float))
+            and not isinstance(value, bool)
+            and math.isfinite(float(value))
+            and float(value) > 0.0
+        ):
+            return float(value), "raw_pool_authority_summary.embedding_bbox_scale"
+        # Production raw_pool_person_authority.py defaults this coordinate
+        # contract to identity when no scale metadata exists.
+        return 1.0, "raw_pool_person_authority_default_identity"
+
+    def _stage_player_selection(self) -> StageOutcome:
+        stage = "player_selection"
+        if not self.options.player_selection:
+            return StageOutcome(
+                stage=stage,
+                status="skipped",
+                wall_seconds=0.0,
+                notes=["player_selection typed skip: disabled; no files read or written"],
+                metrics={
+                    "reason_code": "player_selection_disabled",
+                    "enablement_source": (
+                        "explicit_flag"
+                        if self.options.player_selection_explicit
+                        else "best_stack"
+                    ),
+                },
+            )
+        if self.options.max_players != EXACTLY_FOUR_HARD_CAP:
+            raise _HardStageFailure(
+                "player_selection requires --max-players 4 for the registered hard cap"
+            )
+
+        tracks_path = self.clip_dir / "tracks.json"
+        raw_pool_path = self._player_selection_raw_pool_path()
+        calibration_path = self.clip_dir / "court_calibration.json"
+        embeddings_path = self._player_selection_embeddings_path()
+        missing = [
+            str(path)
+            for path in (tracks_path, raw_pool_path, calibration_path)
+            if not path.is_file()
+        ]
+        if missing:
+            raise _HardStageFailure(
+                "player_selection missing required input(s): " + ", ".join(missing)
+            )
+
+        tracks_bytes = tracks_path.read_bytes()
+        preselection_sha256 = hashlib.sha256(tracks_bytes).hexdigest()
+        tracks_payload = _read_json(tracks_path)
+        raw_pool_payload = _read_json(raw_pool_path)
+        calibration = validate_artifact_file("court_calibration", calibration_path)
+        if not isinstance(calibration, CourtCalibration):
+            raise _HardStageFailure(
+                f"{calibration_path} did not parse as CourtCalibration"
+            )
+        embedding_payload = (
+            _read_json(embeddings_path) if embeddings_path.is_file() else None
+        )
+        provider_available = embeddings_path.is_file() and self.options.reid_model.is_file()
+        provider_reason = None
+        if not embeddings_path.is_file():
+            provider_reason = "embedding_provider_artifact_absent"
+        elif not self.options.reid_model.is_file():
+            provider_reason = "embedding_provider_checkpoint_absent"
+        bbox_scale, bbox_scale_source = self._player_selection_embedding_bbox_scale()
+
+        selected, report = select_players_payload(
+            tracks_payload,
+            raw_pool_payload=raw_pool_payload,
+            embedding_payload=embedding_payload,
+            calibration=calibration,
+            enabled=True,
+            embedding_bbox_scale=bbox_scale,
+            reid_provider_available=provider_available,
+            reid_provider_reason=provider_reason,
+            auto_player_count=self.options.pipeline_preset == "court_skeletons",
+        )
+        unbound = selected.get("unbound_observations")
+        if not isinstance(unbound, list):
+            raise _HardStageFailure(
+                "player_selection output has no unbound_observations list"
+            )
+        canonical_input = dict(selected)
+        canonical_input.pop("unbound_observations", None)
+        validated = Tracks.model_validate(canonical_input)
+        canonical_output = validated.model_dump(mode="json")
+        canonical_output["unbound_observations"] = unbound
+        players = canonical_output.get("players")
+        if not isinstance(players, list) or len(players) > EXACTLY_FOUR_HARD_CAP:
+            raise _HardStageFailure(
+                "player_selection hard-cap invariant failed at runner boundary"
+            )
+        per_frame: Counter[int] = Counter()
+        for player in players:
+            if not isinstance(player, Mapping) or not isinstance(player.get("frames"), list):
+                raise _HardStageFailure("player_selection player frames must be lists")
+            for frame in player["frames"]:
+                if not isinstance(frame, Mapping):
+                    raise _HardStageFailure("player_selection output frames must be objects")
+                frame_idx = int(frame.get("frame_idx", round(float(frame["t"]) * float(canonical_output["fps"]))))
+                per_frame[frame_idx] += 1
+        violation = next(
+            ((frame_idx, count) for frame_idx, count in sorted(per_frame.items()) if count > EXACTLY_FOUR_HARD_CAP),
+            None,
+        )
+        if violation is not None:
+            raise _HardStageFailure(
+                "player_selection per-frame hard-cap invariant failed: "
+                f"frame {violation[0]} carries {violation[1]} detections"
+            )
+
+        selected_text = json.dumps(
+            canonical_output, allow_nan=False, indent=2, sort_keys=True
+        ) + "\n"
+        selected_sha256 = hashlib.sha256(selected_text.encode("utf-8")).hexdigest()
+        input_hashes = {
+            "tracks_preselection_sha256": preselection_sha256,
+            "raw_pool_sha256": hashlib.sha256(raw_pool_path.read_bytes()).hexdigest(),
+            "calibration_sha256": hashlib.sha256(calibration_path.read_bytes()).hexdigest(),
+            "embeddings_sha256": (
+                hashlib.sha256(embeddings_path.read_bytes()).hexdigest()
+                if embeddings_path.is_file()
+                else None
+            ),
+        }
+        report["decisions"].append(
+            {
+                "action": "selection_stage_provenance",
+                "input_hashes": input_hashes,
+                "selected_tracks_sha256": selected_sha256,
+                "config_echo": {
+                    "best_stack_revision": BEST_STACK_MANIFEST.revision,
+                    "best_stack_key": PLAYER_SELECTION_STACK_KEY,
+                    "enablement_source": (
+                        "explicit_flag"
+                        if self.options.player_selection_explicit
+                        else "best_stack"
+                    ),
+                    "embedding_bbox_scale": bbox_scale,
+                    "embedding_bbox_scale_source": bbox_scale_source,
+                    "reid_provider_available": provider_available,
+                    "reid_provider_reason": provider_reason,
+                },
+                "reasons": [
+                    "preselection_bytes_preserved_and_content_hashed",
+                    "selected_tracks_published_last",
+                ],
+            }
+        )
+        report_text = json.dumps(
+            report, allow_nan=False, indent=2, sort_keys=True
+        ) + "\n"
+        preselection_path = self.clip_dir / "tracks_preselection.json"
+        report_path = self.clip_dir / "selection_report.json"
+        staged_outputs: list[tuple[Path, Path]] = []
+        try:
+            staged_outputs = [
+                (player_selection_cli.stage_copy(tracks_path, preselection_path), preselection_path),
+                (player_selection_cli.stage_text(report_path, report_text), report_path),
+                (player_selection_cli.stage_text(tracks_path, selected_text), tracks_path),
+            ]
+        except BaseException:
+            for staged, _destination in staged_outputs:
+                staged.unlink(missing_ok=True)
+            raise
+        player_selection_cli.publish_output_bundle(staged_outputs)
+        if hashlib.sha256(preselection_path.read_bytes()).hexdigest() != preselection_sha256:
+            raise _HardStageFailure(
+                "tracks_preselection.json changed while publishing player_selection"
+            )
+
+        summaries = [
+            row
+            for row in report.get("decisions", [])
+            if isinstance(row, Mapping)
+            and row.get("action") == "selective_reid_policy_summary"
+        ]
+        if len(summaries) != 1:
+            raise _HardStageFailure(
+                "player_selection report must contain one selective_reid_policy_summary"
+            )
+        counters = {
+            name: int(summaries[0].get(name, 0))
+            for name in (
+                "frames_ambiguous",
+                "reid_invoked",
+                "reid_skipped_unambiguous",
+                "reid_unavailable",
+            )
+        }
+        warnings = []
+        if counters["reid_unavailable"]:
+            warnings.append(
+                {
+                    "reason_code": "player_selection_reid_unavailable",
+                    "count": counters["reid_unavailable"],
+                    "provider_reason": provider_reason,
+                }
+            )
+        return StageOutcome(
+            stage=stage,
+            status="ran",
+            wall_seconds=0.0,
+            notes=[
+                "selected bound-slot tracks from the measured raw pool",
+                "preserved byte-exact association output as tracks_preselection.json",
+                *(
+                    [
+                        "typed warning: reid_unavailable="
+                        f"{counters['reid_unavailable']} ({provider_reason or 'ambiguous_frame_identity_missing'})"
+                    ]
+                    if warnings
+                    else []
+                ),
+            ],
+            artifacts=[
+                "tracks_preselection.json",
+                "selection_report.json",
+                "tracks.json",
+            ],
+            trust_badge="preview",
+            metrics={
+                "input_hashes": input_hashes,
+                "selected_tracks_sha256": selected_sha256,
+                "selective_reid": counters,
+                "warnings": warnings,
+            },
         )
 
     def _stage_camera_motion(self) -> StageOutcome:
@@ -3164,7 +3649,11 @@ class ProcessVideoPipeline:
 
         try:
             tracks = validate_artifact_file("tracks", tracks_path)
-            frame_plan_path = self.clip_dir / "frame_compute_plan.json"
+            frame_plan_path = (
+                self.clip_dir / "__court_skeletons_no_mesh_plan__.json"
+                if opts.pipeline_preset == "court_skeletons"
+                else self.clip_dir / "frame_compute_plan.json"
+            )
             body_execution: Mapping[str, Any] | None = None
             required_frame_indexes: set[int] | None = None
             body_frame_cap = min(
@@ -3327,6 +3816,8 @@ class ProcessVideoPipeline:
         timing_metrics: dict[str, Any] = {}
         warnings: list[str] = []
         if (
+            opts.pipeline_preset == "full"
+            and
             target.is_file()
             and not opts.force
             and self._identity_allows_reuse("ball")
@@ -4574,7 +5065,8 @@ class ProcessVideoPipeline:
         target = self.clip_dir / "smpl_motion.json"
 
         if (
-            target.is_file()
+            opts.pipeline_preset == "full"
+            and target.is_file()
             and not opts.force
             and self._identity_allows_reuse("body")
             and _valid_artifact("smpl_motion", target)
@@ -4672,6 +5164,7 @@ class ProcessVideoPipeline:
                         body_contact_splice=opts.remote_config.body_contact_splice,
                         body_world_joint_visual_smoothing=opts.remote_config.body_world_joint_visual_smoothing,
                         experimental_body_array_native=opts.remote_config.experimental_body_array_native,
+                        pipeline_preset=opts.pipeline_preset,
                     )
                 },
                 # Calibration/tracking already ran earlier in this same process_video
@@ -4706,26 +5199,49 @@ class ProcessVideoPipeline:
             evidence_path=str(self.clip_dir / "body_full_clip_gate.json"),
         )
         self.trust_bands["body"] = badge
+        skeleton_only = opts.pipeline_preset == "court_skeletons"
+        body_run_note = (
+            "ran BODY (Fast SAM-3D-Body joints only at the scheduled measured-player cadence) locally "
+            "with detector_name='' and fov_name='' to match the VM-proven no-MoGe configuration "
+            f"(fast_sam_repo={opts.remote_config.fast_sam_root}); SAM3D body-mode joints are the "
+            "offline skeleton source for all safe tracked person-frames, with mesh computation and "
+            "serialization disabled"
+            if skeleton_only
+            else
+            "ran BODY (Fast SAM-3D-Body mesh at contact windows, joints elsewhere) locally "
+            "with detector_name='' and fov_name='' to match the VM-proven no-MoGe configuration "
+            f"(fast_sam_repo={opts.remote_config.fast_sam_root}); SAM3D body-mode joints are the "
+            "offline skeleton source for all safe tracked person-frames, with tier-2 mesh vertices "
+            "omitted from serialization"
+        )
         return StageOutcome(
             stage="body",
             status="ran",
             wall_seconds=0.0,
             notes=[
-                "ran BODY (Fast SAM-3D-Body mesh at contact windows, joints elsewhere) locally "
-                "with detector_name='' and fov_name='' to match the VM-proven no-MoGe configuration "
-                f"(fast_sam_repo={opts.remote_config.fast_sam_root}); SAM3D body-mode joints are the "
-                "offline skeleton source for all safe tracked person-frames, with tier-2 mesh vertices "
-                "omitted from serialization",
+                body_run_note,
                 *manifest_notes,
             ],
-            artifacts=[
-                "smpl_motion.json",
-                "skeleton3d.json",
-                "body_mesh.json",
-                "body_compute_execution.json",
-                "sam3d_tier2_config.json",
-            ],
+            artifacts=(
+                [
+                    "skeleton3d.json",
+                    "body_compute_execution.json",
+                    "sam3d_tier2_config.json",
+                    "body_stage_phase_timing.json",
+                    "body_full_clip_gate.json",
+                    "body_grounding_quality.json",
+                ]
+                if skeleton_only
+                else [
+                    "smpl_motion.json",
+                    "skeleton3d.json",
+                    "body_mesh.json",
+                    "body_compute_execution.json",
+                    "sam3d_tier2_config.json",
+                ]
+            ),
             trust_badge=badge["badge"],
+            metrics={"pipeline_preset": opts.pipeline_preset},
         )
 
     def _ensure_remote_calibration_seed(self) -> str:
@@ -4800,6 +5316,7 @@ class ProcessVideoPipeline:
                 config=opts.remote_config,
                 max_frames=opts.max_frames,
                 max_players=opts.max_players,
+                pipeline_preset=opts.pipeline_preset,
             )
         except RemoteBodyDispatchError as exc:
             raise ExpectedOptionalAbsence(
@@ -4828,11 +5345,20 @@ class ProcessVideoPipeline:
         # body-mode joints synced but no smpl_motion.json or mesh vertices did.
         # That is retained as low-confidence BODY output and never papered over
         # with a fabricated mesh or legacy pose fallback.
-        skeleton_level_only = skeleton_synced and not smpl_synced
+        skeleton_level_only = (
+            opts.pipeline_preset == "full"
+            and skeleton_synced
+            and not smpl_synced
+        )
         if skeleton_level_only:
             reason = (
                 f"remote A100 BODY run ({result.remote_run_dir}) came back skeleton-level only without "
                 "smpl_motion.json; this is treated as low-confidence SAM-3D BODY output, not a mesh claim."
+            )
+        elif opts.pipeline_preset == "court_skeletons":
+            reason = (
+                f"Fast SAM-3D-Body ran on the remote A100 ({result.remote_run_dir}) in joint-only "
+                "court_skeletons mode for measured player samples; no mesh authority or mesh artifact was requested."
             )
         else:
             reason = (
@@ -4862,6 +5388,7 @@ class ProcessVideoPipeline:
             notes=notes,
             artifacts=list(result.synced_outputs),
             trust_badge=badge["badge"],
+            metrics={"pipeline_preset": opts.pipeline_preset},
         )
 
     # ------------------------------------------------------------------
@@ -5287,10 +5814,11 @@ class ProcessVideoPipeline:
                 notes=["requires court_calibration.json"],
             )
 
+        skeleton_only = self.options.pipeline_preset == "court_skeletons"
         tracks = _read_optional_json(self.clip_dir / "tracks.json")
-        smpl_motion = _read_optional_json(self.clip_dir / "smpl_motion.json")
+        smpl_motion = None if skeleton_only else _read_optional_json(self.clip_dir / "smpl_motion.json")
         skeleton3d = _read_optional_json(self.clip_dir / "skeleton3d.json")
-        ball_track = _read_optional_json(self.clip_dir / "ball_track.json")
+        ball_track = None if skeleton_only else _read_optional_json(self.clip_dir / "ball_track.json")
         physics_footlock_path = self.clip_dir / "physics_footlock.json"
         ball_physics_path = self.clip_dir / "ball_track_physics_filled.json"
         ball_arc_solved_path = self.clip_dir / "ball_track_arc_solved.json"
@@ -5305,22 +5833,26 @@ class ProcessVideoPipeline:
             ball_track=ball_track,
             racket_pose=_read_optional_json(racket_pose_path),
             trust_bands=self.trust_bands,
-            physics_footlock=_read_optional_json(physics_footlock_path),
-            ball_track_physics_filled=_read_optional_json(ball_physics_path),
-            ball_track_arc_solved=_read_optional_json(ball_arc_solved_path),
+            physics_footlock=(None if skeleton_only else _read_optional_json(physics_footlock_path)),
+            ball_track_physics_filled=(None if skeleton_only else _read_optional_json(ball_physics_path)),
+            ball_track_arc_solved=(None if skeleton_only else _read_optional_json(ball_arc_solved_path)),
             racket_pose_estimate=_read_optional_json(racket_estimate_path) if self.options.paddle_pose else None,
             placement_calibration_path=court_path,
             artifact_paths={
-                "physics_footlock": physics_footlock_path if physics_footlock_path.is_file() else None,
-                "ball_track_physics_filled": ball_physics_path if ball_physics_path.is_file() else None,
-                "ball_track_arc_solved": ball_arc_solved_path if ball_arc_solved_path.is_file() else None,
+                "physics_footlock": physics_footlock_path if not skeleton_only and physics_footlock_path.is_file() else None,
+                "ball_track_physics_filled": ball_physics_path if not skeleton_only and ball_physics_path.is_file() else None,
+                "ball_track_arc_solved": ball_arc_solved_path if not skeleton_only and ball_arc_solved_path.is_file() else None,
                 "racket_pose_estimate": racket_estimate_path if self.options.paddle_pose and racket_estimate_path.is_file() else None,
             },
         )
-        verdict_sidecar = build_ball_fail_closed_verdicts_sidecar(
-            _read_optional_json(ball_physics_path),
-            _read_optional_json(ball_arc_solved_path),
-            ball_arc_render=_read_optional_json(self.clip_dir / "ball_arc_render.json"),
+        verdict_sidecar = (
+            None
+            if skeleton_only
+            else build_ball_fail_closed_verdicts_sidecar(
+                _read_optional_json(ball_physics_path),
+                _read_optional_json(ball_arc_solved_path),
+                ball_arc_render=_read_optional_json(self.clip_dir / "ball_arc_render.json"),
+            )
         )
         verdict_sidecar_name = "ball_fail_closed_verdicts.json"
         if verdict_sidecar is not None:
@@ -5382,8 +5914,16 @@ class ProcessVideoPipeline:
         calibration_curves = _read_optional_json(curves_path) if curves_path is not None else None
         gated = apply_confidence_gate_to_world(
             _read_json(world_path),
-            ball_track_physics_filled=_read_optional_json(self.clip_dir / "ball_track_physics_filled.json"),
-            physics_footlock=_read_optional_json(self.clip_dir / "physics_footlock.json"),
+            ball_track_physics_filled=(
+                None
+                if self.options.pipeline_preset == "court_skeletons"
+                else _read_optional_json(self.clip_dir / "ball_track_physics_filled.json")
+            ),
+            physics_footlock=(
+                None
+                if self.options.pipeline_preset == "court_skeletons"
+                else _read_optional_json(self.clip_dir / "physics_footlock.json")
+            ),
             racket_pose_estimate=_read_optional_json(self.clip_dir / "racket_pose_estimate.json") if self.options.paddle_pose else None,
             contact_windows=_read_optional_json(self._preferred_contact_windows_path()),
             calibration_curves=calibration_curves,
@@ -5456,7 +5996,12 @@ class ProcessVideoPipeline:
         if not vw_path.is_file():
             return StageOutcome(stage="manifest", status="blocked", wall_seconds=0.0, notes=["requires virtual_world.json"])
 
-        contact_windows_path = self._preferred_contact_windows_path()
+        skeleton_only = self.options.pipeline_preset == "court_skeletons"
+        contact_windows_path = (
+            self.clip_dir / "__court_skeletons_no_contact_windows__.json"
+            if skeleton_only
+            else self._preferred_contact_windows_path()
+        )
         ball_inflections_path = self.clip_dir / "ball_inflections.json"
         ball_arc_solved_path = self.clip_dir / "ball_track_arc_solved.json"
         ball_arc_render_path = self.clip_dir / "ball_arc_render.json"
@@ -5480,10 +6025,16 @@ class ProcessVideoPipeline:
             contact_windows_path=contact_windows_path if contact_windows_path.is_file() else None,
             rally_spans_path=rally_spans_path if rally_spans_path.is_file() else None,
         )
-        body_mesh_path = self.clip_dir / "body_mesh.json" if (self.clip_dir / "body_mesh.json").is_file() else None
+        body_mesh_path = (
+            None
+            if skeleton_only
+            else self.clip_dir / "body_mesh.json"
+            if (self.clip_dir / "body_mesh.json").is_file()
+            else None
+        )
         root_body_mesh_index_path = self.clip_dir / "body_mesh_index.json"
         nested_body_mesh_index_path = self.clip_dir / "body_mesh_index" / "body_mesh_index.json"
-        body_mesh_index_path = (
+        body_mesh_index_path = None if skeleton_only else (
             root_body_mesh_index_path
             if root_body_mesh_index_path.is_file()
             else nested_body_mesh_index_path
@@ -5956,6 +6507,7 @@ class ProcessVideoPipeline:
             clip_dir=self.clip_dir,
             stage_outcomes=self.stage_outcomes,
             video_identity=video_identity,
+            pipeline_preset=self.options.pipeline_preset,
         )
         if hard_failed:
             status = "failed"
@@ -5975,6 +6527,7 @@ class ProcessVideoPipeline:
             "schema_version": 1,
             "artifact_type": "racketsport_process_video_pipeline_summary",
             "clip": self.options.clip,
+            "pipeline_preset": self.options.pipeline_preset,
             "video": (
                 {**copy.deepcopy(dict(video_identity)), "path": str(self.options.video)}
                 if video_identity is not None
@@ -5986,6 +6539,11 @@ class ProcessVideoPipeline:
             "status": status,
             "missing_capabilities": missing_capabilities,
             "wall_seconds": round(wall_seconds, 3),
+            "performance": _pipeline_performance_summary(
+                clip_dir=self.clip_dir,
+                video_identity=video_identity,
+                wall_seconds=wall_seconds,
+            ),
             "stages": stage_dicts,
             "trust_bands": self.trust_bands,
             "camera_motion_auto": self._camera_motion_auto,
@@ -6076,10 +6634,11 @@ def _minimum_bundle_missing_capabilities(
     clip_dir: Path,
     stage_outcomes: Sequence[StageOutcome],
     video_identity: Mapping[str, Any] | None = None,
+    pipeline_preset: Literal["full", "court_skeletons"] = "full",
 ) -> list[dict[str, str]]:
     """Evaluate the North Star 3.2 bundle from artifacts and stage notes only."""
 
-    requirements: tuple[tuple[str, tuple[str, ...], str, str | None], ...] = (
+    full_requirements: tuple[tuple[str, tuple[str, ...], str, str | None], ...] = (
         ("source_identity", (), "content-addressed source identity is missing", "ingest"),
         ("capture_sidecar", ("capture_sidecar.json",), "capture sidecar is missing", "ingest"),
         ("calibration", ("court_calibration.json",), "court/camera calibration is missing", "calibration"),
@@ -6116,6 +6675,17 @@ def _minimum_bundle_missing_capabilities(
         ("trust_bands", ("trust_bands.json",), "trust bands artifact is missing", "world"),
         ("manifest", ("replay_viewer_manifest.json",), "replay manifest is missing", "manifest"),
     )
+    skeleton_requirements: tuple[tuple[str, tuple[str, ...], str, str | None], ...] = (
+        ("source_identity", (), "content-addressed source identity is missing", "ingest"),
+        ("calibration", ("court_calibration.json",), "automatic court/camera calibration is missing", "calibration"),
+        ("tracks", ("tracks.json",), "persistent player tracks are missing", "tracking"),
+        ("body", ("skeleton3d.json",), "scheduled joint skeleton coverage is missing", "body"),
+        ("fusion", ("confidence_gated_world.json", "virtual_world.json"), "fused-world artifact is missing", "world"),
+        ("assets", ("replay_scene.json",), "recursive replay assets are missing", "manifest"),
+        ("trust_bands", ("trust_bands.json",), "trust bands artifact is missing", "world"),
+        ("manifest", ("replay_viewer_manifest.json",), "replay manifest is missing", "manifest"),
+    )
+    requirements = skeleton_requirements if pipeline_preset == "court_skeletons" else full_requirements
     by_stage = {outcome.stage: outcome for outcome in stage_outcomes}
     missing: list[dict[str, str]] = []
     source_identity_present = bool(
@@ -6128,9 +6698,10 @@ def _minimum_bundle_missing_capabilities(
         if capability == "source_identity":
             present = source_identity_present
         elif capability == "body":
-            present = any((clip_dir / candidate).is_file() for candidate in candidates) and (
-                clip_dir / "body_full_clip_gate.json"
-            ).is_file()
+            present = (
+                any((clip_dir / candidate).is_file() for candidate in candidates)
+                and (clip_dir / "body_full_clip_gate.json").is_file()
+            )
         elif capability == "coaching":
             coaching_audit = _read_optional_json(clip_dir / "coaching_fact_audit.json")
             present = (clip_dir / "coaching_card_facts.json").is_file() and (
@@ -6155,6 +6726,75 @@ def _minimum_bundle_missing_capabilities(
             }
         )
     return missing
+
+
+def _pipeline_performance_summary(
+    *,
+    clip_dir: Path,
+    video_identity: Mapping[str, Any] | None,
+    wall_seconds: float,
+) -> dict[str, Any]:
+    timing = video_identity.get("timing") if isinstance(video_identity, Mapping) else None
+    duration_s = (
+        _float_or_none(timing.get("duration_s"))
+        if isinstance(timing, Mapping)
+        else None
+    )
+    output_size_bytes = sum(
+        path.stat().st_size
+        for path in clip_dir.rglob("*")
+        if path.is_file()
+        and not path.name.startswith("source.")
+        and path.name != "PIPELINE_SUMMARY.json"
+    )
+    body_timing = _read_optional_json(clip_dir / "body_stage_phase_timing.json")
+    body_execution = _read_optional_json(clip_dir / "body_compute_execution.json")
+    body_summary = (
+        body_execution.get("summary")
+        if isinstance(body_execution, Mapping)
+        and isinstance(body_execution.get("summary"), Mapping)
+        else {}
+    )
+    scheduled_samples = _int_or_none(body_summary.get("scheduled_player_frame_count")) or 0
+    inference_s = (
+        _float_or_none(body_timing.get("inference_s"))
+        if isinstance(body_timing, Mapping)
+        else None
+    )
+    resource_usage = _read_optional_json(clip_dir / "gpu_resource_usage.json")
+    resource_summary = (
+        resource_usage.get("summary")
+        if isinstance(resource_usage, Mapping)
+        and isinstance(resource_usage.get("summary"), Mapping)
+        else {}
+    )
+    return {
+        "video_duration_s": duration_s,
+        "total_wall_seconds": round(float(wall_seconds), 3),
+        "seconds_per_video_second": (
+            None
+            if duration_s is None or duration_s <= 0.0
+            else round(float(wall_seconds) / duration_s, 6)
+        ),
+        "output_size_bytes": int(output_size_bytes),
+        "body_model_load_seconds": (
+            _float_or_none(body_timing.get("model_load_s"))
+            if isinstance(body_timing, Mapping)
+            else None
+        ),
+        "body_inference_seconds": inference_s,
+        "body_scheduled_player_crops": scheduled_samples,
+        "body_crops_per_second": (
+            None
+            if inference_s is None or inference_s <= 0.0
+            else round(scheduled_samples / inference_s, 6)
+        ),
+        "gpu_utilization_avg_pct": resource_summary.get("gpu_utilization_avg_pct"),
+        "peak_vram_mb": resource_summary.get("gpu_memory_used_max_mb"),
+        "gpu_resource_usage_source": (
+            "gpu_resource_usage.json" if resource_summary else "external_monitor_pending_or_unavailable"
+        ),
+    }
 
 
 def _missing_local_manifest_urls(manifest_path: Path) -> list[str]:
@@ -8107,7 +8747,7 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
     association_court_margin["margin_m"] = float(association_profile.court_margin_m)
     placement_trajectory_refine = copy.deepcopy(PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE)
     placement_trajectory_refine["enabled"] = bool(options.placement_trajectory_refine)
-    return {
+    resolved: dict[str, Any] = {
         "ball.wasb_checkpoint": _path_summary(options.wasb_checkpoint),
         "ball.wasb_repo": _path_summary(options.wasb_repo),
         "ball.arc_chain": not options.no_ball_arc,
@@ -8140,6 +8780,11 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
         },
         "placement.undistort": options.placement_undistort,
     }
+    if options.player_selection:
+        player_selection = copy.deepcopy(PLAYER_SELECTION_STACK_VALUE)
+        player_selection["enabled"] = True
+        resolved[PLAYER_SELECTION_STACK_KEY] = player_selection
+    return resolved
 
 
 def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any]:
@@ -8153,6 +8798,7 @@ def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any
         "tracking.association_court_margin": copy.deepcopy(
             BEST_STACK_MANIFEST.value("tracking.association_court_margin")
         ),
+        PLAYER_SELECTION_STACK_KEY: copy.deepcopy(PLAYER_SELECTION_STACK_VALUE),
         "confidence.calibration_curves": BEST_STACK_MANIFEST.path_value("confidence.calibration_curves").as_posix(),
         "mesh.coverage_mode": BEST_STACK_MANIFEST.string_value("mesh.coverage_mode"),
         "mesh.byte_budget_mib": BEST_STACK_MANIFEST.number_value("mesh.byte_budget_mib"),
@@ -8336,6 +8982,9 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
     video = Path(args.video).expanduser().resolve()
     clip = args.clip or _clip_id_from_video(video)
     run_dir = Path(args.out).expanduser().resolve() if args.out else DEFAULT_RUN_ROOT / f"process_video_{clip}"
+    pipeline_preset = str(getattr(args, "pipeline_preset", "full"))
+    if pipeline_preset not in PIPELINE_PRESETS:
+        raise ValueError(f"unsupported --pipeline-preset {pipeline_preset!r}")
     body_postchain_raw = args.body_postchain == "raw"
     mesh_byte_budget_mib = args.mesh_byte_budget_mib
     if args.target_mesh_frame_budget is None:
@@ -8347,6 +8996,10 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         raise ValueError("--mesh-byte-budget-mib must be positive")
     if args.body_skeleton_stride <= 0:
         raise ValueError("--body-skeleton-stride must be positive")
+    body_skeleton_stride = int(args.body_skeleton_stride)
+    if pipeline_preset == "court_skeletons":
+        source_fps = _video_timing_probe(video).fps
+        body_skeleton_stride = max(1, int(math.ceil(source_fps / 30.0)))
     if args.ball_detection_stride <= 0:
         raise ValueError("--ball-detection-stride must be positive")
     if args.ball_detection_stride != 1:
@@ -8361,7 +9014,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         fast_sam_root=args.remote_fast_sam_root,
         lock_wait_timeout_s=args.remote_lock_wait_timeout_s,
         command_timeout_s=args.remote_command_timeout_s,
-        body_skeleton_stride=int(args.body_skeleton_stride),
+        body_skeleton_stride=body_skeleton_stride,
         experimental_body_array_native=DEFAULT_BODY_ARRAY_NATIVE,
         sam3d_body_input_size_px=args.sam3d_body_input_size_px,
         sam3d_crop_bucket_sizes=_parse_int_tuple(args.sam3d_crop_bucket_sizes, name="--sam3d-crop-bucket-sizes"),
@@ -8399,6 +9052,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         max_frames=args.max_frames,
         force=args.force,
         device=args.device,
+        pipeline_preset=pipeline_preset,  # type: ignore[arg-type]
         court_corners=Path(args.court_corners).expanduser().resolve() if args.court_corners else None,
         capture_sidecar=Path(args.capture_sidecar).expanduser().resolve() if args.capture_sidecar else None,
         court_keypoints=Path(args.court_keypoints).expanduser().resolve() if args.court_keypoints else None,
@@ -8406,7 +9060,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         allow_auto_court_corners_preview=args.allow_auto_court_corners_preview,
         court_proposals_preview=args.court_proposals_preview,
         court_line_evidence_pooling=bool(args.court_line_evidence_pooling),
-        input_quality_mode=str(args.input_quality_mode),
+        input_quality_mode=("strict" if pipeline_preset == "court_skeletons" else str(args.input_quality_mode)),
         tracks_reuse=Path(args.tracks).expanduser().resolve() if args.tracks else None,
         tracking_raw_pool_reuse=Path(args.tracking_raw_pool).expanduser().resolve()
         if args.tracking_raw_pool
@@ -8417,22 +9071,38 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         global_association=not args.no_global_association,
         global_association_profile=args.global_association_profile,
         reid_model=Path(args.reid_model).expanduser().resolve(),
+        player_selection=(
+            True
+            if pipeline_preset == "court_skeletons"
+            else DEFAULT_PLAYER_SELECTION_ENABLED
+            if args.player_selection is None
+            else bool(args.player_selection)
+        ),
+        player_selection_explicit=args.player_selection is not None,
         ball_track_reuse=Path(args.ball_track).expanduser().resolve() if args.ball_track else None,
         ball_candidates_reuse=tuple(Path(path).expanduser().resolve() for path in (args.ball_candidates or [])),
-        emit_ball_candidates=not args.no_ball_candidates,
-        ball_track_auto_discovery=bool(args.allow_auto_ball_track) and not args.no_auto_ball_track,
-        skip_ball=args.skip_ball,
-        no_ball_arc=args.no_ball_arc,
+        emit_ball_candidates=(pipeline_preset != "court_skeletons" and not args.no_ball_candidates),
+        ball_track_auto_discovery=(
+            pipeline_preset != "court_skeletons"
+            and bool(args.allow_auto_ball_track)
+            and not args.no_auto_ball_track
+        ),
+        skip_ball=(pipeline_preset == "court_skeletons" or args.skip_ball),
+        no_ball_arc=(pipeline_preset == "court_skeletons" or args.no_ball_arc),
         wasb_checkpoint=Path(args.wasb_checkpoint).expanduser().resolve(),
         wasb_repo=Path(args.wasb_repo).expanduser().resolve() if args.wasb_repo else None,
-        skip_audio=args.skip_audio,
-        rally_gating=args.rally_gating,
+        skip_audio=(pipeline_preset == "court_skeletons" or args.skip_audio),
+        rally_gating=(pipeline_preset != "court_skeletons" and args.rally_gating),
         placement_keypoints_2d=Path(args.placement_keypoints_2d).expanduser().resolve()
         if args.placement_keypoints_2d
         else None,
         camera_motion_path=Path(args.camera_motion).expanduser().resolve() if args.camera_motion else None,
-        enable_camera_motion=bool(args.enable_camera_motion) and not bool(args.disable_camera_motion),
-        skip_camera_motion=bool(args.disable_camera_motion),
+        enable_camera_motion=(
+            pipeline_preset != "court_skeletons"
+            and bool(args.enable_camera_motion)
+            and not bool(args.disable_camera_motion)
+        ),
+        skip_camera_motion=(pipeline_preset == "court_skeletons" or bool(args.disable_camera_motion)),
         camera_motion_estimator=args.camera_motion_estimator,
         camera_motion_flow_backend=args.camera_motion_flow_backend,
         camera_motion_person_masks=not args.no_camera_motion_person_mask,
@@ -8440,7 +9110,7 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         mesh_coverage_mode=args.mesh_coverage_mode,
         target_mesh_frame_budget=target_mesh_frame_budget,
         mesh_byte_budget_mib=mesh_byte_budget_mib,
-        body_skeleton_stride=int(args.body_skeleton_stride),
+        body_skeleton_stride=body_skeleton_stride,
         ball_detection_stride=int(args.ball_detection_stride),
         ball_proximity_m=args.ball_proximity_m,
         high_confidence_swing_floor=args.high_confidence_swing_floor,
@@ -8448,23 +9118,34 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         ball_track_arc_solved=Path(args.ball_track_arc_solved).expanduser().resolve() if args.ball_track_arc_solved else None,
         no_gpu=args.no_gpu,
         body_remote=not args.body_local,
-        body_schedule=args.body_schedule,
+        body_schedule=("serial" if pipeline_preset == "court_skeletons" else args.body_schedule),
         remote_config=remote_config,
-        grounding_refine=not args.no_grounding_refine,
-        placement_trajectory_refine=bool(args.placement_trajectory_refine)
-        or DEFAULT_PLACEMENT_TRAJECTORY_REFINE,
+        grounding_refine=(pipeline_preset == "court_skeletons" or not args.no_grounding_refine),
+        placement_trajectory_refine=(
+            pipeline_preset == "court_skeletons"
+            or bool(args.placement_trajectory_refine)
+            or DEFAULT_PLACEMENT_TRAJECTORY_REFINE
+        ),
         placement_trajectory_refine_explicit=bool(args.placement_trajectory_refine),
-        paddle_pose=bool(DEFAULT_PADDLE_FUSED_ESTIMATOR.get("enabled", True)) and not args.no_paddle_pose,
+        paddle_pose=(
+            pipeline_preset != "court_skeletons"
+            and bool(DEFAULT_PADDLE_FUSED_ESTIMATOR.get("enabled", True))
+            and not args.no_paddle_pose
+        ),
         confidence_gate=not args.no_confidence_gate,
         confidence_calibration_curves=Path(args.confidence_calibration_curves).expanduser().resolve()
         if args.confidence_calibration_curves
         else None,
-        scene_points=not args.no_scene_points,
+        scene_points=(pipeline_preset != "court_skeletons" and not args.no_scene_points),
         manifest_path=Path(args.manifest),
         tracker_config_path=Path(args.tracker_config),
         verify_viewer=args.verify_viewer,
         vite_allow_root=Path(args.vite_allow_root).expanduser().resolve() if args.vite_allow_root else ROOT,
-        match_stats=bool(DEFAULT_MATCH_STATS_ENABLED) and not bool(args.no_match_stats),
+        match_stats=(
+            pipeline_preset != "court_skeletons"
+            and bool(DEFAULT_MATCH_STATS_ENABLED)
+            and not bool(args.no_match_stats)
+        ),
     )
 
 
@@ -8474,6 +9155,16 @@ def build_arg_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("--video", required=True, help="Source video file.")
+    parser.add_argument(
+        "--pipeline-preset",
+        choices=PIPELINE_PRESETS,
+        default="full",
+        help=(
+            "Execution projection of the canonical stage graph. court_skeletons runs automatic court, "
+            "people IDs, joint-only SAM-3D-Body, grounding, and the replay viewer while omitting ball, "
+            "paddle, mesh, events, audio, stats, and coaching."
+        ),
+    )
     parser.add_argument("--court-corners", help="court_corners.json with declared image_size (manual 4-corner taps).")
     parser.add_argument("--capture-sidecar", help="Pre-built capture_sidecar.json (e.g. ARKit); alternative to --court-corners.")
     parser.add_argument("--court-keypoints", help="court_keypoints.json for the no-tap ARKit metric-calibration path (pairs with --capture-sidecar).")
@@ -8557,6 +9248,23 @@ def build_arg_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument("--reid-model", default=str(DEFAULT_REID_MODEL), help="OSNet ReID checkpoint for global association.")
+    player_selection_flags = parser.add_mutually_exclusive_group()
+    player_selection_flags.add_argument(
+        "--player-selection",
+        dest="player_selection",
+        action="store_true",
+        default=None,
+        help=(
+            "Enable the default-OFF preview player-selection stage after tracking. "
+            "With neither flag, best_stack controls enablement."
+        ),
+    )
+    player_selection_flags.add_argument(
+        "--no-player-selection",
+        dest="player_selection",
+        action="store_false",
+        help="Explicitly disable the player-selection stage.",
+    )
 
     parser.add_argument("--ball-track", help="Reuse an already-computed ball_track.json instead of running WASB zero-shot.")
     parser.add_argument(

@@ -5,7 +5,10 @@ import subprocess
 import sys
 from pathlib import Path
 
-from threed.racketsport.body_compute import build_body_compute_execution
+from threed.racketsport.body_compute import (
+    build_body_compute_execution,
+    build_court_skeletons_body_compute_execution,
+)
 from threed.racketsport.schemas import Tracks
 
 
@@ -26,6 +29,41 @@ def _tracks_payload() -> dict:
         ],
         "rally_spans": [],
     }
+
+
+def test_court_skeletons_schedules_only_measured_body_joint_samples() -> None:
+    payload = _tracks_payload()
+    payload["players"][0]["frames"] = [
+        {"t": 0.0, "bbox": [100.0, 100.0, 200.0, 300.0], "world_xy": [-1.0, -3.0], "conf": 0.92},
+        {
+            "t": 1.0 / 30.0,
+            "bbox": [101.0, 100.0, 201.0, 300.0],
+            "world_xy": [-0.98, -3.0],
+            "conf": 0.91,
+            "interpolated": True,
+        },
+        {"t": 2.0 / 30.0, "bbox": [102.0, 100.0, 202.0, 300.0], "world_xy": [-0.9, -3.0], "conf": 0.90},
+    ]
+
+    execution = build_court_skeletons_body_compute_execution(
+        Tracks.model_validate(payload),
+        skeleton_stride=2,
+    )
+
+    assert execution["pipeline_preset"] == "court_skeletons"
+    assert [frame["frame_idx"] for frame in execution["scheduled_frames"]] == [0, 2]
+    assert {frame["target_representation"] for frame in execution["scheduled_frames"]} == {"body_joints"}
+    assert execution["summary"]["scheduled_by_target_representation"] == {"body_joints": 2}
+    assert execution["summary"]["tier1_mesh_player_frame_count"] == 0
+    assert execution["summary"]["coverage_denominator_policy"] == "eligible_scheduled_measured_samples"
+    assert execution["summary"]["coverage_denominator_player_frame_count"] == 2
+    assert execution["summary"]["interpolated_player_frame_excluded_count"] == 1
+    interpolated_skip = next(
+        frame for frame in execution["skipped_frames"] if frame["skip_reason"] == "purely_interpolated_track_frame"
+    )
+    assert interpolated_skip["frame_idx"] == 1
+    assert interpolated_skip["target_player_ids"] == [7]
+    assert interpolated_skip["target_representation"] == "body_joints"
 
 
 def _teleporting_tracks_payload() -> dict:

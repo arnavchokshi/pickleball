@@ -148,7 +148,12 @@
       "else": {
         "properties": {
           "selection_mode": {
-            "enum": ["enrolled_four_slot", "partial_unbound_real_only"]
+            "enum": [
+              "enrolled_four_slot",
+              "auto_2_player_enrollment",
+              "auto_4_player_enrollment",
+              "partial_unbound_real_only"
+            ]
           },
           "source_attestations": {
             "properties": {
@@ -175,7 +180,13 @@
             "properties": {
               "slot_count": {"const": 0},
               "slots": {"maxItems": 0},
-              "status": {"const": "no_valid_exact_four_window"}
+              "status": {
+                "enum": [
+                  "no_valid_exact_four_window",
+                  "no_valid_exact_2_window",
+                  "no_valid_exact_4_window"
+                ]
+              }
             }
           },
           "output_counts": {
@@ -200,7 +211,8 @@
             ]
           }
         },
-        "required": ["status"]
+        "required": ["status"],
+        "not": {"required": ["player_cardinality"]}
       },
       "then": {
         "properties": {
@@ -214,6 +226,36 @@
           "selection_mode": {"const": "enrolled_four_slot"},
           "output_counts": {
             "properties": {"players": {"const": 4}}
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "preview_selection_complete",
+              "preview_selection_partial_with_abstentions"
+            ]
+          }
+        },
+        "required": ["status", "player_cardinality"]
+      },
+      "then": {
+        "properties": {
+          "enrollment": {
+            "properties": {
+              "slot_count": {"enum": [2, 4]},
+              "slots": {"maxItems": 4, "minItems": 2},
+              "status": {"const": "enrolled"}
+            }
+          },
+          "selection_mode": {
+            "enum": ["auto_2_player_enrollment", "auto_4_player_enrollment"]
+          },
+          "output_counts": {
+            "properties": {"players": {"enum": [2, 4]}}
           }
         }
       }
@@ -335,9 +377,26 @@
       "type": "object"
     },
     "preview_only": {"const": true, "type": "boolean"},
+    "player_cardinality": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {"const": "auto_two_or_four", "type": "string"},
+        "inferred_players": {"enum": [2, 4, null]},
+        "selected_target": {"enum": [2, 4], "type": "integer"},
+        "hard_maximum": {"const": 4, "type": "integer"}
+      },
+      "required": ["mode", "inferred_players", "selected_target", "hard_maximum"],
+      "type": "object"
+    },
     "schema_version": {"const": 1, "type": "integer"},
     "selection_mode": {
-      "enum": ["disabled", "enrolled_four_slot", "partial_unbound_real_only"],
+      "enum": [
+        "disabled",
+        "enrolled_four_slot",
+        "auto_2_player_enrollment",
+        "auto_4_player_enrollment",
+        "partial_unbound_real_only"
+      ],
       "type": "string"
     },
     "source_attestations": {

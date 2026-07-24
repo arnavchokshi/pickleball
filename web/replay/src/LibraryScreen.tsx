@@ -139,7 +139,7 @@ export async function createJob(clipId: string, options: AuthApiOptions = {}): P
     {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ clip_id: clipId }),
+      body: JSON.stringify({ clip_id: clipId, pipeline_preset: "court_skeletons" }),
     },
     options,
   );
@@ -340,6 +340,10 @@ export function LibraryScreen({
       });
       setJobsByClipId((prev) => ({ ...prev, [clip.id]: job }));
       await refreshClips();
+      const manifestHref = manifestUrlForJob(job, baseUrl);
+      if (job.status === "complete" && manifestHref) {
+        onOpenViewer(manifestHref);
+      }
     } catch (error) {
       setUploadError(error instanceof Error ? error.message : String(error));
     } finally {

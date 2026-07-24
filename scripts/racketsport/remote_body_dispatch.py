@@ -1112,6 +1112,7 @@ def dispatch_body_stage(
     config: RemoteConfig | None = None,
     max_frames: int | None = None,
     max_players: int = 4,
+    pipeline_preset: str = "full",
     allow_dirty: bool = False,
     run: RunFn = _run,
 ) -> RemoteBodyDispatchResult:
@@ -1125,6 +1126,8 @@ def dispatch_body_stage(
     """
 
     clip = _validate_clip_id(clip)
+    if pipeline_preset not in {"full", "court_skeletons"}:
+        raise RemoteBodyDispatchError(f"unsupported pipeline preset: {pipeline_preset}")
     config = config or RemoteConfig()
     _require_remote_host(config.host)
     transport = _validate_transport_name(config.transport)
@@ -1144,6 +1147,7 @@ def dispatch_body_stage(
         config=config,
         max_frames=max_frames,
         max_players=max_players,
+        pipeline_preset=pipeline_preset,
     )
     version_stamp = build_version_stamp(
         remote_run_dir=remote_run_dir,
@@ -1539,6 +1543,7 @@ def _remote_body_runner_script(
     config: RemoteConfig,
     max_frames: int | None,
     max_players: int,
+    pipeline_preset: str = "full",
 ) -> str:
     """Generate the python script the remote host executes for the BODY run.
 
@@ -1593,6 +1598,7 @@ from threed.racketsport.orchestrator import BodyStageRunner, run_pipeline
 _emit_marker("imports_done")
 
 remote_dispatch_sam3d_config = json.loads({dispatch_config_json!r})
+remote_dispatch_sam3d_config["pipeline_preset"] = {pipeline_preset!r}
 try:
     with open({remote_run_dir + '/' + VERSION_STAMP_ARTIFACT!r}, "r", encoding="utf-8") as version_file:
         _version_stamp = json.load(version_file)
@@ -1633,7 +1639,7 @@ summary = run_pipeline(
             tier2_body_joints_all_tracked=True,
             body_skeleton_stride={int(config.body_skeleton_stride)!r},
             mesh_vertex_serialization_policy={'tier1_only' if config.sam3d_skip_tier2_mesh_vertices else 'all'!r},
-            write_body_monoliths={bool(config.fetch_body_monoliths)!r},
+            write_body_monoliths={bool(config.fetch_body_monoliths and pipeline_preset == 'full')!r},
             sam3d_body_input_size_px={int(config.sam3d_body_input_size_px)!r},
             sam3d_crop_bucket_sizes={tuple(int(value) for value in config.sam3d_crop_bucket_sizes)!r},
             sam3d_crop_padding_scale={float(config.sam3d_crop_padding_scale)!r},
@@ -1654,6 +1660,7 @@ summary = run_pipeline(
             body_contact_splice={bool(config.body_contact_splice)!r},
             body_world_joint_visual_smoothing={bool(config.body_world_joint_visual_smoothing)!r},
             experimental_body_array_native={bool(config.experimental_body_array_native)!r},
+            pipeline_preset={pipeline_preset!r},
         )
     }},
 )

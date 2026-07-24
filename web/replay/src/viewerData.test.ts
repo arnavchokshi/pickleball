@@ -1260,7 +1260,7 @@ describe("viewer data contracts", () => {
     expect(active[0].frame.mesh_vertices_world).toEqual(parsedBodyMesh.players[0].frames[0].mesh_vertices_world);
   });
 
-  it("builds a doubled display-FPS world and body mesh sequence while preserving originals for OFF", () => {
+  it("leaves mesh-backed world samples computed while doubling the separate body-mesh display", () => {
     const parsedWorld = parseVirtualWorld({
       ...world,
       joint_names: ["left_hip", "right_hip"],
@@ -1299,16 +1299,11 @@ describe("viewer data contracts", () => {
 
     expect(off.world).toBe(parsedWorld);
     expect(off.bodyMesh).toBe(parsedBodyMesh);
-    expect(on.world).not.toBe(parsedWorld);
-    expect(on.world.fps).toBe(60);
-    expect(on.world.players[0].frames.map((frame) => frame.t)).toHaveLength(3);
+    expect(on.world).toBe(parsedWorld);
+    expect(on.world.fps).toBe(30);
+    expect(on.world.players[0].frames.map((frame) => frame.t)).toHaveLength(2);
     expect(on.world.players[0].frames[0].t).toBeCloseTo(1);
-    expect(on.world.players[0].frames[1].t).toBeCloseTo(1 + 1 / 60);
-    expect(on.world.players[0].frames[2].t).toBeCloseTo(1 + 1 / 30);
-    expect(on.world.players[0].frames[1].joints_world).toEqual([
-      [0, 1, 1],
-      [2, 1, 1],
-    ]);
+    expect(on.world.players[0].frames[1].t).toBeCloseTo(1 + 1 / 30);
     expect(on.bodyMesh?.players[0].frames).toHaveLength(3);
     expect(on.bodyMesh?.players[0].frames[1].t).toBeCloseTo(1 + 1 / 60);
     expect(on.bodyMesh?.players[0].frames[1]).toMatchObject({
@@ -1320,10 +1315,166 @@ describe("viewer data contracts", () => {
       sourceFps: 30,
       displayFps: 60,
       worldComputedFrameCount: 2,
-      worldInterpolatedFrameCount: 1,
+      worldInterpolatedFrameCount: 0,
       meshComputedFrameCount: 2,
       meshInterpolatedFrameCount: 1,
     });
+  });
+
+  it("adds only bounded runtime skeleton midpoints without changing measurement coverage", () => {
+    const skeletonWorld = parseVirtualWorld({
+      ...world,
+      joint_names: ["left_hip", "right_hip"],
+      players: [
+        {
+          ...world.players[0],
+          representation: "joints",
+          frames: [
+            {
+              ...world.players[0].frames[0],
+              t: 1,
+              joints_world: [
+                [0, 0, 1],
+                [2, 0, 1],
+              ],
+              joint_conf: [0.8, 0.6],
+              mesh_vertices_world: [],
+              joint_count: 2,
+              mesh_vertex_count: 0,
+            },
+            {
+              ...world.players[0].frames[0],
+              t: 1.05,
+              joints_world: [
+                [0, 2, 1],
+                [2, 2, 1],
+              ],
+              joint_conf: [0.6, 0.4],
+              mesh_vertices_world: [],
+              joint_count: 2,
+              mesh_vertex_count: 0,
+            },
+          ],
+        },
+      ],
+    });
+    const originalSummary = skeletonWorld.summary;
+    const originalCoverage = playerCoverageStats(skeletonWorld);
+
+    const displayed = displayFpsReplayData(skeletonWorld, null, true);
+
+    expect(skeletonWorld.players[0].frames).toHaveLength(2);
+    expect(skeletonWorld.players[0].frames.every((frame) => frame.display_interpolated !== true)).toBe(true);
+    expect(displayed.world.fps).toBe(skeletonWorld.fps);
+    expect(displayed.world.summary).toBe(originalSummary);
+    expect(displayed.world.players[0].frames).toHaveLength(3);
+    const midpoint = displayed.world.players[0].frames[1];
+    expect(midpoint).toMatchObject({
+      t: 1.025,
+      display_interpolated: true,
+      display_interpolation: {
+        kind: "skeleton_midpoint",
+        player_id: 1,
+        from_t: 1,
+        to_t: 1.05,
+        alpha: 0.5,
+        max_gap_s: 0.05,
+      },
+      joints_world: [
+        [0, 1, 1],
+        [2, 1, 1],
+      ],
+      joint_conf: [0.7, 0.5],
+      mesh_vertices_world: [],
+      mesh_vertex_count: 0,
+    });
+    expect(midpoint.track_world_xy).toBeUndefined();
+    expect(midpoint.floor_world_xyz).toBeUndefined();
+    expect(midpoint.transl_world).toBeUndefined();
+    expect(playerCoverageStats(displayed.world)).toEqual(originalCoverage);
+    expect(displayed.stats).toMatchObject({
+      worldComputedFrameCount: 2,
+      worldInterpolatedFrameCount: 1,
+    });
+
+    const displayedAgain = displayFpsReplayData(displayed.world, null, true);
+    expect(displayedAgain.world.players[0].frames).toHaveLength(3);
+    expect(displayedAgain.stats.worldComputedFrameCount).toBe(2);
+    expect(displayedAgain.stats.worldInterpolatedFrameCount).toBe(0);
+  });
+
+  it("preserves skeleton gaps across interruptions, wide spans, other players, and non-joint representations", () => {
+    const computedFrame = (t: number, joints: number[][] = [[0, 0, 1], [1, 0, 1]]) => ({
+      ...world.players[0].frames[0],
+      t,
+      joints_world: joints,
+      joint_conf: joints.map(() => 0.8),
+      mesh_vertices_world: [],
+      joint_count: joints.length,
+      mesh_vertex_count: 0,
+    });
+    const interrupted = parseVirtualWorld({
+      ...world,
+      players: [
+        {
+          ...world.players[0],
+          representation: "joints",
+          frames: [computedFrame(0), computedFrame(0.02, []), computedFrame(0.04)],
+        },
+      ],
+    });
+    const wide = parseVirtualWorld({
+      ...world,
+      players: [
+        { ...world.players[0], representation: "joints", frames: [computedFrame(0), computedFrame(0.3)] },
+      ],
+    });
+    const justOverLimit = parseVirtualWorld({
+      ...world,
+      players: [
+        { ...world.players[0], representation: "joints", frames: [computedFrame(0), computedFrame(0.0501)] },
+      ],
+    });
+    const separatePlayers = parseVirtualWorld({
+      ...world,
+      players: [
+        { ...world.players[0], id: 1, representation: "joints", frames: [computedFrame(0)] },
+        { ...world.players[0], id: 2, representation: "joints", frames: [computedFrame(0.03)] },
+      ],
+    });
+    const nonJoint = parseVirtualWorld({
+      ...world,
+      players: [
+        { ...world.players[0], representation: "mesh", frames: [computedFrame(0), computedFrame(0.03)] },
+      ],
+    });
+
+    expect(displayFpsReplayData(interrupted, null, true).stats.worldInterpolatedFrameCount).toBe(0);
+    expect(displayFpsReplayData(justOverLimit, null, true).stats.worldInterpolatedFrameCount).toBe(0);
+    const displayedWide = displayFpsReplayData(wide, null, true);
+    expect(displayedWide.stats.worldInterpolatedFrameCount).toBe(0);
+    expect(frameForTime(wide.players[0], 0.15)).toBeUndefined();
+    expect(frameForTime(displayedWide.world.players[0], 0.15)).toBeUndefined();
+    expect(displayFpsReplayData(separatePlayers, null, true).stats.worldInterpolatedFrameCount).toBe(0);
+    expect(displayFpsReplayData(nonJoint, null, true).stats.worldInterpolatedFrameCount).toBe(0);
+  });
+
+  it("drops persisted display interpolation claims and only marks viewer-generated frames", () => {
+    const parsed = parseVirtualWorld({
+      ...world,
+      players: [
+        {
+          ...world.players[0],
+          representation: "joints",
+          frames: [
+            { ...world.players[0].frames[0], display_interpolated: true, display_interpolation: { kind: "forged" } },
+          ],
+        },
+      ],
+    });
+
+    expect(parsed.players[0].frames[0].display_interpolated).toBeUndefined();
+    expect(parsed.players[0].frames[0].display_interpolation).toBeUndefined();
   });
 
   it("relaxes mesh midpoint interpolation to the user-enabled cadence ceiling and reports the real counts", () => {

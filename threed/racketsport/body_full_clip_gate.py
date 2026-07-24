@@ -10,6 +10,8 @@ from typing import Any, Mapping
 SCHEMA_VERSION = 1
 ARTIFACT_TYPE = "racketsport_body_full_clip_gate"
 DEFAULT_MIN_COVERAGE = 0.98
+DEFAULT_COVERAGE_DENOMINATOR_POLICY = "all_tracked_player_frames"
+ELIGIBLE_SCHEDULED_MEASURED_COVERAGE_POLICY = "eligible_scheduled_measured_samples"
 
 
 def build_body_full_clip_gate(
@@ -40,10 +42,25 @@ def build_body_full_clip_gate(
     execution_summary = body_compute_execution.get("summary") if isinstance(body_compute_execution, Mapping) else {}
     quality_summary = body_joint_quality.get("summary") if isinstance(body_joint_quality, Mapping) else {}
     scheduled_player_frames = _non_negative_int(_mapping_value(execution_summary, "scheduled_player_frame_count"))
+    requested_coverage_policy = str(
+        _mapping_value(execution_summary, "coverage_denominator_policy") or DEFAULT_COVERAGE_DENOMINATOR_POLICY
+    )
+    if requested_coverage_policy == ELIGIBLE_SCHEDULED_MEASURED_COVERAGE_POLICY:
+        coverage_denominator_policy = requested_coverage_policy
+        coverage_denominator_player_frames = _non_negative_int(
+            _mapping_value(execution_summary, "coverage_denominator_player_frame_count")
+        )
+    else:
+        coverage_denominator_policy = DEFAULT_COVERAGE_DENOMINATOR_POLICY
+        coverage_denominator_player_frames = tracked_player_frames
     mesh_joint_player_frames = _non_negative_int(_mapping_value(quality_summary, "joint_frame_count"))
     skeleton_joint_player_frames = _non_negative_int(_mapping_value(quality_summary, "skeleton_joint_frame_count"))
     joint_player_frames = skeleton_joint_player_frames or mesh_joint_player_frames
-    coverage = (joint_player_frames / tracked_player_frames) if tracked_player_frames else 0.0
+    coverage = (
+        joint_player_frames / coverage_denominator_player_frames
+        if coverage_denominator_player_frames
+        else 0.0
+    )
     contact_summary = contact_splice.get("summary") if isinstance(contact_splice, Mapping) else {}
     scheduled_contacts = _non_negative_int(_mapping_value(contact_summary, "scheduled_contact_count"))
     mesh_contact_count = _non_negative_int(_mapping_value(contact_summary, "spliced_contact_count"))
@@ -71,13 +88,21 @@ def build_body_full_clip_gate(
         blockers.append("missing_body_joint_quality")
     if tracked_player_frames == 0:
         blockers.append("no_tracked_player_frames")
+    if (
+        coverage_denominator_policy == ELIGIBLE_SCHEDULED_MEASURED_COVERAGE_POLICY
+        and coverage_denominator_player_frames == 0
+    ):
+        blockers.append("no_eligible_scheduled_measured_samples")
     if body_joint_quality is not None and (not quality_usable or quality_blockers):
         blockers.append("body_joint_quality_blocked")
-    if tracked_player_frames > 0 and coverage < min_coverage:
+    if coverage_denominator_player_frames > 0 and coverage < min_coverage:
         blockers.append("full_clip_body_coverage_below_threshold")
     if scheduled_contacts > 0 and accounted_contacts < scheduled_contacts:
         blockers.append("contact_mesh_or_unavailable_coverage_incomplete")
-    if scheduled_player_frames < tracked_player_frames:
+    if (
+        coverage_denominator_policy == DEFAULT_COVERAGE_DENOMINATOR_POLICY
+        and scheduled_player_frames < tracked_player_frames
+    ):
         warnings.append("body_not_scheduled_for_all_tracked_player_frames")
 
     blockers = _dedupe(blockers)
@@ -93,9 +118,13 @@ def build_body_full_clip_gate(
         "evaluated_frame_count": joint_player_frames,
         "min_coverage": min_coverage,
         "tracked_player_frame_count": tracked_player_frames,
+        "coverage_denominator_policy": coverage_denominator_policy,
+        "coverage_denominator_player_frame_count": coverage_denominator_player_frames,
         "evaluated_player_frame_count": joint_player_frames,
         "summary": {
             "tracked_player_frame_count": tracked_player_frames,
+            "coverage_denominator_policy": coverage_denominator_policy,
+            "coverage_denominator_player_frame_count": coverage_denominator_player_frames,
             "scheduled_player_frame_count": scheduled_player_frames,
             "joint_player_frame_count": joint_player_frames,
             "mesh_joint_player_frame_count": mesh_joint_player_frames,
