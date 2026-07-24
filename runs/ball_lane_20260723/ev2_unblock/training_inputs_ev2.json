@@ -1,0 +1,25 @@
+{
+  "artifact_type": "training_input_manifest",
+  "inputs": [
+    {
+      "asset_id": "event_abc_vm_pull_20260721",
+      "path": "runs/lanes/abc_experiment_20260721/vm_pull_v2/abc_out_v2/arm_b_manifest.json",
+      "sha256": "f5c1e3d89d072c4a770ef776378596921ae2e2fa7a91395ca2315df27b53a2a7"
+    },
+    {
+      "asset_id": "event_abc_vm_pull_20260721",
+      "path": "runs/lanes/abc_experiment_20260721/vm_pull/inputs/frozen_t20_event_head.pt",
+      "sha256": "f7b61b25d7e147e3d6353c8ec2bdf6a86e41721455398c23b9c617e065316082"
+    },
+    {
+      "asset_id": "event_abc_inputs_20260720",
+      "path": "runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json",
+      "sha256": "84a0062c776029bc33b01381add8c0b6ecbe9fc018732d6cff2bb8bdcd194e9b"
+    },
+    {
+      "asset_id": "online_harvest_20260706",
+      "path": "data/online_harvest_20260706/rallies"
+    }
+  ],
+  "schema_version": 1
+}
