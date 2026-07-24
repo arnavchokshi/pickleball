@@ -3,12 +3,15 @@
 Updated: 2026-07-23 (late evening). `VERIFIED=0` binding; nothing promoted past the bar yet.
 Single source of owner-facing truth. Full data map: `DATA_INVENTORY.md`. Program: `NORTH_STAR_ROADMAP.md`.
 
-## 👉 Your one high-value to-do: label court pack #3
-`cvat_upload/court_labelpack3_20260723/START_HERE.html` — 122 frames across **50 distinct new venues**
-(zero overlap with anything you've labeled). Click a point → auto-advances; **C** = copy previous
-frame's points; **click a dot + Delete/Backspace** = fix it; Space/X/U = skip point/frame/undo.
-Export one JSON, send it back. This is the highest-leverage thing you can do — more venue diversity
-is the path from court 0.371 → the 0.95 bar.
+## 👉 Your one high-value to-do: capture real pickleball footage (ground truth)
+Nothing can be promoted past `VERIFIED=0` until we have **owner-shot footage with ground truth** — the
+one action that unblocks *every* lane (court, ball-3D, person, events). Start small: ~100–300 controlled
+flights, baseline iPhone + 2 temporary side/corner cameras for triangulation. Plan:
+`runs/ball3d_lifting_plan_20260723/PLAN.md`.
+
+_Court labeling is **handled** — it's Codex's lane, you've already labeled plenty (incl. v3), and Codex
+has 293 auto-adapted diverse-venue labels. An optional fresh pack (`court_labelpack3_20260723`, 50 new
+venues) exists for cheap extra points, but it is **not needed from you**._
 
 ## Capability status
 
