@@ -1,8 +1,11 @@
-# B1 resume (WS1.1) — STATUS, 2026-07-24 ~07:50Z
+# B1 resume (WS1.1) — STATUS, 2026-07-24 (launched ~07:12Z; updated ~09:05Z)
 
-**State: LAUNCHED, RUNNING DETACHED.** pb.vision ball-SST build (B1) is executing on a fresh T4
-SPOT VM under the repaired, sha-pinned builder. This file records the guard findings, what was
-launched, verifications, cost, monitoring, and the rail-kill contingency.
+**State: LAUNCHED, RUNNING DETACHED, PROGRESS VERIFIED.** pb.vision ball-SST build (B1) is
+executing on a fresh T4 SPOT VM under the repaired, sha-pinned builder. The coordinator's 08:50Z
+"stalled" alarm was investigated and is a FALSE ALARM — see the 09:05Z addendum at the bottom
+(root cause: stale attempt-1 error line in an append-mode log + block-buffered stdout; the builder
+never stopped). This file records the guard findings, what was launched, verifications, cost,
+monitoring, and the rail-kill contingency.
 
 ## Guard findings (checked first, in order)
 
@@ -59,9 +62,13 @@ launched, verifications, cost, monitoring, and the rail-kill contingency.
 - **Log**: `/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_data_regroup_20260722/b1_resume_20260723.log`
   (on the VM; stdout is block-buffered — a quiet log does NOT mean a dead builder; the first ~200
   bytes are a stale error line from launch attempt 1, see Findings).
-- **Heartbeat**: `/var/tmp/b1_hb.txt` on the VM, rewritten every 60s: UTC time,
-  builder RUNNING/NOT_RUNNING + pid (precise pattern `[.]venv/bin/python.*build_pbvision_ball_sst`),
-  log size, last log line, `OUT_EXISTS=<bytes>` once the manifest lands, `PREEMPTED=TRUE` if spot-reclaimed.
+- **Heartbeat (v2, hardened 09:03Z)**: `/var/tmp/b1_hb.txt` on the VM (writer:
+  `/var/tmp/b1_hb2.sh`), rewritten every 60s: UTC time; builder RUNNING/DEAD + pid (precise
+  pattern `[.]venv/bin/python.*build_pbvision_ball_sst`) **plus `cpu_jiffies` and
+  `cpu_delta_last_cycle`** — a dead or hung inner process shows DEAD or delta≈0, so RUNNING can no
+  longer mask a stall; `new_log_bytes` (total minus the 200-byte stale attempt-1 error, labeled
+  IGNORE) + last NEW log line only; `OUT_EXISTS bytes/mtime` or `OUT_NOT_YET`; `dep_dirs=N/7`;
+  `PREEMPTED=TRUE` if spot-reclaimed.
   (Boot log: `/var/tmp/b1resume_boot.log`; rail proof `/var/tmp/b1resume_boot_rail_armed.txt`.)
 
 ## Verifications performed before launch (all PASS)
@@ -108,6 +115,11 @@ launched, verifications, cost, monitoring, and the rail-kill contingency.
 
 - Estimated total wall from 07:12Z: **5.9-8.5h** (reused-video reproduction ≈2.3h + fresh
   inference+reproduction ≈3.3-5.9h + snapshot/overheads ≈0.3h) → completion ~**13:05-15:40Z**.
+  **REVISED 09:05Z with measured rates**: reproduction is running at 15.7-19.5 fps on this CPU
+  (better than the 10.4 fps planning number; py-spy frame-counter samples 08:52-09:01Z) →
+  ETA ~**12:15-15:30Z** depending on which video the counter is currently in (per-frame cost
+  scales with each video's frame-time table, so per-video rates vary). Most of the distribution
+  completes under the rail; only the extreme slow tail risks a rail-kill ≤~30 min short.
 - The rail fires **15:03:56Z** (7.86h of runway). Mid-band completes under it; the slow tail may be
   **rail-killed near the end (~40min short, worst case)**. I attempted to extend the rail to +585
   and the permission system denied canceling the armed shutdown — respected, not worked around.
@@ -158,3 +170,38 @@ gcloud compute ssh pickleball-gpu-ball-t4 --zone=us-central1-a \
 ```
 
 VM status / rail check: `gcloud compute instances describe pickleball-gpu-ball-t4 --zone=us-central1-a --format='value(status)'`
+
+## ADDENDUM 2026-07-24 ~09:05Z — coordinator stall alarm: investigated, FALSE ALARM
+
+The 08:50Z heartbeat (`builder=RUNNING`, `log_bytes=200`, `log_last=` attempt-1's
+symlink/alias error) was read as "wrapper running, inner builder errored out." Reconstruction
+with fresh evidence says otherwise — the builder never stopped:
+
+- **pid 4299 IS the inner builder, not a wrapper** (py-spy attaches to it and dumps
+  `build_pbvision_ball_sst.py` frames; its cmdline is the absolute-path invocation with
+  `--resume-dependencies`; `setsid` did not fork).
+- **The log line is attempt 1's corpse, not attempt 2's state**: log mtime is frozen at
+  **07:10:19Z** — before pid 4299 existed (07:12Z). The error references snapshot dir
+  `…_wv4gt8th` (attempt 1's, deleted before relaunch); the live run's snapshot dir is
+  `…_pq2upnff`. Attempt 2 has written 0 log bytes because its stdout is **block-buffered**
+  and the builder is in a multi-hour phase with no flush — a quiet log here is normal.
+- **Liveness + forward progress proven, not asserted**: cumulative CPU 1h32m at 08:52Z
+  (92.4% duty since launch); py-spy loop-counter samples `row.frame` = 3510 (08:52:14Z) →
+  3948 → 5677 (08:56:10Z) → 6399 (08:56:47Z) → **11568 (09:01:15Z)** — monotonic,
+  ~15.7-19.5 fps through the known `PERF_BUG_io_decode.md` reproduction phase (GPU
+  correctly idle during it). No invocation fix or relaunch was needed; killing the run
+  would have wasted ~1.75h of valid compute.
+- **Monitoring hardened (heartbeat v2)** so this class of false alarm cannot recur:
+  `cpu_delta_last_cycle` per 60s cycle (dead/hung ⇒ DEAD or ≈0; verified live showing
+  ≈100% of one core), stale attempt-1 bytes excluded and labeled IGNORE, `OUT` size/mtime,
+  `dep_dirs=N/7`. Watch `dep_dirs` go 5→7 and GPU util rise when fresh-video inference starts.
+- Incidental ops lesson (cost three rc-255 SSH deaths): `pkill -f <pattern>` run over SSH
+  kills the SSH session itself whenever the pattern appears literally anywhere in the sent
+  command string (heredoc bodies included). Control such loops via a small script file
+  invoked by a clean path (`/var/tmp/hbctl.sh`), with bracketed patterns.
+- **Rail decision unchanged**: rail fires 15:03:56Z; measured-rate ETA 12:15-15:30Z. Not
+  re-attempting the denied shutdown-rail change. If the slow tail clips the rail, the
+  contingency above applies (restart VM, relaunch same command, `--resume-dependencies`
+  reuses everything completed; est ≤~$2).
+- Cost estimates unchanged (row `62341a2` stands): the VM was never idle — the builder has
+  held ~100% of a core continuously since 07:12Z; bound remains the 8h rail (~$1.9-3.5).
