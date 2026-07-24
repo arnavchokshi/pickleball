@@ -2411,6 +2411,7 @@ class ProcessVideoPipeline:
             court_line_evidence_override=readiness_override,
             mode=mode,
             config=config,
+            require_visible_net_evidence=self.options.pipeline_preset != "court_skeletons",
         )
         self._input_quality_report = report
         _write_json(self.clip_dir / "input_quality.json", report)
@@ -8246,6 +8247,7 @@ def _build_input_quality_report(
     court_line_evidence_override: Mapping[str, Any] | None = None,
     mode: str,
     config: Mapping[str, Any],
+    require_visible_net_evidence: bool = True,
 ) -> dict[str, Any]:
     thresholds = config.get("thresholds")
     if not isinstance(thresholds, Mapping):
@@ -8268,6 +8270,7 @@ def _build_input_quality_report(
         width=timing.width,
         height=timing.height,
         thresholds=thresholds,
+        require_visible_net_evidence=require_visible_net_evidence,
     )
 
     rejection_reasons: list[str] = []
@@ -8338,6 +8341,9 @@ def _build_input_quality_report(
             "advisory_continues_downstream": str(mode) == "advisory",
             "strict_fail_closes": str(mode) == "strict",
             "owner_policy_rejection_reason": owner_reason,
+            "required_court_evidence_scope": (
+                "floor_and_visible_net" if require_visible_net_evidence else "floor_only"
+            ),
         },
     }
 
@@ -8417,6 +8423,7 @@ def _court_visibility_angle_metrics(
     width: int,
     height: int,
     thresholds: Mapping[str, Any],
+    require_visible_net_evidence: bool = True,
 ) -> dict[str, Any]:
     metrics: dict[str, Any] = {
         "source": "court_calibration.json+court_line_evidence.json",
@@ -8451,8 +8458,12 @@ def _court_visibility_angle_metrics(
     if camera_height_m is not None and camera_height_m < _float_threshold(thresholds, "min_camera_height_m"):
         metrics["below_acceptance"] = True
 
-    missing_required = _missing_required_court_line_count(court_line_evidence)
+    missing_required = _missing_required_court_line_count(
+        court_line_evidence,
+        include_net=require_visible_net_evidence,
+    )
     metrics["missing_required_court_line_count"] = missing_required
+    metrics["visible_net_evidence_required"] = require_visible_net_evidence
     if missing_required > _int_threshold(thresholds, "max_missing_required_court_lines"):
         metrics["below_acceptance"] = True
     return metrics
@@ -8535,14 +8546,21 @@ def _camera_height_m(calibration: Mapping[str, Any]) -> float | None:
     return abs(parsed) if parsed is not None else None
 
 
-def _missing_required_court_line_count(court_line_evidence: Any) -> int:
+def _missing_required_court_line_count(
+    court_line_evidence: Any,
+    *,
+    include_net: bool = True,
+) -> int:
     if not isinstance(court_line_evidence, Mapping):
         return 0
     aggregate = court_line_evidence.get("aggregate")
     if not isinstance(aggregate, Mapping):
         return 0
     total = 0
-    for key in ("missing_required_line_ids", "missing_required_net_ids"):
+    keys = ["missing_required_line_ids"]
+    if include_net:
+        keys.append("missing_required_net_ids")
+    for key in keys:
         value = aggregate.get(key)
         if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
             total += len(value)

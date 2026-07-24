@@ -1788,6 +1788,49 @@ def test_input_quality_strict_fail_closes_and_stops_before_tracking(
     assert input_stage["metrics"]["input_quality"]["strict"] is True
 
 
+def test_court_skeletons_input_quality_requires_floor_but_not_visible_top_net(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video, frame_count=120, fps=30.0)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.pipeline_preset = "court_skeletons"
+    options.input_quality_mode = "strict"
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    calibration = _low_angle_not_fully_visible_calibration_payload()
+    calibration["image_pts"][-1][0] = 45.0
+    calibration["extrinsics"]["camera_height_m"] = 1.5
+    _write_json(options.clip_dir / "court_calibration.json", calibration)
+    _write_json(
+        options.clip_dir / "court_line_evidence.json",
+        {
+            "aggregate": {
+                "missing_required_line_ids": [],
+                "missing_required_net_ids": ["top_net"],
+            }
+        },
+    )
+    monkeypatch.setattr(
+        process_video,
+        "_probe_video_quality_samples",
+        lambda *args, **kwargs: {
+            "blur_laplacian_var": 500.0,
+            "luminance_mean": 0.5,
+            "sampled_frame_count": 3,
+        },
+        raising=False,
+    )
+
+    outcome = process_video.ProcessVideoPipeline(options)._stage_input_quality()
+    payload = json.loads((options.clip_dir / "input_quality.json").read_text(encoding="utf-8"))
+
+    assert outcome.status == "ran"
+    assert payload["metrics"]["court_visibility_angle"]["missing_required_court_line_count"] == 0
+    assert payload["metrics"]["court_visibility_angle"]["visible_net_evidence_required"] is False
+    assert payload["policy"]["required_court_evidence_scope"] == "floor_only"
+
+
 def test_body_summary_populates_postchain_bypassed_stages_from_phase_timing(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     video.write_bytes(b"fake-video")
