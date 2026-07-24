@@ -2,7 +2,7 @@
 
 > **GENERATED FILE — do not hand-edit.** Authority is `runs/manager/data_ledger.json`; this is its scannable human view.
 > Regenerate after any ledger change: `.venv/bin/python scripts/racketsport/build_data_inventory.py`
-> Ledger generated: `2026-07-23T21:16:15Z` · 34 registered datasets · `VERIFIED=0` binding.
+> Ledger generated: `2026-07-24T06:41:09Z` · 34 registered datasets · `VERIFIED=0` binding.
 
 The single place to see **all data we have on every lane and whether it is used**. Every dataset the project has touched is a registered asset here with a state and a reason. If a dataset is not in this table, it is not registered — add a ledger row before any training touches it (the data-safety gate enforces this).
 
@@ -13,11 +13,11 @@ The single place to see **all data we have on every lane and whether it is used*
 | Lane | ✅ used | 🟡 authorized | 🔴 blocked | 🔒 held-out | ❌ rejected |
 |---|---|---|---|---|---|
 | **COURT** | 5 | 0 | 2 | 2 | 0 |
-| **BALL** | 1 | 0 | 2 | 1 | 0 |
+| **BALL** | 2 | 0 | 1 | 1 | 0 |
 | **PERSON** | 0 | 0 | 2 | 1 | 0 |
 | **EVENT** | 2 | 1 | 4 | 1 | 3 |
 | **SHARED / OTHER** | 1 | 0 | 2 | 0 | 4 |
-| **TOTAL** | 9 | 1 | 12 | 5 | 7 |
+| **TOTAL** | 10 | 1 | 11 | 5 | 7 |
 
 ## COURT
 
@@ -38,9 +38,9 @@ The single place to see **all data we have on every lane and whether it is used*
 | Dataset | What / source | Size | Status | Why not used / next step |
 |---|---|---|---|---|
 | `pbv_replay_xkadsq9bli3h_20260720` | pb.vision gallery | 1 rows | ✅ used (training) | Resume B1 SST materialization for remaining sources tqjlrcntpjvt and xkadsq9bli3h with skip-if-exists/resume support; do not arm B2 without a fresh e… |
+| `w7_audit_stratum_scratch_350` | six source YouTube channels | 350 labels | 📊 used (audit/eval only) | Keep the 167-row judge frozen and evaluation-only; score every BALL candidate through scripts/racketsport/ball_loso_validation.py --parent-source-spl… |
 | `event_public_extended_opentt_20260713` | lab.osai.ai | 52,987 labels | 🔴 not used — blocked | Run one controlled OpenTTGames dense-ball pretrain experiment against the official control, using only source-mapped local pixels and a frozen source… |
-| `w7_audit_stratum_scratch_350` | six source YouTube channels | 350 rows | 🔴 not used — blocked | Finish and export all 350 scratch labels, reconcile lineage, and prove zero protected collisions before Track B consumption. |
-| `ball_reviewed_corpus_chain_1121_3026` | six source YouTube channels | 3,026 labels | 🔒 held out (eval/protected) | Reconcile the 350-row scratch audit, freeze source-held partitions, and issue a contamination ruling before any Track B reuse. |
+| `ball_reviewed_corpus_chain_1121_3026` | six source YouTube channels | 3,026 labels | 🔒 held out (eval/protected) | Issue the contamination root-cause ruling for the 74.8% control-prediction finding; until then any Track B training reuse must load rows only through… |
 
 ## PERSON
 
