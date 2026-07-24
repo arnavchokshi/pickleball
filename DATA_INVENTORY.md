@@ -2,7 +2,7 @@
 
 > **GENERATED FILE — do not hand-edit.** Authority is `runs/manager/data_ledger.json`; this is its scannable human view.
 > Regenerate after any ledger change: `.venv/bin/python scripts/racketsport/build_data_inventory.py`
-> Ledger generated: `2026-07-24T06:41:09Z` · 34 registered datasets · `VERIFIED=0` binding.
+> Ledger generated: `2026-07-24T09:00:00Z` · 35 registered datasets · `VERIFIED=0` binding.
 
 The single place to see **all data we have on every lane and whether it is used**. Every dataset the project has touched is a registered asset here with a state and a reason. If a dataset is not in this table, it is not registered — add a ledger row before any training touches it (the data-safety gate enforces this).
 
@@ -15,9 +15,9 @@ The single place to see **all data we have on every lane and whether it is used*
 | **COURT** | 5 | 0 | 2 | 2 | 0 |
 | **BALL** | 2 | 0 | 1 | 1 | 0 |
 | **PERSON** | 0 | 0 | 2 | 1 | 0 |
-| **EVENT** | 2 | 1 | 4 | 1 | 3 |
+| **EVENT** | 2 | 2 | 4 | 1 | 3 |
 | **SHARED / OTHER** | 1 | 0 | 2 | 0 | 4 |
-| **TOTAL** | 10 | 1 | 11 | 5 | 7 |
+| **TOTAL** | 10 | 2 | 11 | 5 | 7 |
 
 ## COURT
 
@@ -57,6 +57,7 @@ The single place to see **all data we have on every lane and whether it is used*
 | `event_abc_inputs_20260720` | owner event labeling | 102 labels | ✅ used (training) | Reuse the exact frozen 61-train/41-validation manifest for corrected exposure-matched Track D arms; validation rows stay gradient-excluded. |
 | `owner_event_labels_102_20260719` | owner labeling session | 102 labels | ✅ used (training) | Reuse the frozen 61 training rows for corrected Track D fine-tuning and keep the 41 validation rows gradient-excluded. |
 | `event_abc_vm_pull_20260721` | pb.vision gallery and frozen T20 initialization lineage | 1,189 labels | 🟡 authorized — not yet trained | Pretrain Stage-P/E-v2 only from the SHA-bound corrected 1189-row arm_b_manifest.json and initialize model-only from the SHA-bound frozen_t20_event_he… |
+| `multimodal_event_windows_20260724` | owner labeling session | 151 labels | 🟡 authorized — not yet trained | Train the future multimodal v3 event head only from the SHA-bound train-split records (61 owner train + 49 teacher train); keep the 41 owner val reco… |
 | `event_public_f3set_20260713` | source YouTube channels not fetched | 43,655 labels | 🔴 not used — blocked | Run the Track D inventory-only pretrain-corpus adapter and preserve BLOCKED_NO_PIXELS if no local 64-frame context resolves. |
 | `event_public_golfdb_20260713` | test_video.mp4 exists locally but is not source-resolved or… | 11,200 labels | 🔴 not used — blocked | Run the Track D inventory-only pretrain-corpus adapter and preserve BLOCKED_NO_LABEL_MAPPED_SOURCE_RESOLVED_PIXELS unless the local test video is aut… |
 | `event_public_shuttleset_20260713` | broadcast videos not downloaded | 88,840 labels | 🔴 not used — blocked | Run the Track D inventory-only pretrain-corpus adapter and preserve BLOCKED_NO_PIXELS unless local source context resolves. |
