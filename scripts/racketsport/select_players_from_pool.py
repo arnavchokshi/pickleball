@@ -44,7 +44,10 @@ def main() -> int:
     parser.add_argument(
         "--embeddings",
         type=Path,
-        help="Source-only ReID embedding export; required when enabled.",
+        help=(
+            "Optional source-only ReID embedding export. Missing provider evidence "
+            "is reported loudly as reid_unavailable."
+        ),
     )
     parser.add_argument(
         "--calibration",
@@ -67,16 +70,46 @@ def main() -> int:
         action="store_true",
         help="Enable preview selection. Omit for a byte-identical tracks.json no-op.",
     )
+    selection_flags = parser.add_mutually_exclusive_group()
+    selection_flags.add_argument(
+        "--player-selection",
+        dest="player_selection",
+        action="store_true",
+        default=None,
+        help="Explicit alias for --enable-selection.",
+    )
+    selection_flags.add_argument(
+        "--no-player-selection",
+        dest="player_selection",
+        action="store_false",
+        help="Explicitly keep selection disabled.",
+    )
+    parser.add_argument(
+        "--embedding-bbox-scale",
+        type=float,
+        default=1.0,
+        help=(
+            "Runtime raw-pool coordinate scale joining geometry boxes to embedding boxes. "
+            "The production raw-pool authority default is identity when no scale metadata exists."
+        ),
+    )
     args = parser.parse_args()
 
     try:
-        if args.scoring_projection is not None and not args.enable_selection:
+        if args.enable_selection and args.player_selection is False:
+            raise ValueError(
+                "--enable-selection and --no-player-selection cannot be combined"
+            )
+        selection_enabled = bool(
+            args.enable_selection or args.player_selection is True
+        )
+        if args.scoring_projection is not None and not selection_enabled:
             raise ValueError("--scoring-projection requires --enable-selection")
         scoring_projection = (
             args.scoring_projection
             if args.scoring_projection is not None
             else _default_scoring_projection_path(args.out_tracks)
-            if args.enable_selection
+            if selection_enabled
             else None
         )
         scoring_projection_sha256 = (
@@ -98,7 +131,7 @@ def main() -> int:
         )
         tracks_payload = _read_object(args.tracks)
         config = PlayerSelectionConfig()
-        if not args.enable_selection:
+        if not selection_enabled:
             selected, report = select_players_payload(
                 tracks_payload, enabled=False, config=config
             )
@@ -123,7 +156,6 @@ def main() -> int:
                 flag
                 for flag, value in (
                     ("--raw-pool", args.raw_pool),
-                    ("--embeddings", args.embeddings),
                     ("--calibration", args.calibration),
                 )
                 if value is None
@@ -138,10 +170,21 @@ def main() -> int:
             selected, report = select_players_payload(
                 tracks_payload,
                 raw_pool_payload=_read_object(args.raw_pool),
-                embedding_payload=_read_object(args.embeddings),
+                embedding_payload=(
+                    _read_object(args.embeddings)
+                    if args.embeddings is not None
+                    else None
+                ),
                 calibration=calibration,
                 enabled=True,
                 config=config,
+                embedding_bbox_scale=args.embedding_bbox_scale,
+                reid_provider_available=args.embeddings is not None,
+                reid_provider_reason=(
+                    None
+                    if args.embeddings is not None
+                    else "embedding_provider_artifact_absent"
+                ),
             )
             unbound_observations = selected.get("unbound_observations")
             if not isinstance(unbound_observations, list):
@@ -204,12 +247,19 @@ def main() -> int:
 
     print(args.out_tracks)
     print(args.report)
-    if args.enable_selection:
+    if selection_enabled:
         assert scoring_projection is not None
         assert scoring_projection_sha256 is not None
         print(scoring_projection)
         print(scoring_projection_sha256)
         print(f"scoring_projection_sha256={scoring_projection_digest}")
+        reid_summary = _selective_reid_summary(report)
+        if int(reid_summary["reid_unavailable"]) > 0:
+            print(
+                "player selection warning: "
+                f"reid_unavailable={reid_summary['reid_unavailable']}",
+                file=sys.stderr,
+            )
     return 0
 
 
@@ -225,6 +275,20 @@ def _read_object(path: Path | None) -> dict[str, Any]:
 def _default_scoring_projection_path(output: Path) -> Path:
     suffix = output.suffix or ".json"
     return output.with_name(f"{output.stem}.scoring_projection{suffix}")
+
+
+def _selective_reid_summary(report: dict[str, Any]) -> dict[str, Any]:
+    summaries = [
+        row
+        for row in report.get("decisions", [])
+        if isinstance(row, dict)
+        and row.get("action") == "selective_reid_policy_summary"
+    ]
+    if len(summaries) != 1:
+        raise ValueError(
+            "enabled selection must emit exactly one selective_reid_policy_summary"
+        )
+    return summaries[0]
 
 
 def _field_stripped_scoring_projection(
@@ -435,6 +499,12 @@ def _stage_and_publish_enabled_outputs(
             staged.unlink(missing_ok=True)
         raise
     _publish_output_bundle(staged_outputs)
+
+
+# Atomic publication helpers shared by the process_video selection seam.
+stage_copy = _stage_copy
+stage_text = _stage_text
+publish_output_bundle = _publish_output_bundle
 
 
 if __name__ == "__main__":
