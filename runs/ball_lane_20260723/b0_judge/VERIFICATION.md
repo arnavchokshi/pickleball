@@ -7,6 +7,18 @@ and nothing here is a promotion claim.
 Machine-readable twin: `verification.json` (same directory). Baseline numbers:
 `baseline_scores.json`. Re-score artifacts: `rescore_wasb_official_control/`.
 
+Rerun protocol (this is frozen gate evidence): rerun `verify_b0_judge.py` from
+the repo root and require BOTH exit code 0 AND a `verification.json`
+byte-identical to the committed copy. A partial crash leaves the stale
+committed file in place, so the exit code — not the file's presence — is the
+freshness signal. The script derives the repo root from its own location and
+remains runnable after this worktree is merged and removed; the only rows that
+may legitimately differ across reruns are the live-ledger
+`ledger_holdout_family_scan` INFO row and the worktree-conditional V1 row
+(`worktree_copy_absent[informational]` replaces the second hash comparison
+once no worktree checkout exists) — such a diff must be re-reviewed, not
+treated as breakage.
+
 ## 1. What was verified
 
 The frozen judge is `runs/lanes/ball_b0_split_20260721/split/` (round-1
@@ -84,6 +96,13 @@ Cross-round note (informational, train-side only): exactly one row
 `corrected_prelabel` @1.0 in fix2. It belongs to a train family and does not
 touch the judge; the 167 judge rows are field-identical across rounds.
 
+Scope note: the `split_fix2_hashes` block in `verification.json` is recorded,
+not verified — no independent frozen reference exists for the fix2 rebuild
+(only the round-1 `split/` files are pinned in committed code). The fix2-derived
+rows in the table above (image zip, member digests, protected guard) are
+verified against the fix2 report's own recorded values, which is exactly what
+they claim.
+
 ## 6. Ledger refresh performed (this lane)
 
 `runs/manager/data_ledger.json` (schema v3, all edits in existing entry style):
@@ -114,6 +133,13 @@ exactly):
 | Candidate | Pooled F1@20 | Indoor (HyU, 100 rows) | Outdoor-night (Ezz, 67 rows) | Hidden-FP (pooled) |
 | --- | ---: | ---: | ---: | ---: |
 | WASB tennis zero-shot control (9d391239…) | 0.5670 | 0.7395 | 0.2933 | 0.4932 |
+
+Caveat on the markdown twin: the header of
+`rescore_wasb_official_control/loso_report.md` carries stale internal-val
+boilerplate (burlington/wolverine CVAT clip ids and a limitations line)
+emitted unconditionally by the pre-existing scorer regardless of mode; the
+JSON twin's `parent_source_split` block (`identity_mode=frozen_b0_20260721`)
+is the authoritative record of what was actually scored.
 
 Not locally scoreable (recorded, NON-blocking for Gate 1.0):
 
