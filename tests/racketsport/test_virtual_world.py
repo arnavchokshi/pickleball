@@ -123,6 +123,7 @@ def test_virtual_world_carries_placement_uncertainty_for_viewer_diagnostics() ->
                         },
                         "contact_state": {"state": "planted", "support_foot": "left"},
                         "measurement_provenance": "measured",
+                        "metric_eligible": True,
                     }
                 ],
             }
@@ -139,6 +140,7 @@ def test_virtual_world_carries_placement_uncertainty_for_viewer_diagnostics() ->
     assert diagnostics["covariance_m2"] == placement["players"][0]["frames"][0]["covariance_m2"]
     assert diagnostics["selected_support_signal"]["pixel_xy"] == [120.0, 240.0]
     assert diagnostics["measurement_provenance"] == "measured"
+    assert diagnostics["metric_eligible"] is True
 
 
 def _tracks_ten_frame_clip() -> dict:

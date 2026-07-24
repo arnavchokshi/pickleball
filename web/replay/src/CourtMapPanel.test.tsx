@@ -85,6 +85,7 @@ const world = parseVirtualWorld({
             },
             contact_state: { state: "planted", support_foot: "left" },
             measurement_provenance: "measured",
+            metric_eligible: true,
           },
         },
       ],
@@ -178,6 +179,7 @@ describe("CourtMapPanel", () => {
     expect(html).toContain("native2d");
     expect(html).toContain("left_heel+left_toe");
     expect(html).toContain("foot_localization-dominated");
+    expect(html).toContain("metric eligible");
     expect(html).toContain("aria-label=\"Top-down court map\"");
   });
 });

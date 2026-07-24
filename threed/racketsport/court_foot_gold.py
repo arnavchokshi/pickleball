@@ -166,6 +166,7 @@ def score_gold_review(packet: Mapping[str, Any], review: Mapping[str, Any]) -> d
     review_frames = review_frames if isinstance(review_frames, Mapping) else {}
     samples: list[dict[str, Any]] = []
     clip_summaries: list[dict[str, Any]] = []
+    coverage = _review_coverage(packet, review_frames)
     for clip in packet.get("clips") or []:
         if not isinstance(clip, Mapping):
             continue
@@ -190,9 +191,15 @@ def score_gold_review(packet: Mapping[str, Any], review: Mapping[str, Any]) -> d
                         continue
                     semantic = f"{support}_contact"
                     automatic_px = (player.get("points") or {}).get(semantic)
-                    reviewed_px = _reviewed_point(automatic_px, player_review.get("points") or {}, semantic)
+                    player_review_points = player_review.get("points") or {}
+                    reviewed_px = _reviewed_point(automatic_px, player_review_points, semantic)
                     if automatic_px is None or reviewed_px is None:
                         continue
+                    reference_source = (
+                        "manual_correction"
+                        if _has_reviewed_xy(player_review_points, semantic)
+                        else "accepted_prelabel"
+                    )
                     auto_world_from_review = _unproject(auto_h, reviewed_px)
                     human_world_from_review = _unproject(human_h, reviewed_px)
                     human_world_from_auto = _unproject(human_h, automatic_px)
@@ -219,6 +226,7 @@ def score_gold_review(packet: Mapping[str, Any], review: Mapping[str, Any]) -> d
                         "player_id": player.get("player_id"),
                         "support_foot": support,
                         "contact_state": player_review.get("contact_state"),
+                        "reference_source": reference_source,
                         "pixel_error": _distance(automatic_px, reviewed_px),
                         "calibration_error_m": _distance(auto_world_from_review, human_world_from_review),
                         "foot_localization_error_m": _distance(human_world_from_auto, human_world_from_review),
@@ -238,7 +246,18 @@ def score_gold_review(packet: Mapping[str, Any], review: Mapping[str, Any]) -> d
                     }
                     clip_samples.append(sample)
                     samples.append(sample)
-        clip_summaries.append(_metric_summary(str(clip.get("clip_id")), clip_samples))
+        clip_summary = _metric_summary(str(clip.get("clip_id")), clip_samples)
+        clip_summary["manual_correction_sample_count"] = sum(
+            sample["reference_source"] == "manual_correction" for sample in clip_samples
+        )
+        clip_summary["accepted_prelabel_sample_count"] = sum(
+            sample["reference_source"] == "accepted_prelabel" for sample in clip_samples
+        )
+        clip_summaries.append(clip_summary)
+    manual_samples = [sample for sample in samples if sample["reference_source"] == "manual_correction"]
+    accepted_prelabel_samples = [
+        sample for sample in samples if sample["reference_source"] == "accepted_prelabel"
+    ]
     return {
         "artifact_type": "racketsport_court_foot_human_reference_report",
         "schema_version": 1,
@@ -246,10 +265,80 @@ def score_gold_review(packet: Mapping[str, Any], review: Mapping[str, Any]) -> d
         "measurement_authority": "human_reference_estimate_only",
         "matching_policy": "exact_player_id_exact_support_foot_exact_semantic_name",
         "sample_count": len(samples),
+        "manual_correction_sample_count": len(manual_samples),
+        "accepted_prelabel_sample_count": len(accepted_prelabel_samples),
+        "review_coverage": coverage,
         "summary": _metric_summary("all", samples),
+        "summary_manual_corrections": _metric_summary("manual_corrections", manual_samples),
+        "summary_accepted_prelabels": _metric_summary("accepted_prelabels", accepted_prelabel_samples),
         "clips": clip_summaries,
         "samples": samples,
     }
+
+
+def _review_coverage(
+    packet: Mapping[str, Any],
+    review_frames: Mapping[str, Any],
+) -> dict[str, Any]:
+    packet_frame_ids = {
+        str(row.get("frame_id"))
+        for clip in packet.get("clips") or []
+        if isinstance(clip, Mapping)
+        for row in clip.get("frames") or []
+        if isinstance(row, Mapping)
+    }
+    statuses = {"accepted": 0, "skipped": 0, "needs_edit": 0, "missing": 0}
+    manual_court_points = 0
+    occluded_court_points = 0
+    manual_foot_points = 0
+    occluded_foot_points = 0
+    for frame_id in packet_frame_ids:
+        reviewed = review_frames.get(frame_id)
+        if not isinstance(reviewed, Mapping):
+            statuses["missing"] += 1
+            continue
+        status = str(reviewed.get("status") or "missing")
+        statuses[status if status in statuses else "missing"] += 1
+        for value in (reviewed.get("court_points") or {}).values():
+            if not isinstance(value, Mapping):
+                continue
+            occluded_court_points += value.get("occluded") is True
+            manual_court_points += _mapping_has_xy(value)
+        for player in (reviewed.get("players") or {}).values():
+            if not isinstance(player, Mapping):
+                continue
+            for value in (player.get("points") or {}).values():
+                if not isinstance(value, Mapping):
+                    continue
+                occluded_foot_points += value.get("occluded") is True
+                manual_foot_points += _mapping_has_xy(value)
+    return {
+        "packet_frame_count": len(packet_frame_ids),
+        "accepted_frame_count": statuses["accepted"],
+        "skipped_frame_count": statuses["skipped"],
+        "needs_edit_frame_count": statuses["needs_edit"],
+        "missing_frame_count": statuses["missing"],
+        "manual_court_point_count": int(manual_court_points),
+        "occluded_court_point_count": int(occluded_court_points),
+        "manual_foot_point_count": int(manual_foot_points),
+        "occluded_foot_point_count": int(occluded_foot_points),
+    }
+
+
+def _mapping_has_xy(value: Mapping[str, Any]) -> bool:
+    xy = value.get("xy")
+    return (
+        isinstance(xy, Sequence)
+        and not isinstance(xy, (str, bytes))
+        and len(xy) == 2
+    )
+
+
+def _has_reviewed_xy(review_points: Any, name: str) -> bool:
+    if not isinstance(review_points, Mapping):
+        return False
+    value = review_points.get(name)
+    return isinstance(value, Mapping) and value.get("occluded") is not True and _mapping_has_xy(value)
 
 
 def _fit_human_court_homography(

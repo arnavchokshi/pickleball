@@ -520,6 +520,7 @@ export type PlayerPlacementDiagnostics = {
   contactState: string;
   supportFoot: string | null;
   measurementProvenance: string;
+  metricEligible: boolean;
 };
 
 export type DisplaySkeletonInterpolation = {
@@ -3421,6 +3422,7 @@ function readPlayerPlacementDiagnostics(input: unknown, path: string): PlayerPla
     contactState,
     supportFoot,
     measurementProvenance: readString(input.measurement_provenance ?? "unknown", `${path}.measurement_provenance`),
+    metricEligible: readBoolean(input.metric_eligible ?? false, `${path}.metric_eligible`),
   };
 }
 

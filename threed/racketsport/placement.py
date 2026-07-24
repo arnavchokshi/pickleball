@@ -674,8 +674,16 @@ def rewrite_tracks_with_placement(
             placement_stance = frame_idx in placement_stance_frames
             body_lock_stance = frame_idx in body_lock_stance_frames
             track_interpolated = bool(frame.get("interpolated", False))
-            if used_measurement and not track_interpolated:
+            has_keypoint_measurement = any(
+                int(fs.source_counts.get(source, 0)) > 0 for source in ("native2d", "sam3d")
+            )
+            metric_eligible = bool(
+                used_measurement and not track_interpolated and has_keypoint_measurement
+            )
+            if metric_eligible:
                 measurement_provenance = "measured"
+            elif used_measurement and not track_interpolated:
+                measurement_provenance = "bbox_fallback_estimate"
             elif frame_idx in gap_interpolated_frames:
                 measurement_provenance = "display_interpolated_only"
             elif track_interpolated:
@@ -719,6 +727,7 @@ def rewrite_tracks_with_placement(
                 "foot_candidates": fs.foot_candidates,
                 "nearest_regulation_line": line_proximity,
                 "measurement_provenance": measurement_provenance,
+                "metric_eligible": metric_eligible,
                 "signals": fs.signals,
                 "source_counts": fs.source_counts,
                 "output_source": written_source,

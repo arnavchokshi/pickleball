@@ -99,7 +99,7 @@ export function CourtMapPanel({
                 <text x="9" y="4">P{playerId}</text>
                 <title>
                   {diagnostics
-                    ? `P${playerId} ${diagnostics.measurementProvenance}; contact ${diagnostics.contactState}; support ${diagnostics.supportFoot ?? "--"}; signal ${diagnostics.selectedSupportSignal?.name ?? "--"}; pixel ${diagnostics.selectedSupportSignal?.pixelXY.join(", ") ?? "--"}; uncertainty ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated; candidates ${candidateSummary || "--"}; nearest ${line?.lineName ?? "--"} ${line ? line.signedDistanceM.toFixed(2) : "--"}m`
+                    ? `P${playerId} ${diagnostics.measurementProvenance}; ${diagnostics.metricEligible ? "metric eligible" : "visual estimate only"}; contact ${diagnostics.contactState}; support ${diagnostics.supportFoot ?? "--"}; signal ${diagnostics.selectedSupportSignal?.name ?? "--"}; pixel ${diagnostics.selectedSupportSignal?.pixelXY.join(", ") ?? "--"}; uncertainty ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated; candidates ${candidateSummary || "--"}; nearest ${line?.lineName ?? "--"} ${line ? line.signedDistanceM.toFixed(2) : "--"}m`
                     : `P${playerId} placement diagnostics unavailable`}
                 </title>
               </g>
@@ -113,7 +113,7 @@ export function CourtMapPanel({
         <span>{activeShot?.heightOverNetM === null || activeShot?.heightOverNetM === undefined ? "net --" : `net ${activeShot.heightOverNetM.toFixed(2)}m`}</span>
         {playerPositions.map(({ playerId, diagnostics }) => diagnostics ? (
           <span className="court-map-placement-readout" key={`placement-${playerId}`}>
-            {`P${playerId} ${diagnostics.contactState} · ${diagnostics.nearestRegulationLine?.lineName ?? "line --"} ${diagnostics.nearestRegulationLine ? diagnostics.nearestRegulationLine.signedDistanceM.toFixed(2) : "--"}m · ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated · ${diagnostics.measurementProvenance}`}
+            {`P${playerId} ${diagnostics.contactState} · ${diagnostics.nearestRegulationLine?.lineName ?? "line --"} ${diagnostics.nearestRegulationLine ? diagnostics.nearestRegulationLine.signedDistanceM.toFixed(2) : "--"}m · ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated · ${diagnostics.metricEligible ? "metric" : "visual only"} · ${diagnostics.measurementProvenance}`}
           </span>
         ) : null)}
       </div>

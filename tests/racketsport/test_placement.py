@@ -383,8 +383,30 @@ def test_interpolated_track_frame_never_becomes_a_measured_foot_position(tmp_pat
     payload = json.loads(placement_path.read_text(encoding="utf-8"))
     first = payload["players"][0]["frames"][0]
     assert first["measurement_provenance"] == "identity_interpolated_not_measured"
+    assert first["metric_eligible"] is False
     assert all(signal["used"] is False for signal in first["signals"])
     assert first["selected_support_signal"] is None
+
+
+def test_bbox_only_placement_is_visual_estimate_not_metric_measurement(tmp_path: Path) -> None:
+    tracks_path = tmp_path / "tracks.json"
+    calibration_path = tmp_path / "court_calibration.json"
+    placement_path = tmp_path / "placement.json"
+    _write_json(tracks_path, _tracks_payload())
+    _write_json(calibration_path, _calibration_payload())
+
+    rewrite_tracks_with_placement(
+        tracks_path=tracks_path,
+        calibration_path=calibration_path,
+        placement_path=placement_path,
+    )
+
+    payload = json.loads(placement_path.read_text(encoding="utf-8"))
+    assert payload["players"][0]["frames"]
+    for frame in payload["players"][0]["frames"]:
+        assert frame["measurement_provenance"] == "bbox_fallback_estimate"
+        assert frame["metric_eligible"] is False
+        assert frame["source_counts"] == {"bbox": 1}
 
 
 def test_kalman_rts_smoothing_coasts_occlusions_and_tightens_stance() -> None:

@@ -778,6 +778,7 @@ class PlacementFrame(BaseModel):
     foot_candidates: list[dict[str, Any]] = Field(default_factory=list)
     nearest_regulation_line: dict[str, Any] | None = None
     measurement_provenance: str | None = None
+    metric_eligible: bool = False
     signals: list[PlacementSignal] = Field(default_factory=list)
     source_counts: dict[str, int] = Field(default_factory=dict)
     gap_hold: bool | None = None

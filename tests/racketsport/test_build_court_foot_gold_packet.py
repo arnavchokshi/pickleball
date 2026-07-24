@@ -97,6 +97,12 @@ def test_packet_builds_prelabels_and_exact_foot_error_budget(tmp_path: Path) -> 
 
     assert report["matching_policy"] == "exact_player_id_exact_support_foot_exact_semantic_name"
     assert report["sample_count"] == 3
+    assert report["manual_correction_sample_count"] == 3
+    assert report["accepted_prelabel_sample_count"] == 0
+    assert report["review_coverage"]["accepted_frame_count"] == 3
+    assert report["review_coverage"]["manual_foot_point_count"] == 3
+    assert report["summary_manual_corrections"]["sample_count"] == 3
+    assert {sample["reference_source"] for sample in report["samples"]} == {"manual_correction"}
     assert report["summary"]["calibration_error_m"]["max"] < 1.0e-6
     assert report["summary"]["foot_localization_error_m"]["median"] > 0.0
 

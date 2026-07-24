@@ -1055,6 +1055,7 @@ def _apply_placement_diagnostics(
                 "nearest_regulation_line": placement_frame.get("nearest_regulation_line"),
                 "contact_state": placement_frame.get("contact_state"),
                 "measurement_provenance": placement_frame.get("measurement_provenance"),
+                "metric_eligible": bool(placement_frame.get("metric_eligible", False)),
             }
 
 
