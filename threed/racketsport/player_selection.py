@@ -1351,21 +1351,43 @@ def select_players_payload(
         if selection_counts["unbound_real_detections"]:
             report["status"] = "preview_selection_partial_with_abstentions"
     else:
-        (
-            unbound_observations,
-            fallback_decisions,
-            track_rows,
-            selection_counts,
-        ) = _select_without_enrollment(
-            pool_fragments,
-            fps=fps,
-            config=cfg,
+        measured_fallback = (
+            _select_measured_association_fallback(
+                players,
+                real_by_frame=real_by_frame,
+                pool_fragments=pool_fragments,
+                fps=fps,
+                config=cfg,
+            )
+            if auto_player_count and inferred_player_count in {2, 4}
+            else None
         )
-        output_players = []
+        if measured_fallback is not None:
+            (
+                output_players,
+                unbound_observations,
+                fallback_decisions,
+                track_rows,
+                selection_counts,
+            ) = measured_fallback
+            report["status"] = "preview_selection_measured_association_fallback"
+            report["selection_mode"] = "auto_measured_association_fallback"
+        else:
+            (
+                unbound_observations,
+                fallback_decisions,
+                track_rows,
+                selection_counts,
+            ) = _select_without_enrollment(
+                pool_fragments,
+                fps=fps,
+                config=cfg,
+            )
+            output_players = []
+            report["status"] = "preview_selection_partial_no_enrollment"
+            report["selection_mode"] = "partial_unbound_real_only"
         report["decisions"].extend(fallback_decisions)
         report["tracks"] = track_rows
-        report["status"] = "preview_selection_partial_no_enrollment"
-        report["selection_mode"] = "partial_unbound_real_only"
 
     output["players"] = output_players
     output["unbound_observations"] = unbound_observations
@@ -1554,6 +1576,25 @@ def _association_raw_join_count(
     real_by_frame: Mapping[int, Sequence[SelectionDetection]],
     config: PlayerSelectionConfig,
 ) -> int:
+    return len(
+        _association_raw_matches(
+            players,
+            fps=fps,
+            real_by_frame=real_by_frame,
+            config=config,
+        )
+    )
+
+
+def _association_raw_matches(
+    players: Sequence[Mapping[str, Any]],
+    *,
+    fps: float,
+    real_by_frame: Mapping[int, Sequence[SelectionDetection]],
+    config: PlayerSelectionConfig,
+) -> list[tuple[int, int, SelectionDetection]]:
+    """One-to-one measured raw detections matching existing association rows."""
+
     requests_by_frame: dict[
         int, list[tuple[int, int, tuple[float, float, float, float]]]
     ] = defaultdict(list)
@@ -1568,7 +1609,7 @@ def _association_raw_join_count(
             frame_idx = _frame_index(payload, fps=fps)
             requests_by_frame[frame_idx].append((player_index, frame_position, bbox))
 
-    joined = 0
+    joined: list[tuple[int, int, SelectionDetection]] = []
     for frame_idx, requests in requests_by_frame.items():
         candidates = list(real_by_frame.get(frame_idx, ()))
         preferences: dict[int, list[int]] = {}
@@ -1622,8 +1663,191 @@ def _association_raw_join_count(
             ),
         ):
             assign(request_index, set())
-        joined += len(candidate_owner)
+        for candidate_index, request_index in sorted(candidate_owner.items()):
+            player_index, frame_position, _bbox = requests[request_index]
+            joined.append(
+                (player_index, frame_position, candidates[candidate_index])
+            )
     return joined
+
+
+def _select_measured_association_fallback(
+    players: Sequence[Mapping[str, Any]],
+    *,
+    real_by_frame: Mapping[int, Sequence[SelectionDetection]],
+    pool_fragments: Sequence[TrackFragment],
+    fps: float,
+    config: PlayerSelectionConfig,
+) -> tuple[
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    list[dict[str, Any]],
+    dict[str, int],
+] | None:
+    """Preserve established IDs using measured associations when enrollment fragments.
+
+    This fallback is intentionally narrower than slot enrollment. It only retains
+    existing association rows that one-to-one match immutable raw detections; it
+    never emits an interpolated bridge or creates a new identity.
+    """
+
+    expected = config.expected_players
+    if expected not in {2, 4}:
+        return None
+    matches = _association_raw_matches(
+        players,
+        fps=fps,
+        real_by_frame=real_by_frame,
+        config=config,
+    )
+    matched_by_player: dict[int, dict[int, SelectionDetection]] = defaultdict(dict)
+    for player_index, _frame_position, detection in matches:
+        matched_by_player[player_index][detection.frame_idx] = detection
+
+    accepted_frame_count = len(
+        {
+            detection.frame_idx
+            for per_player in matched_by_player.values()
+            for detection in per_player.values()
+        }
+    )
+    persistence_floor = min(
+        max(1, int(math.ceil(fps))),
+        max(1, int(math.ceil(0.2 * accepted_frame_count))),
+    )
+    eligible = [
+        player_index
+        for player_index, detections in matched_by_player.items()
+        if len(detections) >= persistence_floor
+        and any(
+            frame_court_evidence(detection.world_xy, config)
+            >= config.enrollment_court_presence_min
+            for detection in detections.values()
+        )
+    ]
+    if len(eligible) < expected:
+        return None
+
+    def rank(player_index: int) -> tuple[int, float, int]:
+        detections = tuple(matched_by_player[player_index].values())
+        return (
+            len(detections),
+            sum(detection.conf for detection in detections) / len(detections),
+            -player_index,
+        )
+
+    ranked = sorted(eligible, key=rank, reverse=True)
+    if expected == 2:
+        by_side: dict[str, list[int]] = defaultdict(list)
+        for player_index in ranked:
+            side = str(players[player_index].get("side", ""))
+            if side not in {"near", "far"}:
+                _x, y = _median_world_xy(
+                    tuple(matched_by_player[player_index].values())
+                )
+                side = "near" if y < 0.0 else "far"
+            by_side[side].append(player_index)
+        if by_side["near"] and by_side["far"]:
+            selected_indexes = [by_side["near"][0], by_side["far"][0]]
+        else:
+            selected_indexes = ranked[:2]
+    else:
+        selected_indexes = ranked[:4]
+    selected_indexes.sort(key=lambda index: int(players[index].get("id", index + 1)))
+
+    output_players: list[dict[str, Any]] = []
+    track_rows: list[dict[str, Any]] = []
+    decisions: list[dict[str, Any]] = []
+    used_uids: set[str] = set()
+    for player_index in selected_indexes:
+        source_player = players[player_index]
+        detections = [
+            matched_by_player[player_index][frame_idx]
+            for frame_idx in sorted(matched_by_player[player_index])
+        ]
+        raw_uids = [_required_raw_uid(detection) for detection in detections]
+        used_uids.update(raw_uids)
+        player_id = int(source_player.get("id", player_index + 1))
+        side = str(source_player.get("side", ""))
+        role = str(source_player.get("role", ""))
+        if side not in {"near", "far"} or role not in {"left", "right"}:
+            x, y = _median_world_xy(tuple(detections))
+            side = "near" if y < 0.0 else "far"
+            role = "left" if x < 0.0 else "right"
+        output_players.append(
+            {
+                "id": player_id,
+                "side": side,
+                "role": role,
+                "frames": [
+                    _detection_payload(detection, fps=fps)
+                    for detection in detections
+                ],
+            }
+        )
+        track_rows.append(
+            {
+                "player_id": player_id,
+                "selection_state": "bound_measured_association_fallback",
+                "raw_detection_uids": raw_uids,
+                "output_frame_count": len(detections),
+            }
+        )
+        decisions.append(
+            {
+                "action": "retain_measured_association_identity",
+                "player_id": player_id,
+                "measured_frame_count": len(detections),
+                "persistence_floor_frames": persistence_floor,
+                "reasons": [
+                    "automatic_two_or_four_cardinality",
+                    "one_to_one_raw_detection_match",
+                    "existing_identity_preserved",
+                    "interpolated_rows_excluded",
+                ],
+            }
+        )
+
+    unbound_observations, unbound_track_rows = _unbound_observations(
+        pool_fragments,
+        excluded_uids=used_uids,
+        abstention_reasons_by_fragment={
+            fragment.fragment_id: [
+                "not_selected_by_measured_association_fallback",
+                "preserve_as_unbound_real_observation",
+            ]
+            for fragment in pool_fragments
+        },
+        fps=fps,
+    )
+    track_rows.extend(unbound_track_rows)
+    all_uids = {
+        _required_raw_uid(detection)
+        for fragment in pool_fragments
+        for detection in fragment.detections
+    }
+    unbound_uids = {
+        uid
+        for row in unbound_track_rows
+        for uid in row["raw_detection_uids"]
+    }
+    if used_uids & unbound_uids or used_uids | unbound_uids != all_uids:
+        raise ValueError(
+            "measured association fallback must account for every raw detection once"
+        )
+    return (
+        output_players,
+        unbound_observations,
+        decisions,
+        track_rows,
+        {
+            "interpolated_frames": 0,
+            "unbound_real_detections": len(unbound_uids),
+            "dropped_real_detections": 0,
+            "recovered_real_detections": 0,
+        },
+    )
 
 
 def _pool_fragments(

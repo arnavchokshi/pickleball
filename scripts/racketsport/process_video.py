@@ -3023,7 +3023,12 @@ class ProcessVideoPipeline:
         canonical_input.pop("unbound_observations", None)
         validated = Tracks.model_validate(canonical_input)
         canonical_output = validated.model_dump(mode="json")
-        canonical_output["unbound_observations"] = unbound
+        report["unbound_observation_count"] = len(unbound)
+        report["unbound_observation_ids"] = [
+            observation.get("unbound_observation_id")
+            for observation in unbound
+            if isinstance(observation, Mapping)
+        ]
         players = canonical_output.get("players")
         if not isinstance(players, list) or len(players) > EXACTLY_FOUR_HARD_CAP:
             raise _HardStageFailure(
@@ -3036,7 +3041,12 @@ class ProcessVideoPipeline:
             for frame in player["frames"]:
                 if not isinstance(frame, Mapping):
                     raise _HardStageFailure("player_selection output frames must be objects")
-                frame_idx = int(frame.get("frame_idx", round(float(frame["t"]) * float(canonical_output["fps"]))))
+                raw_frame_idx = frame.get("frame_idx")
+                frame_idx = int(
+                    raw_frame_idx
+                    if raw_frame_idx is not None
+                    else round(float(frame["t"]) * float(canonical_output["fps"]))
+                )
                 per_frame[frame_idx] += 1
         violation = next(
             ((frame_idx, count) for frame_idx, count in sorted(per_frame.items()) if count > EXACTLY_FOUR_HARD_CAP),

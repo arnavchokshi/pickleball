@@ -57,6 +57,7 @@ def _detection(
     bbox: tuple[float, float, float, float] | None = None,
     conf: float = 0.9,
     interpolated: bool = False,
+    raw_detection_uid: str | None = None,
 ) -> SelectionDetection:
     return SelectionDetection(
         frame_idx=frame,
@@ -66,6 +67,7 @@ def _detection(
         conf=conf,
         embedding=embedding,
         interpolated=interpolated,
+        raw_detection_uid=raw_detection_uid,
     )
 
 
@@ -93,6 +95,85 @@ def test_auto_player_count_selects_singles_or_doubles_without_interpolation_back
         for source in (5, 6)
     )
     assert infer_active_player_count(doubles, fps=30.0) == 4
+
+
+def test_measured_association_fallback_preserves_ids_and_excludes_interpolation() -> None:
+    fps = 30.0
+    players = []
+    detections: list[SelectionDetection] = []
+    fragments: list[TrackFragment] = []
+    for source in (1, 2, 3, 4):
+        x = -1.0 if source % 2 else 1.0
+        y = -2.0 if source <= 2 else 2.0
+        measured = tuple(
+            _detection(
+                frame,
+                source,
+                (x, y),
+                (1.0, 0.0),
+                bbox=(source * 10.0, 20.0, source * 10.0 + 5.0, 40.0),
+                raw_detection_uid=f"raw:{frame}:{source}",
+            )
+            for frame in range(10)
+        )
+        detections.extend(measured)
+        fragments.append(
+            TrackFragment(
+                fragment_id=f"pool-{source}-1-0-9",
+                source_track_id=source,
+                detections=measured,
+            )
+        )
+        frames = [
+            {
+                "t": detection.frame_idx / fps,
+                "bbox": list(detection.bbox),
+                "world_xy": list(detection.world_xy),
+                "conf": detection.conf,
+            }
+            for detection in measured
+        ]
+        frames.append(
+            {
+                "t": 10 / fps,
+                "bbox": [999.0, 999.0, 1000.0, 1000.0],
+                "world_xy": [x, y],
+                "conf": 0.1,
+                "interpolated": True,
+            }
+        )
+        players.append(
+            {
+                "id": source,
+                "side": "near" if y < 0.0 else "far",
+                "role": "left" if x < 0.0 else "right",
+                "frames": frames,
+            }
+        )
+    real_by_frame: dict[int, list[SelectionDetection]] = {}
+    for detection in detections:
+        real_by_frame.setdefault(detection.frame_idx, []).append(detection)
+
+    result = player_selection_module._select_measured_association_fallback(
+        players,
+        real_by_frame=real_by_frame,
+        pool_fragments=fragments,
+        fps=fps,
+        config=PlayerSelectionConfig(expected_players=4),
+    )
+
+    assert result is not None
+    selected, unbound, decisions, _rows, counts = result
+    assert [player["id"] for player in selected] == [1, 2, 3, 4]
+    assert all(len(player["frames"]) == 10 for player in selected)
+    assert not any(
+        frame.get("interpolated") is True
+        for player in selected
+        for frame in player["frames"]
+    )
+    assert unbound == []
+    assert counts["interpolated_frames"] == 0
+    assert len(decisions) == 4
 
 
 def _fragment(

@@ -1831,6 +1831,54 @@ def test_court_skeletons_input_quality_requires_floor_but_not_visible_top_net(
     assert payload["policy"]["required_court_evidence_scope"] == "floor_only"
 
 
+def test_player_selection_keeps_unbound_diagnostics_out_of_tracks_contract(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.pipeline_preset = "court_skeletons"
+    options.player_selection = True
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    _write_json(options.clip_dir / "raw_tracked_detections.json", {"frames": []})
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+
+    selected = _tracks_payload()
+    selected["unbound_observations"] = [
+        {"unbound_observation_id": 7, "selection_state": "unbound_abstention"}
+    ]
+    report = {
+        "decisions": [
+            {
+                "action": "selective_reid_policy_summary",
+                "frames_ambiguous": 0,
+                "reid_invoked": 0,
+                "reid_skipped_unambiguous": 1,
+                "reid_unavailable": 0,
+            }
+        ]
+    }
+    monkeypatch.setattr(
+        process_video,
+        "select_players_payload",
+        lambda *args, **kwargs: (selected, report),
+    )
+
+    outcome = process_video.ProcessVideoPipeline(options)._stage_player_selection()
+    tracks = json.loads((options.clip_dir / "tracks.json").read_text(encoding="utf-8"))
+    saved_report = json.loads(
+        (options.clip_dir / "selection_report.json").read_text(encoding="utf-8")
+    )
+
+    assert outcome.status == "ran"
+    assert "unbound_observations" not in tracks
+    process_video.Tracks.model_validate(tracks)
+    assert saved_report["unbound_observation_count"] == 1
+    assert saved_report["unbound_observation_ids"] == [7]
+
+
 def test_body_summary_populates_postchain_bypassed_stages_from_phase_timing(tmp_path: Path) -> None:
     video = tmp_path / "clip.mp4"
     video.write_bytes(b"fake-video")
