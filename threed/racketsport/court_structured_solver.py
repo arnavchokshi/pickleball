@@ -1350,6 +1350,15 @@ def _estimate_transform_covariance(
     covariance_h = np.linalg.pinv(information) * residual_variance
     if not np.isfinite(covariance_h).all():
         return None, {}
+    # ``pinv`` of a theoretically symmetric information matrix can differ
+    # from its transpose by more than the strict court-lock tolerance once
+    # homography parameter scales become large.  Normalize the estimate back
+    # onto the symmetric PSD cone before it crosses the public artifact
+    # boundary; this changes only floating-point noise, not the fitted court.
+    covariance_h = 0.5 * (covariance_h + covariance_h.T)
+    values_h, vectors_h = np.linalg.eigh(covariance_h)
+    covariance_h = vectors_h @ np.diag(np.maximum(values_h, 0.0)) @ vectors_h.T
+    covariance_h = 0.5 * (covariance_h + covariance_h.T)
     point_covariance: dict[str, list[list[float]]] = {}
     for name in FLOOR_KEYPOINT_NAMES:
         jacobian = _homography_projection_jacobian(model.homography, FLOOR_WORLD_XY_M[name])

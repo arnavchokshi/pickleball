@@ -376,6 +376,8 @@ def test_transform_covariance_is_propagated_from_floor_inliers() -> None:
     covariance = np.asarray(result["transform_covariance"], dtype=np.float64)
     assert covariance.shape == (8, 8)
     assert np.isfinite(covariance).all()
+    assert np.allclose(covariance, covariance.T, atol=1.0e-10, rtol=1.0e-10)
+    assert np.linalg.eigvalsh(covariance).min() >= -1.0e-9
     for point in result["projected_floor_keypoints"].values():
         point_covariance = np.asarray(point["covariance_px2"], dtype=np.float64)
         assert point_covariance.shape == (2, 2)
