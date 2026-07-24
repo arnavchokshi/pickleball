@@ -860,7 +860,14 @@ def _score_model(
         expected = projected[semantic]
         for candidate in candidates[semantic]:
             residual = math.dist(expected, candidate.xy)
-            threshold = max(inlier_threshold_px, 2.5 * candidate.sigma_px)
+            # Predicted covariance controls likelihood, but it cannot turn an
+            # arbitrarily distant semantic observation into a geometric
+            # inlier.  The absolute cap is what lets eleven mutually
+            # consistent points outvote one wildly uncertain/corrupt point.
+            threshold = min(
+                max(inlier_threshold_px, 2.5 * candidate.sigma_px),
+                2.0 * inlier_threshold_px,
+            )
             delta = np.asarray(expected, dtype=np.float64) - np.asarray(candidate.xy, dtype=np.float64)
             covariance = np.asarray(candidate.covariance, dtype=np.float64) + np.eye(2) * 1.0e-6
             mahalanobis = float(delta.T @ np.linalg.pinv(covariance) @ delta)

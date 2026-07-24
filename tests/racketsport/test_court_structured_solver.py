@@ -166,6 +166,31 @@ def test_top_two_cap_confidence_visibility_and_covariance_control_candidate_prio
     assert search["valid_homographies_scored"] <= 31
 
 
+def test_huge_covariance_cannot_make_a_distant_observation_an_inlier() -> None:
+    homography = _perspective_homography()
+    observations = _observations(homography)
+    name = "far_baseline_center"
+    exact = observations[name][0]["xy"]
+    observations[name] = [
+        {
+            "id": "wildly-uncertain-corrupt",
+            "xy": [exact[0] + 600.0, exact[1] - 300.0],
+            "confidence": 0.999,
+            "visibility": 1.0,
+            "covariance": 100000.0,
+        }
+    ]
+
+    result = solve_best_floor_court(observations)
+
+    inlier_ids = {item["candidate_id"] for item in result["inliers"]}
+    assert "wildly-uncertain-corrupt" not in inlier_ids
+    ignored = {item["candidate_id"]: item["reason"] for item in result["ignored_observations"]}
+    assert ignored["wildly-uncertain-corrupt"] == "residual_outlier"
+    expected = _project(homography, FLOOR_WORLD_XY_M[name])
+    assert result["projected_floor_keypoints"][name]["xy"] == pytest.approx(expected, abs=1.0e-5)
+
+
 def test_swapped_semantic_candidates_are_outvoted_by_global_regulation_consensus() -> None:
     homography = _perspective_homography()
     observations = _observations(homography)
