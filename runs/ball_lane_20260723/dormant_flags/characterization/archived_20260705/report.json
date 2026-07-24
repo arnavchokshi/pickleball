@@ -1,0 +1,2354 @@
+{
+  "artifact_type": "racketsport_ball_solver_characterization_report",
+  "clips": [
+    {
+      "anchor_inventory": {
+        "by_metric_anchor_anatomy": {
+          "double_metric_anchor": {
+            "accepted_segments": 5,
+            "segments": 11
+          },
+          "single_sided_metric_anchor": {
+            "accepted_segments": 0,
+            "segments": 2
+          }
+        },
+        "by_metric_anchor_class_combo": {
+          "bounce_auto": {
+            "accepted_segments": 0,
+            "segments": 2
+          },
+          "bounce_auto+bounce_solver_proposed": {
+            "accepted_segments": 1,
+            "segments": 1
+          },
+          "bounce_auto+contact_wrist_seed": {
+            "accepted_segments": 3,
+            "segments": 7
+          },
+          "bounce_solver_proposed+contact_wrist_seed": {
+            "accepted_segments": 1,
+            "segments": 1
+          },
+          "contact_wrist_seed": {
+            "accepted_segments": 0,
+            "segments": 2
+          }
+        }
+      },
+      "chain_config_degraded": "no_candidate_sidecars",
+      "clip": "burlington_gold_0300_low_steep_corner",
+      "court_split": {
+        "camera_center_world": [
+          4.548781,
+          -8.497264,
+          1.325928
+        ],
+        "camera_side": "negative_y",
+        "camera_side_source": "sha_verified_calibration",
+        "far_half": "y_positive",
+        "halves": {
+          "y_negative": {
+            "accepted_fraction": 0.123656,
+            "accepted_frame_count": 23,
+            "frames_with_world_xyz": 186,
+            "suppressed_frame_count": 163
+          },
+          "y_positive": {
+            "accepted_fraction": 0.393035,
+            "accepted_frame_count": 158,
+            "frames_with_world_xyz": 402,
+            "suppressed_frame_count": 244
+          }
+        },
+        "near_half": "y_negative",
+        "segment_halves": {
+          "y_negative": {
+            "accepted_segments": 1,
+            "segments": 4
+          },
+          "y_positive": {
+            "accepted_segments": 4,
+            "segments": 9
+          }
+        },
+        "unattributable_hidden_frames": 12
+      },
+      "coverage": {
+        "accepted_3d_coverage_fraction": 0.301667,
+        "accepted_3d_frame_count": 181,
+        "band_counts": {
+          "anchored_measured": 130,
+          "arc_extrapolated": 11,
+          "arc_interpolated": 39,
+          "arc_weak": 408,
+          "hidden": 12
+        },
+        "fail_closed_suppressed_frame_count": 407,
+        "frames_with_world_xyz": 588,
+        "hidden_frame_count": 12,
+        "rally_frame_count": 600,
+        "rally_frame_denominator": "all_input_frames"
+      },
+      "fail_closed_reason_counts": {
+        "insufficient_inliers": 4,
+        "max_reprojection_error_above_bound": 8,
+        "outliers_exceed_inliers": 7,
+        "spatial_sanity_violation": 2
+      },
+      "flight_sanity": {
+        "artifact_present": true,
+        "summary": {
+          "demoted_frame_count": 46,
+          "failed_segment_count": 1,
+          "passed_segment_count": 10,
+          "segment_count": 11,
+          "skipped_segment_count": 0
+        }
+      },
+      "kill_reasons": [],
+      "net_plane_provenance": {
+        "consumed_net_plane": true,
+        "reason": "consumed"
+      },
+      "physics_fill": {
+        "artifact_present": false,
+        "policy": "render_only_not_blended_into_accepted_stats"
+      },
+      "segment_count": 13,
+      "segment_status_counts": {
+        "fit": 5,
+        "fit_bvp_fallback": 8
+      },
+      "segment_verdict_counts": {
+        "accepted": 5,
+        "rejected_fail_closed": 8
+      },
+      "segments": [
+        {
+          "anchors": {
+            "classes": [
+              "contact_wrist_seed",
+              "rally_endpoint_weak"
+            ],
+            "end": {
+              "anchor_id": "contact_007_p1_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            },
+            "metric_anchor_anatomy": "single_sided_metric_anchor",
+            "metric_anchor_classes": [
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "rally_endpoint_0_start_000000",
+              "class": "rally_endpoint_weak",
+              "kind": "rally_endpoint",
+              "source": "ball_ray_plane_weak_endpoint_prior",
+              "status": "rally_endpoint_weak"
+            }
+          },
+          "fail_closed_reasons": [
+            "insufficient_inliers",
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 75,
+          "frame_start": 0,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 75,
+            "with_world_xyz": 75
+          },
+          "initial_speed_mps": 10.024785,
+          "inlier_count": 0,
+          "net_clearance_m": 1.366963,
+          "net_clearance_ok": true,
+          "outlier_count": 69,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 1342.681532,
+            "fit_rmse_px": null,
+            "raw_track_visible_px": {
+              "count": 68,
+              "max": 1300.615533,
+              "p50": 238.964344,
+              "p90": 1288.370403,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 0,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000132_000",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "contact_007_p1_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 132,
+          "frame_start": 75,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 57,
+            "with_world_xyz": 57
+          },
+          "initial_speed_mps": 7.69687,
+          "inlier_count": 10,
+          "net_clearance_m": 0.557249,
+          "net_clearance_ok": true,
+          "outlier_count": 33,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 259.594571,
+            "fit_rmse_px": 10.678067,
+            "raw_track_visible_px": {
+              "count": 43,
+              "max": 263.989167,
+              "p50": 90.533321,
+              "p90": 159.39238,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 1,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "contact_020_p4_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000132_000",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 168,
+          "frame_start": 132,
+          "frames": {
+            "accepted": 37,
+            "rally_total": 37,
+            "with_world_xyz": 37
+          },
+          "initial_speed_mps": 4.251072,
+          "inlier_count": 20,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 4,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 72.971101,
+            "fit_rmse_px": 9.39988,
+            "raw_track_visible_px": {
+              "count": 25,
+              "max": 81.535791,
+              "p50": 9.875852,
+              "p90": 60.609101,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 2,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_solver_proposed",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "solver_bounce_000218",
+              "class": "bounce_solver_proposed",
+              "kind": "bounce",
+              "source": "ray_intersection_z_ball_radius",
+              "status": "solver_proposed"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_solver_proposed",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "contact_020_p4_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 218,
+          "frame_start": 168,
+          "frames": {
+            "accepted": 49,
+            "rally_total": 49,
+            "with_world_xyz": 49
+          },
+          "initial_speed_mps": 4.952877,
+          "inlier_count": 44,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 7,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 33.529323,
+            "fit_rmse_px": 13.513988,
+            "raw_track_visible_px": {
+              "count": 49,
+              "max": 31.685296,
+              "p50": 15.551746,
+              "p90": 17.944289,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 3,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "bounce_solver_proposed"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000266_001",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "bounce_solver_proposed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "solver_bounce_000218",
+              "class": "bounce_solver_proposed",
+              "kind": "bounce",
+              "source": "ray_intersection_z_ball_radius",
+              "status": "solver_proposed"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 266,
+          "frame_start": 218,
+          "frames": {
+            "accepted": 48,
+            "rally_total": 48,
+            "with_world_xyz": 48
+          },
+          "initial_speed_mps": 4.98018,
+          "inlier_count": 43,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 0,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 17.732113,
+            "fit_rmse_px": 6.208437,
+            "raw_track_visible_px": {
+              "count": 42,
+              "max": 17.732113,
+              "p50": 4.51967,
+              "p90": 8.325968,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 4,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "contact_032_p4_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000266_001",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 289,
+          "frame_start": 266,
+          "frames": {
+            "accepted": 24,
+            "rally_total": 24,
+            "with_world_xyz": 24
+          },
+          "initial_speed_mps": 3.906878,
+          "inlier_count": 18,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 0,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 3.38368,
+            "fit_rmse_px": 1.57074,
+            "raw_track_visible_px": {
+              "count": 18,
+              "max": 3.38368,
+              "p50": 1.232658,
+              "p90": 2.211014,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 5,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000334_002",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "contact_032_p4_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            }
+          },
+          "fail_closed_reasons": [
+            "insufficient_inliers",
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [
+              "vertical_multi_apex"
+            ],
+            "verdict": "fail"
+          },
+          "frame_end": 334,
+          "frame_start": 289,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 44,
+            "with_world_xyz": 44
+          },
+          "initial_speed_mps": 10.805984,
+          "inlier_count": 2,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 39,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 256.383406,
+            "fit_rmse_px": 1.618053,
+            "raw_track_visible_px": {
+              "count": 40,
+              "max": 256.383406,
+              "p50": 57.630151,
+              "p90": 67.422332,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 6,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000347_003",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000334_002",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound",
+            "spatial_sanity_violation"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 347,
+          "frame_start": 334,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 13,
+            "with_world_xyz": 13
+          },
+          "initial_speed_mps": 53.987828,
+          "inlier_count": 12,
+          "net_clearance_m": -0.849966,
+          "net_clearance_ok": false,
+          "outlier_count": 2,
+          "physical_sanity_violations": [
+            "initial_speed_outside_plausible_range_mps",
+            "net_clearance_below_slack"
+          ],
+          "reprojection": {
+            "fit_max_px": 53.590161,
+            "fit_rmse_px": 9.899622,
+            "raw_track_visible_px": {
+              "count": 13,
+              "max": 33.938464,
+              "p50": 22.327524,
+              "p90": 32.490569,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 7,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "contact_035_p1_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000347_003",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "insufficient_inliers",
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 355,
+          "frame_start": 347,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 9,
+            "with_world_xyz": 9
+          },
+          "initial_speed_mps": 33.125866,
+          "inlier_count": 1,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 6,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 780.463851,
+            "fit_rmse_px": 1.651146,
+            "raw_track_visible_px": {
+              "count": 8,
+              "max": 962.227384,
+              "p50": 453.220496,
+              "p90": 898.92654,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 8,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000423_004",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "contact_035_p1_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            }
+          },
+          "fail_closed_reasons": [
+            "insufficient_inliers",
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 423,
+          "frame_start": 355,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 68,
+            "with_world_xyz": 68
+          },
+          "initial_speed_mps": 6.87659,
+          "inlier_count": 0,
+          "net_clearance_m": 0.483,
+          "net_clearance_ok": true,
+          "outlier_count": 64,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 568.687683,
+            "fit_rmse_px": null,
+            "raw_track_visible_px": {
+              "count": 63,
+              "max": 629.947805,
+              "p50": 581.698316,
+              "p90": 602.716431,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 9,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000497_005",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000423_004",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 497,
+          "frame_start": 423,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 73,
+            "with_world_xyz": 73
+          },
+          "initial_speed_mps": 6.783589,
+          "inlier_count": 18,
+          "net_clearance_m": 0.896063,
+          "net_clearance_ok": true,
+          "outlier_count": 48,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 519.563039,
+            "fit_rmse_px": 10.847089,
+            "raw_track_visible_px": {
+              "count": 64,
+              "max": 523.827781,
+              "p50": 82.078955,
+              "p90": 114.447333,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 10,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "contact_043_p1_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000497_005",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 519,
+          "frame_start": 497,
+          "frames": {
+            "accepted": 23,
+            "rally_total": 23,
+            "with_world_xyz": 23
+          },
+          "initial_speed_mps": 4.68089,
+          "inlier_count": 6,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 0,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 9.581789,
+            "fit_rmse_px": 5.595205,
+            "raw_track_visible_px": {
+              "count": 7,
+              "max": 16.183402,
+              "p50": 4.665039,
+              "p90": 12.222434,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 11,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "contact_wrist_seed",
+              "rally_endpoint_weak"
+            ],
+            "end": {
+              "anchor_id": "rally_endpoint_0_end_000587",
+              "class": "rally_endpoint_weak",
+              "kind": "rally_endpoint",
+              "source": "ball_ray_plane_weak_endpoint_prior",
+              "status": "rally_endpoint_weak"
+            },
+            "metric_anchor_anatomy": "single_sided_metric_anchor",
+            "metric_anchor_classes": [
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "contact_043_p1_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers",
+            "spatial_sanity_violation"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 587,
+          "frame_start": 519,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 68,
+            "with_world_xyz": 68
+          },
+          "initial_speed_mps": 20.610142,
+          "inlier_count": 18,
+          "net_clearance_m": 0.143857,
+          "net_clearance_ok": true,
+          "outlier_count": 22,
+          "physical_sanity_violations": [
+            "outside_court_volume"
+          ],
+          "reprojection": {
+            "fit_max_px": 83.332892,
+            "fit_rmse_px": 11.180367,
+            "raw_track_visible_px": {
+              "count": 39,
+              "max": 97.338951,
+              "p50": 38.362393,
+              "p90": 87.310845,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 12,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        }
+      ],
+      "skipped": null,
+      "solver_status": "ran",
+      "zero_return": {
+        "frame_zero_return_rate": 0.698333,
+        "segment_zero_return_rate": 0.615385,
+        "segments_with_zero_accepted_frames": 8
+      }
+    },
+    {
+      "anchor_inventory": {
+        "by_metric_anchor_anatomy": {
+          "double_metric_anchor": {
+            "accepted_segments": 4,
+            "segments": 7
+          }
+        },
+        "by_metric_anchor_class_combo": {
+          "bounce_auto": {
+            "accepted_segments": 4,
+            "segments": 7
+          }
+        }
+      },
+      "chain_config_degraded": "no_candidate_sidecars",
+      "clip": "outdoor_webcam_iynbd_1500_long_high_baseline",
+      "court_split": {
+        "camera_center_world": [
+          -0.063174,
+          -20.748474,
+          4.680527
+        ],
+        "camera_side": "negative_y",
+        "camera_side_source": "sha_verified_calibration",
+        "far_half": "y_positive",
+        "halves": {
+          "y_negative": {
+            "accepted_fraction": 0.663793,
+            "accepted_frame_count": 77,
+            "frames_with_world_xyz": 116,
+            "suppressed_frame_count": 39
+          },
+          "y_positive": {
+            "accepted_fraction": 0.058824,
+            "accepted_frame_count": 21,
+            "frames_with_world_xyz": 357,
+            "suppressed_frame_count": 336
+          }
+        },
+        "near_half": "y_negative",
+        "segment_halves": {
+          "y_negative": {
+            "accepted_segments": 2,
+            "segments": 2
+          },
+          "y_positive": {
+            "accepted_segments": 2,
+            "segments": 5
+          }
+        },
+        "unattributable_hidden_frames": 678
+      },
+      "coverage": {
+        "accepted_3d_coverage_fraction": 0.085143,
+        "accepted_3d_frame_count": 98,
+        "band_counts": {
+          "anchored_measured": 72,
+          "arc_interpolated": 26,
+          "arc_weak": 375,
+          "hidden": 678
+        },
+        "fail_closed_suppressed_frame_count": 375,
+        "frames_with_world_xyz": 473,
+        "hidden_frame_count": 678,
+        "rally_frame_count": 1151,
+        "rally_frame_denominator": "all_input_frames"
+      },
+      "fail_closed_reason_counts": {
+        "insufficient_inliers": 1,
+        "max_reprojection_error_above_bound": 3,
+        "outliers_exceed_inliers": 3,
+        "spatial_sanity_violation": 1
+      },
+      "flight_sanity": {
+        "artifact_present": true,
+        "summary": {
+          "demoted_frame_count": 0,
+          "failed_segment_count": 0,
+          "passed_segment_count": 7,
+          "segment_count": 7,
+          "skipped_segment_count": 0
+        }
+      },
+      "kill_reasons": [],
+      "net_plane_provenance": {
+        "consumed_net_plane": true,
+        "reason": "consumed"
+      },
+      "physics_fill": {
+        "artifact_present": false,
+        "policy": "render_only_not_blended_into_accepted_stats"
+      },
+      "segment_count": 7,
+      "segment_status_counts": {
+        "fit": 4,
+        "fit_bvp_fallback": 3
+      },
+      "segment_verdict_counts": {
+        "accepted": 4,
+        "rejected_fail_closed": 3
+      },
+      "segments": [
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000321_001",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000303_000",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 321,
+          "frame_start": 303,
+          "frames": {
+            "accepted": 20,
+            "rally_total": 20,
+            "with_world_xyz": 20
+          },
+          "initial_speed_mps": 28.861387,
+          "inlier_count": 3,
+          "net_clearance_m": -0.55313,
+          "net_clearance_ok": false,
+          "outlier_count": 16,
+          "physical_sanity_violations": [
+            "net_clearance_below_slack"
+          ],
+          "reprojection": {
+            "fit_max_px": 193.786885,
+            "fit_rmse_px": 12.557402,
+            "raw_track_visible_px": {
+              "count": 20,
+              "max": 193.786885,
+              "p50": 56.846483,
+              "p90": 154.180503,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 0,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000426_002",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000321_001",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 426,
+          "frame_start": 321,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 105,
+            "with_world_xyz": 105
+          },
+          "initial_speed_mps": 9.225537,
+          "inlier_count": 5,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 77,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 400.060151,
+            "fit_rmse_px": 12.95793,
+            "raw_track_visible_px": {
+              "count": 81,
+              "max": 445.360213,
+              "p50": 205.319501,
+              "p90": 386.418301,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 1,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000596_003",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000426_002",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "insufficient_inliers",
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers",
+            "spatial_sanity_violation"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 596,
+          "frame_start": 426,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 169,
+            "with_world_xyz": 169
+          },
+          "initial_speed_mps": 16.655867,
+          "inlier_count": 1,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 123,
+          "physical_sanity_violations": [
+            "apex_height_implausible"
+          ],
+          "reprojection": {
+            "fit_max_px": 991.58344,
+            "fit_rmse_px": 12.700218,
+            "raw_track_visible_px": {
+              "count": 122,
+              "max": 1038.47498,
+              "p50": 492.567226,
+              "p90": 958.123297,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 2,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000605_004",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000596_003",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 605,
+          "frame_start": 596,
+          "frames": {
+            "accepted": 10,
+            "rally_total": 10,
+            "with_world_xyz": 10
+          },
+          "initial_speed_mps": 4.859507,
+          "inlier_count": 2,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 6,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 228.474589,
+            "fit_rmse_px": 5.82454,
+            "raw_track_visible_px": {
+              "count": 8,
+              "max": 228.474589,
+              "p50": 173.244151,
+              "p90": 210.11931,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 3,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000707_005",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000605_004",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 707,
+          "frame_start": 605,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 101,
+            "with_world_xyz": 101
+          },
+          "initial_speed_mps": 13.364254,
+          "inlier_count": 5,
+          "net_clearance_m": 2.491897,
+          "net_clearance_ok": true,
+          "outlier_count": 76,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 480.989569,
+            "fit_rmse_px": 12.764765,
+            "raw_track_visible_px": {
+              "count": 79,
+              "max": 523.930101,
+              "p50": 190.210777,
+              "p90": 260.821139,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 4,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000746_006",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000707_005",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 746,
+          "frame_start": 707,
+          "frames": {
+            "accepted": 39,
+            "rally_total": 39,
+            "with_world_xyz": 39
+          },
+          "initial_speed_mps": 4.26021,
+          "inlier_count": 40,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 0,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 13.151291,
+            "fit_rmse_px": 3.994588,
+            "raw_track_visible_px": {
+              "count": 39,
+              "max": 6.821948,
+              "p50": 2.823192,
+              "p90": 5.635824,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 5,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000774_007",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000746_006",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 774,
+          "frame_start": 746,
+          "frames": {
+            "accepted": 29,
+            "rally_total": 29,
+            "with_world_xyz": 29
+          },
+          "initial_speed_mps": 3.447576,
+          "inlier_count": 28,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 1,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 21.712268,
+            "fit_rmse_px": 3.062019,
+            "raw_track_visible_px": {
+              "count": 29,
+              "max": 21.712268,
+              "p50": 2.634698,
+              "p90": 5.459354,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 6,
+          "status": "fit",
+          "verdict": "accepted"
+        }
+      ],
+      "skipped": null,
+      "solver_status": "ran",
+      "zero_return": {
+        "frame_zero_return_rate": 0.914857,
+        "segment_zero_return_rate": 0.428571,
+        "segments_with_zero_accepted_frames": 3
+      }
+    },
+    {
+      "anchor_inventory": {
+        "by_metric_anchor_anatomy": {
+          "double_metric_anchor": {
+            "accepted_segments": 3,
+            "segments": 9
+          },
+          "single_sided_metric_anchor": {
+            "accepted_segments": 0,
+            "segments": 1
+          }
+        },
+        "by_metric_anchor_class_combo": {
+          "bounce_auto": {
+            "accepted_segments": 2,
+            "segments": 6
+          },
+          "bounce_auto+contact_wrist_seed": {
+            "accepted_segments": 0,
+            "segments": 2
+          },
+          "contact_wrist_seed": {
+            "accepted_segments": 1,
+            "segments": 2
+          }
+        }
+      },
+      "chain_config_degraded": "no_candidate_sidecars",
+      "clip": "wolverine_mixed_0200_mid_steep_corner",
+      "court_split": {
+        "camera_center_world": [
+          -4.869814,
+          -9.077023,
+          1.733697
+        ],
+        "camera_side": "negative_y",
+        "camera_side_source": "sha_verified_calibration",
+        "far_half": "y_positive",
+        "halves": {
+          "y_negative": {
+            "accepted_fraction": 0.461538,
+            "accepted_frame_count": 30,
+            "frames_with_world_xyz": 65,
+            "suppressed_frame_count": 35
+          },
+          "y_positive": {
+            "accepted_fraction": 0.111111,
+            "accepted_frame_count": 25,
+            "frames_with_world_xyz": 225,
+            "suppressed_frame_count": 200
+          }
+        },
+        "near_half": "y_negative",
+        "segment_halves": {
+          "y_negative": {
+            "accepted_segments": 2,
+            "segments": 3
+          },
+          "y_positive": {
+            "accepted_segments": 1,
+            "segments": 7
+          }
+        },
+        "unattributable_hidden_frames": 10
+      },
+      "coverage": {
+        "accepted_3d_coverage_fraction": 0.183333,
+        "accepted_3d_frame_count": 55,
+        "band_counts": {
+          "anchored_measured": 51,
+          "arc_interpolated": 4,
+          "arc_weak": 235,
+          "hidden": 10
+        },
+        "fail_closed_suppressed_frame_count": 235,
+        "frames_with_world_xyz": 290,
+        "hidden_frame_count": 10,
+        "rally_frame_count": 300,
+        "rally_frame_denominator": "all_input_frames"
+      },
+      "fail_closed_reason_counts": {
+        "insufficient_inliers": 3,
+        "max_reprojection_error_above_bound": 7,
+        "outliers_exceed_inliers": 6,
+        "spatial_sanity_violation": 2
+      },
+      "flight_sanity": {
+        "artifact_present": true,
+        "summary": {
+          "demoted_frame_count": 3,
+          "failed_segment_count": 5,
+          "passed_segment_count": 4,
+          "segment_count": 9,
+          "skipped_segment_count": 0
+        }
+      },
+      "kill_reasons": [],
+      "net_plane_provenance": {
+        "consumed_net_plane": true,
+        "reason": "consumed"
+      },
+      "physics_fill": {
+        "artifact_present": false,
+        "policy": "render_only_not_blended_into_accepted_stats"
+      },
+      "segment_count": 10,
+      "segment_status_counts": {
+        "fit": 3,
+        "fit_bvp_fallback": 7
+      },
+      "segment_verdict_counts": {
+        "accepted": 3,
+        "rejected_fail_closed": 7
+      },
+      "segments": [
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "rally_endpoint_weak"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000013_000",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "single_sided_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "rally_endpoint_0_start_000000",
+              "class": "rally_endpoint_weak",
+              "kind": "rally_endpoint",
+              "source": "ball_ray_plane_weak_endpoint_prior",
+              "status": "rally_endpoint_weak"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers",
+            "spatial_sanity_violation"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 13,
+          "frame_start": 0,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 14,
+            "with_world_xyz": 14
+          },
+          "initial_speed_mps": 23.329491,
+          "inlier_count": 5,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 7,
+          "physical_sanity_violations": [
+            "outside_court_volume"
+          ],
+          "reprojection": {
+            "fit_max_px": 1356.172899,
+            "fit_rmse_px": 10.431983,
+            "raw_track_visible_px": {
+              "count": 12,
+              "max": 1348.66744,
+              "p50": 30.943969,
+              "p90": 1307.575167,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 0,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "contact_004_p3_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000013_000",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "insufficient_inliers",
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 36,
+          "frame_start": 13,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 23,
+            "with_world_xyz": 23
+          },
+          "initial_speed_mps": 10.05289,
+          "inlier_count": 0,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 20,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 519.829685,
+            "fit_rmse_px": null,
+            "raw_track_visible_px": {
+              "count": 19,
+              "max": 585.842732,
+              "p50": 311.276503,
+              "p90": 492.093866,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 1,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "contact_009_p4_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "contact_004_p3_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            }
+          },
+          "fail_closed_reasons": [
+            "insufficient_inliers",
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers",
+            "spatial_sanity_violation"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 70,
+          "frame_start": 36,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 33,
+            "with_world_xyz": 33
+          },
+          "initial_speed_mps": 6.509646,
+          "inlier_count": 0,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 6,
+          "physical_sanity_violations": [
+            "outside_court_volume"
+          ],
+          "reprojection": {
+            "fit_max_px": 213.278704,
+            "fit_rmse_px": null,
+            "raw_track_visible_px": {
+              "count": 6,
+              "max": 284.942865,
+              "p50": 207.909161,
+              "p90": 269.622336,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 2,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "contact_012_p4_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "contact_009_p4_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 84,
+          "frame_start": 70,
+          "frames": {
+            "accepted": 15,
+            "rally_total": 15,
+            "with_world_xyz": 15
+          },
+          "initial_speed_mps": 8.267798,
+          "inlier_count": 12,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 0,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 6.505183,
+            "fit_rmse_px": 2.791168,
+            "raw_track_visible_px": {
+              "count": 12,
+              "max": 6.505183,
+              "p50": 2.149789,
+              "p90": 3.442162,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 3,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000104_001",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto",
+              "contact_wrist_seed"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "contact_012_p4_right",
+              "class": "contact_wrist_seed",
+              "kind": "contact",
+              "source": "skeleton3d_wrist_reach_prior",
+              "status": "contact_prior"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound"
+          ],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": null
+          },
+          "frame_end": 104,
+          "frame_start": 84,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 20,
+            "with_world_xyz": 20
+          },
+          "initial_speed_mps": 29.972166,
+          "inlier_count": 13,
+          "net_clearance_m": 0.655985,
+          "net_clearance_ok": true,
+          "outlier_count": 3,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 91.796242,
+            "fit_rmse_px": 10.633439,
+            "raw_track_visible_px": {
+              "count": 16,
+              "max": 190.095521,
+              "p50": 65.650223,
+              "p90": 83.800916,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 4,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000156_002",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000104_001",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [
+              "outside_court_volume"
+            ],
+            "verdict": "fail"
+          },
+          "frame_end": 156,
+          "frame_start": 104,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 52,
+            "with_world_xyz": 52
+          },
+          "initial_speed_mps": 13.592431,
+          "inlier_count": 11,
+          "net_clearance_m": 2.811503,
+          "net_clearance_ok": true,
+          "outlier_count": 16,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 193.444458,
+            "fit_rmse_px": 10.413056,
+            "raw_track_visible_px": {
+              "count": 26,
+              "max": 264.606695,
+              "p50": 74.55246,
+              "p90": 168.494626,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 5,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000217_003",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000156_002",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "insufficient_inliers",
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [
+              "outside_court_volume"
+            ],
+            "verdict": "fail"
+          },
+          "frame_end": 217,
+          "frame_start": 156,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 60,
+            "with_world_xyz": 60
+          },
+          "initial_speed_mps": 10.936495,
+          "inlier_count": 0,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 58,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 649.182147,
+            "fit_rmse_px": null,
+            "raw_track_visible_px": {
+              "count": 56,
+              "max": 715.141555,
+              "p50": 358.058657,
+              "p90": 626.921561,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 6,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000250_004",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000217_003",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [
+            "max_reprojection_error_above_bound",
+            "outliers_exceed_inliers"
+          ],
+          "flight_sanity": {
+            "reasons": [
+              "outside_court_volume"
+            ],
+            "verdict": "fail"
+          },
+          "frame_end": 250,
+          "frame_start": 217,
+          "frames": {
+            "accepted": 0,
+            "rally_total": 33,
+            "with_world_xyz": 33
+          },
+          "initial_speed_mps": 7.373454,
+          "inlier_count": 8,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 26,
+          "physical_sanity_violations": [],
+          "reprojection": {
+            "fit_max_px": 73.405487,
+            "fit_rmse_px": 11.108728,
+            "raw_track_visible_px": {
+              "count": 33,
+              "max": 106.965636,
+              "p50": 62.752616,
+              "p90": 96.847359,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 7,
+          "status": "fit_bvp_fallback",
+          "verdict": "rejected_fail_closed"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000272_005",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": true,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000250_004",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 272,
+          "frame_start": 250,
+          "frames": {
+            "accepted": 22,
+            "rally_total": 22,
+            "with_world_xyz": 22
+          },
+          "initial_speed_mps": 3.60244,
+          "inlier_count": 22,
+          "net_clearance_m": -0.129624,
+          "net_clearance_ok": false,
+          "outlier_count": 1,
+          "physical_sanity_violations": [
+            "net_clearance_below_slack"
+          ],
+          "reprojection": {
+            "fit_max_px": 26.825665,
+            "fit_rmse_px": 5.804084,
+            "raw_track_visible_px": {
+              "count": 22,
+              "max": 26.825664,
+              "p50": 5.087757,
+              "p90": 8.77641,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 8,
+          "status": "fit",
+          "verdict": "accepted"
+        },
+        {
+          "anchors": {
+            "classes": [
+              "bounce_auto"
+            ],
+            "end": {
+              "anchor_id": "auto_bounce_candidate_000289_006",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            },
+            "metric_anchor_anatomy": "double_metric_anchor",
+            "metric_anchor_classes": [
+              "bounce_auto"
+            ],
+            "net_constraint_evaluated": false,
+            "start": {
+              "anchor_id": "auto_bounce_candidate_000272_005",
+              "class": "bounce_auto",
+              "kind": "bounce",
+              "source": "track_geometry_candidate",
+              "status": "auto_bounce_candidate"
+            }
+          },
+          "fail_closed_reasons": [],
+          "flight_sanity": {
+            "reasons": [],
+            "verdict": "pass"
+          },
+          "frame_end": 289,
+          "frame_start": 272,
+          "frames": {
+            "accepted": 18,
+            "rally_total": 18,
+            "with_world_xyz": 18
+          },
+          "initial_speed_mps": 2.813084,
+          "inlier_count": 18,
+          "net_clearance_m": null,
+          "net_clearance_ok": null,
+          "outlier_count": 0,
+          "physical_sanity_violations": [
+            "initial_speed_outside_plausible_range_mps"
+          ],
+          "reprojection": {
+            "fit_max_px": 4.33879,
+            "fit_rmse_px": 1.597502,
+            "raw_track_visible_px": {
+              "count": 18,
+              "max": 4.33879,
+              "p50": 1.06099,
+              "p90": 2.414486,
+              "status": "recomputed"
+            },
+            "solver_selected_residuals_px": null
+          },
+          "segment_id": 9,
+          "status": "fit",
+          "verdict": "accepted"
+        }
+      ],
+      "skipped": null,
+      "solver_status": "ran",
+      "zero_return": {
+        "frame_zero_return_rate": 0.816667,
+        "segment_zero_return_rate": 0.7,
+        "segments_with_zero_accepted_frames": 7
+      }
+    }
+  ],
+  "fail_closed_policy": {
+    "max_reprojection_error_px": 40.0,
+    "min_inlier_count": 3,
+    "policy": "arc_segment_fail_closed_v1"
+  },
+  "label": "ball_lane_20260723_dormant_flags_archived_20260705",
+  "manifest_sha256": "3ae4f71faaf86437ce067b82182a50d409da451820d1b6a8236cd279b6e219fe",
+  "policy": {
+    "deterministic_report_bytes": true,
+    "measurement_only": true,
+    "physics_fill_reported_separately": true,
+    "promotion": false,
+    "reprojection_blind_to_depth": true,
+    "verified_gate": "VERIFIED=0 unaffected; this report is measurement, not verification"
+  },
+  "pooled": {
+    "anchor_inventory": {
+      "by_metric_anchor_anatomy": {
+        "double_metric_anchor": {
+          "accepted_segments": 12,
+          "segments": 27
+        },
+        "single_sided_metric_anchor": {
+          "accepted_segments": 0,
+          "segments": 3
+        }
+      },
+      "by_metric_anchor_class_combo": {
+        "bounce_auto": {
+          "accepted_segments": 6,
+          "segments": 15
+        },
+        "bounce_auto+bounce_solver_proposed": {
+          "accepted_segments": 1,
+          "segments": 1
+        },
+        "bounce_auto+contact_wrist_seed": {
+          "accepted_segments": 3,
+          "segments": 9
+        },
+        "bounce_solver_proposed+contact_wrist_seed": {
+          "accepted_segments": 1,
+          "segments": 1
+        },
+        "contact_wrist_seed": {
+          "accepted_segments": 1,
+          "segments": 4
+        }
+      }
+    },
+    "clip_count": 3,
+    "court_split_halves": {
+      "y_negative": {
+        "accepted_fraction": 0.354223,
+        "accepted_frame_count": 130,
+        "frames_with_world_xyz": 367,
+        "suppressed_frame_count": 237
+      },
+      "y_positive": {
+        "accepted_fraction": 0.207317,
+        "accepted_frame_count": 204,
+        "frames_with_world_xyz": 984,
+        "suppressed_frame_count": 780
+      }
+    },
+    "coverage": {
+      "accepted_3d_coverage_fraction": 0.162847,
+      "accepted_3d_frame_count": 334,
+      "fail_closed_suppressed_frame_count": 1017,
+      "hidden_frame_count": 700,
+      "rally_frame_count": 2051
+    },
+    "fail_closed_reason_counts": {
+      "insufficient_inliers": 8,
+      "max_reprojection_error_above_bound": 18,
+      "outliers_exceed_inliers": 16,
+      "spatial_sanity_violation": 5
+    },
+    "segment_count": 30,
+    "segment_status_counts": {
+      "fit": 12,
+      "fit_bvp_fallback": 18
+    },
+    "segment_verdict_counts": {
+      "accepted": 12,
+      "rejected_fail_closed": 18
+    },
+    "skipped_clip_count": 0,
+    "zero_return": {
+      "frame_zero_return_rate": 0.837153,
+      "segment_zero_return_rate": 0.6,
+      "segments_with_zero_accepted_frames": 18
+    }
+  },
+  "schema_version": 1
+}

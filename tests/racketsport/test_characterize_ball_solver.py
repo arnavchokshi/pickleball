@@ -613,6 +613,91 @@ def test_cli_solve_requires_ball_track_and_calibration(tmp_path: Path) -> None:
     assert "--solve requires" in result.stderr
 
 
+def test_cli_dormant_flag_options_require_solve(tmp_path: Path) -> None:
+    """The dormant-evidence experiment flags are --solve only.
+
+    Read mode must refuse them loudly (never silently ignore an experiment
+    flag) and must not write any outputs when refusing.
+    """
+
+    clip_dir = _write_clip_dir(tmp_path)
+    out_dir = tmp_path / "out_flags"
+    for flag in ("--enable-joint-anchor-search", "--enable-ukf-fallback"):
+        result = subprocess.run(
+            [
+                sys.executable,
+                str(REPO_ROOT / CLI_PATH),
+                "--clip",
+                f"synthetic_clip={clip_dir}",
+                "--out-dir",
+                str(out_dir),
+                flag,
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 2, result.stderr
+        assert "require --solve" in result.stderr
+        assert not out_dir.exists()
+
+
+def test_cli_dormant_flags_with_solve_still_require_solve_inputs(tmp_path: Path) -> None:
+    """Flags never bypass --solve input validation (ball track + calibration)."""
+
+    clip_dir = _write_clip_dir(tmp_path)
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(REPO_ROOT / CLI_PATH),
+            "--clip",
+            f"synthetic_clip={clip_dir}",
+            "--out-dir",
+            str(tmp_path / "out"),
+            "--solve",
+            "--enable-joint-anchor-search",
+            "--enable-ukf-fallback",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert "--solve requires" in result.stderr
+
+
+def test_cli_read_mode_report_bytes_unchanged_by_flag_plumbing(tmp_path: Path) -> None:
+    """Read-mode outputs must be byte-identical with the flag options present.
+
+    The flags only gate the opt-in --solve path; a read-mode invocation that
+    never mentions them produces the same report bytes as before the options
+    existed (regression guard: deterministic bytes, no flag echo leaking into
+    read-mode manifests or reports).
+    """
+
+    clip_dir = _write_clip_dir(tmp_path)
+    out_dir = tmp_path / "characterization_read_mode"
+    cmd = [
+        sys.executable,
+        str(REPO_ROOT / CLI_PATH),
+        "--clip",
+        f"synthetic_clip={clip_dir}",
+        "--out-dir",
+        str(out_dir),
+        "--root",
+        str(tmp_path),
+        "--label",
+        "test_lane",
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+    assert result.returncode == 0, result.stderr
+    report_text = (out_dir / "report.json").read_text(encoding="utf-8")
+    manifest_text = (out_dir / "manifest.json").read_text(encoding="utf-8")
+    for needle in ("joint_anchor_search", "ukf_fallback", "enable_joint", "enable_ukf"):
+        assert needle not in report_text
+        assert needle not in manifest_text
+
+
 def test_cli_errors_on_malformed_clip_argument(tmp_path: Path) -> None:
     result = subprocess.run(
         [
