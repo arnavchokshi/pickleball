@@ -1,0 +1,82 @@
+{
+  "artifact_type": "racketsport_ball_b0_judge_baseline_scores",
+  "lane": "ball_lane_20260723/b0_judge",
+  "generated_utc": "2026-07-24T06:41:09Z",
+  "language": "measurement-only; VERIFIED=0 remains binding; no promotion claims",
+  "judge": {
+    "path": "runs/lanes/ball_b0_split_20260721/split/validation.jsonl",
+    "sha256": "39a07ed6d5211cbdc2ccc8a3f1f73b298a1ed262a6cae1f8a6190e5aa1533429",
+    "row_count": 167,
+    "slices": {
+      "HyUqT7zFiwk": {"rows": 100, "venue": "indoor_court_level", "clips": 1},
+      "Ezz6HDNHlnk": {"rows": 67, "venue": "outdoor_night_fenced", "clips": 7}
+    },
+    "identity_authority": "FROZEN_B0_ARTIFACT_SHA256 + FROZEN_B0_SOURCE_VIDEO_SHA256 in scripts/racketsport/ball_loso_validation.py"
+  },
+  "scored": [
+    {
+      "candidate": "wasb_official_control (zero-shot, untouched)",
+      "checkpoint": {
+        "path": "/Users/arnavchokshi/Desktop/pickleball/models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+        "sha256": "9d391239ab10c733f8e5bfadf16ab72838e7a8ebc88e8ae2038501c03d42b4bb",
+        "present_locally": true
+      },
+      "prediction_provenance": "Inference ran 2026-07-22 on an A100 VM (lane ball_baseline_20260721, repo pin 9bbd8011, visible-threshold 0.5, official preprocessing, full clips); prediction artifacts were pulled back and sha256-verified two-sided. This lane re-scored those exact artifacts locally on 2026-07-24 UTC through the committed frozen-identity scorer path.",
+      "scoring_command": "scripts/racketsport/ball_loso_validation.py --parent-source-split runs/lanes/ball_b0_split_20260721/split --candidate-track ... (identity_mode=frozen_b0_20260721; report at runs/ball_lane_20260723/b0_judge/rescore_wasb_official_control/loso_report.json)",
+      "pooled": {
+        "f1_at_20": 0.5670103092783506,
+        "recall_at_20": 0.5851063829787234,
+        "precision_at_20": 0.55,
+        "hidden_fp_rate": 0.4931506849315068
+      },
+      "per_venue": {
+        "HyUqT7zFiwk_indoor": {
+          "f1_at_20": 0.7394957983193278,
+          "recall_at_20": 0.6875,
+          "precision_at_20": 0.8,
+          "hidden_fp_rate": 0.3055555555555556
+        },
+        "Ezz6HDNHlnk_outdoor_night": {
+          "f1_at_20": 0.29333333333333333,
+          "recall_at_20": 0.36666666666666664,
+          "precision_at_20": 0.24444444444444444,
+          "hidden_fp_rate": 0.6756756756756757
+        }
+      },
+      "loso": {"mean_f1_at_20": 0.5164, "worst_fold_f1_at_20": 0.2933, "generalization_gap": 0.0506},
+      "reproduces_published_baseline": "Yes; pooled and per-source values match runs/lanes/ball_baseline_20260721/RESULTS.md and the b1b2 parity run exactly."
+    }
+  ],
+  "not_locally_scoreable": [
+    {
+      "candidate": "w7 retrain arm E3k_seed_official_aug",
+      "checkpoint": {
+        "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_seed_official_aug/checkpoints/latest.pt",
+        "sha256": "00aa8a428b1d8ce86db8cecd3deb1566ce8b2894fa63224d7eee635f1af4993e",
+        "present_locally": true
+      },
+      "why_not_scored": "Weights are local but no fresh predictions on the 8 judge clips exist locally; producing them needs full-clip inference over ~48,030 frames, which was not run in this CPU/MPS lane. Historical w7 prediction artifacts are disqualified as scoring inputs because the 74.8% control-prediction contamination finding (runs/lanes/w7_ballretrain2_20260709/control_contamination_finding.json) has an unconfirmed root cause and 3 of the 8 judge clips (HyUqT7zFiwk_rally_0001, Ezz6HDNHlnk_rally_0004, Ezz6HDNHlnk_rally_0007) are on its contaminated-clip list.",
+      "interpretation_caveat": "This arm trained on the pre-split 3026-row corpus that included 960 HyUqT7zFiwk/Ezz6HDNHlnk rows; any future score of it on this judge is not source-clean and must say so."
+    },
+    {
+      "candidate": "w7 retrain arm E3k_matched_seed_official_aug",
+      "checkpoint": {
+        "path": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
+        "sha256": "ae01298cf8829bbec5837d8b1a1993cff4128981838007e1c60e56cfade4d9e6",
+        "present_locally": true
+      },
+      "why_not_scored": "Same as E3k_seed_official_aug: no locally trustworthy judge-clip predictions and no fresh inference run in this lane.",
+      "interpretation_caveat": "Same non-source-clean caveat as E3k_seed_official_aug."
+    },
+    {
+      "candidate": "B1/B2 SST-retrained checkpoint",
+      "checkpoint": {
+        "path": "no *.pt or *.pth exists under runs/lanes/ball_b1_gpu_resume_20260722, ball_b1_resume_20260722, ball_b1b2_prep_20260721, ball_b2_seed1_20260722, or ball_b2_realrun_20260723 (empty dir)",
+        "sha256": null,
+        "present_locally": false
+      },
+      "why_not_scored": "Not locally scoreable. If it exists, it lives only on the GPU VM pickleball-gpu-ball-f2 (us-central1-f, SPOT, possibly stopped/torn down) whose kept disk is pickleball-gpu-ball-disk-f; no checkpoint has been pulled back to this machine."
+    }
+  ],
+  "media_availability": "All 8 judge source videos are local under /Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/rallies/ and sha256-match the frozen constants (verification.json check frozen_judge_source_videos_local)."
+}

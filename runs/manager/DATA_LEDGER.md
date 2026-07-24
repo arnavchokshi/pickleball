@@ -4,15 +4,15 @@
 This is a coordination view for data lineage and utilization only. `NORTH_STAR_ROADMAP.md` remains product truth.
 
 - Ledger schema: `3`
-- Snapshot UTC: `2026-07-23T21:16:15Z`
+- Snapshot UTC: `2026-07-24T06:41:09Z`
 - Assets: `34`
-- States: `BLOCKED=10`, `CONSUMED=9`, `DEFERRED_WITH_REASON=2`, `QUARANTINED=5`, `READY=1`, `REJECTED=7`
+- States: `BLOCKED=9`, `CONSUMED=10`, `DEFERRED_WITH_REASON=2`, `QUARANTINED=5`, `READY=1`, `REJECTED=7`
 - License state gate: `False` (license is FYI only)
 - Directive: Owner directive 2026-07-22: internal use has no licensing constraints; license metadata is FYI only and never determines ledger state. Protected-eval and compare-only restrictions remain protocol quarantines.
 
 | Asset ID | State | Disposition | Bytes | Raw | Kept | Decoded | Labels | Authority | Owner | Next check |
 |---|---:|---|---:|---:|---:|---:|---:|---|---|---|
-| `ball_reviewed_corpus_chain_1121_3026` | `QUARANTINED` | Track B: Reconcile the 350-row scratch audit, freeze source-held partitions, and issue a contamination ruling before any Track B reuse. | 16450892 | 3026 reviewed_rows | 3026 current_corpus_rows | 3026 image_label_rows | 3026 BALL_labels | corrected_prelabel, confirmed_prelabel, human_gt | BALL data owner | Reconcile all 350 scratch labels, hold out HyUqT7zFiwk/Ezz6HDNHlnk by parent source, and issue an explicit contamination ruling. |
+| `ball_reviewed_corpus_chain_1121_3026` | `QUARANTINED` | Track B: Issue the contamination root-cause ruling for the 74.8% control-prediction finding; until then any Track B training reuse must load rows only through the frozen ball_b0_split_20260721 train selector. | 16450892 | 3026 reviewed_rows | 3026 current_corpus_rows | 3026 image_label_rows | 3026 BALL_labels | corrected_prelabel, confirmed_prelabel, human_gt | BALL data owner | Issue an explicit contamination root-cause ruling; keep all corpus reuse behind the frozen ball_b0_split_20260721 selectors until then. |
 | `court_diversity_100_20260712` | `BLOCKED` | Track A: After the owner exports tasks 88-91, add only the protocol-eligible reviewed rows to the Track A court retrain pool with the frozen source-family split. | 170624051 | 100 frame_images | 97 potentially_allowed_after_source_denial | 100 frame_images | 0 reviewed_labels | none | COURT data owner | Owner exports tasks 88-91; adapter then denies the three IYnbdRs1Jdk frames and reports reviewed/usable/train/holdout/rejected counts. |
 | `court_keypoints_6_20260707` | `QUARANTINED` | Track A: Use the three fully usable rows once as the frozen Track A external audit; never train or tune on any of the six rows. | 28412080 | 6 reviewed_images | 3 fully_usable_rows | 6 frame_images | 6 human_review_outcomes | human_gt | COURT independent eval owner | Score the frozen control and eligible challenger once on the three usable rows after the eight-source holdout, without tuning. |
 | `court_labelpack3_owner_labels_20260723` | `CONSUMED` | Track A: Retain the 106 supported rows for structured-v3 training and use the 16 rejected views when the supported-view classifier is actually trained. | 659483 | 122 owner_decided_frames_including_16_unsupported | 122 package_frames_after_zero-near-match_selection | 106 trainer_loadable_supported_frames_46_new_source_plus_60_owner_label_upgrades | 1446 non_null_owner_keypoints_with_109_explicit_and_35_omitted_invisible_points | human_gt | COURT owner-label data owner | Do not double-count the 60 source-overlap rows as new pixels; preserve them as owner-label upgrades. |
@@ -45,21 +45,21 @@ This is a coordination view for data lineage and utilization only. `NORTH_STAR_R
 | `roboflow_person_adjacent_20260706` | `REJECTED` | RULED OUT: DOMAIN_MISMATCH_ADJACENT_TENNIS: the 15,469-image adjacent PERSON bucket is dominated by tennis and is explicitly excluded from the pickleball product-domain arm; evidence data/roboflow_universe_20260706/aggregated/corpus_card.json. | 780082673 | 29036 pre_dedup_adjacent_samples_all_classes | 15469 adjacent_person_images | 15469 indexed_images | 15469 person_images_with_boxes | human_gt | PERSON public-data owner | Do not queue in the regroup product-domain arm. |
 | `roboflow_person_core_20260706` | `REJECTED` | RULED OUT: PERSON_RF_POOL_TOO_THIN: REJECTED_FOR_TRAINING; P2: NO_ATTEMPT_PREREQ, permanently closed for this export. The protected-collision audit ALREADY PASSED with 0 collisions across 45,844,128 frame pairs and 366,753,024 descriptor comparisons; Human quality card: NOT_COMPLETED_PROTOCOL. Any Track C aux/eval use requires a NEW ruling. Binding refs: runs/lanes/person_p1_roboflow_20260721/RULING.md and runs/lanes/person_p1_roboflow_20260721/report_fix2.json. | 872492382 | 15334 core_pickleball_person_rows_before_rights_exclusion | 15312 commercial_clean_core_person_rows | 15312 selector_bound_indexed_images | 47044 person_boxes | human_gt | PERSON public-data owner | Do not train from this export. Reopen any Track C aux/eval use only under a NEW ruling. |
 | `roboflow_person_nc_20260706` | `BLOCKED` | Track C: Audit the 22 unique testing-esifc PERSON images for exhaustive protected collisions, then admit them only as a Track C judge/aux candidate with source_slug preserved. | 548850 | 34 person_index_rows | 22 unique_images | 22 indexed_images | 22 person_images_with_boxes | human_gt | PERSON public-data owner | Prove exhaustive zero protected collisions, then release to the named Track C judge/aux action. |
-| `w7_audit_stratum_scratch_350` | `BLOCKED` | Track B: Finish and export all 350 scratch labels, reconcile lineage, and prove zero protected collisions before Track B consumption. | 566895615 | 350 frame_images | 350 uniform_random_scratch_frames | 350 frame_images | 0 reviewed_labels | none | BALL independent-review owner | Finish/export 350/350 scratch labels, reconcile lineage, and prove zero protected collisions before any BALL GPU. |
+| `w7_audit_stratum_scratch_350` | `CONSUMED` | Track B: Keep the 167-row judge frozen and evaluation-only; score every BALL candidate through scripts/racketsport/ball_loso_validation.py --parent-source-split with per-venue slices; the 183 train-candidate rows may enter Track B training pools. | 566895615 | 350 frame_images | 350 uniform_random_scratch_frames | 350 frame_images | 350 reviewed_labels | human_gt | BALL independent-review owner | Never train on the 167 judge rows; require the frozen-identity scorer path and per-venue (indoor vs outdoor-night) slices for every BALL evaluation claim. |
 
 ## Per-asset rulings and utilization
 
 ### `ball_reviewed_corpus_chain_1121_3026`
 
-- State reason: UNRULED contamination finding: the 3026-row run was consumed, but the blended metric cannot decide a model and the corpus is quarantined pending source-held reconciliation.
+- State reason: 2026-07-23 ball_lane_20260723: source-held reconciliation and the frozen split are done and re-verified; quarantine persists solely because the 74.8% control-prediction contamination finding remains UNRULED.
 - Paths: `runs/lanes/w7_ballingest4_20260709`, `runs/lanes/w7_ballretrain2_20260709`
 - Source families: 73VurrTKCZ8, Ezz6HDNHlnk, HyUqT7zFiwk, _L0HVmAlCQI, wBu8bC4OfUY, zwCtH_i1_S4
-- Partition: train=['73VurrTKCZ8', 'Ezz6HDNHlnk', 'HyUqT7zFiwk', '_L0HVmAlCQI', 'wBu8bC4OfUY', 'zwCtH_i1_S4']; val=[]; test=[]
-- Overlap coverage: FAIL — all rows have source IDs; no immutable uncontaminated selector is registered
-- Immutable clean-subset selectors: 0
-- Consumers: 1
+- Partition: train=['73VurrTKCZ8', '_L0HVmAlCQI', 'wBu8bC4OfUY', 'zwCtH_i1_S4']; val=[]; test=[]
+- Overlap coverage: PASS — all rows carry parent_source_id; the frozen split selector excludes every HyUqT7zFiwk/Ezz6HDNHlnk historical row (960) from every pool
+- Immutable clean-subset selectors: 1
+- Consumers: 2
 - License FYI: Source license fields are recorded for information only; contamination and source-held evaluation determine state.
-- Disposition: Track B — Reconcile the 350-row scratch audit, freeze source-held partitions, and issue a contamination ruling before any Track B reuse. (evidence: `runs/lanes/w7_ballretrain2_20260709/provenance_split_corrected_3026.json`)
+- Disposition: Track B — Issue the contamination root-cause ruling for the 74.8% control-prediction finding; until then any Track B training reuse must load rows only through the frozen ball_b0_split_20260721 train selector. (evidence: `runs/ball_lane_20260723/b0_judge/verification.json`)
 
 ### `court_diversity_100_20260712`
 
@@ -447,12 +447,12 @@ This is a coordination view for data lineage and utilization only. `NORTH_STAR_R
 
 ### `w7_audit_stratum_scratch_350`
 
-- State reason: All 350 images are staged and decodable, but no authoritative reviewed export exists; label_count is zero.
+- State reason: 2026-07-23 ball_lane_20260723: 350/350 reviewed labels exist and were consumed into the frozen ball_b0_split_20260721 judge and train-candidate pools; verification table clean.
 - Paths: `cvat_upload/w7_audit_stratum_20260709`
 - Source families: 73VurrTKCZ8, Ezz6HDNHlnk, HyUqT7zFiwk, _L0HVmAlCQI, wBu8bC4OfUY, zwCtH_i1_S4
 - Partition: train=['73VurrTKCZ8:27', '_L0HVmAlCQI:34', 'wBu8bC4OfUY:60', 'zwCtH_i1_S4:62']; val=['HyUqT7zFiwk:100', 'Ezz6HDNHlnk:67']; test=[]
-- Overlap coverage: NOT_RUN — not run; old 35-frame sample is insufficient
-- Immutable clean-subset selectors: 0
-- Consumers: 0
+- Overlap coverage: PASS — 2953 protected frames from the four protected videos plus two protected additions; zero exact and zero near collisions (independently confirmed in ball_b0_split_20260721_review)
+- Immutable clean-subset selectors: 1
+- Consumers: 1
 - License FYI: Source license metadata is FYI only; missing reviewed labels and collision proof determine state.
-- Disposition: Track B — Finish and export all 350 scratch labels, reconcile lineage, and prove zero protected collisions before Track B consumption. (evidence: `cvat_upload/w7_audit_stratum_20260709`)
+- Disposition: Track B — Keep the 167-row judge frozen and evaluation-only; score every BALL candidate through scripts/racketsport/ball_loso_validation.py --parent-source-split with per-venue slices; the 183 train-candidate rows may enter Track B training pools. (evidence: `runs/ball_lane_20260723/b0_judge/verification.json`)
