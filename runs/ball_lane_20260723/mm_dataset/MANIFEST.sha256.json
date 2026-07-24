@@ -1,0 +1,580 @@
+{
+ "artifact_type": "racketsport_multimodal_event_dataset_manifest",
+ "inputs": [
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/73VurrTKCZ8_rally_0002.json",
+   "role": "clip_audio_onsets_v0[73VurrTKCZ8_rally_0002]",
+   "sha256": "37e0a5fe896c9d46cace31c90d1544eedb5f689138559d69442f799f6259572c"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/73VurrTKCZ8_rally_0005.json",
+   "role": "clip_audio_onsets_v0[73VurrTKCZ8_rally_0005]",
+   "sha256": "75ca8539f0652e7941e7155dc174670ec6548a58569fe7495c50aedf64f2a012"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/73VurrTKCZ8_rally_0008.json",
+   "role": "clip_audio_onsets_v0[73VurrTKCZ8_rally_0008]",
+   "sha256": "59029ea2f72fbc0bf9a5a81f675956f1e13d50cea19fbff705f853a83c4cf153"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/Ezz6HDNHlnk_rally_0002.json",
+   "role": "clip_audio_onsets_v0[Ezz6HDNHlnk_rally_0002]",
+   "sha256": "b5a7744d99fc31b70a2f4d9254bcf8fc1113a9ebcd4d7bfe7bd4e66b1140aa60"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/Ezz6HDNHlnk_rally_0003.json",
+   "role": "clip_audio_onsets_v0[Ezz6HDNHlnk_rally_0003]",
+   "sha256": "f7288aba8525366c21a30ae5b581d3364caf15c9ca7d05c2b6970915908ec771"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/Ezz6HDNHlnk_rally_0004.json",
+   "role": "clip_audio_onsets_v0[Ezz6HDNHlnk_rally_0004]",
+   "sha256": "a698c1f75b0bc94e3e1aec1614b68a788c683664647b09e635d805af68e4f6e7"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/Ezz6HDNHlnk_rally_0005.json",
+   "role": "clip_audio_onsets_v0[Ezz6HDNHlnk_rally_0005]",
+   "sha256": "65aaf56f97cd556e4f096a9ff948a71252af0bb266a351c897f0607b2531c3d3"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/Ezz6HDNHlnk_rally_0006.json",
+   "role": "clip_audio_onsets_v0[Ezz6HDNHlnk_rally_0006]",
+   "sha256": "62740693b4e0afeb54e73c6ffc1643cb5e3fcfb69c215c3a5694d684cd2ae4ce"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/Ezz6HDNHlnk_rally_0008.json",
+   "role": "clip_audio_onsets_v0[Ezz6HDNHlnk_rally_0008]",
+   "sha256": "fd20415c6df1b89c85a78e6f0b1089cdda010e65feff19a2e3b2e4c50fec0b37"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/HyUqT7zFiwk_rally_0001.json",
+   "role": "clip_audio_onsets_v0[HyUqT7zFiwk_rally_0001]",
+   "sha256": "74243f290cbb0e69fff1746068eed1c186cee7ed5143ac0cd4775b0b6bffeee2"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0001.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0001]",
+   "sha256": "e294fd563ff18624dc0309c959b461ff6604504ee39b50990cecb53ad8fe576a"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0002.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0002]",
+   "sha256": "515e9a48d3b7befd651b9804bb3403edb604647d62e26daa739ea90b19ca64ee"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0003.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0003]",
+   "sha256": "e3ffd8ad3e9504cc8d43fbfb5be992ec74a353a4d00ab4e003139afb721a3fd0"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0006.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0006]",
+   "sha256": "5ac7663bbbcdaa07bfc6de70ede44bd59d9d47b5fca133ce4b06ae333328649d"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0007.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0007]",
+   "sha256": "50c7a238c1ed7cffd7fc231f89fc607daa885dfe6bc52e5bbecd22fa52fba6b8"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0009.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0009]",
+   "sha256": "cfd9e010983a2a479560c2a911414048312105826a0c371ad67b8db5d76c0234"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0010.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0010]",
+   "sha256": "a58e0024f88f175085bb953604e93f8ae3f63677f0ce41b827444e5e50aefd30"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0011.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0011]",
+   "sha256": "3e79de693b332e7324dc542d902892466b031d0a4a35dbef2094f2862028c080"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0014.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0014]",
+   "sha256": "c0739cfb8a773a63882670220f949143cee4ea2b2dfb01c0ecc387c3c48fbcfe"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0017.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0017]",
+   "sha256": "7871f76a17a3fc7894f0bba2c97cae16c82108f94aa806ad97c1bbd69ce5547f"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/_L0HVmAlCQI_rally_0019.json",
+   "role": "clip_audio_onsets_v0[_L0HVmAlCQI_rally_0019]",
+   "sha256": "b48f272eecf7becc4b10ee4c719f0db221acc0c87cef59641a9ddf262ea293b9"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/wBu8bC4OfUY_rally_0001.json",
+   "role": "clip_audio_onsets_v0[wBu8bC4OfUY_rally_0001]",
+   "sha256": "3f82a6b0dc2390e8124cc5d46be53d44ef9d9900750aac7ba65588fae2275718"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/wBu8bC4OfUY_rally_0002.json",
+   "role": "clip_audio_onsets_v0[wBu8bC4OfUY_rally_0002]",
+   "sha256": "86fdfa299845c48892d1929e71452ce001c66d062181c13984ce8736bcb80e22"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/wBu8bC4OfUY_rally_0003.json",
+   "role": "clip_audio_onsets_v0[wBu8bC4OfUY_rally_0003]",
+   "sha256": "18da36bdbc83d1894c9a34c8db58a325af9d2abed01b40667f82fe520ef74f3e"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/audio_onsets_v0/zwCtH_i1_S4_rally_0001.json",
+   "role": "clip_audio_onsets_v0[zwCtH_i1_S4_rally_0001]",
+   "sha256": "49a8393d24a6e034549217d32ad36ca3322202e470fda5e72c6cbd221a162198"
+  },
+  {
+   "path": "data/event_bootstrap_20260713/inventory_v0.json",
+   "role": "event bootstrap clip inventory",
+   "sha256": "38de3516ba6ed9fe3ef4029a5c026a0a0ee48ea1f4134c6e1ac035f772edc6d7"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/73VurrTKCZ8_rally_0002/ball_track.json",
+   "role": "ball_track[73VurrTKCZ8_rally_0002]",
+   "sha256": "1a7e383d4ecca4e16c4b28db99ffb7075afd778d7a8ecc2064b008f1d93d8a25"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/73VurrTKCZ8_rally_0005/ball_track.json",
+   "role": "ball_track[73VurrTKCZ8_rally_0005]",
+   "sha256": "adef2b675352cdf8c17ace51eb1ae240f8fde464ff873e4d76aefa73d08b8f4b"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/73VurrTKCZ8_rally_0008/ball_track.json",
+   "role": "ball_track[73VurrTKCZ8_rally_0008]",
+   "sha256": "1d0b97cc7b0194da6aa59c2a8c2c21d2fd60752dcf831641b96e1cdb6d1dbe8b"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/Ezz6HDNHlnk_rally_0002/ball_track.json",
+   "role": "ball_track[Ezz6HDNHlnk_rally_0002]",
+   "sha256": "4b087f9edaf50d91f6da3dac86d34cbe4d5aba2fcb0b6c5a4723ab73bc3c5c9f"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/Ezz6HDNHlnk_rally_0003/ball_track.json",
+   "role": "ball_track[Ezz6HDNHlnk_rally_0003]",
+   "sha256": "9259e7f7ea28fa863a47b91a7ad7c8b8af20271ad63cce1342492dc8a0d51b7d"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/Ezz6HDNHlnk_rally_0004/ball_track.json",
+   "role": "ball_track[Ezz6HDNHlnk_rally_0004]",
+   "sha256": "6986223d66007b4b2d77a64925c001bf8dfdc8cf8f02829844fbb89db83f8f9f"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/Ezz6HDNHlnk_rally_0005/ball_track.json",
+   "role": "ball_track[Ezz6HDNHlnk_rally_0005]",
+   "sha256": "dff399c73525d4444d5b9c50fd6c662d6a1b2280b555c7d38a7c2b6c6041da62"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/Ezz6HDNHlnk_rally_0006/ball_track.json",
+   "role": "ball_track[Ezz6HDNHlnk_rally_0006]",
+   "sha256": "aed0dd70f226b55a9b315084fc9688a90ae37aefc0e042681b8b641a4f116bc1"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/Ezz6HDNHlnk_rally_0008/ball_track.json",
+   "role": "ball_track[Ezz6HDNHlnk_rally_0008]",
+   "sha256": "6c1125850c7eaf49c384a0a66fb61021f92c7d9b8645d84e661d7f53b451c78a"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/HyUqT7zFiwk_rally_0001/ball_track.json",
+   "role": "ball_track[HyUqT7zFiwk_rally_0001]",
+   "sha256": "e479dff20521f026b7e318e11da26529bfe5c21a49bb9950bbcc48976faa87d5"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0001/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0001]",
+   "sha256": "552e7f743b87c8652319181a60697432e6abf464baa8316c964663126d77a562"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0002/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0002]",
+   "sha256": "1db72cbce67ce22a3fc4b65a71674ec64870abd964e04d426b03c0ce8c615e21"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0003/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0003]",
+   "sha256": "97bfe11bd9e3fa90839b4b9dc2f56e327a44adc4a6c4a7cea18dd46ddc66decc"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0006/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0006]",
+   "sha256": "0537a028de2d90f1e93cbc8da651e80897510ee60ae2fdd26316a60d132f38d0"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0007/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0007]",
+   "sha256": "3103f573359304effdf2941bd27e552751fdd1451c5b017be3e27ca83413bdf8"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0009/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0009]",
+   "sha256": "80525b62e1598447933c5f921606ad602e5ea115022666bee50ab3d66246bd5f"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0010/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0010]",
+   "sha256": "b0f5dbe95dfe40a0190782db90c82805fdf356732873e807955e2ba7a9d85631"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0011/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0011]",
+   "sha256": "32135757009d88a4191a115558602c6636c50c7773cea680aed70dad0f0336cd"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0014/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0014]",
+   "sha256": "67004d114b0eb430835274e752a8d7d2b2954e66082bd69a7933c718cb578435"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0017/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0017]",
+   "sha256": "e706f8ec8d5cc7968d7c9198197675b2c649d6d1649a2e2c409a4f35a803d8cd"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0019/ball_track.json",
+   "role": "ball_track[_L0HVmAlCQI_rally_0019]",
+   "sha256": "b654fc77aaa3964676226c4894d04dc2f635e888a1d4749ca20df5d48c6307ef"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/wBu8bC4OfUY_rally_0001/ball_track.json",
+   "role": "ball_track[wBu8bC4OfUY_rally_0001]",
+   "sha256": "2df943784888eb697c418e77f2fc9bb7da738a72501f314eac597dece33019b5"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/wBu8bC4OfUY_rally_0002/ball_track.json",
+   "role": "ball_track[wBu8bC4OfUY_rally_0002]",
+   "sha256": "6b39cc9fd0cb339589c29423a56ca5dca4fc87f3c1da763945ab3d504fbbbe8a"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/wBu8bC4OfUY_rally_0003/ball_track.json",
+   "role": "ball_track[wBu8bC4OfUY_rally_0003]",
+   "sha256": "b30e2590db93aaf9c64e15a1fc22591dd07b6fcb5950c78d618d2b2766a28579"
+  },
+  {
+   "path": "data/online_harvest_20260706/prelabels/zwCtH_i1_S4_rally_0001/ball_track.json",
+   "role": "ball_track[zwCtH_i1_S4_rally_0001]",
+   "sha256": "6f044a33ccc02794ea291864108ea66b34c781e84c802ae21bb3cf8d888fdebe"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0002.provenance.json",
+   "role": "clip_provenance[73VurrTKCZ8_rally_0002]",
+   "sha256": "69bdb6f6cfec87dc32dc2cd8655607190bd4ad9c56ab3c6aeb02a3a8049b267f"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0005.provenance.json",
+   "role": "clip_provenance[73VurrTKCZ8_rally_0005]",
+   "sha256": "8062c651e39b08523aafb0cc1a7f8eb2f213d53dac755b7dafd8545fdd2508bc"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/73VurrTKCZ8/73VurrTKCZ8_rally_0008.provenance.json",
+   "role": "clip_provenance[73VurrTKCZ8_rally_0008]",
+   "sha256": "d0dcd3072b14aca497cf145c6d13a6a3a1ca48150b10e5221eed5639c302224f"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0002.provenance.json",
+   "role": "clip_provenance[Ezz6HDNHlnk_rally_0002]",
+   "sha256": "a25f303d1c81eaed5d46764a697a56424fa4685255abb5c5b198ccd400549e6b"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0003.provenance.json",
+   "role": "clip_provenance[Ezz6HDNHlnk_rally_0003]",
+   "sha256": "270436998533c08834e9fe3e16f8fc7ce935e88496862b9f8f587f75fcc27b0a"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0004.provenance.json",
+   "role": "clip_provenance[Ezz6HDNHlnk_rally_0004]",
+   "sha256": "be892412c09a8eacfc04876fb84217fb738fca9d81665679efb6e3488756c169"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0005.provenance.json",
+   "role": "clip_provenance[Ezz6HDNHlnk_rally_0005]",
+   "sha256": "828a6dc11356cbafb8fc29ff3643ba92b2fa2da719b113e090fc0544c00165cf"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0006.provenance.json",
+   "role": "clip_provenance[Ezz6HDNHlnk_rally_0006]",
+   "sha256": "033f1fa8fb7d70bbd415eff1f1498f94f263acc6199600fc3de23e3be7d5f6da"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0008.provenance.json",
+   "role": "clip_provenance[Ezz6HDNHlnk_rally_0008]",
+   "sha256": "6408c8318f2bdd432aa77bce5daab3ec0dc27edced022bfb5ed35ed83ae4db63"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/HyUqT7zFiwk/HyUqT7zFiwk_rally_0001.provenance.json",
+   "role": "clip_provenance[HyUqT7zFiwk_rally_0001]",
+   "sha256": "3ca4d3e1e29438d5f2be4b9d57c9838982dcbd3e392e06ecacf20d72e8c1db56"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0001.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0001]",
+   "sha256": "7584e948ed04b38df298abdd1c1d364553856ee8d56d37ddff257165dfb1e26b"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0002.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0002]",
+   "sha256": "244f054184c9649c6cb3ad1009260d2f7cbc324dbe284d57456bc5e1add122a4"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0003.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0003]",
+   "sha256": "5b1efd771638682b31dffc80159f6b6ac1f0f700710f50e6c4363d23a06922bd"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0006.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0006]",
+   "sha256": "93d52e7d2c2c8c42522bfbf3d037a3bc5758a1d311add0c1975fc7f32d2cfa33"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0007.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0007]",
+   "sha256": "23fdd68c0f0475954c328c1831bd547ad1a4213d454512d8a0fbffb31daca0b6"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0009.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0009]",
+   "sha256": "fb4302f0f965a9705e68fee0055c5635e3b0e341830ecd3d327e2310fa1683d7"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0010.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0010]",
+   "sha256": "06f25f554a0889077c1899861bdccec7025cbf66a8f89f191d73717458272455"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0011.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0011]",
+   "sha256": "46d1b26c1ddceecf34fd1d5b585b1b569f35d63a1285db10543d39cde89d0581"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0014.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0014]",
+   "sha256": "f0c930764e7f73bf82eb426b453ef37eabdfb170e34ed10133c203157d858498"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0017.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0017]",
+   "sha256": "c0e85981c90ef0c04433d22860e1c423825323dd645dd234e45e521936b57806"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/_L0HVmAlCQI/_L0HVmAlCQI_rally_0019.provenance.json",
+   "role": "clip_provenance[_L0HVmAlCQI_rally_0019]",
+   "sha256": "aec7f453ab3b38f185b14f637f5312a6397897e6ad031a92c30e91796e57002d"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0001.provenance.json",
+   "role": "clip_provenance[wBu8bC4OfUY_rally_0001]",
+   "sha256": "d593fdd84b3f98e8fb3da726889135651c9e20022b3a18d66cc593dbbd0706f0"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0002.provenance.json",
+   "role": "clip_provenance[wBu8bC4OfUY_rally_0002]",
+   "sha256": "4f4cee1bb488857f09c943a54b7c7c351384d03fa8382274c1a282df638665bc"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/wBu8bC4OfUY/wBu8bC4OfUY_rally_0003.provenance.json",
+   "role": "clip_provenance[wBu8bC4OfUY_rally_0003]",
+   "sha256": "464a712f3626dbe6e995f43cbd6d31279405153fc320b226fcce567868190fd5"
+  },
+  {
+   "path": "data/online_harvest_20260706/rallies/zwCtH_i1_S4/zwCtH_i1_S4_rally_0001.provenance.json",
+   "role": "clip_provenance[zwCtH_i1_S4_rally_0001]",
+   "sha256": "bd5e2354e4cb7c6bb6ffcac12e895d65d16587f522e0a04c11b6fac188f37108"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/_L0HVmAlCQI.audio_onsets_v2.json",
+   "role": "audio_onsets_v2[_L0HVmAlCQI]",
+   "sha256": "d96a9c2420be9628e1053bccfeac6c228e1ab706f95767eb6ad4e22f665ca6e8"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/73VurrTKCZ8_rally_0002.ball_inflections.json",
+   "role": "ball_inflections[73VurrTKCZ8_rally_0002]",
+   "sha256": "9304363378e64dcf34ce3c5b37ad56db073fc8edf78066e03563c0d8152596d9"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/73VurrTKCZ8_rally_0005.ball_inflections.json",
+   "role": "ball_inflections[73VurrTKCZ8_rally_0005]",
+   "sha256": "ba0774c06adc127da57c1b7be6a260800d20db5dc5901db0e08d8e6d8f10e2eb"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/73VurrTKCZ8_rally_0008.ball_inflections.json",
+   "role": "ball_inflections[73VurrTKCZ8_rally_0008]",
+   "sha256": "f25b31a581afbdbc366abfefd2057f6b2fa0c63eef9da27f1ef1bc19fb146321"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/Ezz6HDNHlnk_rally_0002.ball_inflections.json",
+   "role": "ball_inflections[Ezz6HDNHlnk_rally_0002]",
+   "sha256": "b2632847aa07fed4a538838bffbd7b8f86a433f6a0aed998024faac03c9c4ccc"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/Ezz6HDNHlnk_rally_0003.ball_inflections.json",
+   "role": "ball_inflections[Ezz6HDNHlnk_rally_0003]",
+   "sha256": "394714b11ac2c2b3165f9e1f373bbade1ebdcae1a4e9cf7906b4a3e5d1bf596b"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/Ezz6HDNHlnk_rally_0004.ball_inflections.json",
+   "role": "ball_inflections[Ezz6HDNHlnk_rally_0004]",
+   "sha256": "d06af0eb401faa0825a7edc0a812de6528f1fed3c88df285e33a3fd5092889a0"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/Ezz6HDNHlnk_rally_0005.ball_inflections.json",
+   "role": "ball_inflections[Ezz6HDNHlnk_rally_0005]",
+   "sha256": "e699de8964e3b95ae2b5aeff0f0422205071bfb552951b590e02b69c543467f3"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/Ezz6HDNHlnk_rally_0006.ball_inflections.json",
+   "role": "ball_inflections[Ezz6HDNHlnk_rally_0006]",
+   "sha256": "e9c505f565f6ed149fdb7673d3379984489156e912a982422af92aa223302640"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/Ezz6HDNHlnk_rally_0008.ball_inflections.json",
+   "role": "ball_inflections[Ezz6HDNHlnk_rally_0008]",
+   "sha256": "5e16b9b703f1fcff4919ebc982d1b8e0ab84385458c11651d774a8ad2d869756"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/HyUqT7zFiwk_rally_0001.ball_inflections.json",
+   "role": "ball_inflections[HyUqT7zFiwk_rally_0001]",
+   "sha256": "f2bd1389741344573d4ada5e9d7aed01e4834f61f612ac28c9803ffa91551ca6"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0001.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0001]",
+   "sha256": "6fbeab023369dafb0abb937acf4c60f591934b0faf9c903434c7a1d308766126"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0002.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0002]",
+   "sha256": "49d2f7d6ffc37ea613def09c539f344cd5b2f0df4014f28ad318936335f08d76"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0003.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0003]",
+   "sha256": "54e8a0ad110db06e843374fa1300b0dda831ed4fc901fe591bf60a0809f1247c"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0006.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0006]",
+   "sha256": "b2247bc53a5b9d03cbeb480b9b8171a66b4f8285db16ca89ddac12f07e9fc948"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0007.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0007]",
+   "sha256": "96e9e49643464685dd0ab70953f26e34d567896f0dd69a0461761d646f037d49"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0009.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0009]",
+   "sha256": "be5461475793415efd4877c7afc5ad72c5cfcfec9cb39530dc277c42fcc066f9"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0010.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0010]",
+   "sha256": "2f778422d7a8e07ebab30b401d9cf6853fec98bb503c59fe137a5671008deb0b"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0011.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0011]",
+   "sha256": "7f161e335f04f9264e26282ba0eeea768b6334f6cc9b22e29426b42fc92f1dd0"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0014.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0014]",
+   "sha256": "34680bc18c6992be81b24c1e5631d14dc71a974840e5431ee23abb3cff413dac"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0017.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0017]",
+   "sha256": "c7f95d677748da85aaff23ce7ffa29c3326d5a4168ab07414486942d54f3a904"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/_L0HVmAlCQI_rally_0019.ball_inflections.json",
+   "role": "ball_inflections[_L0HVmAlCQI_rally_0019]",
+   "sha256": "730dcf79fafcfa8fa8a14a5585a73c7bee9a10dc1abe8130d3612be74f0a6a39"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/wBu8bC4OfUY_rally_0001.ball_inflections.json",
+   "role": "ball_inflections[wBu8bC4OfUY_rally_0001]",
+   "sha256": "a2fd29a38709275e65b73d2ff4a3ec00056f9ce2a6bd9a9e02b230cf046334c7"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/wBu8bC4OfUY_rally_0002.ball_inflections.json",
+   "role": "ball_inflections[wBu8bC4OfUY_rally_0002]",
+   "sha256": "e650832a66fea5a64c5bf2bd6175c89cd0b34c1871746892d73c98998a511a7e"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/wBu8bC4OfUY_rally_0003.ball_inflections.json",
+   "role": "ball_inflections[wBu8bC4OfUY_rally_0003]",
+   "sha256": "456318d477f9b715352af5122cfe0fb87a657f507dc1be58f611f6a400dc62f2"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/ball_inflections/zwCtH_i1_S4_rally_0001.ball_inflections.json",
+   "role": "ball_inflections[zwCtH_i1_S4_rally_0001]",
+   "sha256": "b9fd2a2455d118836a5201f7c1762737ce7e0d4487fa026eed90c5cb12e35c74"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/cue_index.json",
+   "role": "cue artifact index",
+   "sha256": "4f1f2e28301760e42a52e2d17245c127233a8a27d9e1b8af43410c2b439c6896"
+  },
+  {
+   "path": "runs/ball_lane_20260723/mm_dataset/cue_artifacts/zwCtH_i1_S4.audio_onsets_v2.json",
+   "role": "audio_onsets_v2[zwCtH_i1_S4]",
+   "sha256": "bdadd7ef407093191023ef77defbdfd92ead1ee903860a0e9fa0eef465ca5f07"
+  },
+  {
+   "path": "runs/lanes/abc_experiment_20260721/vm_pull_v2/abc_out_v2/arm_b_manifest.json",
+   "role": "teacher corrected 1189-row manifest",
+   "sha256": "f5c1e3d89d072c4a770ef776378596921ae2e2fa7a91395ca2315df27b53a2a7"
+  },
+  {
+   "path": "runs/lanes/ball_audio_repair2_20260722/raw_audio_onsets/73VurrTKCZ8.audio_onsets_v2.json",
+   "role": "audio_onsets_v2[73VurrTKCZ8]",
+   "sha256": "abd3ee5be409bd860868cda8a92ff150e0a6e8b4c7dcacbf3e6e1ea0933e8e10"
+  },
+  {
+   "path": "runs/lanes/ball_audio_repair2_20260722/raw_audio_onsets/Ezz6HDNHlnk.audio_onsets_v2.json",
+   "role": "audio_onsets_v2[Ezz6HDNHlnk]",
+   "sha256": "4f42b911efc396a0a227a813fd49b88b95383eb5984b6a35f3d5e951721f8121"
+  },
+  {
+   "path": "runs/lanes/ball_audio_repair2_20260722/raw_audio_onsets/HyUqT7zFiwk.audio_onsets_v2.json",
+   "role": "audio_onsets_v2[HyUqT7zFiwk]",
+   "sha256": "72e2fd427a1e8dcc1c32fd71846a8903e358225d71ea96e463dcc4159511f911"
+  },
+  {
+   "path": "runs/lanes/ball_audio_repair2_20260722/raw_audio_onsets/wBu8bC4OfUY.audio_onsets_v2.json",
+   "role": "audio_onsets_v2[wBu8bC4OfUY]",
+   "sha256": "8d117824d1cf816234304c72a13f6d8311c10dd8c907f5bbc6bbb9620a9c9b14"
+  },
+  {
+   "path": "runs/lanes/ball_audio_repair2_20260722/raw_audio_onsets/xkadsq9bli3h.audio_onsets_v2.json",
+   "role": "audio_onsets_v2[xkadsq9bli3h]",
+   "sha256": "f4f6ef0e571a30c747233d33b7d39dbae2e56fe491d56904c7d86cc7f9cb4305"
+  },
+  {
+   "path": "runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json",
+   "role": "owner 102-row manifest",
+   "sha256": "84a0062c776029bc33b01381add8c0b6ecbe9fc018732d6cff2bb8bdcd194e9b"
+  },
+  {
+   "path": "runs/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json",
+   "role": "protected seed identity selector",
+   "sha256": "b7f2386d91ba4564e52de1e87eb7907990f539e79e503587aeff380806ee4e60"
+  }
+ ],
+ "outputs": [
+  {
+   "path": "records/owner_records.jsonl",
+   "sha256": "09fbb4ca90b273900e2cf54b3efa0d48a6e3f5cfe001fce8326979f808b7515f"
+  },
+  {
+   "path": "records/teacher_records.jsonl",
+   "sha256": "40abaa157f6291c058be3f26c9d5edf3140dbcb1787a234c8f3f225f31dc790c"
+  },
+  {
+   "path": "coverage.json",
+   "sha256": "5b7b1c65d208c44d0303bb71a3fce579a0993efe450dc438f0e2d3fef94d8479"
+  }
+ ],
+ "schema_version": 1
+}

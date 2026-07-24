@@ -4,9 +4,9 @@
 This is a coordination view for data lineage and utilization only. `NORTH_STAR_ROADMAP.md` remains product truth.
 
 - Ledger schema: `3`
-- Snapshot UTC: `2026-07-24T06:41:09Z`
-- Assets: `34`
-- States: `BLOCKED=9`, `CONSUMED=10`, `DEFERRED_WITH_REASON=2`, `QUARANTINED=5`, `READY=1`, `REJECTED=7`
+- Snapshot UTC: `2026-07-24T09:00:00Z`
+- Assets: `35`
+- States: `BLOCKED=9`, `CONSUMED=10`, `DEFERRED_WITH_REASON=2`, `QUARANTINED=5`, `READY=2`, `REJECTED=7`
 - License state gate: `False` (license is FYI only)
 - Directive: Owner directive 2026-07-22: internal use has no licensing constraints; license metadata is FYI only and never determines ledger state. Protected-eval and compare-only restrictions remain protocol quarantines.
 
@@ -29,6 +29,7 @@ This is a coordination view for data lineage and utilization only. `NORTH_STAR_R
 | `event_public_shuttleset_20260713` | `BLOCKED` | Track D: Run the Track D inventory-only pretrain-corpus adapter and preserve BLOCKED_NO_PIXELS unless local source context resolves. | 129883486 | 88840 event_rows | 88840 event_rows | 0 64_frame_windows | 88840 event_rows | human_gt | EVENT public-data owner | Run inventory-only adapter and preserve BLOCKED_NO_PIXELS unless local context resolves. |
 | `event_public_squash_figshare_20260713` | `REJECTED` | Track D: Run the Track D inventory-only adapter and record BLOCKED_NO_STRUCTURED_EVENTS unless an authoritative structured-label file is present. | 138216934 | 1 audio_parts | 1 audio_parts | 0 structured_event_rows | 0 structured_event_rows | none | EVENT public-data owner | Inventory only; reopen training eligibility only if an authoritative structured-label release appears. |
 | `event_public_tt_sounds_20260713` | `REJECTED` | Track D: Include in the Track D inventory-only corpus-expansion audit as audio-only negative evidence; do not queue it to typed visual event training. | 17006390 | 5702 labeled_audio_rows | 5702 labeled_audio_rows | 5702 audio_snippets | 5702 audio_event_rows | human_gt | EVENT public-data owner | Inventory in Track D as audio-only negative evidence; no typed event GPU training. |
+| `multimodal_event_windows_20260724` | `READY` | Track D: Train the future multimodal v3 event head only from the SHA-bound train-split records (61 owner train + 49 teacher train); keep the 41 owner val records gradient-excluded and treat teacher records as teacher-weighted, never ground truth. | 7808403 | 1291 label_rows_considered | 151 windowed_records_emitted | 151 windowed_records_emitted | 151 multimodal_64_frame_window_records | human_gt, teacher | EVENT training data owner | Regenerate records only through scripts/racketsport/build_multimodal_event_dataset.py with MANIFEST.sha256.json-pinned inputs; keep the wrist modality masked absent until a skeleton3d artifact exists for a labeled source video; the 1140 VM-only teacher rows stay in the unbuildable ledger until media/PTS land locally. |
 | `online_harvest_20260706` | `CONSUMED` | Track A: Keep the unregistered court_calibrations directory items audit-only; use them only to reproduce and verify the frozen Track A external audit packaging, and exclude every derivative from training and tuning. | 1087546365 | 40 rally_video_clips | 40 source_grouped_rally_video_clips | 40 training_or_scoring_media_clips | 0 raw_human_labels | none | BALL/EVENT data owner | Use the training-input gate for every Stage-F dispatch and keep prelabels, court-calibration derivatives, protected media, and compare-only media outside the input manifest. |
 | `online_harvest_20260712` | `CONSUMED` | Track A: Feed only protocol-eligible reviewed rows from the derived 100-frame court package into the Track A court pool through the court_diversity_100_20260712 row after owner export. | 170641232 | 39 attempted_sources | 28 selected_sources | 100 derived_frame_images | 0 reviewed_labels | none | COURT data owner | Preserve source-family IDs during owner export and deny all three IYnbdRs1Jdk frames before label read. |
 | `online_harvest_person_gap_20260706` | `DEFERRED_WITH_REASON` | RULED OUT: CVAT_CLOSED_TO_PERSON_TASKS: no person-box task was created on the eight raw videos, and the route is superseded by Track C's stratified few-shot verify-not-draw pack; evidence runs/research_sota_20260722/INTERNAL_AUDIT.json and runs/research_sota_20260722/PROGRAM.md#track-c-person-identity-pose. | 50349 | 8 source_videos_without_person_task | 8 source_videos_without_person_task | 0 person_task_rows | 0 person_boxes | none | PERSON data owner | Do not reopen this route; Track C owns the few-shot pack. |
@@ -252,6 +253,18 @@ This is a coordination view for data lineage and utilization only. `NORTH_STAR_R
 - Consumers: 0
 - License FYI: CC BY-NC 4.0 is recorded for information only; technical audio-only semantics determine the current rejection.
 - Disposition: Track D — Include in the Track D inventory-only corpus-expansion audit as audio-only negative evidence; do not queue it to typed visual event training. (evidence: `data/event_public_20260713/tt_sounds_data/manifest.json`)
+
+### `multimodal_event_windows_20260724`
+
+- State reason: ready_for_named_consumer
+- Paths: `runs/ball_lane_20260723/mm_dataset`
+- Source families: 73VurrTKCZ8, Ezz6HDNHlnk, HyUqT7zFiwk, _L0HVmAlCQI, wBu8bC4OfUY, zwCtH_i1_S4, xkadsq9bli3h
+- Partition: train=['owner_102_manifest:61_rows', 'arm_b_manifest_xkadsq9bli3h:49_rows']; val=['owner_102_manifest:41_rows']; test=[]
+- Overlap coverage: PASS — all emitted records: 0 seed identity matches, 0 train-window overlaps, 0 val-window overlaps measured; teacher source shas disjoint from seed clip shas
+- Immutable clean-subset selectors: 0
+- Consumers: 0
+- License FYI: Owner internal-use directive 2026-07-22 plus PBV-FULL-USAGE-20260720 cover the consumed label sets; license is FYI only and never a state gate.
+- Disposition: Track D — Train the future multimodal v3 event head only from the SHA-bound train-split records (61 owner train + 49 teacher train); keep the 41 owner val records gradient-excluded and treat teacher records as teacher-weighted, never ground truth. (evidence: `runs/ball_lane_20260723/mm_dataset/COVERAGE.md`)
 
 ### `online_harvest_20260706`
 
