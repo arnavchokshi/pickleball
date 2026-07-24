@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
 """WS1.0 (B0) clean-judge verification for lane ball_lane_20260723.
 
-Measurement-only. Reads the immutable ball_b0_split_20260721 artifacts (main
-checkout + worktree tracked copy), recomputes counts/hashes, and emits
-verification.json next to this script. It never writes outside its own lane
-directory and never modifies any prior lane artifact.
+Measurement-only. Reads the immutable ball_b0_split_20260721 artifacts,
+recomputes counts/hashes, and emits verification.json next to this script.
+It never writes outside its own lane directory and never modifies any prior
+lane artifact.
 
-Run:
-  /Users/arnavchokshi/Desktop/pickleball/.venv/bin/python \
-    runs/ball_lane_20260723/b0_judge/verify_b0_judge.py
+Rerunnable from any checkout: the repo root is derived from this file's own
+location (<root>/runs/ball_lane_20260723/b0_judge/verify_b0_judge.py). While
+the root is a git worktree under <main>/.claude/worktrees/<name>, untracked
+data (split_fix2, the image zip, rally media, sampling manifest) is read from
+<main>; after merge + worktree removal the root IS the main checkout and every
+input resolves locally.
+
+Run (from the repo root):
+  .venv/bin/python runs/ball_lane_20260723/b0_judge/verify_b0_judge.py
+
+Freshness protocol: require exit 0 AND a verification.json byte-identical to
+the committed copy. A partial crash leaves the stale committed file in place,
+so the exit code, not the file's existence, is the freshness signal.
 """
 from __future__ import annotations
 
@@ -18,15 +28,43 @@ import json
 import zipfile
 from pathlib import Path
 
-MAIN = Path("/Users/arnavchokshi/Desktop/pickleball")
-WORKTREE = Path("/Users/arnavchokshi/Desktop/pickleball/.claude/worktrees/ball-lane-20260723")
-LANE_MAIN = MAIN / "runs/lanes/ball_b0_split_20260721"
-LANE_WT = WORKTREE / "runs/lanes/ball_b0_split_20260721"
-OUT_DIR = WORKTREE / "runs/ball_lane_20260723/b0_judge"
-SCORER = WORKTREE / "scripts/racketsport/ball_loso_validation.py"
+_SELF = Path(__file__).resolve()
+ROOT = _SELF.parents[3]
+if ROOT.parent.name == "worktrees" and ROOT.parents[1].name == ".claude":
+    # Running inside a git worktree: untracked data lives only in the main checkout.
+    DATA_ROOT = ROOT.parents[2]
+    WORKTREE_COPY = ROOT
+else:
+    DATA_ROOT = ROOT
+    WORKTREE_COPY = None
+LANE_DATA = DATA_ROOT / "runs/lanes/ball_b0_split_20260721"
+OUT_DIR = _SELF.parent
+SCORER = ROOT / "scripts/racketsport/ball_loso_validation.py"
 
 HOLDOUT_FAMILIES = {"HyUqT7zFiwk", "Ezz6HDNHlnk"}
 TRAIN_FAMILIES = {"73VurrTKCZ8", "_L0HVmAlCQI", "wBu8bC4OfUY", "zwCtH_i1_S4"}
+
+_REL_ANCHORS = ("runs", "cvat_upload", "data", "models", "scripts")
+
+
+def repo_rel(value: str) -> str:
+    """Reduce a stored absolute or repo-relative path to its repo-relative tail."""
+    parts = Path(value).parts
+    for anchor in _REL_ANCHORS:
+        if anchor in parts:
+            return str(Path(*parts[parts.index(anchor):]))
+    return value
+
+
+def anchored(value: str) -> Path:
+    """Resolve a stored path against the derived root, falling back to the
+    main-checkout data root for untracked inputs while in a worktree."""
+    rel = repo_rel(value)
+    for base in (ROOT, DATA_ROOT):
+        candidate = base / rel
+        if candidate.exists():
+            return candidate
+    return DATA_ROOT / rel
 
 
 def sha256_file(path: Path) -> str:
@@ -79,8 +117,14 @@ def main() -> int:
     checks: list[dict] = []
     frozen_artifacts, frozen_videos = frozen_constants_from_scorer()
 
-    # V1: frozen artifact hashes -- main copy and worktree tracked copy.
-    for label, lane in (("main_checkout", LANE_MAIN), ("worktree_tracked", LANE_WT)):
+    # V1: frozen artifact hashes -- main-checkout copy always; the worktree
+    # tracked copy only while a distinct worktree checkout exists.
+    lanes = [("main_checkout", LANE_DATA)]
+    if WORKTREE_COPY is not None:
+        wt_lane = WORKTREE_COPY / "runs/lanes/ball_b0_split_20260721"
+        if (wt_lane / "split").is_dir():
+            lanes.append(("worktree_tracked", wt_lane))
+    for label, lane in lanes:
         actual = {name: sha256_file(lane / "split" / name) for name in frozen_artifacts}
         checks.append(
             check(
@@ -90,16 +134,24 @@ def main() -> int:
                  "actual": actual},
             )
         )
+    if len(lanes) == 1:
+        checks.append(
+            {
+                "check": "worktree_copy_absent[informational]",
+                "verdict": "INFO",
+                "detail": "no distinct worktree checkout; the single frozen-hash comparison above covers the only copy",
+            }
+        )
     fix2_hashes = {
-        name: sha256_file(LANE_MAIN / "split_fix2" / name)
+        name: sha256_file(LANE_DATA / "split_fix2" / name)
         for name in ("report.json", "train.jsonl", "validation.jsonl", "lineage_rows.jsonl")
     }
 
     # Load rows (round 1 = frozen judge; fix2 = provenance-hardened rebuild).
-    split1 = {n: read_jsonl(LANE_MAIN / "split" / f"{n}.jsonl") for n in ("train", "validation", "lineage_rows")}
-    split2 = {n: read_jsonl(LANE_MAIN / "split_fix2" / f"{n}.jsonl") for n in ("train", "validation", "lineage_rows")}
-    report1 = json.loads((LANE_MAIN / "split/report.json").read_text())
-    report2 = json.loads((LANE_MAIN / "split_fix2/report.json").read_text())
+    split1 = {n: read_jsonl(LANE_DATA / "split" / f"{n}.jsonl") for n in ("train", "validation", "lineage_rows")}
+    split2 = {n: read_jsonl(LANE_DATA / "split_fix2" / f"{n}.jsonl") for n in ("train", "validation", "lineage_rows")}
+    report1 = json.loads((LANE_DATA / "split/report.json").read_text())
+    report2 = json.loads((LANE_DATA / "split_fix2/report.json").read_text())
 
     # V2: row counts.
     for label, split, report in (("split", split1, report1), ("split_fix2", split2, report2)):
@@ -259,7 +311,7 @@ def main() -> int:
     )
 
     # V8: image byte binding -- zip sha256 + all 167 validation member digests.
-    zip_path = MAIN / "cvat_upload/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_images.zip"
+    zip_path = anchored("cvat_upload/w7_audit_stratum_20260709/w7_audit_stratum_uniform350_images.zip")
     expected_zip_sha = report2["checks"]["scratch_materialized_image_bytes"]["image_zip_sha256"]
     actual_zip_sha = sha256_file(zip_path)
     contract = report2["input_contract"]["image_zip_entry_sha256"]
@@ -293,9 +345,9 @@ def main() -> int:
 
     # V9: input-contract manifest digests.
     ic1 = report1["input_contract"]
-    sampling_path = Path(ic1["scratch_sampling_manifest"])
-    package_path = MAIN / ic1["scratch_package"]
-    export_path = MAIN / ic1["scratch_export"]
+    sampling_path = anchored(ic1["scratch_sampling_manifest"])
+    package_path = anchored(ic1["scratch_package"])
+    export_path = anchored(ic1["scratch_export"])
     digests = {
         "scratch_sampling_manifest_md5": (ic1["scratch_sampling_manifest_md5"], md5_file(sampling_path)),
         "scratch_package_sha256": (ic1["scratch_package_sha256"], sha256_file(package_path)),
@@ -313,7 +365,7 @@ def main() -> int:
     video_results = {}
     for clip, expected_sha in frozen_videos.items():
         parent = clip.split("_rally_")[0]
-        path = MAIN / f"data/online_harvest_20260706/rallies/{parent}/{clip}.mp4"
+        path = anchored(f"data/online_harvest_20260706/rallies/{parent}/{clip}.mp4")
         actual = sha256_file(path) if path.exists() else None
         video_results[clip] = {"path": str(path), "expected": expected_sha, "actual": actual,
                                "match": actual == expected_sha}
@@ -342,18 +394,20 @@ def main() -> int:
     )
 
     # V12: ledger family scan -- where do the holdout families appear as train pools?
-    ledger = json.loads((WORKTREE / "runs/manager/data_ledger.json").read_text())
+    ledger = json.loads((ROOT / "runs/manager/data_ledger.json").read_text())
     family_table = []
     for asset in ledger["assets"]:
         part = asset.get("partitions", {})
         hits_train = sorted(HOLDOUT_FAMILIES & set(part.get("train", [])))
         hits_val = sorted(HOLDOUT_FAMILIES & set(part.get("val", [])))
+        hits_test = sorted(HOLDOUT_FAMILIES & set(part.get("test", [])))
         in_sources = sorted(HOLDOUT_FAMILIES & set(asset.get("source_lineage", {}).get("original_sources", [])))
-        if hits_train or hits_val or in_sources:
+        if hits_train or hits_val or hits_test or in_sources:
             family_table.append(
                 {"asset_id": asset["asset_id"], "state": asset["state"],
                  "holdout_families_in_train_partition": hits_train,
                  "holdout_families_in_val_partition": hits_val,
+                 "holdout_families_in_test_partition": hits_test,
                  "holdout_families_in_original_sources": in_sources}
             )
     checks.append({"check": "ledger_holdout_family_scan", "verdict": "INFO", "detail": family_table})
@@ -366,10 +420,10 @@ def main() -> int:
         "frozen_judge": {
             "path": "runs/lanes/ball_b0_split_20260721/split/validation.jsonl",
             "row_count": len(split1["validation"]),
-            "sha256": sha256_file(LANE_MAIN / "split/validation.jsonl"),
+            "sha256": sha256_file(LANE_DATA / "split/validation.jsonl"),
             "identity_authority": "FROZEN_B0_ARTIFACT_SHA256 in scripts/racketsport/ball_loso_validation.py (commit 4c27023)",
         },
-        "split_fix2_hashes": fix2_hashes,
+        "split_fix2_hashes": {"note": "recorded, not verified: no independent frozen reference exists for the fix2 rebuild", "sha256": fix2_hashes},
         "checks": checks,
         "overall": "PASS" if all(c["verdict"] in ("PASS", "PASS_AS_REPORTED", "INFO") for c in checks) else "FAIL",
     }

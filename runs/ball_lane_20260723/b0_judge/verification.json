@@ -353,6 +353,7 @@
             "Ezz6HDNHlnk",
             "HyUqT7zFiwk"
           ],
+          "holdout_families_in_test_partition": [],
           "holdout_families_in_train_partition": [
             "Ezz6HDNHlnk",
             "HyUqT7zFiwk"
@@ -366,6 +367,7 @@
             "Ezz6HDNHlnk",
             "HyUqT7zFiwk"
           ],
+          "holdout_families_in_test_partition": [],
           "holdout_families_in_train_partition": [
             "Ezz6HDNHlnk",
             "HyUqT7zFiwk"
@@ -379,6 +381,7 @@
             "Ezz6HDNHlnk",
             "HyUqT7zFiwk"
           ],
+          "holdout_families_in_test_partition": [],
           "holdout_families_in_train_partition": [],
           "holdout_families_in_val_partition": [],
           "state": "QUARANTINED"
@@ -389,6 +392,7 @@
             "Ezz6HDNHlnk",
             "HyUqT7zFiwk"
           ],
+          "holdout_families_in_test_partition": [],
           "holdout_families_in_train_partition": [],
           "holdout_families_in_val_partition": [],
           "state": "CONSUMED"
@@ -399,6 +403,7 @@
             "Ezz6HDNHlnk",
             "HyUqT7zFiwk"
           ],
+          "holdout_families_in_test_partition": [],
           "holdout_families_in_train_partition": [],
           "holdout_families_in_val_partition": [],
           "state": "QUARANTINED"
@@ -417,10 +422,13 @@
   "language": "measurement-only; no promotion claims",
   "overall": "PASS",
   "split_fix2_hashes": {
-    "lineage_rows.jsonl": "6dade710994884b5362189e1050f0c8d9899c819971564558e06ae7fb7c6f7b6",
-    "report.json": "f8a95c81663421daa79f3b78f3cdfa6e373ff5196cf477aa1dafdc7e0fb35537",
-    "train.jsonl": "669df8953756b0fc99110eda710c807400b3800e22892d031a75f3ae70b9fca0",
-    "validation.jsonl": "e20048880674dc21269cde7835e2cdee775eacfd698a699859bd36a55a03a5b6"
+    "note": "recorded, not verified: no independent frozen reference exists for the fix2 rebuild",
+    "sha256": {
+      "lineage_rows.jsonl": "6dade710994884b5362189e1050f0c8d9899c819971564558e06ae7fb7c6f7b6",
+      "report.json": "f8a95c81663421daa79f3b78f3cdfa6e373ff5196cf477aa1dafdc7e0fb35537",
+      "train.jsonl": "669df8953756b0fc99110eda710c807400b3800e22892d031a75f3ae70b9fca0",
+      "validation.jsonl": "e20048880674dc21269cde7835e2cdee775eacfd698a699859bd36a55a03a5b6"
+    }
   },
   "verified_flag": 0
 }
