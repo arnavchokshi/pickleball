@@ -2907,6 +2907,123 @@ def _court_half_extents(calibration: CourtCalibration) -> tuple[float, float]:
     return PICKLEBALL_HALF_WIDTH_M, PICKLEBALL_HALF_LENGTH_M
 
 
+def reanchor_skeleton3d_to_sam3d_foot_pixels(
+    skeleton3d: Mapping[str, Any],
+    *,
+    sam3d_keypoints_2d: Mapping[str, Any],
+    anchor_tracks: Mapping[str, Any],
+    calibration: CourtCalibration,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Translate persisted BODY joints to their measured SAM foot pixels.
+
+    This is a deterministic migration for an already-computed joints artifact;
+    it never creates a skeleton where BODY was absent and never changes joint
+    angles. New BODY runs apply the same target in `_ground_fast_sam_sample`.
+    """
+
+    output = copy.deepcopy(dict(skeleton3d))
+    fps = float(output.get("fps") or anchor_tracks.get("fps") or 30.0)
+    if fps <= 0.0:
+        raise ValueError("skeleton3d/anchor tracks fps must be positive")
+    track_index: dict[tuple[int, int], list[float]] = {}
+    for player in anchor_tracks.get("players", []) or []:
+        player_id = int(player["id"])
+        for ordinal, frame in enumerate(player.get("frames", []) or []):
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", ordinal / fps)) * fps)))
+            if frame.get("world_xy") is not None:
+                track_index[(player_id, frame_idx)] = _vector2(frame["world_xy"], name="anchor_tracks.world_xy")
+    foot_index: dict[tuple[int, int], list[dict[str, Any]]] = {}
+    for player in sam3d_keypoints_2d.get("players", []) or []:
+        player_id = int(player["id"])
+        for frame in player.get("frames", []) or []:
+            foot_index[(player_id, int(frame["frame_idx"]))] = [
+                dict(item) for item in frame.get("keypoints", []) or [] if isinstance(item, Mapping)
+            ]
+
+    aligned = 0
+    unchanged = 0
+    missing_evidence = 0
+    zone_corrections = 0
+    magnitudes: list[float] = []
+    source_counts: dict[str, int] = {}
+    for player in output.get("players", []) or []:
+        player_id = int(player["id"])
+        for ordinal, frame in enumerate(player.get("frames", []) or []):
+            frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", ordinal / fps)) * fps)))
+            anchor = track_index.get((player_id, frame_idx))
+            keypoints = foot_index.get((player_id, frame_idx))
+            if anchor is None or not keypoints:
+                missing_evidence += 1
+                continue
+            target = _sam3d_foot_grounding_target(
+                {"pred_foot_keypoints_2d": keypoints},
+                calibration=calibration,
+                placement_track_world_xy=anchor,
+                camera_motion=None,
+            )
+            correction = _vector2(target["correction_xy_m"], name="grounding_target_correction_xy_m")
+            source = str(target["source"])
+            source_counts[source] = source_counts.get(source, 0) + 1
+            magnitude = _distance2(correction, [0.0, 0.0])
+            magnitudes.append(magnitude)
+            if magnitude <= 1e-12:
+                unchanged += 1
+                continue
+            old_zone = abs(anchor[1]) < 2.1336
+            new_zone = abs(anchor[1] + correction[1]) < 2.1336
+            if old_zone != new_zone:
+                zone_corrections += 1
+            frame["joints_world"] = [
+                [float(joint[0]) + correction[0], float(joint[1]) + correction[1], float(joint[2])]
+                for joint in frame.get("joints_world", []) or []
+            ]
+            if frame.get("transl_world") is not None:
+                transl = _vector3(frame["transl_world"], name="skeleton3d.transl_world")
+                frame["transl_world"] = [
+                    transl[0] + correction[0],
+                    transl[1] + correction[1],
+                    transl[2],
+                ]
+            confidence = dict(frame.get("confidence_provenance", {}))
+            confidence.update(
+                {
+                    "grounding_target_source": source,
+                    "placement_track_world_xy": anchor,
+                    "grounding_target_correction_xy_m": correction,
+                    "posthoc_translation_only": True,
+                }
+            )
+            frame["confidence_provenance"] = confidence
+            aligned += 1
+
+    provenance = dict(output.get("provenance", {}))
+    provenance["sam3d_foot_pixel_reanchor"] = {
+        "status": "applied_translation_only",
+        "aligned_frame_count": aligned,
+        "unchanged_frame_count": unchanged,
+        "missing_evidence_frame_count": missing_evidence,
+        "joint_angles_changed": False,
+        "creates_missing_skeletons": False,
+        "measurement_authority": False,
+    }
+    output["provenance"] = provenance
+    report = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_body_foot_evidence_alignment",
+        "status": "preview_translation_only",
+        "aligned_frame_count": aligned,
+        "unchanged_frame_count": unchanged,
+        "missing_evidence_frame_count": missing_evidence,
+        "zone_correction_count": zone_corrections,
+        "source_counts": source_counts,
+        "correction_magnitude_m": _distribution_m(magnitudes),
+        "creates_missing_skeletons": False,
+        "joint_angles_changed": False,
+        "measurement_valid": False,
+    }
+    return output, report
+
+
 def _camera_offsets_to_world(
     points_camera_relative: Sequence[Sequence[float]],
     *,

@@ -99,6 +99,64 @@ def test_sam3d_foot_grounding_rejects_legacy_mislabeled_right_toe_and_unsafe_axi
     assert target["candidate_count"] == 2
 
 
+def test_persisted_skeleton_reanchor_translates_existing_joints_without_filling_gaps() -> None:
+    skeleton = {
+        "schema_version": 1,
+        "artifact_type": "racketsport_skeleton3d",
+        "fps": 30.0,
+        "players": [
+            {
+                "id": 3,
+                "frames": [
+                    {
+                        "frame_idx": 0,
+                        "t": 0.0,
+                        "transl_world": [0.0, 1.5, 0.0],
+                        "joints_world": [[0.0, 1.5, 0.0], [0.0, 1.5, 1.0]],
+                    }
+                ],
+            }
+        ],
+        "provenance": {},
+    }
+    sidecar = {
+        "players": [
+            {
+                "id": 3,
+                "frames": [
+                    {
+                        "frame_idx": 0,
+                        "keypoints": [
+                            {"name": "left_heel", "index": 17, "xy_px": [1020.0, 1250.0]},
+                            {"name": "right_heel", "index": 20, "xy_px": [1040.0, 1250.0]},
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+    tracks = {
+        "fps": 30.0,
+        "players": [{"id": 3, "frames": [{"frame_idx": 0, "t": 0.0, "world_xy": [0.0, 1.5]}]}],
+    }
+
+    refined, report = worldhmr.reanchor_skeleton3d_to_sam3d_foot_pixels(
+        skeleton,
+        sam3d_keypoints_2d=sidecar,
+        anchor_tracks=tracks,
+        calibration=_identity_calibration(),
+    )
+
+    frame = refined["players"][0]["frames"][0]
+    assert frame["transl_world"] == pytest.approx([0.3, 2.5, 0.0])
+    assert frame["joints_world"][1] == pytest.approx([0.3, 2.5, 1.0])
+    assert frame["confidence_provenance"]["posthoc_translation_only"] is True
+    assert report["aligned_frame_count"] == 1
+    assert report["zone_correction_count"] == 1
+    assert report["creates_missing_skeletons"] is False
+    assert skeleton["players"][0]["frames"][0]["transl_world"] == [0.0, 1.5, 0.0]
+
+
 def test_snap_player_translation_to_court_projects_root_and_mesh_without_mutating_input() -> None:
     sample = worldhmr.WorldTranslationSample(
         frame_idx=12,
