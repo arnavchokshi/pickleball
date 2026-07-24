@@ -169,6 +169,7 @@ def _structured_proposal(result: dict[str, object]) -> CourtProposal | None:
         evidence={
             "best_court": best,
             "static_motion": result.get("static_motion"),
+            "appearance_motion": result.get("appearance_motion"),
             "court_lock": result.get("court_lock"),
             "selected_frame_indices": result.get("selected_frame_indices"),
             "inlier_observation_count": len(inliers) if isinstance(inliers, list) else 0,

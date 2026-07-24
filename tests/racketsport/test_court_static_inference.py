@@ -5,7 +5,10 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from threed.racketsport.court_static_inference import infer_static_court_model
+from threed.racketsport.court_static_inference import (
+    _appearance_static_diagnostics,
+    infer_static_court_model,
+)
 from threed.racketsport.court_static_lock import read_court_lock
 from threed.racketsport.court_structured_solver import FLOOR_KEYPOINT_NAMES, FLOOR_WORLD_XY_M
 
@@ -111,3 +114,37 @@ def test_moving_camera_returns_clearest_frame_without_static_lock(monkeypatch, t
     assert result["source"] == "clearest_frame_point_and_line"
     assert result["court_lock"] is None
     assert result["best_court"].get("measurement_valid", False) is not True
+
+
+def test_background_flow_calls_fixed_camera_static_despite_moving_foreground() -> None:
+    rng = np.random.default_rng(13)
+    background = rng.integers(0, 255, size=(360, 640, 3), dtype=np.uint8)
+    frames = []
+    for index in range(8):
+        frame = background.copy()
+        cv2.rectangle(frame, (40 + index * 35, 130), (140 + index * 35, 330), (0, 0, 0), -1)
+        frames.append(frame)
+
+    diagnostics = _appearance_static_diagnostics(frames, frame_indices=list(range(8)))
+
+    assert diagnostics["status"] == "static"
+    assert diagnostics["drift_px_p95"] <= 1.5
+    assert diagnostics["mean_inlier_ratio"] >= 0.45
+
+
+def test_background_flow_detects_real_camera_translation() -> None:
+    rng = np.random.default_rng(29)
+    background = rng.integers(0, 255, size=(360, 640, 3), dtype=np.uint8)
+    frames = [
+        cv2.warpAffine(
+            background,
+            np.asarray([[1.0, 0.0, index * 2.0], [0.0, 1.0, index * 0.75]], dtype=np.float32),
+            (640, 360),
+        )
+        for index in range(8)
+    ]
+
+    diagnostics = _appearance_static_diagnostics(frames, frame_indices=list(range(8)))
+
+    assert diagnostics["status"] == "moving"
+    assert diagnostics["drift_px_p95"] >= 4.0

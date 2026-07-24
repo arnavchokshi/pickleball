@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 import math
 import hashlib
 from pathlib import Path
@@ -22,6 +23,7 @@ from threed.racketsport.court_static_lock import (
     CourtLockEvidenceSummary,
     CourtLockResidual,
     FrameCourtTransform,
+    StaticMotionDiagnostics,
     StaticCourtObservation,
     StaticFrameEvidence,
     diagnose_static_camera,
@@ -117,7 +119,9 @@ def infer_static_court_model(
             )
 
     pooled = pool_static_frame_evidence(frame_evidence, max_frames=8)
-    motion = diagnose_static_camera(transforms)
+    transform_motion = diagnose_static_camera(transforms)
+    appearance_motion = _appearance_static_diagnostics(frames_bgr, frame_indices=indexes)
+    motion = _resolve_static_motion(transform_motion, appearance_motion)
     selected_results = [
         frame_results[indexes.index(index)] for index in pooled.selected_frame_indices
     ]
@@ -277,6 +281,7 @@ def infer_static_court_model(
         "best_court": best_court,
         "court_lock": lock_payload,
         "static_motion": motion.to_dict(),
+        "appearance_motion": appearance_motion,
         "candidate_frame_count": len(frames_bgr),
         "selected_frame_indices": list(pooled.selected_frame_indices),
         "pooled_observation_count": len(pooled.observations),
@@ -284,6 +289,175 @@ def infer_static_court_model(
         "frame_best_courts": [result["best_court"] for result in frame_results],
         "structured_pool_diagnostics": None if structured is None else structured.get("diagnostics"),
     }
+
+
+def _appearance_static_diagnostics(
+    frames_bgr: Sequence[Any],
+    *,
+    frame_indices: Sequence[int],
+    max_width: int = 640,
+) -> dict[str, Any]:
+    """Measure real image motion independently of noisy court predictions.
+
+    The court network can jitter several pixels across a truly immutable
+    tripod clip.  Sparse background flow with a RANSAC similarity transform
+    distinguishes that prediction noise from camera pan/tilt/zoom.  Moving
+    players are rejected as flow outliers; insufficient background support is
+    explicitly ambiguous rather than accepted.
+    """
+
+    import cv2
+
+    if len(frames_bgr) < 3 or len(frames_bgr) != len(frame_indices):
+        return {
+            "status": "ambiguous",
+            "reason": "insufficient_frames",
+            "valid_pair_count": 0,
+        }
+    height, width = frames_bgr[0].shape[:2]
+    scale = min(1.0, float(max_width) / max(float(width), 1.0))
+
+    def gray(frame: Any) -> np.ndarray:
+        resized = (
+            frame
+            if scale == 1.0
+            else cv2.resize(frame, None, fx=scale, fy=scale, interpolation=cv2.INTER_AREA)
+        )
+        return cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
+
+    reference = gray(frames_bgr[0])
+    reference_points = cv2.goodFeaturesToTrack(
+        reference,
+        maxCorners=1000,
+        qualityLevel=0.01,
+        minDistance=8,
+        blockSize=7,
+    )
+    if reference_points is None or len(reference_points) < 40:
+        return {
+            "status": "ambiguous",
+            "reason": "too_few_background_features",
+            "reference_feature_count": 0 if reference_points is None else int(len(reference_points)),
+            "valid_pair_count": 0,
+        }
+
+    anchor_points = np.asarray(
+        [
+            [0.0, 0.0, 1.0],
+            [reference.shape[1] - 1.0, 0.0, 1.0],
+            [0.0, reference.shape[0] - 1.0, 1.0],
+            [reference.shape[1] - 1.0, reference.shape[0] - 1.0, 1.0],
+            [reference.shape[1] * 0.5, reference.shape[0] * 0.5, 1.0],
+        ],
+        dtype=np.float64,
+    )
+    drift_px = [0.0]
+    inlier_ratios = [1.0]
+    valid_indices = [int(frame_indices[0])]
+    for frame_index, frame in zip(frame_indices[1:], frames_bgr[1:], strict=True):
+        current = gray(frame)
+        tracked, status, _errors = cv2.calcOpticalFlowPyrLK(
+            reference,
+            current,
+            reference_points,
+            None,
+            winSize=(21, 21),
+            maxLevel=3,
+            criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 30, 0.01),
+        )
+        if tracked is None or status is None:
+            continue
+        keep = status.reshape(-1) == 1
+        source = reference_points.reshape(-1, 2)[keep]
+        destination = tracked.reshape(-1, 2)[keep]
+        if len(source) < 30:
+            continue
+        affine, inliers = cv2.estimateAffinePartial2D(
+            source,
+            destination,
+            method=cv2.RANSAC,
+            ransacReprojThreshold=1.0,
+            maxIters=3000,
+            confidence=0.99,
+            refineIters=10,
+        )
+        if affine is None or inliers is None or int(inliers.sum()) < 30:
+            continue
+        ratio = float(inliers.mean())
+        if ratio < 0.35:
+            continue
+        transformed = (affine @ anchor_points.T).T
+        anchor_drift = np.linalg.norm(transformed - anchor_points[:, :2], axis=1)
+        drift_px.append(float(np.max(anchor_drift)) / scale)
+        inlier_ratios.append(ratio)
+        valid_indices.append(int(frame_index))
+
+    required = max(3, int(math.ceil(len(frames_bgr) * 0.5)))
+    if len(drift_px) < required:
+        return {
+            "status": "ambiguous",
+            "reason": "insufficient_valid_background_flow",
+            "reference_feature_count": int(len(reference_points)),
+            "valid_pair_count": len(drift_px),
+            "required_pair_count": required,
+            "valid_frame_indices": valid_indices,
+        }
+    drift_array = np.asarray(drift_px, dtype=np.float64)
+    p50 = float(np.percentile(drift_array, 50))
+    p95 = float(np.percentile(drift_array, 95))
+    maximum = float(np.max(drift_array))
+    mean_inlier_ratio = float(np.mean(inlier_ratios))
+    if p95 <= 1.5 and maximum <= 3.0 and mean_inlier_ratio >= 0.45:
+        status_name = "static"
+        reason = "background_flow_near_identity"
+    elif p50 >= 2.5 or p95 >= 4.0:
+        status_name = "moving"
+        reason = "background_flow_exceeds_static_threshold"
+    else:
+        status_name = "ambiguous"
+        reason = "background_flow_overlaps_static_threshold"
+    return {
+        "status": status_name,
+        "reason": reason,
+        "reference_feature_count": int(len(reference_points)),
+        "valid_pair_count": len(drift_px),
+        "required_pair_count": required,
+        "valid_frame_indices": valid_indices,
+        "drift_px_p50": p50,
+        "drift_px_p95": p95,
+        "drift_px_max": maximum,
+        "mean_inlier_ratio": mean_inlier_ratio,
+    }
+
+
+def _resolve_static_motion(
+    transform_motion: StaticMotionDiagnostics,
+    appearance_motion: Mapping[str, Any],
+) -> StaticMotionDiagnostics:
+    appearance_status = str(appearance_motion.get("status") or "ambiguous")
+    if appearance_status == "ambiguous":
+        return transform_motion
+    if appearance_status == "static":
+        return replace(
+            transform_motion,
+            status="static",
+            camera_motion_suspected=False,
+            static_lock_usable=True,
+            reasons=(
+                *transform_motion.reasons,
+                "background_flow_resolved_transform_uncertainty_as_static",
+            ),
+        )
+    return replace(
+        transform_motion,
+        status="moving",
+        camera_motion_suspected=True,
+        static_lock_usable=False,
+        reasons=(
+            *transform_motion.reasons,
+            "background_flow_detected_camera_motion",
+        ),
+    )
 
 
 def _static_observations(result: Mapping[str, Any]) -> list[StaticCourtObservation]:
