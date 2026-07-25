@@ -124,6 +124,45 @@ def test_gap_aware_speed_skips_missing_frame_teleports_on_clip_fallback(tmp_path
     assert metrics["distance_covered_m"]["trust"] == "estimated"
 
 
+def test_unknown_kitchen_decision_is_excluded_and_breaks_recovery(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    _write_run(
+        run_dir,
+        fps=10.0,
+        players=[
+            {
+                "id": "p1",
+                "frames": [
+                    _frame(0.0, [0.0, -3.0]),
+                    _frame(0.1, [0.0, -2.2]),
+                    _frame(0.2, [0.0, -1.8]),
+                ],
+            }
+        ],
+        rally_spans=[{"id": "r0", "t0": 0.0, "t1": 0.3}],
+    )
+    placement = {
+        "players": [
+            {
+                "id": "p1",
+                "frames": [
+                    {"frame_idx": 0, "kitchen_decision": {"court_contact_state": "confirmed_outside"}},
+                    {"frame_idx": 1, "kitchen_decision": {"court_contact_state": "unknown"}},
+                    {"frame_idx": 2, "kitchen_decision": {"court_contact_state": "confirmed_inside_or_on"}},
+                ],
+            }
+        ]
+    }
+    (run_dir / "placement_refined.json").write_text(json.dumps(placement), encoding="utf-8")
+    result = build_rally_metrics(run_dir)
+    metrics = result["rallies"][0]["players"][0]["metrics"]
+    assert metrics["zone_occupancy"]["value"]["unknown"] == pytest.approx(1 / 3)
+    assert metrics["kitchen_decisive_coverage"]["value"] == pytest.approx(2 / 3)
+    facts = result["coaching_card_facts"]
+    assert all(fact.get("metric") != "return_to_kitchen_line_s" for fact in facts["audited_facts"])
+    assert all(fact.get("metric") != "kitchen_proximity_s" for fact in facts["facts"])
+
+
 def test_interpolated_or_predicted_frame_caps_position_metric_trust(tmp_path: Path) -> None:
     run_dir = tmp_path / "run"
     _write_run(

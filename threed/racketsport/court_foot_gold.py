@@ -8,9 +8,11 @@ decomposed without nearest-point matching.
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 import math
 from pathlib import Path
+import shutil
 from typing import Any, Mapping, Sequence
 
 import cv2
@@ -157,6 +159,178 @@ def build_gold_packet(
     html = Path(template_path).read_text().replace("__PACKET_JSON__", _safe_script_json(packet))
     (destination / "START_HERE.html").write_text(html)
     return packet
+
+
+def build_stabilization_review_packet(
+    packet_path: str | Path,
+    output_dir: str | Path,
+    *,
+    moments_per_category: int = 8,
+    template_path: str | Path | None = None,
+) -> dict[str, Any]:
+    """Lock a deterministic one-player-per-moment placement/NVZ review.
+
+    Selection uses only existing immutable prelabels.  The result records the
+    source packet hash and category assignment so candidate output cannot
+    influence which moments become the final selection set.
+    """
+
+    source_path = Path(packet_path)
+    source = _read_json(source_path)
+    destination = Path(output_dir)
+    frame_dir = destination / "frames"
+    frame_dir.mkdir(parents=True, exist_ok=True)
+    candidates: dict[str, list[dict[str, Any]]] = {
+        "clear_outside": [],
+        "line_or_inside": [],
+        "ambiguous_or_dynamic": [],
+    }
+    for clip in source.get("clips") or []:
+        if not isinstance(clip, Mapping):
+            continue
+        homography = np.asarray(clip["automatic_homography_image_from_court"], dtype=np.float64)
+        for frame in clip.get("frames") or []:
+            if not isinstance(frame, Mapping):
+                continue
+            for player in frame.get("players") or []:
+                if not isinstance(player, Mapping):
+                    continue
+                category, priority = _stabilization_category(player, homography=homography)
+                candidates[category].append(
+                    {
+                        "clip": clip,
+                        "frame": frame,
+                        "player": player,
+                        "priority": priority,
+                    }
+                )
+    selected: list[dict[str, Any]] = []
+    for category in ("clear_outside", "line_or_inside", "ambiguous_or_dynamic"):
+        rows = sorted(
+            candidates[category],
+            key=lambda row: (
+                float(row["priority"]),
+                str(row["clip"].get("clip_id")),
+                int(row["frame"].get("frame_index", 0)),
+                str(row["player"].get("player_id")),
+            ),
+        )
+        chosen = _round_robin_clips(rows, count=moments_per_category)
+        if len(chosen) != moments_per_category:
+            raise ValueError(
+                f"stabilization packet needs {moments_per_category} {category} moments; found {len(chosen)}"
+            )
+        for row in chosen:
+            row["category"] = category
+        selected.extend(chosen)
+
+    clip_rows: dict[str, dict[str, Any]] = {}
+    source_root = source_path.parent
+    for ordinal, row in enumerate(selected):
+        clip = row["clip"]
+        frame = row["frame"]
+        player = row["player"]
+        clip_id = str(clip["clip_id"])
+        target_clip = clip_rows.setdefault(
+            clip_id,
+            {
+                **{key: value for key, value in clip.items() if key != "frames"},
+                "frames": [],
+            },
+        )
+        source_image = source_root / str(frame["image"])
+        image_name = f"moment_{ordinal + 1:02d}_{source_image.name}"
+        shutil.copy2(source_image, frame_dir / image_name)
+        target_clip["frames"].append(
+            {
+                **dict(frame),
+                "frame_id": f"stabilization:{ordinal + 1:02d}:{frame['frame_id']}",
+                "image": f"frames/{image_name}",
+                "players": [dict(player)],
+                "stabilization_category": row["category"],
+                "review_scope": "single_active_player_feet_support_contact_and_visible_nvz_line",
+            }
+        )
+    packet = {
+        **{key: value for key, value in source.items() if key not in {"clips", "frame_count", "frames_per_clip"}},
+        "artifact_type": "racketsport_foot_anchor_stabilization_review_packet",
+        "frame_count": len(selected),
+        "frames_per_clip": None,
+        "clips": [clip_rows[key] for key in sorted(clip_rows)],
+        "instructions": {
+            "scope": "Review only the one shown active player in each moment.",
+            "feet": "Correct visible heel, toe, and sole-contact pixels; mark covered points occluded.",
+            "support": "Choose left, right, bilateral, airborne, or uncertain contact.",
+            "nvz": "Correct the two visible endpoints of the applicable NVZ painted line.",
+            "do_not_review": "Do not review other players, every joint, ball, paddle, or mesh.",
+        },
+        "stabilization_review": {
+            "locked_for_final_selection": True,
+            "candidate_outputs_used_for_selection": False,
+            "selection_version": "foot_anchor_stabilization_stratified_v1",
+            "source_packet": str(source_path.resolve()),
+            "source_packet_sha256": hashlib.sha256(source_path.read_bytes()).hexdigest(),
+            "category_counts": {
+                category: sum(row["category"] == category for row in selected)
+                for category in candidates
+            },
+        },
+    }
+    destination.mkdir(parents=True, exist_ok=True)
+    (destination / "review_packet.json").write_text(
+        json.dumps(packet, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    if template_path is None:
+        template_path = Path(__file__).resolve().parents[2] / "web/replay/public/court_foot_review_template.html"
+    html = Path(template_path).read_text().replace("__PACKET_JSON__", _safe_script_json(packet))
+    (destination / "START_HERE.html").write_text(html, encoding="utf-8")
+    return packet
+
+
+def _stabilization_category(
+    player: Mapping[str, Any],
+    *,
+    homography: np.ndarray,
+) -> tuple[str, float]:
+    contact_state = str(player.get("contact_state") or "uncertain").lower()
+    support = str(player.get("support_foot") or "")
+    points = player.get("points") if isinstance(player.get("points"), Mapping) else {}
+    contact = points.get(f"{support}_contact") if support in {"left", "right"} else None
+    if contact is None:
+        contact = points.get("left_contact") or points.get("right_contact")
+    world = _unproject(homography, contact) if contact is not None else None
+    source = str(player.get("prelabel_source") or "missing")
+    if (
+        world is None
+        or contact_state in {"airborne", "missing"}
+        or source in {"missing", "bbox_bottom_low_confidence"}
+    ):
+        return "ambiguous_or_dynamic", 0.0 if contact_state == "airborne" else 1.0
+    line_distance = abs(abs(float(world[1])) - 2.1336)
+    if abs(float(world[1])) < 2.1336:
+        return "line_or_inside", abs(float(world[1]))
+    if line_distance <= 0.12:
+        return "line_or_inside", line_distance
+    if line_distance <= 0.35:
+        return "ambiguous_or_dynamic", line_distance
+    return "clear_outside", -line_distance
+
+
+def _round_robin_clips(rows: Sequence[dict[str, Any]], *, count: int) -> list[dict[str, Any]]:
+    by_clip: dict[str, list[dict[str, Any]]] = {}
+    for row in rows:
+        by_clip.setdefault(str(row["clip"].get("clip_id")), []).append(row)
+    selected: list[dict[str, Any]] = []
+    while len(selected) < count:
+        added = False
+        for clip_id in sorted(by_clip):
+            if by_clip[clip_id] and len(selected) < count:
+                selected.append(by_clip[clip_id].pop(0))
+                added = True
+        if not added:
+            break
+    return selected
 
 
 def score_gold_review(packet: Mapping[str, Any], review: Mapping[str, Any]) -> dict[str, Any]:

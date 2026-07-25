@@ -20,16 +20,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--tracks", type=Path, required=True, help="tracks.json to rewrite in place.")
     parser.add_argument("--court-calibration", type=Path, required=True, help="court_calibration.json with homography/intrinsics.")
     parser.add_argument("--placement-out", type=Path, required=True, help="placement.json output path.")
+    parser.add_argument("--rewritten-tracks-out", type=Path, default=None, help="Optional immutable rewritten tracks output.")
     parser.add_argument("--keypoints-2d", type=Path, default=None, help="Optional native/body keypoints_2d.json.")
     parser.add_argument("--sam3d-keypoints-2d", type=Path, default=None, help="Optional sam3d_keypoints_2d.json sidecar.")
     parser.add_argument("--stance-phases", type=Path, default=None, help="Optional foot_contact_phases.json or foot_pin_audit.json stance phase artifact.")
     parser.add_argument("--foot-contact-phases-out", type=Path, default=None, help="Optional foot_contact_phases.json output path.")
     parser.add_argument("--camera-motion", type=Path, default=None, help="Optional camera_motion.json used to compensate placement evidence.")
     parser.add_argument("--court-lock", type=Path, default=None, help="Optional court_lock.json covariance posterior.")
+    parser.add_argument("--court-line-evidence", type=Path, default=None, help="Optional semantic line evidence for local NVZ uncertainty.")
+    parser.add_argument("--skeleton3d", type=Path, default=None, help="Optional raw BODY skeleton for direct-anchor translations.")
     parser.add_argument("--refine-from-sam3d", action="store_true", help="Run the post-BODY SAM3D refinement pass.")
     parser.add_argument("--no-placement-undistort", action="store_true", help="Disable pixel undistortion before homography projection.")
     parser.add_argument("--keypoint-conf-min", type=float, default=PlacementConfig().keypoint_conf_min)
     parser.add_argument("--bbox-base-sigma-px", type=float, default=PlacementConfig().bbox_base_sigma_px)
+    parser.add_argument("--court-margin-m", type=float, default=PlacementConfig().court_margin_m)
     args = parser.parse_args(argv)
 
     try:
@@ -37,16 +41,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             tracks_path=args.tracks,
             calibration_path=args.court_calibration,
             placement_path=args.placement_out,
+            rewritten_tracks_path=args.rewritten_tracks_out,
             native2d_keypoints_path=args.keypoints_2d,
             sam3d_keypoints_path=args.sam3d_keypoints_2d,
             stance_phases_path=args.stance_phases,
             foot_contact_phases_out_path=args.foot_contact_phases_out,
             camera_motion_path=args.camera_motion,
             court_lock_path=args.court_lock,
+            court_line_evidence_path=args.court_line_evidence,
+            skeleton3d_path=args.skeleton3d,
             refine_from_sam3d=args.refine_from_sam3d,
             config=PlacementConfig(
                 keypoint_conf_min=args.keypoint_conf_min,
                 bbox_base_sigma_px=args.bbox_base_sigma_px,
+                court_margin_m=args.court_margin_m,
                 undistort=not args.no_placement_undistort,
             ),
         )

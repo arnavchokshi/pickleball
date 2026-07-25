@@ -177,6 +177,12 @@ def test_merge_line_observations_aligns_reversed_segment_endpoints():
     assert merged.image_segment[1] == pytest.approx([100.5, 10.0])
     assert merged.residual_px.mean == pytest.approx(1.5)
     assert merged.frame_indexes == [0, 1]
+    assert merged.optimization_image_segment[0] == pytest.approx([0.0, 10.0])
+    assert merged.optimization_image_segment[1] == pytest.approx([100.0, 10.0])
+    assert merged.held_out_image_segment[0] == pytest.approx([1.0, 10.0])
+    assert merged.held_out_image_segment[1] == pytest.approx([101.0, 10.0])
+    assert merged.optimization_frame_indexes == [0]
+    assert merged.held_out_frame_indexes == [1]
 
 
 def test_merge_net_observations_aligns_reversed_top_net_points():

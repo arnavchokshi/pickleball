@@ -1796,6 +1796,22 @@ dd {
   vector-effect: non-scaling-stroke;
 }
 
+.court-map-player.nvz-confirmed-outside circle {
+  fill: #22c55e;
+}
+
+.court-map-player.nvz-confirmed-inside circle {
+  fill: #f97316;
+}
+
+.court-map-player.nvz-unknown circle {
+  fill: #f59e0b;
+}
+
+.court-map-player.nvz-airborne circle {
+  fill: #94a3b8;
+}
+
 .court-map-player .court-map-player-uncertainty {
   fill: rgb(99 217 255 / 14%);
   stroke: #63d9ff;

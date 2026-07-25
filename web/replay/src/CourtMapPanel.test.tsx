@@ -84,6 +84,25 @@ const world = parseVirtualWorld({
               court_zone: "far_backcourt",
             },
             contact_state: { state: "planted", support_foot: "left" },
+            support_state: {
+              state: "left_planted",
+              foot: "left",
+              phase_id: "p1-phase-4",
+              transition_reason: "continued_same_support",
+            },
+            sole_contact: {
+              image_points: [[510, 487], [514, 489]],
+              court_points: [[1.08, 2.18], [1.12, 2.22]],
+              source: "native2d",
+            },
+            kitchen_decision: {
+              spatial_state: "outside",
+              court_contact_state: "confirmed_outside",
+              gameplay_fault_state: "not_evaluated",
+              signed_clearance_m: 0.12,
+              signed_clearance_ci99_m: [0.05, 0.19],
+              reasons: ["ci99_wholly_outside_nvz"],
+            },
             measurement_provenance: "measured",
             metric_eligible: true,
           },
@@ -180,6 +199,9 @@ describe("CourtMapPanel", () => {
     expect(html).toContain("left_heel+left_toe");
     expect(html).toContain("foot_localization-dominated");
     expect(html).toContain("metric eligible");
+    expect(html).toContain("nvz-confirmed-outside");
+    expect(html).toContain("p1-phase-4");
+    expect(html).toContain("[0.05, 0.19]m");
     expect(html).toContain("aria-label=\"Top-down court map\"");
   });
 });

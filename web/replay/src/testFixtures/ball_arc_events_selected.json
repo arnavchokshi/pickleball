@@ -1,0 +1,17 @@
+{
+  "artifact_type": "racketsport_ball_arc_events_selected",
+  "selected": [
+    {
+      "anchor_id": "wolverine_start",
+      "kind": "contact",
+      "frame": 12,
+      "t": 0.4
+    },
+    {
+      "anchor_id": "wolverine_end",
+      "kind": "bounce",
+      "frame": 217,
+      "t": 7.233333333
+    }
+  ]
+}

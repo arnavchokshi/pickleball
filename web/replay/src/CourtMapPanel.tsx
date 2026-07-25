@@ -77,6 +77,8 @@ export function CourtMapPanel({
               ? placementUncertaintyEllipse(xy, diagnostics.covarianceM2, project)
               : null;
             const line = diagnostics?.nearestRegulationLine;
+            const kitchen = diagnostics?.kitchenDecision;
+            const stateClass = kitchenStateClass(kitchen?.courtContactState ?? null);
             const candidateSummary = diagnostics
               ? diagnostics.footCandidates
                 .map((candidate) => {
@@ -86,7 +88,7 @@ export function CourtMapPanel({
                 .join(" | ")
               : "";
             return (
-              <g key={playerId} className="court-map-player" transform={`translate(${cx} ${cy})`}>
+              <g key={playerId} className={`court-map-player ${stateClass}`} transform={`translate(${cx} ${cy})`}>
                 {ellipse ? (
                   <ellipse
                     className="court-map-player-uncertainty"
@@ -99,7 +101,7 @@ export function CourtMapPanel({
                 <text x="9" y="4">P{playerId}</text>
                 <title>
                   {diagnostics
-                    ? `P${playerId} ${diagnostics.measurementProvenance}; ${diagnostics.metricEligible ? "metric eligible" : "visual estimate only"}; contact ${diagnostics.contactState}; support ${diagnostics.supportFoot ?? "--"}; signal ${diagnostics.selectedSupportSignal?.name ?? "--"}; pixel ${diagnostics.selectedSupportSignal?.pixelXY.join(", ") ?? "--"}; uncertainty ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated; candidates ${candidateSummary || "--"}; nearest ${line?.lineName ?? "--"} ${line ? line.signedDistanceM.toFixed(2) : "--"}m`
+                    ? `P${playerId} ${diagnostics.measurementProvenance}; ${diagnostics.metricEligible ? "metric eligible" : "visual estimate only"}; contact ${diagnostics.contactState}; support ${diagnostics.supportState?.state ?? diagnostics.supportFoot ?? "--"}; phase ${diagnostics.supportState?.phaseId ?? "--"}; NVZ ${kitchen?.courtContactState ?? "unknown"}; clearance ${formatKitchenInterval(kitchen?.signedClearanceCi99M ?? null)}; fault ${kitchen?.gameplayFaultState ?? "not_evaluated"}; signal ${diagnostics.selectedSupportSignal?.name ?? "--"}; pixel ${diagnostics.selectedSupportSignal?.pixelXY.join(", ") ?? "--"}; uncertainty ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated; candidates ${candidateSummary || "--"}; nearest ${line?.lineName ?? "--"} ${line ? line.signedDistanceM.toFixed(2) : "--"}m`
                     : `P${playerId} placement diagnostics unavailable`}
                 </title>
               </g>
@@ -113,12 +115,23 @@ export function CourtMapPanel({
         <span>{activeShot?.heightOverNetM === null || activeShot?.heightOverNetM === undefined ? "net --" : `net ${activeShot.heightOverNetM.toFixed(2)}m`}</span>
         {playerPositions.map(({ playerId, diagnostics }) => diagnostics ? (
           <span className="court-map-placement-readout" key={`placement-${playerId}`}>
-            {`P${playerId} ${diagnostics.contactState} · ${diagnostics.nearestRegulationLine?.lineName ?? "line --"} ${diagnostics.nearestRegulationLine ? diagnostics.nearestRegulationLine.signedDistanceM.toFixed(2) : "--"}m · ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated · ${diagnostics.metricEligible ? "metric" : "visual only"} · ${diagnostics.measurementProvenance}`}
+            {`P${playerId} ${diagnostics.supportState?.state ?? diagnostics.contactState} · NVZ ${diagnostics.kitchenDecision?.courtContactState ?? "unknown"} ${formatKitchenInterval(diagnostics.kitchenDecision?.signedClearanceCi99M ?? null)} · ${diagnostics.uncertaintyDecomposition?.dominantInput ?? "unknown"}-dominated · ${diagnostics.metricEligible ? "metric" : "visual only"} · ${diagnostics.measurementProvenance}`}
           </span>
         ) : null)}
       </div>
     </div>
   );
+}
+
+function kitchenStateClass(state: string | null): string {
+  if (state === "confirmed_outside") return "nvz-confirmed-outside";
+  if (state === "confirmed_inside_or_on") return "nvz-confirmed-inside";
+  if (state === "airborne_no_contact") return "nvz-airborne";
+  return "nvz-unknown";
+}
+
+function formatKitchenInterval(interval: Vec2 | null): string {
+  return interval ? `[${interval[0].toFixed(2)}, ${interval[1].toFixed(2)}]m` : "CI --";
 }
 
 function placementUncertaintyEllipse(

@@ -64,6 +64,14 @@
       "type": "object",
       "additionalProperties": true
     },
+    "semantic_line_uncertainty": {
+      "type": "object",
+      "properties": {
+        "near_nvz": {"type": "object", "additionalProperties": true},
+        "far_nvz": {"type": "object", "additionalProperties": true}
+      },
+      "additionalProperties": false
+    },
     "covariance_source": {"type": "string", "minLength": 1},
     "floor_lock_eligible": {"type": "boolean"},
     "pose_3d_eligible": {"type": "boolean"},

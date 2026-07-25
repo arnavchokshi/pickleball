@@ -28,6 +28,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--skeleton", required=True, type=Path)
     parser.add_argument("--tracks", required=True, type=Path)
     parser.add_argument("--phases", required=True, type=Path)
+    parser.add_argument("--placement", type=Path, default=None)
     parser.add_argument("--out", required=True, type=Path)
     parser.add_argument("--weight-field", choices=("trk_weight", "plant_weight", "smoothness_weight"))
     parser.add_argument("--weight-scale", type=float, default=1.0)
@@ -42,6 +43,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             read_json_object(args.skeleton),
             tracks_payload=read_json_object(args.tracks),
             foot_contact_phases=read_json_object(args.phases),
+            placement_payload=(read_json_object(args.placement) if args.placement is not None else None),
             config=config,
         )
         payload["placement_trajectory_refinement"]["provenance"] = {
@@ -49,9 +51,14 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "skeleton3d": {"path": str(args.skeleton.resolve()), "sha256": sha256_file(args.skeleton)},
                 "tracks": {"path": str(args.tracks.resolve()), "sha256": sha256_file(args.tracks)},
                 "foot_contact_phases": {"path": str(args.phases.resolve()), "sha256": sha256_file(args.phases)},
+                **(
+                    {"placement": {"path": str(args.placement.resolve()), "sha256": sha256_file(args.placement)}}
+                    if args.placement is not None
+                    else {}
+                ),
             },
             "config": config.to_dict(),
-            "code_version": "trackI_placefuse_20260716_schema_v1",
+            "code_version": "foot_anchor_stabilization_20260725_schema_v2",
             "coordinate_space": "court_Z0",
             "typed_coordinate_space": "world_court_netcenter_z_up_m",
             "distortion_state": "not_applicable_no_image_transform_in_refiner",

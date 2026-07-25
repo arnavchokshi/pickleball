@@ -134,6 +134,25 @@ def test_derive_court_trust_band_surfaces_metric15_grade_without_manual_sidecar_
     assert "grade=warn" in band["reason"]
     assert "metric_confidence=low" in band["reason"]
     assert "manual corner sidecar" not in band["reason"]
+
+
+def test_derive_court_trust_band_describes_automatic_lock_without_manual_sidecar_claim() -> None:
+    court_calibration = {
+        "intrinsics": {"source": "bounded_image_profile_prior"},
+        "capture_quality": {
+            "grade": "warn",
+            "reasons": [
+                "court_lock_visualization_only",
+                "authority_state=review_only",
+                "measurement_valid=false",
+                "court_lock_source=clearest_frame_point_and_line",
+            ],
+        },
+    }
+    band = derive_court_trust_band(court_calibration, evidence_path="runs/court_calibration.json")
+    assert band["gate_status"] == "automatic_lock_review_only"
+    assert "fresh automatic structured court lock" in band["reason"]
+    assert "not a manual sidecar" in band["reason"]
     assert "4-corner PnP" not in band["reason"]
     TrustBand.model_validate(band)
 

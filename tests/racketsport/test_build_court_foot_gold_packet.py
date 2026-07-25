@@ -11,6 +11,7 @@ import numpy as np
 from threed.racketsport.court_foot_gold import (
     GoldClipSpec,
     build_gold_packet,
+    build_stabilization_review_packet,
     score_gold_review,
 )
 
@@ -116,3 +117,68 @@ def test_gold_packet_cli_help() -> None:
     )
     assert completed.returncode == 0
     assert "compact court/foot human-reference packet" in completed.stdout
+
+
+def test_stabilization_packet_locks_eight_moments_per_category(tmp_path: Path) -> None:
+    source_dir = tmp_path / "source"
+    frame_dir = source_dir / "frames"
+    frame_dir.mkdir(parents=True)
+    frames = []
+    category_y = [3.0] * 8 + [2.0] * 8 + [2.3] * 8
+    for frame_index, y_coord in enumerate(category_y):
+        image_name = f"frame_{frame_index:03d}.jpg"
+        assert cv2.imwrite(
+            str(frame_dir / image_name),
+            np.full((24, 32, 3), frame_index, dtype=np.uint8),
+        )
+        frames.append(
+            {
+                "frame_id": f"fixture:{frame_index}",
+                "frame_index": frame_index,
+                "image": f"frames/{image_name}",
+                "players": [
+                    {
+                        "player_id": 7,
+                        "support_foot": "left",
+                        "contact_state": "planted",
+                        "prelabel_source": "sam3d_body_foot_keypoints",
+                        "points": {"left_contact": [0.0, y_coord]},
+                    }
+                ],
+            }
+        )
+    source_packet = {
+        "artifact_type": "racketsport_court_foot_human_reference_packet",
+        "schema_version": 1,
+        "verified": False,
+        "clips": [
+            {
+                "clip_id": "fixture",
+                "automatic_homography_image_from_court": np.eye(3).tolist(),
+                "frames": frames,
+            }
+        ],
+        "frame_count": len(frames),
+    }
+    source_path = source_dir / "review_packet.json"
+    source_path.write_text(json.dumps(source_packet), encoding="utf-8")
+    template = tmp_path / "template.html"
+    template.write_text("<script>__PACKET_JSON__</script>", encoding="utf-8")
+
+    packet = build_stabilization_review_packet(
+        source_path,
+        tmp_path / "stabilization",
+        template_path=template,
+    )
+
+    assert packet["frame_count"] == 24
+    assert packet["stabilization_review"]["locked_for_final_selection"] is True
+    assert packet["stabilization_review"]["candidate_outputs_used_for_selection"] is False
+    assert packet["stabilization_review"]["category_counts"] == {
+        "clear_outside": 8,
+        "line_or_inside": 8,
+        "ambiguous_or_dynamic": 8,
+    }
+    selected = [frame for clip in packet["clips"] for frame in clip["frames"]]
+    assert all(len(frame["players"]) == 1 for frame in selected)
+    assert len(list((tmp_path / "stabilization/frames").glob("*.jpg"))) == 24

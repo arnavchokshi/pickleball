@@ -483,10 +483,16 @@ class CourtLineObservation(BaseModel):
     residual_px: ResidualSummary
     visible_fraction: float
     source: str
+    optimization_image_segment: list[Vector2] | None = None
+    held_out_image_segment: list[Vector2] | None = None
+    optimization_frame_indexes: list[int] = Field(default_factory=list)
+    held_out_frame_indexes: list[int] = Field(default_factory=list)
 
-    @field_validator("image_segment")
+    @field_validator("image_segment", "optimization_image_segment", "held_out_image_segment")
     @classmethod
-    def _must_be_segment(cls, value: list[Vector2]) -> list[Vector2]:
+    def _must_be_segment(cls, value: list[Vector2] | None) -> list[Vector2] | None:
+        if value is None:
+            return None
         if len(value) != 2 or any(len(point) != 2 for point in value):
             raise ValueError("image_segment must contain exactly two 2D points")
         return value
@@ -663,6 +669,7 @@ class CourtLock(StrictArtifact):
     held_out_line_residual_px: dict[str, FiniteFloat] = Field(default_factory=dict)
     camera_model_conditioning: dict[str, Any] = Field(default_factory=dict)
     off_plane_net_reprojection: dict[str, Any] = Field(default_factory=dict)
+    semantic_line_uncertainty: dict[str, Any] = Field(default_factory=dict)
     covariance_source: str = "unavailable"
     floor_lock_eligible: bool = False
     pose_3d_eligible: bool = False
@@ -778,11 +785,17 @@ class PlacementFrame(BaseModel):
     smoothed_world_xy: Vector2
     track_placement_translation_world: Vector3 | None = None
     applied_rigid_translation_world: Vector3 | None = None
+    direct_anchor_world_xy: Vector2 | None = None
+    direct_anchor_source: str | None = None
+    direct_anchor_phase_id: str | None = None
     rigid_translation_status: str | None = None
     covariance_m2: Matrix2
     uncertainty_decomposition: dict[str, Any] = Field(default_factory=dict)
     stance: bool
     contact_state: dict[str, Any] = Field(default_factory=dict)
+    support_state: dict[str, Any] = Field(default_factory=dict)
+    sole_contact: dict[str, Any] | None = None
+    kitchen_decision: dict[str, Any] = Field(default_factory=dict)
     selected_support_signal: dict[str, Any] | None = None
     foot_candidates: list[dict[str, Any]] = Field(default_factory=list)
     nearest_regulation_line: dict[str, Any] | None = None
@@ -832,6 +845,8 @@ class PlacementSummary(BaseModel):
     camera_motion_artifact_compensated_frame_count: int | None = Field(default=None, ge=0)
     calibration_uncertainty_status: str | None = None
     post_body_skeleton_translation: dict[str, Any] = Field(default_factory=dict)
+    support_and_kitchen: dict[str, Any] = Field(default_factory=dict)
+    direct_phase_anchors: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("source_counts")
     @classmethod
@@ -842,6 +857,7 @@ class PlacementSummary(BaseModel):
 
 
 class PlacementArtifact(StrictArtifact):
+    schema_version: Literal[1, 2]
     artifact_type: Literal["racketsport_placement"]
     fps: FiniteFloat = Field(gt=0.0)
     source: str
@@ -853,6 +869,7 @@ class PlacementArtifact(StrictArtifact):
     undistort_applied: bool
     players: list[PlacementPlayer]
     summary: PlacementSummary
+    semantic_line_uncertainty: dict[str, Any] = Field(default_factory=dict)
     provenance: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -2328,6 +2345,7 @@ class VirtualWorldPlayerFrame(BaseModel):
     skeleton_source: str | None = None
     position_provenance: str | None = None
     applied_rigid_translation_world: Vector3 | None = None
+    trajectory_selection: dict[str, Any] | None = None
 
 
 class VirtualWorldJointsSource(BaseModel):

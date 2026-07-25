@@ -579,12 +579,14 @@ def test_post_body_refine_can_emit_immutable_tracks_without_rewriting_raw_tracks
     )
     assert placement.summary.post_body_skeleton_translation["translated_frame_count"] == 12
     phases = json.loads(phases_path.read_text(encoding="utf-8"))
-    assert phases["phase_count"] == 2
-    assert {phase["assignment_evidence"]["body_detector_agreement"] for phase in phases["phases"]} == {1.0}
-    assert {phase["assignment_evidence"]["body_support_frame_count"] for phase in phases["phases"]} == {12}
+    assert phases["phase_count"] >= 1
+    assert {phase["source"] for phase in phases["phases"]} == {
+        "placement_v2_temporal_support_state"
+    }
+    assert all(phase["assignment_evidence"]["temporal_support_state"] for phase in phases["phases"])
 
 
-def test_post_body_support_uses_one_contact_foot_and_bbox_floor_y(tmp_path: Path) -> None:
+def test_post_body_support_uses_one_contact_foot_without_overwriting_sole_y(tmp_path: Path) -> None:
     tracks_path = tmp_path / "tracks.json"
     calibration_path = tmp_path / "court_calibration.json"
     sam3d_path = tmp_path / "sam3d_keypoints_2d.json"
@@ -613,10 +615,110 @@ def test_post_body_support_uses_one_contact_foot_and_bbox_floor_y(tmp_path: Path
     payload = json.loads(placement_path.read_text(encoding="utf-8"))
     first = payload["players"][0]["frames"][0]
     assert first["selected_support_signal"]["foot"] == "left"
-    assert first["selected_support_signal"]["bbox_floor_y_fused"] is True
-    assert first["selected_support_signal"]["pixel_xy"][1] == pytest.approx(1050.0)
+    assert first["selected_support_signal"]["bbox_floor_y_fused"] is False
+    assert first["selected_support_signal"]["pixel_xy"][1] == pytest.approx(1044.0)
     assert first["contact_state"]["state"] in {"planted", "uncertain"}
     assert first["contact_state"]["support_foot"] in {"left", "bilateral"}
+
+
+@pytest.mark.parametrize(
+    ("court_points", "expected"),
+    [
+        ([[-0.1, -2.55], [0.1, -2.50]], "confirmed_outside"),
+        ([[-0.1, -2.20], [0.1, -2.10]], "confirmed_inside_or_on"),
+    ],
+)
+def test_conservative_kitchen_decision_confirms_only_one_sided_ci(
+    court_points: list[list[float]], expected: str
+) -> None:
+    decision = placement_module._conservative_kitchen_decision(
+        sole_contact={
+            "court_points": court_points,
+            "covariance": [[0.000001, 0.0], [0.0, 0.000001]],
+            "metric_eligible_geometry": True,
+        },
+        support_state={
+            "state": "left_planted",
+            "probabilities": {"planted": 0.99},
+        },
+        metric_eligible=True,
+        nvz_line_posteriors={
+            "near_nvz": {
+                "usable_for_decision": True,
+                "sigma_m": 0.001,
+                "perpendicular_offset_m": 0.0,
+            }
+        },
+        temporal_sigma_m=0.001,
+    )
+    assert decision["court_contact_state"] == expected
+    assert decision["gameplay_fault_state"] == "not_evaluated"
+
+
+def test_conservative_kitchen_decision_abstains_when_ci_crosses_line() -> None:
+    decision = placement_module._conservative_kitchen_decision(
+        sole_contact={
+            "court_points": [[-0.1, -2.18], [0.1, -2.17]],
+            "covariance": [[0.04, 0.0], [0.0, 0.04]],
+            "metric_eligible_geometry": True,
+        },
+        support_state={"state": "left_planted", "probabilities": {"planted": 0.9}},
+        metric_eligible=True,
+        nvz_line_posteriors={
+            "near_nvz": {
+                "usable_for_decision": True,
+                "sigma_m": 0.05,
+                "perpendicular_offset_m": 0.0,
+            }
+        },
+        temporal_sigma_m=0.02,
+    )
+    assert decision["spatial_state"] == "unknown"
+    assert decision["court_contact_state"] == "unknown"
+    assert decision["signed_clearance_ci99_m"][0] < 0.0
+    assert decision["signed_clearance_ci99_m"][1] > 0.0
+
+
+def test_local_nvz_offset_requires_held_out_improvement() -> None:
+    homography = np.asarray(_calibration_payload()["homography"], dtype=float)
+    projected_y = 1000.0 - 2.1336 * 100.0
+    base = {
+        "line_id": "near_nvz",
+        "image_segment": [[700.0, projected_y + 2.0], [1300.0, projected_y + 2.0]],
+        "optimization_image_segment": [[700.0, projected_y + 2.0], [1300.0, projected_y + 2.0]],
+        "optimization_frame_indexes": [0, 2],
+        "held_out_frame_indexes": [1, 3],
+        "confidence": 0.95,
+        "visible_fraction": 0.9,
+        "residual_px": {"mean": 1.0, "p95": 2.0},
+        "source": "test",
+    }
+    improving = dict(base)
+    improving["held_out_image_segment"] = [
+        [700.0, projected_y + 2.0],
+        [1300.0, projected_y + 2.0],
+    ]
+    worsening = dict(base)
+    worsening["held_out_image_segment"] = [
+        [700.0, projected_y - 2.0],
+        [1300.0, projected_y - 2.0],
+    ]
+    config = PlacementConfig()
+    good = placement_module._build_nvz_line_posteriors(
+        homography,
+        court_line_evidence_payload={"line_observations": [improving]},
+        homography_pixel_space=placement_module.CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        config=config,
+    )["near_nvz"]
+    bad = placement_module._build_nvz_line_posteriors(
+        homography,
+        court_line_evidence_payload={"line_observations": [worsening]},
+        homography_pixel_space=placement_module.CoordinateSpace.PIXELS_UNDISTORTED_NATIVE,
+        config=config,
+    )["near_nvz"]
+    assert good["usable_for_decision"] is True
+    assert good["held_out_refined_error_m"] < good["held_out_original_error_m"]
+    assert bad["usable_for_decision"] is False
 
 
 def test_stance_phase_artifact_anchors_external_contact_windows(tmp_path: Path) -> None:

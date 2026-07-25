@@ -375,6 +375,24 @@ def _merge_one_line(line_id: str, observations: list[CourtLineObservation]) -> C
     count = len(observations)
     reference = observations[0].image_segment
     aligned_segments = [_align_image_segment(reference, observation.image_segment) for observation in observations]
+    ordered = sorted(
+        zip(observations, aligned_segments, strict=True),
+        key=lambda row: (min(row[0].frame_indexes or [0]), row[0].source),
+    )
+    optimization_rows = ordered[::2]
+    held_out_rows = ordered[1::2]
+
+    def mean_segment(rows: Sequence[tuple[CourtLineObservation, list[list[float]]]]) -> list[list[float]] | None:
+        if not rows:
+            return None
+        return [
+            [
+                sum(segment[point_idx][axis_idx] for _, segment in rows) / len(rows)
+                for axis_idx in range(2)
+            ]
+            for point_idx in range(2)
+        ]
+
     return CourtLineObservation(
         line_id=line_id,
         image_segment=[
@@ -392,6 +410,14 @@ def _merge_one_line(line_id: str, observations: list[CourtLineObservation]) -> C
         },
         visible_fraction=sum(observation.visible_fraction for observation in observations) / count,
         source="auto_hough_template_video",
+        optimization_image_segment=mean_segment(optimization_rows),
+        held_out_image_segment=mean_segment(held_out_rows),
+        optimization_frame_indexes=sorted(
+            {index for observation, _ in optimization_rows for index in observation.frame_indexes}
+        ),
+        held_out_frame_indexes=sorted(
+            {index for observation, _ in held_out_rows for index in observation.frame_indexes}
+        ),
     )
 
 

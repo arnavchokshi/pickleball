@@ -39,6 +39,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--tracks", type=Path, help="Optional tracks.json artifact.")
     parser.add_argument("--smpl-motion", type=Path, help="Optional smpl_motion.json artifact.")
     parser.add_argument("--skeleton3d", type=Path, help="Optional skeleton3d.json artifact.")
+    parser.add_argument("--placement", type=Path, help="Optional placement or placement_refined diagnostics artifact.")
     parser.add_argument("--ball-track", type=Path, help="Optional ball_track.json artifact.")
     parser.add_argument(
         "--ball-track-arc-solved",
@@ -80,6 +81,7 @@ def main(argv: list[str] | None = None) -> int:
                 tracks_path=args.tracks,
                 smpl_motion_path=args.smpl_motion,
                 skeleton3d_path=args.skeleton3d,
+                placement_path=args.placement,
                 ball_track_path=args.ball_track,
                 racket_pose_path=args.racket_pose,
                 physics_footlock_path=_existing(run_dir / "physics_footlock.json"),

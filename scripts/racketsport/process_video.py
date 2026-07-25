@@ -3507,6 +3507,9 @@ class ProcessVideoPipeline:
             court_lock_path=(self.clip_dir / "court_lock.json")
             if (self.clip_dir / "court_lock.json").is_file()
             else None,
+            court_line_evidence_path=(self.clip_dir / "court_line_evidence.json")
+            if (self.clip_dir / "court_line_evidence.json").is_file()
+            else None,
             refine_from_sam3d=refine_from_sam3d,
             config=PlacementConfig(
                 undistort=self.options.placement_undistort,
@@ -5782,14 +5785,21 @@ class ProcessVideoPipeline:
             _read_json(skeleton_path),
             tracks_payload=_read_json(tracks_path),
             foot_contact_phases=phases,
+            placement_payload=(
+                _read_json(immutable_inputs["placement"])
+                if "placement" in immutable_inputs
+                else None
+            ),
             config=PlacementTrajectoryConfig(),
         )
         refinement = refined["placement_trajectory_refinement"]
-        refinement["selected_for_world"] = True
+        refinement["selected_for_world"] = bool(
+            refinement["summary"].get("world_selected_frame_count", 0)
+        )
         refinement["selection_reason"] = (
-            "bounded_rigid_refinement_from_measured_sam3d_foot_placement"
-            if refined_tracks_path.is_file()
-            else "bounded_rigid_refinement_from_initial_track_placement"
+            "guarded_residual_or_direct_anchor_selected_per_frame"
+            if refinement["selected_for_world"]
+            else "no_guard_passing_residual_or_direct_anchor"
         )
         refinement["provenance"] = {
             "inputs": input_hashes,

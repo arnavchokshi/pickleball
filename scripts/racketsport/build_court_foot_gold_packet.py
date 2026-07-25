@@ -16,6 +16,7 @@ from threed.racketsport.court_foot_gold import (  # noqa: E402
     GoldClipSpec,
     build_gold_packet,
     score_gold_review,
+    build_stabilization_review_packet,
 )
 
 
@@ -30,6 +31,12 @@ def parse_args() -> argparse.Namespace:
     score.add_argument("--packet", type=Path, required=True)
     score.add_argument("--review", type=Path, required=True)
     score.add_argument("--out", type=Path, required=True)
+    stabilize = subparsers.add_parser(
+        "stabilization",
+        help="select a locked 24-moment foot/NVZ review from an existing packet",
+    )
+    stabilize.add_argument("--packet", type=Path, required=True)
+    stabilize.add_argument("--out", type=Path, required=True)
     return parser.parse_args()
 
 
@@ -59,6 +66,20 @@ def main() -> int:
                     "status": "ok",
                     "frame_count": packet["frame_count"],
                     "clip_count": len(packet["clips"]),
+                    "start_here": str((args.out / "START_HERE.html").resolve()),
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    if args.command == "stabilization":
+        packet = build_stabilization_review_packet(args.packet, args.out)
+        print(
+            json.dumps(
+                {
+                    "status": "ok",
+                    "moment_count": packet["frame_count"],
+                    "category_counts": packet["stabilization_review"]["category_counts"],
                     "start_here": str((args.out / "START_HERE.html").resolve()),
                 },
                 sort_keys=True,

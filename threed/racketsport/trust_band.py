@@ -167,6 +167,7 @@ def derive_court_trust_band(
         any("human_review" in reason or reason == "manual" for reason in reasons)
         or intrinsics_source == "manual"
     )
+    is_automatic_lock = any(reason.startswith("court_lock_source=") for reason in reasons)
 
     if is_metric15:
         return build_trust_band(
@@ -194,6 +195,25 @@ def derive_court_trust_band(
             reason=(
                 "Capture quality grade is good, but the held-out PCK@5px>=0.95 gate has not passed. "
                 + world_scale_note
+            ),
+            evidence_path=evidence_path,
+        )
+    if is_automatic_lock:
+        lock_source = next(
+            (reason.split("=", 1)[1] for reason in reasons if reason.startswith("court_lock_source=")),
+            "structured_auto_lock",
+        )
+        return build_trust_band(
+            stage="CAL",
+            gate_id="court_calibration_pck5px_gate",
+            gate_status="automatic_lock_review_only",
+            badge="preview",
+            reason=(
+                f"Calibration comes from the fresh automatic structured court lock ({lock_source}) "
+                f"with intrinsics source={intrinsics_source or 'unknown'}. It remains review-only, "
+                "measurement_valid=false, and VERIFIED=0; this is not a manual sidecar and is not "
+                "measurement authority. Floor homography visualization is available, while absolute "
+                "3D pose and metric scale remain limited by the current intrinsics/distortion uncertainty."
             ),
             evidence_path=evidence_path,
         )

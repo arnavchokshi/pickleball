@@ -126,6 +126,7 @@ def build_virtual_world_state(
     """
 
     calibration = _court_calibration(court_calibration)
+    trajectory_frame_index = _trajectory_frame_index(skeleton3d)
     skeleton_source_label, position_provenance = _world_skeleton_provenance(
         skeleton3d,
         tracks,
@@ -157,6 +158,7 @@ def build_virtual_world_state(
         players,
         skeleton_source=skeleton_source_label,
         position_provenance=position_provenance,
+        trajectory_frame_index=trajectory_frame_index,
     )
     _apply_post_body_support_foot_translation(players, joint_names=joint_names)
     membership_summary = _apply_player_membership_preview(
@@ -644,13 +646,18 @@ def _optional_artifact(artifact: str, path: str | Path | None, model: type[Any])
     return parsed
 
 
-def _optional_skeleton3d_artifact(path: str | Path | None) -> Skeleton3D | None:
+def _optional_skeleton3d_artifact(
+    path: str | Path | None,
+) -> Skeleton3D | Mapping[str, Any] | None:
     if path is None:
         return None
     payload = _optional_json_mapping(path)
     if payload is None:
         return None
-    return _skeleton3d(_strip_legacy_skeleton3d_extras(payload))
+    # Keep the raw mapping until build_virtual_world_state has indexed the
+    # per-frame trajectory audit.  _skeleton3d() still validates a stripped
+    # in-memory copy before any geometry is rendered.
+    return payload
 
 
 def _legacy_pre_r3_world_path(run_dir: Path) -> Path | None:
@@ -1064,6 +1071,8 @@ def _apply_placement_diagnostics(
                 "applied_rigid_translation_world": placement_frame.get(
                     "applied_rigid_translation_world"
                 ),
+                "direct_anchor_world_xy": placement_frame.get("direct_anchor_world_xy"),
+                "direct_anchor_phase_id": placement_frame.get("direct_anchor_phase_id"),
                 "rigid_translation_status": placement_frame.get("rigid_translation_status"),
                 "covariance_m2": placement_frame.get("covariance_m2"),
                 "uncertainty_decomposition": placement_frame.get("uncertainty_decomposition"),
@@ -1071,6 +1080,9 @@ def _apply_placement_diagnostics(
                 "foot_candidates": placement_frame.get("foot_candidates") or [],
                 "nearest_regulation_line": placement_frame.get("nearest_regulation_line"),
                 "contact_state": placement_frame.get("contact_state"),
+                "support_state": placement_frame.get("support_state"),
+                "sole_contact": placement_frame.get("sole_contact"),
+                "kitchen_decision": placement_frame.get("kitchen_decision"),
                 "measurement_provenance": placement_frame.get("measurement_provenance"),
                 "metric_eligible": bool(placement_frame.get("metric_eligible", False)),
             }
@@ -2396,6 +2408,7 @@ def _annotate_world_skeleton_provenance(
     *,
     skeleton_source: str,
     position_provenance: str,
+    trajectory_frame_index: Mapping[tuple[str, int], Mapping[str, Any]] | None = None,
 ) -> None:
     for player in players:
         for frame in player.get("frames", []) or []:
@@ -2405,8 +2418,53 @@ def _annotate_world_skeleton_provenance(
                 frame["skeleton_source"] = "missing"
                 frame["position_provenance"] = "missing"
                 continue
+            trajectory = (trajectory_frame_index or {}).get(
+                (str(player.get("id")), int(round(float(frame.get("t", 0.0)) * 1_000_000)))
+            )
+            if isinstance(trajectory, Mapping):
+                if "base_source" not in trajectory and "guard_passed" not in trajectory:
+                    frame["skeleton_source"] = skeleton_source
+                    frame["position_provenance"] = position_provenance
+                    frame["trajectory_selection"] = dict(trajectory)
+                    continue
+                base_source = str(trajectory.get("base_source") or "raw_body")
+                guard_passed = bool(trajectory.get("guard_passed"))
+                if guard_passed:
+                    frame["skeleton_source"] = "placement_trajectory_refined"
+                    frame["position_provenance"] = "guard_passing_residual_after_direct_anchor"
+                elif base_source == "direct_post_body_anchor":
+                    frame["skeleton_source"] = "sam3d_body_joints"
+                    frame["position_provenance"] = "post_body_foot_anchored_rigid_translation"
+                elif base_source == "kinematic_predicted_visualization_only":
+                    frame["skeleton_source"] = "sam3d_body_joints"
+                    frame["position_provenance"] = "kinematic_predicted_visualization_only"
+                else:
+                    frame["skeleton_source"] = "sam3d_body_joints"
+                    frame["position_provenance"] = "raw_body_visualization_placement"
+                frame["trajectory_selection"] = dict(trajectory)
+                continue
             frame["skeleton_source"] = skeleton_source
             frame["position_provenance"] = position_provenance
+
+
+def _trajectory_frame_index(
+    skeleton3d: Skeleton3D | Mapping[str, Any] | None,
+) -> dict[tuple[str, int], Mapping[str, Any]]:
+    if not isinstance(skeleton3d, Mapping):
+        return {}
+    result: dict[tuple[str, int], Mapping[str, Any]] = {}
+    for player in skeleton3d.get("players", []) or []:
+        if not isinstance(player, Mapping):
+            continue
+        player_id = str(player.get("id", player.get("player_id")))
+        for frame in player.get("frames", []) or []:
+            if not isinstance(frame, Mapping):
+                continue
+            row = frame.get("placement_trajectory_refinement")
+            if not isinstance(row, Mapping):
+                continue
+            result[(player_id, int(round(float(frame.get("t", 0.0)) * 1_000_000)))] = row
+    return result
 
 
 def _apply_post_body_support_foot_translation(

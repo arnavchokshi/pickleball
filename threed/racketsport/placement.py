@@ -8,7 +8,7 @@ import json
 import math
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -29,6 +29,10 @@ from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 UTC = timezone.utc
 COURT_HALF_WIDTH_M = 3.048
 COURT_HALF_LENGTH_M = 6.7056
+NVZ_DISTANCE_FROM_NET_M = 2.1336
+NVZ_LINE_HALF_WIDTH_M = 0.0254
+KITCHEN_DECISION_POLICY_VERSION = "conservative_nvz_sole_ci99_v1"
+PLACEMENT_SCHEMA_VERSION = 2
 
 NATIVE2D_FOOT_NAMES: dict[str, tuple[str, ...]] = {
     "left": ("left_ankle", "left_heel", "left_big_toe", "left_small_toe"),
@@ -89,6 +93,16 @@ class PlacementConfig:
     bbox_pad_min_px: float = 12.0
     foot_lower_half_frac: float = 0.50
     support_foot_hysteresis_px: float = 3.0
+    support_switch_penalty: float = 2.4
+    support_uncertain_transition_penalty: float = 0.25
+    support_missing_transition_penalty: float = 0.10
+    support_body_lock_bonus: float = 1.5
+    support_bilateral_y_tolerance_px: float = 2.0
+    support_plant_speed_scale_mps: float = 0.30
+    support_temporal_sigma_m: float = 0.01
+    nvz_line_confidence_min: float = 0.50
+    nvz_line_visible_fraction_min: float = 0.15
+    nvz_line_residual_max_px: float = 12.0
     bbox_floor_vertical_tolerance_frac: float = 0.40
     bbox_floor_vertical_tolerance_min_px: float = 12.0
     bbox_floor_vertical_tolerance_max_px: float = 40.0
@@ -200,6 +214,7 @@ def rewrite_tracks_with_placement(
     foot_contact_phases_out_path: str | Path | None = None,
     camera_motion_path: str | Path | None = None,
     court_lock_path: str | Path | None = None,
+    court_line_evidence_path: str | Path | None = None,
     refine_from_sam3d: bool = False,
     config: PlacementConfig | None = None,
 ) -> PlacementRewriteResult:
@@ -219,10 +234,18 @@ def rewrite_tracks_with_placement(
     foot_contact_phases_out_path = Path(foot_contact_phases_out_path) if foot_contact_phases_out_path is not None else None
     camera_motion_path = Path(camera_motion_path) if camera_motion_path is not None else None
     court_lock_path = Path(court_lock_path) if court_lock_path is not None else None
+    court_line_evidence_path = (
+        Path(court_line_evidence_path) if court_line_evidence_path is not None else None
+    )
 
     tracks_payload = _read_json(tracks_path)
     calibration_payload = _read_json(calibration_path)
     court_lock_payload = _read_json(court_lock_path) if court_lock_path is not None and court_lock_path.is_file() else {}
+    court_line_evidence_payload = (
+        _read_json(court_line_evidence_path)
+        if court_line_evidence_path is not None and court_line_evidence_path.is_file()
+        else {}
+    )
     camera_motion_frames, camera_motion_metadata = (
         _load_camera_motion(camera_motion_path) if camera_motion_path is not None else ({}, {})
     )
@@ -277,6 +300,20 @@ def rewrite_tracks_with_placement(
         _write_json(backup_path, backup_payload)
 
     homography = np.asarray(calibration_payload["homography"], dtype=float)
+    homography_pixel_convention = _homography_pixel_convention(calibration_payload)
+    homography_pixel_space = _typed_homography_pixel_space(homography_pixel_convention)
+    nvz_line_posteriors = _build_nvz_line_posteriors(
+        homography,
+        court_line_evidence_payload=court_line_evidence_payload,
+        homography_pixel_space=homography_pixel_space,
+        config=config,
+    )
+    if court_lock_path is not None and court_lock_payload:
+        court_lock_payload = _persist_nvz_line_posteriors(
+            court_lock_path,
+            court_lock_payload=court_lock_payload,
+            nvz_line_posteriors=nvz_line_posteriors,
+        )
     transform_covariance, calibration_uncertainty_status = _compatible_transform_covariance(
         court_lock_payload,
         homography=homography,
@@ -284,8 +321,6 @@ def rewrite_tracks_with_placement(
     intrinsics = calibration_payload.get("intrinsics", {})
     camera_matrix = _camera_matrix(intrinsics)
     dist = [float(value) for value in intrinsics.get("dist", []) or []]
-    homography_pixel_convention = _homography_pixel_convention(calibration_payload)
-    homography_pixel_space = _typed_homography_pixel_space(homography_pixel_convention)
     undistort_applied = bool(
         config.undistort and homography_pixel_convention == "undistorted_pixels" and _dist_nonzero(dist)
     )
@@ -566,6 +601,38 @@ def rewrite_tracks_with_placement(
             )
             for foot in ("left", "right")
         }
+        source_frame_by_index = {_frame_index(frame, fps): frame for frame in frames}
+        support_state_by_frame, selected_support_by_frame, sole_contact_by_frame = (
+            _decode_temporal_support_states(
+                frame_indices=frame_indices,
+                frame_signals=frame_signals,
+                source_frames=source_frame_by_index,
+                body_lock_frames_by_foot=body_lock_frames_by_foot,
+                homography=homography,
+                homography_pixel_space=homography_pixel_space,
+                config=config,
+            )
+        )
+        for frame_idx, support in selected_support_by_frame.items():
+            current = frame_signals[frame_idx]
+            if support is None:
+                frame_signals[frame_idx] = replace(
+                    current,
+                    selected_support_signal=None,
+                )
+                continue
+            candidate_covariance = support.get("covariance_m2")
+            covariance = (
+                _matrix2(candidate_covariance, name="support.covariance_m2")
+                if candidate_covariance is not None
+                else current.fused_covariance
+            )
+            frame_signals[frame_idx] = replace(
+                current,
+                fused_xy=_xy(support["court_xy"], name="support.court_xy"),
+                fused_covariance=_covariance_to_list(_psd_covariance(covariance)),
+                selected_support_signal=support,
+            )
         if not native_stance_phases and not player_stance_phases:
             stance_detection_warnings.append(
                 f"player {player_id}: emitted zero native stance phases at "
@@ -737,19 +804,8 @@ def rewrite_tracks_with_placement(
                 measurement_provenance = "identity_interpolated_not_measured"
             else:
                 measurement_provenance = "missing"
-            contact_state = _contact_state_for_frame(
-                frame,
-                frame_idx=frame_idx,
-                body_lock_frames_by_foot=body_lock_frames_by_foot,
-                foot_candidates=fs.foot_candidates,
-            )
-            if (
-                contact_state.get("state") == "uncertain"
-                and isinstance(fs.selected_support_signal, Mapping)
-                and fs.selected_support_signal.get("foot") in {"left", "right"}
-            ):
-                contact_state["support_foot"] = str(fs.selected_support_signal["foot"])
-                contact_state["support_foot_source"] = "visual_contact_proxy"
+            support_state = dict(support_state_by_frame.get(frame_idx) or _missing_support_state())
+            contact_state = _contact_state_from_support_state(support_state)
             final_covariance = _covariance_after_position_refinement(
                 smoothed_frame.covariance,
                 before_xy=smoothed_frame.xy,
@@ -758,6 +814,14 @@ def rewrite_tracks_with_placement(
             line_proximity = _nearest_regulation_line(
                 xy,
                 covariance=final_covariance,
+            )
+            sole_contact = sole_contact_by_frame.get(frame_idx)
+            kitchen_decision = _conservative_kitchen_decision(
+                sole_contact=sole_contact,
+                support_state=support_state,
+                metric_eligible=metric_eligible,
+                nvz_line_posteriors=nvz_line_posteriors,
+                temporal_sigma_m=config.support_temporal_sigma_m,
             )
             placement_frame = {
                 "frame_idx": int(frame_idx),
@@ -784,6 +848,9 @@ def rewrite_tracks_with_placement(
                 },
                 "stance": bool(body_lock_stance),
                 "contact_state": contact_state,
+                "support_state": support_state,
+                "sole_contact": sole_contact,
+                "kitchen_decision": kitchen_decision,
                 "selected_support_signal": fs.selected_support_signal,
                 "foot_candidates": fs.foot_candidates,
                 "nearest_regulation_line": line_proximity,
@@ -879,6 +946,10 @@ def rewrite_tracks_with_placement(
         "homography_pixel_convention": homography_pixel_convention,
         "undistort_applied": undistort_applied,
         "court_lock": court_lock_path.name if court_lock_path is not None else None,
+        "court_line_evidence": (
+            court_line_evidence_path.name if court_line_evidence_path is not None else None
+        ),
+        "semantic_line_uncertainty": nvz_line_posteriors,
         "calibration_uncertainty_status": calibration_uncertainty_status,
         "source_counts": dict(total_source_counts),
         "sidecar_identity": sidecar_identity_summary,
@@ -888,6 +959,13 @@ def rewrite_tracks_with_placement(
         "side_quadrant_consistency": side_consistency_summary,
         **camera_motion_counts,
     }
+    direct_phase_anchor_summary = _assign_direct_phase_anchors(placement_players)
+    temporal_support_phases = _temporal_support_stance_phases(
+        placement_players,
+        config=config,
+    )
+    provenance["direct_phase_anchors"] = direct_phase_anchor_summary
+    provenance["temporal_support_phase_count"] = len(temporal_support_phases)
     skeleton_translation_summary = _annotate_post_body_skeleton_translations(
         placement_players,
         skeleton3d_payload=(
@@ -933,13 +1011,15 @@ def rewrite_tracks_with_placement(
         "court_bounds_violations": total_bounds_violations,
         "calibration_uncertainty_status": calibration_uncertainty_status,
         "post_body_skeleton_translation": skeleton_translation_summary,
+        "direct_phase_anchors": direct_phase_anchor_summary,
+        "support_and_kitchen": _support_and_kitchen_summary(placement_players),
     }
     if gap_reacquisition_speed_violations:
         placement_summary["gap_reacquisition_speed_violations"] = gap_reacquisition_speed_violations
     placement_summary.update(camera_motion_counts)
 
     placement_payload = {
-        "schema_version": 1,
+        "schema_version": PLACEMENT_SCHEMA_VERSION,
         "artifact_type": "racketsport_placement",
         "fps": fps,
         "source": "threed.racketsport.placement",
@@ -949,6 +1029,7 @@ def rewrite_tracks_with_placement(
         "refine_from_sam3d": bool(refine_from_sam3d),
         "homography_pixel_convention": homography_pixel_convention,
         "undistort_applied": undistort_applied,
+        "semantic_line_uncertainty": nvz_line_posteriors,
         "players": placement_players,
         "summary": placement_summary,
         "provenance": provenance,
@@ -959,7 +1040,11 @@ def rewrite_tracks_with_placement(
         _write_json(
             foot_contact_phases_out_path,
             _foot_contact_phases_payload(
-                phases=emitted_stance_phases,
+                phases=(
+                    temporal_support_phases
+                    if refine_from_sam3d and temporal_support_phases
+                    else emitted_stance_phases
+                ),
                 clip=tracks_path.parent.name,
                 source_artifact=placement_path.name,
                 generated_at=generated_at,
@@ -975,6 +1060,116 @@ def rewrite_tracks_with_placement(
         court_bounds_violations=total_bounds_violations,
         summary=placement_summary,
     )
+
+
+def _assign_direct_phase_anchors(
+    placement_players: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    phase_count = 0
+    anchored_frame_count = 0
+    phase_lengths: list[int] = []
+    for player in placement_players:
+        grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for frame in player.get("frames", []) or []:
+            support = frame.get("support_state")
+            phase_id = support.get("phase_id") if isinstance(support, Mapping) else None
+            if (
+                not phase_id
+                or str(support.get("state"))
+                not in {"left_planted", "right_planted", "bilateral_planted"}
+                or not isinstance(frame.get("selected_support_signal"), Mapping)
+            ):
+                continue
+            grouped[str(phase_id)].append(frame)
+        for phase_id, rows in grouped.items():
+            observations = [
+                _xy(
+                    row["selected_support_signal"]["court_xy"],
+                    name="selected_support_signal.court_xy",
+                )
+                for row in rows
+            ]
+            if not observations:
+                continue
+            anchor = np.median(np.asarray(observations, dtype=float), axis=0).tolist()
+            phase_count += 1
+            phase_lengths.append(len(rows))
+            for row in rows:
+                row["direct_anchor_world_xy"] = [float(anchor[0]), float(anchor[1])]
+                row["direct_anchor_source"] = "robust_median_selected_sole_over_support_phase"
+                row["direct_anchor_phase_id"] = phase_id
+                anchored_frame_count += 1
+    return {
+        "phase_count": phase_count,
+        "anchored_frame_count": anchored_frame_count,
+        "phase_length_frames": {
+            "median": float(np.median(phase_lengths)) if phase_lengths else None,
+            "p95": float(np.quantile(phase_lengths, 0.95)) if phase_lengths else None,
+            "max": max(phase_lengths) if phase_lengths else None,
+        },
+        "anchor_estimator": "componentwise_median_selected_sole_court_xy",
+    }
+
+
+def _temporal_support_stance_phases(
+    placement_players: Sequence[dict[str, Any]],
+    *,
+    config: PlacementConfig,
+) -> list[_StancePhase]:
+    result: list[_StancePhase] = []
+    for player in placement_players:
+        player_id = int(player["id"])
+        grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        for frame in player.get("frames", []) or []:
+            support = frame.get("support_state")
+            if not isinstance(support, Mapping) or not support.get("phase_id"):
+                continue
+            if str(support.get("state")) not in {
+                "left_planted",
+                "right_planted",
+                "bilateral_planted",
+            }:
+                continue
+            grouped[str(support["phase_id"])].append(frame)
+        for rows in grouped.values():
+            first_support = rows[0]["support_state"]
+            foot = str(first_support.get("foot") or "")
+            if foot == "bilateral":
+                selected = rows[0].get("selected_support_signal")
+                foot = str(selected.get("foot") or "") if isinstance(selected, Mapping) else ""
+            if foot not in {"left", "right"}:
+                continue
+            confidences = [
+                float(
+                    (row["support_state"].get("probabilities") or {}).get(
+                        str(row["support_state"].get("state")),
+                        0.0,
+                    )
+                )
+                for row in rows
+            ]
+            result.append(
+                _StancePhase(
+                    player_id=player_id,
+                    foot=foot,
+                    frame_indices=tuple(int(row["frame_idx"]) for row in rows),
+                    source="placement_v2_temporal_support_state",
+                    min_confidence=min(confidences) if confidences else 0.0,
+                    max_height_m=0.0,
+                    max_speed_mps=0.0,
+                    source_thresholds={
+                        "support_switch_penalty": config.support_switch_penalty,
+                        "plant_speed_scale_mps": config.support_plant_speed_scale_mps,
+                    },
+                    foot_assignment="temporal_support_state",
+                    source_phase_foot=foot,
+                    assignment_evidence={
+                        "body_detector_agreement": min(confidences) if confidences else 0.0,
+                        "temporal_support_state": True,
+                    },
+                )
+            )
+    return result
 
 
 def _annotate_post_body_skeleton_translations(
@@ -1021,7 +1216,21 @@ def _annotate_post_body_skeleton_translations(
                 missing_frame_count += 1
                 continue
             selected = frame.get("selected_support_signal")
-            target_xy = frame.get("smoothed_world_xy")
+            target_xy = frame.get("direct_anchor_world_xy") or frame.get("smoothed_world_xy")
+            support_state = frame.get("support_state")
+            support_name = (
+                str(support_state.get("state"))
+                if isinstance(support_state, Mapping)
+                else "uncertain"
+            )
+            if support_name in {"missing", "airborne"}:
+                frame["rigid_translation_status"] = (
+                    "missing_support_state"
+                    if support_name == "missing"
+                    else "airborne_not_ground_anchored"
+                )
+                missing_support_joint_count += 1
+                continue
             semantics = (
                 [str(name) for name in selected.get("contact_proxy_semantics", []) or []]
                 if isinstance(selected, Mapping)
@@ -1057,8 +1266,10 @@ def _annotate_post_body_skeleton_translations(
                 frame["rigid_translation_status"] = "missing_support_joint"
                 missing_support_joint_count += 1
                 continue
+            minimum_z = min(joint[2] for joint in support_joints)
+            sole_joints = [joint for joint in support_joints if joint[2] <= minimum_z + 0.025]
             support_xy = [
-                sum(joint[axis] for joint in support_joints) / len(support_joints)
+                sum(joint[axis] for joint in sole_joints) / len(sole_joints)
                 for axis in (0, 1)
             ]
             delta = [
@@ -1067,7 +1278,11 @@ def _annotate_post_body_skeleton_translations(
                 0.0,
             ]
             frame["applied_rigid_translation_world"] = delta
-            frame["rigid_translation_status"] = "support_foot_to_refined_court_xy"
+            frame["rigid_translation_status"] = (
+                "support_foot_to_refined_court_xy"
+                if support_name in {"left_planted", "right_planted", "bilateral_planted"}
+                else "uncertain_support_visualization_only"
+            )
             magnitudes.append(math.hypot(delta[0], delta[1]))
 
     return {
@@ -2083,6 +2298,732 @@ def _psd_covariance(covariance: Sequence[Sequence[float]] | np.ndarray) -> np.nd
     return 0.5 * (projected + projected.T)
 
 
+_SUPPORT_STATES = (
+    "left_planted",
+    "right_planted",
+    "bilateral_planted",
+    "airborne",
+    "uncertain",
+    "missing",
+)
+
+
+def _decode_temporal_support_states(
+    *,
+    frame_indices: Sequence[int],
+    frame_signals: Mapping[int, _FrameSignals],
+    source_frames: Mapping[int, Mapping[str, Any]],
+    body_lock_frames_by_foot: Mapping[str, set[int]],
+    homography: np.ndarray,
+    homography_pixel_space: CoordinateSpace,
+    config: PlacementConfig,
+) -> tuple[
+    dict[int, dict[str, Any]],
+    dict[int, dict[str, Any] | None],
+    dict[int, dict[str, Any] | None],
+]:
+    """Decode one deterministic support-state sequence instead of greedy feet.
+
+    The scores are deliberately described as uncalibrated evidence.  They are
+    useful for temporal association and abstention, not measurement authority.
+    """
+
+    ordered = [int(value) for value in frame_indices]
+    if not ordered:
+        return {}, {}, {}
+    candidates_by_frame = {
+        frame_idx: _best_sole_candidates(frame_signals[frame_idx].foot_candidates)
+        for frame_idx in ordered
+    }
+    emissions: list[dict[str, float]] = []
+    for ordinal, frame_idx in enumerate(ordered):
+        frame = source_frames.get(frame_idx, {})
+        candidates = candidates_by_frame[frame_idx]
+        interpolated = bool(frame.get("interpolated", False))
+        explicit = str(frame.get("contact_state") or "").lower()
+        scores = {state: -4.0 for state in _SUPPORT_STATES}
+        if interpolated:
+            scores["missing"] = 12.0
+            emissions.append(scores)
+            continue
+        left = candidates.get("left")
+        right = candidates.get("right")
+        if left is None and right is None:
+            scores["missing"] = 5.0
+            scores["uncertain"] = 2.0
+            if explicit == "airborne":
+                scores["airborne"] = 10.0
+            emissions.append(scores)
+            continue
+        scores["uncertain"] = 0.75
+        scores["missing"] = -2.0
+        scores["airborne"] = 9.0 if explicit == "airborne" else -1.5
+        if left is not None:
+            scores["left_planted"] = 1.0 + 2.0 * float(left.get("confidence") or 0.0)
+        if right is not None:
+            scores["right_planted"] = 1.0 + 2.0 * float(right.get("confidence") or 0.0)
+        speeds: dict[str, float] = {}
+        if ordinal > 0:
+            previous_idx = ordered[ordinal - 1]
+            previous_frame = source_frames.get(previous_idx, {})
+            dt = float(frame.get("t", frame_idx / 30.0)) - float(
+                previous_frame.get("t", previous_idx / 30.0)
+            )
+            for foot, candidate in (("left", left), ("right", right)):
+                previous_candidate = candidates_by_frame[previous_idx].get(foot)
+                if candidate is None or previous_candidate is None or dt <= 0.0:
+                    continue
+                speeds[foot] = float(
+                    np.linalg.norm(
+                        np.asarray(candidate["court_xy"], dtype=float)
+                        - np.asarray(previous_candidate["court_xy"], dtype=float)
+                    )
+                    / dt
+                )
+                penalty = min(
+                    5.0,
+                    speeds[foot] / max(float(config.support_plant_speed_scale_mps), 1.0e-6),
+                )
+                scores[f"{foot}_planted"] -= penalty
+                scores["uncertain"] += min(1.5, penalty * 0.35)
+        if left is not None and right is not None:
+            left_y = float(left["pixel_xy"][1])
+            right_y = float(right["pixel_xy"][1])
+            delta = left_y - right_y
+            scores["left_planted"] += max(-1.5, min(1.5, delta / 4.0))
+            scores["right_planted"] += max(-1.5, min(1.5, -delta / 4.0))
+            scores["bilateral_planted"] = (
+                2.6
+                if abs(delta) <= float(config.support_bilateral_y_tolerance_px)
+                else 0.25
+            )
+            if speeds:
+                scores["bilateral_planted"] -= min(
+                    5.0,
+                    max(speeds.values())
+                    / max(float(config.support_plant_speed_scale_mps), 1.0e-6),
+                )
+        if frame_idx in body_lock_frames_by_foot.get("left", set()):
+            scores["left_planted"] += float(config.support_body_lock_bonus)
+        if frame_idx in body_lock_frames_by_foot.get("right", set()):
+            scores["right_planted"] += float(config.support_body_lock_bonus)
+        if (
+            frame_idx in body_lock_frames_by_foot.get("left", set())
+            and frame_idx in body_lock_frames_by_foot.get("right", set())
+        ):
+            scores["bilateral_planted"] += float(config.support_body_lock_bonus) + 1.0
+        if explicit == "airborne":
+            for state in ("left_planted", "right_planted", "bilateral_planted"):
+                scores[state] -= 12.0
+        emissions.append(scores)
+
+    backpointers: list[dict[str, str | None]] = []
+    previous_scores: dict[str, float] = {}
+    for ordinal, scores in enumerate(emissions):
+        current_scores: dict[str, float] = {}
+        current_back: dict[str, str | None] = {}
+        for state in _SUPPORT_STATES:
+            if ordinal == 0:
+                current_scores[state] = scores[state]
+                current_back[state] = None
+                continue
+            options = [
+                (
+                    previous_scores[previous]
+                    - _support_transition_penalty(previous, state, config=config),
+                    previous,
+                )
+                for previous in _SUPPORT_STATES
+            ]
+            best_score, best_previous = max(options, key=lambda item: (item[0], item[1]))
+            current_scores[state] = best_score + scores[state]
+            current_back[state] = best_previous
+        previous_scores = current_scores
+        backpointers.append(current_back)
+    state = max(previous_scores, key=lambda item: (previous_scores[item], item))
+    path = [state]
+    for ordinal in range(len(ordered) - 1, 0, -1):
+        previous = backpointers[ordinal][path[-1]]
+        path.append(str(previous))
+    path.reverse()
+    # Remove one-frame left/right chatter even when a noisy emission barely
+    # overcomes the transition penalty.
+    for ordinal in range(1, len(path) - 1):
+        if (
+            path[ordinal - 1] == path[ordinal + 1]
+            and path[ordinal] in {"left_planted", "right_planted"}
+            and path[ordinal] != path[ordinal - 1]
+        ):
+            path[ordinal] = path[ordinal - 1]
+
+    states: dict[int, dict[str, Any]] = {}
+    selected: dict[int, dict[str, Any] | None] = {}
+    sole_contacts: dict[int, dict[str, Any] | None] = {}
+    phase_counter = 0
+    previous_state: str | None = None
+    current_phase_id: str | None = None
+    for ordinal, (frame_idx, state) in enumerate(zip(ordered, path, strict=True)):
+        candidates = candidates_by_frame[frame_idx]
+        if state != previous_state:
+            if state in {"left_planted", "right_planted", "bilateral_planted"}:
+                phase_counter += 1
+                current_phase_id = f"support_{phase_counter:04d}"
+            else:
+                current_phase_id = None
+        probabilities = _support_probabilities(emissions[ordinal])
+        foot = {
+            "left_planted": "left",
+            "right_planted": "right",
+            "bilateral_planted": "bilateral",
+        }.get(state)
+        transition_reason = (
+            "initial_state"
+            if previous_state is None
+            else "same_state"
+            if previous_state == state
+            else "temporal_evidence_transition"
+        )
+        states[frame_idx] = {
+            "state": state,
+            "foot": foot,
+            "phase_id": current_phase_id,
+            "probabilities": probabilities,
+            "transition_reason": transition_reason,
+            "probability_source": "uncalibrated_temporal_evidence_v1",
+        }
+        chosen = _support_candidate_for_state(state, candidates)
+        if chosen is None:
+            selected[frame_idx] = None
+            sole_contacts[frame_idx] = None
+        else:
+            support = {
+                "name": str(chosen.get("source") or "unknown"),
+                "foot": str(chosen.get("foot") or "unknown"),
+                "pixel_xy": list(chosen["pixel_xy"]),
+                "court_xy": list(chosen["court_xy"]),
+                "confidence": float(chosen.get("confidence") or 0.0),
+                "covariance_m2": chosen.get("covariance_m2"),
+                "selection_rule": "temporal_support_state_v1",
+                "bbox_floor_y_fused": False,
+                "contact_proxy_semantics": [
+                    str(value) for value in chosen.get("contact_proxy_semantics") or []
+                ],
+                "keypoint_candidates": [
+                    dict(value) for value in chosen.get("keypoint_candidates") or []
+                ],
+            }
+            selected[frame_idx] = support
+            sole_contacts[frame_idx] = _sole_contact_geometry(
+                state=state,
+                support=support,
+                candidates=candidates,
+                homography=homography,
+                homography_pixel_space=homography_pixel_space,
+            )
+        previous_state = state
+    return states, selected, sole_contacts
+
+
+def _support_transition_penalty(
+    previous: str,
+    current: str,
+    *,
+    config: PlacementConfig,
+) -> float:
+    if previous == current:
+        return 0.0
+    if "missing" in {previous, current}:
+        return float(config.support_missing_transition_penalty)
+    if "uncertain" in {previous, current} or "bilateral_planted" in {previous, current}:
+        return float(config.support_uncertain_transition_penalty)
+    if {previous, current} == {"left_planted", "right_planted"}:
+        return float(config.support_switch_penalty)
+    if "airborne" in {previous, current}:
+        return 0.7
+    return 0.5
+
+
+def _best_sole_candidates(
+    candidates: Sequence[Mapping[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    result: dict[str, dict[str, Any]] = {}
+    for raw in candidates:
+        foot = str(raw.get("foot") or "")
+        if foot not in {"left", "right"} or not bool(raw.get("accepted", False)):
+            continue
+        if not raw.get("pixel_xy") or not raw.get("court_xy"):
+            continue
+        current = result.get(foot)
+        rank = (
+            float(raw.get("confidence") or 0.0),
+            str(raw.get("source")) == "sam3d",
+            -float(np.trace(np.asarray(raw.get("covariance_m2") or np.eye(2), dtype=float))),
+        )
+        if current is None:
+            result[foot] = dict(raw)
+            continue
+        current_rank = (
+            float(current.get("confidence") or 0.0),
+            str(current.get("source")) == "sam3d",
+            -float(np.trace(np.asarray(current.get("covariance_m2") or np.eye(2), dtype=float))),
+        )
+        if rank > current_rank:
+            result[foot] = dict(raw)
+    return result
+
+
+def _support_candidate_for_state(
+    state: str,
+    candidates: Mapping[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    if state == "left_planted":
+        return candidates.get("left")
+    if state == "right_planted":
+        return candidates.get("right")
+    if state in {"bilateral_planted", "uncertain"}:
+        eligible = [value for value in candidates.values() if value.get("pixel_xy")]
+        return max(
+            eligible,
+            key=lambda value: (
+                float(value["pixel_xy"][1]),
+                float(value.get("confidence") or 0.0),
+                str(value.get("foot")) == "left",
+            ),
+            default=None,
+        )
+    return None
+
+
+def _support_probabilities(scores: Mapping[str, float]) -> dict[str, float]:
+    peak = max(float(value) for value in scores.values())
+    weights = {key: math.exp(float(value) - peak) for key, value in scores.items()}
+    denominator = max(sum(weights.values()), 1.0e-12)
+    normalized = {key: float(value / denominator) for key, value in weights.items()}
+    normalized["planted"] = float(
+        normalized["left_planted"]
+        + normalized["right_planted"]
+        + normalized["bilateral_planted"]
+    )
+    return normalized
+
+
+def _sole_contact_geometry(
+    *,
+    state: str,
+    support: Mapping[str, Any],
+    candidates: Mapping[str, dict[str, Any]],
+    homography: np.ndarray,
+    homography_pixel_space: CoordinateSpace,
+) -> dict[str, Any] | None:
+    feet = (
+        ("left", "right") if state == "bilateral_planted" else (str(support.get("foot")),)
+    )
+    image_points: list[list[float]] = []
+    semantics: list[str] = []
+    source_names: list[str] = []
+    covariance_rows: list[np.ndarray] = []
+    for foot in feet:
+        candidate = candidates.get(foot)
+        if candidate is None:
+            continue
+        source_names.append(str(candidate.get("source") or "unknown"))
+        if candidate.get("covariance_m2") is not None:
+            covariance_rows.append(np.asarray(candidate["covariance_m2"], dtype=float))
+        for point in candidate.get("keypoint_candidates") or []:
+            semantic = str(point.get("semantic_name") or "")
+            if "heel" not in semantic.lower() and "toe" not in semantic.lower():
+                continue
+            pixel = point.get("pixel_xy")
+            if not isinstance(pixel, Sequence) or len(pixel) < 2:
+                continue
+            image_points.append(_xy(pixel, name="sole_contact.pixel_xy"))
+            semantics.append(semantic)
+    if not image_points:
+        image_points = [_xy(support["pixel_xy"], name="support.pixel_xy")]
+        semantics = ["contact_proxy"]
+    inverse = np.linalg.inv(np.asarray(homography, dtype=float))
+    court_points = [
+        _unproject_pixel(
+            inverse,
+            np.asarray(point, dtype=float),
+            input_space=homography_pixel_space,
+            homography_space=homography_pixel_space,
+        ).tolist()
+        for point in image_points
+    ]
+    covariance = (
+        _psd_covariance(sum(covariance_rows) / len(covariance_rows))
+        if covariance_rows
+        else np.eye(2, dtype=float) * 0.25
+    )
+    return {
+        "foot": "bilateral" if len(feet) == 2 else str(support.get("foot")),
+        "image_points": image_points,
+        "court_points": court_points,
+        "semantic_names": semantics,
+        "covariance": _covariance_to_list(covariance),
+        "source": "+".join(sorted(set(source_names))) or str(support.get("name")),
+        "geometry": "sole_hull_points" if len(image_points) >= 3 else "sole_segment_or_point",
+        "metric_eligible_geometry": len(image_points) >= 2,
+    }
+
+
+def _missing_support_state() -> dict[str, Any]:
+    return {
+        "state": "missing",
+        "foot": None,
+        "phase_id": None,
+        "probabilities": {
+            "left_planted": 0.0,
+            "right_planted": 0.0,
+            "bilateral_planted": 0.0,
+            "airborne": 0.0,
+            "uncertain": 0.0,
+            "missing": 1.0,
+            "planted": 0.0,
+        },
+        "transition_reason": "missing_support_state",
+        "probability_source": "typed_missing",
+    }
+
+
+def _contact_state_from_support_state(support: Mapping[str, Any]) -> dict[str, Any]:
+    state = str(support.get("state") or "missing")
+    probabilities = support.get("probabilities") if isinstance(support.get("probabilities"), Mapping) else {}
+    if state in {"left_planted", "right_planted", "bilateral_planted"}:
+        return {
+            "state": "planted",
+            "support_foot": support.get("foot"),
+            "source": "temporal_support_state_v1",
+            "probabilities": {
+                "planted": float(probabilities.get("planted", 0.0)),
+                "airborne": float(probabilities.get("airborne", 0.0)),
+                "uncertain": float(probabilities.get("uncertain", 0.0)),
+            },
+        }
+    if state == "airborne":
+        return {
+            "state": "airborne",
+            "support_foot": None,
+            "source": "temporal_support_state_v1",
+            "probabilities": {
+                "planted": float(probabilities.get("planted", 0.0)),
+                "airborne": float(probabilities.get("airborne", 0.0)),
+                "uncertain": float(probabilities.get("uncertain", 0.0)),
+            },
+        }
+    return {
+        "state": "uncertain" if state == "uncertain" else "missing",
+        "support_foot": None,
+        "source": "temporal_support_state_v1",
+        "probabilities": {
+            "planted": float(probabilities.get("planted", 0.0)),
+            "airborne": float(probabilities.get("airborne", 0.0)),
+            "uncertain": float(probabilities.get("uncertain", 0.0)),
+        },
+    }
+
+
+def _conservative_kitchen_decision(
+    *,
+    sole_contact: Mapping[str, Any] | None,
+    support_state: Mapping[str, Any],
+    metric_eligible: bool,
+    nvz_line_posteriors: Mapping[str, Mapping[str, Any]],
+    temporal_sigma_m: float,
+) -> dict[str, Any]:
+    base = {
+        "nvz_line_id": None,
+        "signed_clearance_m": None,
+        "signed_clearance_ci99_m": None,
+        "outside_probability": 0.0,
+        "inside_or_on_probability": 0.0,
+        "floor_contact_probability": float(
+            (support_state.get("probabilities") or {}).get("planted", 0.0)
+        ),
+        "spatial_state": "unknown",
+        "court_contact_state": "unknown",
+        "gameplay_fault_state": "not_evaluated",
+        "reasons": [],
+        "decision_policy_version": KITCHEN_DECISION_POLICY_VERSION,
+    }
+    state = str(support_state.get("state") or "missing")
+    if state == "airborne":
+        base["court_contact_state"] = "airborne_no_contact"
+        base["reasons"] = ["airborne_no_floor_contact"]
+        return base
+    if state not in {"left_planted", "right_planted", "bilateral_planted"}:
+        base["reasons"] = ["support_state_not_confirmed_planted"]
+        return base
+    if not metric_eligible:
+        base["reasons"] = ["placement_not_metric_eligible"]
+        return base
+    if not isinstance(sole_contact, Mapping) or not bool(sole_contact.get("metric_eligible_geometry")):
+        base["reasons"] = ["insufficient_sole_geometry"]
+        return base
+    points = [
+        _xy(value, name="sole_contact.court_point")
+        for value in sole_contact.get("court_points") or []
+    ]
+    if len(points) < 2:
+        base["reasons"] = ["insufficient_sole_geometry"]
+        return base
+    median_y = float(np.median([point[1] for point in points]))
+    line_id = "near_nvz" if median_y < 0.0 else "far_nvz"
+    base["nvz_line_id"] = line_id
+    posterior = nvz_line_posteriors.get(line_id) or {}
+    if not bool(posterior.get("usable_for_decision", False)):
+        base["reasons"] = [str(posterior.get("reason") or "local_nvz_line_unobservable")]
+        return base
+    if line_id == "near_nvz":
+        boundary = (
+            -NVZ_DISTANCE_FROM_NET_M
+            + float(posterior.get("perpendicular_offset_m") or 0.0)
+            - NVZ_LINE_HALF_WIDTH_M
+        )
+        clearance = boundary - max(point[1] for point in points)
+    else:
+        boundary = (
+            NVZ_DISTANCE_FROM_NET_M
+            + float(posterior.get("perpendicular_offset_m") or 0.0)
+            + NVZ_LINE_HALF_WIDTH_M
+        )
+        clearance = min(point[1] for point in points) - boundary
+    covariance = np.asarray(sole_contact.get("covariance") or np.eye(2), dtype=float)
+    localization_variance = max(float(covariance[1, 1]), 0.0)
+    line_sigma_m = max(float(posterior.get("sigma_m") or 0.0), 0.0)
+    sigma = math.sqrt(
+        localization_variance + line_sigma_m**2 + max(float(temporal_sigma_m), 0.0) ** 2
+    )
+    sigma = max(sigma, 1.0e-6)
+    ci = [float(clearance - 2.576 * sigma), float(clearance + 2.576 * sigma)]
+    outside_probability = _normal_cdf(clearance / sigma)
+    inside_probability = 1.0 - outside_probability
+    base.update(
+        {
+            "signed_clearance_m": float(clearance),
+            "signed_clearance_ci99_m": ci,
+            "outside_probability": float(outside_probability),
+            "inside_or_on_probability": float(inside_probability),
+        }
+    )
+    if ci[0] > 0.0:
+        base["spatial_state"] = "outside"
+        base["court_contact_state"] = "confirmed_outside"
+        base["reasons"] = ["ci99_wholly_outside_nvz"]
+    elif ci[1] <= 0.0:
+        base["spatial_state"] = "inside_or_on"
+        base["court_contact_state"] = "confirmed_inside_or_on"
+        base["reasons"] = ["ci99_wholly_inside_or_on_nvz"]
+    else:
+        base["reasons"] = ["nvz_boundary_within_ci99"]
+    return base
+
+
+def _normal_cdf(value: float) -> float:
+    return 0.5 * (1.0 + math.erf(float(value) / math.sqrt(2.0)))
+
+
+def _build_nvz_line_posteriors(
+    homography: np.ndarray,
+    *,
+    court_line_evidence_payload: Mapping[str, Any],
+    homography_pixel_space: CoordinateSpace,
+    config: PlacementConfig,
+) -> dict[str, dict[str, Any]]:
+    observations = {
+        str(row.get("line_id")): row
+        for row in court_line_evidence_payload.get("line_observations", []) or []
+        if isinstance(row, Mapping)
+    }
+    result: dict[str, dict[str, Any]] = {}
+    for line_id, y in (("near_nvz", -NVZ_DISTANCE_FROM_NET_M), ("far_nvz", NVZ_DISTANCE_FROM_NET_M)):
+        projected = [
+            _project_homography_point(homography, [-COURT_HALF_WIDTH_M, y]),
+            _project_homography_point(homography, [COURT_HALF_WIDTH_M, y]),
+        ]
+        observation = observations.get(line_id)
+        if not isinstance(observation, Mapping):
+            result[line_id] = {
+                "line_id": line_id,
+                "projected_image_segment": projected,
+                "observed_image_segment": None,
+                "perpendicular_offset_px": 0.0,
+                "sigma_px": None,
+                "sigma_m": None,
+                "supporting_frames": [],
+                "observable": False,
+                "usable_for_decision": False,
+                "reason": "local_nvz_line_unobservable",
+                "source": "projected_template_only",
+            }
+            continue
+        observed = observation.get("optimization_image_segment")
+        held_out = observation.get("held_out_image_segment")
+        if observed is None:
+            observed = observation.get("image_segment")
+        if not (
+            isinstance(observed, Sequence)
+            and len(observed) == 2
+            and all(isinstance(point, Sequence) and len(point) >= 2 for point in observed)
+        ):
+            observed = None
+        if not (
+            isinstance(held_out, Sequence)
+            and len(held_out) == 2
+            and all(isinstance(point, Sequence) and len(point) >= 2 for point in held_out)
+        ):
+            held_out = None
+        residual = observation.get("residual_px") if isinstance(observation.get("residual_px"), Mapping) else {}
+        p95 = float(residual.get("p95") or math.inf)
+        confidence = float(observation.get("confidence") or 0.0)
+        visible_fraction = float(observation.get("visible_fraction") or 0.0)
+        offset_px = (
+            _signed_point_line_distance(
+                np.mean(np.asarray(projected, dtype=float), axis=0),
+                np.asarray(observed, dtype=float),
+            )
+            if observed is not None
+            else 0.0
+        )
+        sigma_px = max(1.0, p95 / 1.96) if math.isfinite(p95) else None
+        px_per_m = _projected_line_normal_px_per_m(homography, y=y)
+        offset_m = 0.0
+        if observed is not None:
+            observed_midpoint = np.mean(np.asarray(observed, dtype=float), axis=0)
+            inverse = np.linalg.inv(np.asarray(homography, dtype=float))
+            observed_court = _unproject_pixel(
+                inverse,
+                observed_midpoint,
+                input_space=homography_pixel_space,
+                homography_space=homography_pixel_space,
+            )
+            offset_m = max(-0.15, min(0.15, float(observed_court[1]) - float(y)))
+        held_out_original_error_m = None
+        held_out_refined_error_m = None
+        if held_out is not None:
+            held_out_midpoint = np.mean(np.asarray(held_out, dtype=float), axis=0)
+            inverse = np.linalg.inv(np.asarray(homography, dtype=float))
+            held_out_court = _unproject_pixel(
+                inverse,
+                held_out_midpoint,
+                input_space=homography_pixel_space,
+                homography_space=homography_pixel_space,
+            )
+            held_out_offset_m = float(held_out_court[1]) - float(y)
+            held_out_original_error_m = abs(held_out_offset_m)
+            held_out_refined_error_m = abs(held_out_offset_m - offset_m)
+        sigma_m = (
+            None
+            if sigma_px is None or px_per_m <= 1.0e-6
+            else float(sigma_px / px_per_m)
+        )
+        if sigma_m is not None and held_out_refined_error_m is not None:
+            sigma_m = max(float(sigma_m), float(held_out_refined_error_m))
+        usable = bool(
+            observed is not None
+            and held_out is not None
+            and confidence >= float(config.nvz_line_confidence_min)
+            and visible_fraction >= float(config.nvz_line_visible_fraction_min)
+            and p95 <= float(config.nvz_line_residual_max_px)
+            and sigma_m is not None
+            and held_out_refined_error_m is not None
+            and held_out_original_error_m is not None
+            and held_out_refined_error_m <= held_out_original_error_m + 1.0e-9
+        )
+        result[line_id] = {
+            "line_id": line_id,
+            "projected_image_segment": projected,
+            "observed_image_segment": None if observed is None else [list(map(float, point[:2])) for point in observed],
+            "held_out_image_segment": None if held_out is None else [list(map(float, point[:2])) for point in held_out],
+            "perpendicular_offset_px": float(offset_px),
+            "perpendicular_offset_m": float(offset_m),
+            "sigma_px": sigma_px,
+            "sigma_m": sigma_m,
+            "confidence": confidence,
+            "visible_fraction": visible_fraction,
+            "validation_residual_p95_px": None if not math.isfinite(p95) else p95,
+            "held_out_original_error_m": held_out_original_error_m,
+            "held_out_refined_error_m": held_out_refined_error_m,
+            "supporting_frames": [int(value) for value in observation.get("optimization_frame_indexes", []) or []],
+            "held_out_frames": [int(value) for value in observation.get("held_out_frame_indexes", []) or []],
+            "observable": observed is not None,
+            "usable_for_decision": usable,
+            "reason": (
+                None
+                if usable
+                else "local_nvz_line_held_out_unavailable"
+                if held_out is None
+                else "local_nvz_line_evidence_below_decision_bar"
+            ),
+            "source": str(observation.get("source") or "court_line_evidence"),
+            "offset_applied_to_global_homography": False,
+            "offset_scope": "local_nvz_decision_only",
+        }
+    return result
+
+
+def _persist_nvz_line_posteriors(
+    path: Path,
+    *,
+    court_lock_payload: Mapping[str, Any],
+    nvz_line_posteriors: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    if court_lock_payload.get("semantic_line_uncertainty") == nvz_line_posteriors:
+        return dict(court_lock_payload)
+    from threed.racketsport.court_static_lock import CourtLockArtifact, write_court_lock
+
+    parsed = CourtLockArtifact.from_dict(court_lock_payload)
+    enriched = replace(parsed, semantic_line_uncertainty=dict(nvz_line_posteriors))
+    write_court_lock(enriched, path)
+    return enriched.to_dict()
+
+
+def _project_homography_point(homography: np.ndarray, xy: Sequence[float]) -> list[float]:
+    vector = np.asarray([float(xy[0]), float(xy[1]), 1.0], dtype=float)
+    projected = np.asarray(homography, dtype=float) @ vector
+    if abs(float(projected[2])) <= 1.0e-12:
+        raise ValueError("homography projects NVZ line to infinity")
+    return [float(projected[0] / projected[2]), float(projected[1] / projected[2])]
+
+
+def _signed_point_line_distance(point: np.ndarray, segment: np.ndarray) -> float:
+    direction = segment[1] - segment[0]
+    norm = float(np.linalg.norm(direction))
+    if norm <= 1.0e-12:
+        return 0.0
+    normal = np.asarray([-direction[1], direction[0]], dtype=float) / norm
+    return float(np.dot(point - segment[0], normal))
+
+
+def _projected_line_normal_px_per_m(homography: np.ndarray, *, y: float) -> float:
+    center = _project_homography_point(homography, [0.0, y])
+    shifted = _project_homography_point(homography, [0.0, y + (0.02 if y < 0.0 else -0.02)])
+    return float(math.dist(center, shifted) / 0.02)
+
+
+def _support_and_kitchen_summary(players: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+    support_counts: Counter[str] = Counter()
+    kitchen_counts: Counter[str] = Counter()
+    gameplay_counts: Counter[str] = Counter()
+    for player in players:
+        for frame in player.get("frames", []) or []:
+            support = frame.get("support_state") if isinstance(frame, Mapping) else None
+            decision = frame.get("kitchen_decision") if isinstance(frame, Mapping) else None
+            support_counts[str((support or {}).get("state") or "missing")] += 1
+            kitchen_counts[str((decision or {}).get("court_contact_state") or "unknown")] += 1
+            gameplay_counts[str((decision or {}).get("gameplay_fault_state") or "not_evaluated")] += 1
+    total = sum(kitchen_counts.values())
+    decisive = kitchen_counts["confirmed_outside"] + kitchen_counts["confirmed_inside_or_on"]
+    return {
+        "support_state_counts": dict(support_counts),
+        "kitchen_contact_state_counts": dict(kitchen_counts),
+        "gameplay_fault_state_counts": dict(gameplay_counts),
+        "kitchen_decisive_coverage": float(decisive / total) if total else 0.0,
+        "decision_policy_version": KITCHEN_DECISION_POLICY_VERSION,
+    }
+
+
 def _selected_support_signal(signals: Sequence[Mapping[str, Any]]) -> dict[str, Any] | None:
     eligible = [
         signal
@@ -2510,20 +3451,12 @@ def _phase_foot_signal_for_frame(
             fallback_pixel=observation.pixel_xy,
         )
         raw_contact_y = float(raw_contact_pixel[1])
+        # Keep BODY/native sole pixels immutable.  The former path silently
+        # replaced an otherwise valid heel/toe Y coordinate with bbox bottom,
+        # which made a low-authority detector box look like measured sole
+        # evidence and created large depth jumps through the homography.  Bbox
+        # bottom is already emitted as its own low-confidence signal.
         bbox_floor_fused = False
-        if allow_bbox_floor and _valid_bbox(bbox):
-            bbox_height = max(float(bbox[3]) - float(bbox[1]), 1.0)
-            vertical_delta = float(bbox[3]) - raw_contact_y
-            vertical_tolerance = min(
-                config.bbox_floor_vertical_tolerance_max_px,
-                max(
-                    config.bbox_floor_vertical_tolerance_min_px,
-                    config.bbox_floor_vertical_tolerance_frac * bbox_height,
-                ),
-            )
-            if 0.0 <= vertical_delta <= vertical_tolerance:
-                raw_contact_pixel[1] = float(bbox[3])
-                bbox_floor_fused = True
         transformed_candidates = [
             {
                 **dict(candidate),

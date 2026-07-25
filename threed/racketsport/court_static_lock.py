@@ -453,6 +453,7 @@ class CourtLockArtifact:
     held_out_line_residual_px: Mapping[str, float] = field(default_factory=dict)
     camera_model_conditioning: Mapping[str, Any] = field(default_factory=dict)
     off_plane_net_reprojection: Mapping[str, Any] = field(default_factory=dict)
+    semantic_line_uncertainty: Mapping[str, Any] = field(default_factory=dict)
     covariance_source: str = "unavailable"
     floor_lock_eligible: bool = False
     pose_3d_eligible: bool = False
@@ -496,6 +497,9 @@ class CourtLockArtifact:
         for key, value in self.held_out_line_residual_px.items():
             if not str(key).strip() or isinstance(value, bool) or not math.isfinite(float(value)) or float(value) < 0.0:
                 raise ValueError("held_out_line_residual_px must contain finite non-negative values")
+        for line_id, row in self.semantic_line_uncertainty.items():
+            if str(line_id) not in {"near_nvz", "far_nvz"} or not isinstance(row, Mapping):
+                raise ValueError("semantic_line_uncertainty must contain near_nvz/far_nvz objects")
         if not self.covariance_source.strip():
             raise ValueError("covariance_source must be nonblank")
         if self.lock_eligible and not self.floor_lock_eligible:
@@ -538,6 +542,10 @@ class CourtLockArtifact:
             },
             "camera_model_conditioning": dict(self.camera_model_conditioning),
             "off_plane_net_reprojection": dict(self.off_plane_net_reprojection),
+            "semantic_line_uncertainty": {
+                str(key): dict(value)
+                for key, value in sorted(self.semantic_line_uncertainty.items())
+            },
             "covariance_source": self.covariance_source,
             "floor_lock_eligible": self.floor_lock_eligible,
             "pose_3d_eligible": self.pose_3d_eligible,
@@ -614,6 +622,15 @@ class CourtLockArtifact:
                 if isinstance(payload.get("off_plane_net_reprojection"), Mapping)
                 else {}
             ),
+            semantic_line_uncertainty=(
+                {
+                    str(key): dict(value)
+                    for key, value in payload["semantic_line_uncertainty"].items()
+                    if isinstance(value, Mapping)
+                }
+                if isinstance(payload.get("semantic_line_uncertainty"), Mapping)
+                else {}
+            ),
             covariance_source=str(payload.get("covariance_source") or "unavailable"),
             floor_lock_eligible=bool(payload.get("floor_lock_eligible", payload.get("lock_eligible", False))),
             pose_3d_eligible=bool(payload.get("pose_3d_eligible", False)),
@@ -657,6 +674,7 @@ _COURT_LOCK_KEYS = frozenset(
         "held_out_line_residual_px",
         "camera_model_conditioning",
         "off_plane_net_reprojection",
+        "semantic_line_uncertainty",
         "covariance_source",
         "floor_lock_eligible",
         "pose_3d_eligible",
@@ -678,6 +696,7 @@ _COURT_LOCK_OPTIONAL_KEYS = frozenset(
         "held_out_line_residual_px",
         "camera_model_conditioning",
         "off_plane_net_reprojection",
+        "semantic_line_uncertainty",
         "covariance_source",
         "floor_lock_eligible",
         "pose_3d_eligible",

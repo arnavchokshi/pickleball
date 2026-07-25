@@ -2331,7 +2331,7 @@ describe("timeline markers and coaching-card metrics", () => {
         readFileSync(
           resolve(
             process.cwd(),
-            "../../runs/ball_arc_event_subset_20260703T02Z/wolverine_mixed_0200_mid_steep_corner/events_selected.json",
+            "src/testFixtures/ball_arc_events_selected.json",
           ),
           "utf8",
         ),

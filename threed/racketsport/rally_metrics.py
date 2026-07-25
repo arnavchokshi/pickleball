@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -33,6 +33,7 @@ class PlayerFrame:
     t: float
     track_world_xy: tuple[float, float]
     estimated_input: bool = False
+    kitchen_decision: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -86,6 +87,7 @@ def build_rally_metrics(run_dir: Path | str) -> dict[str, Any]:
     if not player_positions_path.is_file():
         return _missing_player_positions_result(run_path, player_positions_path, fps=30.0)
     world = read_virtual_world_tracks(player_positions_path)
+    world = _attach_kitchen_decisions(world, run_path / "placement_refined.json")
     players_with_positions = tuple(player for player in world.players if player.frames)
     if not players_with_positions:
         return _missing_player_positions_result(run_path, player_positions_path, fps=world.fps)
@@ -176,6 +178,54 @@ def read_virtual_world_tracks(path: Path) -> WorldTrackData:
     if ijson is None:
         return _read_virtual_world_tracks_small_json(path)
     return _read_virtual_world_tracks_stream(path)
+
+
+def _attach_kitchen_decisions(world: WorldTrackData, path: Path) -> WorldTrackData:
+    if not path.is_file():
+        return world
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return world
+    lookup: dict[tuple[str, int], Mapping[str, Any]] = {}
+    for player in payload.get("players", []) if isinstance(payload, Mapping) else []:
+        if not isinstance(player, Mapping):
+            continue
+        player_id = _id_string(player.get("id", player.get("player_id")))
+        for frame in player.get("frames", []) or []:
+            if not isinstance(frame, Mapping) or not isinstance(frame.get("kitchen_decision"), Mapping):
+                continue
+            try:
+                frame_index = int(frame["frame_idx"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            lookup[(player_id, frame_index)] = frame["kitchen_decision"]
+    if not lookup:
+        return world
+    return replace(
+        world,
+        players=tuple(
+            replace(
+                player,
+                frames=tuple(
+                    replace(
+                        frame,
+                        kitchen_decision=lookup.get((player.player_id, frame.frame_index)),
+                    )
+                    for frame in player.frames
+                ),
+            )
+            for player in world.players
+        ),
+    )
+
+
+def _kitchen_contact_state(frame: PlayerFrame) -> str | None:
+    decision = frame.kitchen_decision
+    if not isinstance(decision, Mapping):
+        return None
+    state = decision.get("court_contact_state")
+    return str(state) if state is not None else "unknown"
 
 
 def _read_virtual_world_tracks_stream(path: Path) -> WorldTrackData:
@@ -451,12 +501,36 @@ def _player_metrics(
     coverage = _coverage(frames_used, frames_total)
     position_trust = _position_trust(frames, coverage)
     distance, speeds = _distance_and_speeds(frames, fps=fps)
-    zone_counts = {"kitchen": 0, "transition": 0, "baseline": 0, "out_of_court": 0}
+    has_kitchen_decisions = any(frame.kitchen_decision is not None for frame in frames)
+    zone_counts = {
+        "kitchen": 0,
+        "transition": 0,
+        "baseline": 0,
+        "out_of_court": 0,
+    }
+    if has_kitchen_decisions:
+        zone_counts["unknown"] = 0
     proximity_count = 0
+    decisive_count = 0
     for frame in frames:
-        zone = _zone_for_point(frame.track_world_xy, court_zones)
+        contact_state = _kitchen_contact_state(frame)
+        if contact_state == "confirmed_inside_or_on":
+            zone = "kitchen"
+            decisive_count += 1
+        elif contact_state == "confirmed_outside":
+            zone = _zone_for_point(frame.track_world_xy, court_zones)
+            zone = "transition" if zone == "kitchen" else zone
+            decisive_count += 1
+        elif contact_state in {"unknown", "airborne_no_contact"}:
+            zone = "unknown"
+        else:
+            zone = _zone_for_point(frame.track_world_xy, court_zones)
+            decisive_count += 1
         zone_counts[zone] += 1
-        if _near_kitchen_line(frame.track_world_xy, court_zones):
+        if (
+            contact_state in {None, "confirmed_inside_or_on", "confirmed_outside"}
+            and _near_kitchen_line(frame.track_world_xy, court_zones)
+        ):
             proximity_count += 1
     zone_value = {
         zone: (count / frames_used if frames_used else 0.0)
@@ -481,6 +555,13 @@ def _player_metrics(
         ),
         "p95_speed_mps": _metric(round(_percentile(speeds, 95.0), 6), frames_used, frames_total, position_trust, unit="mps"),
         "zone_occupancy": _metric(zone_value, frames_used, frames_total, position_trust, unit="fraction"),
+        "kitchen_decisive_coverage": _metric(
+            _coverage(decisive_count, frames_used),
+            frames_used,
+            frames_total,
+            position_trust,
+            unit="fraction",
+        ),
         "kitchen_proximity_s": _metric(round(proximity_count / fps, 6), frames_used, frames_total, position_trust, unit="s"),
         "contact_count": _metric(len(contacts), frames_used, frames_total, contact_trust, unit="count"),
         "contact_positions_world": _metric(contact_positions, frames_used, frames_total, contact_trust, unit="m"),
@@ -815,6 +896,7 @@ def _facts_source_artifacts(run_path: Path) -> list[dict[str, Any]]:
     paths = {
         "virtual_world": run_path / "virtual_world.json",
         "tracks": run_path / "tracks.json",
+        "placement_refined": run_path / "placement_refined.json",
         "court_zones": run_path / "court_zones.json",
         "rally_spans": run_path / "rally_spans.json",
         "contact_windows": run_path / "contact_windows.json",
@@ -944,7 +1026,17 @@ def _first_return_to_kitchen(
     for frame in ordered:
         if previous is not None and frame.t - previous.t > _max_gap_s(fps):
             start = None
-        near_line = _near_kitchen_line(frame.track_world_xy, court_zones)
+        contact_state = _kitchen_contact_state(frame)
+        if contact_state in {"unknown", "airborne_no_contact"}:
+            start = None
+            previous = frame
+            continue
+        if contact_state == "confirmed_inside_or_on":
+            near_line = True
+        elif contact_state == "confirmed_outside":
+            near_line = False
+        else:
+            near_line = _near_kitchen_line(frame.track_world_xy, court_zones)
         if start is None and not near_line:
             start = frame
         elif start is not None and near_line and frame.t > start.t:
@@ -992,9 +1084,14 @@ def _advanced_fact_omissions(run_path: Path) -> list[dict[str, Any]]:
 
 def _select_fact(*, rally_id: str, rally_scope: str, player: Mapping[str, Any]) -> dict[str, Any]:
     metrics = player["metrics"]
+    kitchen_coverage = float(metrics.get("kitchen_decisive_coverage", {}).get("value", 0.0))
     candidates = [
         ("contact_count", metrics["contact_count"], lambda metric: metric["value"] > 0),
-        ("kitchen_proximity_s", metrics["kitchen_proximity_s"], lambda metric: metric["value"] > 0),
+        (
+            "kitchen_proximity_s",
+            metrics["kitchen_proximity_s"],
+            lambda metric: kitchen_coverage >= 0.90 and metric["value"] > 0,
+        ),
         ("distance_covered_m", metrics["distance_covered_m"], lambda metric: metric["value"] > 0),
         ("p95_speed_mps", metrics["p95_speed_mps"], lambda metric: metric["value"] > 0),
         ("zone_occupancy", metrics["zone_occupancy"], lambda _metric: True),

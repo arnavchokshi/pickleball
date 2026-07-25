@@ -519,6 +519,25 @@ export type PlayerPlacementDiagnostics = {
   } | null;
   contactState: string;
   supportFoot: string | null;
+  supportState: {
+    state: string;
+    foot: string | null;
+    phaseId: string | null;
+    transitionReason: string;
+  } | null;
+  soleContact: {
+    imagePoints: Vec2[];
+    courtPoints: Vec2[];
+    source: string;
+  } | null;
+  kitchenDecision: {
+    spatialState: string;
+    courtContactState: string;
+    gameplayFaultState: string;
+    signedClearanceM: number | null;
+    signedClearanceCi99M: Vec2 | null;
+    reasons: string[];
+  } | null;
   measurementProvenance: string;
   metricEligible: boolean;
 };
@@ -3386,6 +3405,54 @@ function readPlayerPlacementDiagnostics(input: unknown, path: string): PlayerPla
       ? null
       : readString(input.contact_state.support_foot, `${path}.contact_state.support_foot`);
   }
+  let supportState: PlayerPlacementDiagnostics["supportState"] = null;
+  if (input.support_state !== null && input.support_state !== undefined) {
+    assertRecord(input.support_state, `${path}.support_state`);
+    supportState = {
+      state: readString(input.support_state.state, `${path}.support_state.state`),
+      foot: input.support_state.foot === null || input.support_state.foot === undefined
+        ? null
+        : readString(input.support_state.foot, `${path}.support_state.foot`),
+      phaseId: input.support_state.phase_id === null || input.support_state.phase_id === undefined
+        ? null
+        : readString(input.support_state.phase_id, `${path}.support_state.phase_id`),
+      transitionReason: readString(
+        input.support_state.transition_reason ?? "unknown",
+        `${path}.support_state.transition_reason`,
+      ),
+    };
+  }
+  let soleContact: PlayerPlacementDiagnostics["soleContact"] = null;
+  if (input.sole_contact !== null && input.sole_contact !== undefined) {
+    assertRecord(input.sole_contact, `${path}.sole_contact`);
+    soleContact = {
+      imagePoints: readArray(input.sole_contact.image_points ?? [], `${path}.sole_contact.image_points`).map(
+        (point, index) => readVec2(point, `${path}.sole_contact.image_points[${index}]`),
+      ),
+      courtPoints: readArray(input.sole_contact.court_points ?? [], `${path}.sole_contact.court_points`).map(
+        (point, index) => readVec2(point, `${path}.sole_contact.court_points[${index}]`),
+      ),
+      source: readString(input.sole_contact.source ?? "unknown", `${path}.sole_contact.source`),
+    };
+  }
+  let kitchenDecision: PlayerPlacementDiagnostics["kitchenDecision"] = null;
+  if (input.kitchen_decision !== null && input.kitchen_decision !== undefined) {
+    assertRecord(input.kitchen_decision, `${path}.kitchen_decision`);
+    kitchenDecision = {
+      spatialState: readString(input.kitchen_decision.spatial_state ?? "unknown", `${path}.kitchen_decision.spatial_state`),
+      courtContactState: readString(input.kitchen_decision.court_contact_state ?? "unknown", `${path}.kitchen_decision.court_contact_state`),
+      gameplayFaultState: readString(input.kitchen_decision.gameplay_fault_state ?? "not_evaluated", `${path}.kitchen_decision.gameplay_fault_state`),
+      signedClearanceM: input.kitchen_decision.signed_clearance_m === null || input.kitchen_decision.signed_clearance_m === undefined
+        ? null
+        : readNumber(input.kitchen_decision.signed_clearance_m, `${path}.kitchen_decision.signed_clearance_m`),
+      signedClearanceCi99M: input.kitchen_decision.signed_clearance_ci99_m === null || input.kitchen_decision.signed_clearance_ci99_m === undefined
+        ? null
+        : readVec2(input.kitchen_decision.signed_clearance_ci99_m, `${path}.kitchen_decision.signed_clearance_ci99_m`),
+      reasons: readArray(input.kitchen_decision.reasons ?? [], `${path}.kitchen_decision.reasons`).map(
+        (reason, index) => readString(reason, `${path}.kitchen_decision.reasons[${index}]`),
+      ),
+    };
+  }
   const covarianceM2 = input.covariance_m2 === null || input.covariance_m2 === undefined
     ? null
     : readMatrix2(input.covariance_m2, `${path}.covariance_m2`);
@@ -3421,6 +3488,9 @@ function readPlayerPlacementDiagnostics(input: unknown, path: string): PlayerPla
     nearestRegulationLine,
     contactState,
     supportFoot,
+    supportState,
+    soleContact,
+    kitchenDecision,
     measurementProvenance: readString(input.measurement_provenance ?? "unknown", `${path}.measurement_provenance`),
     metricEligible: readBoolean(input.metric_eligible ?? false, `${path}.metric_eligible`),
   };

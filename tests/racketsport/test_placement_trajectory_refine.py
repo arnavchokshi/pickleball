@@ -131,6 +131,61 @@ def test_soft_court_prior_never_snaps_nonzero_sole_to_zero() -> None:
     assert provenance["z_soft_prior"]["clamped_to_plane"] is False
 
 
+def test_direct_anchor_is_applied_before_residual_solver() -> None:
+    source = _skeleton(jitter=[0.0, 0.0])
+    placement = {
+        "players": [
+            {
+                "id": "p1",
+                "frames": [
+                    {
+                        "frame_idx": index,
+                        "smoothed_world_xy": [index * 0.02 + 0.4, 1.02],
+                        "applied_rigid_translation_world": [0.5, 0.0, 0.0],
+                        "rigid_translation_status": "support_foot_to_refined_court_xy",
+                        "support_state": {
+                            "state": "left_planted",
+                            "foot": "left",
+                            "phase_id": "support_0001",
+                            "probabilities": {"left_planted": 0.99},
+                        },
+                    }
+                    for index in range(2)
+                ],
+            }
+        ]
+    }
+    refined = refine_placement_trajectory(
+        source,
+        tracks_payload=_tracks(2),
+        foot_contact_phases=_phases([0, 1]),
+        placement_payload=placement,
+    )
+    row = refined["players"][0]["frames"][0]["placement_trajectory_refinement"]
+    assert row["base_source"] == "direct_post_body_anchor"
+    assert row["direct_anchor_translation"] == pytest.approx([0.5, 0.0, 0.0])
+    assert _left_x(refined, 0) == pytest.approx(0.4, abs=0.01)
+
+
+def test_residual_over_limit_falls_back_instead_of_clipping() -> None:
+    source = _skeleton(jitter=[0.0])
+    refined = refine_placement_trajectory(
+        source,
+        tracks_payload=_tracks(1, outlier_frame=0),
+        foot_contact_phases=_phases([0]),
+        config=PlacementTrajectoryConfig(
+            trk_weight=1_000_000.0,
+            body_weight=0.001,
+            plant_weight=0.001,
+        ),
+    )
+    row = refined["players"][0]["frames"][0]["placement_trajectory_refinement"]
+    assert row["residual_limit_exceeded"] is True
+    assert row["guard_passed"] is False
+    assert row["residual_translation"][:2] == pytest.approx([0.0, 0.0])
+    assert row["fallback_source"] == "raw_body_visualization_only"
+
+
 def test_fail_closed_on_missing_calibration_empty_phases_and_nan_confidence() -> None:
     source = _skeleton(jitter=[0.0, 0.0])
     tracks = _tracks(2)
@@ -157,4 +212,3 @@ def test_refiner_is_byte_deterministic() -> None:
     first = refine_placement_trajectory(source, **kwargs)
     second = refine_placement_trajectory(source, **kwargs)
     assert json.dumps(first, indent=2, sort_keys=True) == json.dumps(second, indent=2, sort_keys=True)
-

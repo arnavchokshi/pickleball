@@ -121,7 +121,20 @@ def score_placement_slide(
         raise MalformedPlacementInputError(
             f"frozen BODY phase producer failed: {producer.get('summary', {}).get('status')}"
         )
-    accepted = _phase_window_metrics(skeleton_payload, _required_phases(producer))
+    producer_phases = producer.get("phases")
+    accepted = (
+        _phase_window_metrics(skeleton_payload, _required_phases(producer))
+        if isinstance(producer_phases, list) and producer_phases
+        else {
+            "phase_count": 0,
+            "phase_frame_count": 0,
+            "max_slide_m": None,
+            "p95_slide_m": None,
+            "median_phase_slide_m": None,
+            "per_phase": [],
+            "status": "no_producer_rebuilt_phases",
+        }
+    )
     frozen = _phase_window_metrics(skeleton_payload, frozen_phases)
     reprojection = _reprojection_metrics(
         skeleton_payload,
@@ -183,6 +196,7 @@ def refine_placement_trajectory(
     *,
     tracks_payload: Mapping[str, Any],
     foot_contact_phases: Mapping[str, Any],
+    placement_payload: Mapping[str, Any] | None = None,
     config: PlacementTrajectoryConfig | None = None,
 ) -> dict[str, Any]:
     """Apply a robust, soft, rigid XYZ correction per BODY frame.
@@ -205,11 +219,15 @@ def refine_placement_trajectory(
     output["preview_band"] = True
     output["VERIFIED"] = 0
     track_index = _track_index(tracks_payload)
+    placement_index = _placement_index(placement_payload)
     phase_index = _phase_index(phases)
     joint_names = [str(name) for name in output["joint_names"]]
     correction_values: list[float] = []
     covariance_values: list[float] = []
     plant_frame_count = 0
+    world_selected_frame_count = 0
+    residual_limit_exceeded_count = 0
+    residual_eligible_frame_count = 0
     player_summaries: dict[str, Any] = {}
 
     for player in output["players"]:
@@ -218,11 +236,25 @@ def refine_placement_trajectory(
         if not frames:
             raise MissingPlacementInputError(f"skeleton player {player_id} contains no frames")
         foot_indices = resolve_foot_joint_indices(joint_names, joint_count=len(frames[0]["joints_world"]))
+        direct_rows: list[dict[str, Any]] = []
+        for ordinal, frame in enumerate(frames):
+            frame_index = int(frame.get("frame_idx", ordinal))
+            placement_row = placement_index.get((player_id, frame_index))
+            direct = _direct_anchor_for_frame(placement_row)
+            if direct["applied"]:
+                _apply_rigid_translation(frame, direct["translation"])
+            direct_rows.append(direct)
+        player_phases = _support_phases_from_placement(
+            player_id,
+            frames,
+            placement_index=placement_index,
+        ) or phase_index.get(player_id, [])
         factors, frame_terms = _build_xy_factors(
             player_id,
             frames,
             tracks=track_index,
-            phases=phase_index.get(player_id, []),
+            phases=player_phases,
+            placement=placement_index,
             foot_indices=foot_indices,
             config=cfg,
         )
@@ -230,15 +262,51 @@ def refine_placement_trajectory(
             len(frames), factors, config=cfg
         )
         correction_norms = np.linalg.norm(corrections_xy, axis=1)
-        scale = np.ones_like(correction_norms)
-        too_large = correction_norms > cfg.max_xy_correction_m
-        scale[too_large] = cfg.max_xy_correction_m / correction_norms[too_large]
-        corrections_xy = corrections_xy * scale[:, None]
+        residual_eligible = np.asarray(
+            [
+                (
+                    bool(row["applied"])
+                    and str(row.get("support_state"))
+                    in {"left_planted", "right_planted", "bilateral_planted"}
+                )
+                or (not placement_index and bool(frame_terms[ordinal]["plant_phases"]))
+                for ordinal, row in enumerate(direct_rows)
+            ],
+            dtype=bool,
+        )
+        too_large = (correction_norms > cfg.max_xy_correction_m) & residual_eligible
+        saturation_fraction = float(
+            np.count_nonzero(too_large) / max(1, int(np.count_nonzero(residual_eligible)))
+        )
+        player_guard_passed = saturation_fraction <= 0.01
+        residual_eligible_frame_count += int(np.count_nonzero(residual_eligible))
+        if not player_guard_passed:
+            corrections_xy[:] = 0.0
         player_corrections: list[float] = []
         for ordinal, frame in enumerate(frames):
             frame_index = int(frame.get("frame_idx", ordinal))
-            dz, z_provenance = _soft_z_correction(frame, foot_indices=foot_indices, config=cfg)
-            dx, dy = (float(corrections_xy[ordinal, 0]), float(corrections_xy[ordinal, 1]))
+            direct = direct_rows[ordinal]
+            residual_limit_exceeded = bool(too_large[ordinal])
+            residual_allowed = bool(
+                residual_eligible[ordinal]
+                and player_guard_passed
+                and not residual_limit_exceeded
+            )
+            support_state = str(direct.get("support_state") or "missing")
+            if support_state == "missing" and frame_terms[ordinal]["plant_phases"]:
+                support_state = "legacy_plant_phase"
+            if support_state in {
+                "left_planted",
+                "right_planted",
+                "bilateral_planted",
+                "legacy_plant_phase",
+            }:
+                dz, z_provenance = _soft_z_correction(frame, foot_indices=foot_indices, config=cfg)
+            else:
+                dz = 0.0
+                z_provenance = {"active": False, "reason": f"support_state_{support_state}"}
+            dx = float(corrections_xy[ordinal, 0]) if residual_allowed else 0.0
+            dy = float(corrections_xy[ordinal, 1]) if residual_allowed else 0.0
             correction = [dx, dy, dz]
             _apply_rigid_translation(frame, correction)
             left_foot = _foot_point_from_payload(frame, foot_indices.left)
@@ -265,8 +333,35 @@ def refine_placement_trajectory(
             covariance_values.append(variance_xy)
             if phase_rows:
                 plant_frame_count += 1
+            if residual_limit_exceeded:
+                residual_limit_exceeded_count += 1
+            selected_for_world = bool(direct["applied"] or residual_allowed)
+            if selected_for_world:
+                world_selected_frame_count += 1
+            base_source = (
+                "direct_post_body_anchor"
+                if direct["applied"]
+                and support_state in {"left_planted", "right_planted", "bilateral_planted"}
+                else "kinematic_predicted_visualization_only"
+                if direct["applied"]
+                else "raw_body"
+            )
+            fallback_source = (
+                base_source
+                if direct["applied"]
+                else "raw_body_visualization_only"
+            )
             frame["placement_trajectory_refinement"] = {
                 "rigid_correction_xyz_m": correction,
+                "base_source": base_source,
+                "support_state": support_state,
+                "direct_anchor_translation": list(direct["translation"]),
+                "residual_translation": correction,
+                "residual_limit_exceeded": residual_limit_exceeded,
+                "saturation_fraction": saturation_fraction,
+                "guard_passed": bool(residual_allowed),
+                "fallback_source": None if residual_allowed else fallback_source,
+                "selected_for_world": selected_for_world,
                 "correction_convention": "add_to_transl_world_and_every_joints_world_point",
                 "correction_magnitude_m": magnitude,
                 "refined_transl_world": list(frame["transl_world"]),
@@ -290,6 +385,10 @@ def refine_placement_trajectory(
             "plant_anchored_frame_count": sum(bool(row["plant_phases"]) for row in frame_terms),
             "correction_magnitude_m": _summary(player_corrections),
             "correction_max_m": max(player_corrections),
+            "saturation_fraction": saturation_fraction,
+            "residual_limit_exceeded_count": int(np.count_nonzero(too_large)),
+            "guard_passed": player_guard_passed,
+            "fallback_source": None if player_guard_passed else "direct_post_body_anchor_or_raw_body",
         }
 
     output["placement_trajectory_refinement"] = {
@@ -305,6 +404,11 @@ def refine_placement_trajectory(
             "player_count": len(output["players"]),
             "frame_count": len(correction_values),
             "plant_anchored_frame_count": plant_frame_count,
+            "world_selected_frame_count": world_selected_frame_count,
+            "residual_limit_exceeded_count": residual_limit_exceeded_count,
+            "residual_eligible_frame_count": residual_eligible_frame_count,
+            "saturation_fraction": residual_limit_exceeded_count
+            / max(1, residual_eligible_frame_count),
             "correction_magnitude_m": {
                 **_summary(correction_values),
                 "max": max(correction_values) if correction_values else 0.0,
@@ -321,7 +425,8 @@ def refine_placement_trajectory(
             "root_relative_pose_unchanged": True,
             "plant_stationarity_soft_finite_weight": True,
             "robust_loss": "Huber IRLS on TRK, BODY, plant, and smoothness factors",
-            "xy_correction_bounded": True,
+            "xy_correction_bounded": False,
+            "xy_residual_limit_policy": "reject_frame_then_reject_player_above_one_percent; never clip",
             "court_plane_prior": "soft bounded residual reduction only",
             "sole_or_ankle_z_clamping": False,
             "covariance_method": "bounded diagonal inverse local robust factor precision approximation",
@@ -357,12 +462,114 @@ def _phase_index(phases: Sequence[Mapping[str, Any]]) -> dict[str, list[Mapping[
     return result
 
 
+def _placement_index(
+    payload: Mapping[str, Any] | None,
+) -> dict[tuple[str, int], Mapping[str, Any]]:
+    if not isinstance(payload, Mapping):
+        return {}
+    result: dict[tuple[str, int], Mapping[str, Any]] = {}
+    for player in payload.get("players", []) or []:
+        if not isinstance(player, Mapping):
+            continue
+        player_id = str(player.get("id", player.get("player_id")))
+        for frame in player.get("frames", []) or []:
+            if not isinstance(frame, Mapping):
+                continue
+            try:
+                frame_index = int(frame["frame_idx"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            result[(player_id, frame_index)] = frame
+    return result
+
+
+def _direct_anchor_for_frame(row: Mapping[str, Any] | None) -> dict[str, Any]:
+    if not isinstance(row, Mapping):
+        return {
+            "applied": False,
+            "translation": [0.0, 0.0, 0.0],
+            "support_state": "missing",
+            "reason": "missing_placement_frame",
+        }
+    support = row.get("support_state")
+    state = str(support.get("state")) if isinstance(support, Mapping) else "uncertain"
+    status = str(row.get("rigid_translation_status") or "")
+    raw_translation = row.get("applied_rigid_translation_world")
+    eligible_state = state not in {"missing", "airborne"}
+    eligible_status = status in {
+        "support_foot_to_refined_court_xy",
+        "uncertain_support_visualization_only",
+    }
+    try:
+        translation = _finite_vector(raw_translation, 3, "applied_rigid_translation_world")
+    except (MissingPlacementInputError, MalformedPlacementInputError):
+        translation = [0.0, 0.0, 0.0]
+        eligible_status = False
+    return {
+        "applied": bool(eligible_state and eligible_status),
+        "translation": [float(value) for value in translation],
+        "support_state": state,
+        "reason": status or "translation_unavailable",
+    }
+
+
+def _support_phases_from_placement(
+    player_id: str,
+    frames: Sequence[Mapping[str, Any]],
+    *,
+    placement_index: Mapping[tuple[str, int], Mapping[str, Any]],
+) -> list[Mapping[str, Any]]:
+    grouped: dict[str, list[tuple[int, Mapping[str, Any]]]] = {}
+    for ordinal, frame in enumerate(frames):
+        frame_index = int(frame.get("frame_idx", ordinal))
+        row = placement_index.get((player_id, frame_index))
+        support = row.get("support_state") if isinstance(row, Mapping) else None
+        state = str(support.get("state")) if isinstance(support, Mapping) else ""
+        if state not in {"left_planted", "right_planted", "bilateral_planted"}:
+            continue
+        phase_id = str(support.get("phase_id") or f"{player_id}:{frame_index}")
+        grouped.setdefault(phase_id, []).append((frame_index, support))
+    result: list[Mapping[str, Any]] = []
+    for phase_id, rows in sorted(grouped.items(), key=lambda item: item[1][0][0]):
+        frame_indices = [frame_index for frame_index, _ in rows]
+        support = rows[0][1]
+        foot = str(support.get("foot") or "")
+        if foot not in {"left", "right"}:
+            probabilities = support.get("probabilities")
+            foot = (
+                "left"
+                if isinstance(probabilities, Mapping)
+                and float(probabilities.get("left_planted", 0.0))
+                >= float(probabilities.get("right_planted", 0.0))
+                else "right"
+            )
+        probabilities = support.get("probabilities")
+        confidence = (
+            float(probabilities.get(str(support.get("state")), 0.5))
+            if isinstance(probabilities, Mapping)
+            else 0.5
+        )
+        result.append(
+            {
+                "player_id": player_id,
+                "foot": foot,
+                "frame_indices": frame_indices,
+                "min_confidence": max(0.0, min(1.0, confidence)),
+                "assignment_evidence": {"body_detector_agreement": max(0.05, confidence)},
+                "phase_id": phase_id,
+                "source": "placement_v2_temporal_support_state",
+            }
+        )
+    return result
+
+
 def _build_xy_factors(
     player_id: str,
     frames: Sequence[Mapping[str, Any]],
     *,
     tracks: Mapping[tuple[str, int], Mapping[str, Any]],
     phases: Sequence[Mapping[str, Any]],
+    placement: Mapping[tuple[str, int], Mapping[str, Any]],
     foot_indices: Any,
     config: PlacementTrajectoryConfig,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
@@ -403,7 +610,14 @@ def _build_xy_factors(
             raise MissingPlacementInputError(f"missing track observation for skeleton frame {key}")
         track_conf = _finite_confidence(track.get("conf"), f"track {key}.conf")
         body_conf = float(np.mean([_finite_confidence(value, f"skeleton {key}.joint_conf") for value in frame["joint_conf"]]))
-        target = np.asarray(_track_world_xy(track), dtype=float) - roots[ordinal]
+        placement_row = placement.get(key)
+        target = _placement_residual_target(
+            frame,
+            placement_row=placement_row,
+            foot_indices=foot_indices,
+            fallback_track_xy=_track_world_xy(track),
+            root_xy=roots[ordinal],
+        )
         add_factor({ordinal: 1.0}, target, config.trk_weight * max(track_conf, 0.05) ** 2, "trk")
         add_factor({ordinal: 1.0}, [0.0, 0.0], config.body_weight * max(body_conf, 0.05) ** 2, "body")
 
@@ -456,6 +670,33 @@ def _build_xy_factors(
             add_factor({ordinal: 1.0}, anchor - point, weight, "plant")
             terms[ordinal]["plant_phases"].append(phase_descriptor)
     return factors, terms
+
+
+def _placement_residual_target(
+    frame: Mapping[str, Any],
+    *,
+    placement_row: Mapping[str, Any] | None,
+    foot_indices: Any,
+    fallback_track_xy: Sequence[float],
+    root_xy: Sequence[float],
+) -> np.ndarray:
+    if isinstance(placement_row, Mapping):
+        target_xy = placement_row.get("direct_anchor_world_xy") or placement_row.get("smoothed_world_xy")
+        support = placement_row.get("support_state")
+        state = str(support.get("state")) if isinstance(support, Mapping) else ""
+        foot = str(support.get("foot")) if isinstance(support, Mapping) else ""
+        if (
+            isinstance(target_xy, Sequence)
+            and len(target_xy) >= 2
+            and state in {"left_planted", "right_planted", "bilateral_planted"}
+            and foot in {"left", "right"}
+        ):
+            support_xy = np.asarray(
+                _foot_point_from_payload(frame, foot_indices.for_foot(foot))[:2],
+                dtype=float,
+            )
+            return np.asarray(_finite_vector(target_xy, 2, "smoothed_world_xy"), dtype=float) - support_xy
+    return np.asarray(_finite_vector(fallback_track_xy, 2, "track world_xy"), dtype=float) - np.asarray(root_xy, dtype=float)
 
 
 def _solve_robust_factors(
