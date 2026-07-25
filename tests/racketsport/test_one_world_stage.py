@@ -395,6 +395,34 @@ def test_fusion_output_is_not_credited_to_any_bundle_capability(tmp_path: Path) 
         assert capability in names, capability
 
 
+def test_reuse_is_content_addressed_and_a_changed_raw_input_invalidates_it(tmp_path: Path) -> None:
+    """The point of registering the stage in the NS-01.3 identity graph: an
+    unchanged run reuses the published generation, and a changed upstream raw
+    observation rebuilds instead of serving a stale preview."""
+
+    def fresh_pipeline() -> process_video.ProcessVideoPipeline:
+        return process_video.ProcessVideoPipeline(_options(tmp_path, one_world=True))
+
+    first = fresh_pipeline()
+    make_run(first.clip_dir)
+    assert first._run_stage_safely("one_world", first._stage_one_world).status == "ran"
+
+    second = fresh_pipeline()
+    reused = second._run_stage_safely("one_world", second._stage_one_world)
+    assert reused.status == "skipped"
+    assert "reused content-addressed stage generation" in reused.notes[0]
+
+    # Mutate a raw upstream observation that the fusion consumes.
+    ball_track = json.loads((second.clip_dir / "ball_track.json").read_text())
+    ball_track["frames"][0]["conf"] = 0.5
+    (second.clip_dir / "ball_track.json").write_text(json.dumps(ball_track))
+
+    third = fresh_pipeline()
+    assert third._run_stage_safely("one_world", third._stage_one_world).status == "ran", (
+        "a changed ball_track.json must invalidate the fusion generation"
+    )
+
+
 def test_stage_is_deterministic_across_repeat_runs(tmp_path: Path) -> None:
     pipeline = process_video.ProcessVideoPipeline(_options(tmp_path, one_world=True))
     make_run(pipeline.clip_dir)
