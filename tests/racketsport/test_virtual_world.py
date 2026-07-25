@@ -1317,6 +1317,31 @@ def test_world_records_one_selected_trajectory_skeleton_source_per_frame() -> No
     assert missing["position_provenance"] == "missing"
 
 
+def test_world_adapts_refined_trajectory_audit_fields_without_duplicate_skeleton() -> None:
+    tracks = _tracks_three_players()
+    skeleton = _skeleton3d_two_players()
+    skeleton["artifact_type"] = "placement_trajectory_refined"
+    skeleton["VERIFIED"] = 0
+    skeleton["coordinate_space"] = "world_court_netcenter_z_up_m"
+    skeleton["preview_band"] = True
+    skeleton["placement_trajectory_refinement"] = {"selected_for_world": True}
+    skeleton["players"][0]["frames"][0]["placement_trajectory_refinement"] = {
+        "rigid_correction_xyz_m": [0.1, -0.1, 0.0],
+    }
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=tracks,
+        skeleton3d=skeleton,
+    )
+
+    players_by_id = {player["id"]: player for player in world["players"]}
+    measured = players_by_id[3]["frames"][0]
+    assert measured["skeleton_source"] == "placement_trajectory_refined"
+    assert measured["position_provenance"] == "guard_passing_trajectory_rigid_translation"
+    assert measured["joint_count"] == 2
+
+
 def test_world_applies_refined_track_xy_as_one_post_body_rigid_translation() -> None:
     tracks = _tracks_three_players()
     tracks["placement_provenance"] = {

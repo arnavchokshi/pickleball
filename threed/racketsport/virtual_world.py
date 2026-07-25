@@ -2469,6 +2469,33 @@ def _apply_post_body_support_foot_translation(
 def _strip_legacy_skeleton3d_extras(value: Mapping[str, Any]) -> dict[str, Any]:
     payload = dict(value)
     payload.pop("foot_pin", None)
+    if payload.get("artifact_type") == "placement_trajectory_refined":
+        # The trajectory artifact intentionally keeps richer per-frame audit
+        # evidence than the public Skeleton3D contract.  Preserve that file on
+        # disk, but adapt one in-memory copy for world assembly so the refined
+        # joint coordinates can be rendered without weakening Skeleton3D or
+        # drawing a second/raw skeleton representation.
+        payload["artifact_type"] = "racketsport_skeleton3d"
+        payload.pop("VERIFIED", None)
+        payload.pop("coordinate_space", None)
+        payload.pop("preview_band", None)
+        normalized_players: list[dict[str, Any]] = []
+        for player in payload.get("players", []) or []:
+            if not isinstance(player, Mapping):
+                normalized_players.append(player)
+                continue
+            normalized_player = dict(player)
+            normalized_frames: list[dict[str, Any]] = []
+            for frame in player.get("frames", []) or []:
+                if not isinstance(frame, Mapping):
+                    normalized_frames.append(frame)
+                    continue
+                normalized_frame = dict(frame)
+                normalized_frame.pop("placement_trajectory_refinement", None)
+                normalized_frames.append(normalized_frame)
+            normalized_player["frames"] = normalized_frames
+            normalized_players.append(normalized_player)
+        payload["players"] = normalized_players
     return payload
 
 
