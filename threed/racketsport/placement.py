@@ -3007,7 +3007,13 @@ def _per_foot_stance_phases_from_keypoints(
             if len(run) < 2:
                 continue
             confidences = [float(foot_confidence_by_frame.get(foot, {}).get(frame_idx, 0.0)) for frame_idx in run]
-            sources = sorted({str(foot_source_by_frame.get(foot, {}).get(frame_idx, "unknown")) for frame_idx in run})
+            frame_sources = [
+                str(foot_source_by_frame.get(foot, {}).get(frame_idx, "unknown"))
+                for frame_idx in run
+            ]
+            sources = sorted(set(frame_sources))
+            body_support_frame_count = sum(source == "sam3d" for source in frame_sources)
+            body_detector_agreement = body_support_frame_count / len(run)
             phases.append(
                 _StancePhase(
                     player_id=int(player_id),
@@ -3024,6 +3030,10 @@ def _per_foot_stance_phases_from_keypoints(
                     demoted=False,
                     assignment_evidence={
                         "support_frame_count": len(run),
+                        "body_support_frame_count": body_support_frame_count,
+                        "body_detector_agreement": body_detector_agreement,
+                        "body_detector_exact_agreement": body_detector_agreement,
+                        "source_phase_foot": foot,
                         "sources": sources,
                         "per_foot_keypoint_support": True,
                     },

@@ -514,6 +514,7 @@ def test_post_body_refine_can_emit_immutable_tracks_without_rewriting_raw_tracks
     sam3d_path = tmp_path / "sam3d_keypoints_2d.json"
     skeleton3d_path = tmp_path / "skeleton3d.json"
     placement_path = tmp_path / "placement_refined.json"
+    phases_path = tmp_path / "foot_contact_phases.json"
     _write_json(tracks_path, _tracks_payload())
     _write_json(calibration_path, _calibration_payload())
     _write_json(sam3d_path, _sam3d_sidecar_payload())
@@ -555,6 +556,7 @@ def test_post_body_refine_can_emit_immutable_tracks_without_rewriting_raw_tracks
         placement_path=placement_path,
         sam3d_keypoints_path=sam3d_path,
         skeleton3d_path=skeleton3d_path,
+        foot_contact_phases_out_path=phases_path,
         refine_from_sam3d=True,
         config=PlacementConfig(
             keypoint_base_sigma_px=1.0,
@@ -576,6 +578,10 @@ def test_post_body_refine_can_emit_immutable_tracks_without_rewriting_raw_tracks
         first_placement.smoothed_world_xy
     )
     assert placement.summary.post_body_skeleton_translation["translated_frame_count"] == 12
+    phases = json.loads(phases_path.read_text(encoding="utf-8"))
+    assert phases["phase_count"] == 2
+    assert {phase["assignment_evidence"]["body_detector_agreement"] for phase in phases["phases"]} == {1.0}
+    assert {phase["assignment_evidence"]["body_support_frame_count"] for phase in phases["phases"]} == {12}
 
 
 def test_post_body_support_uses_one_contact_foot_and_bbox_floor_y(tmp_path: Path) -> None:
@@ -750,6 +756,8 @@ def test_rewrite_tracks_emits_confident_per_foot_phase_when_keypoint_support_agr
     assert phase["source_thresholds"]["keypoint_stance_speed_mps"] == pytest.approx(
         PlacementConfig().keypoint_stance_speed_mps
     )
+    assert phase["assignment_evidence"]["body_detector_agreement"] == pytest.approx(0.0)
+    assert phase["assignment_evidence"]["body_support_frame_count"] == 0
     assert phase["weak"] is False
     assert phase["demoted"] is False
     assert all(item["foot_assignment"] != "bilateral_from_player_stance" for item in phases["phases"])
