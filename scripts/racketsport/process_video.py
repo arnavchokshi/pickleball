@@ -1287,8 +1287,8 @@ class ProcessVideoPipeline:
             # these gate reuse, so a changed upstream artifact rebuilds the fusion
             # instead of serving a stale preview.
             candidates = {
-                name: self.clip_dir / name
-                for name in (
+                artifact_name: self.clip_dir / artifact_name
+                for artifact_name in (
                     "court_calibration.json",
                     "trust_bands.json",
                     "tracks.json",
