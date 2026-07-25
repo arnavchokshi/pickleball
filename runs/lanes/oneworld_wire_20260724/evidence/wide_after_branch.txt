@@ -1,0 +1,2892 @@
+........................................................................ [  1%]
+...........................FFF.......................................... [  2%]
+...................sF........................................s.......... [  4%]
+........................................................................ [  5%]
+........................................................................ [  7%]
+.................................................FF..................... [  8%]
+..........................................s..............FFF...F.FF.FF.F [ 10%]
+FF..F................................................................... [ 11%]
+.....................FFFF............................................... [ 13%]
+.............................................................s.......... [ 14%]
+........................................................................ [ 16%]
+.....................................................................FFF [ 17%]
+FFFF.........F.FFF............................................F....F.F.. [ 19%]
+....FFFFF.FF............................................................ [ 20%]
+........................................................................ [ 21%]
+........................................................................ [ 23%]
+........................................................................ [ 24%]
+........................................................................ [ 26%]
+........................................................................ [ 27%]
+........................................................................ [ 29%]
+..............F.........s............................................... [ 30%]
+.FFFFFFF................................................................ [ 32%]
+....................................FF..........F....................... [ 33%]
+......ss.............
+=================================== FAILURES ===================================
+_____ test_banked_fixture_grounding_and_disabled_replay_pass_frozen_limits _____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_banked_fixture_grounding_0')
+
+    def test_banked_fixture_grounding_and_disabled_replay_pass_frozen_limits(tmp_path: Path) -> None:
+        out = tmp_path / "attribution.json"
+>       report = attribution.run(
+            Namespace(
+                run_dir=BANKED_RUN,
+                calibration=BANKED_RUN / "court_calibration.json",
+                raw_grounded=BANKED_RUN / "body_raw_grounded_joints.json",
+                sam3d_output_index=BANKED_INDEX,
+                out=out,
+                max_frames_per_player=0,
+                checkpoint=Path("missing.ckpt"),
+                mhr_asset=Path("missing_mhr.pt"),
+                device=None,
+            )
+        )
+
+tests/racketsport/test_attribute_body_decode_residual.py:27: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = Namespace(run_dir=PosixPath('/private/tmp/pb-after-20260724/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mi...n'), max_frames_per_player=0, checkpoint=PosixPath('missing.ckpt'), mhr_asset=PosixPath('missing_mhr.pt'), device=None)
+
+    def run(args: argparse.Namespace) -> dict[str, Any]:
+        if args.max_frames_per_player < 0:
+            raise AttributionInputError("--max-frames-per-player must be >= 0")
+        coverage_threshold = float(getattr(args, "input_coverage_threshold", 1.0))
+        if not 0.0 <= coverage_threshold <= 1.0:
+            raise AttributionInputError("--input-coverage-threshold must be between 0 and 1")
+        allow_incoherent = bool(getattr(args, "allow_incoherent_inputs", False))
+        run_dir = args.run_dir.resolve()
+        calibration_path = (args.calibration or run_dir / "court_calibration.json").resolve()
+        if not run_dir.is_dir():
+>           raise AttributionInputError(f"--run-dir does not exist: {run_dir}")
+E           scripts.racketsport.attribute_body_decode_residual.AttributionInputError: --run-dir does not exist: /private/tmp/pb-after-20260724/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner
+
+scripts/racketsport/attribute_body_decode_residual.py:119: AttributionInputError
+_____ test_incoherent_body_mesh_pairing_writes_evidence_and_exits_nonzero ______
+
+argv = ['--run-dir', '/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_incohe...nstrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_raw_grounded_joints.json', ...]
+
+    def main(argv: list[str] | None = None) -> int:
+        parser = build_arg_parser()
+        args = parser.parse_args(argv)
+        try:
+>           report = run(args)
+                     ^^^^^^^^^
+
+scripts/racketsport/attribute_body_decode_residual.py:936: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+args = Namespace(run_dir=PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-11...th('/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3/assets/mhr_model.pt'), device=None)
+
+    def run(args: argparse.Namespace) -> dict[str, Any]:
+        if args.max_frames_per_player < 0:
+            raise AttributionInputError("--max-frames-per-player must be >= 0")
+        coverage_threshold = float(getattr(args, "input_coverage_threshold", 1.0))
+        if not 0.0 <= coverage_threshold <= 1.0:
+            raise AttributionInputError("--input-coverage-threshold must be between 0 and 1")
+        allow_incoherent = bool(getattr(args, "allow_incoherent_inputs", False))
+        run_dir = args.run_dir.resolve()
+        calibration_path = (args.calibration or run_dir / "court_calibration.json").resolve()
+        if not run_dir.is_dir():
+            raise AttributionInputError(f"--run-dir does not exist: {run_dir}")
+        if not calibration_path.is_file():
+>           raise AttributionInputError(f"calibration does not exist: {calibration_path}")
+E           scripts.racketsport.attribute_body_decode_residual.AttributionInputError: calibration does not exist: /private/tmp/pb-after-20260724/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/court_calibration.json
+
+scripts/racketsport/attribute_body_decode_residual.py:121: AttributionInputError
+
+During handling of the above exception, another exception occurred:
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_incoherent_body_mesh_pair0')
+
+    def test_incoherent_body_mesh_pairing_writes_evidence_and_exits_nonzero(tmp_path: Path) -> None:
+        run_dir = tmp_path / "stale_pairing"
+        run_dir.mkdir()
+        (run_dir / "body_mesh.json").write_text(
+            json.dumps(
+                {
+                    "players": [
+                        {
+                            "id": 999,
+                            "frames": [{"frame_idx": 999, "joints_world": [[0.0, 0.0, 0.0]]}],
+                        }
+                    ]
+                }
+            ),
+            encoding="utf-8",
+        )
+        out = tmp_path / "incoherent.json"
+>       exit_code = attribution.main(
+            [
+                "--run-dir",
+                str(run_dir),
+                "--calibration",
+                str(BANKED_RUN / "court_calibration.json"),
+                "--raw-grounded",
+                str(BANKED_RUN / "body_raw_grounded_joints.json"),
+                "--sam3d-output-index",
+                str(BANKED_INDEX),
+                "--out",
+                str(out),
+            ]
+        )
+
+tests/racketsport/test_attribute_body_decode_residual.py:74: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/attribute_body_decode_residual.py:941: in main
+    parser.exit(2, f"{parser.prog}: error: {exc}\n")
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = ArgumentParser(prog='python -m pytest', usage=None, description='Attribute BODY GATE-1b residual to grounding, postcha...and FK-vs-head components.', formatter_class=<class 'argparse.HelpFormatter'>, conflict_handler='error', add_help=True)
+status = 2
+message = 'python -m pytest: error: calibration does not exist: /private/tmp/pb-after-20260724/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/court_calibration.json\n'
+
+    def exit(self, status=0, message=None):
+        if message:
+            self._print_message(message, _sys.stderr)
+>       _sys.exit(status)
+E       SystemExit: 2
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/argparse.py:2769: SystemExit
+----------------------------- Captured stderr call -----------------------------
+python -m pytest: error: calibration does not exist: /private/tmp/pb-after-20260724/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/court_calibration.json
+_______ test_allow_incoherent_inputs_stamps_every_computed_result_block ________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_allow_incoherent_inputs_s0')
+
+    def test_allow_incoherent_inputs_stamps_every_computed_result_block(tmp_path: Path) -> None:
+>       raw_reference = json.loads((BANKED_RUN / "body_raw_grounded_joints.json").read_text(encoding="utf-8"))
+                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_attribute_body_decode_residual.py:100: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_raw_grounded_joints.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/w7_p22gate_20260709/gpu_instrument_wolverine_mixed_0200_raw_postchain/wolverine_mixed_0200_mid_steep_corner/body_raw_grounded_joints.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+___________ test_default_chain_config_matches_frozen_row22_manifest ____________
+
+    def test_default_chain_config_matches_frozen_row22_manifest() -> None:
+>       frozen_configs = json.loads(FROZEN_ROW22_MANIFEST.read_text(encoding="utf-8"))["configs"]
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_ball_arc_chain.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/ball_heldout_chain_run_20260704/chain_runs/outdoor_webcam_iynbd_1500_long_high_baseline/ball_chain_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/ball_heldout_chain_run_20260704/chain_runs/outdoor_webcam_iynbd_1500_long_high_baseline/ball_chain_manifest.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+______ test_live_b0_split_scores_final_labels_and_binds_prediction_media _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_live_b0_split_scores_fina0')
+
+    def test_live_b0_split_scores_final_labels_and_binds_prediction_media(tmp_path: Path) -> None:
+        split_dir = Path("runs/lanes/ball_b0_split_20260721/split")
+        validation_rows = [
+            json.loads(line)
+            for line in (split_dir / "validation.jsonl").read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        clips = sorted({row["clip_id"] for row in validation_rows})
+        assert len(validation_rows) == 167
+        assert len(clips) == 8
+        args = ["--out-dir", str(tmp_path / "live_out"), "--parent-source-split", str(split_dir)]
+        for clip in clips:
+            track = Path("data/online_harvest_20260706/prelabels") / clip / "ball_track.json"
+            args.extend(["--candidate-track", f"wasb={clip}={track}"])
+    
+        completed = _run_cli(args)
+    
+>       assert completed.returncode == 0, completed.stderr
+E       AssertionError: ball_loso_validation.py: error: missing B0 source video for Ezz6HDNHlnk_rally_0001: /private/tmp/pb-after-20260724/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python', 'scripts/racketsport/ball_loso_valid...ly_0001: /private/tmp/pb-after-20260724/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4\n').returncode
+
+tests/racketsport/test_ball_loso_validation.py:740: AssertionError
+________ test_live_b0_split_refuses_same_hyu_prediction_reused_for_ezz _________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_live_b0_split_refuses_sam0')
+
+    def test_live_b0_split_refuses_same_hyu_prediction_reused_for_ezz(tmp_path: Path) -> None:
+        split_dir = Path("runs/lanes/ball_b0_split_20260721/split")
+        clips = sorted(
+            {
+                json.loads(line)["clip_id"]
+                for line in (split_dir / "validation.jsonl").read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            }
+        )
+        hyu_clip = "HyUqT7zFiwk_rally_0001"
+        hyu_track = Path("data/online_harvest_20260706/prelabels") / hyu_clip / "ball_track.json"
+        args = ["--out-dir", str(tmp_path / "out"), "--parent-source-split", str(split_dir)]
+        for index, clip in enumerate(clips):
+            track = (
+                hyu_track
+                if index == 0
+                else Path("data/online_harvest_20260706/prelabels") / clip / "ball_track.json"
+            )
+            args.extend(["--candidate-track", f"wasb={clip}={track}"])
+    
+        completed = _run_cli(args)
+    
+        assert completed.returncode == 2
+>       assert "canonical path is bound to 'HyUqT7zFiwk_rally_0001'" in completed.stderr
+E       assert "canonical path is bound to 'HyUqT7zFiwk_rally_0001'" in 'ball_loso_validation.py: error: missing B0 source video for Ezz6HDNHlnk_rally_0001: /private/tmp/pb-after-20260724/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4\n'
+E        +  where 'ball_loso_validation.py: error: missing B0 source video for Ezz6HDNHlnk_rally_0001: /private/tmp/pb-after-20260724/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4\n' = CompletedProcess(args=['/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python', 'scripts/racketsport/ball_loso_valid...ly_0001: /private/tmp/pb-after-20260724/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4\n').stderr
+
+tests/racketsport/test_ball_loso_validation.py:782: AssertionError
+_ test_revision_explicit_harness_loads_pinned_git_source_and_records_exact_compute _
+
+    def test_revision_explicit_harness_loads_pinned_git_source_and_records_exact_compute() -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        batches = []
+        expected_order = []
+        for step in range(7):
+            ids = [f"sample-{step}-{index}" for index in range(8)]
+            expected_order.append(ids)
+            batches.append(
+                {
+                    "input": torch.full((8, 3, 4, 4), step / 10.0, dtype=torch.float32),
+                    "target": torch.full((8, 1, 4, 4), (step % 2), dtype=torch.float32),
+                    "wbce_weight": torch.linspace(0.25, 1.0, 8),
+                    "sample_id": ids,
+                }
+            )
+    
+        def model_factory():
+            torch.manual_seed(20260721)
+            return torch.nn.Sequential(
+                torch.nn.Conv2d(3, 4, kernel_size=1),
+                torch.nn.ReLU(),
+                torch.nn.Conv2d(4, 1, kernel_size=1),
+            )
+    
+        fixture_config = {
+            "model_family": "tiny_cpu_fixture",
+            "steps": 7,
+            "batch_size": 8,
+            "device": "cpu",
+        }
+>       result = stage2.run_revision_explicit_compute_parity(
+            batches,
+            baseline_revision=PARITY_BASELINE_REV,
+            baseline_sha256=PARITY_BASELINE_SHA256,
+            model_factory=model_factory,
+            optimizer_factory=lambda parameters: torch.optim.AdamW(parameters, lr=0.01, weight_decay=0.0),
+            steps=7,
+            device=torch.device("cpu"),
+            torch=torch,
+            comparison_config=fixture_config,
+            production=False,
+        )
+
+tests/racketsport/test_ball_stage2_training.py:503: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:2311: in run_revision_explicit_compute_parity
+    baseline_module, baseline_identity, candidate_identity = _resolve_distinct_parity_trainers(
+scripts/racketsport/train_ball_stage2.py:2277: in _resolve_distinct_parity_trainers
+    baseline_module, baseline_identity = load_trainer_module_from_git_revision(
+scripts/racketsport/train_ball_stage2.py:2230: in load_trainer_module_from_git_revision
+    commit = _git_commit(revision)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/train_ball_stage2.py:4088: in _git_commit
+    completed = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['git', 'rev-parse', '--verify', '86465272f3b267a1ab5a7c3dc5be4ca824c70d43^{commit}'],)
+kwargs = {'cwd': PosixPath('/private/tmp/pb-after-20260724'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'rev-parse', '--verify', '86465272f3b267a1ab5a7c3dc5be4ca824c70d43^{commit}']' returned non-zero exit status 128.
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:578: CalledProcessError
+_ test_revision_explicit_parity_rejects_hash_mismatch_and_candidate_versus_itself _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_revision_explicit_parity_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x138129fd0>
+capsys = <_pytest.capture.CaptureFixture object at 0x137e86990>
+
+    def test_revision_explicit_parity_rejects_hash_mismatch_and_candidate_versus_itself(
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        with pytest.raises(ValueError, match="git blob SHA-256 mismatch"):
+>           stage2.load_trainer_module_from_git_revision(
+                PARITY_BASELINE_REV,
+                expected_sha256="0" * 64,
+            )
+
+tests/racketsport/test_ball_stage2_training.py:588: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:2230: in load_trainer_module_from_git_revision
+    commit = _git_commit(revision)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/train_ball_stage2.py:4088: in _git_commit
+    completed = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['git', 'rev-parse', '--verify', '86465272f3b267a1ab5a7c3dc5be4ca824c70d43^{commit}'],)
+kwargs = {'cwd': PosixPath('/private/tmp/pb-after-20260724'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'rev-parse', '--verify', '86465272f3b267a1ab5a7c3dc5be4ca824c70d43^{commit}']' returned non-zero exit status 128.
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:578: CalledProcessError
+______ test_production_parity_refuses_when_requested_cuda_is_unavailable _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_production_parity_refuses0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x13812a5f0>
+
+    def test_production_parity_refuses_when_requested_cuda_is_unavailable(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        class UnavailableCuda:
+            @staticmethod
+            def is_available() -> bool:
+                return False
+    
+        class TorchWithoutCuda:
+            cuda = UnavailableCuda()
+    
+        monkeypatch.setattr(stage2, "_torch", lambda: TorchWithoutCuda())
+        args = stage2._build_parser().parse_args(
+            [
+                "--mode",
+                "verify-head-parity",
+                "--out-dir",
+                str(tmp_path / "parity"),
+                "--baseline-rev",
+                PARITY_BASELINE_REV,
+                "--baseline-sha256",
+                PARITY_BASELINE_SHA256,
+                "--b0-split-root",
+                str(stage2.DEFAULT_B0_SPLIT_ROOT),
+                "--init-checkpoint",
+                "models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+                "--steps",
+                "2372",
+                "--seed",
+                "20260721",
+                "--occluded-prob",
+                "0",
+            ]
+        )
+        with pytest.raises(RuntimeError, match="requires requested CUDA"):
+>           stage2.run_revision_explicit_production_parity(args)
+
+tests/racketsport/test_ball_stage2_training.py:663: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:2568: in run_revision_explicit_production_parity
+    _resolve_distinct_parity_trainers(
+scripts/racketsport/train_ball_stage2.py:2277: in _resolve_distinct_parity_trainers
+    baseline_module, baseline_identity = load_trainer_module_from_git_revision(
+scripts/racketsport/train_ball_stage2.py:2230: in load_trainer_module_from_git_revision
+    commit = _git_commit(revision)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/train_ball_stage2.py:4088: in _git_commit
+    completed = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['git', 'rev-parse', '--verify', '86465272f3b267a1ab5a7c3dc5be4ca824c70d43^{commit}'],)
+kwargs = {'cwd': PosixPath('/private/tmp/pb-after-20260724'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'rev-parse', '--verify', '86465272f3b267a1ab5a7c3dc5be4ca824c70d43^{commit}']' returned non-zero exit status 128.
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:578: CalledProcessError
+____ test_frozen_b0_media_inventory_is_exact_and_symlink_roots_are_refused _____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_frozen_b0_media_inventory0')
+
+    def test_frozen_b0_media_inventory_is_exact_and_symlink_roots_are_refused(tmp_path: Path) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        rows, _ = stage2.load_and_validate_b0_split(stage2.DEFAULT_B0_SPLIT_ROOT)
+>       observed = stage2._validate_b0_source_media(
+            rows,
+            rally_root=stage2.DEFAULT_RALLY_ROOT,
+        )
+
+tests/racketsport/test_ball_stage2_training.py:761: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:693: in _validate_b0_source_media
+    root = _required_canonical_directory(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = PosixPath('data/online_harvest_20260706/rallies')
+field = 'B0 rally_root'
+expected = PosixPath('/private/tmp/pb-after-20260724/data/online_harvest_20260706/rallies')
+
+    def _required_canonical_directory(value: Any, field: str, *, expected: Path | None = None) -> Path:
+        if not isinstance(value, (str, Path)) or not str(value):
+            raise ValueError(f"{field} must be a path string")
+        path = Path(value)
+        if not path.is_dir():
+>           raise FileNotFoundError(f"missing {field}: {path}")
+E           FileNotFoundError: missing B0 rally_root: data/online_harvest_20260706/rallies
+
+scripts/racketsport/train_ball_stage2.py:1117: FileNotFoundError
+_ test_generic_cvat_loader_refuses_renamed_ezz_judge_row_by_media_content_sha __
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_generic_cvat_loader_refus0')
+
+    def test_generic_cvat_loader_refuses_renamed_ezz_judge_row_by_media_content_sha(
+        tmp_path: Path,
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        alias_clip = "allowedalias_rally_0001"
+        cvat_root = tmp_path / "cvat"
+        clip_dir = cvat_root / alias_clip
+        clip_dir.mkdir(parents=True)
+        payload = _cvat_payload(
+            frame_count=335,
+            reviewed_frame_indices=[334],
+            ball_frames={334: (10.0, 12.0, 4.0, 6.0)},
+            ball_visibility_levels={334: "clear"},
+        )
+        payload["clip_id"] = alias_clip
+        (clip_dir / "reviewed_boxes.json").write_text(json.dumps(payload), encoding="utf-8")
+        ezz_judge_media = Path(
+            "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4"
+        )
+    
+        with pytest.raises(ValueError, match="resolves by content SHA to frozen B0 judge media"):
+>           stage2.CvatBallStage2Dataset.from_export_root(
+                cvat_root,
+                video_paths={alias_clip: ezz_judge_media},
+                image_size=(32, 32),
+                frames_in=3,
+                heatmap_radius_px=2.0,
+            )
+
+tests/racketsport/test_ball_stage2_training.py:812: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'scripts.racketsport.train_ball_stage2.CvatBallStage2Dataset'>
+cvat_export_root = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_generic_cvat_loader_refus0/cvat')
+rally_root = PosixPath('data/online_harvest_20260706/rallies')
+video_paths = {'allowedalias_rally_0001': PosixPath('data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4')}
+image_size = (32, 32), frames_in = 3, heatmap_radius_px = 2.0
+image_path_rewrites = None, max_samples = None
+
+    @classmethod
+    def from_export_root(
+        cls,
+        cvat_export_root: str | Path,
+        *,
+        rally_root: str | Path = DEFAULT_RALLY_ROOT,
+        video_paths: Mapping[str, str | Path] | None = None,
+        image_size: tuple[int, int] = DEFAULT_BALL_PRETRAIN_IMAGE_SIZE,
+        frames_in: int = DEFAULT_BALL_PRETRAIN_FRAMES_IN,
+        heatmap_radius_px: float = DEFAULT_BALL_PRETRAIN_HEATMAP_RADIUS_PX,
+        image_path_rewrites: Mapping[str, str] | Sequence[str] | None = None,
+        max_samples: int | None = None,
+    ) -> "CvatBallStage2Dataset":
+        root = Path(cvat_export_root)
+        if not root.is_dir():
+            raise FileNotFoundError(f"missing CVAT export root: {root}")
+        normalized_videos = {str(clip): Path(path) for clip, path in (video_paths or {}).items()}
+        normalized_rewrites = _parse_image_path_rewrites(image_path_rewrites)
+        records: list[Stage2SampleRecord] = []
+        media_sha_cache: dict[Path, str] = {}
+        for clip_dir in sorted(path for path in root.iterdir() if path.is_dir()):
+            annotations = load_cvat_annotations_from_export_clip(clip_dir)
+            video_path = normalized_videos.get(annotations.clip_id) or _resolve_rally_video(Path(rally_root), annotations.clip_id)
+            decoded_video_path = _rewrite_path(video_path, normalized_rewrites)
+            if not decoded_video_path.is_file():
+>               raise FileNotFoundError(
+                    f"missing CVAT source video for {annotations.clip_id}: {decoded_video_path}"
+                )
+E               FileNotFoundError: missing CVAT source video for allowedalias_rally_0001: data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4
+
+scripts/racketsport/train_ball_stage2.py:339: FileNotFoundError
+_ test_production_training_and_parity_refuse_image_path_rewrites_before_execution _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_production_training_and_p0')
+
+    def test_production_training_and_parity_refuse_image_path_rewrites_before_execution(
+        tmp_path: Path,
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        training_args = stage2._build_parser().parse_args(
+            [
+                "--b0-split-root",
+                str(stage2.DEFAULT_B0_SPLIT_ROOT),
+                "--out-dir",
+                str(tmp_path / "training"),
+                "--image-root-rewrite",
+                "/canonical=/substitute",
+            ]
+        )
+        with pytest.raises(ValueError, match="refuses --image-root-rewrite"):
+            stage2.run(training_args)
+    
+        parity_args = stage2._build_parser().parse_args(
+            [
+                "--mode",
+                "verify-head-parity",
+                "--out-dir",
+                str(tmp_path / "parity"),
+                "--baseline-rev",
+                PARITY_BASELINE_REV,
+                "--baseline-sha256",
+                PARITY_BASELINE_SHA256,
+                "--b0-split-root",
+                str(stage2.DEFAULT_B0_SPLIT_ROOT),
+                "--init-checkpoint",
+                "models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+                "--steps",
+                "2372",
+                "--seed",
+                "20260721",
+                "--occluded-prob",
+                "0",
+                "--image-root-rewrite",
+                "/canonical=/substitute",
+            ]
+        )
+        with pytest.raises(ValueError, match="frozen production config"):
+>           stage2.run_revision_explicit_production_parity(parity_args)
+
+tests/racketsport/test_ball_stage2_training.py:864: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:2568: in run_revision_explicit_production_parity
+    _resolve_distinct_parity_trainers(
+scripts/racketsport/train_ball_stage2.py:2277: in _resolve_distinct_parity_trainers
+    baseline_module, baseline_identity = load_trainer_module_from_git_revision(
+scripts/racketsport/train_ball_stage2.py:2230: in load_trainer_module_from_git_revision
+    commit = _git_commit(revision)
+             ^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/train_ball_stage2.py:4088: in _git_commit
+    completed = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['git', 'rev-parse', '--verify', '86465272f3b267a1ab5a7c3dc5be4ca824c70d43^{commit}'],)
+kwargs = {'cwd': PosixPath('/private/tmp/pb-after-20260724'), 'text': True, 'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'rev-parse', '--verify', '86465272f3b267a1ab5a7c3dc5be4ca824c70d43^{commit}']' returned non-zero exit status 128.
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:578: CalledProcessError
+_______ test_failed_gate_sst_fixture_and_sst_only_invocation_are_refused _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_failed_gate_sst_fixture_a0')
+
+    def test_failed_gate_sst_fixture_and_sst_only_invocation_are_refused(tmp_path: Path) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        failed_manifest = Path("runs/lanes/ball_b1b2_prep_20260721/schema_valid_sample_manifest.json")
+        with pytest.raises(ValueError, match="gate verdict must be PASS"):
+>           stage2.load_and_validate_production_sst_manifest(failed_manifest)
+
+tests/racketsport/test_ball_stage2_training.py:923: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:779: in load_and_validate_production_sst_manifest
+    manifest = _read_json_object(path)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('runs/lanes/ball_b1b2_prep_20260721/schema_valid_sample_manifest.json')
+
+    def _read_json_object(path: Path) -> dict[str, Any]:
+        if not path.is_file():
+>           raise FileNotFoundError(path)
+E           FileNotFoundError: runs/lanes/ball_b1b2_prep_20260721/schema_valid_sample_manifest.json
+
+scripts/racketsport/train_ball_stage2.py:4009: FileNotFoundError
+_ test_sst_trust_boundary_recounts_and_refuses_forged_row_authority_hashes_and_bounds _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_sst_trust_boundary_recoun0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x138121a20>
+
+    def test_sst_trust_boundary_recounts_and_refuses_forged_row_authority_hashes_and_bounds(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(tmp_path, stage2=stage2, monkeypatch=monkeypatch)
+>       validated, rows = stage2.load_and_validate_production_sst_manifest(manifest_path)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_ball_stage2_training.py:946: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:929: in load_and_validate_production_sst_manifest
+    repo_identity = _required_clean_git_repo(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = '/private/tmp/pb-after-20260724/third_party/WASB-SBDT'
+field = 'SST wasb_identity.repo_path'
+expected = PosixPath('/private/tmp/pb-after-20260724/third_party/WASB-SBDT')
+expected_commit = '923462cacdeb3353b84ddebdedb3f4b7a8553b0f'
+
+    def _required_clean_git_repo(
+        value: Any,
+        field: str,
+        *,
+        expected: Path,
+        expected_commit: str,
+    ) -> dict[str, Any]:
+        repo = _required_canonical_directory(value, field, expected=expected)
+        commit_result = subprocess.run(
+            ["git", "-C", str(repo), "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        status_result = subprocess.run(
+            ["git", "-C", str(repo), "status", "--porcelain", "--untracked-files=all"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        commit = commit_result.stdout.strip()
+        if commit != expected_commit:
+>           raise ValueError(f"{field} commit mismatch: expected={expected_commit} actual={commit}")
+E           ValueError: SST wasb_identity.repo_path commit mismatch: expected=923462cacdeb3353b84ddebdedb3f4b7a8553b0f actual=696a7583a5a34218ce751e4f8454ae3379acc4cc
+
+scripts/racketsport/train_ball_stage2.py:1169: ValueError
+_ test_sst_rejects_semantic_metadata_forgery_after_all_dependent_hashes_are_recomputed _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_sst_rejects_semantic_meta0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x143c8bd20>
+
+    def test_sst_rejects_semantic_metadata_forgery_after_all_dependent_hashes_are_recomputed(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(
+            tmp_path,
+            stage2=stage2,
+            monkeypatch=monkeypatch,
+        )
+        clip = manifest["clips"][0]
+        metadata_path = Path(clip["dependencies"]["wasb_metadata_path"])
+        forged_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        forged_metadata["source_mode"] = "wasb_csv"
+        metadata_path.write_text(json.dumps(forged_metadata), encoding="utf-8")
+        forged_sha = hashlib.sha256(metadata_path.read_bytes()).hexdigest()
+        clip["dependencies"]["wasb_metadata_sha256"] = forged_sha
+        clip["dependencies"]["wasb_runtime"] = forged_metadata
+        for row in clip["samples"]:
+            row["dependency_hashes"]["wasb_metadata_sha256"] = forged_sha
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    
+>       with pytest.raises(ValueError, match="source_mode is not production-authentic"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'source_mode is not production-authentic'
+E         Actual message: 'SST wasb_identity.repo_path commit mismatch: expected=923462cacdeb3353b84ddebdedb3f4b7a8553b0f actual=696a7583a5a34218ce751e4f8454ae3379acc4cc'
+
+tests/racketsport/test_ball_stage2_training.py:1186: AssertionError
+_ test_sst_rejects_invalid_prediction_csv_with_self_consistent_hashes_and_replay_proof _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_sst_rejects_invalid_predi0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x143c20130>
+
+    def test_sst_rejects_invalid_prediction_csv_with_self_consistent_hashes_and_replay_proof(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(
+            tmp_path,
+            stage2=stage2,
+            monkeypatch=monkeypatch,
+        )
+        clip = manifest["clips"][0]
+        csv_path = Path(clip["dependencies"]["wasb_predictions_csv_path"])
+        with csv_path.open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.reader(handle))
+        rows[1][1] = "2"
+        with csv_path.open("w", encoding="utf-8", newline="") as handle:
+            csv.writer(handle).writerows(rows)
+        csv_sha = hashlib.sha256(csv_path.read_bytes()).hexdigest()
+    
+        metadata_path = Path(clip["dependencies"]["wasb_metadata_path"])
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        metadata["builder_bindings"]["wasb_predictions_csv_sha256"] = csv_sha
+        metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+        metadata_sha = hashlib.sha256(metadata_path.read_bytes()).hexdigest()
+        clip["dependencies"]["wasb_predictions_csv_sha256"] = csv_sha
+        clip["dependencies"]["wasb_metadata_sha256"] = metadata_sha
+        clip["dependencies"]["wasb_runtime"] = metadata
+        for row in clip["samples"]:
+            row["dependency_hashes"]["wasb_predictions_csv_sha256"] = csv_sha
+            row["dependency_hashes"]["wasb_metadata_sha256"] = metadata_sha
+        manifest["artifact_verification"]["replayed_prediction_sha256_by_clip"][
+            clip["clip_id"]
+        ] = csv_sha
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    
+>       with pytest.raises(ValueError, match="visibility must be exactly 0 or 1"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'visibility must be exactly 0 or 1'
+E         Actual message: 'SST wasb_identity.repo_path commit mismatch: expected=923462cacdeb3353b84ddebdedb3f4b7a8553b0f actual=696a7583a5a34218ce751e4f8454ae3379acc4cc'
+
+tests/racketsport/test_ball_stage2_training.py:1225: AssertionError
+_ test_sst_rejects_replay_mismatch_adapter_forgery_and_symlink_dependency_root _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_sst_rejects_replay_mismat0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x143c86430>
+
+    def test_sst_rejects_replay_mismatch_adapter_forgery_and_symlink_dependency_root(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(
+            tmp_path,
+            stage2=stage2,
+            monkeypatch=monkeypatch,
+        )
+        forged = copy.deepcopy(manifest)
+        forged["preregistration"]["wasb_adapter_code_sha256"] = "f" * 64
+        forged["preregistered_parameters"] = dict(forged["preregistration"])
+        manifest_path.write_text(json.dumps(forged), encoding="utf-8")
+        with pytest.raises(ValueError, match="adapter code identity"):
+            stage2.load_and_validate_production_sst_manifest(manifest_path)
+    
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        monkeypatch.setattr(stage2, "_run_official_wasb_replay", lambda **_kwargs: b"different")
+>       with pytest.raises(ValueError, match="official WASB inference replay differs"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'official WASB inference replay differs'
+E         Actual message: 'SST wasb_identity.repo_path commit mismatch: expected=923462cacdeb3353b84ddebdedb3f4b7a8553b0f actual=696a7583a5a34218ce751e4f8454ae3379acc4cc'
+
+tests/racketsport/test_ball_stage2_training.py:1248: AssertionError
+____ test_sst_rejects_monotonic_rehashed_pts_that_differ_from_encoded_media ____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_sst_rejects_monotonic_reh0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x143b154e0>
+
+    def test_sst_rejects_monotonic_rehashed_pts_that_differ_from_encoded_media(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(
+            tmp_path,
+            stage2=stage2,
+            monkeypatch=monkeypatch,
+        )
+        clip = manifest["clips"][0]
+        dependencies = clip["dependencies"]
+        frame_times_path = Path(dependencies["frame_times_path"])
+        frame_times = json.loads(frame_times_path.read_text(encoding="utf-8"))
+        for row in frame_times["frames"]:
+            row["pts_s"] = float(row["pts_s"]) + 1e-6
+        frame_times_path.write_text(json.dumps(frame_times), encoding="utf-8")
+        frame_times_sha = hashlib.sha256(frame_times_path.read_bytes()).hexdigest()
+    
+        wasb_track_path = Path(dependencies["wasb_ball_track"])
+        regenerated_track = stage2.wasb_csv_to_ball_track(
+            Path(dependencies["wasb_predictions_csv_path"]),
+            fps=30.0,
+            frame_times=frame_times_path,
+            visible_threshold=0.9,
+            input_preprocessing="official",
+        )
+        wasb_track_path.write_text(json.dumps(regenerated_track), encoding="utf-8")
+        wasb_track_sha = hashlib.sha256(wasb_track_path.read_bytes()).hexdigest()
+    
+        wasb_metadata_path = Path(dependencies["wasb_metadata_path"])
+        wasb_metadata = json.loads(wasb_metadata_path.read_text(encoding="utf-8"))
+        wasb_metadata["builder_bindings"]["frame_times_sha256"] = frame_times_sha
+        wasb_metadata["builder_bindings"]["wasb_ball_track_sha256"] = wasb_track_sha
+        wasb_metadata_path.write_text(json.dumps(wasb_metadata), encoding="utf-8")
+        wasb_metadata_sha = hashlib.sha256(wasb_metadata_path.read_bytes()).hexdigest()
+    
+        dependencies["frame_times_sha256"] = frame_times_sha
+        dependencies["wasb_ball_track_sha256"] = wasb_track_sha
+        dependencies["wasb_metadata_sha256"] = wasb_metadata_sha
+        dependencies["wasb_runtime"] = wasb_metadata
+        for sample in clip["samples"]:
+            sample["t"] = float(sample["t"]) + 1e-6
+            sample["frame_ref"]["t"] = float(sample["frame_ref"]["t"]) + 1e-6
+            sample["dependency_hashes"]["frame_times_sha256"] = frame_times_sha
+            sample["dependency_hashes"]["wasb_ball_track_sha256"] = wasb_track_sha
+            sample["dependency_hashes"]["wasb_metadata_sha256"] = wasb_metadata_sha
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    
+>       with pytest.raises(ValueError, match="frame PTS differ from canonical encoded media"):
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'frame PTS differ from canonical encoded media'
+E         Actual message: 'SST wasb_identity.repo_path commit mismatch: expected=923462cacdeb3353b84ddebdedb3f4b7a8553b0f actual=696a7583a5a34218ce751e4f8454ae3379acc4cc'
+
+tests/racketsport/test_ball_stage2_training.py:1375: AssertionError
+___ test_pickleball_vendored_dataset_reads_hidden_rows_and_one_loader_batch ____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_pickleball_vendored_datas0')
+
+    def test_pickleball_vendored_dataset_reads_hidden_rows_and_one_loader_batch(tmp_path: Path) -> None:
+        tracknet_root = _write_tracknet_layout(
+            tmp_path / "tracknet",
+            [
+                _SampleSpec(
+                    split="train",
+                    match="match1",
+                    rally_id="1_01_00",
+                    clip="owner_train_clean",
+                    rows=[(0, 1, 12.0, 20.0), (1, 0, 0.0, 0.0), (2, 1, 13.0, 21.0)],
+                ),
+            ],
+            image_size=(64, 48),
+        )
+        out_dir = tmp_path / "wasb"
+        build_ball_wasb_dataset(tracknet_root=tracknet_root, out_dir=out_dir)
+    
+        wasb_src = Path("third_party/WASB-SBDT/src").resolve()
+>       pickleball_module = _load_module(
+            "wasb_pickleball_dataset_for_test",
+            wasb_src / "datasets" / "pickleball.py",
+            prepend_sys_path=wasb_src,
+        )
+
+tests/racketsport/test_ball_wasb_dataset.py:128: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_ball_wasb_dataset.py:474: in _load_module
+    spec.loader.exec_module(module)
+<frozen importlib._bootstrap_external>:755: in exec_module
+    ???
+<frozen importlib._bootstrap_external>:892: in get_code
+    ???
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <_frozen_importlib_external.SourceFileLoader object at 0x143afa5d0>
+path = '/private/tmp/pb-after-20260724/third_party/WASB-SBDT/src/datasets/pickleball.py'
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/third_party/WASB-SBDT/src/datasets/pickleball.py'
+
+<frozen importlib._bootstrap_external>:950: FileNotFoundError
+__________ test_wasb_factory_build_dataloader_reads_pickleball_batch ___________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_wasb_factory_build_datalo0')
+
+    def test_wasb_factory_build_dataloader_reads_pickleball_batch(tmp_path: Path) -> None:
+        tracknet_root = _write_tracknet_layout(
+            tmp_path / "tracknet",
+            [
+                _SampleSpec(
+                    split="train",
+                    match="match1",
+                    rally_id="1_01_00",
+                    clip="owner_train_clean",
+                    rows=[(0, 1, 12.0, 20.0), (1, 0, 0.0, 0.0), (2, 1, 13.0, 21.0)],
+                ),
+            ],
+            image_size=(64, 48),
+        )
+        out_dir = tmp_path / "wasb"
+        build_ball_wasb_dataset(tracknet_root=tracknet_root, out_dir=out_dir)
+    
+>       batch = _factory_loader_batch("third_party/WASB-SBDT/src", _wasb_loader_cfg(out_dir))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_ball_wasb_dataset.py:162: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+src_dir = 'third_party/WASB-SBDT/src'
+cfg = {'dataset': {'name': 'pickleball', 'root_dir': '/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arn...etector': {'step': 1}, 'dataloader': {'train': True, 'test': False, 'train_clip': False, 'test_clip': False, ...}, ...}
+
+    def _factory_loader_batch(src_dir: str, cfg: dict[str, object]):
+        src_path = Path(src_dir).resolve()
+        old_cwd = Path.cwd()
+        sys.path.insert(0, str(src_path))
+        _purge_vendor_modules()
+        _install_omegaconf_stub()
+        _install_pandas_stub()
+        _install_skimage_stub()
+        try:
+>           os.chdir(src_path)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/third_party/WASB-SBDT/src'
+
+tests/racketsport/test_ball_wasb_dataset.py:400: FileNotFoundError
+_____ test_blurball_factory_build_dataloader_reads_recovered_label_layout ______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_blurball_factory_build_da0')
+
+    def test_blurball_factory_build_dataloader_reads_recovered_label_layout(tmp_path: Path) -> None:
+        tracknet_root = _write_tracknet_layout(
+            tmp_path / "tracknet",
+            [
+                _SampleSpec(
+                    split="train",
+                    match="match1",
+                    rally_id="1_01_00",
+                    clip="owner_train_clean",
+                    rows=[(0, 1, 12.0, 20.0), (1, 0, 0.0, 0.0), (2, 1, 13.0, 21.0)],
+                ),
+            ],
+            image_size=(64, 48),
+        )
+        out_dir = tmp_path / "wasb"
+        build_ball_wasb_dataset(tracknet_root=tracknet_root, out_dir=out_dir)
+    
+        label_rows = (out_dir / "train_match1" / "1_01_00" / BLURBALL_CSV_FILENAME).read_text(
+            encoding="utf-8"
+        ).splitlines()
+        assert label_rows == [
+            "file name,visibility,x-coordinate,y-coordinate",
+            "00000.png,1,12.000,20.000",
+            "00001.png,0,0.000,0.000",
+            "00002.png,1,13.000,21.000",
+        ]
+    
+>       batch = _factory_loader_batch("third_party/blurball/src", _blurball_loader_cfg(out_dir))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_ball_wasb_dataset.py:195: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+src_dir = 'third_party/blurball/src'
+cfg = {'dataset': {'name': 'pickleball', 'root_dir': '/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arn...etector': {'step': 1}, 'dataloader': {'train': True, 'test': False, 'train_clip': False, 'test_clip': False, ...}, ...}
+
+    def _factory_loader_batch(src_dir: str, cfg: dict[str, object]):
+        src_path = Path(src_dir).resolve()
+        old_cwd = Path.cwd()
+        sys.path.insert(0, str(src_path))
+        _purge_vendor_modules()
+        _install_omegaconf_stub()
+        _install_pandas_stub()
+        _install_skimage_stub()
+        try:
+>           os.chdir(src_path)
+E           FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/third_party/blurball/src'
+
+tests/racketsport/test_ball_wasb_dataset.py:400: FileNotFoundError
+_______ test_additive_vendored_pickleball_files_are_marked_not_upstream ________
+
+    def test_additive_vendored_pickleball_files_are_marked_not_upstream() -> None:
+        paths = [
+            Path("third_party/WASB-SBDT/src/configs/dataset/pickleball.yaml"),
+            Path("third_party/WASB-SBDT/src/datasets/pickleball.py"),
+            Path("third_party/blurball/src/configs/dataset/pickleball.yaml"),
+            Path("third_party/blurball/src/datasets/pickleball.py"),
+        ]
+        for path in paths:
+>           assert path.is_file()
+E           AssertionError: assert False
+E            +  where False = is_file()
+E            +    where is_file = PosixPath('third_party/WASB-SBDT/src/configs/dataset/pickleball.yaml').is_file
+
+tests/racketsport/test_ball_wasb_dataset.py:209: AssertionError
+____________ test_missing_media_cli_emits_machine_readable_refusal _____________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_missing_media_cli_emits_m0')
+
+    def test_missing_media_cli_emits_machine_readable_refusal(tmp_path: Path) -> None:
+        split = Path("runs/lanes/pbv_pickleball_corpus_20260720/manifest.json")
+        out = tmp_path / "refusal.json"
+    
+        completed = subprocess.run(
+            [
+                sys.executable,
+                CLI,
+                "--gallery-root",
+                "data/pbvision_gallery_20260719",
+                "--media-root",
+                "data/pbv_replay_20260720",
+                "--split-manifest",
+                str(split),
+                "--wasb-checkpoint",
+                "models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+                "--teacher-confidence-min",
+                "0.90",
+                "--agreement-radius-px",
+                "20",
+                "--pseudo-weight",
+                "0.25",
+                "--out",
+                str(out),
+            ],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    
+>       assert completed.returncode == 3
+E       assert 2 == 3
+E        +  where 2 = CompletedProcess(args=['/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python', 'scripts/racketsport/build_pbvision_..._ball_sst.py: error: [Errno 2] No such file or directory: 'runs/lanes/pbv_pickleball_corpus_20260720/manifest.json'\n").returncode
+
+tests/racketsport/test_build_pbvision_ball_sst.py:476: AssertionError
+__________ test_cli_policy_override_is_diagnostic_not_preregistration __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_cli_policy_override_is_di0')
+
+    def test_cli_policy_override_is_diagnostic_not_preregistration(tmp_path: Path) -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+    
+>       builder_identity, wasb_identity, dependencies = _identity_context(builder)
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_build_pbvision_ball_sst.py:496: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_build_pbvision_ball_sst.py:2098: in _identity_context
+    wasb_identity = builder._resolve_wasb_identity(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+checkpoint_path = PosixPath('models/checkpoints/wasb/wasb_tennis_best.pth.tar')
+repo_path = PosixPath('third_party/WASB-SBDT')
+require_production_identity = True
+
+    def _resolve_wasb_identity(
+        *,
+        checkpoint_path: Path,
+        repo_path: Path,
+        require_production_identity: bool,
+    ) -> dict[str, Any]:
+        models_manifest_path = (ROOT / "models/MANIFEST.json").resolve(strict=True)
+        models_manifest = _read_json(models_manifest_path)
+        models = models_manifest.get("models")
+        if not isinstance(models, list):
+            raise BallSstBuildError("models/MANIFEST.json requires models list")
+        matches = [row for row in models if isinstance(row, Mapping) and row.get("id") == PRODUCTION_WASB_MODEL_ID]
+        if len(matches) != 1:
+            raise BallSstBuildError(f"models/MANIFEST.json must contain one {PRODUCTION_WASB_MODEL_ID}")
+        manifest_identity = matches[0]
+        if manifest_identity.get("local_path") != str(PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH):
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint path differs from frozen code identity")
+        if manifest_identity.get("sha256") != PRODUCTION_WASB_CHECKPOINT_SHA256:
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint SHA differs from frozen code identity")
+        if manifest_identity.get("repo_commit") != PRODUCTION_WASB_REPO_COMMIT:
+            raise BallSstBuildError("models/MANIFEST.json WASB repo commit differs from frozen code identity")
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(f"missing WASB checkpoint: {checkpoint_path}")
+        if not repo_path.is_dir():
+            raise FileNotFoundError(f"missing WASB repo: {repo_path}")
+        checkpoint_resolved = checkpoint_path.resolve(strict=True)
+        repo_resolved = repo_path.resolve(strict=True)
+        checkpoint_sha256 = _sha256_file(checkpoint_resolved)
+        repo_commit = _git_output(repo_resolved, "rev-parse", "HEAD")
+        repo_status = _git_output(repo_resolved, "status", "--porcelain", "--untracked-files=all")
+        expected_checkpoint = (ROOT / PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH).resolve(strict=True)
+        expected_repo = (ROOT / PRODUCTION_WASB_REPO_RELATIVE_PATH).resolve(strict=True)
+        production_identity_verified = (
+            checkpoint_path.absolute() == expected_checkpoint
+            and checkpoint_resolved == expected_checkpoint
+            and checkpoint_sha256 == PRODUCTION_WASB_CHECKPOINT_SHA256
+            and repo_path.absolute() == expected_repo
+            and repo_resolved == expected_repo
+            and repo_commit == PRODUCTION_WASB_REPO_COMMIT
+            and repo_status == ""
+        )
+        if require_production_identity and not production_identity_verified:
+>           raise BallSstBuildError(
+                "production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, "
+                "canonical WASB repo path, pinned repo commit, and a clean repo"
+            )
+E           scripts.racketsport.build_pbvision_ball_sst.BallSstBuildError: production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, canonical WASB repo path, pinned repo commit, and a clean repo
+
+scripts/racketsport/build_pbvision_ball_sst.py:3318: BallSstBuildError
+_ test_production_gallery_authority_pins_all_current_canonical_teacher_inputs __
+
+    def test_production_gallery_authority_pins_all_current_canonical_teacher_inputs() -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+    
+>       canonical_gallery = (builder.ROOT / builder.FROZEN_GALLERY_RELATIVE_PATH).resolve(
+            strict=True
+        )
+
+tests/racketsport/test_build_pbvision_ball_sst.py:541: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:938: in resolve
+    return self.with_segments(os.path.realpath(self, strict=strict))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+filename = '/private/tmp/pb-after-20260724/data/pbvision_gallery_20260719'
+strict = True
+
+>   ???
+E   FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/data/pbvision_gallery_20260719'
+
+<frozen posixpath>:457: FileNotFoundError
+____ test_frozen_policy_with_zero_independent_rows_is_honest_insufficiency _____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_frozen_policy_with_zero_i0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x1446abd90>
+
+    def test_frozen_policy_with_zero_independent_rows_is_honest_insufficiency(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+    
+        monkeypatch.setattr(
+            builder,
+            "_verify_production_artifacts",
+            lambda **_kwargs: {
+                "verified": True,
+                "status": "passed",
+                "reason": "unit fixture identity boundary",
+                "verified_clip_count": 7,
+                "verified_sample_count": 0,
+            },
+        )
+>       builder_identity, wasb_identity, dependencies = _identity_context(builder)
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_build_pbvision_ball_sst.py:570: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_build_pbvision_ball_sst.py:2098: in _identity_context
+    wasb_identity = builder._resolve_wasb_identity(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+checkpoint_path = PosixPath('models/checkpoints/wasb/wasb_tennis_best.pth.tar')
+repo_path = PosixPath('third_party/WASB-SBDT')
+require_production_identity = True
+
+    def _resolve_wasb_identity(
+        *,
+        checkpoint_path: Path,
+        repo_path: Path,
+        require_production_identity: bool,
+    ) -> dict[str, Any]:
+        models_manifest_path = (ROOT / "models/MANIFEST.json").resolve(strict=True)
+        models_manifest = _read_json(models_manifest_path)
+        models = models_manifest.get("models")
+        if not isinstance(models, list):
+            raise BallSstBuildError("models/MANIFEST.json requires models list")
+        matches = [row for row in models if isinstance(row, Mapping) and row.get("id") == PRODUCTION_WASB_MODEL_ID]
+        if len(matches) != 1:
+            raise BallSstBuildError(f"models/MANIFEST.json must contain one {PRODUCTION_WASB_MODEL_ID}")
+        manifest_identity = matches[0]
+        if manifest_identity.get("local_path") != str(PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH):
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint path differs from frozen code identity")
+        if manifest_identity.get("sha256") != PRODUCTION_WASB_CHECKPOINT_SHA256:
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint SHA differs from frozen code identity")
+        if manifest_identity.get("repo_commit") != PRODUCTION_WASB_REPO_COMMIT:
+            raise BallSstBuildError("models/MANIFEST.json WASB repo commit differs from frozen code identity")
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(f"missing WASB checkpoint: {checkpoint_path}")
+        if not repo_path.is_dir():
+            raise FileNotFoundError(f"missing WASB repo: {repo_path}")
+        checkpoint_resolved = checkpoint_path.resolve(strict=True)
+        repo_resolved = repo_path.resolve(strict=True)
+        checkpoint_sha256 = _sha256_file(checkpoint_resolved)
+        repo_commit = _git_output(repo_resolved, "rev-parse", "HEAD")
+        repo_status = _git_output(repo_resolved, "status", "--porcelain", "--untracked-files=all")
+        expected_checkpoint = (ROOT / PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH).resolve(strict=True)
+        expected_repo = (ROOT / PRODUCTION_WASB_REPO_RELATIVE_PATH).resolve(strict=True)
+        production_identity_verified = (
+            checkpoint_path.absolute() == expected_checkpoint
+            and checkpoint_resolved == expected_checkpoint
+            and checkpoint_sha256 == PRODUCTION_WASB_CHECKPOINT_SHA256
+            and repo_path.absolute() == expected_repo
+            and repo_resolved == expected_repo
+            and repo_commit == PRODUCTION_WASB_REPO_COMMIT
+            and repo_status == ""
+        )
+        if require_production_identity and not production_identity_verified:
+>           raise BallSstBuildError(
+                "production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, "
+                "canonical WASB repo path, pinned repo commit, and a clean repo"
+            )
+E           scripts.racketsport.build_pbvision_ball_sst.BallSstBuildError: production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, canonical WASB repo path, pinned repo commit, and a clean repo
+
+scripts/racketsport/build_pbvision_ball_sst.py:3318: BallSstBuildError
+______ test_production_identity_pins_checkpoint_path_sha_and_wasb_commit _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_production_identity_pins_0')
+
+    def test_production_identity_pins_checkpoint_path_sha_and_wasb_commit(tmp_path: Path) -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+    
+>       identity = builder._resolve_wasb_identity(
+            checkpoint_path=Path("models/checkpoints/wasb/wasb_tennis_best.pth.tar"),
+            repo_path=Path("third_party/WASB-SBDT"),
+            require_production_identity=True,
+        )
+
+tests/racketsport/test_build_pbvision_ball_sst.py:596: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+checkpoint_path = PosixPath('models/checkpoints/wasb/wasb_tennis_best.pth.tar')
+repo_path = PosixPath('third_party/WASB-SBDT')
+require_production_identity = True
+
+    def _resolve_wasb_identity(
+        *,
+        checkpoint_path: Path,
+        repo_path: Path,
+        require_production_identity: bool,
+    ) -> dict[str, Any]:
+        models_manifest_path = (ROOT / "models/MANIFEST.json").resolve(strict=True)
+        models_manifest = _read_json(models_manifest_path)
+        models = models_manifest.get("models")
+        if not isinstance(models, list):
+            raise BallSstBuildError("models/MANIFEST.json requires models list")
+        matches = [row for row in models if isinstance(row, Mapping) and row.get("id") == PRODUCTION_WASB_MODEL_ID]
+        if len(matches) != 1:
+            raise BallSstBuildError(f"models/MANIFEST.json must contain one {PRODUCTION_WASB_MODEL_ID}")
+        manifest_identity = matches[0]
+        if manifest_identity.get("local_path") != str(PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH):
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint path differs from frozen code identity")
+        if manifest_identity.get("sha256") != PRODUCTION_WASB_CHECKPOINT_SHA256:
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint SHA differs from frozen code identity")
+        if manifest_identity.get("repo_commit") != PRODUCTION_WASB_REPO_COMMIT:
+            raise BallSstBuildError("models/MANIFEST.json WASB repo commit differs from frozen code identity")
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(f"missing WASB checkpoint: {checkpoint_path}")
+        if not repo_path.is_dir():
+            raise FileNotFoundError(f"missing WASB repo: {repo_path}")
+        checkpoint_resolved = checkpoint_path.resolve(strict=True)
+        repo_resolved = repo_path.resolve(strict=True)
+        checkpoint_sha256 = _sha256_file(checkpoint_resolved)
+        repo_commit = _git_output(repo_resolved, "rev-parse", "HEAD")
+        repo_status = _git_output(repo_resolved, "status", "--porcelain", "--untracked-files=all")
+        expected_checkpoint = (ROOT / PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH).resolve(strict=True)
+        expected_repo = (ROOT / PRODUCTION_WASB_REPO_RELATIVE_PATH).resolve(strict=True)
+        production_identity_verified = (
+            checkpoint_path.absolute() == expected_checkpoint
+            and checkpoint_resolved == expected_checkpoint
+            and checkpoint_sha256 == PRODUCTION_WASB_CHECKPOINT_SHA256
+            and repo_path.absolute() == expected_repo
+            and repo_resolved == expected_repo
+            and repo_commit == PRODUCTION_WASB_REPO_COMMIT
+            and repo_status == ""
+        )
+        if require_production_identity and not production_identity_verified:
+>           raise BallSstBuildError(
+                "production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, "
+                "canonical WASB repo path, pinned repo commit, and a clean repo"
+            )
+E           scripts.racketsport.build_pbvision_ball_sst.BallSstBuildError: production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, canonical WASB repo path, pinned repo commit, and a clean repo
+
+scripts/racketsport/build_pbvision_ball_sst.py:3318: BallSstBuildError
+__________ test_production_artifact_verifier_refuses_reauthored_split __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_production_artifact_verif0')
+
+    def test_production_artifact_verifier_refuses_reauthored_split(tmp_path: Path) -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+    
+        split = tmp_path / "manifest.json"
+        split.write_text(json.dumps(_frozen_split_payload()), encoding="utf-8")
+>       identity = builder._resolve_wasb_identity(
+            checkpoint_path=Path("models/checkpoints/wasb/wasb_tennis_best.pth.tar"),
+            repo_path=Path("third_party/WASB-SBDT"),
+            require_production_identity=True,
+        )
+
+tests/racketsport/test_build_pbvision_ball_sst.py:629: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+checkpoint_path = PosixPath('models/checkpoints/wasb/wasb_tennis_best.pth.tar')
+repo_path = PosixPath('third_party/WASB-SBDT')
+require_production_identity = True
+
+    def _resolve_wasb_identity(
+        *,
+        checkpoint_path: Path,
+        repo_path: Path,
+        require_production_identity: bool,
+    ) -> dict[str, Any]:
+        models_manifest_path = (ROOT / "models/MANIFEST.json").resolve(strict=True)
+        models_manifest = _read_json(models_manifest_path)
+        models = models_manifest.get("models")
+        if not isinstance(models, list):
+            raise BallSstBuildError("models/MANIFEST.json requires models list")
+        matches = [row for row in models if isinstance(row, Mapping) and row.get("id") == PRODUCTION_WASB_MODEL_ID]
+        if len(matches) != 1:
+            raise BallSstBuildError(f"models/MANIFEST.json must contain one {PRODUCTION_WASB_MODEL_ID}")
+        manifest_identity = matches[0]
+        if manifest_identity.get("local_path") != str(PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH):
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint path differs from frozen code identity")
+        if manifest_identity.get("sha256") != PRODUCTION_WASB_CHECKPOINT_SHA256:
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint SHA differs from frozen code identity")
+        if manifest_identity.get("repo_commit") != PRODUCTION_WASB_REPO_COMMIT:
+            raise BallSstBuildError("models/MANIFEST.json WASB repo commit differs from frozen code identity")
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(f"missing WASB checkpoint: {checkpoint_path}")
+        if not repo_path.is_dir():
+            raise FileNotFoundError(f"missing WASB repo: {repo_path}")
+        checkpoint_resolved = checkpoint_path.resolve(strict=True)
+        repo_resolved = repo_path.resolve(strict=True)
+        checkpoint_sha256 = _sha256_file(checkpoint_resolved)
+        repo_commit = _git_output(repo_resolved, "rev-parse", "HEAD")
+        repo_status = _git_output(repo_resolved, "status", "--porcelain", "--untracked-files=all")
+        expected_checkpoint = (ROOT / PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH).resolve(strict=True)
+        expected_repo = (ROOT / PRODUCTION_WASB_REPO_RELATIVE_PATH).resolve(strict=True)
+        production_identity_verified = (
+            checkpoint_path.absolute() == expected_checkpoint
+            and checkpoint_resolved == expected_checkpoint
+            and checkpoint_sha256 == PRODUCTION_WASB_CHECKPOINT_SHA256
+            and repo_path.absolute() == expected_repo
+            and repo_resolved == expected_repo
+            and repo_commit == PRODUCTION_WASB_REPO_COMMIT
+            and repo_status == ""
+        )
+        if require_production_identity and not production_identity_verified:
+>           raise BallSstBuildError(
+                "production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, "
+                "canonical WASB repo path, pinned repo commit, and a clean repo"
+            )
+E           scripts.racketsport.build_pbvision_ball_sst.BallSstBuildError: production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, canonical WASB repo path, pinned repo commit, and a clean repo
+
+scripts/racketsport/build_pbvision_ball_sst.py:3318: BallSstBuildError
+____ test_production_artifact_verifier_rederives_rows_from_hashed_evidence _____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_production_artifact_verif1')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x143f2cd00>
+
+    def test_production_artifact_verifier_rederives_rows_from_hashed_evidence(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+    
+        video_id = builder.TRAIN_IDS[0]
+        gallery = tmp_path / "gallery"
+        media_root = tmp_path / "media"
+        source_dir = gallery / video_id
+        source_dir.mkdir(parents=True)
+        source_media = media_root / video_id / "max.mp4"
+        source_media.parent.mkdir(parents=True)
+        source_media.write_bytes(b"bound-media-fixture")
+        monkeypatch.setitem(
+            builder.EXPECTED_SOURCE_VIDEO_SHA256,
+            video_id,
+            builder._sha256_file(source_media),
+        )
+        monkeypatch.setattr(builder, "FROZEN_GALLERY_RELATIVE_PATH", gallery)
+    
+        cv_export = {
+            "camera": {"fps": 30.0},
+            "sessions": [
+                {
+                    "rallies": [
+                        {
+                            "frame_index": 0,
+                            "frames": [
+                                {},
+                                {
+                                    "actions": {
+                                        "ball": {
+                                            "u": 0.5,
+                                            "v": 0.5,
+                                            "confidence": 0.95,
+                                        }
+                                    }
+                                },
+                                {},
+                                {},
+                                {},
+                            ],
+                        }
+                    ]
+                }
+            ],
+        }
+        metadata = {"metadata": {"width": 64, "height": 48, "fps": 30.0}}
+        provenance = {
+            "video_id": video_id,
+            "source_video_url": f"https://storage.googleapis.com/pbv-pro/{video_id}/max.mp4",
+        }
+        cv_export_path = source_dir / "cv_export.json"
+        metadata_path = source_dir / "api_get_metadata.json"
+        provenance_path = source_dir / "video_provenance.json"
+        builder._write_json(cv_export_path, cv_export)
+        builder._write_json(metadata_path, metadata)
+        builder._write_json(provenance_path, provenance)
+        monkeypatch.setitem(
+            builder.PRODUCTION_GALLERY_ARTIFACT_SHA256,
+            video_id,
+            {
+                "cv_export.json": builder._sha256_file(cv_export_path),
+                "api_get_metadata.json": builder._sha256_file(metadata_path),
+                "video_provenance.json": builder._sha256_file(provenance_path),
+            },
+        )
+    
+        split = tmp_path / "split.json"
+        builder._write_json(split, _frozen_split_payload())
+        monkeypatch.setattr(builder, "FROZEN_SPLIT_RELATIVE_PATH", split)
+        monkeypatch.setattr(builder, "FROZEN_SPLIT_SHA256", builder._sha256_file(split))
+    
+        timing = builder.MediaTiming(
+            fps=30.0,
+            duration_s=5.0 / 30.0,
+            pts_s=tuple(index / 30.0 for index in range(5)),
+            width=64,
+            height=48,
+        )
+        monkeypatch.setattr(builder, "probe_media_pts", lambda *_args, **_kwargs: timing)
+        dependency_dir = tmp_path / "dependencies" / video_id
+        frame_times_path = dependency_dir / "frame_times.json"
+        wasb_track_path = dependency_dir / "wasb_ball_track.json"
+        wasb_metadata_path = dependency_dir / "wasb_ball_track_metadata.json"
+        wasb_csv_path = dependency_dir / "wasb_predictions.csv"
+        builder._write_json(
+            frame_times_path,
+            builder._frame_times_payload(
+                timing,
+                media_sha256=builder.EXPECTED_SOURCE_VIDEO_SHA256[video_id],
+            ),
+        )
+        retained_csv_bytes = (
+            "Frame,Visibility,X,Y,Confidence\n"
+            "0,0,0.0,0.0,0.0\n"
+            "1,1,32.0,24.0,0.96\n"
+            "2,0,0.0,0.0,0.0\n"
+            "3,0,0.0,0.0,0.0\n"
+            "4,0,0.0,0.0,0.0\n"
+        ).encode("utf-8")
+        wasb_csv_path.write_bytes(retained_csv_bytes)
+        wasb_track = builder.wasb_csv_to_ball_track(
+            wasb_csv_path,
+            fps=timing.fps,
+            frame_times=frame_times_path,
+            visible_threshold=0.90,
+            input_preprocessing="official",
+        )
+        builder._write_json(wasb_track_path, wasb_track)
+    
+>       wasb_identity = builder._resolve_wasb_identity(
+            checkpoint_path=Path("models/checkpoints/wasb/wasb_tennis_best.pth.tar"),
+            repo_path=Path("third_party/WASB-SBDT"),
+            require_production_identity=True,
+        )
+
+tests/racketsport/test_build_pbvision_ball_sst.py:759: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+checkpoint_path = PosixPath('models/checkpoints/wasb/wasb_tennis_best.pth.tar')
+repo_path = PosixPath('third_party/WASB-SBDT')
+require_production_identity = True
+
+    def _resolve_wasb_identity(
+        *,
+        checkpoint_path: Path,
+        repo_path: Path,
+        require_production_identity: bool,
+    ) -> dict[str, Any]:
+        models_manifest_path = (ROOT / "models/MANIFEST.json").resolve(strict=True)
+        models_manifest = _read_json(models_manifest_path)
+        models = models_manifest.get("models")
+        if not isinstance(models, list):
+            raise BallSstBuildError("models/MANIFEST.json requires models list")
+        matches = [row for row in models if isinstance(row, Mapping) and row.get("id") == PRODUCTION_WASB_MODEL_ID]
+        if len(matches) != 1:
+            raise BallSstBuildError(f"models/MANIFEST.json must contain one {PRODUCTION_WASB_MODEL_ID}")
+        manifest_identity = matches[0]
+        if manifest_identity.get("local_path") != str(PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH):
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint path differs from frozen code identity")
+        if manifest_identity.get("sha256") != PRODUCTION_WASB_CHECKPOINT_SHA256:
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint SHA differs from frozen code identity")
+        if manifest_identity.get("repo_commit") != PRODUCTION_WASB_REPO_COMMIT:
+            raise BallSstBuildError("models/MANIFEST.json WASB repo commit differs from frozen code identity")
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(f"missing WASB checkpoint: {checkpoint_path}")
+        if not repo_path.is_dir():
+            raise FileNotFoundError(f"missing WASB repo: {repo_path}")
+        checkpoint_resolved = checkpoint_path.resolve(strict=True)
+        repo_resolved = repo_path.resolve(strict=True)
+        checkpoint_sha256 = _sha256_file(checkpoint_resolved)
+        repo_commit = _git_output(repo_resolved, "rev-parse", "HEAD")
+        repo_status = _git_output(repo_resolved, "status", "--porcelain", "--untracked-files=all")
+        expected_checkpoint = (ROOT / PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH).resolve(strict=True)
+        expected_repo = (ROOT / PRODUCTION_WASB_REPO_RELATIVE_PATH).resolve(strict=True)
+        production_identity_verified = (
+            checkpoint_path.absolute() == expected_checkpoint
+            and checkpoint_resolved == expected_checkpoint
+            and checkpoint_sha256 == PRODUCTION_WASB_CHECKPOINT_SHA256
+            and repo_path.absolute() == expected_repo
+            and repo_resolved == expected_repo
+            and repo_commit == PRODUCTION_WASB_REPO_COMMIT
+            and repo_status == ""
+        )
+        if require_production_identity and not production_identity_verified:
+>           raise BallSstBuildError(
+                "production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, "
+                "canonical WASB repo path, pinned repo commit, and a clean repo"
+            )
+E           scripts.racketsport.build_pbvision_ball_sst.BallSstBuildError: production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, canonical WASB repo path, pinned repo commit, and a clean repo
+
+scripts/racketsport/build_pbvision_ball_sst.py:3318: BallSstBuildError
+_____ test_assemble_revalidates_claimed_counts_and_cannot_pass_fabrication _____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_assemble_revalidates_clai0')
+
+    def test_assemble_revalidates_claimed_counts_and_cannot_pass_fabrication(tmp_path: Path) -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+    
+>       builder_identity, wasb_identity, dependencies = _identity_context(builder)
+                                                        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_build_pbvision_ball_sst.py:1165: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_build_pbvision_ball_sst.py:2098: in _identity_context
+    wasb_identity = builder._resolve_wasb_identity(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+checkpoint_path = PosixPath('models/checkpoints/wasb/wasb_tennis_best.pth.tar')
+repo_path = PosixPath('third_party/WASB-SBDT')
+require_production_identity = True
+
+    def _resolve_wasb_identity(
+        *,
+        checkpoint_path: Path,
+        repo_path: Path,
+        require_production_identity: bool,
+    ) -> dict[str, Any]:
+        models_manifest_path = (ROOT / "models/MANIFEST.json").resolve(strict=True)
+        models_manifest = _read_json(models_manifest_path)
+        models = models_manifest.get("models")
+        if not isinstance(models, list):
+            raise BallSstBuildError("models/MANIFEST.json requires models list")
+        matches = [row for row in models if isinstance(row, Mapping) and row.get("id") == PRODUCTION_WASB_MODEL_ID]
+        if len(matches) != 1:
+            raise BallSstBuildError(f"models/MANIFEST.json must contain one {PRODUCTION_WASB_MODEL_ID}")
+        manifest_identity = matches[0]
+        if manifest_identity.get("local_path") != str(PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH):
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint path differs from frozen code identity")
+        if manifest_identity.get("sha256") != PRODUCTION_WASB_CHECKPOINT_SHA256:
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint SHA differs from frozen code identity")
+        if manifest_identity.get("repo_commit") != PRODUCTION_WASB_REPO_COMMIT:
+            raise BallSstBuildError("models/MANIFEST.json WASB repo commit differs from frozen code identity")
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(f"missing WASB checkpoint: {checkpoint_path}")
+        if not repo_path.is_dir():
+            raise FileNotFoundError(f"missing WASB repo: {repo_path}")
+        checkpoint_resolved = checkpoint_path.resolve(strict=True)
+        repo_resolved = repo_path.resolve(strict=True)
+        checkpoint_sha256 = _sha256_file(checkpoint_resolved)
+        repo_commit = _git_output(repo_resolved, "rev-parse", "HEAD")
+        repo_status = _git_output(repo_resolved, "status", "--porcelain", "--untracked-files=all")
+        expected_checkpoint = (ROOT / PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH).resolve(strict=True)
+        expected_repo = (ROOT / PRODUCTION_WASB_REPO_RELATIVE_PATH).resolve(strict=True)
+        production_identity_verified = (
+            checkpoint_path.absolute() == expected_checkpoint
+            and checkpoint_resolved == expected_checkpoint
+            and checkpoint_sha256 == PRODUCTION_WASB_CHECKPOINT_SHA256
+            and repo_path.absolute() == expected_repo
+            and repo_resolved == expected_repo
+            and repo_commit == PRODUCTION_WASB_REPO_COMMIT
+            and repo_status == ""
+        )
+        if require_production_identity and not production_identity_verified:
+>           raise BallSstBuildError(
+                "production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, "
+                "canonical WASB repo path, pinned repo commit, and a clean repo"
+            )
+E           scripts.racketsport.build_pbvision_ball_sst.BallSstBuildError: production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, canonical WASB repo path, pinned repo commit, and a clean repo
+
+scripts/racketsport/build_pbvision_ball_sst.py:3318: BallSstBuildError
+_____________ test_emitted_sample_manifest_satisfies_stage2_schema _____________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_emitted_sample_manifest_s0')
+
+    def test_emitted_sample_manifest_satisfies_stage2_schema(tmp_path: Path) -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+        from threed.racketsport.ball_sst_dataset import iter_sst_manifest_samples, load_sst_manifest
+    
+        video_id = _train_ids()[0]
+        builder_identity = builder._builder_identity()
+>       wasb_identity = builder._resolve_wasb_identity(
+            checkpoint_path=Path("models/checkpoints/wasb/wasb_tennis_best.pth.tar"),
+            repo_path=Path("third_party/WASB-SBDT"),
+            require_production_identity=True,
+        )
+
+tests/racketsport/test_build_pbvision_ball_sst.py:1203: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+checkpoint_path = PosixPath('models/checkpoints/wasb/wasb_tennis_best.pth.tar')
+repo_path = PosixPath('third_party/WASB-SBDT')
+require_production_identity = True
+
+    def _resolve_wasb_identity(
+        *,
+        checkpoint_path: Path,
+        repo_path: Path,
+        require_production_identity: bool,
+    ) -> dict[str, Any]:
+        models_manifest_path = (ROOT / "models/MANIFEST.json").resolve(strict=True)
+        models_manifest = _read_json(models_manifest_path)
+        models = models_manifest.get("models")
+        if not isinstance(models, list):
+            raise BallSstBuildError("models/MANIFEST.json requires models list")
+        matches = [row for row in models if isinstance(row, Mapping) and row.get("id") == PRODUCTION_WASB_MODEL_ID]
+        if len(matches) != 1:
+            raise BallSstBuildError(f"models/MANIFEST.json must contain one {PRODUCTION_WASB_MODEL_ID}")
+        manifest_identity = matches[0]
+        if manifest_identity.get("local_path") != str(PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH):
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint path differs from frozen code identity")
+        if manifest_identity.get("sha256") != PRODUCTION_WASB_CHECKPOINT_SHA256:
+            raise BallSstBuildError("models/MANIFEST.json WASB checkpoint SHA differs from frozen code identity")
+        if manifest_identity.get("repo_commit") != PRODUCTION_WASB_REPO_COMMIT:
+            raise BallSstBuildError("models/MANIFEST.json WASB repo commit differs from frozen code identity")
+        if not checkpoint_path.is_file():
+            raise FileNotFoundError(f"missing WASB checkpoint: {checkpoint_path}")
+        if not repo_path.is_dir():
+            raise FileNotFoundError(f"missing WASB repo: {repo_path}")
+        checkpoint_resolved = checkpoint_path.resolve(strict=True)
+        repo_resolved = repo_path.resolve(strict=True)
+        checkpoint_sha256 = _sha256_file(checkpoint_resolved)
+        repo_commit = _git_output(repo_resolved, "rev-parse", "HEAD")
+        repo_status = _git_output(repo_resolved, "status", "--porcelain", "--untracked-files=all")
+        expected_checkpoint = (ROOT / PRODUCTION_WASB_CHECKPOINT_RELATIVE_PATH).resolve(strict=True)
+        expected_repo = (ROOT / PRODUCTION_WASB_REPO_RELATIVE_PATH).resolve(strict=True)
+        production_identity_verified = (
+            checkpoint_path.absolute() == expected_checkpoint
+            and checkpoint_resolved == expected_checkpoint
+            and checkpoint_sha256 == PRODUCTION_WASB_CHECKPOINT_SHA256
+            and repo_path.absolute() == expected_repo
+            and repo_resolved == expected_repo
+            and repo_commit == PRODUCTION_WASB_REPO_COMMIT
+            and repo_status == ""
+        )
+        if require_production_identity and not production_identity_verified:
+>           raise BallSstBuildError(
+                "production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, "
+                "canonical WASB repo path, pinned repo commit, and a clean repo"
+            )
+E           scripts.racketsport.build_pbvision_ball_sst.BallSstBuildError: production mode requires the canonical models/MANIFEST.json WASB checkpoint SHA, canonical WASB repo path, pinned repo commit, and a clean repo
+
+scripts/racketsport/build_pbvision_ball_sst.py:3318: BallSstBuildError
+________ test_resume_off_manifest_is_byte_identical_to_prepatch_builder ________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_resume_off_manifest_is_by0')
+
+    def test_resume_off_manifest_is_byte_identical_to_prepatch_builder(
+        tmp_path: Path,
+    ) -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+    
+>       head_builder = _load_prepatch_builder(tmp_path)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_build_pbvision_ball_sst.py:1294: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_build_pbvision_ball_sst.py:2147: in _load_prepatch_builder
+    source = subprocess.run(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = None, check = True
+popenargs = (['git', 'show', '4c27023f686dd61200cf0394a8d900510596c8b0:scripts/racketsport/build_pbvision_ball_sst.py'],)
+kwargs = {'stdout': -1, 'stderr': -1}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout (seconds) is given and the process takes too long,
+         a TimeoutExpired exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'show', '4c27023f686dd61200cf0394a8d900510596c8b0:scripts/racketsport/build_pbvision_ball_sst.py']' returned non-zero exit status 128.
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/subprocess.py:578: CalledProcessError
+__ test_real_production_dependency_copies_fail_closed_on_unbound_fifth_source __
+
+    def test_real_production_dependency_copies_fail_closed_on_unbound_fifth_source() -> None:
+        from scripts.racketsport import build_pbvision_ball_sst as builder
+    
+        dependency_root = Path(
+            "runs/lanes/ball_b2_seed1_20260722/vm_pull/"
+            "ball_data_regroup_20260722_partial/pbv_ball_sst_dependencies"
+        )
+>       assert sorted(path.name for path in dependency_root.iterdir()) == [
+                                            ^^^^^^^^^^^^^^^^^^^^^^^^^
+            "143sf3gdwxsa",
+            "98z43hspqz13",
+            "bewqc0glhgpq",
+            "st0epgnab7dr",
+            "td2szayjwtrj",
+        ]
+
+tests/racketsport/test_build_pbvision_ball_sst.py:1331: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('runs/lanes/ball_b2_seed1_20260722/vm_pull/ball_data_regroup_20260722_partial/pbv_ball_sst_dependencies')
+
+    def iterdir(self):
+        """Yield path objects of the directory contents.
+    
+        The children are yielded in arbitrary order, and the
+        special entries '.' and '..' are not included.
+        """
+        root_dir = str(self)
+>       with os.scandir(root_dir) as scandir_it:
+             ^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'runs/lanes/ball_b2_seed1_20260722/vm_pull/ball_data_regroup_20260722_partial/pbv_ball_sst_dependencies'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:836: FileNotFoundError
+_ test_quarantine_regenerated_owner_artifacts_contain_no_denied_source_identity _
+
+    def test_quarantine_regenerated_owner_artifacts_contain_no_denied_source_identity() -> None:
+        lane = ROOT / "runs/lanes/trkC_fewshot_pack_20260722"
+        regenerated_text = "\n".join(
+            [
+>               (lane / "review/START_HERE.html").read_text(encoding="utf-8"),
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                (lane / "review/index.html").read_text(encoding="utf-8"),
+                (lane / "OWNER_ASK.md").read_text(encoding="utf-8"),
+            ]
+        )
+
+tests/racketsport/test_build_person_fewshot_pack.py:152: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/trkC_fewshot_pack_20260722/review/START_HERE.html')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/trkC_fewshot_pack_20260722/review/START_HERE.html'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+____ test_real_assignment_passes_person_p1_and_person_mixed_alias_taxonomy _____
+
+    def test_real_assignment_passes_person_p1_and_person_mixed_alias_taxonomy() -> None:
+        lane = ROOT / "runs/lanes/trkC_fewshot_pack_20260722"
+>       manifest = pack._load_json(lane / "pack_manifest.json")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_build_person_fewshot_pack.py:234: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/build_person_fewshot_pack.py:183: in _load_json
+    with path.open("r", encoding="utf-8") as handle:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/trkC_fewshot_pack_20260722/pack_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/trkC_fewshot_pack_20260722/pack_manifest.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+___________ test_same_seed_writes_byte_identical_plan_and_partition ____________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_same_seed_writes_byte_ide0')
+
+    def test_same_seed_writes_byte_identical_plan_and_partition(tmp_path: Path) -> None:
+        checkpoint = tmp_path / "teacher.pt"
+        checkpoint.write_bytes(b"teacher")
+        sources = _sources(15)
+        first = tmp_path / "first"
+        second = tmp_path / "second"
+>       pack.write_plan(
+            out_dir=first,
+            sources=sources,
+            teacher=_teacher(checkpoint),
+            local_media=_local_media(sources),
+            seed=20260722,
+        )
+
+tests/racketsport/test_build_person_fewshot_pack.py:282: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/build_person_fewshot_pack.py:934: in write_plan
+    venue_aliases = load_person_family_alias_taxonomy(
+scripts/racketsport/build_person_fewshot_pack.py:246: in load_person_family_alias_taxonomy
+    p1_manifest = _load_json(person_p1_manifest_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/build_person_fewshot_pack.py:183: in _load_json
+    with path.open("r", encoding="utf-8") as handle:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+____ test_materialize_writes_separate_prelabels_offline_html_and_cvat_jobs _____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_materialize_writes_separa0')
+
+    def test_materialize_writes_separate_prelabels_offline_html_and_cvat_jobs(tmp_path: Path) -> None:
+        video = tmp_path / "venue.avi"
+        _write_test_video(video)
+        checkpoint = tmp_path / "yolo26m.pt"
+        checkpoint.write_bytes(b"fixture-checkpoint")
+        sources = _sources(10, frame_count=120, media_sha256=_sha256(video))
+        out = tmp_path / "pack"
+        teacher = _teacher(checkpoint)
+>       pack.write_plan(
+            out_dir=out,
+            sources=sources,
+            teacher=teacher,
+            local_media=_local_media(sources),
+        )
+
+tests/racketsport/test_build_person_fewshot_pack.py:401: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/build_person_fewshot_pack.py:934: in write_plan
+    venue_aliases = load_person_family_alias_taxonomy(
+scripts/racketsport/build_person_fewshot_pack.py:246: in load_person_family_alias_taxonomy
+    p1_manifest = _load_json(person_p1_manifest_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/build_person_fewshot_pack.py:183: in _load_json
+    with path.open("r", encoding="utf-8") as handle:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+__ TestEmittedReviewJavaScriptRuntime.test_regenerated_start_here_node_check ___
+
+self = <test_build_person_fewshot_pack.TestEmittedReviewJavaScriptRuntime object at 0x130061810>
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_regenerated_start_here_no0')
+
+    def test_regenerated_start_here_node_check(self, tmp_path: Path) -> None:
+        node = shutil.which("node")
+        assert node is not None, "node is required for the emitted-page runtime regression"
+        review = (
+            ROOT / "runs/lanes/trkC_fewshot_pack_20260722/review/START_HERE.html"
+>       ).read_text(encoding="utf-8")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_build_person_fewshot_pack.py:561: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/trkC_fewshot_pack_20260722/review/START_HERE.html')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/trkC_fewshot_pack_20260722/review/START_HERE.html'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_ TestEmittedReviewJavaScriptRuntime.test_node_vm_compiles_and_executes_keymap_autoadvance_storage_and_export _
+
+self = <test_build_person_fewshot_pack.TestEmittedReviewJavaScriptRuntime object at 0x12ff22d50>
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_node_vm_compiles_and_exec0')
+
+    def test_node_vm_compiles_and_executes_keymap_autoadvance_storage_and_export(
+        self,
+        tmp_path: Path,
+    ) -> None:
+        node = shutil.which("node")
+        assert node is not None, "node is required for the emitted-page runtime regression"
+>       review_path = _emit_runtime_review_fixture(tmp_path)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_build_person_fewshot_pack.py:589: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_build_person_fewshot_pack.py:502: in _emit_runtime_review_fixture
+    pack.write_plan(
+scripts/racketsport/build_person_fewshot_pack.py:934: in write_plan
+    venue_aliases = load_person_family_alias_taxonomy(
+scripts/racketsport/build_person_fewshot_pack.py:246: in load_person_family_alias_taxonomy
+    p1_manifest = _load_json(person_p1_manifest_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/build_person_fewshot_pack.py:183: in _load_json
+    with path.open("r", encoding="utf-8") as handle:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_ test_regeneration_refuses_nonempty_verified_labels_and_force_backs_up_first __
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_regeneration_refuses_none0')
+
+    def test_regeneration_refuses_nonempty_verified_labels_and_force_backs_up_first(
+        tmp_path: Path,
+    ) -> None:
+        sources = _sources(10)
+        checkpoint = tmp_path / "teacher.pt"
+        checkpoint.write_bytes(b"teacher")
+        out = tmp_path / "pack"
+>       pack.write_plan(
+            out_dir=out,
+            sources=sources,
+            teacher=_teacher(checkpoint),
+            local_media=_local_media(sources),
+        )
+
+tests/racketsport/test_build_person_fewshot_pack.py:745: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/build_person_fewshot_pack.py:934: in write_plan
+    venue_aliases = load_person_family_alias_taxonomy(
+scripts/racketsport/build_person_fewshot_pack.py:246: in load_person_family_alias_taxonomy
+    p1_manifest = _load_json(person_p1_manifest_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/build_person_fewshot_pack.py:183: in _load_json
+    with path.open("r", encoding="utf-8") as handle:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+____ test_repeated_force_backup_excludes_prior_backups_from_live_label_scan ____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_repeated_force_backup_exc0')
+
+    def test_repeated_force_backup_excludes_prior_backups_from_live_label_scan(
+        tmp_path: Path,
+    ) -> None:
+        sources = _sources(10)
+        checkpoint = tmp_path / "teacher.pt"
+        checkpoint.write_bytes(b"teacher")
+        out = tmp_path / "pack"
+>       pack.write_plan(
+            out_dir=out,
+            sources=sources,
+            teacher=_teacher(checkpoint),
+            local_media=_local_media(sources),
+        )
+
+tests/racketsport/test_build_person_fewshot_pack.py:773: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/build_person_fewshot_pack.py:934: in write_plan
+    venue_aliases = load_person_family_alias_taxonomy(
+scripts/racketsport/build_person_fewshot_pack.py:246: in load_person_family_alias_taxonomy
+    p1_manifest = _load_json(person_p1_manifest_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/build_person_fewshot_pack.py:183: in _load_json
+    with path.open("r", encoding="utf-8") as handle:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_______ test_fix1_report_correction_records_the_honest_attribution_split _______
+
+    def test_fix1_report_correction_records_the_honest_attribution_split() -> None:
+        correction = (
+            ROOT / "runs/lanes/trkC_fewshot_pack_fix1_20260722/report_correction.md"
+>       ).read_text(encoding="utf-8")
+          ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_build_person_fewshot_pack.py:845: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:787: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors, newline=newline) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/trkC_fewshot_pack_fix1_20260722/report_correction.md')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/trkC_fewshot_pack_fix1_20260722/report_correction.md'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+____ test_review_answer_contract_embedded_mapping_never_auto_verifies_2_3_4 ____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_review_answer_contract_em0')
+
+    def test_review_answer_contract_embedded_mapping_never_auto_verifies_2_3_4(
+        tmp_path: Path,
+    ) -> None:
+        sources = _sources(10)
+        checkpoint = tmp_path / "teacher.pt"
+        checkpoint.write_bytes(b"teacher")
+        out = tmp_path / "pack"
+>       pack.write_plan(
+            out_dir=out,
+            sources=sources,
+            teacher=_teacher(checkpoint),
+            local_media=_local_media(sources),
+        )
+
+tests/racketsport/test_build_person_fewshot_pack.py:860: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/build_person_fewshot_pack.py:934: in write_plan
+    venue_aliases = load_person_family_alias_taxonomy(
+scripts/racketsport/build_person_fewshot_pack.py:246: in load_person_family_alias_taxonomy
+    p1_manifest = _load_json(person_p1_manifest_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+scripts/racketsport/build_person_fewshot_pack.py:183: in _load_json
+    with path.open("r", encoding="utf-8") as handle:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/person_p1_roboflow_20260721/roboflow_person/dataset_manifest.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_______ test_compare_img1605_partial_labels_rejects_current_bad_proposal _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_compare_img1605_partial_l0')
+
+    def test_compare_img1605_partial_labels_rejects_current_bad_proposal(tmp_path):
+>       progress = json.loads(open(IMG1605_PROGRESS, encoding="utf-8").read())
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json'
+
+tests/racketsport/test_compare_court_proposals.py:107: FileNotFoundError
+____________ test_frozen_wolverine_court_projection_seams_are_exact ____________
+
+    def test_frozen_wolverine_court_projection_seams_are_exact() -> None:
+>       calibration = CourtCalibration.model_validate(_load("court_calibration.json"))
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_coords_parity_real_fixture.py:53: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_coords_parity_real_fixture.py:43: in _load
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == _FIXTURE_SHA256[name]
+                          ^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_______ test_frozen_wolverine_paddle_detector_projection_route_is_exact ________
+
+    def test_frozen_wolverine_paddle_detector_projection_route_is_exact() -> None:
+>       calibration = CourtCalibration.model_validate(_load("court_calibration.json"))
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_coords_parity_real_fixture.py:82: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_coords_parity_real_fixture.py:43: in _load
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == _FIXTURE_SHA256[name]
+                          ^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+________ test_frozen_wolverine_person_bottom_center_projection_is_exact ________
+
+    def test_frozen_wolverine_person_bottom_center_projection_is_exact() -> None:
+>       calibration = CourtCalibration.model_validate(_load("court_calibration.json"))
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_coords_parity_real_fixture.py:99: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_coords_parity_real_fixture.py:43: in _load
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == _FIXTURE_SHA256[name]
+                          ^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+__________ test_frozen_wolverine_paddle_raw_numeric_payload_is_exact ___________
+
+    def test_frozen_wolverine_paddle_raw_numeric_payload_is_exact() -> None:
+>       skeleton = _load("skeleton3d.json")
+                   ^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_coords_parity_real_fixture.py:112: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_coords_parity_real_fixture.py:43: in _load
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == _FIXTURE_SHA256[name]
+                          ^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/skeleton3d.json')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/skeleton3d.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_______ test_frozen_wolverine_placement_stage_projection_is_byte_stable ________
+
+    def test_frozen_wolverine_placement_stage_projection_is_byte_stable() -> None:
+>       calibration = CourtCalibration.model_validate(_load("court_calibration.json"))
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_coords_parity_real_fixture.py:140: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_coords_parity_real_fixture.py:43: in _load
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == _FIXTURE_SHA256[name]
+                          ^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_____ test_frozen_wolverine_ball_filter_and_arc_projection_are_byte_stable _____
+
+    def test_frozen_wolverine_ball_filter_and_arc_projection_are_byte_stable() -> None:
+>       calibration = CourtCalibration.model_validate(_load("court_calibration.json"))
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_coords_parity_real_fixture.py:176: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_coords_parity_real_fixture.py:43: in _load
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == _FIXTURE_SHA256[name]
+                          ^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+_______ test_frozen_wolverine_inout_pose_and_world_ball_are_byte_stable ________
+
+    def test_frozen_wolverine_inout_pose_and_world_ball_are_byte_stable() -> None:
+>       calibration = CourtCalibration.model_validate(_load("court_calibration.json"))
+                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_coords_parity_real_fixture.py:207: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_coords_parity_real_fixture.py:43: in _load
+    assert hashlib.sha256(path.read_bytes()).hexdigest() == _FIXTURE_SHA256[name]
+                          ^^^^^^^^^^^^^^^^^
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:777: in read_bytes
+    with self.open(mode='rb', buffering=0) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json')
+mode = 'rb', buffering = 0, encoding = None, errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed to by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-after-20260724/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner/court_calibration.json'
+
+/opt/homebrew/Cellar/python@3.14/3.14.6/Frameworks/Python.framework/Versions/3.14/lib/python3.14/pathlib/__init__.py:771: FileNotFoundError
+__________ test_run_court_detector_v2_img1605_writes_blocked_proposal __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_run_court_detector_v2_img0')
+
+    def test_run_court_detector_v2_img1605_writes_blocked_proposal(tmp_path: Path) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/racketsport/run_court_detector_v2.py",
+                "--input",
+                "runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/"
+                "owner_IMG_1605_8a193402780b/frame_000151.jpg",
+                "--clip-id",
+                "owner_IMG_1605_8a193402780b",
+                "--out-dir",
+                str(tmp_path),
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: ERROR: court detector v2 failed: input does not exist: runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/owner_IMG_1605_8a193402780b/frame_000151.jpg
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python', 'scripts/racketsport/run_court_detec...t: runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/owner_IMG_1605_8a193402780b/frame_000151.jpg\n').returncode
+
+tests/racketsport/test_court_detector_v2_eval.py:27: AssertionError
+_____________ test_detector_v2_eval_includes_img1605_partial_clip ______________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1145/test_detector_v2_eval_includes0')
+
+    def test_detector_v2_eval_includes_img1605_partial_clip(tmp_path: Path) -> None:
+        out = tmp_path / "court_detector_v2_eval.json"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/racketsport/evaluate_court_detector_v2.py",
+                "--eval-root",
+                "eval_clips/ball",
+                "--include-partial",
+                "owner_IMG_1605_8a193402780b",
+                "--out",
+                str(out),
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: [ WARN:0@0.041] global loadsave.cpp:278 findDecoder imread_('eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames/frame_000060.jpg'): can't open/read file: check file path/integrity
+E         ERROR: court detector v2 eval failed: failed to read image: eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames/frame_000060.jpg
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python', 'scripts/racketsport/evaluate_court_...ed to read image: eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames/frame_000060.jpg\n").returncode
+
+tests/racketsport/test_court_detector_v2_eval.py:54: AssertionError
+___________ test_img1605_net_evidence_is_anchor_not_floor_homography ___________
+
+    def test_img1605_net_evidence_is_anchor_not_floor_homography() -> None:
+        frame = cv2.imread(
+            "runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/"
+            "owner_IMG_1605_8a193402780b/frame_000151.jpg"
+        )
+>       assert frame is not None
+E       assert None is not None
+
+tests/racketsport/test_court_detector_v2_net.py:13: AssertionError
+----------------------------- Captured stderr call -----------------------------
+[ WARN:0@449.644] global loadsave.cpp:278 findDecoder imread_('runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/owner_IMG_1605_8a193402780b/frame_000151.jpg'): can't open/read file: check file path/integrity
+=============================== warnings summary ===============================
+tests/racketsport/test_body_mesh_index.py:304
+  /private/tmp/pb-after-20260724/tests/racketsport/test_body_mesh_index.py:304: PytestUnknownMarkWarning: Unknown pytest.mark.slow - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.slow
+
+../../../Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torchreid/reid/metrics/rank.py:11
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torchreid/reid/metrics/rank.py:11: UserWarning: Cython evaluation (very fast so highly recommended) is unavailable, now use python evaluation.
+    warnings.warn(
+
+../../../Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/racketsport/test_body_runner_real_path.py::test_body_runner_leaves_missing_outputs_when_fast_sam_runtime_is_unavailable
+  /private/tmp/pb-after-20260724/threed/racketsport/orchestrator.py:3064: RuntimeWarning: FAST_SAM_PYTHON is unset; BODY is degrading from the batched FastSam3DBodySubprocessRuntime path to the in-process per-frame FastSam3DBodyRuntime path
+    result = runner.run(context)
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_trace.py:1000: DeprecationWarning: `torch.jit.trace` is not supported in Python 3.14+ and may break. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_trace.py:1139: DeprecationWarning: `torch.jit.trace_method` is not supported in Python 3.14+ and may break. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+tests/racketsport/test_court_finding_technology_benchmark.py::test_pretrained_shadow_removed_hough_runs_torchscript_model
+  /Users/arnavchokshi/Desktop/pickleball/.venv/lib/python3.14/site-packages/torch/jit/_serialization.py:170: DeprecationWarning: `torch.jit.load` is not supported in Python 3.14+ and may break. Please switch to `torch.export`.
+    warnings.warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/racketsport/test_attribute_body_decode_residual.py::test_banked_fixture_grounding_and_disabled_replay_pass_frozen_limits
+FAILED tests/racketsport/test_attribute_body_decode_residual.py::test_incoherent_body_mesh_pairing_writes_evidence_and_exits_nonzero
+FAILED tests/racketsport/test_attribute_body_decode_residual.py::test_allow_incoherent_inputs_stamps_every_computed_result_block
+FAILED tests/racketsport/test_ball_arc_chain.py::test_default_chain_config_matches_frozen_row22_manifest
+FAILED tests/racketsport/test_ball_loso_validation.py::test_live_b0_split_scores_final_labels_and_binds_prediction_media
+FAILED tests/racketsport/test_ball_loso_validation.py::test_live_b0_split_refuses_same_hyu_prediction_reused_for_ezz
+FAILED tests/racketsport/test_ball_stage2_training.py::test_revision_explicit_harness_loads_pinned_git_source_and_records_exact_compute
+FAILED tests/racketsport/test_ball_stage2_training.py::test_revision_explicit_parity_rejects_hash_mismatch_and_candidate_versus_itself
+FAILED tests/racketsport/test_ball_stage2_training.py::test_production_parity_refuses_when_requested_cuda_is_unavailable
+FAILED tests/racketsport/test_ball_stage2_training.py::test_frozen_b0_media_inventory_is_exact_and_symlink_roots_are_refused
+FAILED tests/racketsport/test_ball_stage2_training.py::test_generic_cvat_loader_refuses_renamed_ezz_judge_row_by_media_content_sha
+FAILED tests/racketsport/test_ball_stage2_training.py::test_production_training_and_parity_refuse_image_path_rewrites_before_execution
+FAILED tests/racketsport/test_ball_stage2_training.py::test_failed_gate_sst_fixture_and_sst_only_invocation_are_refused
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_trust_boundary_recounts_and_refuses_forged_row_authority_hashes_and_bounds
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_rejects_semantic_metadata_forgery_after_all_dependent_hashes_are_recomputed
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_rejects_invalid_prediction_csv_with_self_consistent_hashes_and_replay_proof
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_rejects_replay_mismatch_adapter_forgery_and_symlink_dependency_root
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_rejects_monotonic_rehashed_pts_that_differ_from_encoded_media
+FAILED tests/racketsport/test_ball_wasb_dataset.py::test_pickleball_vendored_dataset_reads_hidden_rows_and_one_loader_batch
+FAILED tests/racketsport/test_ball_wasb_dataset.py::test_wasb_factory_build_dataloader_reads_pickleball_batch
+FAILED tests/racketsport/test_ball_wasb_dataset.py::test_blurball_factory_build_dataloader_reads_recovered_label_layout
+FAILED tests/racketsport/test_ball_wasb_dataset.py::test_additive_vendored_pickleball_files_are_marked_not_upstream
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_missing_media_cli_emits_machine_readable_refusal
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_cli_policy_override_is_diagnostic_not_preregistration
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_production_gallery_authority_pins_all_current_canonical_teacher_inputs
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_frozen_policy_with_zero_independent_rows_is_honest_insufficiency
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_production_identity_pins_checkpoint_path_sha_and_wasb_commit
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_production_artifact_verifier_refuses_reauthored_split
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_production_artifact_verifier_rederives_rows_from_hashed_evidence
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_assemble_revalidates_claimed_counts_and_cannot_pass_fabrication
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_emitted_sample_manifest_satisfies_stage2_schema
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_resume_off_manifest_is_byte_identical_to_prepatch_builder
+FAILED tests/racketsport/test_build_pbvision_ball_sst.py::test_real_production_dependency_copies_fail_closed_on_unbound_fifth_source
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::test_quarantine_regenerated_owner_artifacts_contain_no_denied_source_identity
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::test_real_assignment_passes_person_p1_and_person_mixed_alias_taxonomy
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::test_same_seed_writes_byte_identical_plan_and_partition
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::test_materialize_writes_separate_prelabels_offline_html_and_cvat_jobs
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::TestEmittedReviewJavaScriptRuntime::test_regenerated_start_here_node_check
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::TestEmittedReviewJavaScriptRuntime::test_node_vm_compiles_and_executes_keymap_autoadvance_storage_and_export
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::test_regeneration_refuses_nonempty_verified_labels_and_force_backs_up_first
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::test_repeated_force_backup_excludes_prior_backups_from_live_label_scan
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::test_fix1_report_correction_records_the_honest_attribution_split
+FAILED tests/racketsport/test_build_person_fewshot_pack.py::test_review_answer_contract_embedded_mapping_never_auto_verifies_2_3_4
+FAILED tests/racketsport/test_compare_court_proposals.py::test_compare_img1605_partial_labels_rejects_current_bad_proposal
+FAILED tests/racketsport/test_coords_parity_real_fixture.py::test_frozen_wolverine_court_projection_seams_are_exact
+FAILED tests/racketsport/test_coords_parity_real_fixture.py::test_frozen_wolverine_paddle_detector_projection_route_is_exact
+FAILED tests/racketsport/test_coords_parity_real_fixture.py::test_frozen_wolverine_person_bottom_center_projection_is_exact
+FAILED tests/racketsport/test_coords_parity_real_fixture.py::test_frozen_wolverine_paddle_raw_numeric_payload_is_exact
+FAILED tests/racketsport/test_coords_parity_real_fixture.py::test_frozen_wolverine_placement_stage_projection_is_byte_stable
+FAILED tests/racketsport/test_coords_parity_real_fixture.py::test_frozen_wolverine_ball_filter_and_arc_projection_are_byte_stable
+FAILED tests/racketsport/test_coords_parity_real_fixture.py::test_frozen_wolverine_inout_pose_and_world_ball_are_byte_stable
+FAILED tests/racketsport/test_court_detector_v2_eval.py::test_run_court_detector_v2_img1605_writes_blocked_proposal
+FAILED tests/racketsport/test_court_detector_v2_eval.py::test_detector_v2_eval_includes_img1605_partial_clip
+FAILED tests/racketsport/test_court_detector_v2_net.py::test_img1605_net_evidence_is_anchor_not_floor_homography
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! KeyboardInterrupt !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+/private/tmp/pb-after-20260724/threed/racketsport/court_finding_technology_benchmark.py:3299: KeyboardInterrupt
+(to show a full traceback on KeyboardInterrupt use --full-trace)
+54 failed, 1616 passed, 7 skipped, 8 warnings in 509.15s (0:08:29)
