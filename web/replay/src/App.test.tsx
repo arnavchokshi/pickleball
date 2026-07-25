@@ -237,7 +237,7 @@ describe("viewer truth wiring", () => {
     expect(source).toContain('title="Court evidence"');
     expect(source).toContain('title="BODY evidence"');
     expect(source).toContain("new OrbitControls(camera, gl.domElement)");
-    expect(source).toContain("Right-drag move");
+    expect(source).toContain("<strong>Right-drag</strong> move");
     expect(source).not.toContain("function skeletonForFrame");
     expect(source).not.toContain("CameraDragPads");
   });
