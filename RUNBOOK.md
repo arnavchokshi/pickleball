@@ -191,7 +191,8 @@ before fresh BALL/audio and does not yet trim all downstream decoding.
     wall time.
 19. **world** - compose `virtual_world.json` and `trust_bands.json` from the
     already-finished refined artifacts; refinement time is not folded into
-    this stage.
+    this stage. This stage COMPOSITES; it performs no joint refinement, and the
+    bundle capability it satisfies is named `composited_world` for that reason.
 20. **confidence_gate** - write `confidence_gated_world.json` unless
     `--no-confidence-gate` is set.
 21. **match_stats** - default-on fail-open placement/court movement stats.

@@ -6868,10 +6868,15 @@ def _minimum_bundle_missing_capabilities(
         ),
         ("ball_arc", ("ball_track_arc_solved.json",), "ball arc artifact is missing", "ball_arc"),
         ("paddle", (PADDLE_POSE_ARTIFACT_NAME,), "paddle artifact is missing", "paddle_pose"),
+        # NS-04 honesty contract: the `world` stage COMPOSITES already-finished
+        # artifacts (threed/racketsport/virtual_world.py "assembles" them). It runs
+        # no joint refinement, so this capability must not be named "fusion".
+        # Confidence-weighted joint refinement is a separate concern and is never
+        # credited here.
         (
-            "fusion",
+            "composited_world",
             ("confidence_gated_world.json", "virtual_world.json"),
-            "fused-world artifact is missing",
+            "composited world artifact is missing",
             "world",
         ),
         ("stats", ("match_stats.json",), "deterministic stats artifact is missing", "match_stats"),
@@ -6890,7 +6895,12 @@ def _minimum_bundle_missing_capabilities(
         ("calibration", ("court_calibration.json",), "automatic court/camera calibration is missing", "calibration"),
         ("tracks", ("tracks.json",), "persistent player tracks are missing", "tracking"),
         ("body", ("skeleton3d.json",), "scheduled joint skeleton coverage is missing", "body"),
-        ("fusion", ("confidence_gated_world.json", "virtual_world.json"), "fused-world artifact is missing", "world"),
+        (
+            "composited_world",
+            ("confidence_gated_world.json", "virtual_world.json"),
+            "composited world artifact is missing",
+            "world",
+        ),
         ("assets", ("replay_scene.json",), "recursive replay assets are missing", "manifest"),
         ("trust_bands", ("trust_bands.json",), "trust bands artifact is missing", "world"),
         ("manifest", ("replay_viewer_manifest.json",), "replay manifest is missing", "manifest"),
