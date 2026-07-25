@@ -151,6 +151,12 @@ from threed.racketsport.contact_provenance import (  # noqa: E402
 from threed.racketsport.match_stats import compute_match_stats_for_run_dir, write_match_stats_json  # noqa: E402
 from threed.racketsport.rally_metrics import build_rally_metrics  # noqa: E402
 from threed.racketsport.coaching_fact_audit import audit_coaching_facts_file  # noqa: E402
+from threed.racketsport.one_world_v1 import (  # noqa: E402
+    OneWorldV1,
+    build_one_world,
+    canonical_json as one_world_canonical_json,
+    validate_one_world,
+)
 from threed.racketsport.frame_rating import (  # noqa: E402
     DEFAULT_BALL_PROXIMITY_M,
     DEFAULT_HIGH_CONFIDENCE_SWING_FLOOR,
@@ -309,6 +315,33 @@ if (
         f"best_stack entry {PLACEMENT_TRAJECTORY_REFINE_STACK_KEY!r} must declare boolean value.enabled"
     )
 DEFAULT_PLACEMENT_TRAJECTORY_REFINE = bool(PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE["enabled"])
+
+# NS-04.6 one_world_v1: the confidence-weighted joint-refinement pass. It is the
+# only stage in this graph that may claim fusion, it is permanently preview-only
+# (`do_not_promote`), and it is DEFAULT OFF. Its artifact is never authority and
+# no downstream stage reads it -- see `_stage_one_world`.
+ONE_WORLD_STACK_KEY = "world.one_world_v1_fusion"
+ONE_WORLD_STACK_VALUE = BEST_STACK_MANIFEST.value(ONE_WORLD_STACK_KEY)
+if (
+    not isinstance(ONE_WORLD_STACK_VALUE, Mapping)
+    or not isinstance(ONE_WORLD_STACK_VALUE.get("enabled"), bool)
+):
+    raise ValueError(
+        f"best_stack entry {ONE_WORLD_STACK_KEY!r} must declare boolean value.enabled"
+    )
+if ONE_WORLD_STACK_VALUE.get("do_not_promote") is not True:
+    raise ValueError(
+        f"best_stack entry {ONE_WORLD_STACK_KEY!r} must keep do_not_promote=true; "
+        "one_world_v1 is permanently preview-only"
+    )
+DEFAULT_ONE_WORLD_ENABLED = bool(ONE_WORLD_STACK_VALUE["enabled"])
+ONE_WORLD_ARTIFACT_NAME = "one_world_v1.json"
+ONE_WORLD_VALIDATION_ARTIFACT_NAME = "one_world_v1_validation.json"
+# `one_world_v1.build_one_world` hard-raises FileNotFoundError without this file,
+# and the `court_skeletons` preset has no ball stages at all. Pre-flight it so the
+# stage reports a typed blocked outcome instead of crashing the run.
+ONE_WORLD_REQUIRED_INPUTS = ("ball_track.json", "court_calibration.json")
+
 DEFAULT_BALL_DETECTION_STRIDE = int(BEST_STACK_MANIFEST.value("ball.detection_stride"))
 DEFAULT_PADDLE_FUSED_ESTIMATOR = BEST_STACK_MANIFEST.value("paddle.fused_estimator")
 PADDLE_POSE_ARTIFACT_NAME = "racket_pose_estimate.json"
@@ -398,7 +431,7 @@ class PipelineStageDefinition:
     name: str
     serial_order: int
     overlap_order: int
-    enabled_by: Literal["player_selection", "rally_gating", "verify_viewer"] | None = None
+    enabled_by: Literal["player_selection", "rally_gating", "verify_viewer", "one_world"] | None = None
 
 
 # NS-01.6: this is the only ordered stage-graph definition. Serial and overlap
@@ -427,6 +460,11 @@ AUTHORITATIVE_STAGE_GRAPH: tuple[PipelineStageDefinition, ...] = (
     PipelineStageDefinition("events_refined", 160, 160),
     PipelineStageDefinition("ball_arc_refined", 170, 170),
     PipelineStageDefinition("world", 180, 180),
+    # DEFAULT OFF. Reads the composited world plus its raw upstream inputs and
+    # writes only new preview artifacts; `confidence_gate` (190) and everything
+    # after it deliberately do NOT depend on it, so an enabled one_world can never
+    # change the authoritative bundle.
+    PipelineStageDefinition("one_world", 185, 185, "one_world"),
     PipelineStageDefinition("confidence_gate", 190, 190),
     PipelineStageDefinition("match_stats", 200, 200),
     PipelineStageDefinition("coaching_facts", 210, 210),
@@ -442,13 +480,19 @@ def authoritative_stage_names(
     player_selection: bool = True,
     body_schedule: Literal["serial", "overlap"] = "serial",
     pipeline_preset: Literal["full", "court_skeletons"] = "full",
+    one_world: bool = False,
 ) -> tuple[str, ...]:
-    """Project the canonical graph into the selected runtime schedule."""
+    """Project the canonical graph into the selected runtime schedule.
+
+    ``one_world`` defaults to False so every pre-existing call site keeps its
+    exact stage list: the default-OFF fusion stage is invisible unless asked for.
+    """
 
     enabled = {
         "player_selection": player_selection,
         "rally_gating": rally_gating,
         "verify_viewer": verify_viewer,
+        "one_world": one_world,
     }
     order_field = "overlap_order" if body_schedule == "overlap" else "serial_order"
     nodes = [
@@ -576,6 +620,24 @@ RUN_IDENTITY_DEPENDENCIES: dict[str, tuple[str, ...]] = {
         "events_refined",
         "ball_arc_refined",
     ),
+    # one_world consumes the composited world AND the same raw upstream evidence
+    # the compositor read, so any of those changing must invalidate the fusion.
+    # Nothing depends on one_world in return: `confidence_gate` and the rest of
+    # the tail keep depending only on `world`, which is what keeps a default-OFF
+    # (or enabled) one_world from perturbing any authoritative artifact.
+    "one_world": (
+        "calibration",
+        "player_selection",
+        "ball",
+        "ball_fill",
+        "body",
+        "placement_refine",
+        "grounding_refine",
+        "paddle_pose",
+        "events_refined",
+        "ball_arc_refined",
+        "world",
+    ),
     "confidence_gate": ("world",),
     "match_stats": ("placement", "world"),
     "coaching_facts": ("world", "match_stats"),
@@ -606,6 +668,7 @@ RUN_IDENTITY_CONFIG_KEYS: dict[str, tuple[str, ...]] = {
     ),
     "placement_trajectory_refine": (PLACEMENT_TRAJECTORY_REFINE_STACK_KEY,),
     "paddle_pose": ("paddle.fused_estimator",),
+    "one_world": (ONE_WORLD_STACK_KEY,),
     "confidence_gate": ("confidence.calibration_curves",),
     "match_stats": ("stats.match_stats_v0",),
 }
@@ -663,6 +726,7 @@ RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
         "trust_bands.json",
         "ball_fail_closed_verdicts.json",
     ),
+    "one_world": (ONE_WORLD_ARTIFACT_NAME, ONE_WORLD_VALIDATION_ARTIFACT_NAME),
     "confidence_gate": ("confidence_gated_world.json", "confidence_gate_summary.json"),
     "manifest": ("replay_viewer_manifest.json", "replay_scene.json", "replay_review"),
     "match_stats": ("match_stats.json",),
@@ -742,6 +806,9 @@ class PipelineOptions:
     placement_trajectory_refine: bool = DEFAULT_PLACEMENT_TRAJECTORY_REFINE
     placement_trajectory_refine_explicit: bool = False
     paddle_pose: bool = bool(DEFAULT_PADDLE_FUSED_ESTIMATOR.get("enabled", True))
+
+    one_world: bool = DEFAULT_ONE_WORLD_ENABLED
+    one_world_explicit: bool = False
 
     confidence_gate: bool = True
     confidence_calibration_curves: Path | None = None
@@ -1063,6 +1130,12 @@ class ProcessVideoPipeline:
                 ),
             },
             "paddle_pose": {"enabled": opts.paddle_pose},
+            "one_world": {
+                "enabled": opts.one_world,
+                "enablement_source": (
+                    "explicit_flag" if opts.one_world_explicit else "best_stack"
+                ),
+            },
             "confidence_gate": {"enabled": opts.confidence_gate},
             "manifest": {"scene_points": opts.scene_points},
             "verify": {"enabled": opts.verify_viewer},
@@ -1209,6 +1282,37 @@ class ProcessVideoPipeline:
             }
         elif name == "ball_arc_refined":
             candidates = self._refined_arc_dependency_paths()
+        elif name == "one_world":
+            # Every same-run artifact one_world_v1 actually reads. Content hashes of
+            # these gate reuse, so a changed upstream artifact rebuilds the fusion
+            # instead of serving a stale preview.
+            candidates = {
+                name: self.clip_dir / name
+                for name in (
+                    "court_calibration.json",
+                    "trust_bands.json",
+                    "tracks.json",
+                    "placement.json",
+                    "placement_refined.json",
+                    "placement_trajectory_refined.json",
+                    "repair_summary.json",
+                    "ball_track.json",
+                    "smpl_motion.json",
+                    "skeleton3d.json",
+                    "ball_arc_render.json",
+                    "ball_track_arc_solved.json",
+                    "contact_windows_refined_v1.json",
+                    "contact_windows.json",
+                    "audio_onsets_v2.json",
+                    "racket_pose.json",
+                    "racket_pose_hypotheses.json",
+                    "racket_pose_estimate.json",
+                    "court_zones.json",
+                    "rally_spans.json",
+                    "net_plane.json",
+                    "virtual_world.json",
+                )
+            }
         elif name == "confidence_gate":
             candidates = {"confidence_calibration_curves": opts.confidence_calibration_curves}
         return {key: Path(value) for key, value in candidates.items() if value is not None}
@@ -1332,6 +1436,7 @@ class ProcessVideoPipeline:
             player_selection=self.options.player_selection,
             body_schedule=body_schedule or self.options.body_schedule,
             pipeline_preset=self.options.pipeline_preset,
+            one_world=self.options.one_world,
         )
 
     def _stage_fns(self, names: Sequence[str]) -> list[tuple[str, Callable[[], StageOutcome]]]:
@@ -6083,6 +6188,123 @@ class ProcessVideoPipeline:
         )
 
     # ------------------------------------------------------------------
+    # stage 10b: one_world_v1 fusion (DEFAULT OFF, permanently preview-only)
+    # ------------------------------------------------------------------
+
+    def _stage_one_world(self) -> StageOutcome:
+        """Confidence-weighted joint refinement over the finished same-run world.
+
+        This is the only stage allowed to claim fusion, and it claims nothing else:
+
+        * It is DEFAULT OFF (`world.one_world_v1_fusion`, status PENDING,
+          `do_not_promote`). When off it is not even projected into the stage list.
+        * It only ever WRITES `one_world_v1.json` and its validation sidecar. Raw
+          observations stay immutable; the refinement is a separate artifact with
+          its own provenance and covariance, exactly as the standing rules require.
+        * Nothing downstream reads it. `confidence_gate`, `match_stats`,
+          `coaching_facts` and `manifest` keep consuming `virtual_world.json`, so an
+          enabled one_world cannot change the shipped bundle.
+        * It degrades typed instead of crashing. `build_one_world` hard-raises
+          FileNotFoundError without `ball_track.json`, and the `court_skeletons`
+          preset never produces one, so absent inputs are pre-flighted into a typed
+          `blocked` outcome with the exact missing filenames.
+        """
+
+        missing_inputs = [
+            name for name in ONE_WORLD_REQUIRED_INPUTS if not (self.clip_dir / name).is_file()
+        ]
+        if missing_inputs:
+            raise ExpectedOptionalAbsence(
+                "blocked",
+                "one_world_required_inputs_missing",
+                "one_world_v1 fusion requires same-run "
+                f"{', '.join(ONE_WORLD_REQUIRED_INPUTS)}; missing {', '.join(missing_inputs)}. "
+                "No fusion was attempted and no artifact was written "
+                f"(pipeline_preset={self.options.pipeline_preset})",
+            )
+
+        try:
+            artifact = build_one_world(self.clip_dir)
+        except FileNotFoundError as exc:
+            raise ExpectedOptionalAbsence(
+                "blocked",
+                "one_world_required_inputs_missing",
+                f"one_world_v1 fusion could not read a required same-run input: {exc}",
+            ) from exc
+        except (ValueError, KeyError, TypeError) as exc:
+            # Real disagreements between same-run artifacts (identity mismatch,
+            # unsupported coordinate frame, fps skew). Honest degrade: this stage is
+            # never authority, so it must not take down the authoritative bundle.
+            # Genuine programming errors still surface as a loud `failed` stage via
+            # the generic handler in `_run_stage_safely`.
+            raise ExpectedOptionalAbsence(
+                "degraded",
+                "one_world_input_disagreement",
+                f"one_world_v1 fusion refused to fuse inconsistent same-run inputs: "
+                f"{type(exc).__name__}: {exc}. No artifact was written",
+            ) from exc
+
+        serialized = one_world_canonical_json(artifact)
+        # Schema gate before publishing: the committed public schema
+        # docs/racketsport/one_world_v1_schema.json is generated from OneWorldV1, so
+        # re-validating the exact bytes proves the emitted artifact matches it.
+        OneWorldV1.model_validate_json(serialized)
+        out_path = self.clip_dir / ONE_WORLD_ARTIFACT_NAME
+        out_path.write_text(serialized, encoding="utf-8")
+
+        validation = validate_one_world(out_path, self.clip_dir)
+        validation_path = self.clip_dir / ONE_WORLD_VALIDATION_ARTIFACT_NAME
+        validation_path.write_text(one_world_canonical_json(validation), encoding="utf-8")
+
+        summary = artifact.summary
+        notes = [
+            "one_world_v1 confidence-weighted joint refinement over finished same-run "
+            "artifacts; preview_only, do_not_promote, VERIFIED=0",
+            "raw observations were not modified; the refinement is a separate artifact "
+            "carrying its own provenance and covariance",
+            "no downstream stage reads this artifact; it is never product authority",
+        ]
+        if not validation.valid:
+            notes.append(
+                "one_world_v1 self-validation FAILED: " + "; ".join(validation.errors)
+            )
+        if summary.regression_kills:
+            notes.append("regression kills fired: " + "; ".join(summary.regression_kills))
+        if summary.warnings:
+            notes.append("fusion warnings: " + "; ".join(summary.warnings))
+
+        return StageOutcome(
+            stage="one_world",
+            status="ran" if validation.valid else "degraded",
+            wall_seconds=0.0,
+            notes=notes,
+            artifacts=[ONE_WORLD_ARTIFACT_NAME, ONE_WORLD_VALIDATION_ARTIFACT_NAME],
+            trust_badge="preview",
+            metrics={
+                "VERIFIED": 0,
+                "preview_only": True,
+                "do_not_promote": True,
+                "authority": "never",
+                "validation_valid": validation.valid,
+                "validation_checks": dict(validation.checks),
+                "validation_errors": list(validation.errors),
+                "frame_count": len(artifact.frames),
+                "contact_count": len(artifact.contacts),
+                "bounce_count": len(artifact.bounces),
+                "event_count": len(artifact.events),
+                "placement_tier_counts": dict(summary.placement_tier_counts),
+                "missing_counts": dict(summary.missing_counts),
+                "world_coverage": copy.deepcopy(dict(summary.world_coverage)),
+                "paddle_resolution": dict(summary.paddle_resolution),
+                "ball_contact_distance_m": dict(summary.ball_contact_distance_m),
+                "bounce_plane_residual_m": dict(summary.bounce_plane_residual_m),
+                "reprojection_consistency": copy.deepcopy(dict(summary.reprojection_consistency)),
+                "regression_kills": list(summary.regression_kills),
+                "warnings": list(summary.warnings),
+            },
+        )
+
+    # ------------------------------------------------------------------
     # stage 11: confidence gate (confidence_gated_world.json)
     # ------------------------------------------------------------------
 
@@ -6871,8 +7093,8 @@ def _minimum_bundle_missing_capabilities(
         # NS-04 honesty contract: the `world` stage COMPOSITES already-finished
         # artifacts (threed/racketsport/virtual_world.py "assembles" them). It runs
         # no joint refinement, so this capability must not be named "fusion".
-        # Confidence-weighted joint refinement is a separate concern and is never
-        # credited here.
+        # Confidence-weighted joint refinement lives in the separate, default-OFF,
+        # preview-only `one_world` stage and is never credited here.
         (
             "composited_world",
             ("confidence_gated_world.json", "virtual_world.json"),
@@ -9097,6 +9319,13 @@ def resolved_best_stack_config_from_options(options: PipelineOptions) -> dict[st
         player_selection = copy.deepcopy(PLAYER_SELECTION_STACK_VALUE)
         player_selection["enabled"] = True
         resolved[PLAYER_SELECTION_STACK_KEY] = player_selection
+    if options.one_world:
+        # Same default-OFF contract as player_selection: while the stage is off the
+        # key is absent from the resolved config entirely, so no other stage's
+        # content-addressed identity moves and existing generations stay reusable.
+        one_world = copy.deepcopy(ONE_WORLD_STACK_VALUE)
+        one_world["enabled"] = True
+        resolved[ONE_WORLD_STACK_KEY] = one_world
     return resolved
 
 
@@ -9124,6 +9353,7 @@ def best_stack_overrides_from_options(options: PipelineOptions) -> dict[str, Any
         "body.detector_fov": BEST_STACK_MANIFEST.value("body.detector_fov"),
         "body.schedule": BEST_STACK_MANIFEST.string_value("body.schedule"),
         PLACEMENT_TRAJECTORY_REFINE_STACK_KEY: copy.deepcopy(PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE),
+        ONE_WORLD_STACK_KEY: copy.deepcopy(ONE_WORLD_STACK_VALUE),
         "paddle.fused_estimator": copy.deepcopy(BEST_STACK_MANIFEST.value("paddle.fused_estimator")),
         "input_quality.preflight": copy.deepcopy(BEST_STACK_MANIFEST.value("input_quality.preflight")),
         "stats.match_stats_v0": copy.deepcopy(BEST_STACK_MANIFEST.value("stats.match_stats_v0")),
@@ -9440,6 +9670,16 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
             or DEFAULT_PLACEMENT_TRAJECTORY_REFINE
         ),
         placement_trajectory_refine_explicit=bool(args.placement_trajectory_refine),
+        # DEFAULT OFF everywhere. `court_skeletons` has no ball stages at all, so the
+        # preset never enables it even if best_stack later flips the default.
+        one_world=(
+            False
+            if pipeline_preset == "court_skeletons"
+            else DEFAULT_ONE_WORLD_ENABLED
+            if args.one_world is None
+            else bool(args.one_world)
+        ),
+        one_world_explicit=args.one_world is not None,
         paddle_pose=(
             pipeline_preset != "court_skeletons"
             and bool(DEFAULT_PADDLE_FUSED_ESTIMATOR.get("enabled", True))
@@ -9577,6 +9817,27 @@ def build_arg_parser() -> argparse.ArgumentParser:
         dest="player_selection",
         action="store_false",
         help="Explicitly disable the player-selection stage.",
+    )
+
+    one_world_flags = parser.add_mutually_exclusive_group()
+    one_world_flags.add_argument(
+        "--one-world",
+        dest="one_world",
+        action="store_true",
+        default=None,
+        help=(
+            "Enable the default-OFF one_world_v1 confidence-weighted joint-refinement "
+            "stage (order 185, between world and confidence_gate). Writes preview-only "
+            "one_world_v1.json plus its validation sidecar; no downstream stage reads "
+            "them and they are never product authority. With neither flag, best_stack "
+            f"({ONE_WORLD_STACK_KEY}) controls enablement."
+        ),
+    )
+    one_world_flags.add_argument(
+        "--no-one-world",
+        dest="one_world",
+        action="store_false",
+        help="Explicitly disable the one_world_v1 fusion stage.",
     )
 
     parser.add_argument("--ball-track", help="Reuse an already-computed ball_track.json instead of running WASB zero-shot.")

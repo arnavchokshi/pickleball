@@ -149,6 +149,11 @@ only moves `frames` ahead of the four overlapped BALL/event stages:
    no-flag default until both frozen rows pass
    `runs/lanes/trk_rfdetr_integrate_20260717/VM_REPRO_PLAN.md`. `VERIFIED=0`
    remains binding.
+   Optional stage between 4 and 5: **player_selection** via `--player-selection`
+   (default OFF, best_stack `tracking.player_selection_layer`, status PENDING,
+   `do_not_promote`). It writes `tracks_preselection.json` and
+   `selection_report.json` and applies the registered exactly-four and
+   court-region post-filter. The `court_skeletons` preset always enables it.
 5. **camera_motion** - optional/auto preview camera-motion compensation before
    placement homography projection.
 6. **placement** - project tracks into court/world placement when inputs exist.
@@ -193,6 +198,17 @@ before fresh BALL/audio and does not yet trim all downstream decoding.
     already-finished refined artifacts; refinement time is not folded into
     this stage. This stage COMPOSITES; it performs no joint refinement, and the
     bundle capability it satisfies is named `composited_world` for that reason.
+    Optional stage between 19 and 20: **one_world** via `--one-world`
+    (default OFF, best_stack `world.one_world_v1_fusion`, status PENDING,
+    `do_not_promote`). This is the only stage that performs confidence-weighted
+    joint refinement. It writes `one_world_v1.json` plus
+    `one_world_v1_validation.json`, leaves every raw observation immutable, and is
+    read by nothing downstream, so it can never become product authority. Absent
+    inputs (it requires `ball_track.json` and `court_calibration.json`, which the
+    `court_skeletons` preset never produces) yield a typed `blocked` outcome with
+    reason `one_world_required_inputs_missing` instead of a crash. Wiring it is
+    integration progress, not capability progress: `VERIFIED=0` and there is no
+    accuracy evidence for the refinement.
 20. **confidence_gate** - write `confidence_gated_world.json` unless
     `--no-confidence-gate` is set.
 21. **match_stats** - default-on fail-open placement/court movement stats.

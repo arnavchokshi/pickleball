@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
  "revision": 15,
- "updated": "2026-07-23",
+ "updated": "2026-07-24",
  "invariants": [
   "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
   "Explicit CLI flag overrides manifest defaults; absent manifest entry is a hard error on decision paths.",
@@ -1313,6 +1313,61 @@
     "independent_gt": false
    },
    "notes": "preview_band; do_not_promote; disabled until Track C wiring and independent court-frame GT. VERIFIED=0."
+  },
+  "world.one_world_v1_fusion": {
+   "stage": "one_world",
+   "selection": "default-OFF permanently-preview confidence-weighted joint refinement of the finished same-run world (soft bounce priors, contact co-location likelihood with an explicit null hypothesis, both IPPE paddle poses retained, tiered ball continuity)",
+   "value": {
+    "enabled": false,
+    "enable_flag": "--one-world",
+    "disable_flag": "--no-one-world",
+    "stage_order": 185,
+    "module": "threed/racketsport/one_world_v1.py",
+    "artifact": "one_world_v1.json",
+    "validation_artifact": "one_world_v1_validation.json",
+    "schema": "docs/racketsport/one_world_v1_schema.json",
+    "trust_band": "preview",
+    "do_not_promote": true,
+    "required_inputs": [
+     "ball_track.json",
+     "court_calibration.json"
+    ],
+    "absent_input_policy": "typed_blocked_stage_outcome_reason_one_world_required_inputs_missing",
+    "downstream_consumers": [],
+    "authority": "never",
+    "excluded_from_presets": [
+     "court_skeletons"
+    ]
+   },
+   "status": "PENDING",
+   "trust_band": "preview",
+   "do_not_promote": true,
+   "gate": {
+    "name": "one_world_v1_independent_gt_joint_refinement_accuracy",
+    "metric_key": "contact_point_p90_cm_and_bounce_plane_residual_m_on_independent_gt",
+    "bar": "Wiring is integration progress, NOT capability progress, and cannot promote this entry. Promotion requires the NS-02 independent preregistered ground truth: contact-point p90 <=3cm and a non-regressing bounce-plane residual, measured on data never used to develop the refiner. The lane that built one_world_v1 scored A4 METRICS TABLE = FAIL (0 supported / 24 abstained contacts on Wolverine), so there is no accuracy evidence of any kind today.",
+    "evidence_path": "runs/lanes/oneworld_impl_20260716/report.json"
+   },
+   "provenance": {
+    "lane": "oneworld_wire_20260724",
+    "commit": "worktree",
+    "date": "2026-07-24",
+    "evidence_paths": [
+     "runs/lanes/oneworld_wire_20260724/REPORT.md",
+     "runs/lanes/oneworld_wire_20260724/report.json",
+     "runs/lanes/oneworld_impl_20260716/report.json",
+     "runs/lanes/oneworld_impl_20260716/spec.md"
+    ]
+   },
+   "proven_against": {
+    "scope": "stage-wiring mechanics only: default-off byte identity, typed blocked path on absent ball_track.json, schema validation of the emitted artifact, and content-addressed identity/reuse registration",
+    "accuracy_evidence": "none",
+    "independent_gt": false,
+    "source_lane_objective_result": "PARTIAL (A4 METRICS TABLE FAIL, A9 WIDE SUITE FAIL)",
+    "end_to_end_exercise": "runs/lanes/oneworld_wire_20260724/report.json",
+    "accuracy_promotion_passed": false
+   },
+   "notes": "PENDING, default OFF, preview, do_not_promote=true. Wiring this stage is INTEGRATION progress, not capability progress: the product does not have fusion. The refiner correctly ABSTAINS on the only full-artifact clip available (that clip's ball 3D has ~51% of world points off-court, so contacts are refused) -- refusal is correct behavior, not a defect. No downstream stage reads one_world_v1.json and it is never product authority. Raw observations stay immutable; the refinement is a separate artifact with its own provenance and covariance. VERIFIED=0."
   }
  },
  "selection_constant_coverage": {
