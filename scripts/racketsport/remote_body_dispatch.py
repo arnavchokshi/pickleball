@@ -1592,10 +1592,24 @@ import sys
 
 sys.path.insert(0, {config.repo!r})
 
-from threed.racketsport.body_mesh_index import build_body_mesh_index, build_body_mesh_index_cli_summary
-from threed.racketsport.orchestrator import BodyStageRunner, run_pipeline
+# The BODY parent only prepares artifacts and launches the dedicated Fast-SAM
+# subprocess.  Some transitive imports probe CUDA and acquire a context, which
+# prevents that child from opening an EXCLUSIVE_PROCESS GPU.  Hide CUDA while
+# importing the parent-side orchestration modules, then restore the caller's
+# visibility before the child is spawned.  The BODY child is a fresh process
+# and therefore observes the restored value.
+_parent_cuda_visible_devices = os.environ.get("CUDA_VISIBLE_DEVICES")
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+try:
+    from threed.racketsport.body_mesh_index import build_body_mesh_index, build_body_mesh_index_cli_summary
+    from threed.racketsport.orchestrator import BodyStageRunner, run_pipeline
+finally:
+    if _parent_cuda_visible_devices is None:
+        os.environ.pop("CUDA_VISIBLE_DEVICES", None)
+    else:
+        os.environ["CUDA_VISIBLE_DEVICES"] = _parent_cuda_visible_devices
 
-_emit_marker("imports_done")
+_emit_marker("imports_done", parent_cuda_isolated=True)
 
 remote_dispatch_sam3d_config = json.loads({dispatch_config_json!r})
 remote_dispatch_sam3d_config["pipeline_preset"] = {pipeline_preset!r}

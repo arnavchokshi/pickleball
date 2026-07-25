@@ -1877,7 +1877,9 @@ def test_remote_body_runner_script_registers_vm_proven_body_configuration() -> N
     assert "no world_mesh frames" not in script
     assert "os.chdir('/remote/run')" in script
     assert '_emit_marker("script_start")' in script
-    assert '_emit_marker("imports_done")' in script
+    assert 'os.environ["CUDA_VISIBLE_DEVICES"] = ""' in script
+    assert 'os.environ.pop("CUDA_VISIBLE_DEVICES", None)' in script
+    assert '_emit_marker("imports_done", parent_cuda_isolated=True)' in script
     assert '_emit_marker("run_pipeline_done"' in script
     assert "build_body_mesh_index" in script
     assert "body_mesh_index/body_mesh_index.json" in script
