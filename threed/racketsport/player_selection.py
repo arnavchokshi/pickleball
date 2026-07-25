@@ -962,6 +962,95 @@ def infer_active_player_count(
     return 2
 
 
+def infer_associated_active_player_count(
+    players: Sequence[Mapping[str, Any]],
+    *,
+    fps: float,
+    real_by_frame: Mapping[int, Sequence[SelectionDetection]],
+    config: PlayerSelectionConfig | None = None,
+) -> tuple[int | None, dict[str, Any]]:
+    """Infer cardinality from measured rows already bound to stable player IDs.
+
+    The raw pool may fragment one person into several short source-track IDs,
+    which makes a four-player match look like singles.  Existing association
+    rows carry the stable IDs we actually publish, so prefer their one-to-one
+    matches to immutable raw detections.  Interpolated rows cannot match a raw
+    detection and therefore never contribute.
+    """
+
+    cfg = config or PlayerSelectionConfig()
+    if fps <= 0.0:
+        raise ValueError("fps must be positive")
+    matches = _association_raw_matches(
+        players,
+        fps=fps,
+        real_by_frame=real_by_frame,
+        config=cfg,
+    )
+    identities_by_frame: dict[int, set[int]] = defaultdict(set)
+    measured_frames_by_player: dict[int, set[int]] = defaultdict(set)
+    source_ids_by_player: dict[int, Counter[int]] = defaultdict(Counter)
+    for player_index, frame_position, detection in matches:
+        if detection.interpolated:
+            continue
+        frame_payload = players[player_index]["frames"][frame_position]
+        if bool(frame_payload.get("interpolated", False)):
+            continue
+        track_world_xy = frame_payload.get("world_xy")
+        if (
+            not isinstance(track_world_xy, Sequence)
+            or isinstance(track_world_xy, (str, bytes))
+            or len(track_world_xy) < 2
+        ):
+            continue
+        if (
+            frame_court_evidence(
+                (float(track_world_xy[0]), float(track_world_xy[1])), cfg
+            )
+            < cfg.enrollment_court_presence_min
+        ):
+            continue
+        identities_by_frame[detection.frame_idx].add(player_index)
+        measured_frames_by_player[player_index].add(detection.frame_idx)
+        source_ids_by_player[player_index][detection.source_track_id] += 1
+
+    accepted = {
+        frame_idx: identities
+        for frame_idx, identities in identities_by_frame.items()
+        if len(identities) >= 2
+    }
+    histogram = Counter(len(identities) for identities in accepted.values())
+    one_second = max(1, int(math.ceil(fps)))
+    twenty_percent = max(1, int(math.ceil(0.2 * len(accepted)))) if accepted else 1
+    doubles_threshold = min(one_second, twenty_percent)
+    doubles_frames = sum(len(identities) >= 4 for identities in accepted.values())
+    inferred = 4 if doubles_frames >= doubles_threshold else (2 if accepted else None)
+    persistent_floor = doubles_threshold
+    dominant_source_ids: list[int] = []
+    for player_index, frames in measured_frames_by_player.items():
+        if len(frames) < persistent_floor or not source_ids_by_player[player_index]:
+            continue
+        source_id, source_count = source_ids_by_player[player_index].most_common(1)[0]
+        if source_count / max(sum(source_ids_by_player[player_index].values()), 1) >= 0.8:
+            dominant_source_ids.append(int(source_id))
+    diagnostics = {
+        "evidence_source": "one_to_one_measured_preselection_associations",
+        "matched_measured_detection_count": len(matches),
+        "accepted_frame_count": len(accepted),
+        "simultaneous_measured_player_histogram": {
+            str(count): int(histogram[count]) for count in sorted(histogram)
+        },
+        "four_player_frame_count": int(doubles_frames),
+        "doubles_threshold_frames": int(doubles_threshold),
+        "measured_frames_by_player": {
+            str(int(players[player_index].get("id", player_index + 1))): len(frames)
+            for player_index, frames in sorted(measured_frames_by_player.items())
+        },
+        "dominant_measured_source_track_ids": sorted(set(dominant_source_ids)),
+    }
+    return inferred, diagnostics
+
+
 def enroll_slots(
     fragments: Sequence[TrackFragment],
     *,
@@ -1245,6 +1334,7 @@ def select_players_payload(
     real_by_frame: dict[int, list[SelectionDetection]] = defaultdict(list)
     for detection in real_pool:
         real_by_frame[detection.frame_idx].append(detection)
+    association_real_by_frame = real_by_frame
 
     fps = float(tracks_payload.get("fps", 0.0))
     if not math.isfinite(fps) or fps <= 0.0:
@@ -1281,8 +1371,51 @@ def select_players_payload(
         sport=cfg.sport,
     )
     inferred_player_count: int | None = None
+    cardinality_diagnostics: dict[str, Any] = {}
     if auto_player_count:
-        inferred_player_count = infer_active_player_count(
+        associated_count, cardinality_diagnostics = infer_associated_active_player_count(
+            players,
+            fps=fps,
+            real_by_frame=association_real_by_frame,
+            config=cfg,
+        )
+        association_rescued_source_ids = (
+            {
+                int(source_id)
+                for source_id in cardinality_diagnostics.get(
+                    "dominant_measured_source_track_ids", []
+                )
+            }
+            if associated_count == 4
+            else set()
+        )
+        overridden_hard_exclusions = sorted(
+            hard_excluded_source_ids.intersection(association_rescued_source_ids)
+        )
+        if overridden_hard_exclusions:
+            hard_excluded_source_ids = hard_excluded_source_ids.difference(
+                overridden_hard_exclusions
+            )
+            hard_decisions.append(
+                {
+                    "action": "retain_stable_on_court_preselection_identity",
+                    "source_track_ids": overridden_hard_exclusions,
+                    "reasons": [
+                        "four_stable_preselection_identities_coexist",
+                        "one_to_one_raw_detection_association",
+                        "preselection_world_xy_inside_registered_court_apron",
+                        "dominant_raw_source_for_persistent_identity",
+                    ],
+                }
+            )
+        cardinality_diagnostics["overridden_raw_court_exclusion_source_track_ids"] = (
+            overridden_hard_exclusions
+        )
+        filtered_real_by_frame: dict[int, list[SelectionDetection]] = defaultdict(list)
+        for detection in real_pool:
+            if detection.source_track_id not in hard_excluded_source_ids:
+                filtered_real_by_frame[detection.frame_idx].append(detection)
+        raw_pool_count = infer_active_player_count(
             [
                 detection
                 for detection in real_pool
@@ -1290,6 +1423,13 @@ def select_players_payload(
             ],
             fps=fps,
             config=cfg,
+        )
+        inferred_player_count = associated_count or raw_pool_count
+        cardinality_diagnostics["raw_pool_fallback_inferred_players"] = raw_pool_count
+        cardinality_diagnostics["selected_evidence_source"] = (
+            "one_to_one_measured_preselection_associations"
+            if associated_count is not None
+            else "raw_pool_source_track_ids"
         )
         cfg = replace(cfg, expected_players=inferred_player_count or 2)
 
@@ -1308,6 +1448,7 @@ def select_players_payload(
             "inferred_players": inferred_player_count,
             "selected_target": cfg.expected_players,
             "hard_maximum": hard_cfg.exactly_four_hard_cap,
+            **cardinality_diagnostics,
         }
     association_join_count = _association_raw_join_count(
         players,
@@ -3720,6 +3861,7 @@ __all__ = [
     "fusion_score",
     "identity_match_score",
     "infer_active_player_count",
+    "infer_associated_active_player_count",
     "mark_micro_fill_provenance",
     "median_real_footpoint_court_excess_m",
     "micro_fill_allowed",

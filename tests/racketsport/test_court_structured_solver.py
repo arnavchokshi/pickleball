@@ -391,6 +391,9 @@ def test_line_and_surface_evidence_select_a_coherent_line_only_candidate() -> No
     assert result["selected_hypothesis"]["source"].startswith("line_only_true")
     assert result["score_components"]["line_alignment"] > 0.9
     assert result["score_components"]["surface_overlap"] > 0.9
+    assert result["score_components"]["held_out_line_sample_count"] > 0
+    assert result["score_components"]["held_out_line_p90_distance_px"] < 2.0
+    assert result["score_components"]["held_out_line_p95_distance_px"] < 2.0
     assert set(result["projected_floor_keypoints"]) == set(FLOOR_KEYPOINT_NAMES)
     assert result["measurement_valid"] is False
 

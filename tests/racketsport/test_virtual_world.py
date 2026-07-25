@@ -1293,6 +1293,94 @@ def test_build_virtual_world_state_combines_skeleton3d_with_full_clip_tracks() -
     assert player7["frames"][0]["floor_world_xyz"] == [0.25, -2.0, 0.0]
 
 
+def test_world_records_one_selected_trajectory_skeleton_source_per_frame() -> None:
+    tracks = _tracks_three_players()
+    tracks["placement_provenance"] = {
+        "stage": "placement_refine",
+        "raw_tracks_mutated": False,
+    }
+    skeleton = _skeleton3d_two_players()
+    skeleton["placement_trajectory_refinement"] = {"selected_for_world": True}
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=tracks,
+        skeleton3d=skeleton,
+    )
+
+    players_by_id = {player["id"]: player for player in world["players"]}
+    measured = players_by_id[3]["frames"][0]
+    missing = players_by_id[7]["frames"][0]
+    assert measured["skeleton_source"] == "placement_trajectory_refined"
+    assert measured["position_provenance"] == "guard_passing_trajectory_rigid_translation"
+    assert missing["skeleton_source"] == "missing"
+    assert missing["position_provenance"] == "missing"
+
+
+def test_world_applies_refined_track_xy_as_one_post_body_rigid_translation() -> None:
+    tracks = _tracks_three_players()
+    tracks["placement_provenance"] = {
+        "stage": "placement_refine",
+        "raw_tracks_mutated": False,
+    }
+    skeleton = _skeleton3d_two_players()
+    skeleton["joint_names"] = ["left_big_toe_tip", "left_small_toe_tip"]
+    skeleton["players"][0]["frames"][0]["joints_world"] = [
+        [-0.9, 3.7, 0.0],
+        [-0.7, 3.9, 0.0],
+    ]
+    skeleton["players"][0]["frames"][0]["transl_world"] = [-0.5, 3.0, 0.0]
+    placement = {
+        "players": [
+            {
+                "id": 3,
+                "frames": [
+                    {
+                        "t": 0.0,
+                        "original_world_xy": [-0.5, 3.0],
+                        "fused_world_xy": [-1.0, 4.0],
+                        "smoothed_world_xy": [-1.0, 4.0],
+                        "selected_support_signal": {
+                            "foot": "left",
+                            "contact_proxy_semantics": [
+                                "left_big_toe_tip",
+                                "left_small_toe_tip",
+                            ],
+                        },
+                    }
+                ],
+            }
+        ]
+    }
+
+    world = build_virtual_world_state(
+        court_calibration=_court_calibration(),
+        tracks=tracks,
+        skeleton3d=skeleton,
+        placement=placement,
+    )
+
+    player = next(player for player in world["players"] if player["id"] == 3)
+    frame = player["frames"][0]
+    assert frame["track_world_xy"] == [-1.0, 4.0]
+    assert frame["transl_world"] == pytest.approx([-0.7, 3.2, 0.0])
+    assert frame["applied_rigid_translation_world"] == pytest.approx([-0.2, 0.2, 0.0])
+    assert frame["joints_world"][0] == pytest.approx([-1.1, 3.9, 0.0])
+    assert frame["joints_world"][1] == pytest.approx([-0.9, 4.1, 0.0])
+    support_xy = [
+        sum(joint[axis] for joint in frame["joints_world"]) / 2.0
+        for axis in (0, 1)
+    ]
+    assert support_xy == pytest.approx([-1.0, 4.0])
+    before_bone = sum((a - b) ** 2 for a, b in zip([-0.9, 3.7, 0.0], [-0.7, 3.9, 0.0])) ** 0.5
+    after_bone = sum(
+        (a - b) ** 2 for a, b in zip(frame["joints_world"][0], frame["joints_world"][1])
+    ) ** 0.5
+    assert after_bone == pytest.approx(before_bone)
+    assert frame["skeleton_source"] == "sam3d_body_joints"
+    assert frame["position_provenance"] == "post_body_foot_anchored_rigid_translation"
+
+
 def test_build_virtual_world_state_skeleton_only_without_tracks_has_no_floor() -> None:
     world = build_virtual_world_state(
         court_calibration=_court_calibration(),

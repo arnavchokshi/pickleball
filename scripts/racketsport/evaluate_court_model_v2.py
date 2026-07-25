@@ -48,6 +48,7 @@ from threed.racketsport.court_model_infer import (  # noqa: E402
     make_court_model_infer_provider,
 )
 from threed.racketsport.court_structured_metrics import (  # noqa: E402
+    assess_structured_target_eligibility,
     evaluate_raw_vs_structured_court_outputs,
     evaluate_structured_court_outputs,
 )
@@ -290,6 +291,7 @@ def evaluate_raw_vs_structured_checkpoint_against_real_labels(
                     "visibility": visibility,
                 },
                 "ground_truth": truth,
+                "structured_target_eligibility": assess_structured_target_eligibility(truth),
                 "raw_prediction": {
                     "keypoints": raw_prediction,
                     "confidences": {

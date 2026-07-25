@@ -629,6 +629,7 @@ RUN_IDENTITY_OUTPUTS: dict[str, tuple[str, ...]] = {
     ),
     "camera_motion": ("camera_motion.json",),
     "placement": ("placement.json", "tracks_prewrite_backup.json"),
+    "placement_refine": ("placement_refined.json", "tracks_placement_refined.json"),
     "rally_gating": ("rally_spans.json",),
     "ball": ("ball_track.json", "ball_candidates.json", "ball_inout_summary.json"),
     "ball_arc": (
@@ -810,6 +811,8 @@ class ProcessVideoPipeline:
             "frame_compute_plan.json",
             "input_quality.json",
             "placement.json",
+            "placement_refined.json",
+            "tracks_placement_refined.json",
             "sam3d_keypoints_2d.json",
             "smpl_motion.json",
             "body_compute_execution.json",
@@ -3443,16 +3446,31 @@ class ProcessVideoPipeline:
         return self._run_placement_stage(refine_from_sam3d=False)
 
     def _stage_placement_refine(self) -> StageOutcome:
-        return StageOutcome(
-            stage="placement_refine",
-            status="skipped",
-            wall_seconds=0.0,
-            notes=[
-                "same-pass post-BODY placement_refine is disabled by R3; SAM3D foot pixels may only feed a "
-                "second pass before a fresh BODY run, never an in-place tracks.json rewrite before world build"
-            ],
-            metrics={"same_pass_track_rewrite_disabled": True},
-        )
+        if self.options.pipeline_preset != "court_skeletons":
+            return StageOutcome(
+                stage="placement_refine",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[
+                    "immutable post-BODY placement refinement is currently enabled only for the court_skeletons preset"
+                ],
+                metrics={"court_skeletons_only": True},
+            )
+        sam3d_path = self.clip_dir / "sam3d_keypoints_2d.json"
+        skeleton_path = self.clip_dir / "skeleton3d.json"
+        missing = [path.name for path in (sam3d_path, skeleton_path) if not path.is_file()]
+        if missing:
+            return StageOutcome(
+                stage="placement_refine",
+                status="skipped",
+                wall_seconds=0.0,
+                notes=[
+                    "post-BODY placement refinement requires real SAM-3D joints and 2D foot evidence",
+                    "missing: " + ", ".join(missing),
+                ],
+                metrics={"reason": "missing_sam3d_foot_evidence", "missing_inputs": missing},
+            )
+        return self._run_placement_stage(refine_from_sam3d=True)
 
     def _run_placement_stage(self, *, refine_from_sam3d: bool) -> StageOutcome:
         stage_name = "placement_refine" if refine_from_sam3d else "placement"
@@ -3469,13 +3487,20 @@ class ProcessVideoPipeline:
         if sam3d_path is not None and not sam3d_path.is_file():
             sam3d_path = None
         stance_phases_path = self._placement_stance_phases_path() if refine_from_sam3d else None
-        placement_path = self.clip_dir / "placement.json"
+        placement_path = self.clip_dir / (
+            "placement_refined.json" if refine_from_sam3d else "placement.json"
+        )
+        rewritten_tracks_path = (
+            self.clip_dir / "tracks_placement_refined.json" if refine_from_sam3d else None
+        )
         result = rewrite_tracks_with_placement(
             tracks_path=tracks_path,
             calibration_path=calibration_path,
             placement_path=placement_path,
+            rewritten_tracks_path=rewritten_tracks_path,
             native2d_keypoints_path=native2d_path,
             sam3d_keypoints_path=sam3d_path,
+            skeleton3d_path=(self.clip_dir / "skeleton3d.json") if refine_from_sam3d else None,
             stance_phases_path=stance_phases_path,
             foot_contact_phases_out_path=self.clip_dir / "foot_contact_phases.json",
             camera_motion_path=camera_motion_path,
@@ -3483,13 +3508,23 @@ class ProcessVideoPipeline:
             if (self.clip_dir / "court_lock.json").is_file()
             else None,
             refine_from_sam3d=refine_from_sam3d,
-            config=PlacementConfig(undistort=self.options.placement_undistort),
+            config=PlacementConfig(
+                undistort=self.options.placement_undistort,
+                # Active players routinely stand more than 0.6 m behind the
+                # baseline. Spectator rejection has already happened upstream;
+                # do not discard measured SAM-3D feet solely for using the apron.
+                court_margin_m=2.0 if refine_from_sam3d else PlacementConfig().court_margin_m,
+            ),
         )
 
         source_notes = [f"{name}={count}" for name, count in sorted(result.source_counts.items()) if count]
         placement_summary = getattr(result, "summary", {}) if isinstance(getattr(result, "summary", {}), dict) else {}
         notes = [
-            "rewrote tracks.json world_xy via foot-keypoint placement fusion",
+            (
+                "emitted immutable post-BODY track placement from SAM-3D foot pixels; raw tracks.json was not rewritten"
+                if refine_from_sam3d
+                else "rewrote tracks.json world_xy via foot-keypoint placement fusion"
+            ),
             f"coverage_unchanged={result.coverage_unchanged}",
             f"source_counts({', '.join(source_notes) if source_notes else 'none'})",
         ]
@@ -3501,7 +3536,11 @@ class ProcessVideoPipeline:
             notes.append(f"sam3d_keypoints={sam3d_path}")
         if stance_phases_path is not None:
             notes.append(f"stance_phases={stance_phases_path}")
-        artifacts = ["placement.json", "tracks.json", "tracks_prewrite_backup.json"]
+        artifacts = (
+            ["placement_refined.json", "tracks_placement_refined.json"]
+            if refine_from_sam3d
+            else ["placement.json", "tracks.json", "tracks_prewrite_backup.json"]
+        )
         if (self.clip_dir / "foot_contact_phases.json").is_file():
             artifacts.append("foot_contact_phases.json")
             notes.append("foot_contact_phases=foot_contact_phases.json")
@@ -5517,10 +5556,14 @@ class ProcessVideoPipeline:
                 metrics={"policy_note": GROUNDING_REFINE_POLICY_NOTE},
             )
 
+        refined_tracks_path = self.clip_dir / "tracks_placement_refined.json"
+        grounding_tracks_path = (
+            refined_tracks_path if refined_tracks_path.is_file() else self.clip_dir / "tracks.json"
+        )
         required = {
             "foot_contact_phases.json": self.clip_dir / "foot_contact_phases.json",
             "court_calibration.json": self.clip_dir / "court_calibration.json",
-            "tracks.json": self.clip_dir / "tracks.json",
+            grounding_tracks_path.name: grounding_tracks_path,
         }
         missing = [name for name, path in required.items() if not path.is_file()]
         if missing:
@@ -5577,7 +5620,7 @@ class ProcessVideoPipeline:
                 metrics={"status": "skipped_missing_body_artifacts", "phase_count": phase_count, "policy_note": GROUNDING_REFINE_POLICY_NOTE},
             )
 
-        tracks = _read_json(required["tracks.json"])
+        tracks = _read_json(grounding_tracks_path)
         r3_grounded = _has_r3_grounding_provenance(self.clip_dir)
         config = GroundingRefineConfig(xy_translation_enabled=not r3_grounded)
         reports: dict[str, Any] = {}
@@ -5682,7 +5725,8 @@ class ProcessVideoPipeline:
             )
 
         skeleton_path = self.clip_dir / "skeleton3d.json"
-        tracks_path = self.clip_dir / "tracks.json"
+        refined_tracks_path = self.clip_dir / "tracks_placement_refined.json"
+        tracks_path = refined_tracks_path if refined_tracks_path.is_file() else self.clip_dir / "tracks.json"
         phases_path = self.clip_dir / "foot_contact_phases.json"
         if not skeleton_path.is_file():
             return _placement_trajectory_optional_skip(
@@ -5717,8 +5761,13 @@ class ProcessVideoPipeline:
             "tracks": tracks_path,
             "foot_contact_phases": phases_path,
         }
+        placement_input_name = (
+            "placement_refined.json"
+            if (self.clip_dir / "placement_refined.json").is_file()
+            else "placement.json"
+        )
         for name, filename in (
-            ("placement", "placement.json"),
+            ("placement", placement_input_name),
             ("grounding_refinement", "body_grounding_refinement.json"),
         ):
             path = self.clip_dir / filename
@@ -5736,6 +5785,12 @@ class ProcessVideoPipeline:
             config=PlacementTrajectoryConfig(),
         )
         refinement = refined["placement_trajectory_refinement"]
+        refinement["selected_for_world"] = True
+        refinement["selection_reason"] = (
+            "bounded_rigid_refinement_from_measured_sam3d_foot_placement"
+            if refined_tracks_path.is_file()
+            else "bounded_rigid_refinement_from_initial_track_placement"
+        )
         refinement["provenance"] = {
             "inputs": input_hashes,
             "code_version": f"trackI_placefuse_20260716_schema_v{PLACEMENT_REFINED_SCHEMA_VERSION}",
@@ -5927,9 +5982,27 @@ class ProcessVideoPipeline:
             )
 
         skeleton_only = self.options.pipeline_preset == "court_skeletons"
-        tracks = _read_optional_json(self.clip_dir / "tracks.json")
+        refined_tracks_path = self.clip_dir / "tracks_placement_refined.json"
+        tracks = _read_optional_json(
+            refined_tracks_path if refined_tracks_path.is_file() else self.clip_dir / "tracks.json"
+        )
         smpl_motion = None if skeleton_only else _read_optional_json(self.clip_dir / "smpl_motion.json")
-        skeleton3d = _read_optional_json(self.clip_dir / "skeleton3d.json")
+        trajectory_path = self.clip_dir / "placement_trajectory_refined.json"
+        trajectory_payload = _read_optional_json(trajectory_path)
+        trajectory_metadata = (
+            trajectory_payload.get("placement_trajectory_refinement")
+            if isinstance(trajectory_payload, Mapping)
+            else None
+        )
+        use_trajectory = bool(
+            isinstance(trajectory_metadata, Mapping)
+            and trajectory_metadata.get("selected_for_world") is True
+        )
+        skeleton3d = (
+            trajectory_payload
+            if use_trajectory
+            else _read_optional_json(self.clip_dir / "skeleton3d.json")
+        )
         ball_track = None if skeleton_only else _read_optional_json(self.clip_dir / "ball_track.json")
         physics_footlock_path = self.clip_dir / "physics_footlock.json"
         ball_physics_path = self.clip_dir / "ball_track_physics_filled.json"
@@ -5942,7 +6015,13 @@ class ProcessVideoPipeline:
             tracks=tracks,
             smpl_motion=smpl_motion,
             skeleton3d=skeleton3d,
-            placement=_read_optional_json(self.clip_dir / "placement.json"),
+            placement=_read_optional_json(
+                self.clip_dir / (
+                    "placement_refined.json"
+                    if (self.clip_dir / "placement_refined.json").is_file()
+                    else "placement.json"
+                )
+            ),
             ball_track=ball_track,
             racket_pose=_read_optional_json(racket_pose_path),
             trust_bands=self.trust_bands,
@@ -5983,6 +6062,11 @@ class ProcessVideoPipeline:
             wall_seconds=0.0,
             notes=[
                 "assembled virtual_world.json with per-entity trust bands (never invented; read from real upstream state)",
+                (
+                    "selected placement_trajectory_refined.json as the sole skeleton source"
+                    if use_trajectory
+                    else "selected raw/grounded skeleton3d.json as the sole skeleton source"
+                ),
             ],
             artifacts=[
                 "virtual_world.json",
@@ -5991,6 +6075,10 @@ class ProcessVideoPipeline:
             ],
             metrics={
                 **dict(payload.get("summary", {})),
+                "skeleton_source": (
+                    "placement_trajectory_refined.json" if use_trajectory else "skeleton3d.json"
+                ),
+                "tracks_source": refined_tracks_path.name if refined_tracks_path.is_file() else "tracks.json",
             },
         )
 
@@ -7061,6 +7149,13 @@ def _populate_missing_transl_world_from_tracks(payload: dict[str, Any], tracks: 
 
 
 def _has_r3_grounding_provenance(clip_dir: Path) -> bool:
+    refined_placement = _read_optional_json(clip_dir / "placement_refined.json")
+    if (
+        isinstance(refined_placement, Mapping)
+        and refined_placement.get("refine_from_sam3d") is True
+        and (clip_dir / "tracks_placement_refined.json").is_file()
+    ):
+        return True
     quality = _read_optional_json(clip_dir / "body_grounding_quality.json")
     if _payload_has_r3_grounding_provenance(quality):
         return True

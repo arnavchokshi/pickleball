@@ -388,6 +388,7 @@ class CourtLockDistortion:
 class CourtLockResidual:
     median_px: float
     p95_px: float
+    p90_px: float | None = None
 
     def __post_init__(self) -> None:
         for name in ("median_px", "p95_px"):
@@ -396,9 +397,19 @@ class CourtLockResidual:
                 raise ValueError(f"{name} must be non-negative and finite")
         if self.p95_px < self.median_px:
             raise ValueError("p95_px cannot be smaller than median_px")
+        if self.p90_px is None:
+            object.__setattr__(self, "p90_px", float(self.p95_px))
+        if not math.isfinite(float(self.p90_px)) or float(self.p90_px) < 0.0:
+            raise ValueError("p90_px must be non-negative and finite")
+        if not self.median_px <= float(self.p90_px) <= self.p95_px:
+            raise ValueError("p90_px must lie between median_px and p95_px")
 
     def to_dict(self) -> dict[str, float]:
-        return {"median_px": float(self.median_px), "p95_px": float(self.p95_px)}
+        return {
+            "median_px": float(self.median_px),
+            "p90_px": float(self.p90_px),
+            "p95_px": float(self.p95_px),
+        }
 
 
 @dataclass(frozen=True)
@@ -439,6 +450,12 @@ class CourtLockArtifact:
     evidence: CourtLockEvidenceSummary
     static_motion: StaticMotionDiagnostics
     residual_px: CourtLockResidual
+    held_out_line_residual_px: Mapping[str, float] = field(default_factory=dict)
+    camera_model_conditioning: Mapping[str, Any] = field(default_factory=dict)
+    off_plane_net_reprojection: Mapping[str, Any] = field(default_factory=dict)
+    covariance_source: str = "unavailable"
+    floor_lock_eligible: bool = False
+    pose_3d_eligible: bool = False
     lock_eligible: bool = False
     lock_decision_reasons: tuple[str, ...] = ()
     segment_range: tuple[int, int] | None = None
@@ -476,6 +493,20 @@ class CourtLockArtifact:
         for key, value in self.score_components.items():
             if not str(key).strip() or isinstance(value, bool) or not math.isfinite(float(value)):
                 raise ValueError("score_components must map nonblank names to finite numbers")
+        for key, value in self.held_out_line_residual_px.items():
+            if not str(key).strip() or isinstance(value, bool) or not math.isfinite(float(value)) or float(value) < 0.0:
+                raise ValueError("held_out_line_residual_px must contain finite non-negative values")
+        if not self.covariance_source.strip():
+            raise ValueError("covariance_source must be nonblank")
+        if self.lock_eligible and not self.floor_lock_eligible:
+            object.__setattr__(self, "floor_lock_eligible", True)
+        if self.floor_lock_eligible and not self.lock_eligible:
+            raise ValueError("floor_lock_eligible requires lock_eligible")
+        if self.pose_3d_eligible and (
+            self.camera_parameters.rotation_world_to_camera is None
+            or self.camera_parameters.translation_world_to_camera_m is None
+        ):
+            raise ValueError("pose_3d_eligible requires solved camera extrinsics")
         if self.measurement_valid and not self.static_motion.static_lock_usable:
             raise ValueError("measurement_valid requires a confirmed static camera")
         if self.lock_eligible and not self.static_motion.static_lock_usable:
@@ -501,6 +532,15 @@ class CourtLockArtifact:
             "evidence": self.evidence.to_dict(),
             "static_motion": self.static_motion.to_dict(),
             "residual_px": self.residual_px.to_dict(),
+            "held_out_line_residual_px": {
+                str(key): float(value)
+                for key, value in sorted(self.held_out_line_residual_px.items())
+            },
+            "camera_model_conditioning": dict(self.camera_model_conditioning),
+            "off_plane_net_reprojection": dict(self.off_plane_net_reprojection),
+            "covariance_source": self.covariance_source,
+            "floor_lock_eligible": self.floor_lock_eligible,
+            "pose_3d_eligible": self.pose_3d_eligible,
             "lock_eligible": self.lock_eligible,
             "lock_decision_reasons": list(self.lock_decision_reasons),
             "segment_range": None if self.segment_range is None else list(self.segment_range),
@@ -557,8 +597,26 @@ class CourtLockArtifact:
             static_motion=StaticMotionDiagnostics.from_dict(payload["static_motion"]),
             residual_px=CourtLockResidual(
                 median_px=float(residual_payload["median_px"]),
+                p90_px=float(residual_payload.get("p90_px", residual_payload["p95_px"])),
                 p95_px=float(residual_payload["p95_px"]),
             ),
+            held_out_line_residual_px={
+                str(key): float(value)
+                for key, value in (payload.get("held_out_line_residual_px") or {}).items()
+            },
+            camera_model_conditioning=(
+                dict(payload["camera_model_conditioning"])
+                if isinstance(payload.get("camera_model_conditioning"), Mapping)
+                else {}
+            ),
+            off_plane_net_reprojection=(
+                dict(payload["off_plane_net_reprojection"])
+                if isinstance(payload.get("off_plane_net_reprojection"), Mapping)
+                else {}
+            ),
+            covariance_source=str(payload.get("covariance_source") or "unavailable"),
+            floor_lock_eligible=bool(payload.get("floor_lock_eligible", payload.get("lock_eligible", False))),
+            pose_3d_eligible=bool(payload.get("pose_3d_eligible", False)),
             lock_eligible=bool(payload.get("lock_eligible", False)),
             lock_decision_reasons=tuple(str(value) for value in payload.get("lock_decision_reasons", [])),
             segment_range=(
@@ -596,6 +654,12 @@ _COURT_LOCK_KEYS = frozenset(
         "evidence",
         "static_motion",
         "residual_px",
+        "held_out_line_residual_px",
+        "camera_model_conditioning",
+        "off_plane_net_reprojection",
+        "covariance_source",
+        "floor_lock_eligible",
+        "pose_3d_eligible",
         "lock_eligible",
         "lock_decision_reasons",
         "segment_range",
@@ -610,7 +674,18 @@ _COURT_LOCK_KEYS = frozenset(
     }
 )
 _COURT_LOCK_OPTIONAL_KEYS = frozenset(
-    {"lock_eligible", "lock_decision_reasons", "segment_range", "segment_diagnostics"}
+    {
+        "held_out_line_residual_px",
+        "camera_model_conditioning",
+        "off_plane_net_reprojection",
+        "covariance_source",
+        "floor_lock_eligible",
+        "pose_3d_eligible",
+        "lock_eligible",
+        "lock_decision_reasons",
+        "segment_range",
+        "segment_diagnostics",
+    }
 )
 _COURT_LOCK_REQUIRED_KEYS = _COURT_LOCK_KEYS - _COURT_LOCK_OPTIONAL_KEYS
 

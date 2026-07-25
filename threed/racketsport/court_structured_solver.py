@@ -166,10 +166,26 @@ def solve_best_floor_court(
                 prior_homography = candidate.get("homography")
                 break
     candidates, initially_ignored, observation_counts = _normalize_observations(raw_observations)
-    hypothesis_specs, hypothesis_diagnostics = _prioritized_hypotheses(
-        candidates,
-        max_hypotheses=max_hypotheses,
-    )
+    primary_initializer_budget = min(2, max_hypotheses) if len(candidates) >= 4 else 0
+    prosac_budget = max_hypotheses - primary_initializer_budget
+    if prosac_budget > 0:
+        hypothesis_specs, hypothesis_diagnostics = _prioritized_hypotheses(
+            candidates,
+            max_hypotheses=prosac_budget,
+        )
+    else:
+        hypothesis_specs = []
+        hypothesis_diagnostics = {
+            "candidate_hypotheses_nondegenerate": 0,
+            "hypotheses_retained_cap": 0,
+            "hypothesis_cap": max_hypotheses,
+            "world_degenerate_groups_ignored": 0,
+            "image_degenerate_hypotheses_ignored": 0,
+            "semantic_groups_queued": 0,
+            "candidate_products_expanded": 0,
+        }
+    hypothesis_diagnostics["hypothesis_cap"] = max_hypotheses
+    hypothesis_diagnostics["all_primary_initializer_count"] = primary_initializer_budget
 
     scored: list[_ScoredModel] = []
     hard_rejection_counts: dict[str, int] = {}
@@ -199,6 +215,38 @@ def solve_best_floor_court(
                 dense_evidence=dense_evidence,
             )
         )
+
+    # Four-point PROSAC hypotheses are essential when raw evidence contains
+    # swaps/outliers, but confidence ordering can exclude the globally coherent
+    # all-primary solution from a capped search.  Always include both uniform
+    # and covariance-weighted DLT initializers over every primary semantic.
+    # A corrupt primary point cannot force either initializer to win because
+    # both still compete under the same outlier-mixture/coverage score.
+    primary_semantics = tuple(sorted(candidates))
+    primary_observations = tuple(candidates[name][0] for name in primary_semantics)
+    if len(primary_observations) >= 4:
+        primary_world = [EVIDENCE_WORLD_XY_M[name] for name in primary_semantics]
+        primary_image = [candidate.xy for candidate in primary_observations]
+        primary_weight_sets = (
+            ("all_primary_uniform_dlt", [1.0] * len(primary_observations)),
+            (
+                "all_primary_covariance_weighted_dlt",
+                [
+                    max(candidate.quality / (candidate.sigma_px**2), 1.0e-6)
+                    for candidate in primary_observations
+                ],
+            ),
+        )
+        for source, weights in primary_weight_sets[:primary_initializer_budget]:
+            try:
+                homography = _fit_homography(primary_world, primary_image, weights)
+            except ValueError:
+                continue
+            score_if_eligible(
+                homography,
+                source=source,
+                seed_semantics=primary_semantics,
+            )
 
     for priority, semantics, selected in hypothesis_specs:
         del priority
@@ -279,7 +327,54 @@ def solve_best_floor_court(
         )
     finalists = scored + refined
     finalists.sort(key=_model_sort_key)
-    best = finalists[0]
+    score_winner = finalists[0]
+    best = score_winner
+    selection_guard = {
+        "applied": False,
+        "score_winner_source": score_winner.source,
+        "selected_source": score_winner.source,
+        "reason": "posterior_score_winner_retained",
+    }
+    all_primary_models = [
+        model for model in finalists if model.source.startswith("all_primary_")
+    ]
+    if all_primary_models:
+        primary = min(
+            all_primary_models,
+            key=lambda model: (
+                float(model.residual_stats.get("p95") or math.inf),
+                float(model.residual_stats.get("median") or math.inf),
+                -len(model.inliers),
+                -float(model.score),
+            ),
+        )
+        winner_p95 = float(score_winner.residual_stats.get("p95") or math.inf)
+        primary_p95 = float(primary.residual_stats.get("p95") or math.inf)
+        winner_median = float(score_winner.residual_stats.get("median") or math.inf)
+        primary_median = float(primary.residual_stats.get("median") or math.inf)
+        material_p95_gain = primary_p95 + max(1.0, 0.15 * primary_p95) < winner_p95
+        near_complete_consensus = len(primary.inliers) >= max(4, len(score_winner.inliers) - 1)
+        median_not_worse = primary_median <= winner_median + 0.5
+        score_not_remote = primary.score >= score_winner.score - 1.0
+        if (
+            primary is not score_winner
+            and material_p95_gain
+            and near_complete_consensus
+            and median_not_worse
+            and score_not_remote
+            and _held_out_line_not_worse(primary, score_winner)
+        ):
+            best = primary
+            selection_guard = {
+                "applied": True,
+                "score_winner_source": score_winner.source,
+                "selected_source": primary.source,
+                "reason": "globally_coherent_primary_residual_guard",
+                "score_winner_residual_p95_px": winner_p95,
+                "selected_residual_p95_px": primary_p95,
+                "score_winner_inlier_count": len(score_winner.inliers),
+                "selected_inlier_count": len(primary.inliers),
+            }
     alternate = next(
         (
             model
@@ -382,6 +477,37 @@ def solve_best_floor_court(
         "shortlist_size": len(shortlisted),
         "refined_models_scored": len(refined),
         "refine_size": min(refine_size, len(shortlisted)),
+        "top_models": [
+            {
+                "source": model.source,
+                "score": float(model.score),
+                "inlier_count": len(model.inliers),
+                "residual_median_px": model.residual_stats.get("median"),
+                "residual_p95_px": model.residual_stats.get("p95"),
+                "line_p95_distance_px": model.score_components.get("line_p95_distance_px"),
+                "held_out_line_p95_distance_px": model.score_components.get(
+                    "held_out_line_p95_distance_px"
+                ),
+                "surface_overlap": model.score_components.get("surface_overlap"),
+            }
+            for model in finalists[:8]
+        ],
+        "all_primary_models": [
+            {
+                "source": model.source,
+                "score": float(model.score),
+                "inlier_count": len(model.inliers),
+                "residual_median_px": model.residual_stats.get("median"),
+                "residual_p95_px": model.residual_stats.get("p95"),
+                "held_out_line_p95_distance_px": model.score_components.get(
+                    "held_out_line_p95_distance_px"
+                ),
+                "surface_overlap": model.score_components.get("surface_overlap"),
+            }
+            for model in finalists
+            if model.source.startswith("all_primary_")
+        ],
+        "selection_guard": selection_guard,
     }
     if prior_error is not None:
         diagnostics["prior_homography"] = {"accepted": False, "reason": prior_error}
@@ -1029,6 +1155,12 @@ def _score_dense_evidence(
             "surface_overlap": 0.0,
             "temporal_support": 0.0,
             "line_mean_distance_px": 0.0,
+            "line_p90_distance_px": 0.0,
+            "line_p95_distance_px": 0.0,
+            "held_out_line_mean_distance_px": 0.0,
+            "held_out_line_p90_distance_px": 0.0,
+            "held_out_line_p95_distance_px": 0.0,
+            "held_out_line_sample_count": 0.0,
             "line_visible_fraction": 0.0,
             "line_unique_footprint_fraction": 0.0,
             "line_semantic_collision_fraction": 0.0,
@@ -1037,10 +1169,15 @@ def _score_dense_evidence(
         }
 
     line_distances: list[float] = []
+    held_out_line_distances: list[float] = []
     requested_line_samples = 0
+    requested_optimization_samples = 0
+    requested_held_out_samples = 0
     retained_unique_line_samples = 0
     semantic_pixel_owners: dict[tuple[int, int], set[str]] = {}
-    for segment_name, (start_name, end_name) in SEMANTIC_FLOOR_SEGMENTS.items():
+    for segment_index, (segment_name, (start_name, end_name)) in enumerate(
+        SEMANTIC_FLOOR_SEGMENTS.items()
+    ):
         distance_map = evidence.line_distance_maps.get(segment_name)
         if distance_map is None:
             distance_map = evidence.line_distance_maps.get("pickleball_line")
@@ -1067,13 +1204,30 @@ def _score_dense_evidence(
         retained_unique_line_samples += len(unique_projected)
         for point in unique_projected:
             semantic_pixel_owners.setdefault(_raster_key(point), set()).add(segment_name)
-        line_distances.extend(_sample_image(distance_map, unique_projected))
+        optimization_projected = [
+            point
+            for sample_index, point in enumerate(projected)
+            if (sample_index + segment_index) % 4 != 0
+        ]
+        held_out_projected = [
+            point
+            for sample_index, point in enumerate(projected)
+            if (sample_index + segment_index) % 4 == 0
+        ]
+        requested_optimization_samples += len(optimization_projected)
+        requested_held_out_samples += len(held_out_projected)
+        line_distances.extend(
+            _sample_image(distance_map, _unique_raster_points(optimization_projected))
+        )
+        held_out_line_distances.extend(
+            _sample_image(distance_map, _unique_raster_points(held_out_projected))
+        )
     unique_line_fraction = retained_unique_line_samples / max(requested_line_samples, 1)
     collision_count = sum(max(0, len(owners) - 1) for owners in semantic_pixel_owners.values())
     semantic_collision_fraction = collision_count / max(retained_unique_line_samples, 1)
     if line_distances:
         mean_line_distance = float(np.mean(line_distances))
-        visible_line_fraction = len(line_distances) / max(requested_line_samples, 1)
+        visible_line_fraction = len(line_distances) / max(requested_optimization_samples, 1)
         footprint_factor = math.sqrt(min(max(unique_line_fraction, 0.0), 1.0))
         collision_factor = math.exp(-4.0 * semantic_collision_fraction)
         line_alignment = (
@@ -1086,6 +1240,29 @@ def _score_dense_evidence(
         mean_line_distance = 0.0
         visible_line_fraction = 0.0
         line_alignment = 0.0
+
+    line_p90_distance = (
+        float(np.percentile(line_distances, 90)) if line_distances else 0.0
+    )
+    line_p95_distance = (
+        float(np.percentile(line_distances, 95)) if line_distances else 0.0
+    )
+    held_out_line_mean_distance = (
+        float(np.mean(held_out_line_distances)) if held_out_line_distances else 0.0
+    )
+    held_out_line_p90_distance = (
+        float(np.percentile(held_out_line_distances, 90))
+        if held_out_line_distances
+        else 0.0
+    )
+    held_out_line_p95_distance = (
+        float(np.percentile(held_out_line_distances, 95))
+        if held_out_line_distances
+        else 0.0
+    )
+    held_out_line_visible_fraction = len(held_out_line_distances) / max(
+        requested_held_out_samples, 1
+    )
 
     surface_overlap = 0.0
     surface_visible_fraction = 0.0
@@ -1115,6 +1292,13 @@ def _score_dense_evidence(
         "surface_overlap": float(min(max(surface_overlap, 0.0), 1.0)),
         "temporal_support": float(evidence.temporal_support or 0.0),
         "line_mean_distance_px": mean_line_distance,
+        "line_p90_distance_px": line_p90_distance,
+        "line_p95_distance_px": line_p95_distance,
+        "held_out_line_mean_distance_px": held_out_line_mean_distance,
+        "held_out_line_p90_distance_px": held_out_line_p90_distance,
+        "held_out_line_p95_distance_px": held_out_line_p95_distance,
+        "held_out_line_sample_count": float(len(held_out_line_distances)),
+        "held_out_line_visible_fraction": float(held_out_line_visible_fraction),
         "line_visible_fraction": float(visible_line_fraction),
         "line_unique_footprint_fraction": float(unique_line_fraction),
         "line_semantic_collision_fraction": float(semantic_collision_fraction),
@@ -1220,7 +1404,10 @@ def _refine_model(
             duplicate_tolerance_px=duplicate_tolerance_px,
             dense_evidence=dense_evidence,
         )
-        if _model_sort_key(candidate_model) < _model_sort_key(current):
+        if (
+            _held_out_line_not_worse(candidate_model, current)
+            and _model_sort_key(candidate_model) < _model_sort_key(current)
+        ):
             current = candidate_model
         else:
             break
@@ -1313,12 +1500,29 @@ def _refine_dense_model(
                         duplicate_tolerance_px=duplicate_tolerance_px,
                         dense_evidence=dense_evidence,
                     )
-                    if _model_sort_key(candidate_model) < _model_sort_key(current):
+                    if (
+                        _held_out_line_not_worse(candidate_model, current)
+                        and _model_sort_key(candidate_model) < _model_sort_key(current)
+                    ):
                         current = candidate_model
                         improved = True
             # One complete coordinate pass per scale keeps runtime bounded and deterministic.
             break
     return current
+
+
+def _held_out_line_not_worse(candidate: _ScoredModel, incumbent: _ScoredModel) -> bool:
+    candidate_count = float(candidate.score_components.get("held_out_line_sample_count", 0.0))
+    incumbent_count = float(incumbent.score_components.get("held_out_line_sample_count", 0.0))
+    if candidate_count <= 0.0 or incumbent_count <= 0.0:
+        return True
+    for key in ("held_out_line_p90_distance_px", "held_out_line_p95_distance_px"):
+        candidate_value = float(candidate.score_components.get(key, math.inf))
+        incumbent_value = float(incumbent.score_components.get(key, math.inf))
+        tolerance = max(0.25, 0.05 * incumbent_value)
+        if candidate_value > incumbent_value + tolerance:
+            return False
+    return True
 
 
 def _point_set_supports_homography(points: Sequence[Sequence[float]]) -> bool:

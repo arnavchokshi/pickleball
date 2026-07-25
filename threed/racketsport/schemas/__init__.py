@@ -660,6 +660,12 @@ class CourtLock(StrictArtifact):
     evidence: dict[str, Any]
     static_motion: dict[str, Any]
     residual_px: dict[str, Any]
+    held_out_line_residual_px: dict[str, FiniteFloat] = Field(default_factory=dict)
+    camera_model_conditioning: dict[str, Any] = Field(default_factory=dict)
+    off_plane_net_reprojection: dict[str, Any] = Field(default_factory=dict)
+    covariance_source: str = "unavailable"
+    floor_lock_eligible: bool = False
+    pose_3d_eligible: bool = False
     lock_eligible: bool = False
     lock_decision_reasons: list[str] = Field(default_factory=list)
     segment_range: tuple[int, int] | None = None
@@ -770,6 +776,9 @@ class PlacementFrame(BaseModel):
     original_world_xy: Vector2
     fused_world_xy: Vector2
     smoothed_world_xy: Vector2
+    track_placement_translation_world: Vector3 | None = None
+    applied_rigid_translation_world: Vector3 | None = None
+    rigid_translation_status: str | None = None
     covariance_m2: Matrix2
     uncertainty_decomposition: dict[str, Any] = Field(default_factory=dict)
     stance: bool
@@ -822,6 +831,7 @@ class PlacementSummary(BaseModel):
     camera_motion_artifact_frame_count: int | None = Field(default=None, ge=0)
     camera_motion_artifact_compensated_frame_count: int | None = Field(default=None, ge=0)
     calibration_uncertainty_status: str | None = None
+    post_body_skeleton_translation: dict[str, Any] = Field(default_factory=dict)
 
     @field_validator("source_counts")
     @classmethod
@@ -836,6 +846,7 @@ class PlacementArtifact(StrictArtifact):
     fps: FiniteFloat = Field(gt=0.0)
     source: str
     tracks_path: str
+    rewritten_tracks_path: str | None = None
     backup_tracks_path: str
     refine_from_sam3d: bool
     homography_pixel_convention: str | None = None
@@ -1445,6 +1456,7 @@ class Skeleton3D(StrictArtifact):
     players: list[SkeletonPlayer]
     provenance: dict[str, Any] = Field(default_factory=dict)
     body_grounding_refinement: dict[str, Any] | None = None
+    placement_trajectory_refinement: dict[str, Any] | None = None
 
 
 class BallFrame(BaseModel):
@@ -2313,6 +2325,9 @@ class VirtualWorldPlayerFrame(BaseModel):
     trust_band: TrustBand | None = None
     confidence_provenance: ConfidenceProvenance | None = None
     placement_diagnostics: dict[str, Any] | None = None
+    skeleton_source: str | None = None
+    position_provenance: str | None = None
+    applied_rigid_translation_world: Vector3 | None = None
 
 
 class VirtualWorldJointsSource(BaseModel):

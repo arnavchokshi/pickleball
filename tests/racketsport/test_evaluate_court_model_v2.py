@@ -232,6 +232,10 @@ def test_paired_eval_runs_inference_once_and_preserves_protocol_strata(
     assert report["structured"]["point_metrics"]["median_error_px"] == 1.0
     assert report["paired_deltas"]["point_estimates"]["mean_paired_error_reduction_px"] == 1.0
     assert set(report["strata"]["source"]) == {"camera_a"}
+    assert report["structured_selection_subset"]["sample_count"] == 0
+    assert report["structured_selection_subset"]["exclusion_reason_counts"] == {
+        "insufficient_floor_correspondences": 1
+    }
     assert report["authority_state"] == "review_only"
 
 

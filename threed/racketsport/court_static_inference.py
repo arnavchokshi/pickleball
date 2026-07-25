@@ -944,11 +944,33 @@ def _court_lock_artifact(
     k1 = float(distortion_payload.get("k1", 0.0))
     residual = best_court.get("residual_stats_px") or {}
     median = float(residual.get("median") or 0.0)
+    p90 = float(residual.get("p90") or residual.get("p95") or median)
     p95 = float(residual.get("p95") or residual.get("p90") or median)
     pose = solved_camera.get("pose")
     pose = pose if isinstance(pose, Mapping) else {}
     rotation = pose.get("rotation_world_to_camera")
     translation = pose.get("translation_world_to_camera_m")
+    score_components = {
+        str(key): float(value)
+        for key, value in (best_court.get("score_components") or {}).items()
+        if isinstance(value, (int, float)) and not isinstance(value, bool)
+    }
+    held_out_line_residual = {
+        "mean_px": float(score_components.get("held_out_line_mean_distance_px", 0.0)),
+        "p90_px": float(score_components.get("held_out_line_p90_distance_px", 0.0)),
+        "p95_px": float(score_components.get("held_out_line_p95_distance_px", 0.0)),
+        "sample_count": float(score_components.get("held_out_line_sample_count", 0.0)),
+    }
+    has_extrinsics = rotation is not None and translation is not None
+    homography_condition_number = float(
+        np.linalg.cond(np.asarray(best_court["homography_image_from_court"], dtype=np.float64))
+    )
+    off_plane_net = best_court.get("off_plane_net_reprojection")
+    off_plane_net = dict(off_plane_net) if isinstance(off_plane_net, Mapping) else {
+        "status": "unavailable",
+        "reason": "no_independent_net_top_pose_check",
+    }
+    pose_3d_eligible = bool(has_extrinsics and off_plane_net.get("status") == "pass")
     return CourtLockArtifact(
         coordinate_space="pixels_raw_native",
         homography_image_from_court=tuple(
@@ -996,12 +1018,31 @@ def _court_lock_artifact(
             pooled_semantic_count=len(pooled.observations),
         ),
         static_motion=motion,
-        residual_px=CourtLockResidual(median_px=median, p95_px=max(median, p95)),
-        score_components={
-            str(key): float(value)
-            for key, value in (best_court.get("score_components") or {}).items()
-            if isinstance(value, (int, float)) and not isinstance(value, bool)
+        residual_px=CourtLockResidual(
+            median_px=median,
+            p90_px=max(median, min(p90, max(median, p95))),
+            p95_px=max(median, p95),
+        ),
+        held_out_line_residual_px=held_out_line_residual,
+        camera_model_conditioning={
+            "status": "bounded_extrinsics_available" if has_extrinsics else "underconstrained_planar",
+            "homography_condition_number": homography_condition_number,
+            "intrinsics_source": str(
+                solved_camera.get("source")
+                or solved_camera.get("intrinsics_source")
+                or profile.get("source")
+                or "bounded_image_profile_prior"
+            ),
         },
+        off_plane_net_reprojection=off_plane_net,
+        covariance_source=(
+            "analytic_local_hessian"
+            if best_court.get("transform_covariance") is not None
+            else "unavailable"
+        ),
+        floor_lock_eligible=True,
+        pose_3d_eligible=pose_3d_eligible,
+        score_components=score_components,
         checkpoint_sha256=checkpoint_sha256,
         lock_eligible=True,
         lock_decision_reasons=tuple(str(value) for value in lock_decision_reasons),

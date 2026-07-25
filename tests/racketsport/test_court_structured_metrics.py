@@ -5,9 +5,11 @@ import math
 import pytest
 
 from threed.racketsport.court_structured_metrics import (
+    assess_structured_target_eligibility,
     evaluate_raw_vs_structured_court_outputs,
     evaluate_structured_court_outputs,
 )
+from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
 
 
 def _template_points() -> dict[str, list[float]]:
@@ -299,3 +301,74 @@ def test_paired_raw_vs_structured_metrics_report_strata_and_sample_bootstrap() -
     assert set(metrics["strata"]["viewpoint"]) == {"diagonal", "straight"}
     assert set(metrics["strata"]["visibility"]) == {"full_floor_12", "partial_floor"}
     assert metrics["task88_policy"].startswith("historical_development_only")
+    assert metrics["structured_selection_subset"]["sample_count"] == 0
+    assert metrics["structured_selection_subset"]["exclusion_reason_counts"] == {
+        "not_audited": 2
+    }
+
+
+def _regulation_floor_projection() -> dict[str, list[float]]:
+    return {
+        point.name: [
+            42.0 * float(point.world_xyz_m[0])
+            + 7.0 * float(point.world_xyz_m[1])
+            + 180.0,
+            -3.0 * float(point.world_xyz_m[0])
+            + 27.0 * float(point.world_xyz_m[1])
+            + 90.0,
+        ]
+        for point in PICKLEBALL_KEYPOINTS
+        if abs(float(point.world_xyz_m[2])) <= 1.0e-12
+    }
+
+
+def test_structured_selection_subset_excludes_impossible_labels_without_hiding_them() -> None:
+    coherent = _regulation_floor_projection()
+    inconsistent = {name: list(xy) for name, xy in coherent.items()}
+    inconsistent["near_nvz_center"][0] += 40.0
+    coherent_audit = assess_structured_target_eligibility(coherent)
+    inconsistent_audit = assess_structured_target_eligibility(inconsistent)
+    assert coherent_audit["eligible"] is True
+    assert coherent_audit["p95_residual_px"] == pytest.approx(0.0, abs=1.0e-6)
+    assert inconsistent_audit["eligible"] is False
+    assert inconsistent_audit["reason"] == "regulation_fit_residual_exceeds_threshold"
+
+    records = [
+        {
+            "sample_id": "direct/coherent",
+            "viewpoint": "straight",
+            "strata": {"source": "direct"},
+            "ground_truth": coherent,
+            "structured_target_eligibility": coherent_audit,
+            "raw_prediction": {"keypoints": _translated(coherent, 8.0, 0.0)},
+            "structured_prediction": {"keypoints": _translated(coherent, 2.0, 0.0)},
+        },
+        {
+            "sample_id": "adapter/inconsistent",
+            "viewpoint": "diagonal",
+            "strata": {"source": "geometric_adapter"},
+            "ground_truth": inconsistent,
+            "structured_target_eligibility": inconsistent_audit,
+            "raw_prediction": {"keypoints": inconsistent},
+            "structured_prediction": {"keypoints": coherent},
+        },
+    ]
+    metrics = evaluate_raw_vs_structured_court_outputs(
+        records, bootstrap_resamples=20, bootstrap_seed=13
+    )
+
+    # The impossible adapter row still contributes to the transparent all-row card.
+    assert metrics["sample_count"] == 2
+    assert metrics["raw"]["point_metrics"]["pck_at_5px"] == pytest.approx(0.5)
+    assert metrics["structured"]["point_metrics"]["pck_at_5px"] > 0.5
+
+    # Candidate selection uses only labels a regulation-court solver could possibly match.
+    selection = metrics["structured_selection_subset"]
+    assert selection["sample_count"] == 1
+    assert selection["excluded_sample_count"] == 1
+    assert selection["raw"]["point_metrics"]["pck_at_5px"] == 0.0
+    assert selection["structured"]["point_metrics"]["pck_at_5px"] == 1.0
+    assert selection["exclusion_reason_counts"] == {
+        "regulation_fit_residual_exceeds_threshold": 1
+    }
+    assert selection["excluded_samples"][0]["sample_id"] == "adapter/inconsistent"

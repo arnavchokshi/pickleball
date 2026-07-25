@@ -29,6 +29,7 @@ from threed.racketsport.player_selection import (
     evaluate_stitch,
     fusion_score,
     infer_active_player_count,
+    infer_associated_active_player_count,
     mark_micro_fill_provenance,
     median_real_footpoint_court_excess_m,
     micro_fill_allowed,
@@ -96,6 +97,57 @@ def test_auto_player_count_selects_singles_or_doubles_without_interpolation_back
         for source in (5, 6)
     )
     assert infer_active_player_count(doubles, fps=30.0) == 4
+
+
+def test_associated_cardinality_recovers_doubles_when_raw_source_ids_fragment() -> None:
+    fps = 30.0
+    players: list[dict[str, object]] = []
+    real_by_frame: dict[int, list[SelectionDetection]] = defaultdict(list)
+    for player_id in (1, 2, 3, 4):
+        frames = []
+        x = -1.0 if player_id % 2 else 1.0
+        y = -2.0 if player_id <= 2 else 2.0
+        for frame_idx in range(40):
+            bbox = (player_id * 10.0, 20.0, player_id * 10.0 + 5.0, 40.0)
+            frames.append(
+                {
+                    "t": frame_idx / fps,
+                    "bbox": list(bbox),
+                    "world_xy": [x, y],
+                    "conf": 0.9,
+                }
+            )
+            # Deliberately change source IDs so the raw-source heuristic never
+            # observes four stable identities. Stable preselection IDs still do.
+            real_by_frame[frame_idx].append(
+                _detection(
+                    frame_idx,
+                    source=player_id * 1000 + frame_idx,
+                    xy=(x, y),
+                    embedding=(1.0, 0.0),
+                    bbox=bbox,
+                    raw_detection_uid=f"raw:{frame_idx}:{player_id}",
+                )
+            )
+        players.append(
+            {
+                "id": player_id,
+                "side": "near" if y < 0.0 else "far",
+                "role": "left" if x < 0.0 else "right",
+                "frames": frames,
+            }
+        )
+
+    count, diagnostics = infer_associated_active_player_count(
+        players,
+        fps=fps,
+        real_by_frame=real_by_frame,
+    )
+
+    assert count == 4
+    assert diagnostics["four_player_frame_count"] == 40
+    assert diagnostics["simultaneous_measured_player_histogram"] == {"4": 40}
+    assert diagnostics["dominant_measured_source_track_ids"] == []
 
 
 def test_measured_association_fallback_preserves_ids_and_excludes_interpolation() -> None:

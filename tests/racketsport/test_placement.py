@@ -507,6 +507,112 @@ def test_refine_pass_is_idempotent_for_same_sam3d_sidecar(tmp_path: Path) -> Non
     assert (tmp_path / "tracks_prewrite_backup.json").is_file()
 
 
+def test_post_body_refine_can_emit_immutable_tracks_without_rewriting_raw_tracks(tmp_path: Path) -> None:
+    tracks_path = tmp_path / "tracks.json"
+    refined_tracks_path = tmp_path / "tracks_placement_refined.json"
+    calibration_path = tmp_path / "court_calibration.json"
+    sam3d_path = tmp_path / "sam3d_keypoints_2d.json"
+    skeleton3d_path = tmp_path / "skeleton3d.json"
+    placement_path = tmp_path / "placement_refined.json"
+    _write_json(tracks_path, _tracks_payload())
+    _write_json(calibration_path, _calibration_payload())
+    _write_json(sam3d_path, _sam3d_sidecar_payload())
+    foot_names = [
+        "left_ankle",
+        "right_ankle",
+        "left_big_toe_tip",
+        "left_small_toe_tip",
+        "left_heel",
+        "right_big_toe_tip",
+        "right_small_toe_tip",
+        "right_heel",
+    ]
+    _write_json(
+        skeleton3d_path,
+        {
+            "joint_names": foot_names,
+            "players": [
+                {
+                    "id": 1,
+                    "frames": [
+                        {
+                            "frame_idx": frame_idx,
+                            "t": frame_idx / 30.0,
+                            "joints_world": [[0.0, 0.0, 0.0] for _ in foot_names],
+                        }
+                        for frame_idx in range(12)
+                    ],
+                }
+            ],
+        },
+    )
+    original_tracks_bytes = tracks_path.read_bytes()
+
+    result = rewrite_tracks_with_placement(
+        tracks_path=tracks_path,
+        rewritten_tracks_path=refined_tracks_path,
+        calibration_path=calibration_path,
+        placement_path=placement_path,
+        sam3d_keypoints_path=sam3d_path,
+        skeleton3d_path=skeleton3d_path,
+        refine_from_sam3d=True,
+        config=PlacementConfig(
+            keypoint_base_sigma_px=1.0,
+            bbox_base_sigma_px=80.0,
+            process_noise_mps2=0.1,
+        ),
+    )
+
+    assert tracks_path.read_bytes() == original_tracks_bytes
+    assert result.rewritten_tracks_path == refined_tracks_path
+    refined = json.loads(refined_tracks_path.read_text(encoding="utf-8"))
+    placement = validate_artifact_file("placement", placement_path)
+    assert refined["players"][0]["frames"][0]["world_xy"] == pytest.approx([0.5, 0.5], abs=0.08)
+    assert placement.rewritten_tracks_path == "tracks_placement_refined.json"
+    assert placement.provenance["raw_tracks_mutated"] is False
+    first_placement = placement.players[0].frames[0]
+    assert first_placement.applied_rigid_translation_world is not None
+    assert first_placement.applied_rigid_translation_world[:2] == pytest.approx(
+        first_placement.smoothed_world_xy
+    )
+    assert placement.summary.post_body_skeleton_translation["translated_frame_count"] == 12
+
+
+def test_post_body_support_uses_one_contact_foot_and_bbox_floor_y(tmp_path: Path) -> None:
+    tracks_path = tmp_path / "tracks.json"
+    calibration_path = tmp_path / "court_calibration.json"
+    sam3d_path = tmp_path / "sam3d_keypoints_2d.json"
+    placement_path = tmp_path / "placement_refined.json"
+    tracks = _tracks_payload()
+    sidecar = _sam3d_sidecar_payload()
+    for frame in sidecar["players"][0]["frames"]:  # type: ignore[index]
+        for keypoint in frame["keypoints"]:
+            if keypoint["name"] == "left_toe":
+                keypoint["xy_px"] = [1038.0, 1044.0]
+            elif keypoint["name"] == "right_toe":
+                keypoint["xy_px"] = [1062.0, 1034.0]
+    _write_json(tracks_path, tracks)
+    _write_json(calibration_path, _calibration_payload())
+    _write_json(sam3d_path, sidecar)
+
+    rewrite_tracks_with_placement(
+        tracks_path=tracks_path,
+        rewritten_tracks_path=tmp_path / "tracks_placement_refined.json",
+        calibration_path=calibration_path,
+        placement_path=placement_path,
+        sam3d_keypoints_path=sam3d_path,
+        refine_from_sam3d=True,
+    )
+
+    payload = json.loads(placement_path.read_text(encoding="utf-8"))
+    first = payload["players"][0]["frames"][0]
+    assert first["selected_support_signal"]["foot"] == "left"
+    assert first["selected_support_signal"]["bbox_floor_y_fused"] is True
+    assert first["selected_support_signal"]["pixel_xy"][1] == pytest.approx(1050.0)
+    assert first["contact_state"]["state"] in {"planted", "uncertain"}
+    assert first["contact_state"]["support_foot"] in {"left", "bilateral"}
+
+
 def test_stance_phase_artifact_anchors_external_contact_windows(tmp_path: Path) -> None:
     tracks_path = tmp_path / "tracks.json"
     calibration_path = tmp_path / "court_calibration.json"

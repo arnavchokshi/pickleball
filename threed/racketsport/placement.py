@@ -23,6 +23,7 @@ from .coordinates import (
     unproject_image_points_with_inverse,
 )
 from .court_calibration import undistort_pixels_with_camera_matrix_typed
+from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 
 
 UTC = timezone.utc
@@ -87,6 +88,10 @@ class PlacementConfig:
     bbox_pad_frac: float = 0.10
     bbox_pad_min_px: float = 12.0
     foot_lower_half_frac: float = 0.50
+    support_foot_hysteresis_px: float = 3.0
+    bbox_floor_vertical_tolerance_frac: float = 0.40
+    bbox_floor_vertical_tolerance_min_px: float = 12.0
+    bbox_floor_vertical_tolerance_max_px: float = 40.0
     net_clamp_epsilon_m: float = 0.05
     centerline_gap_window_s: float = 0.33
     max_measurement_gap_s: float = 0.75
@@ -104,6 +109,7 @@ class PlacementConfig:
 @dataclass(frozen=True)
 class PlacementRewriteResult:
     placement_path: Path
+    rewritten_tracks_path: Path
     backup_tracks_path: Path
     coverage_unchanged: bool
     source_counts: dict[str, int]
@@ -186,8 +192,10 @@ def rewrite_tracks_with_placement(
     tracks_path: str | Path,
     calibration_path: str | Path,
     placement_path: str | Path,
+    rewritten_tracks_path: str | Path | None = None,
     native2d_keypoints_path: str | Path | None = None,
     sam3d_keypoints_path: str | Path | None = None,
+    skeleton3d_path: str | Path | None = None,
     stance_phases_path: str | Path | None = None,
     foot_contact_phases_out_path: str | Path | None = None,
     camera_motion_path: str | Path | None = None,
@@ -195,14 +203,18 @@ def rewrite_tracks_with_placement(
     refine_from_sam3d: bool = False,
     config: PlacementConfig | None = None,
 ) -> PlacementRewriteResult:
-    """Fuse foot evidence and rewrite ``tracks.json`` world anchors in place."""
+    """Fuse foot evidence and emit placed tracks, optionally without mutating raw tracks."""
 
     config = config or PlacementConfig()
     tracks_path = Path(tracks_path)
     calibration_path = Path(calibration_path)
     placement_path = Path(placement_path)
+    rewritten_tracks_path = (
+        Path(rewritten_tracks_path) if rewritten_tracks_path is not None else tracks_path
+    )
     native2d_keypoints_path = Path(native2d_keypoints_path) if native2d_keypoints_path is not None else None
     sam3d_keypoints_path = Path(sam3d_keypoints_path) if sam3d_keypoints_path is not None else None
+    skeleton3d_path = Path(skeleton3d_path) if skeleton3d_path is not None else None
     stance_phases_path = Path(stance_phases_path) if stance_phases_path is not None else None
     foot_contact_phases_out_path = Path(foot_contact_phases_out_path) if foot_contact_phases_out_path is not None else None
     camera_motion_path = Path(camera_motion_path) if camera_motion_path is not None else None
@@ -324,6 +336,7 @@ def rewrite_tracks_with_placement(
         foot_keypoint_source_for_stance: dict[str, dict[int, str]] = {"left": {}, "right": {}}
         original_by_frame: dict[int, list[float]] = {}
         frame_indices: list[int] = []
+        previous_support_foot: str | None = None
 
         for frame in frames:
             frame_idx = _frame_index(frame, fps)
@@ -397,6 +410,53 @@ def rewrite_tracks_with_placement(
                         "keypoint_candidates": [],
                     }
                 )
+            per_foot_signals: list[dict[str, Any]] = []
+            for foot in ("left", "right"):
+                if interpolated_track_frame:
+                    continue
+                foot_signal = _phase_foot_signal_for_frame(
+                    player_id=player_id,
+                    frame_idx=frame_idx,
+                    foot=foot,
+                    source_maps=(("native2d", native2d_feet), ("sam3d", sam3d_feet)),
+                    side=side,
+                    homography=homography,
+                    transform_covariance=transform_covariance,
+                    camera_matrix=camera_matrix,
+                    dist=dist,
+                    undistort_applied=undistort_applied,
+                    homography_pixel_space=homography_pixel_space,
+                    pixel_transform=camera_motion.matrix if camera_motion is not None else None,
+                    bbox=frame.get("bbox"),
+                    allow_bbox_floor=str(frame.get("contact_state") or "").lower() != "airborne",
+                    config=config,
+                )
+                if foot_signal is not None:
+                    per_foot_signals.append(foot_signal)
+                    foot_keypoint_xy_for_stance[foot][frame_idx] = [float(foot_signal["xy"][0]), float(foot_signal["xy"][1])]
+                    foot_keypoint_conf_for_stance[foot][frame_idx] = float(foot_signal["confidence"])
+                    foot_keypoint_source_for_stance[foot][frame_idx] = str(foot_signal["source"])
+                    foot_candidates_by_frame[frame_idx].extend(
+                        _foot_candidate_for_artifact(candidate)
+                        for candidate in foot_signal.get("_all_candidates", [foot_signal])
+                    )
+            selected_foot_signal = _select_per_foot_support_signal(
+                per_foot_signals,
+                previous_support_foot=previous_support_foot,
+                hysteresis_px=config.support_foot_hysteresis_px,
+            )
+            if selected_foot_signal is not None:
+                previous_support_foot = str(selected_foot_signal["foot"])
+                selected_source = str(selected_foot_signal["source"])
+                replacement = dict(selected_foot_signal)
+                replacement["name"] = selected_source
+                replacement["support_foot"] = previous_support_foot
+                replacement.pop("_all_candidates", None)
+                signals = [
+                    replacement if str(signal.get("name")) == selected_source else signal
+                    for signal in signals
+                ]
+
             used_signals = [
                 FootSignal(
                     signal["name"],
@@ -427,33 +487,20 @@ def rewrite_tracks_with_placement(
                 keypoint_xy_for_stance[frame_idx] = [float(keypoint_signal["xy"][0]), float(keypoint_signal["xy"][1])]
             if used_signals:
                 trajectory_xy_for_stance[frame_idx] = [float(fused_xy[0]), float(fused_xy[1])]
-            for foot in ("left", "right"):
-                if interpolated_track_frame:
-                    continue
-                foot_signal = _phase_foot_signal_for_frame(
-                    player_id=player_id,
-                    frame_idx=frame_idx,
-                    foot=foot,
-                    source_maps=(("native2d", native2d_feet), ("sam3d", sam3d_feet)),
-                    side=side,
-                    homography=homography,
-                    transform_covariance=transform_covariance,
-                    camera_matrix=camera_matrix,
-                    dist=dist,
-                    undistort_applied=undistort_applied,
-                    homography_pixel_space=homography_pixel_space,
-                    pixel_transform=camera_motion.matrix if camera_motion is not None else None,
-                    config=config,
-                )
-                if foot_signal is not None:
-                    foot_keypoint_xy_for_stance[foot][frame_idx] = [float(foot_signal["xy"][0]), float(foot_signal["xy"][1])]
-                    foot_keypoint_conf_for_stance[foot][frame_idx] = float(foot_signal["confidence"])
-                    foot_keypoint_source_for_stance[foot][frame_idx] = str(foot_signal["source"])
-                    foot_candidates_by_frame[frame_idx].extend(
-                        _foot_candidate_for_artifact(candidate)
-                        for candidate in foot_signal.get("_all_candidates", [foot_signal])
-                    )
             selected_support = _selected_support_signal(signals)
+            if selected_foot_signal is not None:
+                selected_support = {
+                    "name": str(selected_foot_signal["source"]),
+                    "foot": str(selected_foot_signal["foot"]),
+                    "pixel_xy": list(selected_foot_signal["pixel_xy"]),
+                    "court_xy": list(selected_foot_signal["xy"]),
+                    "confidence": float(selected_foot_signal.get("confidence") or 0.0),
+                    "selection_rule": "lowest_contact_proxy_with_temporal_hysteresis",
+                    "bbox_floor_y_fused": bool(selected_foot_signal.get("bbox_floor_y_fused", False)),
+                    "contact_proxy_semantics": list(
+                        selected_foot_signal.get("contact_proxy_semantics") or []
+                    ),
+                }
             frame_signals[frame_idx] = _FrameSignals(
                 fused_xy=[float(fused_xy[0]), float(fused_xy[1])],
                 fused_covariance=_covariance_to_list(fused_cov),
@@ -696,6 +743,13 @@ def rewrite_tracks_with_placement(
                 body_lock_frames_by_foot=body_lock_frames_by_foot,
                 foot_candidates=fs.foot_candidates,
             )
+            if (
+                contact_state.get("state") == "uncertain"
+                and isinstance(fs.selected_support_signal, Mapping)
+                and fs.selected_support_signal.get("foot") in {"left", "right"}
+            ):
+                contact_state["support_foot"] = str(fs.selected_support_signal["foot"])
+                contact_state["support_foot_source"] = "visual_contact_proxy"
             final_covariance = _covariance_after_position_refinement(
                 smoothed_frame.covariance,
                 before_xy=smoothed_frame.xy,
@@ -711,6 +765,13 @@ def rewrite_tracks_with_placement(
                 "original_world_xy": original_by_frame[frame_idx],
                 "fused_world_xy": fs.fused_xy,
                 "smoothed_world_xy": [float(xy[0]), float(xy[1])],
+                "track_placement_translation_world": [
+                    float(xy[0] - original_by_frame[frame_idx][0]),
+                    float(xy[1] - original_by_frame[frame_idx][1]),
+                    0.0,
+                ],
+                "applied_rigid_translation_world": None,
+                "rigid_translation_status": "skeleton_not_supplied",
                 "covariance_m2": final_covariance,
                 "uncertainty_decomposition": {
                     "foot_localization_covariance_m2": fs.localization_covariance,
@@ -796,6 +857,8 @@ def rewrite_tracks_with_placement(
         "stage": "placement_refine" if refine_from_sam3d else "placement",
         "generated_at": generated_at,
         "tracks": tracks_path.name,
+        "rewritten_tracks": rewritten_tracks_path.name,
+        "raw_tracks_mutated": rewritten_tracks_path.resolve() == tracks_path.resolve(),
         "placement": placement_path.name,
         "tracks_backup": backup_path.name,
         "native2d_keypoints": native2d_keypoints_path.name if native2d_keypoints_path else None,
@@ -825,6 +888,17 @@ def rewrite_tracks_with_placement(
         "side_quadrant_consistency": side_consistency_summary,
         **camera_motion_counts,
     }
+    skeleton_translation_summary = _annotate_post_body_skeleton_translations(
+        placement_players,
+        skeleton3d_payload=(
+            _read_json(skeleton3d_path)
+            if refine_from_sam3d and skeleton3d_path is not None and skeleton3d_path.is_file()
+            else None
+        ),
+        fps=fps,
+    )
+    provenance["skeleton3d"] = skeleton3d_path.name if skeleton3d_path is not None else None
+    provenance["post_body_skeleton_translation"] = skeleton_translation_summary
     if camera_motion_path is not None:
         provenance["camera_motion"] = {
             "path": camera_motion_path.name,
@@ -858,6 +932,7 @@ def rewrite_tracks_with_placement(
         "stance_wobble_before_after_m": stance_wobble_summary,
         "court_bounds_violations": total_bounds_violations,
         "calibration_uncertainty_status": calibration_uncertainty_status,
+        "post_body_skeleton_translation": skeleton_translation_summary,
     }
     if gap_reacquisition_speed_violations:
         placement_summary["gap_reacquisition_speed_violations"] = gap_reacquisition_speed_violations
@@ -869,6 +944,7 @@ def rewrite_tracks_with_placement(
         "fps": fps,
         "source": "threed.racketsport.placement",
         "tracks_path": tracks_path.name,
+        "rewritten_tracks_path": rewritten_tracks_path.name,
         "backup_tracks_path": backup_path.name,
         "refine_from_sam3d": bool(refine_from_sam3d),
         "homography_pixel_convention": homography_pixel_convention,
@@ -889,15 +965,122 @@ def rewrite_tracks_with_placement(
                 generated_at=generated_at,
             ),
         )
-    _write_json(tracks_path, rewritten_payload)
+    _write_json(rewritten_tracks_path, rewritten_payload)
     return PlacementRewriteResult(
         placement_path=placement_path,
+        rewritten_tracks_path=rewritten_tracks_path,
         backup_tracks_path=backup_path,
         coverage_unchanged=coverage_unchanged,
         source_counts=dict(total_source_counts),
         court_bounds_violations=total_bounds_violations,
         summary=placement_summary,
     )
+
+
+def _annotate_post_body_skeleton_translations(
+    placement_players: Sequence[dict[str, Any]],
+    *,
+    skeleton3d_payload: Mapping[str, Any] | None,
+    fps: float,
+) -> dict[str, Any]:
+    if not isinstance(skeleton3d_payload, Mapping):
+        return {"status": "skeleton_not_supplied", "translated_frame_count": 0}
+    joint_names = [str(name) for name in skeleton3d_payload.get("joint_names", []) or []]
+    source_model = str(skeleton3d_payload.get("source_model") or "").lower()
+    generic_mhr70_names = [
+        f"sam3dbody_joint_{index:03d}" for index in range(len(MHR70_JOINT_NAMES))
+    ]
+    if len(joint_names) == len(MHR70_JOINT_NAMES) and (
+        joint_names == generic_mhr70_names or "sam3d" in source_model or "sam_3d" in source_model
+    ):
+        joint_names = list(MHR70_JOINT_NAMES)
+    if not joint_names:
+        return {"status": "missing_joint_names", "translated_frame_count": 0}
+    name_to_index = {name: index for index, name in enumerate(joint_names)}
+    skeleton_frames: dict[tuple[int, int], Mapping[str, Any]] = {}
+    for player in skeleton3d_payload.get("players", []) or []:
+        if not isinstance(player, Mapping):
+            continue
+        try:
+            player_id = int(player["id"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        for frame in player.get("frames", []) or []:
+            if isinstance(frame, Mapping):
+                skeleton_frames[(player_id, _frame_index(frame, fps))] = frame
+
+    magnitudes: list[float] = []
+    missing_frame_count = 0
+    missing_support_joint_count = 0
+    for player in placement_players:
+        player_id = int(player["id"])
+        for frame in player.get("frames", []) or []:
+            skeleton_frame = skeleton_frames.get((player_id, int(frame["frame_idx"])))
+            if skeleton_frame is None:
+                frame["rigid_translation_status"] = "missing_skeleton_frame"
+                missing_frame_count += 1
+                continue
+            selected = frame.get("selected_support_signal")
+            target_xy = frame.get("smoothed_world_xy")
+            semantics = (
+                [str(name) for name in selected.get("contact_proxy_semantics", []) or []]
+                if isinstance(selected, Mapping)
+                else []
+            )
+            expanded_semantics: list[str] = []
+            for semantic in semantics:
+                if semantic == "left_toe":
+                    expanded_semantics.extend(("left_big_toe_tip", "left_small_toe_tip"))
+                elif semantic == "right_toe":
+                    expanded_semantics.extend(("right_big_toe_tip", "right_small_toe_tip"))
+                else:
+                    expanded_semantics.append(semantic)
+            semantics = expanded_semantics
+            foot = str(selected.get("foot") or "") if isinstance(selected, Mapping) else ""
+            if not semantics and foot in {"left", "right"}:
+                semantics = [f"{foot}_heel", f"{foot}_big_toe_tip", f"{foot}_small_toe_tip"]
+            joints = skeleton_frame.get("joints_world")
+            support_joints: list[list[float]] = []
+            if isinstance(joints, Sequence):
+                for semantic in semantics:
+                    index = name_to_index.get(semantic)
+                    if index is None or index >= len(joints):
+                        continue
+                    joint = joints[index]
+                    if (
+                        isinstance(joint, Sequence)
+                        and len(joint) >= 3
+                        and all(math.isfinite(float(value)) for value in joint[:3])
+                    ):
+                        support_joints.append([float(value) for value in joint[:3]])
+            if not support_joints or not isinstance(target_xy, Sequence) or len(target_xy) < 2:
+                frame["rigid_translation_status"] = "missing_support_joint"
+                missing_support_joint_count += 1
+                continue
+            support_xy = [
+                sum(joint[axis] for joint in support_joints) / len(support_joints)
+                for axis in (0, 1)
+            ]
+            delta = [
+                float(target_xy[0]) - support_xy[0],
+                float(target_xy[1]) - support_xy[1],
+                0.0,
+            ]
+            frame["applied_rigid_translation_world"] = delta
+            frame["rigid_translation_status"] = "support_foot_to_refined_court_xy"
+            magnitudes.append(math.hypot(delta[0], delta[1]))
+
+    return {
+        "status": "computed" if magnitudes else "no_eligible_frames",
+        "translated_frame_count": len(magnitudes),
+        "missing_skeleton_frame_count": missing_frame_count,
+        "missing_support_joint_count": missing_support_joint_count,
+        "translation_m": {
+            "median": float(np.median(magnitudes)) if magnitudes else None,
+            "p95": float(np.quantile(magnitudes, 0.95)) if magnitudes else None,
+            "max": max(magnitudes) if magnitudes else None,
+        },
+    }
 
 
 def _homography_pixel_convention(calibration_payload: Mapping[str, Any]) -> HomographyPixelConvention:
@@ -1924,6 +2107,43 @@ def _selected_support_signal(signals: Sequence[Mapping[str, Any]]) -> dict[str, 
     }
 
 
+def _select_per_foot_support_signal(
+    signals: Sequence[Mapping[str, Any]],
+    *,
+    previous_support_foot: str | None,
+    hysteresis_px: float,
+) -> dict[str, Any] | None:
+    """Choose one observed contact foot instead of averaging both feet together.
+
+    A planar homography can magnify a small image-space vertical difference into
+    a large court-space displacement. Averaging the two feet is therefore not a
+    valid grounding observation. The lower visible sole/contact proxy is the
+    current support candidate, with a small temporal hysteresis to avoid
+    left/right chatter when both feet are level.
+    """
+
+    eligible = [
+        dict(signal)
+        for signal in signals
+        if signal.get("used")
+        and signal.get("xy") is not None
+        and signal.get("pixel_xy") is not None
+        and str(signal.get("foot")) in {"left", "right"}
+    ]
+    if not eligible:
+        return None
+    return max(
+        eligible,
+        key=lambda signal: (
+            float(signal.get("contact_proxy_raw_y_px", signal["pixel_xy"][1]))
+            + (float(hysteresis_px) if str(signal["foot"]) == previous_support_foot else 0.0),
+            float(signal.get("confidence") or 0.0),
+            str(signal.get("source")) == "native2d",
+            str(signal.get("foot")) == "left",
+        ),
+    )
+
+
 def _foot_candidate_for_artifact(signal: Mapping[str, Any]) -> dict[str, Any]:
     return {
         "foot": str(signal.get("foot") or "unknown"),
@@ -1934,6 +2154,10 @@ def _foot_candidate_for_artifact(signal: Mapping[str, Any]) -> dict[str, Any]:
         "covariance_m2": signal.get("covariance_m2"),
         "accepted": bool(signal.get("used", False)),
         "rejection_reason": signal.get("reason"),
+        "contact_proxy_semantics": [
+            str(value) for value in signal.get("contact_proxy_semantics") or []
+        ],
+        "bbox_floor_y_fused": bool(signal.get("bbox_floor_y_fused", False)),
         "keypoint_candidates": [dict(value) for value in signal.get("keypoint_candidates") or []],
     }
 
@@ -1947,18 +2171,25 @@ def _contact_state_for_frame(
 ) -> dict[str, Any]:
     explicit = str(frame.get("contact_state") or "").lower()
     if explicit == "airborne":
-        return {"state": "airborne", "support_foot": None, "source": "explicit_body_state"}
+        return {
+            "state": "airborne",
+            "support_foot": None,
+            "source": "explicit_body_state",
+            "probabilities": {"planted": 0.01, "airborne": 0.98, "uncertain": 0.01},
+        }
     planted = [foot for foot in ("left", "right") if frame_idx in body_lock_frames_by_foot.get(foot, set())]
     if planted:
         return {
             "state": "planted",
             "support_foot": planted[0] if len(planted) == 1 else "bilateral",
             "source": "eligible_body_or_per_foot_stance_phase",
+            "probabilities": {"planted": 0.90, "airborne": 0.02, "uncertain": 0.08},
         }
     return {
         "state": "uncertain",
         "support_foot": None,
         "source": "visible_foot_evidence_without_confirmed_contact" if foot_candidates else "missing_foot_evidence",
+        "probabilities": {"planted": 0.35, "airborne": 0.10, "uncertain": 0.55},
     }
 
 
@@ -2264,6 +2495,8 @@ def _phase_foot_signal_for_frame(
     undistort_applied: bool,
     homography_pixel_space: CoordinateSpace,
     pixel_transform: np.ndarray | None,
+    bbox: Sequence[float] | None,
+    allow_bbox_floor: bool,
     config: PlacementConfig,
 ) -> dict[str, Any] | None:
     candidates: list[dict[str, Any]] = []
@@ -2271,6 +2504,34 @@ def _phase_foot_signal_for_frame(
         observation = source_map.get((player_id, foot, frame_idx))
         if observation is None or not observation.valid:
             continue
+        raw_candidates = [dict(candidate) for candidate in observation.keypoint_candidates]
+        raw_contact_pixel, contact_proxy_semantics = _ground_contact_proxy_pixel(
+            raw_candidates,
+            fallback_pixel=observation.pixel_xy,
+        )
+        raw_contact_y = float(raw_contact_pixel[1])
+        bbox_floor_fused = False
+        if allow_bbox_floor and _valid_bbox(bbox):
+            bbox_height = max(float(bbox[3]) - float(bbox[1]), 1.0)
+            vertical_delta = float(bbox[3]) - raw_contact_y
+            vertical_tolerance = min(
+                config.bbox_floor_vertical_tolerance_max_px,
+                max(
+                    config.bbox_floor_vertical_tolerance_min_px,
+                    config.bbox_floor_vertical_tolerance_frac * bbox_height,
+                ),
+            )
+            if 0.0 <= vertical_delta <= vertical_tolerance:
+                raw_contact_pixel[1] = float(bbox[3])
+                bbox_floor_fused = True
+        transformed_candidates = [
+            {
+                **dict(candidate),
+                "pixel_xy": _apply_pixel_transform(candidate["pixel_xy"], pixel_transform),
+            }
+            for candidate in raw_candidates
+        ]
+        contact_pixel = _apply_pixel_transform(raw_contact_pixel, pixel_transform)
         sigma_px = _keypoint_sigma_px(
             observation.confidence,
             base_sigma_px=config.keypoint_base_sigma_px,
@@ -2280,7 +2541,7 @@ def _phase_foot_signal_for_frame(
             sigma_px *= config.far_keypoint_sigma_multiplier
         signal = _signal_from_pixel(
             name=source_name,
-            pixel_xy=_apply_pixel_transform(observation.pixel_xy, pixel_transform),
+            pixel_xy=contact_pixel,
             confidence=observation.confidence,
             sigma_px=sigma_px,
             side=side,
@@ -2297,13 +2558,10 @@ def _phase_foot_signal_for_frame(
         signal["confidence"] = _normalized_phase_confidence(float(observation.confidence))
         signal["source"] = source_name
         signal["foot"] = foot
-        signal["keypoint_candidates"] = [
-            {
-                **dict(candidate),
-                "pixel_xy": _apply_pixel_transform(candidate["pixel_xy"], pixel_transform),
-            }
-            for candidate in observation.keypoint_candidates
-        ]
+        signal["keypoint_candidates"] = transformed_candidates
+        signal["contact_proxy_semantics"] = contact_proxy_semantics
+        signal["contact_proxy_raw_y_px"] = raw_contact_y
+        signal["bbox_floor_y_fused"] = bbox_floor_fused
         candidates.append(signal)
     if not candidates:
         return None
@@ -2316,6 +2574,40 @@ def _phase_foot_signal_for_frame(
     return ranked[0]
 
 
+def _ground_contact_proxy_pixel(
+    candidates: Sequence[Mapping[str, Any]],
+    *,
+    fallback_pixel: Sequence[float],
+) -> tuple[list[float], list[str]]:
+    """Estimate sole contact from heel/toe evidence, excluding elevated ankles."""
+
+    contact_rows = [
+        candidate
+        for candidate in candidates
+        if "heel" in str(candidate.get("semantic_name", "")).lower()
+        or "toe" in str(candidate.get("semantic_name", "")).lower()
+    ]
+    if not contact_rows:
+        return _xy(fallback_pixel, name="fallback_contact_pixel"), []
+    lowest = sorted(
+        contact_rows,
+        key=lambda candidate: float(candidate["pixel_xy"][1]),
+        reverse=True,
+    )[:2]
+    combined = _combine_weighted_pixels(
+        [
+            (
+                _xy(candidate["pixel_xy"], name="contact_candidate.pixel_xy"),
+                max(float(candidate.get("confidence", 1.0)), 1.0e-6),
+            )
+            for candidate in lowest
+        ]
+    )
+    if combined is None:
+        return _xy(fallback_pixel, name="fallback_contact_pixel"), []
+    return combined[0], [str(candidate.get("semantic_name", "unknown")) for candidate in lowest]
+
+
 def _signal_from_pixel(
     *,
     name: str,
@@ -2324,12 +2616,12 @@ def _signal_from_pixel(
     sigma_px: float,
     side: str,
     homography: np.ndarray,
-    transform_covariance: np.ndarray | None,
     camera_matrix: np.ndarray,
     dist: Sequence[float],
     undistort_applied: bool,
     homography_pixel_space: CoordinateSpace,
     config: PlacementConfig,
+    transform_covariance: np.ndarray | None = None,
 ) -> dict[str, Any]:
     del side
     pixel = (

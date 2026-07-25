@@ -35,6 +35,12 @@ from collections import defaultdict
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from threed.racketsport.court_calibration import (
+    homography_from_planar_points,
+    project_planar_points,
+)
+from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+
 
 BOUNDARY_POLYGON = (
     "near_left_corner",
@@ -64,6 +70,179 @@ TEMPLATE_ORDERED_LINES = (
         ("near_baseline_center", "near_nvz_center", "far_nvz_center", "far_baseline_center"),
     ),
 )
+
+STRUCTURED_TARGET_MEDIAN_RESIDUAL_PX = 3.0
+STRUCTURED_TARGET_P95_RESIDUAL_PX = 5.0
+STRUCTURED_TARGET_ELIGIBILITY_POLICY = (
+    "one_regulation_floor_homography_non_degenerate_"
+    "median_le_3px_p95_le_5px"
+)
+_REGULATION_FLOOR_WORLD_XY = {
+    point.name: (float(point.world_xyz_m[0]), float(point.world_xyz_m[1]))
+    for point in PICKLEBALL_KEYPOINTS
+    if abs(float(point.world_xyz_m[2])) <= 1.0e-12
+}
+
+
+def assess_structured_target_eligibility(
+    ground_truth: Mapping[str, Any],
+    *,
+    median_residual_threshold_px: float = STRUCTURED_TARGET_MEDIAN_RESIDUAL_PX,
+    p95_residual_threshold_px: float = STRUCTURED_TARGET_P95_RESIDUAL_PX,
+) -> dict[str, Any]:
+    """Audit whether labels can supervise/evaluate one regulation-court projection.
+
+    The audit is deliberately independent of either prediction.  Rows that fail remain in the
+    all-row raw and structured metrics, but they cannot decide structured-solver selection because
+    no single regulation homography can reproduce their own semantic labels at the target error.
+    """
+
+    if not isinstance(ground_truth, Mapping):
+        raise TypeError("ground_truth must be a mapping")
+    median_threshold = _nonnegative_float(
+        median_residual_threshold_px, "median_residual_threshold_px"
+    )
+    p95_threshold = _nonnegative_float(
+        p95_residual_threshold_px, "p95_residual_threshold_px"
+    )
+    if median_threshold > p95_threshold:
+        raise ValueError("median residual threshold cannot exceed p95 residual threshold")
+
+    named_points = {
+        str(name): _xy(value, f"ground_truth.{name}")
+        for name, value in ground_truth.items()
+        if value is not None and str(name) in _REGULATION_FLOOR_WORLD_XY
+    }
+    unknown_names = sorted(
+        str(name)
+        for name, value in ground_truth.items()
+        if value is not None and str(name) not in _REGULATION_FLOOR_WORLD_XY
+    )
+    base: dict[str, Any] = {
+        "policy": STRUCTURED_TARGET_ELIGIBILITY_POLICY,
+        "eligible": False,
+        "reason": None,
+        "visible_floor_point_count": len(named_points),
+        "unknown_semantic_names": unknown_names,
+        "fit_method": "linear_dlt_then_geometric_least_squares",
+        "median_residual_threshold_px": median_threshold,
+        "p95_residual_threshold_px": p95_threshold,
+        "median_residual_px": None,
+        "p90_residual_px": None,
+        "p95_residual_px": None,
+        "max_residual_px": None,
+        "per_semantic_residual_px": {},
+    }
+    if len(named_points) < 4:
+        base["reason"] = "insufficient_floor_correspondences"
+        return base
+
+    names = sorted(named_points)
+    world = [_REGULATION_FLOOR_WORLD_XY[name] for name in names]
+    image = [named_points[name] for name in names]
+    try:
+        homography = _best_fit_regulation_homography(world, image)
+        projected = project_planar_points(homography, world)
+    except (ArithmeticError, ValueError, RuntimeError) as exc:
+        base["reason"] = "nondegenerate_homography_fit_failed"
+        base["fit_error"] = str(exc)
+        return base
+
+    residual_by_name = {
+        name: float(math.dist(image_xy, projected_xy))
+        for name, image_xy, projected_xy in zip(names, image, projected, strict=True)
+    }
+    residuals = list(residual_by_name.values())
+    median = _percentile_or_none(residuals, 0.5)
+    p90 = _percentile_or_none(residuals, 0.9)
+    p95 = _percentile_or_none(residuals, 0.95)
+    maximum = max(residuals) if residuals else None
+    eligible = bool(
+        median is not None
+        and p95 is not None
+        and median <= median_threshold
+        and p95 <= p95_threshold
+    )
+    base.update(
+        {
+            "eligible": eligible,
+            "reason": "eligible" if eligible else "regulation_fit_residual_exceeds_threshold",
+            "median_residual_px": median,
+            "p90_residual_px": p90,
+            "p95_residual_px": p95,
+            "max_residual_px": maximum,
+            "per_semantic_residual_px": residual_by_name,
+            "homography_image_from_court": homography,
+        }
+    )
+    return base
+
+
+def _best_fit_regulation_homography(
+    world_points: Sequence[Sequence[float]],
+    image_points: Sequence[Sequence[float]],
+) -> list[list[float]]:
+    """Fit all declared labels; never use RANSAC to hide an inconsistent label."""
+
+    import numpy as np
+    from scipy.optimize import least_squares
+
+    initial = np.asarray(
+        homography_from_planar_points(world_points, image_points), dtype=np.float64
+    )
+    if initial.shape != (3, 3) or not np.isfinite(initial).all():
+        raise ValueError("initial homography is invalid")
+    if abs(float(initial[2, 2])) <= 1.0e-12:
+        raise ValueError("initial homography has zero scale")
+    initial /= float(initial[2, 2])
+    world = np.asarray(world_points, dtype=np.float64)
+    image = np.asarray(image_points, dtype=np.float64)
+
+    def unpack(params: Any) -> Any:
+        return np.asarray(
+            [
+                [params[0], params[1], params[2]],
+                [params[3], params[4], params[5]],
+                [params[6], params[7], 1.0],
+            ],
+            dtype=np.float64,
+        )
+
+    def residuals(params: Any) -> Any:
+        homography = unpack(params)
+        homogeneous = np.concatenate(
+            [world, np.ones((len(world), 1), dtype=np.float64)], axis=1
+        )
+        projected_h = (homography @ homogeneous.T).T
+        scales = projected_h[:, 2]
+        if np.any(np.abs(scales) <= 1.0e-9):
+            return np.full((len(world) * 2,), 1.0e6, dtype=np.float64)
+        projected = projected_h[:, :2] / scales[:, None]
+        return (projected - image).reshape(-1)
+
+    initial_params = np.asarray(
+        [
+            initial[0, 0],
+            initial[0, 1],
+            initial[0, 2],
+            initial[1, 0],
+            initial[1, 1],
+            initial[1, 2],
+            initial[2, 0],
+            initial[2, 1],
+        ],
+        dtype=np.float64,
+    )
+    result = least_squares(
+        residuals,
+        initial_params,
+        method="lm" if len(world) >= 4 else "trf",
+        max_nfev=500,
+    )
+    refined = unpack(result.x if result.success and np.isfinite(result.x).all() else initial_params)
+    if not np.isfinite(refined).all() or abs(float(np.linalg.det(refined))) <= 1.0e-12:
+        raise ValueError("refined homography is singular")
+    return [[float(value) for value in row] for row in refined]
 
 
 def evaluate_structured_court_outputs(
@@ -180,6 +359,30 @@ def evaluate_raw_vs_structured_court_outputs(
         bootstrap_seed=bootstrap_seed,
     )
 
+    eligible_pairs = [
+        record
+        for record in normalized_pairs
+        if record["structured_target_eligibility"]["eligible"]
+    ]
+    excluded_pairs = [
+        record
+        for record in normalized_pairs
+        if not record["structured_target_eligibility"]["eligible"]
+    ]
+    eligible_raw = evaluate_structured_court_outputs(
+        [_method_record(record, "raw_prediction") for record in eligible_pairs]
+    )
+    eligible_structured = evaluate_structured_court_outputs(
+        [_method_record(record, "structured_prediction") for record in eligible_pairs]
+    )
+    exclusion_reason_counts: dict[str, int] = defaultdict(int)
+    exclusions_by_source: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for record in excluded_pairs:
+        reason = str(record["structured_target_eligibility"]["reason"])
+        source = record["strata"].get("source", "unknown")
+        exclusion_reason_counts[reason] += 1
+        exclusions_by_source[source][reason] += 1
+
     strata: dict[str, Any] = {}
     for dimension in ("subgroup", "source", "source_group", "viewpoint", "visibility"):
         grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
@@ -206,7 +409,7 @@ def evaluate_raw_vs_structured_court_outputs(
         }
 
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "artifact_type": "racketsport_court_raw_vs_structured_exact_semantic_metrics",
         "sample_count": len(normalized_pairs),
         "evaluated_taxonomy": "canonical_floor_points_exact_semantic_name",
@@ -214,7 +417,52 @@ def evaluate_raw_vs_structured_court_outputs(
         "structured": structured,
         "paired_deltas": paired,
         "strata": strata,
+        "structured_selection_subset": {
+            "sample_count": len(eligible_pairs),
+            "excluded_sample_count": len(excluded_pairs),
+            "eligibility_policy": STRUCTURED_TARGET_ELIGIBILITY_POLICY,
+            "selection_use_only": True,
+            "all_row_metrics_remain_authoritative_for_transparency": True,
+            "raw": _compact_metric_summary(eligible_raw),
+            "structured": _compact_metric_summary(eligible_structured),
+            "paired_deltas": _paired_delta_summary(
+                eligible_pairs,
+                bootstrap_resamples=bootstrap_resamples,
+                bootstrap_seed=bootstrap_seed,
+            ),
+            "exclusion_reason_counts": dict(sorted(exclusion_reason_counts.items())),
+            "exclusions_by_source": {
+                source: dict(sorted(reasons.items()))
+                for source, reasons in sorted(exclusions_by_source.items())
+            },
+            "included_sample_ids": [record["sample_id"] for record in eligible_pairs],
+            "excluded_samples": [
+                {
+                    "sample_id": record["sample_id"],
+                    "source": record["strata"].get("source"),
+                    "source_group": record["strata"].get("source_group"),
+                    "eligibility": record["structured_target_eligibility"],
+                }
+                for record in excluded_pairs
+            ],
+        },
         "task88_policy": "historical_development_only_not_fold_or_promotion_evidence",
+    }
+
+
+def _compact_metric_summary(report: Mapping[str, Any]) -> dict[str, Any]:
+    return {
+        "sample_count": report["sample_count"],
+        "point_metrics": report["point_metrics"],
+        "structure": report["structure"],
+        "per_viewpoint": {
+            name: {
+                "sample_count": value["sample_count"],
+                "point_metrics": value["point_metrics"],
+                "structure": value["structure"],
+            }
+            for name, value in report["per_viewpoint"].items()
+        },
     }
 
 
@@ -242,6 +490,9 @@ def _normalize_paired_record(record: Mapping[str, Any], *, index: int) -> dict[s
         "viewpoint": raw["viewpoint"],
         "strata": raw["strata"],
         "ground_truth": raw["ground_truth"],
+        "structured_target_eligibility": _normalize_structured_target_eligibility(
+            record.get("structured_target_eligibility"), index=index
+        ),
         "raw_prediction": {
             "keypoints": raw["keypoints"],
             "confidences": raw["confidences"],
@@ -255,6 +506,36 @@ def _normalize_paired_record(record: Mapping[str, Any], *, index: int) -> dict[s
             "ignored_observations": structured["ignored_observations"],
         },
     }
+
+
+def _normalize_structured_target_eligibility(
+    value: Any,
+    *,
+    index: int,
+) -> dict[str, Any]:
+    if value is None:
+        return {
+            "policy": STRUCTURED_TARGET_ELIGIBILITY_POLICY,
+            "eligible": False,
+            "reason": "not_audited",
+        }
+    if not isinstance(value, Mapping):
+        raise ValueError(f"record {index} structured_target_eligibility must be a mapping")
+    eligible = value.get("eligible")
+    reason = value.get("reason")
+    if not isinstance(eligible, bool):
+        raise ValueError(
+            f"record {index} structured_target_eligibility.eligible must be boolean"
+        )
+    if not isinstance(reason, str) or not reason:
+        raise ValueError(
+            f"record {index} structured_target_eligibility.reason must be a non-empty string"
+        )
+    normalized = dict(value)
+    normalized["eligible"] = eligible
+    normalized["reason"] = reason
+    normalized.setdefault("policy", STRUCTURED_TARGET_ELIGIBILITY_POLICY)
+    return normalized
 
 
 def _method_record(record: Mapping[str, Any], method: str) -> dict[str, Any]:

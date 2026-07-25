@@ -3114,7 +3114,7 @@ def test_placement_stage_auto_discovers_camera_motion_and_surfaces_guard_notes(
     assert "sam3d_dropped=9" in joined_notes
 
 
-def test_placement_refine_stage_is_disabled_same_pass_even_when_sam3d_sidecar_exists(
+def test_full_preset_keeps_post_body_placement_refine_disabled(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     video = tmp_path / "clip.mp4"
@@ -3136,23 +3136,23 @@ def test_placement_refine_stage_is_disabled_same_pass_even_when_sam3d_sidecar_ex
         {"schema_version": 1, "artifact_type": "racketsport_sam3d_keypoints_2d", "source": "test", "players": []},
     )
     def _fail_rewrite(**_kwargs):  # noqa: ANN001
-        raise AssertionError("same-pass placement_refine must not rewrite tracks after BODY")
+        raise AssertionError("full preset must not run skeleton-only placement_refine")
 
     monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fail_rewrite)
 
     ran = pipeline._stage_placement_refine()
 
     assert ran.status == "skipped"
-    assert ran.metrics["same_pass_track_rewrite_disabled"] is True
-    assert "second pass before a fresh BODY run" in " ".join(ran.notes)
+    assert ran.metrics["court_skeletons_only"] is True
 
 
-def test_placement_refine_stage_is_disabled_same_pass_with_stance_phases_without_sam3d_sidecar(
+def test_skeleton_preset_skips_post_body_placement_without_sam3d_evidence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
     options = _base_options(tmp_path, video=video, court_corners=None)
+    options.pipeline_preset = "court_skeletons"
     options.clip_dir.mkdir(parents=True, exist_ok=True)
     _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
     _write_json(options.clip_dir / "tracks.json", _tracks_payload())
@@ -3166,8 +3166,52 @@ def test_placement_refine_stage_is_disabled_same_pass_with_stance_phases_without
     ran = pipeline._stage_placement_refine()
 
     assert ran.status == "skipped"
-    assert ran.metrics["same_pass_track_rewrite_disabled"] is True
-    assert "second pass before a fresh BODY run" in " ".join(ran.notes)
+    assert ran.metrics["reason"] == "missing_sam3d_foot_evidence"
+    assert "sam3d_keypoints_2d.json" in ran.metrics["missing_inputs"]
+    assert "skeleton3d.json" in ran.metrics["missing_inputs"]
+
+
+def test_skeleton_preset_emits_immutable_post_body_placement_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.pipeline_preset = "court_skeletons"
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
+    _write_json(
+        options.clip_dir / "sam3d_keypoints_2d.json",
+        {"schema_version": 1, "artifact_type": "racketsport_sam3d_keypoints_2d", "source": "test", "players": []},
+    )
+    _write_json(options.clip_dir / "skeleton3d.json", {"players": []})
+    calls: list[dict[str, object]] = []
+
+    def _fake_rewrite(**kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        return type(
+            "Result",
+            (),
+            {
+                "coverage_unchanged": True,
+                "source_counts": {"sam3d": 1},
+                "court_bounds_violations": 0,
+                "summary": {},
+            },
+        )()
+
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    ran = pipeline._stage_placement_refine()
+
+    assert ran.status == "ran"
+    assert calls[0]["tracks_path"] == options.clip_dir / "tracks.json"
+    assert calls[0]["rewritten_tracks_path"] == options.clip_dir / "tracks_placement_refined.json"
+    assert calls[0]["placement_path"] == options.clip_dir / "placement_refined.json"
+    assert calls[0]["refine_from_sam3d"] is True
+    assert ran.artifacts == ["placement_refined.json", "tracks_placement_refined.json"]
 
 
 def test_pipeline_blocks_wrist_cues_before_body_without_pose_fallback(

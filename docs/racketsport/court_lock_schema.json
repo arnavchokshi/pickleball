@@ -52,6 +52,21 @@
     "evidence": {"$ref": "#/$defs/evidence"},
     "static_motion": {"$ref": "#/$defs/static_motion"},
     "residual_px": {"$ref": "#/$defs/residual"},
+    "held_out_line_residual_px": {
+      "type": "object",
+      "additionalProperties": {"$ref": "#/$defs/nonnegative_number"}
+    },
+    "camera_model_conditioning": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "off_plane_net_reprojection": {
+      "type": "object",
+      "additionalProperties": true
+    },
+    "covariance_source": {"type": "string", "minLength": 1},
+    "floor_lock_eligible": {"type": "boolean"},
+    "pose_3d_eligible": {"type": "boolean"},
     "lock_eligible": {"type": "boolean"},
     "lock_decision_reasons": {
       "type": "array",
@@ -294,6 +309,7 @@
       "required": ["median_px", "p95_px"],
       "properties": {
         "median_px": {"$ref": "#/$defs/nonnegative_number"},
+        "p90_px": {"$ref": "#/$defs/nonnegative_number"},
         "p95_px": {"$ref": "#/$defs/nonnegative_number"}
       }
     }

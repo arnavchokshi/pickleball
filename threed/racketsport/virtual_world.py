@@ -126,6 +126,10 @@ def build_virtual_world_state(
     """
 
     calibration = _court_calibration(court_calibration)
+    skeleton_source_label, position_provenance = _world_skeleton_provenance(
+        skeleton3d,
+        tracks,
+    )
     normalized_ball_world_policy = _normalize_ball_world_policy(ball_world_policy)
     tracks_obj = _tracks(tracks)
     smpl_obj = _smpl_motion(smpl_motion)
@@ -148,12 +152,18 @@ def build_virtual_world_state(
     fps = _world_fps(tracks_obj, smpl_obj, skeleton_obj, ball_physics_obj, ball_obj, racket_estimate_obj, racket_obj)
     players = _players(tracks_obj=tracks_obj, smpl_obj=smpl_obj, skeleton_obj=skeleton_obj)
     _apply_placement_diagnostics(players, placement)
+    joint_names = _world_joint_names_from_skeleton(skeleton_obj)
+    _annotate_world_skeleton_provenance(
+        players,
+        skeleton_source=skeleton_source_label,
+        position_provenance=position_provenance,
+    )
+    _apply_post_body_support_foot_translation(players, joint_names=joint_names)
     membership_summary = _apply_player_membership_preview(
         players,
         membership_preview=membership_preview,
         trust_bands=trust_bands,
     )
-    joint_names = _world_joint_names_from_skeleton(skeleton_obj)
     _fill_no_data_player_frames(players)
     _apply_physics_footlock(players, footlock_obj, evidence_path=paths.get("physics_footlock"))
     ball = _ball(
@@ -1048,6 +1058,13 @@ def _apply_placement_diagnostics(
             if placement_frame is None:
                 continue
             frame["placement_diagnostics"] = {
+                "raw_world_xy": placement_frame.get("original_world_xy"),
+                "fused_world_xy": placement_frame.get("fused_world_xy"),
+                "refined_world_xy": placement_frame.get("smoothed_world_xy"),
+                "applied_rigid_translation_world": placement_frame.get(
+                    "applied_rigid_translation_world"
+                ),
+                "rigid_translation_status": placement_frame.get("rigid_translation_status"),
                 "covariance_m2": placement_frame.get("covariance_m2"),
                 "uncertainty_decomposition": placement_frame.get("uncertainty_decomposition"),
                 "selected_support_signal": placement_frame.get("selected_support_signal"),
@@ -2343,6 +2360,110 @@ def _skeleton3d(value: Skeleton3D | Mapping[str, Any] | None) -> Skeleton3D | No
         return Skeleton3D.model_validate(_strip_legacy_skeleton3d_extras(value))
     except ValidationError as exc:
         raise ValueError(f"skeleton3d failed validation: {exc}") from exc
+
+
+def _world_skeleton_provenance(
+    skeleton3d: Skeleton3D | Mapping[str, Any] | None,
+    tracks: Tracks | Mapping[str, Any] | None,
+) -> tuple[str, str]:
+    trajectory = (
+        skeleton3d.get("placement_trajectory_refinement")
+        if isinstance(skeleton3d, Mapping)
+        else getattr(skeleton3d, "placement_trajectory_refinement", None)
+    )
+    trajectory_selected = bool(
+        isinstance(trajectory, Mapping) and trajectory.get("selected_for_world") is True
+    )
+    placement_provenance = (
+        tracks.get("placement_provenance")
+        if isinstance(tracks, Mapping)
+        else getattr(tracks, "placement_provenance", None)
+    )
+    post_body_placement = bool(
+        isinstance(placement_provenance, Mapping)
+        and placement_provenance.get("stage") == "placement_refine"
+        and placement_provenance.get("raw_tracks_mutated") is False
+    )
+    if trajectory_selected:
+        return "placement_trajectory_refined", "guard_passing_trajectory_rigid_translation"
+    if post_body_placement:
+        return "sam3d_body_joints", "post_body_foot_anchored_rigid_translation"
+    return "sam3d_body_joints", "raw_body_visualization_placement"
+
+
+def _annotate_world_skeleton_provenance(
+    players: Sequence[Mapping[str, Any]],
+    *,
+    skeleton_source: str,
+    position_provenance: str,
+) -> None:
+    for player in players:
+        for frame in player.get("frames", []) or []:
+            if not isinstance(frame, dict):
+                continue
+            if int(frame.get("joint_count") or 0) <= 0:
+                frame["skeleton_source"] = "missing"
+                frame["position_provenance"] = "missing"
+                continue
+            frame["skeleton_source"] = skeleton_source
+            frame["position_provenance"] = position_provenance
+
+
+def _apply_post_body_support_foot_translation(
+    players: Sequence[Mapping[str, Any]],
+    *,
+    joint_names: Sequence[str] | None,
+) -> None:
+    if not joint_names:
+        return
+    name_to_index = {str(name): index for index, name in enumerate(joint_names)}
+    for player in players:
+        for raw_frame in player.get("frames", []) or []:
+            if not isinstance(raw_frame, dict):
+                continue
+            if raw_frame.get("position_provenance") != "post_body_foot_anchored_rigid_translation":
+                continue
+            diagnostics = raw_frame.get("placement_diagnostics")
+            if not isinstance(diagnostics, Mapping):
+                continue
+            selected = diagnostics.get("selected_support_signal")
+            target_xy = _vector2(diagnostics.get("refined_world_xy"))
+            if not isinstance(selected, Mapping) or target_xy is None:
+                continue
+            foot = str(selected.get("foot") or "")
+            semantics = [str(value) for value in selected.get("contact_proxy_semantics") or []]
+            if not semantics and foot in {"left", "right"}:
+                semantics = [f"{foot}_heel", f"{foot}_big_toe_tip", f"{foot}_small_toe_tip"]
+            joints = raw_frame.get("joints_world")
+            if not isinstance(joints, Sequence):
+                continue
+            stored_delta = _vector3(diagnostics.get("applied_rigid_translation_world"))
+            support_joints = [
+                _vector3(joints[name_to_index[name]])
+                for name in semantics
+                if name in name_to_index and name_to_index[name] < len(joints)
+            ]
+            support_joints = [joint for joint in support_joints if joint is not None]
+            if not support_joints and stored_delta is None:
+                raw_frame["position_provenance"] = "post_body_placement_missing_support_joint"
+                continue
+            if stored_delta is not None:
+                delta = stored_delta
+            else:
+                support_xy = [
+                    float(sum(joint[axis] for joint in support_joints) / len(support_joints))
+                    for axis in (0, 1)
+                ]
+                delta = [target_xy[0] - support_xy[0], target_xy[1] - support_xy[1], 0.0]
+            raw_frame["joints_world"] = _translated_vectors(joints, delta)
+            translation = _vector3(raw_frame.get("transl_world"))
+            if translation is not None:
+                raw_frame["transl_world"] = [
+                    translation[0] + delta[0],
+                    translation[1] + delta[1],
+                    translation[2],
+                ]
+            raw_frame["applied_rigid_translation_world"] = delta
 
 
 def _strip_legacy_skeleton3d_extras(value: Mapping[str, Any]) -> dict[str, Any]:
