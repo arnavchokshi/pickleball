@@ -26,11 +26,20 @@ Not touched: `threed/racketsport/one_world_v1.py`, `threed/racketsport/virtual_w
 
 ## Concurrent-work assessment (checked read-only, never written to)
 
-At the time of writing, the main checkout was at `a83ca9b` (2 commits ahead of my
-base `9d318ad`) with 37 dirty paths.
+The main checkout moved during this lane. Last observed at `60631f1`, 3 commits
+ahead of my base `9d318ad`, with 37 dirty paths.
 
-- Commits `9d318ad..a83ca9b` touch only `scripts/racketsport/remote_body_dispatch.py`
-  and its test. **Zero overlap** with this branch.
+- Commits `9d318ad..60631f1` (`a83ca9b` remote-BODY/CUDA isolation, `244c9c1`
+  BODY foot-phase propagation, `60631f1` refined skeletons for world assembly)
+  touch `scripts/racketsport/remote_body_dispatch.py`,
+  `threed/racketsport/placement.py`, `threed/racketsport/virtual_world.py`, and
+  three tests. **Zero overlap** with the files this branch changes.
+- `60631f1` is worth a second look despite not conflicting textually: it changes
+  `virtual_world.py`, i.e. the compositor whose output this branch renames to
+  `composited_world` and which `one_world` consumes as `virtual_world.json`. It
+  changes what the compositor writes, not the capability contract or the fusion
+  wiring, so the rename and the stage remain correct — but re-run the
+  blast-radius command after merging rather than assuming.
 - Main's uncommitted set includes `RUNBOOK.md`, `NORTH_STAR_ROADMAP.md`,
   `README.md`, `scripts/racketsport/audit_data_utilization.py`,
   `scripts/racketsport/audit_storage_policy.py`,
