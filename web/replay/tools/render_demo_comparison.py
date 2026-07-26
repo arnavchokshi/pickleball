@@ -52,6 +52,11 @@ NVZ_DISTANCE_FROM_NET_M = 2.13
 NET_POST_HEIGHT_M = 0.9144
 NET_CENTER_HEIGHT_M = 0.8636
 DISPLAY_INTERPOLATION_MAX_GAP_S = 0.05
+PRESENTATION_ANCHOR_TAU_S = 0.15
+PRESENTATION_OFFSET_TAU_S = 0.30
+PRESENTATION_ROOT_TAU_S = 0.20
+PRESENTATION_STABILIZATION_MEDIAN_RADIUS = 3
+PRESENTATION_MAX_SPEED_MPS = 7.5
 
 
 @dataclass(frozen=True)
@@ -68,6 +73,198 @@ class WorldFrame:
     joints_m: np.ndarray
     joint_conf: np.ndarray
     mesh_player_id: int
+    floor_xy_m: np.ndarray | None = None
+
+
+def _hip_root_xy(frame: WorldFrame) -> np.ndarray | None:
+    """Return the final-world hip root used only for rigid display translation."""
+    root = _hip_root(frame.joints_m, frame.joint_conf)
+    if root is None:
+        return None
+    return root[:2].astype(np.float64)
+
+
+def _coordinate_median_filter(values: np.ndarray, radius: int) -> np.ndarray:
+    filtered = values.copy()
+    for index in range(len(values)):
+        start = max(0, index - radius)
+        end = min(len(values), index + radius + 1)
+        filtered[index] = np.median(values[start:end], axis=0)
+    return filtered
+
+
+def _symmetric_ema(values: np.ndarray, times: np.ndarray, tau_s: float) -> np.ndarray:
+    """Zero-lag-ish offline smoother that retains real low-frequency motion."""
+
+    def _forward(samples: np.ndarray, sample_times: np.ndarray) -> np.ndarray:
+        output = samples.copy()
+        for index in range(1, len(samples)):
+            dt = max(1e-4, float(sample_times[index] - sample_times[index - 1]))
+            alpha = dt / (tau_s + dt)
+            output[index] = output[index - 1] + alpha * (samples[index] - output[index - 1])
+        return output
+
+    forward = _forward(values, times)
+    backward = _forward(values[::-1], -times[::-1])[::-1]
+    return 0.5 * (forward + backward)
+
+
+def _bounded_speed_projection(
+    values: np.ndarray,
+    times: np.ndarray,
+    max_speed_mps: float,
+) -> np.ndarray:
+    """Symmetrically limit only physically implausible display-root snaps."""
+
+    def _forward(samples: np.ndarray, sample_times: np.ndarray) -> np.ndarray:
+        output = samples.copy()
+        for index in range(1, len(samples)):
+            dt = max(1e-4, float(sample_times[index] - sample_times[index - 1]))
+            delta = samples[index] - output[index - 1]
+            distance = float(np.linalg.norm(delta))
+            maximum = max_speed_mps * dt
+            if distance > maximum and distance > 1e-9:
+                delta *= maximum / distance
+            output[index] = output[index - 1] + delta
+        return output
+
+    forward = _forward(values, times)
+    backward = _forward(values[::-1], -times[::-1])[::-1]
+    return 0.5 * (forward + backward)
+
+
+def stabilize_world_frames_for_presentation(
+    world_frames: dict[int, dict[int, WorldFrame]],
+    fps: float,
+    *,
+    max_gap_s: float = DISPLAY_INTERPOLATION_MAX_GAP_S,
+    median_radius: int = PRESENTATION_STABILIZATION_MEDIAN_RADIUS,
+    root_tau_s: float = PRESENTATION_ROOT_TAU_S,
+    anchor_tau_s: float = PRESENTATION_ANCHOR_TAU_S,
+    offset_tau_s: float = PRESENTATION_OFFSET_TAU_S,
+    max_speed_mps: float = PRESENTATION_MAX_SPEED_MPS,
+) -> tuple[dict[int, dict[int, WorldFrame]], dict[str, float | int | str]]:
+    """Smooth root XY per uninterrupted identity without changing pose or data.
+
+    This transform is intentionally confined to exported presentation video.
+    It never creates a frame, bridges a missing gap, changes player identity, or
+    mutates ``virtual_world.json``.  The same rigid XY delta is applied to all
+    joints, so joint angles and bone lengths remain exactly as persisted.
+    """
+    if fps <= 0:
+        raise ValueError("presentation stabilization requires positive fps")
+    stabilized: dict[int, dict[int, WorldFrame]] = {}
+    corrections: list[float] = []
+    raw_steps: list[float] = []
+    stabilized_steps: list[float] = []
+    segment_count = 0
+    stabilized_frame_count = 0
+    anchor_segment_count = 0
+    root_fallback_segment_count = 0
+
+    for player_id, player_frames in world_frames.items():
+        output = dict(player_frames)
+        ordered = sorted(player_frames)
+        segments: list[list[int]] = []
+        segment: list[int] = []
+        for frame_idx in ordered:
+            current = player_frames[frame_idx]
+            root = _hip_root_xy(current)
+            if root is None:
+                if segment:
+                    segments.append(segment)
+                    segment = []
+                continue
+            if segment:
+                previous_idx = segment[-1]
+                previous = player_frames[previous_idx]
+                gap_s = (frame_idx - previous_idx) / fps
+                if (
+                    gap_s > max_gap_s + 1e-9
+                    or current.mesh_player_id != previous.mesh_player_id
+                ):
+                    segments.append(segment)
+                    segment = []
+            segment.append(frame_idx)
+        if segment:
+            segments.append(segment)
+
+        for indices in segments:
+            # Very short bursts are left untouched; smoothing them can turn an
+            # isolated detection into a visually implied track.
+            if len(indices) < 5:
+                continue
+            roots = np.asarray(
+                [_hip_root_xy(player_frames[frame_idx]) for frame_idx in indices],
+                dtype=np.float64,
+            )
+            times = np.asarray(indices, dtype=np.float64) / fps
+            anchors = [player_frames[frame_idx].floor_xy_m for frame_idx in indices]
+            if all(anchor is not None and np.all(np.isfinite(anchor)) for anchor in anchors):
+                anchor_values = np.asarray(anchors, dtype=np.float64)
+                offsets = roots - anchor_values
+                smooth_anchor = _symmetric_ema(
+                    _coordinate_median_filter(anchor_values, median_radius),
+                    times,
+                    anchor_tau_s,
+                )
+                smooth_offset = _symmetric_ema(
+                    _coordinate_median_filter(offsets, median_radius),
+                    times,
+                    offset_tau_s,
+                )
+                smooth_roots = smooth_anchor + smooth_offset
+                anchor_segment_count += 1
+            else:
+                robust_roots = _coordinate_median_filter(roots, median_radius)
+                smooth_roots = _symmetric_ema(robust_roots, times, root_tau_s)
+                root_fallback_segment_count += 1
+            smooth_roots = _bounded_speed_projection(
+                smooth_roots,
+                times,
+                max_speed_mps,
+            )
+            raw_steps.extend(np.linalg.norm(np.diff(roots, axis=0), axis=1).tolist())
+            stabilized_steps.extend(
+                np.linalg.norm(np.diff(smooth_roots, axis=0), axis=1).tolist()
+            )
+            segment_count += 1
+            for frame_idx, raw_root, smooth_root in zip(
+                indices, roots, smooth_roots, strict=True
+            ):
+                frame = player_frames[frame_idx]
+                delta_xy = (smooth_root - raw_root).astype(np.float32)
+                joints = frame.joints_m.copy()
+                joints[:, :2] += delta_xy
+                output[frame_idx] = WorldFrame(
+                    joints_m=joints,
+                    joint_conf=frame.joint_conf,
+                    mesh_player_id=frame.mesh_player_id,
+                    floor_xy_m=frame.floor_xy_m,
+                )
+                corrections.append(float(np.linalg.norm(delta_xy)))
+                stabilized_frame_count += 1
+        stabilized[player_id] = output
+
+    def _percentile(values: list[float], percentile: float) -> float:
+        return float(np.percentile(values, percentile)) if values else 0.0
+
+    return stabilized, {
+        "mode": "robust_gap_preserving_root_xy",
+        "authority": "presentation_only",
+        "segments": segment_count,
+        "anchor_segments": anchor_segment_count,
+        "root_fallback_segments": root_fallback_segment_count,
+        "frames": stabilized_frame_count,
+        "maximum_display_speed_mps": max_speed_mps,
+        "correction_median_m": _percentile(corrections, 50),
+        "correction_p95_m": _percentile(corrections, 95),
+        "correction_max_m": max(corrections, default=0.0),
+        "raw_root_step_p95_m": _percentile(raw_steps, 95),
+        "stabilized_root_step_p95_m": _percentile(stabilized_steps, 95),
+        "raw_root_step_max_m": max(raw_steps, default=0.0),
+        "stabilized_root_step_max_m": max(stabilized_steps, default=0.0),
+    }
 
 
 def load_mesh_frames(
@@ -169,10 +366,19 @@ def load_world_frames(
             mesh_player_id = player_id
             if isinstance(mesh_ref, dict) and mesh_ref.get("player_id") is not None:
                 mesh_player_id = int(mesh_ref["player_id"])
+            floor_value = frame.get("floor_world_xyz")
+            if not isinstance(floor_value, (list, tuple)) or len(floor_value) < 2:
+                floor_value = frame.get("track_world_xy")
+            floor_xy_m: np.ndarray | None = None
+            if isinstance(floor_value, (list, tuple)) and len(floor_value) >= 2:
+                candidate_floor = np.asarray(floor_value[:2], dtype=np.float32)
+                if np.all(np.isfinite(candidate_floor)):
+                    floor_xy_m = candidate_floor
             frames[frame_idx] = WorldFrame(
                 joints_m=joints,
                 joint_conf=conf,
                 mesh_player_id=mesh_player_id,
+                floor_xy_m=floor_xy_m,
             )
         world_frames[player_id] = frames
     if not world_frames:
@@ -208,7 +414,10 @@ def baseline_camera(width: int, height: int, orbit_degrees: float = 0.0) -> dict
         "basis": camera_basis(eye, target, up),
         # Fit the complete regulation rectangle at 16:9. The earlier demo
         # renderer cropped the near baseline, which made spatial review harder.
-        "focal": float(height) * 1.40,
+        # Leave a generous apron around the full court so players legitimately
+        # standing behind a baseline remain visible instead of clipping against
+        # the panel edge.
+        "focal": float(height) * 1.25,
     }
 
 
@@ -424,6 +633,11 @@ def world_sample_at(
         joints_m=(1.0 - alpha) * current.joints_m + alpha * following.joints_m,
         joint_conf=(1.0 - alpha) * current.joint_conf + alpha * following.joint_conf,
         mesh_player_id=current.mesh_player_id,
+        floor_xy_m=(
+            (1.0 - alpha) * current.floor_xy_m + alpha * following.floor_xy_m
+            if current.floor_xy_m is not None and following.floor_xy_m is not None
+            else None
+        ),
     )
 
 
@@ -888,6 +1102,15 @@ def main() -> int:
         default="static",
         help="static is the comparison/acceptance view; subtle_orbit is presentation-only",
     )
+    parser.add_argument(
+        "--presentation-root-stabilization",
+        choices=("none", "robust"),
+        default="robust",
+        help=(
+            "gap-preserving display-only rigid root stabilization; never mutates "
+            "virtual_world.json or fills missing player samples"
+        ),
+    )
     args = parser.parse_args()
 
     if args.panel_width < 320 or args.panel_height < 240:
@@ -917,6 +1140,19 @@ def main() -> int:
         world_payload = json.loads(world_path.read_text(encoding="utf-8"))
         fps = float(world_payload.get("fps") or source_fps)
     world_frames = load_world_frames(world_path, fps)
+    stabilization_stats: dict[str, float | int | str]
+    if args.presentation_root_stabilization == "robust":
+        world_frames, stabilization_stats = stabilize_world_frames_for_presentation(
+            world_frames,
+            fps,
+        )
+    else:
+        stabilization_stats = {
+            "mode": "none",
+            "authority": "presentation_only",
+            "segments": 0,
+            "frames": 0,
+        }
     frame_start = (
         min(int(window.get("frame_start", 0)) for window in index["windows"])
         if index.get("windows")
@@ -991,7 +1227,15 @@ def main() -> int:
                     alignment_stats=alignment_stats,
                 )
                 draw_panel_chrome(source_panel, "SOURCE", "input video")
-                draw_panel_chrome(virtual_panel, "VIRTUAL BASELINE", "final world placement")
+                draw_panel_chrome(
+                    virtual_panel,
+                    "VIRTUAL BASELINE",
+                    (
+                        "display-stabilized final placement"
+                        if args.presentation_root_stabilization == "robust"
+                        else "final world placement"
+                    ),
+                )
                 canvas = np.hstack((source_panel, virtual_panel))
                 cv2.line(
                     canvas,
@@ -1046,6 +1290,7 @@ def main() -> int:
                 "layout": "source_plus_virtual_baseline",
                 "camera_motion": args.camera_motion,
                 "renderer_authority": "presentation_only",
+                "presentation_stabilization": stabilization_stats,
                 "mesh_alignment": "virtual_world_skeleton_root_plus_floor_guard",
                 "virtual_representation": (
                     "body_mesh_plus_exact_skeleton"
