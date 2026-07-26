@@ -19,6 +19,10 @@ import cv2
 import numpy as np
 
 from threed.racketsport.court_structured_solver import FLOOR_WORLD_XY_M
+from .external_gt_body_prediction_schema import canonical_mhr70_keypoint_name
+
+
+FOOT_SEMANTIC_POLICY_VERSION = "mhr70_index_authoritative_v1"
 
 
 @dataclass(frozen=True)
@@ -142,6 +146,7 @@ def build_gold_packet(
         "schema_version": 1,
         "verified": False,
         "measurement_authority": "human_reference_estimate_only",
+        "foot_semantic_policy_version": FOOT_SEMANTIC_POLICY_VERSION,
         "instructions": {
             "court": "Correct only wrong named court points; do not nearest-match semantics.",
             "feet": "Correct visible ankle, heel, toe, and sole-contact pixels for the same player and same foot.",
@@ -254,6 +259,7 @@ def build_stabilization_review_packet(
     packet = {
         **{key: value for key, value in source.items() if key not in {"clips", "frame_count", "frames_per_clip"}},
         "artifact_type": "racketsport_foot_anchor_stabilization_review_packet",
+        "foot_semantic_policy_version": FOOT_SEMANTIC_POLICY_VERSION,
         "frame_count": len(selected),
         "frames_per_clip": None,
         "clips": [clip_rows[key] for key in sorted(clip_rows)],
@@ -335,6 +341,15 @@ def _round_robin_clips(rows: Sequence[dict[str, Any]], *, count: int) -> list[di
 
 def score_gold_review(packet: Mapping[str, Any], review: Mapping[str, Any]) -> dict[str, Any]:
     """Score exact-semantic support pixels with a three-way error budget."""
+
+    if (
+        packet.get("artifact_type") == "racketsport_foot_anchor_stabilization_review_packet"
+        and packet.get("foot_semantic_policy_version") != FOOT_SEMANTIC_POLICY_VERSION
+    ):
+        raise ValueError(
+            "stabilization review packet predates authoritative MHR70 foot semantics; "
+            "regenerate it before scoring"
+        )
 
     review_frames = review.get("frames") if isinstance(review, Mapping) else None
     review_frames = review_frames if isinstance(review_frames, Mapping) else {}
@@ -604,11 +619,29 @@ def _foot_index(payload: Mapping[str, Any] | None) -> dict[int, dict[int, dict[s
     for player in (payload or {}).get("players") or []:
         player_id = int(player.get("id"))
         for row in player.get("frames") or []:
-            points = {
-                str(point["name"]): [float(point["xy_px"][0]), float(point["xy_px"][1])]
-                for point in row.get("keypoints") or []
-                if point.get("name") and isinstance(point.get("xy_px"), Sequence)
-            }
+            points: dict[str, list[float]] = {}
+            for point in row.get("keypoints") or []:
+                if not isinstance(point, Mapping) or not isinstance(point.get("xy_px"), Sequence):
+                    continue
+                name = canonical_mhr70_keypoint_name(point.get("name"), point.get("index"))
+                if not name:
+                    continue
+                points[name] = [float(point["xy_px"][0]), float(point["xy_px"][1])]
+            for side in ("left", "right"):
+                toe_points = [
+                    points[name]
+                    for name in (
+                        f"{side}_toe",
+                        f"{side}_big_toe_tip",
+                        f"{side}_small_toe_tip",
+                    )
+                    if name in points
+                ]
+                if toe_points:
+                    points[f"{side}_toe"] = [
+                        float(sum(point[axis] for point in toe_points) / len(toe_points))
+                        for axis in (0, 1)
+                    ]
             frames.setdefault(int(row["frame_idx"]), {})[player_id] = points
     return frames
 

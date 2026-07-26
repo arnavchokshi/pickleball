@@ -32,8 +32,10 @@
     const packet=__PACKET_JSON__;
     const frames=packet.clips.flatMap(function(c){return c.frames.map(function(f){return Object.assign({},f,{clip_id:c.clip_id})})});
     const segments=[["near_left_corner","near_baseline_center"],["near_baseline_center","near_right_corner"],["near_left_corner","near_nvz_left"],["near_nvz_left","far_nvz_left"],["far_nvz_left","far_left_corner"],["near_right_corner","near_nvz_right"],["near_nvz_right","far_nvz_right"],["far_nvz_right","far_right_corner"],["near_nvz_left","near_nvz_center"],["near_nvz_center","near_nvz_right"],["far_nvz_left","far_nvz_center"],["far_nvz_center","far_nvz_right"],["far_left_corner","far_baseline_center"],["far_baseline_center","far_right_corner"],["near_baseline_center","near_nvz_center"],["far_nvz_center","far_baseline_center"]];
-    const storageKey="courtFootReview:"+packet.clips.map(function(c){return c.clip_id}).join("|");
-    let state=JSON.parse(localStorage.getItem(storageKey)||'{"frames":{}}'),index=0,selected=null;
+    const reviewNamespace=(packet.stabilization_review&&packet.stabilization_review.selection_version)||packet.foot_semantic_policy_version||"v1";
+    const storageKey="courtFootReview:"+reviewNamespace+":"+packet.clips.map(function(c){return c.clip_id}).join("|");
+    const initialReviewState=packet.initial_review_state||{frames:{}};
+    let state=JSON.parse(localStorage.getItem(storageKey)||JSON.stringify(initialReviewState)),index=0,selected=null;
     const canvas=document.getElementById("canvas"),ctx=canvas.getContext("2d"),img=new Image();
     function frame(){return frames[index]}
     function review(){const id=frame().frame_id;return state.frames[id]||(state.frames[id]={court_points:{},players:{}})}

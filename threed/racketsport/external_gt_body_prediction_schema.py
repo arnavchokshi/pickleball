@@ -111,4 +111,22 @@ MHR70_JOINT_NAMES: tuple[str, ...] = (
 assert len(MHR70_JOINT_NAMES) == 70, "MHR70_JOINT_NAMES must have exactly 70 entries"
 assert len(set(MHR70_JOINT_NAMES)) == 70, "MHR70_JOINT_NAMES must have no duplicate names"
 
-__all__ = ["MHR70_JOINT_NAMES"]
+
+def canonical_mhr70_keypoint_name(name: object, index: object) -> str:
+    """Resolve SAM-3D sidecar semantics from the authoritative MHR70 index.
+
+    Historical sidecars called index 16 ``right_toe`` even though index 16 is
+    ``left_small_toe_tip``.  SAM-3D sidecars use raw MHR70 indices, so a valid
+    index is authoritative and the textual compatibility label is not.
+    """
+
+    try:
+        parsed_index = int(index)
+    except (TypeError, ValueError):
+        return str(name or "")
+    if 0 <= parsed_index < len(MHR70_JOINT_NAMES):
+        return MHR70_JOINT_NAMES[parsed_index]
+    return str(name or "")
+
+
+__all__ = ["MHR70_JOINT_NAMES", "canonical_mhr70_keypoint_name"]

@@ -621,6 +621,23 @@ def test_post_body_support_uses_one_contact_foot_without_overwriting_sole_y(tmp_
     assert first["contact_state"]["support_foot"] in {"left", "bilateral"}
 
 
+def test_legacy_index_16_right_toe_cannot_enter_right_foot_evidence() -> None:
+    frame = {
+        "keypoints": [
+            {"name": "left_toe", "index": 15, "xy_px": [100.0, 200.0], "conf": 0.9},
+            {"name": "right_toe", "index": 16, "xy_px": [102.0, 202.0], "conf": 0.9},
+            {"name": "right_heel", "index": 20, "xy_px": [180.0, 200.0], "conf": 0.9},
+        ]
+    }
+
+    by_name = placement_module._canonical_sam3d_sidecar_keypoints(frame)
+
+    assert by_name["left_big_toe_tip"]["xy_px"] == [100.0, 200.0]
+    assert by_name["left_small_toe_tip"]["xy_px"] == [102.0, 202.0]
+    assert by_name["right_heel"]["xy_px"] == [180.0, 200.0]
+    assert "right_toe" not in by_name
+
+
 @pytest.mark.parametrize(
     ("court_points", "expected"),
     [

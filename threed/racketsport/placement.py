@@ -23,7 +23,10 @@ from .coordinates import (
     unproject_image_points_with_inverse,
 )
 from .court_calibration import undistort_pixels_with_camera_matrix_typed
-from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
+from .external_gt_body_prediction_schema import (
+    MHR70_JOINT_NAMES,
+    canonical_mhr70_keypoint_name,
+)
 
 
 UTC = timezone.utc
@@ -3754,7 +3757,7 @@ def _load_sam3d_foot_pixels(path: Path | None, *, config: PlacementConfig) -> di
         player_id = int(player["id"])
         for frame in player.get("frames", []) or []:
             frame_idx = int(frame["frame_idx"])
-            by_name = {str(item.get("name")): item for item in frame.get("keypoints", []) or [] if isinstance(item, Mapping)}
+            by_name = _canonical_sam3d_sidecar_keypoints(frame)
             foot_points = []
             for names in (
                 ("left_ankle", "left_heel", "left_toe", "left_big_toe_tip", "left_small_toe_tip"),
@@ -3788,7 +3791,7 @@ def _load_sam3d_foot_pixels_by_foot(
         player_id = int(player["id"])
         for frame in player.get("frames", []) or []:
             frame_idx = int(frame["frame_idx"])
-            by_name = {str(item.get("name")): item for item in frame.get("keypoints", []) or [] if isinstance(item, Mapping)}
+            by_name = _canonical_sam3d_sidecar_keypoints(frame)
             for foot, names in foot_names.items():
                 point = _weighted_sidecar_pixel(by_name, names, conf_min=config.sam3d_conf_min)
                 if point is not None:
@@ -3807,6 +3810,22 @@ def _load_sam3d_foot_pixels_by_foot(
                         ),
                     )
     return out
+
+
+def _canonical_sam3d_sidecar_keypoints(
+    frame: Mapping[str, Any],
+) -> dict[str, Mapping[str, Any]]:
+    by_name: dict[str, Mapping[str, Any]] = {}
+    for item in frame.get("keypoints", []) or []:
+        if not isinstance(item, Mapping):
+            continue
+        name = canonical_mhr70_keypoint_name(item.get("name"), item.get("index"))
+        if not name:
+            continue
+        existing = by_name.get(name)
+        if existing is None or float(item.get("conf", 1.0)) > float(existing.get("conf", 1.0)):
+            by_name[name] = item
+    return by_name
 
 
 def _load_stance_phases(path: Path | None) -> dict[int, list[_StancePhase]]:

@@ -7,6 +7,7 @@ import sys
 
 import cv2
 import numpy as np
+import pytest
 
 from threed.racketsport.court_foot_gold import (
     GoldClipSpec,
@@ -50,10 +51,12 @@ def test_packet_builds_prelabels_and_exact_foot_error_budget(tmp_path: Path) -> 
             "keypoints": [
                 {"name": "left_ankle", "xy_px": [112.0, 168.0]},
                 {"name": "left_heel", "xy_px": [111.0, 178.0]},
-                {"name": "left_toe", "xy_px": [116.0, 180.0]},
+                {"name": "left_big_toe_tip", "index": 15, "xy_px": [116.0, 180.0]},
+                {"name": "left_small_toe_tip", "index": 16, "xy_px": [117.0, 179.0]},
                 {"name": "right_ankle", "xy_px": [130.0, 168.0]},
                 {"name": "right_heel", "xy_px": [129.0, 176.0]},
-                {"name": "right_toe", "xy_px": [134.0, 177.0]},
+                {"name": "right_big_toe_tip", "index": 18, "xy_px": [134.0, 177.0]},
+                {"name": "right_small_toe_tip", "index": 19, "xy_px": [135.0, 176.0]},
             ],
         }
         for index in range(10)
@@ -78,7 +81,7 @@ def test_packet_builds_prelabels_and_exact_foot_error_budget(tmp_path: Path) -> 
     assert packet["frame_count"] == 3
     assert (tmp_path / "packet/START_HERE.html").is_file()
     player = packet["clips"][0]["frames"][0]["players"][0]
-    assert player["points"]["left_contact"] == [116.0, 180.0]
+    assert player["points"]["left_contact"] == [116.5, 179.5]
     assert player["support_foot"] == "left"
 
     review_frames = {}
@@ -182,3 +185,40 @@ def test_stabilization_packet_locks_eight_moments_per_category(tmp_path: Path) -
     selected = [frame for clip in packet["clips"] for frame in clip["frames"]]
     assert all(len(frame["players"]) == 1 for frame in selected)
     assert len(list((tmp_path / "stabilization/frames").glob("*.jpg"))) == 24
+
+
+def test_legacy_index_16_right_toe_is_recovered_as_left_small_toe() -> None:
+    from threed.racketsport import court_foot_gold
+
+    payload = {
+        "players": [
+            {
+                "id": 4,
+                "frames": [
+                    {
+                        "frame_idx": 9,
+                        "keypoints": [
+                            {"name": "left_toe", "index": 15, "xy_px": [10.0, 20.0]},
+                            {"name": "right_toe", "index": 16, "xy_px": [14.0, 22.0]},
+                            {"name": "right_heel", "index": 20, "xy_px": [40.0, 21.0]},
+                        ],
+                    }
+                ],
+            }
+        ]
+    }
+
+    points = court_foot_gold._foot_index(payload)[9][4]
+
+    assert points["left_big_toe_tip"] == [10.0, 20.0]
+    assert points["left_small_toe_tip"] == [14.0, 22.0]
+    assert points["left_toe"] == [12.0, 21.0]
+    assert "right_toe" not in points
+
+
+def test_legacy_stabilization_packet_cannot_be_scored() -> None:
+    with pytest.raises(ValueError, match="authoritative MHR70 foot semantics"):
+        score_gold_review(
+            {"artifact_type": "racketsport_foot_anchor_stabilization_review_packet"},
+            {"frames": {}},
+        )
