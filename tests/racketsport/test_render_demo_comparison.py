@@ -17,6 +17,8 @@ baseline_camera = MODULE["baseline_camera"]
 draw_translucent_joint_avatar = MODULE["draw_translucent_joint_avatar"]
 stabilize_world_frames_for_presentation = MODULE["stabilize_world_frames_for_presentation"]
 stabilize_bboxes_for_presentation = MODULE["stabilize_bboxes_for_presentation"]
+stabilize_mesh_frames_for_presentation = MODULE["stabilize_mesh_frames_for_presentation"]
+display_sample_kind = MODULE["display_sample_kind"]
 center_joints_for_studio = MODULE["center_joints_for_studio"]
 center_mesh_for_studio = MODULE["center_mesh_for_studio"]
 draw_person_studio_panel = MODULE["draw_person_studio_panel"]
@@ -56,6 +58,49 @@ def test_sparse_60fps_ticks_interpolate_across_measured_33ms_pair() -> None:
     assert np.allclose(mesh[0], 1.0)
     assert world is not None
     assert np.allclose(world.joints_m, 1.0)
+
+
+def test_native_30hz_surface_supports_strict_60fps_display_without_avatar() -> None:
+    frames = {0: _mesh_frame(0), 1: _mesh_frame(1000)}
+
+    half_tick = mesh_sample_at(frames, 0.5, 30.0)
+    terminal_tick = mesh_sample_at(
+        frames,
+        1.5,
+        30.0,
+        terminal_hold_max_s=1.0 / 60.0,
+    )
+
+    assert half_tick is not None
+    assert np.allclose(half_tick[0], 0.5)
+    assert display_sample_kind(frames, 0.0, 30.0) == "measured_tick"
+    assert display_sample_kind(frames, 0.5, 30.0) == "display_interpolated"
+    assert (
+        display_sample_kind(
+            frames,
+            1.5,
+            30.0,
+            terminal_hold_max_s=1.0 / 60.0,
+        )
+        == "terminal_display_hold"
+    )
+    assert terminal_tick is not None
+    assert np.allclose(terminal_tick[0], 1.0)
+
+
+def test_terminal_subframe_hold_cannot_fill_internal_mesh_gap() -> None:
+    frames = {0: _mesh_frame(0), 2: _mesh_frame(2000)}
+
+    assert (
+        mesh_sample_at(
+            frames,
+            1.0,
+            30.0,
+            terminal_hold_max_s=1.0 / 60.0,
+        )
+        is None
+    )
+    assert display_sample_kind(frames, 1.0, 30.0) == "missing"
 
 
 def test_display_interpolation_refuses_long_or_identity_ambiguous_gap() -> None:
@@ -223,6 +268,54 @@ def test_native_mesh_body_local_centering_preserves_exact_surface_pose() -> None
         atol=5e-7,
     )
     assert np.array_equal(local_confidence, confidence)
+
+
+def test_native_mesh_presentation_filter_reduces_body_local_spike_and_keeps_topology() -> None:
+    frames = {}
+    frame_count = 9
+    for frame_idx in range(frame_count):
+        vertices = np.zeros((8, 3), dtype=np.int16)
+        vertices[:, 0] = np.arange(8, dtype=np.int16) * 10
+        vertices[:, 2] = np.arange(8, dtype=np.int16) * 20
+        joints = np.zeros((70, 3), dtype=np.int16)
+        joints[9] = [-100, 0, 900]
+        joints[10] = [100, 0, 900]
+        if frame_idx == frame_count // 2:
+            vertices[:, 1] += 600
+            joints[0, 1] += 600
+        frames[frame_idx] = MeshFrame(
+            vertices_mm=vertices,
+            joints_mm=joints,
+            joint_conf=np.ones(70, dtype=np.float32),
+            blend_weight=1.0,
+            source_window_index=3,
+        )
+
+    stabilized, stats = stabilize_mesh_frames_for_presentation(frames, 30.0)
+
+    assert set(stabilized) == set(frames)
+    assert stats["authority"] == "presentation_only"
+    assert stats["frames"] == len(frames)
+    assert stats["filtered_surface_step_p95_m"] < stats["raw_surface_step_p95_m"] * 0.35
+    for frame_idx, frame in stabilized.items():
+        assert frame.vertices_mm.shape == frames[frame_idx].vertices_mm.shape
+        assert frame.joints_mm.shape == frames[frame_idx].joints_mm.shape
+        assert frame.source_window_index == 3
+
+
+def test_native_mesh_presentation_filter_preserves_missing_and_window_boundaries() -> None:
+    frames = {
+        frame_idx: _mesh_frame(frame_idx * 100, window=0 if frame_idx < 5 else 1)
+        for frame_idx in (*range(5), *range(20, 25))
+    }
+
+    stabilized, stats = stabilize_mesh_frames_for_presentation(frames, 30.0)
+
+    assert set(stabilized) == set(frames)
+    assert 5 not in stabilized and 19 not in stabilized
+    assert stats["segments"] == 2
+    assert stabilized[4].source_window_index == 0
+    assert stabilized[20].source_window_index == 1
 
 
 def test_native_mesh_studio_path_never_invokes_joint_avatar_proxy() -> None:

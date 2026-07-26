@@ -8,7 +8,9 @@ falling back. Joint-only runs are displayed as translucent articulated avatars
 built directly from their final grounded joints; this is a presentation surface,
 not fabricated measurement geometry. Missing world samples remain missing.
 Optional between-frame interpolation is display-only and is used only when both
-adjacent measured samples exist.
+adjacent measured samples exist. Native closeups can denoise corresponding mesh
+vertices in body-local space and interpolate the immutable 30 Hz evidence onto
+a 60 FPS presentation timeline; neither operation creates measurements.
 
 The visual language mirrors the replay viewer: warm white canvas, regulation
 pickleball court, restrained ink lines, translucent per-player surfaces, and a
@@ -61,6 +63,8 @@ PRESENTATION_STABILIZATION_MEDIAN_RADIUS = 3
 PRESENTATION_MAX_SPEED_MPS = 7.5
 PRESENTATION_CROP_TAU_S = 0.18
 PRESENTATION_CROP_MEDIAN_RADIUS = 3
+PRESENTATION_MESH_TAU_S = 0.065
+PRESENTATION_MESH_MEDIAN_RADIUS = 1
 PLAYER_CLOSEUP_MAX_BODY_HZ = 30.0
 
 
@@ -82,6 +86,154 @@ class WorldFrame:
     bbox_xyxy: np.ndarray | None = None
     raw_bbox_xyxy: np.ndarray | None = None
     translation_world: np.ndarray | None = None
+
+
+def stabilize_mesh_frames_for_presentation(
+    frames: dict[int, MeshFrame],
+    fps: float,
+    *,
+    median_radius: int = PRESENTATION_MESH_MEDIAN_RADIUS,
+    tau_s: float = PRESENTATION_MESH_TAU_S,
+) -> tuple[dict[int, MeshFrame], dict[str, float | int | str]]:
+    """Denoise native surface motion in body-local space for display only.
+
+    BODY produces independent 30 Hz mesh observations.  Filtering their raw
+    court translation does not help a body-local close-up, so this operates on
+    every corresponding native vertex and joint after removing hip-root XY.
+    It preserves frame keys, topology, identity/window boundaries, and missing
+    gaps.  The filtered coordinates are never written back to BODY artifacts or
+    exposed as measurements.
+    """
+    if fps <= 0:
+        raise ValueError("mesh presentation stabilization requires positive fps")
+    if median_radius < 0 or tau_s <= 0:
+        raise ValueError("mesh presentation stabilization parameters are invalid")
+
+    output = dict(frames)
+    segments: list[list[int]] = []
+    segment: list[int] = []
+    for frame_idx in sorted(frames):
+        frame = frames[frame_idx]
+        valid = bool(
+            frame.vertices_mm.ndim == 2
+            and frame.vertices_mm.shape[1] == 3
+            and frame.joints_mm.ndim == 2
+            and frame.joints_mm.shape[1] == 3
+            and len(frame.joints_mm) > 10
+            and len(frame.joint_conf) == len(frame.joints_mm)
+        )
+        if not valid:
+            if segment:
+                segments.append(segment)
+                segment = []
+            continue
+        if segment:
+            previous_idx = segment[-1]
+            previous = frames[previous_idx]
+            if (
+                frame_idx != previous_idx + 1
+                or frame.source_window_index != previous.source_window_index
+                or frame.vertices_mm.shape != previous.vertices_mm.shape
+                or frame.joints_mm.shape != previous.joints_mm.shape
+            ):
+                segments.append(segment)
+                segment = []
+        segment.append(frame_idx)
+    if segment:
+        segments.append(segment)
+
+    raw_steps: list[float] = []
+    filtered_steps: list[float] = []
+    corrections: list[float] = []
+    filtered_frames = 0
+    filtered_segments = 0
+    for indices in segments:
+        # A symmetric filter needs enough context to avoid turning a short
+        # appearance burst into an implied smooth track.
+        if len(indices) < 5:
+            continue
+        vertices = np.asarray(
+            [frames[index].vertices_mm for index in indices],
+            dtype=np.float32,
+        ) / 1000.0
+        joints = np.asarray(
+            [frames[index].joints_mm for index in indices],
+            dtype=np.float32,
+        ) / 1000.0
+        roots_xy = 0.5 * (joints[:, 9, :2] + joints[:, 10, :2])
+        local_vertices = vertices.copy()
+        local_joints = joints.copy()
+        local_vertices[:, :, :2] -= roots_xy[:, None, :]
+        local_joints[:, :, :2] -= roots_xy[:, None, :]
+        times = np.asarray(indices, dtype=np.float64) / fps
+
+        filtered_vertices = _symmetric_ema(
+            _coordinate_median_filter(local_vertices, median_radius),
+            times,
+            tau_s,
+        )
+        filtered_joints = _symmetric_ema(
+            _coordinate_median_filter(local_joints, median_radius),
+            times,
+            tau_s,
+        )
+        confidence = np.asarray(
+            [frames[index].joint_conf for index in indices],
+            dtype=np.float32,
+        )
+        filtered_confidence = np.clip(
+            _symmetric_ema(confidence, times, tau_s),
+            0.0,
+            1.0,
+        )
+
+        raw_delta = np.diff(local_vertices, axis=0)
+        filtered_delta = np.diff(filtered_vertices, axis=0)
+        raw_steps.extend(
+            np.sqrt(np.mean(np.sum(raw_delta * raw_delta, axis=2), axis=1)).tolist()
+        )
+        filtered_steps.extend(
+            np.sqrt(
+                np.mean(np.sum(filtered_delta * filtered_delta, axis=2), axis=1)
+            ).tolist()
+        )
+        correction = filtered_vertices - local_vertices
+        corrections.extend(
+            np.sqrt(np.mean(np.sum(correction * correction, axis=2), axis=1)).tolist()
+        )
+
+        # Restore the original root translation so the frame remains a valid
+        # native BODY coordinate sample.  The studio path removes it again.
+        filtered_vertices[:, :, :2] += roots_xy[:, None, :]
+        filtered_joints[:, :, :2] += roots_xy[:, None, :]
+        for offset, frame_idx in enumerate(indices):
+            original = frames[frame_idx]
+            output[frame_idx] = MeshFrame(
+                vertices_mm=np.rint(filtered_vertices[offset] * 1000.0).astype(np.int16),
+                joints_mm=np.rint(filtered_joints[offset] * 1000.0).astype(np.int16),
+                joint_conf=filtered_confidence[offset].astype(np.float32),
+                blend_weight=original.blend_weight,
+                source_window_index=original.source_window_index,
+            )
+            filtered_frames += 1
+        filtered_segments += 1
+
+    def _percentile(values: list[float], percentile: float) -> float:
+        return float(np.percentile(values, percentile)) if values else 0.0
+
+    return output, {
+        "mode": "body_local_native_vertex_joint_robust_symmetric",
+        "authority": "presentation_only",
+        "segments": filtered_segments,
+        "frames": filtered_frames,
+        "median_radius_frames": median_radius,
+        "symmetric_ema_tau_s": tau_s,
+        "raw_surface_step_p95_m": _percentile(raw_steps, 95),
+        "filtered_surface_step_p95_m": _percentile(filtered_steps, 95),
+        "surface_correction_median_m": _percentile(corrections, 50),
+        "surface_correction_p95_m": _percentile(corrections, 95),
+        "surface_correction_max_m": max(corrections, default=0.0),
+    }
 
 
 def _hip_root_xy(frame: WorldFrame) -> np.ndarray | None:
@@ -705,8 +857,15 @@ def mesh_sample_at(
     frames: dict[int, MeshFrame],
     frame_position: float,
     fps: float,
+    *,
+    terminal_hold_max_s: float = 0.0,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
-    bracket = _display_interpolation_bracket(frames, frame_position, fps)
+    bracket = _display_interpolation_bracket(
+        frames,
+        frame_position,
+        fps,
+        terminal_hold_max_s=terminal_hold_max_s,
+    )
     if bracket is None:
         return None
     left_idx, right_idx, alpha = bracket
@@ -742,12 +901,14 @@ def world_sample_at(
     fps: float,
     *,
     max_gap_frames: int | None = None,
+    terminal_hold_max_s: float = 0.0,
 ) -> WorldFrame | None:
     bracket = _display_interpolation_bracket(
         frames,
         frame_position,
         fps,
         max_gap_frames=max_gap_frames,
+        terminal_hold_max_s=terminal_hold_max_s,
     )
     if bracket is None:
         return None
@@ -801,8 +962,14 @@ def _display_interpolation_bracket(
     max_gap_s: float = DISPLAY_INTERPOLATION_MAX_GAP_S,
     *,
     max_gap_frames: int | None = None,
+    terminal_hold_max_s: float = 0.0,
 ) -> tuple[int, int, float] | None:
-    """Find exact or <=50ms bracketing measured ticks without holding gaps."""
+    """Find exact or <=50ms bracketing ticks without bridging missing gaps.
+
+    A caller may permit one sub-frame hold after the final native observation.
+    This exists solely to encode a complete 60 FPS final second from 30 FPS
+    input; it cannot fill an internal gap or extend a missing identity.
+    """
     if not frames or not math.isfinite(frame_position) or fps <= 0:
         return None
     exact_idx = int(round(frame_position))
@@ -823,6 +990,14 @@ def _display_interpolation_bracket(
         if candidate in frames:
             upper = candidate
             break
+    if (
+        upper is None
+        and lower is not None
+        and lower == max(frames)
+        and terminal_hold_max_s > 0
+        and (frame_position - lower) / fps <= terminal_hold_max_s + 1e-9
+    ):
+        return lower, lower, 0.0
     if lower is None or upper is None or lower >= upper:
         return None
     if max_gap_frames is not None and upper - lower > max_gap_frames:
@@ -834,6 +1009,37 @@ def _display_interpolation_bracket(
     if not 0.0 < alpha < 1.0:
         return None
     return lower, upper, float(alpha)
+
+
+def display_sample_kind(
+    frames: dict[int, object],
+    frame_position: float,
+    fps: float,
+    *,
+    max_gap_frames: int | None = None,
+    terminal_hold_max_s: float = 0.0,
+) -> str:
+    """Return honest timing provenance for a display sample."""
+    bracket = _display_interpolation_bracket(
+        frames,
+        frame_position,
+        fps,
+        max_gap_frames=max_gap_frames,
+        terminal_hold_max_s=terminal_hold_max_s,
+    )
+    if bracket is None:
+        return "missing"
+    left_idx, right_idx, _ = bracket
+    exact_idx = int(round(frame_position))
+    if (
+        left_idx == right_idx
+        and abs(frame_position - exact_idx) <= 1e-7
+        and exact_idx in frames
+    ):
+        return "measured_tick"
+    if left_idx == right_idx:
+        return "terminal_display_hold"
+    return "display_interpolated"
 
 
 def resolve_fps_multiplier(
@@ -1654,8 +1860,9 @@ def main() -> int:
         "--require-native-mesh",
         action="store_true",
         help=(
-            "player_closeup only: require an exact BODY mesh-index sample for "
-            "every output frame; never substitute a joint avatar"
+            "player_closeup only: require a native BODY surface at every output "
+            "tick (measured or interpolated between adjacent measured surfaces); "
+            "never substitute a joint avatar"
         ),
     )
     parser.add_argument("--start-seconds", type=float, default=0.0)
@@ -1695,6 +1902,15 @@ def main() -> int:
         help=(
             "gap-preserving display-only rigid root stabilization; never mutates "
             "virtual_world.json or fills missing player samples"
+        ),
+    )
+    parser.add_argument(
+        "--mesh-presentation-stabilization",
+        choices=("none", "robust"),
+        default="robust",
+        help=(
+            "player_closeup only: display-only body-local temporal filtering of "
+            "native vertices/joints; preserves topology, gaps, and source artifacts"
         ),
     )
     args = parser.parse_args()
@@ -1743,6 +1959,11 @@ def main() -> int:
         "segments": 0,
         "frames": 0,
     }
+    mesh_stabilization_stats: dict[str, object] = {
+        "mode": "none",
+        "authority": "presentation_only",
+        "players": {},
+    }
     if args.layout == "player_closeup":
         assert args.player_id is not None
         if args.player_id not in world_frames:
@@ -1755,6 +1976,28 @@ def main() -> int:
             fps,
         )
         world_frames[args.player_id] = smoothed_boxes
+        if args.index is not None and args.mesh_presentation_stabilization == "robust":
+            referenced_mesh_ids = sorted(
+                {
+                    frame.mesh_player_id
+                    for frame in world_frames[args.player_id].values()
+                }
+            )
+            per_mesh_player: dict[str, dict[str, float | int | str]] = {}
+            for mesh_player_id in referenced_mesh_ids:
+                player_mesh_frames = mesh_frames.get(mesh_player_id)
+                if player_mesh_frames is None:
+                    continue
+                stabilized_mesh_frames, player_stats = (
+                    stabilize_mesh_frames_for_presentation(player_mesh_frames, fps)
+                )
+                mesh_frames[mesh_player_id] = stabilized_mesh_frames
+                per_mesh_player[str(mesh_player_id)] = player_stats
+            mesh_stabilization_stats = {
+                "mode": "body_local_native_vertex_joint_robust_symmetric",
+                "authority": "presentation_only",
+                "players": per_mesh_player,
+            }
         stabilization_stats = {
             "mode": "not_applied_body_local_layout",
             "authority": "presentation_only",
@@ -1796,9 +2039,16 @@ def main() -> int:
     output_width = args.panel_width * 2
     output_height = args.panel_height
     default_fps_multiplier = resolve_fps_multiplier(fps, source_fps, args.fps_multiplier)
-    output_fps = args.output_fps or (fps * default_fps_multiplier)
+    default_output_fps = fps * default_fps_multiplier
+    if args.layout == "player_closeup" and args.require_native_mesh:
+        # The immutable BODY observations remain at their native cadence.  A
+        # strict native-mesh closeup defaults to a 60 FPS display timeline and
+        # fills only half ticks between adjacent native surfaces.
+        default_output_fps = 60.0
+    output_fps = args.output_fps or default_output_fps
     output_frames = max(1, int(round(total_frames / fps * output_fps)))
     fps_multiplier = output_fps / fps
+    terminal_display_hold_s = 1.0 / output_fps + 1e-9
     audio_seek_seconds = source_seek_seconds(base_frame_start, fps, args.start_seconds)
 
     if args.require_native_mesh:
@@ -1806,10 +2056,6 @@ def main() -> int:
         missing_native_frames: list[int] = []
         for output_frame_idx in range(output_frames):
             frame_position = frame_start + output_frame_idx / output_fps * fps
-            exact_frame_idx = int(round(frame_position))
-            if abs(frame_position - exact_frame_idx) > 1e-7:
-                missing_native_frames.append(exact_frame_idx)
-                continue
             focus_frame = world_sample_at(
                 world_frames[args.player_id],
                 frame_position,
@@ -1818,17 +2064,28 @@ def main() -> int:
                     1,
                     int(math.ceil(fps / PLAYER_CLOSEUP_MAX_BODY_HZ - 1e-9)),
                 ),
+                terminal_hold_max_s=terminal_display_hold_s,
             )
             player_mesh_frames = (
                 mesh_frames.get(focus_frame.mesh_player_id)
                 if focus_frame is not None
                 else None
             )
-            if player_mesh_frames is None or exact_frame_idx not in player_mesh_frames:
-                missing_native_frames.append(exact_frame_idx)
+            native_sample = (
+                mesh_sample_at(
+                    player_mesh_frames,
+                    frame_position,
+                    fps,
+                    terminal_hold_max_s=terminal_display_hold_s,
+                )
+                if player_mesh_frames is not None
+                else None
+            )
+            if focus_frame is None or native_sample is None:
+                missing_native_frames.append(int(round(frame_position)))
         if missing_native_frames:
             raise ValueError(
-                "--require-native-mesh found missing/non-exact mesh samples: "
+                "--require-native-mesh found missing/non-interpolatable native surfaces: "
                 f"count={len(missing_native_frames)} frames={missing_native_frames[:12]}"
             )
 
@@ -1858,6 +2115,7 @@ def main() -> int:
         "native_mesh_frames": 0,
         "native_mesh_exact_frames": 0,
         "native_mesh_display_interpolated_frames": 0,
+        "native_mesh_terminal_display_hold_frames": 0,
         "joint_avatar_frames": 0,
     }
     try:
@@ -1891,24 +2149,27 @@ def main() -> int:
                         1,
                         int(math.ceil(fps / PLAYER_CLOSEUP_MAX_BODY_HZ - 1e-9)),
                     ),
+                    terminal_hold_max_s=terminal_display_hold_s,
                 )
                 has_measured_crop = bool(
                     focus_frame is not None and _valid_bbox_xyxy(focus_frame.bbox_xyxy)
                 )
                 focused_mesh_sample = None
-                focused_mesh_exact = False
+                focused_mesh_kind = "missing"
                 if focus_frame is not None:
                     player_mesh_frames = mesh_frames.get(focus_frame.mesh_player_id)
                     if player_mesh_frames is not None:
-                        exact_mesh_idx = int(round(frame_position))
-                        focused_mesh_exact = bool(
-                            abs(frame_position - exact_mesh_idx) <= 1e-7
-                            and exact_mesh_idx in player_mesh_frames
+                        focused_mesh_kind = display_sample_kind(
+                            player_mesh_frames,
+                            frame_position,
+                            fps,
+                            terminal_hold_max_s=terminal_display_hold_s,
                         )
                         focused_mesh_sample = mesh_sample_at(
                             player_mesh_frames,
                             frame_position,
                             fps,
+                            terminal_hold_max_s=terminal_display_hold_s,
                         )
                 if has_measured_crop:
                     assert focus_frame is not None
@@ -1944,10 +2205,12 @@ def main() -> int:
                     alignment_stats["focused_player_frames"] += 1
                 if focused_mesh_sample is not None:
                     alignment_stats["native_mesh_frames"] += 1
-                    if focused_mesh_exact:
+                    if focused_mesh_kind == "measured_tick":
                         alignment_stats["native_mesh_exact_frames"] += 1
-                    else:
+                    elif focused_mesh_kind == "display_interpolated":
                         alignment_stats["native_mesh_display_interpolated_frames"] += 1
+                    elif focused_mesh_kind == "terminal_display_hold":
+                        alignment_stats["native_mesh_terminal_display_hold_frames"] += 1
                 elif focus_frame is not None and not args.require_native_mesh:
                     alignment_stats["joint_avatar_frames"] += 1
                 draw_panel_chrome(
@@ -1962,7 +2225,7 @@ def main() -> int:
                 draw_panel_chrome(
                     virtual_panel,
                     (
-                        "NATIVE BODY MESH"
+                        "DISPLAY-SMOOTHED NATIVE MESH"
                         if focused_mesh_sample is not None
                         else (
                             "MESH ABSENT - JOINT FALLBACK"
@@ -1971,7 +2234,7 @@ def main() -> int:
                         )
                     ),
                     (
-                        f"18,439 vertices | studio view {orbit:03.0f} deg | presentation only"
+                        f"18,439 vertices | {output_fps:g} FPS | view {orbit:03.0f} deg | display only"
                         if focused_mesh_sample is not None
                         else f"joint avatar | studio view {orbit:03.0f} deg | presentation only"
                     ),
@@ -2070,6 +2333,13 @@ def main() -> int:
                 "renderer_authority": "presentation_only",
                 "presentation_stabilization": stabilization_stats,
                 "crop_stabilization": crop_stabilization_stats,
+                "mesh_presentation_stabilization": mesh_stabilization_stats,
+                "native_mesh_observation_fps": fps if args.index is not None else None,
+                "display_interpolation": (
+                    "adjacent_native_surfaces_only_plus_terminal_subframe_hold"
+                    if args.layout == "player_closeup" and args.require_native_mesh
+                    else "default"
+                ),
                 "body_local_centering": (
                     "hip_center_xy_preserve_world_height"
                     if args.layout == "player_closeup"
