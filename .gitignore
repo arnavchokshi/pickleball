@@ -72,3 +72,6 @@ data/event_public_20260713/
 data/event_bootstrap_20260713/
 data/pbv_replay_20260720/
 eval_clips/ball/pbvision_11min_20260713/
+
+# External validation data (TT3D) - NO LICENSE upstream, internal validation only, never commit
+data/external/
