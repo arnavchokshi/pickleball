@@ -57,6 +57,9 @@ PRESENTATION_OFFSET_TAU_S = 0.30
 PRESENTATION_ROOT_TAU_S = 0.20
 PRESENTATION_STABILIZATION_MEDIAN_RADIUS = 3
 PRESENTATION_MAX_SPEED_MPS = 7.5
+PRESENTATION_CROP_TAU_S = 0.18
+PRESENTATION_CROP_MEDIAN_RADIUS = 3
+PLAYER_CLOSEUP_MAX_BODY_HZ = 30.0
 
 
 @dataclass(frozen=True)
@@ -74,6 +77,9 @@ class WorldFrame:
     joint_conf: np.ndarray
     mesh_player_id: int
     floor_xy_m: np.ndarray | None = None
+    bbox_xyxy: np.ndarray | None = None
+    raw_bbox_xyxy: np.ndarray | None = None
+    translation_world: np.ndarray | None = None
 
 
 def _hip_root_xy(frame: WorldFrame) -> np.ndarray | None:
@@ -241,6 +247,9 @@ def stabilize_world_frames_for_presentation(
                     joint_conf=frame.joint_conf,
                     mesh_player_id=frame.mesh_player_id,
                     floor_xy_m=frame.floor_xy_m,
+                    bbox_xyxy=frame.bbox_xyxy,
+                    raw_bbox_xyxy=frame.raw_bbox_xyxy,
+                    translation_world=frame.translation_world,
                 )
                 corrections.append(float(np.linalg.norm(delta_xy)))
                 stabilized_frame_count += 1
@@ -264,6 +273,108 @@ def stabilize_world_frames_for_presentation(
         "stabilized_root_step_p95_m": _percentile(stabilized_steps, 95),
         "raw_root_step_max_m": max(raw_steps, default=0.0),
         "stabilized_root_step_max_m": max(stabilized_steps, default=0.0),
+    }
+
+
+def _valid_bbox_xyxy(value: np.ndarray | None) -> bool:
+    return bool(
+        value is not None
+        and value.shape == (4,)
+        and np.all(np.isfinite(value))
+        and value[2] > value[0]
+        and value[3] > value[1]
+    )
+
+
+def stabilize_bboxes_for_presentation(
+    player_frames: dict[int, WorldFrame],
+    fps: float,
+    *,
+    max_gap_s: float = DISPLAY_INTERPOLATION_MAX_GAP_S,
+    median_radius: int = PRESENTATION_CROP_MEDIAN_RADIUS,
+    tau_s: float = PRESENTATION_CROP_TAU_S,
+) -> tuple[dict[int, WorldFrame], dict[str, float | int | str]]:
+    """Smooth tracked crop motion without inventing boxes across missing gaps."""
+    if fps <= 0:
+        raise ValueError("crop stabilization requires positive fps")
+    output = dict(player_frames)
+    segments: list[list[int]] = []
+    segment: list[int] = []
+    for frame_idx in sorted(player_frames):
+        frame = player_frames[frame_idx]
+        if not _valid_bbox_xyxy(frame.bbox_xyxy):
+            if segment:
+                segments.append(segment)
+                segment = []
+            continue
+        if segment:
+            previous = player_frames[segment[-1]]
+            time_gap = (frame_idx - segment[-1]) / fps
+            if (
+                time_gap > max_gap_s + 1e-9
+                or frame.mesh_player_id != previous.mesh_player_id
+            ):
+                segments.append(segment)
+                segment = []
+        segment.append(frame_idx)
+    if segment:
+        segments.append(segment)
+
+    raw_center_steps: list[float] = []
+    smooth_center_steps: list[float] = []
+    smoothed_frames = 0
+    smoothed_segments = 0
+    for indices in segments:
+        if len(indices) < 5:
+            continue
+        boxes = np.asarray(
+            [player_frames[frame_idx].bbox_xyxy for frame_idx in indices],
+            dtype=np.float64,
+        )
+        centers = 0.5 * (boxes[:, :2] + boxes[:, 2:])
+        sizes = np.maximum(boxes[:, 2:] - boxes[:, :2], 1.0)
+        parameters = np.column_stack((centers, np.log(sizes)))
+        times = np.asarray(indices, dtype=np.float64) / fps
+        smooth = _symmetric_ema(
+            _coordinate_median_filter(parameters, median_radius),
+            times,
+            tau_s,
+        )
+        smooth_centers = smooth[:, :2]
+        smooth_sizes = np.exp(smooth[:, 2:])
+        raw_center_steps.extend(
+            np.linalg.norm(np.diff(centers, axis=0), axis=1).tolist()
+        )
+        smooth_center_steps.extend(
+            np.linalg.norm(np.diff(smooth_centers, axis=0), axis=1).tolist()
+        )
+        for frame_idx, center, size in zip(
+            indices, smooth_centers, smooth_sizes, strict=True
+        ):
+            frame = player_frames[frame_idx]
+            half = 0.5 * size
+            output[frame_idx] = WorldFrame(
+                joints_m=frame.joints_m,
+                joint_conf=frame.joint_conf,
+                mesh_player_id=frame.mesh_player_id,
+                floor_xy_m=frame.floor_xy_m,
+                bbox_xyxy=np.concatenate((center - half, center + half)).astype(np.float32),
+                raw_bbox_xyxy=frame.raw_bbox_xyxy,
+                translation_world=frame.translation_world,
+            )
+            smoothed_frames += 1
+        smoothed_segments += 1
+
+    def _percentile(values: list[float], percentile: float) -> float:
+        return float(np.percentile(values, percentile)) if values else 0.0
+
+    return output, {
+        "mode": "gap_preserving_tracked_crop",
+        "authority": "presentation_only",
+        "segments": smoothed_segments,
+        "frames": smoothed_frames,
+        "raw_center_step_p95_px": _percentile(raw_center_steps, 95),
+        "smoothed_center_step_p95_px": _percentile(smooth_center_steps, 95),
     }
 
 
@@ -374,11 +485,26 @@ def load_world_frames(
                 candidate_floor = np.asarray(floor_value[:2], dtype=np.float32)
                 if np.all(np.isfinite(candidate_floor)):
                     floor_xy_m = candidate_floor
+            bbox_value = frame.get("bbox")
+            bbox_xyxy: np.ndarray | None = None
+            if isinstance(bbox_value, (list, tuple)) and len(bbox_value) == 4:
+                candidate_bbox = np.asarray(bbox_value, dtype=np.float32)
+                if _valid_bbox_xyxy(candidate_bbox):
+                    bbox_xyxy = candidate_bbox
+            translation_value = frame.get("transl_world")
+            translation_world: np.ndarray | None = None
+            if isinstance(translation_value, (list, tuple)) and len(translation_value) == 3:
+                candidate_translation = np.asarray(translation_value, dtype=np.float32)
+                if np.all(np.isfinite(candidate_translation)):
+                    translation_world = candidate_translation
             frames[frame_idx] = WorldFrame(
                 joints_m=joints,
                 joint_conf=conf,
                 mesh_player_id=mesh_player_id,
                 floor_xy_m=floor_xy_m,
+                bbox_xyxy=bbox_xyxy,
+                raw_bbox_xyxy=bbox_xyxy.copy() if bbox_xyxy is not None else None,
+                translation_world=translation_world,
             )
         world_frames[player_id] = frames
     if not world_frames:
@@ -612,8 +738,15 @@ def world_sample_at(
     frames: dict[int, WorldFrame],
     frame_position: float,
     fps: float,
+    *,
+    max_gap_frames: int | None = None,
 ) -> WorldFrame | None:
-    bracket = _display_interpolation_bracket(frames, frame_position, fps)
+    bracket = _display_interpolation_bracket(
+        frames,
+        frame_position,
+        fps,
+        max_gap_frames=max_gap_frames,
+    )
     if bracket is None:
         return None
     left_idx, right_idx, alpha = bracket
@@ -638,6 +771,24 @@ def world_sample_at(
             if current.floor_xy_m is not None and following.floor_xy_m is not None
             else None
         ),
+        bbox_xyxy=(
+            (1.0 - alpha) * current.bbox_xyxy + alpha * following.bbox_xyxy
+            if _valid_bbox_xyxy(current.bbox_xyxy)
+            and _valid_bbox_xyxy(following.bbox_xyxy)
+            else None
+        ),
+        raw_bbox_xyxy=(
+            (1.0 - alpha) * current.raw_bbox_xyxy + alpha * following.raw_bbox_xyxy
+            if _valid_bbox_xyxy(current.raw_bbox_xyxy)
+            and _valid_bbox_xyxy(following.raw_bbox_xyxy)
+            else None
+        ),
+        translation_world=(
+            (1.0 - alpha) * current.translation_world + alpha * following.translation_world
+            if current.translation_world is not None
+            and following.translation_world is not None
+            else None
+        ),
     )
 
 
@@ -646,6 +797,8 @@ def _display_interpolation_bracket(
     frame_position: float,
     fps: float,
     max_gap_s: float = DISPLAY_INTERPOLATION_MAX_GAP_S,
+    *,
+    max_gap_frames: int | None = None,
 ) -> tuple[int, int, float] | None:
     """Find exact or <=50ms bracketing measured ticks without holding gaps."""
     if not frames or not math.isfinite(frame_position) or fps <= 0:
@@ -669,6 +822,8 @@ def _display_interpolation_bracket(
             upper = candidate
             break
     if lower is None or upper is None or lower >= upper:
+        return None
+    if max_gap_frames is not None and upper - lower > max_gap_frames:
         return None
     gap_s = (upper - lower) / fps
     if gap_s > max_gap_s + 1e-9:
@@ -888,28 +1043,208 @@ CORE_MHR70_BONES = (
     (14, 18), (14, 19), (14, 20),
 )
 
+DETAIL_MHR70_BONES = (
+    (0, 1), (0, 2), (1, 3), (2, 4),
+    (5, 67), (6, 68), (7, 63), (7, 65), (8, 64), (8, 66),
+    (41, 24), (24, 23), (23, 22), (22, 21),
+    (41, 28), (28, 27), (27, 26), (26, 25),
+    (41, 32), (32, 31), (31, 30), (30, 29),
+    (41, 36), (36, 35), (35, 34), (34, 33),
+    (41, 40), (40, 39), (39, 38), (38, 37),
+    (62, 45), (45, 44), (44, 43), (43, 42),
+    (62, 49), (49, 48), (48, 47), (47, 46),
+    (62, 53), (53, 52), (52, 51), (51, 50),
+    (62, 57), (57, 56), (56, 55), (55, 54),
+    (62, 61), (61, 60), (60, 59), (59, 58),
+)
+DETAILED_MHR70_BONES = CORE_MHR70_BONES + DETAIL_MHR70_BONES
+
 
 def draw_skeleton(
     panel: np.ndarray,
     joints: np.ndarray,
     color: tuple[int, int, int],
     camera: dict,
+    bones: tuple[tuple[int, int], ...] = CORE_MHR70_BONES,
+    confidence: np.ndarray | None = None,
+    min_confidence: float = 0.05,
+    underlay_width: int = 3,
+    line_width: int = 1,
+    joint_radius: int = 3,
 ) -> None:
     if len(joints) < 70:
         return
     pixels, depth = project(joints, camera, panel.shape[1], panel.shape[0])
     overlay = panel.copy()
-    for left, right in CORE_MHR70_BONES:
+    for left, right in bones:
+        if (
+            confidence is not None
+            and (confidence[left] < min_confidence or confidence[right] < min_confidence)
+        ):
+            continue
         if depth[left] <= 0.05 or depth[right] <= 0.05:
             continue
-        cv2.line(overlay, tuple(pixels[left]), tuple(pixels[right]), WHITE, 3, cv2.LINE_AA)
-        cv2.line(overlay, tuple(pixels[left]), tuple(pixels[right]), _scaled_color(color, 0.72), 1, cv2.LINE_AA)
-    for joint_idx in sorted({index for bone in CORE_MHR70_BONES for index in bone}):
+        cv2.line(
+            overlay,
+            tuple(pixels[left]),
+            tuple(pixels[right]),
+            WHITE,
+            underlay_width,
+            cv2.LINE_AA,
+        )
+        cv2.line(
+            overlay,
+            tuple(pixels[left]),
+            tuple(pixels[right]),
+            _scaled_color(color, 0.72),
+            line_width,
+            cv2.LINE_AA,
+        )
+    for joint_idx in sorted({index for bone in bones for index in bone}):
+        if confidence is not None and confidence[joint_idx] < min_confidence:
+            continue
         if depth[joint_idx] <= 0.05:
             continue
-        cv2.circle(overlay, tuple(pixels[joint_idx]), 3, WHITE, -1, cv2.LINE_AA)
-        cv2.circle(overlay, tuple(pixels[joint_idx]), 2, _scaled_color(color, 0.76), -1, cv2.LINE_AA)
+        cv2.circle(overlay, tuple(pixels[joint_idx]), joint_radius, WHITE, -1, cv2.LINE_AA)
+        cv2.circle(
+            overlay,
+            tuple(pixels[joint_idx]),
+            max(1, joint_radius - 2),
+            _scaled_color(color, 0.76),
+            -1,
+            cv2.LINE_AA,
+        )
     cv2.addWeighted(overlay, 0.72, panel, 0.28, 0, panel)
+
+
+def person_studio_camera(
+    width: int,
+    height: int,
+    orbit_degrees: float,
+) -> dict:
+    angle = math.radians(orbit_degrees)
+    radius = 3.55
+    eye = np.asarray(
+        [radius * math.sin(angle), -radius * math.cos(angle), 1.72],
+        dtype=np.float32,
+    )
+    target = np.asarray([0.0, 0.0, 0.92], dtype=np.float32)
+    return {
+        "eye": eye,
+        "basis": camera_basis(eye, target, np.asarray([0.0, 0.0, 1.0], dtype=np.float32)),
+        "focal": float(height) * 1.72,
+    }
+
+
+def center_joints_for_studio(frame: WorldFrame) -> np.ndarray | None:
+    """Remove court-plane travel while preserving pose and vertical motion."""
+    root = _hip_root(frame.joints_m, frame.joint_conf)
+    if root is None:
+        return None
+    joints = frame.joints_m.copy()
+    joints[:, 0] -= root[0]
+    joints[:, 1] -= root[1]
+    return joints
+
+
+def draw_person_studio_floor(panel: np.ndarray, camera: dict) -> None:
+    # A soft, unscaled studio pedestal provides visual grounding without
+    # implying court placement or metric floor authority.
+    disc = np.asarray(
+        [[1.05 * math.cos(theta), 1.05 * math.sin(theta), -0.012]
+         for theta in np.linspace(0, 2 * math.pi, 72)],
+        dtype=np.float32,
+    )
+    _fill_world_polygon(panel, disc, (235, 239, 235), camera)
+    ring = np.asarray(
+        [[0.72 * math.cos(theta), 0.72 * math.sin(theta), 0.005]
+         for theta in np.linspace(0, 2 * math.pi, 72)],
+        dtype=np.float32,
+    )
+    _draw_world_polyline(panel, ring, (192, 204, 197), 2, camera, closed=True, opacity=0.42)
+
+
+def draw_person_studio_panel(
+    width: int,
+    height: int,
+    frame: WorldFrame | None,
+    player_id: int,
+    orbit_degrees: float,
+) -> np.ndarray:
+    top = np.asarray((242, 246, 242), dtype=np.float32)
+    bottom = np.asarray((220, 231, 225), dtype=np.float32)
+    gradient = np.linspace(top, bottom, height, dtype=np.float32)[:, None, :]
+    panel = np.repeat(gradient, width, axis=1).astype(np.uint8)
+    camera = person_studio_camera(width, height, orbit_degrees)
+    draw_person_studio_floor(panel, camera)
+    if frame is None:
+        cv2.putText(
+            panel,
+            "NO MEASURED BODY SAMPLE",
+            (width // 2 - 155, height // 2),
+            cv2.FONT_HERSHEY_DUPLEX,
+            0.62,
+            TEXT_MUTED,
+            1,
+            cv2.LINE_AA,
+        )
+        return panel
+    joints = center_joints_for_studio(frame)
+    if joints is None:
+        return panel
+    color = PLAYER_COLORS.get(player_id, (190, 190, 190))
+    draw_translucent_joint_avatar(panel, joints, frame.joint_conf, color, camera)
+    draw_skeleton(
+        panel,
+        joints,
+        color,
+        camera,
+        bones=CORE_MHR70_BONES,
+        confidence=frame.joint_conf,
+        min_confidence=0.05,
+        underlay_width=4,
+        line_width=2,
+        joint_radius=4,
+    )
+    # Fine face, foot, and finger topology is additive detail. Confidence dips
+    # may hide this pass, but never erase the readable core body skeleton.
+    draw_skeleton(
+        panel,
+        joints,
+        color,
+        camera,
+        bones=DETAIL_MHR70_BONES,
+        confidence=frame.joint_conf,
+        min_confidence=0.5,
+        underlay_width=2,
+        line_width=1,
+        joint_radius=2,
+    )
+    draw_player_label(panel, player_id, joints, color, camera, [])
+    return panel
+
+
+def studio_orbit_angle(progress: float) -> float:
+    """Hold four readable body-relative studio angles with eased transitions."""
+    value = float(np.clip(progress, 0.0, 1.0))
+
+    def _smoothstep(x: float) -> float:
+        clipped = float(np.clip(x, 0.0, 1.0))
+        return clipped * clipped * (3.0 - 2.0 * clipped)
+
+    if value < 0.22:
+        return 0.0
+    if value < 0.32:
+        return 45.0 * _smoothstep((value - 0.22) / 0.10)
+    if value < 0.48:
+        return 45.0
+    if value < 0.58:
+        return 45.0 + 45.0 * _smoothstep((value - 0.48) / 0.10)
+    if value < 0.74:
+        return 90.0
+    if value < 0.84:
+        return 90.0 + 90.0 * _smoothstep((value - 0.74) / 0.10)
+    return 180.0
 
 
 def draw_player_label(
@@ -1038,6 +1373,154 @@ def fit_source_panel(frame: np.ndarray, width: int, height: int) -> np.ndarray:
     return panel
 
 
+def tracked_person_crop_geometry(
+    smoothed_bbox: np.ndarray,
+    raw_bbox: np.ndarray | None,
+    width: int,
+    height: int,
+    source_width: int,
+    source_height: int,
+    *,
+    body_padding: float = 1.35,
+    containment_margin: float = 0.10,
+) -> tuple[np.ndarray, float, float]:
+    """Return a real-pixel crop with raw-box containment and best-effort guard."""
+    if not _valid_bbox_xyxy(smoothed_bbox):
+        raise ValueError("tracked crop requires a valid smoothed bbox")
+    aspect = width / height
+    center = 0.5 * (smoothed_bbox[:2] + smoothed_bbox[2:])
+    size = smoothed_bbox[2:] - smoothed_bbox[:2]
+    target_h = max(float(size[1]) * body_padding, float(size[0]) * body_padding / aspect)
+    target_w = target_h * aspect
+
+    if _valid_bbox_xyxy(raw_bbox):
+        raw_size = raw_bbox[2:] - raw_bbox[:2]
+        guard = raw_size * containment_margin
+        required_half_w = max(
+            float(center[0] - raw_bbox[0] + guard[0]),
+            float(raw_bbox[2] - center[0] + guard[0]),
+        )
+        required_half_h = max(
+            float(center[1] - raw_bbox[1] + guard[1]),
+            float(raw_bbox[3] - center[1] + guard[1]),
+        )
+        target_w = max(target_w, 2.0 * required_half_w)
+        target_h = max(target_h, 2.0 * required_half_h)
+        if target_w / target_h < aspect:
+            target_w = target_h * aspect
+        else:
+            target_h = target_w / aspect
+
+    # Never synthesize a mirrored copy of the tracked player at image edges.
+    # Fit the crop inside the real source image, then shift its center only as
+    # much as necessary. The player can become slightly off-center near a true
+    # frame boundary, which is preferable to showing duplicated source pixels.
+    fit_scale = min(
+        1.0,
+        float(source_width) / max(target_w, 1.0),
+        float(source_height) / max(target_h, 1.0),
+    )
+    target_w = max(8.0, target_w * fit_scale)
+    target_h = max(8.0, target_h * fit_scale)
+    center[0] = np.clip(center[0], target_w * 0.5, source_width - target_w * 0.5)
+    center[1] = np.clip(center[1], target_h * 0.5, source_height - target_h * 0.5)
+    return center.astype(np.float32), target_w, target_h
+
+
+def source_seek_seconds(
+    base_frame_start: int,
+    world_fps: float,
+    start_seconds: float,
+) -> float:
+    """Map a renderer-local window offset to the source video's timebase."""
+    if base_frame_start < 0 or world_fps <= 0 or start_seconds < 0:
+        raise ValueError("invalid source seek inputs")
+    return base_frame_start / world_fps + start_seconds
+
+
+def fit_tracked_person_panel(
+    frame: np.ndarray,
+    smoothed_bbox: np.ndarray,
+    raw_bbox: np.ndarray | None,
+    width: int,
+    height: int,
+    *,
+    body_padding: float = 1.35,
+    containment_margin: float = 0.10,
+    player_id: int | None = None,
+) -> np.ndarray:
+    """Create an aspect-fixed close crop that still contains the raw detection."""
+    if frame.size == 0 or not _valid_bbox_xyxy(smoothed_bbox):
+        return fit_source_panel(frame, width, height)
+    source_h, source_w = frame.shape[:2]
+    center, target_w, target_h = tracked_person_crop_geometry(
+        smoothed_bbox,
+        raw_bbox,
+        width,
+        height,
+        source_w,
+        source_h,
+        body_padding=body_padding,
+        containment_margin=containment_margin,
+    )
+    scale_x = target_w / width
+    scale_y = target_h / height
+    transform = np.asarray(
+        [
+            [scale_x, 0.0, float(center[0]) - scale_x * width * 0.5],
+            [0.0, scale_y, float(center[1]) - scale_y * height * 0.5],
+        ],
+        dtype=np.float32,
+    )
+    panel = cv2.warpAffine(
+        frame,
+        transform,
+        (width, height),
+        flags=cv2.INTER_CUBIC | cv2.WARP_INVERSE_MAP,
+        borderMode=cv2.BORDER_REPLICATE,
+    )
+    marker_bbox = raw_bbox if _valid_bbox_xyxy(raw_bbox) else smoothed_bbox
+    if player_id is None or not _valid_bbox_xyxy(marker_bbox):
+        return panel
+
+    origin = center - np.asarray([target_w, target_h], dtype=np.float32) * 0.5
+    mapped = np.asarray(
+        [
+            (marker_bbox[0] - origin[0]) / scale_x,
+            (marker_bbox[1] - origin[1]) / scale_y,
+            (marker_bbox[2] - origin[0]) / scale_x,
+            (marker_bbox[3] - origin[1]) / scale_y,
+        ],
+        dtype=np.float32,
+    )
+    x1 = int(np.clip(round(float(mapped[0])), 2, width - 4))
+    y1 = int(np.clip(round(float(mapped[1])), 2, height - 4))
+    x2 = int(np.clip(round(float(mapped[2])), x1 + 1, width - 2))
+    y2 = int(np.clip(round(float(mapped[3])), y1 + 1, height - 2))
+    color = PLAYER_COLORS.get(player_id, (190, 190, 190))
+    cv2.rectangle(panel, (x1, y1), (x2, y2), WHITE, 4, cv2.LINE_AA)
+    cv2.rectangle(panel, (x1, y1), (x2, y2), color, 2, cv2.LINE_AA)
+    label = f"P{player_id}"
+    (label_w, label_h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_DUPLEX, 0.52, 1)
+    tab_w = label_w + 16
+    tab_h = label_h + 12
+    tab_x = int(np.clip(x1, 2, max(2, width - tab_w - 2)))
+    tab_y = y1 - tab_h if y1 >= tab_h + 4 else min(height - tab_h - 2, y1 + 3)
+    cv2.rectangle(panel, (tab_x, tab_y), (tab_x + tab_w, tab_y + tab_h), WHITE, -1, cv2.LINE_AA)
+    cv2.rectangle(panel, (tab_x, tab_y), (tab_x + tab_w, tab_y + tab_h), color, 2, cv2.LINE_AA)
+    cv2.putText(
+        panel,
+        label,
+        (tab_x + 8, tab_y + tab_h - 6),
+        cv2.FONT_HERSHEY_DUPLEX,
+        0.52,
+        TEXT_INK,
+        1,
+        cv2.LINE_AA,
+    )
+    return panel
+
+
 def draw_panel_chrome(panel: np.ndarray, label: str, detail: str) -> None:
     label_size, _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_DUPLEX, 0.63, 1)
     detail_size, _ = cv2.getTextSize(detail, cv2.FONT_HERSHEY_SIMPLEX, 0.45, 1)
@@ -1085,12 +1568,36 @@ def main() -> int:
         help="final virtual_world.json; defaults to the body_mesh_index run directory",
     )
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--layout",
+        choices=("source_virtual_baseline", "player_closeup"),
+        default="source_virtual_baseline",
+    )
+    parser.add_argument(
+        "--player-id",
+        type=int,
+        default=None,
+        help="required for player_closeup; selected player identity to follow",
+    )
+    parser.add_argument("--start-seconds", type=float, default=0.0)
+    parser.add_argument(
+        "--duration-seconds",
+        type=float,
+        default=0.0,
+        help="zero renders the remaining source interval",
+    )
     parser.add_argument("--max-frames", type=int, default=0)
     parser.add_argument(
         "--fps-multiplier",
         type=int,
         default=None,
         help="display multiplier; defaults to the integer native-source/mesh FPS ratio",
+    )
+    parser.add_argument(
+        "--output-fps",
+        type=float,
+        default=0.0,
+        help="explicit presentation FPS; zero retains the native/default rate",
     )
     parser.add_argument("--panel-width", type=int, default=1280)
     parser.add_argument("--panel-height", type=int, default=720)
@@ -1115,6 +1622,12 @@ def main() -> int:
 
     if args.panel_width < 320 or args.panel_height < 240:
         raise ValueError("panel dimensions must be at least 320x240")
+    if args.start_seconds < 0 or args.duration_seconds < 0:
+        raise ValueError("start/duration seconds must be nonnegative")
+    if args.output_fps < 0:
+        raise ValueError("--output-fps must be nonnegative")
+    if args.layout == "player_closeup" and args.player_id is None:
+        raise ValueError("--player-id is required for player_closeup")
     if args.index is not None:
         index, faces, mesh_frames = load_mesh_frames(args.index)
         fps = float(index.get("fps", 30.0))
@@ -1141,7 +1654,31 @@ def main() -> int:
         fps = float(world_payload.get("fps") or source_fps)
     world_frames = load_world_frames(world_path, fps)
     stabilization_stats: dict[str, float | int | str]
-    if args.presentation_root_stabilization == "robust":
+    crop_stabilization_stats: dict[str, float | int | str] = {
+        "mode": "not_applicable",
+        "authority": "presentation_only",
+        "segments": 0,
+        "frames": 0,
+    }
+    if args.layout == "player_closeup":
+        assert args.player_id is not None
+        if args.player_id not in world_frames:
+            raise ValueError(
+                f"player {args.player_id} is not present in {world_path}; "
+                f"available={sorted(world_frames)}"
+            )
+        smoothed_boxes, crop_stabilization_stats = stabilize_bboxes_for_presentation(
+            world_frames[args.player_id],
+            fps,
+        )
+        world_frames[args.player_id] = smoothed_boxes
+        stabilization_stats = {
+            "mode": "not_applied_body_local_layout",
+            "authority": "presentation_only",
+            "segments": 0,
+            "frames": 0,
+        }
+    elif args.presentation_root_stabilization == "robust":
         world_frames, stabilization_stats = stabilize_world_frames_for_presentation(
             world_frames,
             fps,
@@ -1153,30 +1690,40 @@ def main() -> int:
             "segments": 0,
             "frames": 0,
         }
-    frame_start = (
+    base_frame_start = (
         min(int(window.get("frame_start", 0)) for window in index["windows"])
         if index.get("windows")
         else 0
     )
     if index.get("windows"):
         frame_end = max(int(window.get("frame_end", 0)) for window in index["windows"])
-        total_frames = frame_end - frame_start + 1
+        available_frames = frame_end - base_frame_start + 1
     else:
         source_frame_count = int(round(capture.get(cv2.CAP_PROP_FRAME_COUNT)))
-        total_frames = max(1, int(math.ceil(source_frame_count * fps / source_fps)))
+        available_frames = max(1, int(math.ceil(source_frame_count * fps / source_fps)))
+    start_offset_frames = int(round(args.start_seconds * fps))
+    if start_offset_frames >= available_frames:
+        raise ValueError("--start-seconds is beyond the available video interval")
+    frame_start = base_frame_start + start_offset_frames
+    total_frames = available_frames - start_offset_frames
+    if args.duration_seconds > 0:
+        total_frames = min(total_frames, max(1, int(round(args.duration_seconds * fps))))
     if args.max_frames > 0:
         total_frames = min(total_frames, args.max_frames)
     output_width = args.panel_width * 2
     output_height = args.panel_height
-    fps_multiplier = resolve_fps_multiplier(fps, source_fps, args.fps_multiplier)
-    output_fps = fps * fps_multiplier
-    output_frames = total_frames * fps_multiplier
+    default_fps_multiplier = resolve_fps_multiplier(fps, source_fps, args.fps_multiplier)
+    output_fps = args.output_fps or (fps * default_fps_multiplier)
+    output_frames = max(1, int(round(total_frames / fps * output_fps)))
+    fps_multiplier = output_fps / fps
+    audio_seek_seconds = source_seek_seconds(base_frame_start, fps, args.start_seconds)
 
     args.out.parent.mkdir(parents=True, exist_ok=True)
     command = [
         "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
         "-f", "rawvideo", "-pix_fmt", "bgr24",
         "-s", f"{output_width}x{output_height}", "-r", f"{output_fps:g}", "-i", "-",
+        "-ss", f"{audio_seek_seconds:g}",
         "-i", str(args.source_video),
         "-map", "0:v:0", "-map", "1:a?",
         "-c:v", "libx264", "-preset", args.encoder_preset, "-crf", str(args.crf),
@@ -1191,27 +1738,91 @@ def main() -> int:
         "missing_mesh_player_frames": 0,
         "unalignable_player_frames": 0,
         "skeleton_avatar_frames": 0,
+        "focused_player_frames": 0,
+        "focused_missing_frames": 0,
+        "tracked_crop_frames": 0,
     }
     try:
-        for local_frame_idx in range(total_frames):
-            mesh_frame_idx = frame_start + local_frame_idx
-            for subframe in range(fps_multiplier):
-                alpha = subframe / fps_multiplier
-                frame_position = mesh_frame_idx + alpha
-                time_seconds = frame_position / fps
-                source_position = time_seconds * source_fps
-                source_idx = int(math.floor(source_position + 1e-7))
-                source_alpha = float(source_position - source_idx)
-                source_current = read_source_frame_at(capture, source_idx, source_cache)
-                source = source_current
-                if source_alpha > 1e-6:
-                    source_following = read_source_frame_at(capture, source_idx + 1, source_cache)
-                    if source_following.shape == source_current.shape:
-                        source = cv2.addWeighted(source_current, 1.0 - source_alpha, source_following, source_alpha, 0)
+        for output_frame_idx in range(output_frames):
+            local_time_seconds = output_frame_idx / output_fps
+            frame_position = frame_start + local_time_seconds * fps
+            time_seconds = frame_position / fps
+            source_position = time_seconds * source_fps
+            source_idx = int(math.floor(source_position + 1e-7))
+            source_alpha = float(source_position - source_idx)
+            source_current = read_source_frame_at(capture, source_idx, source_cache)
+            source = source_current
+            if source_alpha > 1e-6:
+                source_following = read_source_frame_at(capture, source_idx + 1, source_cache)
+                if source_following.shape == source_current.shape:
+                    source = cv2.addWeighted(
+                        source_current,
+                        1.0 - source_alpha,
+                        source_following,
+                        source_alpha,
+                        0,
+                    )
+            fraction = output_frame_idx / max(1, output_frames - 1)
+            if args.layout == "player_closeup":
+                assert args.player_id is not None
+                focus_frame = world_sample_at(
+                    world_frames[args.player_id],
+                    frame_position,
+                    fps,
+                    max_gap_frames=max(
+                        1,
+                        int(math.ceil(fps / PLAYER_CLOSEUP_MAX_BODY_HZ - 1e-9)),
+                    ),
+                )
+                has_measured_crop = bool(
+                    focus_frame is not None and _valid_bbox_xyxy(focus_frame.bbox_xyxy)
+                )
+                if has_measured_crop:
+                    assert focus_frame is not None
+                    source_panel = fit_tracked_person_panel(
+                        source,
+                        focus_frame.bbox_xyxy,
+                        focus_frame.raw_bbox_xyxy,
+                        args.panel_width,
+                        args.panel_height,
+                        player_id=args.player_id,
+                    )
+                    alignment_stats["tracked_crop_frames"] += 1
+                else:
+                    source_panel = fit_source_panel(
+                        source,
+                        args.panel_width,
+                        args.panel_height,
+                    )
+                orbit = studio_orbit_angle(fraction)
+                virtual_panel = draw_person_studio_panel(
+                    args.panel_width,
+                    args.panel_height,
+                    focus_frame,
+                    args.player_id,
+                    orbit,
+                )
+                if focus_frame is None:
+                    alignment_stats["focused_missing_frames"] += 1
+                else:
+                    alignment_stats["focused_player_frames"] += 1
+                draw_panel_chrome(
+                    source_panel,
+                    "TRACKED CLOSE-UP" if has_measured_crop else "SOURCE CONTEXT",
+                    (
+                        f"P{args.player_id} | tracked source crop"
+                        if has_measured_crop
+                        else f"P{args.player_id} | no measured crop"
+                    ),
+                )
+                draw_panel_chrome(
+                    virtual_panel,
+                    "BODY-LOCAL 3D",
+                    f"joint avatar | studio view {orbit:03.0f} deg | presentation only",
+                )
+            else:
                 source_panel = fit_source_panel(source, args.panel_width, args.panel_height)
-
                 if args.camera_motion == "subtle_orbit":
-                    fraction = (local_frame_idx + alpha) / max(1, total_frames - 1)
                     orbit = 2.4 * math.sin(fraction * math.pi * 2)
                 else:
                     orbit = 0.0
@@ -1236,36 +1847,41 @@ def main() -> int:
                         else "final world placement"
                     ),
                 )
-                canvas = np.hstack((source_panel, virtual_panel))
-                cv2.line(
-                    canvas,
-                    (args.panel_width, 0),
-                    (args.panel_width, output_height),
-                    WHITE,
-                    5,
-                    cv2.LINE_AA,
-                )
-                time_label = f"{time_seconds:05.2f}s"
-                (time_w, _), _ = cv2.getTextSize(time_label, cv2.FONT_HERSHEY_SIMPLEX, 0.52, 1)
-                cv2.putText(
-                    canvas,
-                    time_label,
-                    (output_width - time_w - 22, output_height - 20),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.52,
-                    TEXT_MUTED,
-                    1,
-                    cv2.LINE_AA,
-                )
-                assert encoder.stdin is not None
-                encoder.stdin.write(canvas.tobytes())
-            if local_frame_idx % 30 == 0:
+            canvas = np.hstack((source_panel, virtual_panel))
+            cv2.line(
+                canvas,
+                (args.panel_width, 0),
+                (args.panel_width, output_height),
+                WHITE,
+                5,
+                cv2.LINE_AA,
+            )
+            time_label = f"{local_time_seconds:05.2f}s"
+            (time_w, _), _ = cv2.getTextSize(
+                time_label,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.52,
+                1,
+            )
+            cv2.putText(
+                canvas,
+                time_label,
+                (output_width - time_w - 22, output_height - 20),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.52,
+                TEXT_MUTED,
+                1,
+                cv2.LINE_AA,
+            )
+            assert encoder.stdin is not None
+            encoder.stdin.write(canvas.tobytes())
+            if output_frame_idx % max(1, int(round(output_fps))) == 0:
                 print(
                     json.dumps(
                         {
-                            "source_frame": local_frame_idx,
+                            "source_frame": int(round(frame_position)),
                             "source_total": total_frames,
-                            "output_frame": (local_frame_idx + 1) * fps_multiplier,
+                            "output_frame": output_frame_idx + 1,
                             "output_total": output_frames,
                         }
                     ),
@@ -1287,15 +1903,35 @@ def main() -> int:
                 "fps": output_fps,
                 "duration_s": output_frames / output_fps,
                 "fps_multiplier": fps_multiplier,
-                "layout": "source_plus_virtual_baseline",
-                "camera_motion": args.camera_motion,
+                "layout": args.layout,
+                "player_id": args.player_id,
+                "start_seconds": args.start_seconds,
+                "camera_motion": (
+                    "staged_0_45_90_180_degree_views"
+                    if args.layout == "player_closeup"
+                    else args.camera_motion
+                ),
                 "renderer_authority": "presentation_only",
                 "presentation_stabilization": stabilization_stats,
-                "mesh_alignment": "virtual_world_skeleton_root_plus_floor_guard",
+                "crop_stabilization": crop_stabilization_stats,
+                "body_local_centering": (
+                    "hip_center_xy_preserve_world_height"
+                    if args.layout == "player_closeup"
+                    else "not_applicable"
+                ),
+                "mesh_alignment": (
+                    "body_local_hip_centered_no_court_placement"
+                    if args.layout == "player_closeup"
+                    else "virtual_world_skeleton_root_plus_floor_guard"
+                ),
                 "virtual_representation": (
-                    "body_mesh_plus_exact_skeleton"
-                    if args.index is not None
-                    else "translucent_joint_avatar_plus_exact_skeleton"
+                    "translucent_detailed_joint_avatar_plus_exact_skeleton"
+                    if args.layout == "player_closeup"
+                    else (
+                        "body_mesh_plus_exact_skeleton"
+                        if args.index is not None
+                        else "translucent_joint_avatar_plus_exact_skeleton"
+                    )
                 ),
                 "virtual_world": str(world_path),
                 **alignment_stats,
