@@ -890,7 +890,7 @@ import sys
 from pathlib import Path
 
 proof = json.loads(Path(sys.argv[1]).read_text())
-assert proof.get('pass') is True or proof.get('status') == 'pass', proof
+assert proof.get('status') == 'PASS', proof
 assert proof.get('repo_head_sha') == sys.argv[2], proof
 PY
 cp /tmp/trackD_ev2_python_environment.txt "$EV2_GPU_OUT/python_environment.txt"
@@ -1815,6 +1815,15 @@ cleanup_disposable_vm() {
 }
 # END EV2_F6_TOLERANT_FINALIZER
 trap cleanup_disposable_vm EXIT INT TERM
+# Stage every on-VM log INTO the pulled directory before hashing. The scp below
+# copies only EV2_GPU_OUT, so any stdout/stderr or journal left outside it is lost
+# on the failure path. This leg is best-effort and must never block the pull.
+LOGS_STAGED=0
+if instance_is_original && gcloud compute ssh "arnavchokshi@$INSTANCE" --project="$PROJECT" --zone="$ZONE" --command \
+  'set -u; L=/home/arnavchokshi/pickleball/runs/lanes/trackD_ev2_gpu_20260722/vm_logs; mkdir -p "$L"; cp /var/tmp/trackD_ev2_startup.log "$L/startup.log" 2>/dev/null || true; for f in /home/arnavchokshi/ev2_remote_*.log /home/arnavchokshi/ev2_remote_*.exitcode /home/arnavchokshi/ev2_remote_*.nohup.out; do test -e "$f" && cp "$f" "$L/" || true; done; sudo journalctl --no-pager -o short-iso > "$L/journalctl.txt" 2>/dev/null || true; sudo dmesg > "$L/dmesg.txt" 2>/dev/null || true; nvidia-smi > "$L/nvidia_smi.txt" 2>&1 || true; df -h > "$L/df.txt" 2>&1 || true; ls -la "$L"'
+then
+  LOGS_STAGED=1
+fi
 REMOTE_SHA_OK=0
 if instance_is_original && gcloud compute ssh "arnavchokshi@$INSTANCE" --project="$PROJECT" --zone="$ZONE" --command \
   'cd /home/arnavchokshi/pickleball/runs/lanes/trackD_ev2_gpu_20260722 && find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > /tmp/trackD_ev2_gpu_20260722_SHA256SUMS && mv /tmp/trackD_ev2_gpu_20260722_SHA256SUMS SHA256SUMS'
@@ -1889,6 +1898,9 @@ Path(sys.argv[2]).write_text(json.dumps(result, indent=2, sort_keys=True) + '\n'
 print(json.dumps(result, sort_keys=True))
 assert result['pass'], result
 PY
+
+printf '{"artifact_type": "event_ev2_log_pull_receipt", "logs_staged": %s, "verified": false}\n' \
+  "$(test "$LOGS_STAGED" = 1 && echo true || echo false)" > "$PULLED/LOG_PULL_RECEIPT.json"
 
 .venv/bin/python - "$PULLED/VERDICT.json" <<'PY'
 import json
