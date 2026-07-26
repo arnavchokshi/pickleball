@@ -52,10 +52,8 @@ isolated model campaign.
 Keep source, schemas, small eval labels, and canonical docs in git. Keep
 checkpoints under `models/checkpoints/`, not loose in the repo root. Keep
 generated experiment evidence under `runs/` and cite exact run paths when needed.
-The only tracked files over 5 MB should be the explicit `models_coreml/` app
-candidate packages and the Indoor CVAT/eval video mirror: the CVAT upload source
-and eval clip source intentionally share one Git blob so upload/import and local
-eval paths stay stable without duplicating repository object storage.
+The only tracked files over 5 MB should be explicitly registered evidence,
+`models_coreml/` app candidate packages, and the protected Indoor eval video.
 Run `python3 scripts/racketsport/audit_storage_policy.py --root . --json` before
 adding or removing large files. That command also names the active large source/fixture exceptions
 that are not generated evidence: the iOS bundled
@@ -65,6 +63,9 @@ are referenced by active Swift/Vitest tests; do not make extra copies under new
 fixture or run paths. The same audit fails on generated cache/build leftovers
 such as `__pycache__`, `.pytest_cache`, `ios/.build`, and `web/replay/dist`;
 remove those after local tests/builds instead of leaving them in the workspace.
+It also fails when `runs/` exceeds 25 GiB or `.git/` exceeds 2 GiB. Pytest is
+configured to reject an in-repo `--basetemp`; omit the flag or point it under
+`/tmp` so checkpoint-heavy tests cannot silently fill `runs/` again.
 Do not add new long-lived research/status Markdown under `docs/racketsport/`;
 update the North Star only for current product/direction changes, otherwise use
 a run-local report.

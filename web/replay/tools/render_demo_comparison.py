@@ -2,11 +2,13 @@
 """Render a polished source-video + virtual-baseline comparison MP4.
 
 The renderer consumes the final immutable ``virtual_world.json`` placement and,
-when available, the matching BODY mesh index.  Joint-only runs are displayed as
-translucent articulated avatars built directly from their final grounded joints;
-this is a presentation surface, not fabricated measurement geometry.  Missing
-world samples remain missing.  Optional between-frame interpolation is
-display-only and is used only when both adjacent measured samples exist.
+when available, the matching BODY mesh index. Native-mesh closeups render the
+actual 18,439-vertex BODY surface and may be configured to fail instead of
+falling back. Joint-only runs are displayed as translucent articulated avatars
+built directly from their final grounded joints; this is a presentation surface,
+not fabricated measurement geometry. Missing world samples remain missing.
+Optional between-frame interpolation is display-only and is used only when both
+adjacent measured samples exist.
 
 The visual language mirrors the replay viewer: warm white canvas, regulation
 pickleball court, restrained ink lines, translucent per-player surfaces, and a
@@ -975,6 +977,9 @@ def draw_translucent_mesh(
     faces: np.ndarray,
     color: tuple[int, int, int],
     camera: dict,
+    *,
+    surface_opacity: float = 0.24,
+    wire_opacity: float = 0.42,
 ) -> None:
     pixels, depth = project(vertices, camera, panel.shape[1], panel.shape[0])
     valid_faces = faces[np.all(depth[faces] > 0.05, axis=1)]
@@ -1020,7 +1025,14 @@ def draw_translucent_mesh(
             shade = (0.78, 0.94, 1.08)[shade_bin]
             overlay = panel.copy()
             cv2.fillPoly(overlay, triangles_px[mask], _scaled_color(color, shade), cv2.LINE_AA)
-            cv2.addWeighted(overlay, 0.24, panel, 0.76, 0, panel)
+            cv2.addWeighted(
+                overlay,
+                surface_opacity,
+                panel,
+                1.0 - surface_opacity,
+                0,
+                panel,
+            )
 
     # Sparse luminous topology makes the surface read as a true articulated
     # mesh while remaining lighter than the replay UI's default fill.
@@ -1028,7 +1040,14 @@ def draw_translucent_mesh(
     if len(wire):
         wire_overlay = panel.copy()
         cv2.polylines(wire_overlay, wire, True, _scaled_color(color, 0.76), 1, cv2.LINE_AA)
-        cv2.addWeighted(wire_overlay, 0.42, panel, 0.58, 0, panel)
+        cv2.addWeighted(
+            wire_overlay,
+            wire_opacity,
+            panel,
+            1.0 - wire_opacity,
+            0,
+            panel,
+        )
 
 
 CORE_MHR70_BONES = (
@@ -1147,6 +1166,21 @@ def center_joints_for_studio(frame: WorldFrame) -> np.ndarray | None:
     return joints
 
 
+def center_mesh_for_studio(
+    mesh_sample: tuple[np.ndarray, np.ndarray, np.ndarray],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
+    """Remove only mesh court-plane travel; preserve its exact surface pose."""
+    vertices, joints, confidence = mesh_sample
+    root = _hip_root(joints, confidence)
+    if root is None or vertices.ndim != 2 or vertices.shape[1] != 3:
+        return None
+    local_vertices = vertices.copy()
+    local_joints = joints.copy()
+    local_vertices[:, :2] -= root[:2]
+    local_joints[:, :2] -= root[:2]
+    return local_vertices, local_joints, confidence
+
+
 def draw_person_studio_floor(panel: np.ndarray, camera: dict) -> None:
     # A soft, unscaled studio pedestal provides visual grounding without
     # implying court placement or metric floor authority.
@@ -1170,6 +1204,10 @@ def draw_person_studio_panel(
     frame: WorldFrame | None,
     player_id: int,
     orbit_degrees: float,
+    *,
+    mesh_sample: tuple[np.ndarray, np.ndarray, np.ndarray] | None = None,
+    faces: np.ndarray | None = None,
+    require_native_mesh: bool = False,
 ) -> np.ndarray:
     top = np.asarray((242, 246, 242), dtype=np.float32)
     bottom = np.asarray((220, 231, 225), dtype=np.float32)
@@ -1189,10 +1227,43 @@ def draw_person_studio_panel(
             cv2.LINE_AA,
         )
         return panel
+    color = PLAYER_COLORS.get(player_id, (190, 190, 190))
+    if mesh_sample is not None and faces is not None and len(faces):
+        centered_mesh = center_mesh_for_studio(mesh_sample)
+        if centered_mesh is not None:
+            vertices, joints, confidence = centered_mesh
+            draw_translucent_mesh(
+                panel,
+                vertices,
+                faces,
+                color,
+                camera,
+                surface_opacity=0.46,
+                wire_opacity=0.26,
+            )
+            # A restrained core overlay keeps limb motion readable while the
+            # native 36k-face surface remains the dominant representation.
+            draw_skeleton(
+                panel,
+                joints,
+                color,
+                camera,
+                bones=CORE_MHR70_BONES,
+                confidence=confidence,
+                min_confidence=0.05,
+                underlay_width=2,
+                line_width=1,
+                joint_radius=2,
+            )
+            draw_player_label(panel, player_id, vertices, color, camera, [])
+            return panel
+        if require_native_mesh:
+            raise ValueError("native BODY mesh has invalid hip/surface geometry")
+    if require_native_mesh:
+        raise ValueError("native BODY mesh sample/topology is unavailable")
     joints = center_joints_for_studio(frame)
     if joints is None:
         return panel
-    color = PLAYER_COLORS.get(player_id, (190, 190, 190))
     draw_translucent_joint_avatar(panel, joints, frame.joint_conf, color, camera)
     draw_skeleton(
         panel,
@@ -1579,6 +1650,14 @@ def main() -> int:
         default=None,
         help="required for player_closeup; selected player identity to follow",
     )
+    parser.add_argument(
+        "--require-native-mesh",
+        action="store_true",
+        help=(
+            "player_closeup only: require an exact BODY mesh-index sample for "
+            "every output frame; never substitute a joint avatar"
+        ),
+    )
     parser.add_argument("--start-seconds", type=float, default=0.0)
     parser.add_argument(
         "--duration-seconds",
@@ -1628,6 +1707,10 @@ def main() -> int:
         raise ValueError("--output-fps must be nonnegative")
     if args.layout == "player_closeup" and args.player_id is None:
         raise ValueError("--player-id is required for player_closeup")
+    if args.require_native_mesh and args.layout != "player_closeup":
+        raise ValueError("--require-native-mesh is valid only for player_closeup")
+    if args.require_native_mesh and args.index is None:
+        raise ValueError("--require-native-mesh requires --index")
     if args.index is not None:
         index, faces, mesh_frames = load_mesh_frames(args.index)
         fps = float(index.get("fps", 30.0))
@@ -1718,6 +1801,37 @@ def main() -> int:
     fps_multiplier = output_fps / fps
     audio_seek_seconds = source_seek_seconds(base_frame_start, fps, args.start_seconds)
 
+    if args.require_native_mesh:
+        assert args.player_id is not None
+        missing_native_frames: list[int] = []
+        for output_frame_idx in range(output_frames):
+            frame_position = frame_start + output_frame_idx / output_fps * fps
+            exact_frame_idx = int(round(frame_position))
+            if abs(frame_position - exact_frame_idx) > 1e-7:
+                missing_native_frames.append(exact_frame_idx)
+                continue
+            focus_frame = world_sample_at(
+                world_frames[args.player_id],
+                frame_position,
+                fps,
+                max_gap_frames=max(
+                    1,
+                    int(math.ceil(fps / PLAYER_CLOSEUP_MAX_BODY_HZ - 1e-9)),
+                ),
+            )
+            player_mesh_frames = (
+                mesh_frames.get(focus_frame.mesh_player_id)
+                if focus_frame is not None
+                else None
+            )
+            if player_mesh_frames is None or exact_frame_idx not in player_mesh_frames:
+                missing_native_frames.append(exact_frame_idx)
+        if missing_native_frames:
+            raise ValueError(
+                "--require-native-mesh found missing/non-exact mesh samples: "
+                f"count={len(missing_native_frames)} frames={missing_native_frames[:12]}"
+            )
+
     args.out.parent.mkdir(parents=True, exist_ok=True)
     command = [
         "ffmpeg", "-nostdin", "-hide_banner", "-loglevel", "error", "-y",
@@ -1741,6 +1855,10 @@ def main() -> int:
         "focused_player_frames": 0,
         "focused_missing_frames": 0,
         "tracked_crop_frames": 0,
+        "native_mesh_frames": 0,
+        "native_mesh_exact_frames": 0,
+        "native_mesh_display_interpolated_frames": 0,
+        "joint_avatar_frames": 0,
     }
     try:
         for output_frame_idx in range(output_frames):
@@ -1777,6 +1895,21 @@ def main() -> int:
                 has_measured_crop = bool(
                     focus_frame is not None and _valid_bbox_xyxy(focus_frame.bbox_xyxy)
                 )
+                focused_mesh_sample = None
+                focused_mesh_exact = False
+                if focus_frame is not None:
+                    player_mesh_frames = mesh_frames.get(focus_frame.mesh_player_id)
+                    if player_mesh_frames is not None:
+                        exact_mesh_idx = int(round(frame_position))
+                        focused_mesh_exact = bool(
+                            abs(frame_position - exact_mesh_idx) <= 1e-7
+                            and exact_mesh_idx in player_mesh_frames
+                        )
+                        focused_mesh_sample = mesh_sample_at(
+                            player_mesh_frames,
+                            frame_position,
+                            fps,
+                        )
                 if has_measured_crop:
                     assert focus_frame is not None
                     source_panel = fit_tracked_person_panel(
@@ -1801,11 +1934,22 @@ def main() -> int:
                     focus_frame,
                     args.player_id,
                     orbit,
+                    mesh_sample=focused_mesh_sample,
+                    faces=faces,
+                    require_native_mesh=args.require_native_mesh,
                 )
                 if focus_frame is None:
                     alignment_stats["focused_missing_frames"] += 1
                 else:
                     alignment_stats["focused_player_frames"] += 1
+                if focused_mesh_sample is not None:
+                    alignment_stats["native_mesh_frames"] += 1
+                    if focused_mesh_exact:
+                        alignment_stats["native_mesh_exact_frames"] += 1
+                    else:
+                        alignment_stats["native_mesh_display_interpolated_frames"] += 1
+                elif focus_frame is not None and not args.require_native_mesh:
+                    alignment_stats["joint_avatar_frames"] += 1
                 draw_panel_chrome(
                     source_panel,
                     "TRACKED CLOSE-UP" if has_measured_crop else "SOURCE CONTEXT",
@@ -1817,8 +1961,20 @@ def main() -> int:
                 )
                 draw_panel_chrome(
                     virtual_panel,
-                    "BODY-LOCAL 3D",
-                    f"joint avatar | studio view {orbit:03.0f} deg | presentation only",
+                    (
+                        "NATIVE BODY MESH"
+                        if focused_mesh_sample is not None
+                        else (
+                            "MESH ABSENT - JOINT FALLBACK"
+                            if args.index is not None
+                            else "BODY-LOCAL 3D"
+                        )
+                    ),
+                    (
+                        f"18,439 vertices | studio view {orbit:03.0f} deg | presentation only"
+                        if focused_mesh_sample is not None
+                        else f"joint avatar | studio view {orbit:03.0f} deg | presentation only"
+                    ),
                 )
             else:
                 source_panel = fit_source_panel(source, args.panel_width, args.panel_height)
@@ -1925,7 +2081,11 @@ def main() -> int:
                     else "virtual_world_skeleton_root_plus_floor_guard"
                 ),
                 "virtual_representation": (
-                    "translucent_detailed_joint_avatar_plus_exact_skeleton"
+                    (
+                        "native_body_mesh_18439_vertices_36874_faces_plus_core_skeleton"
+                        if args.index is not None
+                        else "translucent_detailed_joint_avatar_plus_exact_skeleton"
+                    )
                     if args.layout == "player_closeup"
                     else (
                         "body_mesh_plus_exact_skeleton"

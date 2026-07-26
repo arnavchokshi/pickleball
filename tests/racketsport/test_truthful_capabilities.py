@@ -112,7 +112,6 @@ ALLOWED_LARGE_TRACKED_FILES = {
     "runs/lanes/ballarc_anchorfusion_20260716/preset_broad/ball_track_arc_solved.json",
     "runs/lanes/ballarc_anchorfusion_20260716/preset_balanced/ball_track_arc_solved.json",
     "runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_track_arc_solved.json",
-    "cvat_upload/04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",
     "runs/lanes/event_head_scaffold_20260716/dataset/manifest_a.json",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_seed_official_aug/checkpoints/latest.pt",
@@ -120,6 +119,12 @@ ALLOWED_LARGE_TRACKED_FILES = {
     "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",
     "models_coreml/yolo26m_img416_int8/yolo26m.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
     "models_coreml/yolo26s_img416_int8/yolo26s.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/selection/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.selected.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/placement.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/raw_tracked_detections.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracked_detections.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/placement.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_pull.tar.gz",
 }
 
 W6_LABELPACK_IMAGE_ZIPS = {
@@ -132,8 +137,8 @@ W6_LABELPACK_IMAGE_ZIPS = {
 ALLOWED_DUPLICATE_TRACKED_BLOBS = {
     frozenset(
         {
-            "cvat_upload/04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",
-            "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",
+            "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/raw_tracked_detections.json",
+            "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracked_detections.json",
         }
     )
 }
@@ -193,6 +198,14 @@ ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
     "data/pbvision_11min_20260713/source_video.mp4",
     "ios/Replay/Sources/PickleballReplay/Resources/WorldFixture/virtual_world.json",
     "tests/racketsport/fixtures/solid_mesh_real_window_000/body_mesh_faces.json",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_0tmdeghtfvjx_f013835.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_98z43hspqz13_f010560.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_pldtjpw3h0jw_f017042.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_st0epgnab7dr_f008229.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_tqjlrcntpjvt_f017862.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_utasf5hnozwz_f010264.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_xkadsq9bli3h_f005822.png",
+    "data/pbv_replay_20260720/xkadsq9bli3h/max.mp4",
 } | W6_LABELPACK_IMAGE_ZIPS
 
 
@@ -351,7 +364,7 @@ def test_storage_policy_keeps_large_tracked_artifacts_explicit() -> None:
     assert large_tracked == ALLOWED_LARGE_TRACKED_FILES
     assert _duplicate_tracked_blob_groups(large_tracked) == ALLOWED_DUPLICATE_TRACKED_BLOBS
     assert "`models_coreml/`" in text
-    assert "Indoor CVAT/eval video mirror" in text
+    assert "Indoor eval video" in text
 
 
 def test_storage_policy_audit_classifies_large_worktree_artifacts() -> None:

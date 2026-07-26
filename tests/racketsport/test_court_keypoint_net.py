@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 
 import numpy as np
@@ -7,8 +8,12 @@ import pytest
 
 from threed.racketsport.court_templates import FT_TO_M, get_court_template
 from threed.racketsport.court_keypoint_net import (
+    ALL_PICKLEBALL_KEYPOINTS,
+    AUX_PICKLEBALL_KEYPOINTS,
+    COURT_UNET_V2_AUX_ARCHITECTURE,
     COURT_UNET_V2_HEATMAP_STRIDE,
     COURT_UNET_V2_SEG_CLASS_NAMES,
+    PICKLEBALL_KEYPOINT_BY_NAME,
     PICKLEBALL_KEYPOINTS,
     decode_subpixel_heatmap,
     keypoint_labels_from_court_corners,
@@ -63,6 +68,69 @@ def test_pickleball_keypoint_taxonomy_includes_corners_nvz_and_centerline_inters
     assert _ft(by_name["net_center"].world_xyz_m[0]) == pytest.approx(0.0)
     assert _ft(by_name["net_center"].world_xyz_m[1]) == pytest.approx(0.0)
     assert _ft(by_name["far_nvz_center"].world_xyz_m[1]) == pytest.approx(7.0)
+
+
+def test_aux_pickleball_keypoints_have_frozen_canonical_first_order_and_exact_geometry() -> None:
+    expected = [
+        ("near_baseline_left_quarter", (-1.524, -6.7056, 0.0)),
+        ("near_baseline_right_quarter", (1.524, -6.7056, 0.0)),
+        ("far_baseline_left_quarter", (-1.524, 6.7056, 0.0)),
+        ("far_baseline_right_quarter", (1.524, 6.7056, 0.0)),
+        ("near_nvz_left_quarter", (-1.524, -2.1336, 0.0)),
+        ("near_nvz_right_quarter", (1.524, -2.1336, 0.0)),
+        ("far_nvz_left_quarter", (-1.524, 2.1336, 0.0)),
+        ("far_nvz_right_quarter", (1.524, 2.1336, 0.0)),
+        ("left_sideline_near_service_mid", (-3.048, -4.4196, 0.0)),
+        ("left_sideline_near_nvz_mid", (-3.048, -1.0668, 0.0)),
+        ("left_sideline_far_nvz_mid", (-3.048, 1.0668, 0.0)),
+        ("left_sideline_far_service_mid", (-3.048, 4.4196, 0.0)),
+        ("right_sideline_near_service_mid", (3.048, -4.4196, 0.0)),
+        ("right_sideline_near_nvz_mid", (3.048, -1.0668, 0.0)),
+        ("right_sideline_far_nvz_mid", (3.048, 1.0668, 0.0)),
+        ("right_sideline_far_service_mid", (3.048, 4.4196, 0.0)),
+        ("near_centerline_mid", (0.0, -4.4196, 0.0)),
+        ("far_centerline_mid", (0.0, 4.4196, 0.0)),
+    ]
+
+    assert COURT_UNET_V2_AUX_ARCHITECTURE == "court_unet_v2_aux"
+    assert isinstance(AUX_PICKLEBALL_KEYPOINTS, tuple)
+    assert len(AUX_PICKLEBALL_KEYPOINTS) == 18
+    assert [point.name for point in AUX_PICKLEBALL_KEYPOINTS] == [name for name, _ in expected]
+    for point, (_, expected_xyz) in zip(AUX_PICKLEBALL_KEYPOINTS, expected, strict=True):
+        assert point.world_xyz_m == pytest.approx(expected_xyz, abs=1e-12)
+
+    assert len(ALL_PICKLEBALL_KEYPOINTS) == 33
+    assert ALL_PICKLEBALL_KEYPOINTS[: len(PICKLEBALL_KEYPOINTS)] == PICKLEBALL_KEYPOINTS
+    assert ALL_PICKLEBALL_KEYPOINTS[len(PICKLEBALL_KEYPOINTS) :] == AUX_PICKLEBALL_KEYPOINTS
+    assert set(point.name for point in PICKLEBALL_KEYPOINTS).isdisjoint(
+        point.name for point in AUX_PICKLEBALL_KEYPOINTS
+    )
+    assert all(point.name not in PICKLEBALL_KEYPOINT_BY_NAME for point in AUX_PICKLEBALL_KEYPOINTS)
+
+    with pytest.raises(FrozenInstanceError):
+        setattr(AUX_PICKLEBALL_KEYPOINTS[0], "name", "mutated")
+
+
+def test_aux_pickleball_keypoints_lie_on_non_net_painted_template_segments() -> None:
+    template = get_court_template("pickleball")
+    painted_segments = [
+        endpoints for line_name, endpoints in template.line_segments_m.items() if line_name != "net"
+    ]
+
+    def point_segment_distance(point: tuple[float, float, float], endpoints: tuple[list[float], list[float]]) -> float:
+        point_array = np.asarray(point, dtype=np.float64)
+        start = np.asarray(endpoints[0], dtype=np.float64)
+        end = np.asarray(endpoints[1], dtype=np.float64)
+        segment = end - start
+        projection = float(np.dot(point_array - start, segment) / np.dot(segment, segment))
+        nearest = start + np.clip(projection, 0.0, 1.0) * segment
+        return float(np.linalg.norm(point_array - nearest))
+
+    for point in AUX_PICKLEBALL_KEYPOINTS:
+        nearest_painted_line_m = min(
+            point_segment_distance(point.world_xyz_m, segment) for segment in painted_segments
+        )
+        assert nearest_painted_line_m <= 1e-9, (point.name, nearest_painted_line_m)
 
 
 def test_net_keypoints_use_regulation_top_net_height_convention() -> None:
@@ -296,6 +364,33 @@ def test_make_court_unet_v2_model_shapes_and_param_budget() -> None:
     # spec, not merely quantized down to some coarser grid.
     assert 640 / outputs["keypoint_heatmaps"].shape[-1] == COURT_UNET_V2_HEATMAP_STRIDE
     assert 360 / outputs["keypoint_heatmaps"].shape[-2] == COURT_UNET_V2_HEATMAP_STRIDE
+
+
+def test_make_court_unet_v2_aux_model_has_exactly_33_heatmap_and_visibility_channels() -> None:
+    torch = pytest.importorskip("torch")
+
+    model = make_court_keypoint_heatmap_model(
+        len(ALL_PICKLEBALL_KEYPOINTS),
+        architecture=COURT_UNET_V2_AUX_ARCHITECTURE,
+    )
+    model.eval()
+    with torch.no_grad():
+        outputs = model(torch.randn(1, 3, 360, 640))
+
+    assert model.heatmap_stride == COURT_UNET_V2_HEATMAP_STRIDE
+    assert model.seg_class_names == COURT_UNET_V2_SEG_CLASS_NAMES
+    assert outputs["keypoint_heatmaps"].shape == (1, 33, 90, 160)
+    assert outputs["line_family_logits"].shape == (1, len(COURT_UNET_V2_SEG_CLASS_NAMES), 90, 160)
+    assert outputs["keypoint_vis_logits"].shape == (1, 33)
+
+
+@pytest.mark.parametrize("keypoint_count", [1, 15, 32, 34])
+def test_make_court_unet_v2_aux_model_rejects_non_33_channel_counts(keypoint_count: int) -> None:
+    with pytest.raises(ValueError, match="requires exactly 33 keypoint channels"):
+        make_court_keypoint_heatmap_model(
+            keypoint_count,
+            architecture=COURT_UNET_V2_AUX_ARCHITECTURE,
+        )
 
 
 def test_make_court_unet_v2_model_rejects_unsupported_keypoint_count() -> None:

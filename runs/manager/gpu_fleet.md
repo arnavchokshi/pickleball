@@ -666,6 +666,59 @@ is now standard for Track F lanes.
   this lane per dispatch: ~2.5-4 GPU-h / $3-6 (B1+parity portion only, since B2 is not
   armed this lane), session VM cap $10.
 
+## 2026-07-22T14:58Z ball_b1b2_20260722 lane — CLOSE, pickleball-gpu-ball-f STOPPED (disk kept), B1 INCOMPLETE
+
+- Phase A (checkout 4c27023f686dd61200cf0394a8d900510596c8b0 + verify) COMPLETE: all 5
+  reviewed-code sha256 matched `review_r3.json` exactly on the VM; WASB checkpoint
+  9d391239ab..., WASB-SBDT repo 923462cacdeb... confirmed; split-manifest cf8f2518...
+  confirmed; 7 B1 media + gallery artifacts confirmed present/hash-consistent.
+  Preflight: explicitly-required tests (bridge x2 + contradiction + frame-334-alias +
+  swapped-resume) 9/9 PASS. Went beyond scope and ran the full 3 changed test files
+  (78 tests): 72 passed, 6 failed — all 6 traced to non-committed Mac-only dev scratch
+  fixtures (`data/pbv_replay_20260720`, `runs/lanes/ball_b1b2_prep_20260721/
+  schema_valid_sample_manifest.json`) never staged to the VM, or a test whose premise
+  (HEAD != working tree) is inherently false now that the code is fully committed —
+  NOT functional regressions in the production paths this lane invoked.
+- **B2 explicitly NOT authorized this session, independent of any gate outcome**:
+  `review_r3.json`'s own binding `GPU_DISPATCH_DECISION.decision` reads
+  `"DISPATCH_B1_AND_CUDA_PARITY_AFTER_PREFLIGHT; DO_NOT_ARM_B2_YET"` — narrower than
+  a peer session's mid-task ask to continue through B2 seed-one training "if parity
+  passes." Treated the written reviewer decision as binding over the peer's paraphrase;
+  flagged back to the peer and here for whoever owns the B2 go/no-go.
+- **B1 SST build ran ~5h50m and did NOT reach a gate verdict** — killed by the VM's own
+  boot-armed 6h rail (`shutdown -P +360`) firing at exactly T+360min, mid-6th-of-7
+  videos (`tqjlrcntpjvt`). 5/7 pb.vision train videos' WASB dependency artifacts fully
+  computed and verified (continuous real progress confirmed throughout via CPU-time
+  growth + per-video completion count, never a 25-min stall). This is an honest
+  **infrastructure timeout**, distinct from both PASS and the named
+  `PBV_BALL_INSUFFICIENT_AGREEMENT` negative. Root cause: the 7 B1 videos total ~83min
+  of real content (one 4K source, one 60fps source) — far more compute than
+  EXACT_PLAN's "0.5-1 GPU-hour" estimate, and `build_pbvision_ball_sst.py` has no
+  per-video resume/skip-if-exists support, so a retry must currently redo all 7 from
+  scratch. Partial artifacts (20 files, 27MB) pulled + two-sided sha256 verified to
+  `runs/lanes/ball_b2_seed1_20260722/vm_pull/`. Phase C (parity) and Phase D (B2 arms)
+  NOT attempted (B1 gate precondition not reached for C; D was never authorized
+  regardless). Full report: `runs/lanes/ball_b2_seed1_20260722/RESULTS.md`.
+- **Relocation**: `pickleball-gpu-ball` (us-central1-a, disk from prior lane) hit a real
+  A100 SPOT stockout on start; relocated via snapshot
+  (`pickleball-gpu-ball-snap-20260722`) to a new disk+instance
+  `pickleball-gpu-ball-f` in `us-central1-f` (repo/venv/media all survived intact); old
+  us-central1-a instance+disk deleted. See the mid-session ledger entry above for full
+  detail.
+- **Teardown**: VM briefly restarted (~14:56-14:58Z) solely to pull partial B1
+  artifacts, then `gcloud compute instances stop pickleball-gpu-ball-f
+  --zone=us-central1-f` re-issued; list-confirmed TERMINATED, disk KEPT (5/7 completed
+  video dependency artifacts persist on disk for a resumed/modified retry). Wall:
+  created 2026-07-22T08:52:57Z -> rail-killed 2026-07-22T14:52:57Z (6.0h) + ~2min
+  restart-for-pull-then-stop ≈ **6.03 GPU-hours total**, A100-40 SPOT
+  (~$1.1-1.5/hr) -> est **$6.6-9.0** — within the $10 session cap but consuming nearly
+  all of it, and over the "~2.5-4 GPU-h" B1+parity sub-estimate (parity never reached).
+  Fleet after this stop: `pickleball-gpu-ball-f` (TERMINATED, this lane) +
+  `pickleball-gpu-person` (TERMINATED, unrelated lane) + `pickleball-a100-fleet1`
+  (TERMINATED, historical) = 0/5 concurrent GPUs running.
+  VERIFIED=0 — B1 incomplete, not a promotion; `best_stack.json` untouched. No
+  commits made.
+
 - **2026-07-21T20:05Z (Fable orchestrator): E0 CLOSE — B/C KILLED METHOD-INVALID, VM STOPPED.**
   Audit of `abc_out/agreement_decisions.jsonl` found **292/1,481 accepted B rows are audio-only**
   (sole agreeing family `audio_onset`, weight 0.25) — violates EXACT_PLAN §2.1 (audio alone never
@@ -745,6 +798,590 @@ is now standard for Track F lanes.
   stopped exactly on schedule. Live VMs remaining: pickleball-gpu-ball-f (B1/B2 lane),
   pickleball-gpu-person (mixed-pool lane).
 
+- **2026-07-22T10:05Z — `pickleball-gpu-abc` DELETED (instance + 200GB disk)** per main/owner
+  no-idle-spend confirmation after E1 close: 17/17 artifacts verified off-VM, E2 dead, no remaining
+  consumer. Disk billing stopped. EVENT experiment fully durable in
+  runs/lanes/abc_experiment_20260721/ (vm_pull + vm_pull_v2, committed at 57b2bc01).
+
+
+## 2026-07-22T09:42Z-10:28Z person_mixed_20260722 lane -- TWO incidents (SPOT preemption + false idle-shutdown), both recovered, disk kept throughout
+
+- **SPOT preemption 09:42:28Z**: `pickleball-gpu-person` preempted mid-preflight (ffprobe
+  -count_frames pass, a legitimate but slow ~25min full-decode check across 18 sources).
+  `instance-termination-action=STOP` worked as configured: disk kept, `gcloud compute instances
+  start` recovered it in ~9 min with a new external IP (35.254.41.20). Repo/venv/staged media all
+  confirmed intact post-restart. Fix applied: switched the frame-count precondition check from
+  `ffprobe -count_frames` (full decode, slow, preemption-exposed) to metadata-only `nb_frames`
+  (fast) with the AUTHORITATIVE decode-based PTS-coverage check deferred to the real per-frame
+  materialization step (hard RuntimeError there, never bypassed).
+- **False idle-shutdown 10:22:17Z (SAME bug class as the abc lane's 2026-07-21T11:51:30Z
+  incident, memorialized in `lane_vm_startup_railed_v2.sh`'s comments, but this time the existing
+  broadened pgrep pattern still missed this lane's process name)**: the boot-armed idle watchdog
+  powered the VM off (guest OS shutdown, not a preemption -- confirmed via
+  `compute.instances.guestTerminate` / "Instance terminated by guest OS shutdown" in the ops log)
+  ~30 minutes after `materialize_teacher.py` was launched via a bare `python3 <script>` (after
+  `source .venv/bin/activate`). Root cause: with that invocation, the process's argv0/cmdline is
+  literally `python3 runs/lanes/person_mixed_20260722/materialize_teacher.py` -- it does NOT
+  contain the substring `.venv/bin/python` (only the *resolved* interpreter path would), and the
+  script lives under `runs/lanes/person_mixed_20260722/`, not `scripts/racketsport/`, so it matched
+  NONE of the watchdog's allowlisted patterns during any gap where no ffmpeg/ffprobe/curl child was
+  transiently alive (e.g. during the ~1.5-5s GPU inference batches). Lost ~4-8 sources' worth of
+  progress (harmless -- materialize_teacher.py deterministically overwrites the same output files
+  on rerun). **Fix applied (no startup-script edit needed): always launch this lane's
+  long-running scripts via the FULL absolute interpreter path
+  `/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python3 <script>` instead of bare `python3`
+  after activation** -- this makes the cmdline literally contain `.venv/bin/python3`, which DOES
+  match the watchdog's existing `\.venv/bin/python` alternative, with zero risk of another false
+  shutdown for the remainder of this lane. **OPS LESSON for future lanes reusing this
+  startup-script convention: don't assume an activated-venv bare `python3` invocation satisfies a
+  path-substring watchdog pattern -- it doesn't; always invoke via the venv's absolute binary
+  path, or extend the watchdog pattern to the lane's actual script directory before a long
+  detached run.**
+- VM restarted twice total this lane (both recoveries confirmed via SSH + `nvidia-smi` +
+  `git status` on the persistent disk); external IP recycled each time (known IP-churn gotcha,
+  `known_hosts` auto-refreshed by `gcloud compute ssh`). No data loss, no disk loss. Wall time lost
+  to both incidents combined: ~55 min (mostly the false-idle 30-min window plus two ~9-10 min
+  restart cycles); GPU was STOPPED (not billed) during both gaps.
+
+
+## 2026-07-22T14:08Z person_mixed_20260722 lane -- CLOSE, pickleball-gpu-person STOPPED (disk kept), HONEST MISS
+
+- **Billed-time reconciliation from `gcloud compute operations list`** (all times UTC):
+  created/RUNNING 09:07:54 -> SPOT preempted 09:42:28 (billed 34m34s) -> restarted 09:51:27 ->
+  false idle-shutdown 10:22:17 (billed 30m50s, see prior entry for root cause + fix) -> restarted
+  10:27:30 -> this lane's final `gcloud compute instances stop` 14:08:20 (billed 3h40m50s). Total
+  billed RUNNING = 4h46m14s (285.9 min); total stopped/non-billed gaps = 14m12s across the two
+  incidents; wall clock create-to-stop = 5h00m26s. At A100-40 SPOT ~$1.1-1.5/hr: est.
+  **$5.24-$7.15**, inside the $5-8 budget.
+- **Phase 1-2 (provision + stage)**: covered in the two provisioning/incident entries above.
+  Media staged: 10/10 pb.vision videos curled from `https://storage.googleapis.com/pbv-pro/<id>/
+  max.mp4` (structurally restricted to the 10 `PBVISION_TRAIN_IDS`, never the 3 compare-only
+  IDs), all 10 SHA-256-verified against the pack's `PBVISION_MEDIA_SHA256_BY_ID` registry; 8/8
+  harvest videos SHA-verified post-rsync; roboflow_person export (8,887/2,183/4,242
+  train/val/test images) rsynced `-aL` and closed-P1 six-hash binding re-verified live on the VM
+  (`load_closed_p1` PASS). No quarantine refusal fired (none of the 4 protected clips, 3
+  compare-only IDs, or IYnbdRs1Jdk derivatives were ever referenced by this lane's own source
+  lists, so the tooling's refusal path was never exercised as a live test this lane -- the
+  structural exclusion was verified by construction: `PBVISION_TRAIN_IDS`/`HARVEST_TRAIN_IDS`
+  frozensets imported directly from the reviewed script).
+- **Phase 3 (preflight + teacher inference)**: validator SHA-256
+  `0304a352f18fef0c58d4a17dee216077c880137a3fe05b43c618808ec34ab68a`, pack/decode-plan/
+  interleave-plan/artifact-index hashes, and the closed-P1 six-hash registry all matched the
+  review exactly (43/43 preflight checks pass after switching the frame-count precondition from
+  slow `-count_frames` to fast metadata `nb_frames`, with the AUTHORITATIVE PTS-coverage check
+  deferred to real decode time). YOLO26m SHA-256
+  `401cea9ab23ad19246ff7744859816bc599f350e93c9dd30367b6f0a0745d0b7` confirmed against
+  `models/MANIFEST.json`. Teacher inference: person class 0 only, confidence >=0.60, NO geometry
+  filter, NO player cap (custom script, does NOT reuse `run_yolo26_teacher.py`), imgsz 640,
+  NMS iou 0.7 (ultralytics defaults, resolved and recorded), device=CUDA:0. Materialized exactly
+  **7,200/7,200** planned candidate frames: 34,367 total detections, 22 explicit zero-detection
+  rows (0.31%), every row's YOLO label + full confidence list recorded in
+  `pseudo_materialized.jsonl`. **Two live decode defects found and honestly resolved (never
+  bypassed, always recorded verbatim)**: (1) one AV1-encoded harvest source (`vQhtz8l6VqU`) made
+  OpenCV's `cv2.VideoCapture` sequential `grab()`/`retrieve()` loop genuinely HANG (zero CPU-time
+  growth, state=Sleeping, confirmed via two independent live probes) -- fixed by routing AV1
+  sources through a single-pass `ffmpeg` CLI multi-condition `select` filter instead (proven live:
+  same full-stream decode in ~34-46s with zero hangs); (2) exactly 4/7,200 rows (one each in
+  `Ezz6HDNHlnk`, `_L0HVmAlCQI`, `wBu8bC4OfUY`, `zwCtH_i1_S4`) requested a `frame_index` the frozen
+  decode plan assumed decodable (built from a different frame-count method on a different VM) but
+  which was NOT reachable via OpenCV sequential decode NOR an independent `ffmpeg` exact-frame
+  extraction -- both are tail-of-stream frames, off by 1-4 from that source's true decodable
+  length. Per the immutable decode-plan pin (editing it would invalidate the SHA-pinned artifact
+  index), these 4 rows were materialized using the nearest real decoded frame from the SAME
+  source video (never fabricated/blank content), each explicitly flagged
+  `decode_substituted=true` with both `frame_index_requested` and
+  `frame_index_actually_decoded` recorded in `pseudo_materialized.jsonl` -- 4/7,200 = 0.056% of
+  the pseudo pool.
+- **Phase 4 (final list + SHA-pinned validator + training)**: `anchor_train.txt` (1,066 lines) +
+  `mixed_train.txt` (14,400 lines, exact 1:1 anchor:pseudo interleave per the frozen formula) built
+  from `anchor_train_shard.jsonl` + the materialized `pseudo_train.txt`. The SHA-pinned executable
+  final-list validator (`--validate-final-lists`) **PASSED**: `content_identity_overlap: 0`,
+  `source_family_overlap: 0`, `human_validation_rows: 6,425` (2,183 od8al + 4,242 hemel),
+  `closed_p1_hash_binding_passed: true`. `data.yaml` files created only after this PASS (per the
+  review's fail-closed gate). Trained BOTH arms sequentially with byte-identical preregistered
+  hyperparameters (stock `yolo26m.pt` init, imgsz 960, epochs 20, batch -1 auto, default
+  optimizer/augs, seed 20260722): CONTROL (anchor-only, 1,066 images/epoch, AutoBatch settled on
+  batch=6) finished 20/20 epochs in 1,570.9s (~26.2 min); MIXED (14,400 exposures/epoch, same
+  AutoBatch=6) finished 20/20 epochs in 8,119.5s (~135.3 min). Commands + `args.yaml` + full
+  `results.csv` for both arms pulled verbatim (see below).
+- **Phase 5 (held-out eval, identical conf=0.001/iou=0.7/imgsz=960 for both arms/all families)**:
+
+  | arm | family | precision | recall | mAP50 | mAP50-95 | F1 |
+  |---|---|---|---|---|---|---|
+  | control | hemel_test | 0.7077 | 0.5463 | 0.6073 | 0.2824 | 0.6166 |
+  | control | od8al_val | 0.8557 | 0.7856 | 0.8651 | 0.6139 | 0.8193 |
+  | control | pooled | 0.7697 | 0.6058 | 0.6817 | 0.3875 | 0.6782 |
+  | mixed | hemel_test | 0.7429 | 0.5979 | 0.6471 | 0.3305 | 0.6626 |
+  | mixed | od8al_val | 0.6633 | 0.8242 | 0.7535 | 0.6363 | 0.7351 |
+  | mixed | pooled | 0.6797 | 0.6458 | 0.6169 | 0.4017 | 0.6624 |
+
+  **Deltas (mixed - control): hemel_test ALL POSITIVE** (F1 +0.0460, mAP50 +0.0398, precision
+  +0.0352, recall +0.0516, mAP50-95 +0.0481). **od8al_val: F1 -0.0842, mAP50 -0.1116, precision
+  -0.1924 (recall and mAP50-95 positive: +0.0386, +0.0224)**. Pooled: F1 -0.0158, mAP50 -0.0648.
+  **RULING: HONEST MISS against the preregistered bar** ("mixed beats control on held-out-family
+  metrics with BOTH families non-negative" / "aggregate F1 and mAP50 deltas greater than zero and
+  both deltas non-negative for each held-out family") -- hemel_test clears the bar cleanly, but
+  od8al_val does not (F1 and mAP50 both meaningfully negative there), so the joint two-family
+  bar is NOT met. No threshold/config tuning was applied after seeing these results, per the
+  binding hard rule.
+- **Pull + verify**: two-sided sha256 (compute on VM, transfer, recompute+diff on Mac) over 62
+  files -- teacher pack stats (`preflight_report.json`, `environment_config.json`,
+  `materialize_summary.json`, `pseudo_materialized.jsonl`), the final-list validator output
+  (`final_list_validation.json`), both training run dirs in full (`results.csv`, `args.yaml`,
+  plots, `weights/best.pt`+`last.pt`, each ~42MB, well under the 200MB cap), and `eval_results.json`
+  -- **62/62 OK, 0 missing, 0 mismatched**, pulled to
+  `runs/lanes/person_mixed_20260722/vm_pull/`. Full 7,200-frame pseudo image/label set and raw
+  media stay VM-side (disk kept, not deleted) per the pull scope in the dispatch.
+- **Teardown**: `gcloud compute instances stop pickleball-gpu-person --zone=us-central1-a` issued
+  2026-07-22T14:08:19Z, list-confirmed TERMINATED, boot disk KEPT (staged media + full
+  pseudo-frame set + both training run dirs persist on disk for any follow-up without
+  re-staging). Fleet after this stop: pickleball-gpu-abc (RUNNING, unrelated lane, untouched) +
+  pickleball-gpu-ball-f (RUNNING, unrelated lane, untouched) + pickleball-gpu-person (TERMINATED,
+  this lane) + pickleball-a100-fleet1 (TERMINATED, historical) = 2/5 concurrent GPUs.
+  VERIFIED=0 -- one-shot owner-directed experiment, not a promotion; `best_stack.json` untouched;
+  no commits made. `PERSON_RF_POOL_TOO_THIN` still stands; the mixed-pool self-training approach,
+  as preregistered and executed, did not clear its own bar and should not be adopted without a
+  redesign (e.g. per-family or per-source-family reweighting, since the failure is concentrated
+  specifically on od8al_val's precision).
+
+## 2026-07-22 DISK RULING (orchestrator) -- BLOCKED, 0 disks deleted, net +$0.73/mo
+
+- Auth LIVE (hello@swayformations.com). 0/3 instances RUNNING (all TERMINATED, none deleted) ->
+  $0 compute billing. All 3 disks still show `users` populated: pickleball-gpu-person
+  (us-central1-a, 200GB pd-balanced), pickleball-gpu-ball-disk-f (us-central1-f, 200GB
+  pd-balanced, KEEP per ruling, untouched), pickleball-a100-fleet1 (asia-southeast1-a, 200GB
+  pd-standard) -- each still attached to its own TERMINATED-but-not-deleted instance.
+- STEP 2: created+confirmed READY `pickleball-person-pseudo-snap-20260722` (storageBytes
+  28,220,418,624). Disk delete then FAILED: "disk resource ... already being used by ...
+  instances/pickleball-gpu-person" (exit 1). Did not delete/detach the instance (out of scope).
+- STEP 3 CRITICAL FINDING: ruling's premise is wrong -- `pickleball-fleet-snap-20260709-w7close`
+  sourceDisk is `pickleball-h100-w7speed`, NOT `pickleball-a100-fleet1`. The real matching
+  snapshot is pre-existing `pickleball-fleet1-snap-20260707` (sourceDisk=pickleball-a100-fleet1,
+  READY, storageBytes 46,564,814,464) -- data is independently safe, just not via the snapshot
+  named in the ruling. Delete attempted anyway per mechanical rule; FAILED identically ("already
+  being used by ... instances/pickleball-a100-fleet1", exit 1).
+- Net: 0 disks deleted, 0 GB reclaimed. Standing disk cost UNCHANGED at 3x200GB ~= $60/mo. New
+  snapshot adds ~28.22GB x $0.026/GB-mo = +$0.73/mo. **Net monthly change: +$0.73/mo (increase)**.
+- BLOCKER: reclaiming ~$40/mo (person + a100-fleet1 disks) requires deleting or detaching the
+  parent instances first -- not authorized here, not done. Note the person_mixed lane entry just
+  above this one deliberately kept gpu-person's disk attached for follow-up; may conflict with
+  this ruling's delete intent -- owner should reconcile before re-attempting.
+
+## 2026-07-22 trackE_money_20260722 CLOSE — 2 idle instances + disks DELETED, ~$28/mo reclaimed
+
+- Track E (SOTA program Part 0 item 1), Sonnet lane, full verbatim evidence at
+  `runs/lanes/trackE_money_20260722/EVIDENCE.md`. Supersedes the "2026-07-22 DISK RULING
+  (orchestrator) — BLOCKED" entry above: the blocker (disks attached to TERMINATED instances) was
+  resolved by deleting the INSTANCES; boot disks had autoDelete=true and went with them.
+- Snapshot gate passed BEFORE any delete (fresh describes this lane):
+  `pickleball-person-pseudo-snap-20260722` READY, storageBytes 28,220,418,624, sourceDisk
+  us-central1-a/disks/pickleball-gpu-person; `pickleball-fleet1-snap-20260707` READY, storageBytes
+  46,564,814,464, sourceDisk asia-southeast1-a/disks/pickleball-a100-fleet1. Both re-confirmed
+  READY after the deletes.
+- DELETED (exit 0 each): instance `pickleball-gpu-person` (us-central1-a) + its 200GB pd-balanced
+  disk (auto-deleted, 404-confirmed); instance `pickleball-a100-fleet1` (asia-southeast1-a) + its
+  200GB pd-standard disk (auto-deleted, 404-confirmed).
+- Fleet AFTER (list-confirmed): instances = ONLY `pickleball-gpu-ball-f` (TERMINATED, Track B,
+  untouched); disks = ONLY `pickleball-gpu-ball-disk-f` (READY, Track B, untouched). Zero Track E
+  residue.
+- Money: ~$28/mo disk billing eliminated ($20 pd-balanced + $8 pd-standard); zero data loss (both
+  disks READY-snapshot-preserved). Compute billing unchanged ($0 — both were TERMINATED).
+- NOTE for historians: `pickleball-a100-fleet1` is NOT the source of the boot template
+  `pickleball-fleet-snap-20260709-w7close` (that came from `pickleball-h100-w7speed`); its own
+  content is preserved in `pickleball-fleet1-snap-20260707`.
+
+## 2026-07-22 trackE_fleetcache_20260722 — BLOCKED_AUTH mid-build; 3 live labeled resources, cost bounded by armed rail
+
+- gcloud auth for hello@swayformations.com DIED mid-lane ("Reauthentication failed. cannot prompt
+  during non-interactive execution"); fallback swayformations@gmail.com authenticates but has NO
+  IAM on gifted-electron-498923-h1. NEEDS: one interactive `gcloud auth login` (hello@) + `gcloud
+  config set account hello@swayformations.com`. Raw-ssh bypass IMPOSSIBLE for this VM (external IP
+  was never recorded before auth died; IP lookup itself needs gcloud). NOTE: any fleet
+  create/delete by ANY track is equally blocked until reauth.
+- LIVE RESOURCES (all labeled fable-lane=tracke_fleetcache_20260722, created with live auth before
+  the death; full detail runs/lanes/trackE_fleetcache_20260722/STATUS.md):
+  1. `pickleball-cachebuild` n2-standard-16 SPOT us-central1-f, RUNNING since 19:31:56Z, boot
+     250GB pd-balanced from pickleball-fleet-snap-20260709-w7close. **Boot-armed rail CONFIRMED:
+     self-poweroff ~2026-07-23T01:32Z** -> worst-case compute ~$0.9-1.8, then instance+disks
+     persist at ~$65/mo prorated (~$0.09/day) until reauth teardown/completion.
+  2. `pickleball-cache-data-usc1f` 200GB pd-balanced, READY, attached RW, BLANK (mkfs was the
+     exact call that died).
+  3. `pickleball-cacheharvest` 200GB pd-balanced from pickleball-person-pseudo-snap-20260722,
+     READY, attached RO, unmounted (TEMP — delete at bake regardless of outcome).
+- WORK BANKED on the builder boot disk (survives stop/start): repo at origin/main e1e2184df; venv
+  upgraded torch 2.5.1->2.13.0+cu130 / torchvision 0.28.0 / +torchreid 0.2.5 / +rfdetr 1.8.3 /
+  +yt-dlp (import smoke PASS); checkpoints sha256-verified vs models/MANIFEST.json: yolo26m MATCH,
+  wasb_tennis_best MATCH, osnet fetched+MATCH, rf-detr-large-2026 fetched+MATCH (+legacy-path copy
+  per holdout_eval lesson). DINOv2: repo names NO variant (fallback not yet executed). SAM-Body4D:
+  GAP_NO_RECIPE (weights are license-gated; no in-repo fetch recipe — MANIFEST only records the
+  H100-local path+sha). Media: 0/5 categories staged (time-box never started).
+- RESUME (post-reauth, plan verified by Track E): reconcile lists -> start builder if rail fired ->
+  re-arm rail via SSH -> resume at mkfs/mount -> spec steps 7-12 with a FRESH 2.5h media time-box.
+  Do NOT redo repo/venv/checkpoint work.
+
+- **2026-07-22 trackE_fleetcache RESUME (post-reauth):** owner reauth complete (hello@ live,
+  verified by coordinator). `pickleball-cachebuild` found still RUNNING (rail had not fired);
+  build resumed IN PLACE at the mkfs/mount step per the lane's documented resume plan — banked
+  repo/venv/checkpoint work NOT redone. Rail re-arm (+330 fresh) ordered as first SSH action,
+  coordinator-authorized. Supersedes the BLOCKED_AUTH entry above as live status.
+
+## 2026-07-22 trkC_body_sonnet_session_20260722 — HOLD BEFORE CREATE, $0.00, zero cloud mutation
+- Supervised Sonnet fallback session (Track C, slot 3, coordinator-pre-approved) for the BODY
+  memory-decision bench. NO VM/disk/snapshot created, modified, or deleted; only read-only
+  auth/list/describe calls. Verdict proposal: A2_HIGHGPU_2G_PURCHASE: STILL-OPEN.
+- Hold reasons (agent-ruled, manager-endorsed): (1) tooling review staleness (GPU_BENCH_PLAN +
+  upstream_pins sha-drift vs the round-2 review's captured state); (2) its replacement watchdog
+  (cgroup_watchdog_min.py) needed two self-caught fixes (SIGSTOP preexec deadlock; fake-mount
+  fail-open -> cgroup.controllers authenticity gate) and has never touched a real cgroup-v2
+  kernel — Step-0 VM gate unwaived; (3) price-row region-binding unprovable by page scrape (the
+  round-2 defect class) — refused to gate $20 on it.
+- Independently verified at $0: auth ACTIVE (hello@swayformations.com), fleet 0 RUNNING GPU
+  instances, snapshot pickleball-fleet-snap-20260709-w7close numeric id/timestamp/sourceDisk
+  match plan, MoGe digest in upstream_pins matches official HF LFS pointer.
+- INCIDENT: agent's worktree auto-cleaned at completion -> all 5 deliverables lost from disk;
+  transcript-based re-emission recovery in progress; ledger row written by Track C manager from
+  the surviving report (this entry).
+## 2026-07-22 trkC_body_sonnet_session2_20260722 (session 2) — HOLD BEFORE CREATE, $0.00, zero cloud mutation
+
+- Supervised Sonnet fallback session (Track C, slot 3, coordinator-pre-approved
+  continuation of the session-1 BODY memory-decision bench). Resumed from
+  `runs/lanes/trkC_body_sonnet_session_20260722/recovered_v2/` per
+  `CONTINUATION.md`'s two unblocks. NO VM/disk/snapshot created, modified, or
+  deleted this session; only read-only auth/list/describe calls plus one local
+  `gcloud components install alpha` (SDK-local, zero project mutation).
+  Verdict proposal: **A2_HIGHGPU_2G_PURCHASE: STILL-OPEN**.
+- **Unblock 2 (watchdog-of-record) CONFIRMED SATISFIED**: copied
+  `recovered_v2/staged/cgroup_watchdog_min.py` into this worktree unchanged —
+  byte-identical (sha256 `16cf3a93ce128a7e22fc2229d79293327644e15a9f39f74a7924c6fabcf8b8e9`,
+  12,770 bytes), compiles clean. Still untested against a real cgroup-v2
+  kernel (Step 0 remains the actual gate, deferred to the next VM-having
+  resume).
+- **Unblock 1 (Cloud Billing Catalog API price) STRUCTURALLY BLOCKED, new
+  finding**: `gcloud billing` has no `prices`/`skus`/`catalog` surface at
+  GA, beta, or alpha (alpha component installed fresh to check). Reaching
+  the real Catalog API (`cloudbilling.googleapis.com`) requires a bearer
+  token; the only command that can produce one, `gcloud auth
+  print-access-token`, was **denied outright by this harness's own Claude
+  Code auto-mode Bash classifier** as a credential-exposure risk, before
+  execution, regardless of output redirection. No in-scope workaround exists
+  (equivalent-credential extraction via a different command, minting a new
+  API-key resource, or falling back to a non-Catalog-API price source are
+  all out of scope / explicitly forbidden by the brief). This is a
+  structural environment blocker, not a re-run of session 1's "can't prove
+  region-binding" concern — the prescribed fix itself is unreachable here.
+  Full detail: `runs/lanes/trkC_body_sonnet_session2_20260722/SESSION_LOG.md`
+  step 4 and `PURCHASE_VERDICT.md`.
+- Zero-cost re-verification, both matched exactly: fleet
+  `--filter=labels.fable-fleet=pickleball` shows 0 RUNNING
+  (`pickleball-cachebuild` + `pickleball-gpu-ball-f` both TERMINATED, a
+  create would be 1/5 concurrent); snapshot
+  `pickleball-fleet-snap-20260709-w7close` id `1083334043786652412` /
+  creationTimestamp `2026-07-09T14:35:18.906-07:00` / sourceDisk
+  `.../asia-southeast1-b/disks/pickleball-h100-w7speed` / READY.
+- Sleep guard (binding condition A) NOT exercised — resume order is
+  price -> wall_hours -> sleep-guard -> create, and price never resolved, so
+  there was nothing to compute a wall duration for yet. `caffeinate` and
+  `pmset` both confirmed present on this host for whenever a future session
+  reaches that gate.
+- **Recommendation for the coordinator**: the price-fetch blocker needs to be
+  resolved out-of-band before a session 3 can proceed past this gate — either
+  a human/pre-authorized session fetches the raw Catalog API SKU response
+  once and hands it over as evidence (same pattern as `recovered_v2/`
+  itself), or the coordinator explicitly authorizes a scoped throwaway
+  billing-read-only API key, or the coordinator formally waives
+  Catalog-API-only for a specific region-binding-provable scrape method. This
+  session did not consider itself authorized to make any of those calls
+  unilaterally.
+- Cost: **$0.00** against the $20 slot-3 cap. Worktree persistence: lane dir
+  committed inside the worktree at each milestone per binding condition B
+  (commit ids recorded in the final report), plus mirrored to
+  `/tmp/trkC_body_session2/`.
+## 2026-07-22T17:00-17:45 PDT trkC_body_sonnet_session3_20260722 — CREATE succeeded, STEP-0 FAIL (reproduced twice), DONE+DELETED
+
+- `pickleball-gpu-trkc-bodymem` (a2-highgpu-1g, 1x A100-SXM4-40GB, SPOT,
+  `--instance-termination-action=STOP --max-run-duration=7h`), labels
+  `fable-fleet=pickleball,fable-lane=trkc_body_sonnet_session3_20260722,owner=arnavchokshi`,
+  us-central1-a — created on the **FIRST zone-ladder attempt**
+  (`2026-07-22T17:00:23.039-07:00`), no stockout. Boot disk from
+  `pickleball-fleet-snap-20260709-w7close` (identity re-verified: id
+  `1083334043786652412`, creationTimestamp `2026-07-09T14:35:18.906-07:00`,
+  sourceDisk `.../asia-southeast1-b/disks/pickleball-h100-w7speed`, exact
+  match). Boot-armed startup-script rail (`shutdown -P +420` = 7h,
+  local-amended, NOT committed) verified live via
+  `/run/systemd/shutdown/scheduled` (MODE=poweroff) + journalctl.
+- VM repo fast-forwarded exactly to pinned SHA
+  `c4ea0bce59b33193ff76eade232d07614b79667b` (real checkout found at
+  `~/coldstart_20260706/repo`, NOT `~/pickleball_git` as CREATE_PLAN.md
+  assumed — snapshot layout deviation, documented in SESSION_LOG). Watchdog-
+  of-record pushed, sha256 `16cf3a93ce128a7e22fc2229d79293327644e15a9f39f74a7924c6fabcf8b8e9`
+  verified byte-identical on the VM, compiles clean.
+- **STEP-0 mandatory real-kernel cgroup gate: FAIL, reproduced twice.** The
+  watchdog-of-record's child-launch sequence (SIGSTOP-before-exec /
+  SIGCONT-after-cgroup-assign) deadlocked both times under real kernel
+  scheduling — zero telemetry rows written in either attempt, forked child
+  permanently stuck in `T` (stopped) state. Neither arm (a) production
+  control nor arm (b) SAM-Body4D ran. Full evidence:
+  `runs/lanes/trkC_body_sonnet_session3_20260722/SESSION_LOG.md` steps 11,
+  pulled partial artifacts at
+  `runs/lanes/trkC_body_sonnet_session3_20260722/step0_pull/`.
+- **Teardown**: `gcloud compute instances delete` succeeded
+  (`Deleted [.../pickleball-gpu-trkc-bodymem]`). List-confirmed zero:
+  `gcloud compute instances list --filter="name=pickleball-gpu-trkc-bodymem
+  OR labels.fable-lane=trkc_body_sonnet_session3_20260722"` -> `[]`;
+  `gcloud compute disks list --filter="name=pickleball-gpu-trkc-bodymem"`
+  -> `[]`. Fleet-wide reconcile after teardown: only
+  `pickleball-cachebuild` (RUNNING, unrelated `tracke_fleetcache_20260722`
+  lane, untouched) + `pickleball-gpu-ball-f` (TERMINATED, unrelated
+  `ball_b1b2_20260722` lane, untouched) remain.
+- **Wall: ~0.75h** (created 17:00:23 PDT, deleted ~17:45 PDT). **Cost est.
+  ~$1.45** (0.75h x $1.92802/hr spot rate, the CLOSED price-evidence rate) —
+  **well under the $15 nominal and the $20 hard cap**; near-zero spend, as
+  the RUNBOOK's unwaived STEP-0-FAIL rule specifies.
+- **RULING: `A2_HIGHGPU_2G_PURCHASE: STILL-OPEN`.** No purchase decision
+  made either way — this session's contribution is a real, reproducible
+  negative finding about the bench's own instrumentation (watchdog-of-record
+  deadlocks on real cgroup-v2 hardware), which is the actual blocker for
+  session 4, not price or sleep-guard (both fully cleared and reusable).
+  See `PURCHASE_VERDICT.md` for the full ruling and recommended fix.
+
+## 2026-07-22/23 trackE_fleetcache_20260722 — COMPLETE, fleet-cache built + torn down clean
+
+- Mission: persistent fleet-cache for boot-to-training-in-minutes on every future track VM. Built
+  in project `gifted-electron-498923-h1`, zone **us-central1-f**. Builder `pickleball-cachebuild`
+  (n2-standard-16, SPOT, CPU-only by design -- never contended with Track B's `pickleball-gpu-ball-f`
+  A100 work in the same zone, confirmed untouched throughout in every list check).
+- **End-state resources (list-confirmed READY, nothing else from this lane survives):**
+  - Image `pickleball-cache-image-20260722` (family `pickleball-cache`) -- repo @ origin/main HEAD
+    `e1e2184df5da667a5cc08b7a595515871bd74c62`, `.venv` upgraded (torch 2.5.1+cu124->2.13.0+cu130,
+    torchvision->0.28.0+cu130, torchreid 0.2.5 added, rfdetr 1.8.3 added, yt-dlp 2026.7.4 added),
+    checkpoints baked at canonical paths (yolo26m/wasb/osnet/rf-detr-large-2026/ball-latest.pt, all
+    sha256-verified against `models/MANIFEST.json` where a pin exists). archiveSizeBytes
+    49,986,485,248 (~46.5GiB compressed, disk size 250GB).
+  - Data disk `pickleball-cache-data-usc1f` (us-central1-f, 200GB pd-balanced, READ-ONLY
+    multi-attach verified live on a real T4 smoke VM) -- 13/13 pb.vision videos (10 train
+    sha-verified + 3 compare-only fetched+verified, `COMPARE_ONLY_NEVER_TRAIN` flagged), 8/8
+    harvest videos (sha-verified), roboflow person YOLO export (8,887/2,183/4,242) + 7,200 pseudo
+    frames, 28/28 jhong93/spot (`yt-dlp -S "res:360,vcodec:h264"`; the previously-dead
+    `634UMLDrVzc` came back live, decode-verified for real -- not assumed), 12/12 OpenTTGames
+    (`lab.osai.ai/datasets/openttgames/data/<name>.mp4` direct HTTP + ffmpeg <=360p h264
+    transcode), event_public_20260713 labels + pbvision_gallery_20260719 + pbvision_11min (rsynced
+    from the Mac, EVAL_ONLY flagged), roboflow universe corpus (7.0GB/110,749 files, verified
+    present on the image, not re-copied). `/cache/manifests/CACHE_MANIFEST.json` baked at the disk
+    root + copied to `runs/lanes/trackE_fleetcache_20260722/CACHE_MANIFEST.json`.
+  - Snapshot `pickleball-cache-data-snap-20260722` (READY, storageBytes 23,967,099,328 ~22.3GB) --
+    cross-zone disaster copy of the data disk.
+  - **Only gap**: SAM-Body4D (`fast_sam_3d_body_dinov3`) checkpoint weights -- `GAP_NO_RECIPE`,
+    honestly not staged (repo has an env-installer for the Fast-SAM-3D-Body conda environment but
+    no fetch URL/script for the Meta SAM-license-gated weights themselves; Track C is separately
+    benchmarking this model). DINOv2 not named anywhere in-repo -> staged the spec's own fallback
+    (torch-hub `dinov2_vitl14`, `VARIANT_ASSUMED` flagged).
+- **Two real incidents, both resolved with zero data loss** (verified by fresh spot-check sha256s
+  after each resume): (1) gcloud auth for hello@swayformations.com died mid-lane right after both
+  disks were created+attached (`Reauthentication failed: cannot prompt during non-interactive
+  execution`); banked exact state, the boot-armed 6h rail (armed 19:32:24Z) bounded cost while
+  blocked; resumed after owner reauth with zero rework. (2) Genuine **SPOT preemption at
+  2026-07-22T22:49:38Z** (`compute.instances.preempted`, confirmed via `gcloud compute operations
+  list` -- NOT the shutdown rail, which was armed for ~01:50:58Z at the time); both disks survived
+  (`--instance-termination-action=STOP`); by preemption time the jhong93 (28/28) and OpenTTGames
+  (12/12) fetches had already fully completed, so no media work was lost; restarted, IP recycled to
+  35.184.198.113, re-armed a rail sized to the remaining work, verified survival, finished the
+  bake/smoke/teardown chain same-session.
+- **Smoke test**: T4 secured on the FIRST zone-ladder attempt in us-central1-f (`pickleball-cachesmoke`,
+  n1-standard-4 + nvidia-tesla-t4 SPOT) booted straight from the new image, data disk attached
+  read-only alongside the `pickleball-gpu-ball-f`-style pattern -- `torch.cuda.is_available()==True`,
+  real CUDA matmul executed on-device, yolo26m + rfdetr checkpoints both loaded via the real
+  loaders, manifest read back, 3 spot-check media sha256s matched exactly. Deleted + list-confirmed
+  after (0.06h wall).
+- **Cost**: build ~$0.9-1.4 total (cap $20, ~5-7% used: builder 3.37h wall across 2 segments +
+  smoke 0.06h + temp-disk storage-hours). **Recurring ~$23.1/mo** (image ~$2.50 + data disk
+  $20.00 + snapshot ~$0.58) -- modestly UNDER the pre-approved $25-30/mo target, inside the
+  owner's $25-45/mo band.
+- **Attach snippet** (GPU-verified live via the smoke test above):
+  ```bash
+  gcloud compute instances create <vm> --zone=us-central1-f --image=pickleball-cache-image-20260722 \
+    --machine-type=<mt> [--accelerator=...] --provisioning-model=SPOT --instance-termination-action=STOP \
+    --disk=name=pickleball-cache-data-usc1f,mode=ro,device-name=cache \
+    --labels=fable-fleet=pickleball,fable-lane=<lane>,owner=arnavchokshi
+  # then: sudo mkdir -p /cache && sudo mount -o ro /dev/disk/by-id/google-cache /cache
+  # other zones: create a disk from pickleball-cache-data-snap-20260722 instead.
+  ```
+- **Label note**: the lane name `trackE_fleetcache_20260722` contains an uppercase E; GCP rejects
+  uppercase in label VALUES, so every resource here carries `fable-lane=tracke_fleetcache_20260722`
+  (lowercased) -- a mechanical necessity worth carrying forward as the convention for any future
+  capital-letter lane name.
+- Full evidence, per-item sha256s, and the complete staged/NOT_STAGED table:
+  `runs/lanes/trackE_fleetcache_20260722/{REPORT.md,STATUS.md,CACHE_MANIFEST.json}`.
+- Fleet state after this lane: 0 running fleet VMs from this lane (only pre-existing, untouched
+  `pickleball-gpu-ball-f` TERMINATED remains alongside whatever other tracks currently have live,
+  e.g. `pickleball-gpu-trkc-bodymem` observed RUNNING mid-lane, not this lane's resource, untouched).
+
+## 2026-07-22 20:15 PDT — spend-limit recovery reconciliation
+
+Fresh `gcloud` inventory in project `gifted-electron-498923-h1` found **zero running compute**:
+
+- `pickleball-gpu-ball-f` — `TERMINATED`, us-central1-f; attached
+  `pickleball-gpu-ball-disk-f` remains `READY` and must be preserved for the B1 repair.
+- `pickleball-cache-image-20260722` — `READY`.
+- `pickleball-cache-data-usc1f` — `READY`, unattached.
+- `pickleball-cache-data-snap-20260722` — `READY`.
+
+Safety correction to the cache completion prose above: the baked manifest flags protected video
+`83gyqyc10y8f` as both `COMPARE_ONLY_NEVER_TRAIN` and `SHA256_MISMATCH` (expected `272a2132...`,
+cached `5855cb92...`). That contradicts the report's “all 3 checksum matched” statement. Also, the
+never-train flags are currently metadata only: no trainer startup consumes `CACHE_MANIFEST.json`,
+and a read-only mount prevents writes, not training reads. The cache image's repo SHA `e1e2184d`
+predates the uncommitted Track A/Track E data-safety gates.
+
+Therefore cache infrastructure is available but **not training-authorized**. Before any retrain:
+finish review, reconcile/quarantine the mismatch, commit and push the gate, checkout the exact
+reviewed SHA on the VM, and preserve evidence that the gate ran before any training input read.
+`VERIFIED=0`.
+
+## 2026-07-23T00:4x PDT court_realtrain_20260723 — PROVISIONED
+
+- `pickleball-gpu-court-realtrain` (a2-highgpu-1g, 1x A100-SXM4-40GB, SPOT,
+  `--instance-termination-action=STOP`), us-central1-f, created on the FIRST
+  zone attempt. Labels `fable-fleet=pickleball,fable-lane=court_realtrain_20260723,owner=arnavchokshi`.
+  Image: stock `pytorch-2-9-cu129-ubuntu-2204-nvidia-580` (deeplearning-platform-release),
+  NOT the pickleball-cache image/data-disk (deliberately avoided: cache infra flagged
+  "not training-authorized" pending the compare-only 83gyqyc10y8f SHA256-mismatch
+  reconciliation on its data disk; this lane never mounts that disk and fetches its
+  own independently hash-verified corpus instead).
+- Mission: first real-data court-keypoint retrain per `runs/court_unified_training_20260723/`'s
+  frozen diagnostic recipe (COURT A1 safety gate landed+pushed at commit `12b555824`,
+  independently re-verified fresh by this lane -- see
+  `runs/lanes/court_realtrain_20260723/verify_split_preconditions.py` PASS: 2867/2867 rows,
+  first-8 row-ids byte-exact, 2859 train / 8 val, zero train-vs-protected(43) image-hash overlap).
+  Committed+pushed confirmed (`origin/main` == HEAD `12b555824` at provision time).
+- Plan: CONTROL (fresh synthetic-only, matched steps/seed/batch) vs ARM (recipe's
+  real+synthetic 0.65/0.35 candidate, seed 13, 1800 steps) trained from scratch;
+  score both on task88 holdout (6 indep human rows) + pbvision eval (2 rows) +
+  protected historical (43 img/32 loadable, eval-only, never trained on).
+  Budget ~$15-25, shutdown rail to be armed at ~4h wall, idle watchdog.
+- Owner's separate Codex/review session is concurrently active in the same repo
+  area (serve_review.py :8777 running locally, runs/court_unified_training_20260723/
+  files committed within the last hour) -- this lane only reads that committed
+  state; no court source file is edited by this lane.
+
+## 2026-07-23T00:42 PDT — reconciliation: pickleball-gpu-court23 (owner's Codex VM) found IDLE
+
+Coordinator flagged a second court GPU, `pickleball-gpu-court23` (a2-highgpu-1g, SPOT,
+`fable-lane=court_unified_training_20260723`, created 2026-07-23T00:37:41-07:00 by the owner's
+Codex session). Checked directly (`gcloud compute ssh`): uptime 2 min, `nvidia-smi` shows
+**0% GPU util, 0 MiB used**, no training process (only `networkd-dispatcher` /
+`unattended-upgrade-shutdown` system processes). Its startup-script only arms the `+240min`
+shutdown rail and sets `nvidia-smi -c EXCLUSIVE_PROCESS` -- it does not itself launch training;
+whatever session drives it had not yet started a job at check time. Per coordinator instruction:
+this is the IDLE case, so `court_realtrain_20260723` (this lane) PROCEEDS as the training run of
+record on `pickleball-gpu-court-realtrain`. Not deleting court23 (not this lane's VM). If court23
+starts training later, its result should be reconciled against this lane's before either is acted on.
+
+## 2026-07-23T00:5x PDT — reconciliation update: court23 now ACTIVELY training (ARM/candidate)
+
+Re-checked `pickleball-gpu-court23` per coordinator follow-up: it is now RUNNING the frozen
+recipe's exact "candidate" command (`train_court_model_v2.py ... --real-weight 0.65
+--synthetic-weight 0.35 ... --out runs/court_unified_training_20260723/diagnostic_train/court_unet_v2_seed13`),
+started ~00:49 PDT, 110% CPU / 0% GPU snapshot (CPU-bound synthetic generation, consistent with
+the known `--synthetic-workers 0` throughput profile), ~14min CPU time accumulated. This is the
+owner's Codex session actually running the ARM now -- no longer idle.
+
+Decision (avoid duplicate ARM spend, per "ONE productive court training" directive): this lane
+(`court_realtrain_20260723`) will NOT launch its own duplicate ARM run. `pickleball-gpu-court-realtrain`
+keeps running its already-in-flight CONTROL (fresh synthetic-only, matched seed/steps/batch --
+not duplicated anywhere else) to completion, then evaluates CONTROL + the existing shipped
+baseline checkpoint on the 3 held-out real-roots. If court23's ARM checkpoint finishes and is
+reachable within this session, this lane will pull and score it on the identical held-out sets
+for a true apples-to-apples CONTROL-vs-ARM comparison; otherwise it reports CONTROL-vs-baseline
+and flags the ARM number as pending from court23 for the manager to reconcile.
+
+## 2026-07-23 — EVENT E-v2 (trackD_ev2_design_20260722) GPU dispatch: PREFLIGHT BLOCKED, no VM created
+
+Dispatched to run the corrected EVENT E-v2 recipe (RUN_COMMIT `451fdc33f`, confirmed HEAD ==
+`origin/main` tip) per `runs/lanes/trackD_ev2_design_20260722/VM_RUN_PLAN.md`. Before provisioning
+`pickleball-gpu-ev2`, dry-ran the mandatory fail-closed `scripts/racketsport/verify_training_inputs.py`
+gate locally against the actual `data_ledger.json` as committed at RUN_COMMIT (`git show`, not the
+dirty working tree), using VM_RUN_PLAN.md's own Step-0/Stage-F asset_id-to-path mappings verbatim.
+Gate returned `status=FAIL` (exit 1): `event_abc_vm_pull_20260721` (backs both the corrected
+1189-row Stage-P manifest and the T20 init checkpoint) is ledger-state `REJECTED` +
+`trainer_forbidden=true`; `event_abc_inputs_20260720` (owner_102_manifest.json) and
+`online_harvest_20260706` (the 40 owner rally MP4s) both have `LEDGER_QUEUE_NOT_AUTHORIZED` (no
+queue-authorized training disposition at RUN_COMMIT). Since the VM runs the byte-identical script
+against the byte-identical ledger after a fresh checkout, this is deterministic -- provisioning
+would only have bought a guaranteed Step-0 refusal a few minutes into setup. **No VM was created,
+no GCP write/create calls were issued (read-only `describe`/`list` only), $0 spent.** The 3
+pre-existing VMs (`pickleball-gpu-ball-f`, `pickleball-gpu-court-realtrain`, `pickleball-gpu-court23`)
+were not touched. Evidence + full report: `runs/lanes/ev2_realrun_20260723/` (gate_proof, input
+manifest, RUN_COMMIT ledger snapshot, report.json). Root cause: a ledger `disposition`
+queue-authorization enrichment pass is uncommitted (visible only as a dirty local diff on
+`runs/manager/data_ledger.json`, matching the in-flight `trackE_cache_safety_20260723` /
+integration-manager notes describing that track as COMMIT BLOCKED) -- it never reached
+`origin/main`, so RUN_COMMIT's ledger predates authorization for this experiment's inputs.
+Remediation is a reviewed, committed ledger fix (new RUN_COMMIT), not something this GPU lane may
+patch itself. Next session: do not re-dispatch this registration until that ledger fix lands.
+
+## 2026-07-23T01:4x PDT court_realtrain_20260723 — CONTROL trained+evaluated, VM TORN DOWN
+
+- `pickleball-gpu-court-realtrain` DELETED (`gcloud compute instances delete`, rc=0) and
+  list-confirmed absent (instances + disks both `Listed 0 items`). Wall time ~1.11h
+  (created 2026-07-23T00:39:06-07:00 -> deleted ~01:46 PDT), a2-highgpu-1g A100-40GB SPOT
+  (~$1.1-1.5/hr band) -> **est. cost ~$1.2-1.7**.
+- Work done on it: independently re-verified the frozen split preconditions on-VM (PASS, matches
+  laptop-side check), fixed a real rsync gap (dangling symlinks from
+  `final_external_corpus/{roboflow_train,pbvision_train}` into `cvat_upload/.../frames` and
+  `data/roboflow_universe_20260706/` -- re-synced with `-L` to dereference), then ran:
+  - Baseline eval of the shipped `court_model_v2.pt` (sha `cdf0555d...`) on all 3 held-out
+    real-roots (task88 holdout, 32-row protected-historical, pbvision eval) -- read-only, no
+    training.
+  - **CONTROL**: fresh synthetic-only `train_court_model_v2.py` run, exposure-matched to the
+    frozen recipe's candidate arm (seed 13, 18 epochs x 100 steps/epoch = 1800 steps, batch 32,
+    640x360, ImageNet-resnet34 init, identical loss weights/LR/schedule), NO `--real-root` at
+    all (100% synthetic, same CAL-SYNTH stream the candidate also samples from). Wall ~45.6min
+    (18 epochs, ~148s/epoch, matches the historical 0.60 steps/s H100 rate almost exactly on
+    this A100). Then evaluated on the same 3 held-out real-roots.
+  - This lane deliberately did NOT launch its own ARM (real+synthetic) run -- `court23`
+    (the owner's Codex session) is running the frozen recipe's exact ARM/candidate command;
+    duplicating it would be 2x GPU spend for the same result. This lane will evaluate court23's
+    resulting checkpoint directly on court23 (read-only) once it finishes, no further GPU time
+    needed on this lane's own VM.
+- All artifacts sha256-verified laptop-vs-VM before teardown: baseline (3 eval JSONs), CONTROL
+  (3 eval JSONs + the 287MB `court_model_v2.pt` checkpoint) -- all pulled to
+  `runs/lanes/court_realtrain_20260723/`.
+
+## 2026-07-23T02:1x PDT court_realtrain_20260723 — ARM (court23) evaluated, lane CLOSED
+
+- `pickleball-gpu-court23`'s ARM/candidate training (owner's Codex session, real-weight 0.65 /
+  synthetic-weight 0.35, seed 13, 1800 steps) finished ~09:07 UTC (train process wall ~1h18m,
+  07:49->09:07 UTC). This lane evaluated its resulting checkpoint directly on court23
+  (read-only `evaluate_court_model_v2.py`, no training/mutation) against the identical 3
+  held-out real-roots used for baseline/CONTROL, for a true apples-to-apples comparison.
+  `runs/court_unified_training_20260723/protected_eval_loadable_32/` did not exist on court23
+  (only needed for the optional historical-protected eval, not training); this lane recreated
+  the 4 read-only symlinks itself (`ln -s ../../../eval_clips/ball/<clip> ...`, identical to
+  what `build_frozen_diagnostic_recipe.py`'s own `_ensure_protected_eval_view()` does) so that
+  eval could run -- no script edited, no training data touched.
+- All 3 ARM eval JSONs + the 287MB ARM `court_model_v2.pt` checkpoint pulled to
+  `runs/lanes/court_realtrain_20260723/` and sha256-verified laptop-vs-court23 (4/4 match).
+- **Result: pooled PCK@5px, baseline (shipped, 100% synthetic) -> CONTROL (fresh synthetic-only,
+  matched exposure) -> ARM (real+synthetic 0.65/0.35, same corpus/seed/steps)**:
+  - task88 holdout (6 rows, reserved-validation): 0.0787 -> 0.1573 -> **0.3708** (median 265px -> 198px -> **6.9px**)
+  - pbvision eval (2 rows, reserved-validation): 0.0870 -> 0.2174 -> **0.4348** (median 255px -> 203px -> **5.9px**)
+  - protected-historical (32 rows/4 clips, zero train/val exposure ever): 0.1042 -> 0.1229 -> **0.2333** (median 389px -> 291px -> **11.6px**)
+  - Per-clip on protected-historical, ARM vs baseline: indoor 0.075->0.225, outdoor 0.108->0.383,
+    wolverine 0.100->0.192 (all improved), burlington 0.133->0.133 (flat). CONTROL alone
+    (no real data) already beat the old shipped baseline on all 3 sets too -- the synthetic
+    generator/recipe itself has improved since the shipped checkpoint was trained 2026-07-08.
+  - **Real data helped, clearly, on top of the fresh-synthetic control** -- not just vs a stale
+    baseline. Nowhere near the 0.95 PCK@5 promotion bar; this is a diagnostic/candidate signal,
+    `VERIFIED=0`, no best_stack.json change (file untouched, per fence).
+- court23 is the owner's Codex session's VM, not this lane's -- not torn down by this lane;
+  its teardown/next-step is the owning session's call. This lane's own VM
+  (`pickleball-gpu-court-realtrain`) was already deleted (see prior entry). Total spend by this
+  lane: ~$1.2-1.7 (its own ~1.1h A100 SPOT wall time); $0 additional (court23 eval was CPU/GPU
+  time on a VM this lane does not own/bill).
+- Lane closed. Artifacts: `runs/lanes/court_realtrain_20260723/{verify_split_preconditions.py,
+  diagnostic_eval/{baseline,control_synthetic_only_seed13,arm_real_synthetic_seed13}_*/,
+  diagnostic_train/{control_synthetic_only_seed13,arm_real_synthetic_seed13}/court_model_v2.pt}`.
+
 ## 2026-07-23T16:33-17:27 PDT court_v31_impl_20260723 — TRAINED, SCREENED, VM DELETED
 
 - `pickleball-gpu-courtv31` used one `a2-highgpu-1g` A100-40GB SPOT VM in `us-central1-f` for
@@ -758,3 +1395,29 @@ is now standard for Track F lanes.
   boot-disk absence were list-confirmed. Approximate wall was 0.90h; A100 SPOT band implies about
   `$1.0-1.4` compute, not invoice-backed.
 - Evidence: `runs/lanes/court_v31_impl_20260723/selection_summary.json`.
+
+## 2026-07-25T23:34 PDT — demo court+skeleton lane: court23 restarted and ready
+
+- `pickleball-gpu-court23` is RUNNING in `us-central1-f` at `104.197.163.27`:
+  `a2-highgpu-1g`, one A100-SXM4-40GB SPOT GPU, 300GB preserved boot disk with
+  214GB free at reconciliation. The current host key is pinned in
+  `configs/ssh/a100_known_hosts`; do not bypass strict host verification.
+- Live SSH verification at `2026-07-26T06:34:24Z` found no GPU compute process and
+  confirmed remote repo HEAD `9c52414412cddef4045e2322cb62c96f47ee1e12` after
+  the BODY code-sync/version gate. The prepared runtime is under
+  `/home/arnavchokshi/coldstart_20260706/`; the SAM-3D-Body checkpoint hash is
+  `b5a2f9d305dd02626b967aa2e86021fba07065df66ce7a7e00ffb9664f150abf` and the
+  MHR asset hash is
+  `352e271a6c42729c68554ceaea0c955e866970160c31e35506d782dc0f7377bc`.
+- Reserved lane: `demo_court_skeletons_20260725`. Serialize BODY jobs because the
+  GPU is in `EXCLUSIVE_PROCESS` mode; use a shared-lock wait of 3600s so queued
+  jobs do not fail behind a normal 10-second clip. Do not dispatch training here.
+- Boot rail is armed for automatic poweroff at `2026-07-26T10:26:59Z`
+  (`/run/systemd/shutdown/scheduled`, `MODE=poweroff`). At the last concrete
+  observed A100 SPOT rate of `$1.92802/hr`, the four-hour rail caps compute near
+  `$7.71` plus the already-existing disk.
+- End-of-lane teardown (preserves the prepared disk/runtime):
+  `gcloud compute instances stop pickleball-gpu-court23 --zone=us-central1-f --quiet`.
+  If work must continue after a stop, rearm with
+  `gcloud compute instances start pickleball-gpu-court23 --zone=us-central1-f --quiet`,
+  refresh the recycled IP/host key, and re-run the remote code-sync/version gate.

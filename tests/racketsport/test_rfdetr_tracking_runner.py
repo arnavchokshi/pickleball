@@ -399,7 +399,7 @@ def test_default_yolo_and_explicit_rfdetr_candidate_resolve_full_operating_point
         ),
         "stack_entry_key": "tracking.person_detector",
         "stack_entry_status": "WIRED_DEFAULT",
-        "stack_revision": 14,
+        "stack_revision": 15,
         "override_source": "best_stack_default",
         "tracker_config_source": "best_stack",
     }
@@ -499,7 +499,7 @@ def test_committed_rfdetr_manifest_and_preview_stack_contract() -> None:
     stack = json.loads(Path("configs/racketsport/best_stack.json").read_text(encoding="utf-8"))
     default_entry = stack["entries"]["tracking.person_detector"]
     candidate_entry = stack["entries"][RFDETR_PERSON_DETECTOR_CANDIDATE_STACK_KEY]
-    assert stack["revision"] == 14
+    assert stack["revision"] == 15
     assert default_entry["status"] == "WIRED_DEFAULT"
     assert default_entry["value"]["model_id"] == "yolo26m"
     assert default_entry["value"]["tracker_config"].endswith("botsort_reid.yaml")

@@ -1,6 +1,6 @@
 # DinkVision North Star
 
-Last updated: 2026-07-17.
+Last updated: 2026-07-25.
 Status: `VERIFIED=0`.
 
 ## Authority and reading rule
@@ -403,6 +403,46 @@ are not weakened to hit a headline.
 
 ## 5. Active queue for the next agents
 
+### 2026-07-25 court + people skeleton closeout — current execution order
+
+The current product slice is deliberately narrow:
+
+**source video → automatic static court/camera lock → measured two-or-four
+player identities → Fast-SAM-3D-Body MHR70 joints only → post-BODY support-foot
+anchoring → guarded trajectory stabilization → conservative NVZ occupancy →
+court-and-skeleton replay.**
+
+The preset does not compute or serialize body meshes, ball, paddle, audio,
+events, match statistics, or coaching. The latest full timing evidence is
+recorded in `runs/court_skeleton_runtime_20260725/REPORT.md`: six supported
+10.0–14.8-second clips took 290.2–447.0 seconds end to end (median 352.5
+seconds), while actual BODY inference ran at a median 62.1 player crops/second.
+The approximately 10-second subset took a median 327.0 seconds. Tracking and
+cold/remote BODY orchestration, not joint inference or the 2–5 second
+post-BODY anchor, are the dominant costs. These timings are revision
+`60631f1d`; the current July 25 foot/toe repairs still require a fresh timed
+reproduction.
+
+The owner-completed 24-moment foot/NVZ review is structurally complete: 24/24
+accepted, zero packet/player mismatches, 15 manual foot-point edits, and 8
+manual court-point edits. It is a locked selection set, not training data.
+Untouched prelabels are explicit acceptances, not independently redrawn
+labels; contact-state accuracy must not be overstated from this packet.
+
+| Order | Exact action | Pass gate | Failure/stop rule |
+|---:|---|---|---|
+| 1 | Score the current committed candidate on the locked 24-moment review using exact player, exact foot, and exact semantic point. Report foot-pixel, calibration-only, end-to-end court XY, signed NVZ clearance, and decisive/unknown state separately. | Zero false `confirmed_inside_or_on`; zero false `confirmed_outside`; ambiguous/occluded cases remain `unknown`; at least 75% decisive coverage on reviewer-clear planted cases. | Never tune on the locked 24. A false decisive call widens uncertainty/abstention; it never moves the skeleton outside the kitchen. |
+| 2 | Restore an executable focused test environment for the July 25 MHR70 toe-semantic and foot-stabilization changes. Prefer a clean pinned Linux environment if the local macOS native-library trust failure remains. | Canonical left/right heel/toe mapping, placement v1 compatibility, temporal support-state, no-interpolation, airborne, residual-fallback, kitchen-decision, world-source, and viewer tests pass. | Do not call the repair verified from syntax/HTML checks alone. Preserve the preceding 503 Python + 94 viewer baseline as historical, not proof of the new repair. |
+| 3 | Reauthenticate the configured GPU fleet, then run six supported videos and two refusal videos from source with the sole `process_video.py` entrypoint, `pipeline_preset=court_skeletons`, `--force`, pinned code/checkpoint hashes, and no court/track/placement/BODY reuse. | Six supported locks; both unsupported clips refuse before BODY; the fresh-run attestation proves source-video-only inputs. | Current external blocker is expired `gcloud` authentication. The owner action is `gcloud auth login`; do not substitute copied upstream artifacts. |
+| 4 | Evaluate court, identities, BODY coverage, foot anchoring, trajectory guards, NVZ decisions, viewer synchronization, runtime, and bundle size on those same immutable runs. | Zero invalid/collapsed/transition-spanning courts; four indoor-doubles players retained; Wolverine bridge absent; zero fabricated/interpolated measured samples; BODY ≥98% of eligible samples; every supported clip foot slide ≤0.03m; residual saturation <1%; no duplicate skeleton source; non-BODY overhead increase ≤15%. | Any court/identity fabrication rejects the candidate. If trajectory fails, select direct post-BODY anchoring for that player/clip rather than clipped or saturated smoothing. Stop further foot tuning after the gates pass or after two safe changes improve targeted slide p95 by <5%. |
+| 5 | Freeze the winning hashes, artifacts, decision-policy version, before/after evidence, six replay links, two refusal examples, and cold/warm timing card. Make the structurally safe winner the engineering default. | One evidence index lets a reviewer trace source video → court evidence → selected identity → raw BODY → direct anchor → selected world skeleton for every shown frame. | Keep `VERIFIED=0`, `measurement_valid=false`, and `authority_state=review_only`; this is engineering closeout, not surveyed centimeter-level proof. |
+| 6 | After closeout, freeze the court/player world as the only calibration/identity input to NS-03.BALL. Benchmark existing ball candidates and lift confidence-bearing 2D observations into 3D before adding paddle, mesh, coaching, or another people stack. | BALL consumes the same court transform, distortion, timebase, player IDs, wrists, uncertainty, and provenance without duplicating CAL/TRK/BODY. | Do not reopen court or BODY architecture unless the frozen error decomposition proves it is the dominant remaining error. |
+
+No additional owner labeling is required for this engineering closeout. True
+metric-3D promotion still requires the later independent surveyed multi-camera
+capture under NS-02; the current review can select a better implementation but
+cannot establish centimeter truth.
+
 ### 2026-07-23 court v3.1 implementation and selection
 
 The confidence-aware floor-only v3.1 solver, exact-semantic raw/structured evaluator, source-grouped
@@ -432,7 +472,31 @@ those source-disjoint predictions, then build/label the independent 20-camera-se
 the static-lock/net-height gates. The 0.95 target controls measurement authority, not whether a
 better reproducible implementation lands.
 
-Do not start another broad model search. The next executable goals are:
+### 2026-07-22 spend-limit recovery stop point
+
+This stop point supersedes the older July 17 dispatch queue retained below. The machine and fleet
+are quiescent, all interrupted work is preserved, and `VERIFIED=0` remains binding. Do not resume a
+GPU lane merely because its VM plan or focused tests exist.
+
+| Order | Current gate | Exact next action |
+|---:|---|---|
+| 1 | **BALL B1 `REJECT`; GPU resume forbidden.** The final review reproduced a check/use race after dependency hash verification. The terminated VM/disk preserves 5/7 completed builds; only 4/5 copied dependency sets are reusable. | Repair immutable dependency consumption and source-video stability, add a biting race regression, and obtain a deciding review. Keep `DO_NOT_DISPATCH_B1_GPU_RESUME`; B2 remains `DO_NOT_ARM`. |
+| 2 | **Training-data enforcement is locally green but unlanded.** The repaired ledger/audit and COURT loaders pass focused tests, but the cache image was baked from older `e1e2184d`; no fetchable revision contains all current safety gates. | Finish adversarial review, reconcile the cache manifest/report mismatch for `83gyqyc10y8f`, commit and push the reviewed gate, then require each retrain VM to checkout that exact SHA and prove the gate ran before any training read. Cache flags are metadata defense only until code consumes them. |
+| 3 | **EVENT E-v2 repair is still `PARTIAL`; cache swap is not on disk.** Focused repair checks passed, but the frozen canonical suite and deciding re-review are absent. The current VM plan still names `us-central1-a` and the stock PyTorch image. | Apply `CACHE_SWAP_BRIEF.md` to the actual plan with fail-closed zone/capacity/checksum behavior, run a manifest-hash-pinned canonical suite, then re-review and land before GPU dispatch. |
+| 4 | **COURT candidate is review-only.** Six approved videos / 144 frames are eligible after the owner decision and Track D holdout; default-deny loader changes remain uncommitted and the lane is `PARTIAL`. | Adversarially re-review the mixed A1/A2 file scope, land the reviewed gate, then use the exact pinned-revision startup proof from order 2. No retrain before that chain is complete. |
+| 5 | **PERSON/BODY needs review and a real-kernel preflight.** Selection mechanics passed focused/mutation checks but remain `PARTIAL`; the unreviewed best-stack hunk is banked and its shared lock released. BODY session 3 reproduced a watchdog deadlock before either arm ran. | Complete the selection ultra review. Fix the watchdog and pass one cheap real-Linux Step-0 (target ≤$0.25) before considering another A100 BODY session. |
+| Parallel | **Track E governance landings.** Method rules 7-8 have bounded `ADOPT_COMMIT` authorization; data-debt fix2 and data-hygiene amendment still lack deciding adoption reviews. | Commit only the exact authorized method-rule file set. Re-review data-debt and data-hygiene separately. Do not execute the 441,540,544-byte prune proposal without a deciding review and owner approval. |
+
+Fleet state at this stop: zero running compute; `pickleball-gpu-ball-f` is terminated with its disk
+preserved; cache image, data disk, and snapshot are `READY`. The cache manifest marks protected
+`83gyqyc10y8f` `COMPARE_ONLY_NEVER_TRAIN` **and** `SHA256_MISMATCH`, contrary to the prose report's
+all-matched claim. Treat the cache as staged infrastructure, not clean training provenance.
+
+Recovery details and exact evidence pointers: `runs/handoff_20260722/LIMIT_RECOVERY.md`.
+
+### Prior queue retained for historical context
+
+Do not start another broad model search. The prior executable goals were:
 
 Scoped passes since 2026-07-09 (named lane dirs; none are promotions): NS-01.1 sidecar contract;
 NS-01.2a upload route; NS-01.3 run identity + P0-C close; NS-02 gold-capture + eval reset; NS-01.4

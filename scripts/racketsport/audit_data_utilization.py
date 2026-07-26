@@ -20,13 +20,55 @@ COMPONENTS = {"BALL", "COURT", "EVENT", "PERSON", "REID"}
 DATA_INPUT_ROLES = {"ground_truth", "teacher_supervision", "training_data"}
 SHORT_VALUE_FLAGS = {"-c", "-d", "-i", "-l", "-m", "-o", "-t"}
 TRAIN_REFUSAL_STATES = {"BLOCKED", "DEFERRED_WITH_REASON", "QUARANTINED", "REJECTED"}
-TERMINAL_UNQUEUED_STATES = {
-    "BLOCKED",
-    "QUARANTINED",
-    "CONSUMED",
-    "REJECTED",
-    "DEFERRED_WITH_REASON",
-}
+CONSUMER_TRACKS = {"A", "B", "C", "D", "E"}
+FORBIDDEN_IDENTITY_POSTURES = {"compare_only", "protected", "quarantine"}
+REQUIRED_CONTRACT_ASSET_IDS = frozenset(
+    {
+        "ball_reviewed_corpus_chain_1121_3026",
+        "court_diversity_100_20260712",
+        "court_keypoints_6_20260707",
+        "data_testclips_metadata_4",
+        "eval_clips_ball_protected_4",
+        "event_abc_inputs_20260720",
+        "event_abc_vm_pull_20260721",
+        "event_bootstrap_audio_20260713",
+        "event_public_extended_opentt_20260713",
+        "event_public_f3set_20260713",
+        "event_public_golfdb_20260713",
+        "event_public_padeltracker100_20260713",
+        "event_public_shuttlecock_zenodo_20260713",
+        "event_public_shuttleset_20260713",
+        "event_public_squash_figshare_20260713",
+        "event_public_tt_sounds_20260713",
+        "online_harvest_20260706",
+        "online_harvest_20260712",
+        "online_harvest_person_gap_20260706",
+        "owner_event_labels_102_20260719",
+        "owner_img_1605_court_review_20260721",
+        "pbv_pickleball_teacher_events_20260720",
+        "pbv_replay_xkadsq9bli3h_20260720",
+        "pbvision_gallery_20260719",
+        "person_mixed_pool_no_lift_20260722",
+        "protected_event_seed_50_20260713",
+        "roboflow_ball_core_pretrain_20260706",
+        "roboflow_court_taxonomy_20260706",
+        "roboflow_person_adjacent_20260706",
+        "roboflow_person_core_20260706",
+        "roboflow_person_nc_20260706",
+        "w7_audit_stratum_scratch_350",
+    }
+)
+TRAINING_INTENT_PATTERNS = tuple(
+    re.compile(pattern)
+    for pattern in (
+        r"\btrain(?:ing)?\s+on\b",
+        r"\b(?:add|feed|consume|materialize|reuse)\b.{0,240}\b(?:train(?:ing)?[- ]pool|retrain\s+pool|pretrain\s+(?:rows|experiment)|fine[- ]?tun\w*)\b",
+        r"\b(?:run|start|execute)\b.{0,180}\b(?:retrain|pretrain\s+experiment|fine[- ]?tun)\w*\b",
+        r"\bgradient(?:[- ](?:update|step))?[- ]supervision\b",
+        r"\b(?:backprop(?:agation)?|optimizer[- ]?step|loss[- ]?bearing\s+supervision)\b",
+    )
+)
+MIN_SUBSTANTIVE_RULING_LENGTH = 32
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -160,6 +202,8 @@ def validate_ledger(ledger: dict[str, Any]) -> list[str]:
     if duplicates:
         errors.append(f"$.assets: duplicate asset IDs: {duplicates}")
 
+    errors.extend(disposition_violations(ledger))
+
     for index, asset in enumerate(assets):
         if not isinstance(asset, dict):
             continue
@@ -209,11 +253,309 @@ def validate_ledger(ledger: dict[str, Any]) -> list[str]:
     return sorted(errors)
 
 
-def verify_hashes(ledger: dict[str, Any], repo_root: Path) -> list[str]:
+def _queue_action_errors(action: Any, *, location: str) -> list[str]:
+    if not isinstance(action, dict):
+        return [f"{location}: queued disposition must be an object"]
     errors: list[str] = []
+    track = action.get("consumer_track")
+    if track not in CONSUMER_TRACKS:
+        errors.append(f"{location}.consumer_track: expected one of {sorted(CONSUMER_TRACKS)}")
+    if not isinstance(action.get("training_intent"), bool):
+        errors.append(f"{location}.training_intent: boolean structural declaration is required")
+    for key in ("next_queue_action", "consumer_evidence"):
+        value = action.get(key)
+        if not isinstance(value, str) or not value.strip():
+            errors.append(f"{location}.{key}: non-empty string is required")
+    return errors
+
+
+def disposition_violations(ledger: dict[str, Any]) -> list[str]:
+    """Return one or more asset-addressed errors for every invalid queue disposition."""
+    violations: list[str] = []
+    assets = ledger.get("assets", [])
+    if not isinstance(assets, list):
+        return violations
+    for index, asset in enumerate(assets):
+        if not isinstance(asset, dict):
+            continue
+        asset_id = asset.get("asset_id", f"index_{index}")
+        location = f"asset {asset_id} disposition"
+        disposition = asset.get("disposition")
+        if not isinstance(disposition, dict):
+            violations.append(f"{location}: missing valid disposition block")
+            continue
+        is_ruled_out = "not_usable_because" in disposition
+        has_queue_field = any(
+            key in disposition
+            for key in ("consumer_track", "next_queue_action", "consumer_evidence")
+        )
+        if is_ruled_out and has_queue_field:
+            violations.append(f"{location}: cannot be both queued and ruled out")
+            continue
+        if is_ruled_out:
+            reason = disposition.get("not_usable_because")
+            if not isinstance(reason, str) or not reason.strip():
+                violations.append(f"{location}.not_usable_because: non-empty string is required")
+            elif len(reason.strip()) < MIN_SUBSTANTIVE_RULING_LENGTH or ":" not in reason:
+                violations.append(
+                    f"{location}.not_usable_because: substantive CODE: explanation is required"
+                )
+            if "secondary_queue_actions" in disposition:
+                violations.append(f"{location}: ruled-out disposition cannot have secondary queue actions")
+            continue
+        if not has_queue_field:
+            violations.append(f"{location}: must queue a consumer or provide not_usable_because")
+            continue
+        violations.extend(_queue_action_errors(disposition, location=location))
+        secondary = disposition.get("secondary_queue_actions", [])
+        if not isinstance(secondary, list):
+            violations.append(f"{location}.secondary_queue_actions: must be an array")
+            continue
+        for secondary_index, action in enumerate(secondary):
+            violations.extend(
+                _queue_action_errors(
+                    action,
+                    location=f"{location}.secondary_queue_actions[{secondary_index}]",
+                )
+            )
+    return sorted(violations)
+
+
+def _queued_actions(asset: dict[str, Any]) -> list[dict[str, Any]]:
+    disposition = asset.get("disposition", {})
+    if not isinstance(disposition, dict) or "not_usable_because" in disposition:
+        return []
+    actions = [disposition]
+    secondary = disposition.get("secondary_queue_actions", [])
+    if isinstance(secondary, list):
+        actions.extend(action for action in secondary if isinstance(action, dict))
+    return actions
+
+
+def _has_training_language(action: dict[str, Any]) -> bool:
+    text = " ".join(str(action.get("next_queue_action", "")).casefold().split())
+    return any(pattern.search(text) for pattern in TRAINING_INTENT_PATTERNS)
+
+
+def _has_training_intent(action: dict[str, Any]) -> bool:
+    return action.get("training_intent") is True or _has_training_language(action)
+
+
+def _global_forbidden_reference_index(
+    asset_index: dict[str, dict[str, Any]],
+) -> dict[str, tuple[str, ...]]:
+    """Return exact globally forbidden references and their ledger-derived reasons."""
+    reasons_by_reference: dict[str, set[str]] = {}
+    forbidden_asset_ids: set[str] = set()
+
+    def add(reference: Any, reason: str) -> None:
+        if isinstance(reference, str) and reference.strip():
+            reasons_by_reference.setdefault(reference.strip(), set()).add(reason)
+
+    for asset_id, asset in asset_index.items():
+        protection = asset.get("protection", {})
+        if not isinstance(protection, dict):
+            continue
+        if protection.get("trainer_forbidden") is True:
+            forbidden_asset_ids.add(asset_id)
+            add(asset_id, "trainer_forbidden asset")
+            for path_record in asset.get("paths", []):
+                if isinstance(path_record, dict):
+                    add(path_record.get("path"), f"path of trainer_forbidden asset {asset_id}")
+            for binding in asset.get("immutable_hashes", []):
+                if isinstance(binding, dict):
+                    add(binding.get("path"), f"binding of trainer_forbidden asset {asset_id}")
+        for identity in protection.get("identities", []):
+            if not isinstance(identity, dict):
+                continue
+            posture = identity.get("posture")
+            if posture in FORBIDDEN_IDENTITY_POSTURES:
+                add(identity.get("identity"), f"{posture} identity from {asset_id}")
+
+    changed = True
+    while changed:
+        changed = False
+        for asset_id, asset in asset_index.items():
+            protection = asset.get("protection", {})
+            if not isinstance(protection, dict):
+                continue
+            source_ids = protection.get("disposition_derives_from_asset_ids", [])
+            if not isinstance(source_ids, list):
+                continue
+            forbidden_sources = sorted(
+                source_id
+                for source_id in source_ids
+                if isinstance(source_id, str) and source_id in forbidden_asset_ids
+            )
+            if forbidden_sources and asset_id not in forbidden_asset_ids:
+                forbidden_asset_ids.add(asset_id)
+                changed = True
+            for source_id in forbidden_sources:
+                add(asset_id, f"recorded derivative of forbidden asset {source_id}")
+
+    return {
+        reference: tuple(sorted(reasons))
+        for reference, reasons in reasons_by_reference.items()
+    }
+
+
+def _resolved_evidence_path(raw_path: str, *, repo_root: Path) -> Path | None:
+    relative_text = raw_path.split("#", 1)[0].strip()
+    if not relative_text:
+        return None
+    relative = Path(relative_text)
+    if relative.is_absolute() or ".." in relative.parts:
+        return None
+    candidate = (repo_root / relative).resolve()
+    try:
+        candidate.relative_to(repo_root.resolve())
+    except ValueError:
+        return None
+    return candidate
+
+
+def enforced_queue_violations(ledger: dict[str, Any], *, repo_root: Path) -> list[str]:
+    """Bind contract membership, evidence, and protocol semantics for --enforce-queued."""
+    violations: list[str] = []
+    assets = ledger.get("assets", [])
+    if not isinstance(assets, list):
+        return violations
+
+    asset_index = {
+        asset.get("asset_id"): asset
+        for asset in assets
+        if isinstance(asset, dict) and isinstance(asset.get("asset_id"), str)
+    }
+    for asset_id in sorted(REQUIRED_CONTRACT_ASSET_IDS - set(asset_index)):
+        violations.append(f"asset {asset_id} contract baseline: required asset is missing")
+    forbidden_references = _global_forbidden_reference_index(asset_index)
+
+    for asset_id, asset in asset_index.items():
+        protection = asset.get("protection", {})
+        if not isinstance(protection, dict):
+            continue
+        allowed_ids = protection.get("training_allowed_ids", [])
+        if not isinstance(allowed_ids, list):
+            violations.append(f"asset {asset_id} protection.training_allowed_ids: must be an array")
+            allowed_ids = []
+        compare_only_ids = {
+            identity.get("identity")
+            for identity in protection.get("identities", [])
+            if isinstance(identity, dict) and identity.get("posture") == "compare_only"
+        }
+        compare_only_ids.discard(None)
+        allowed_set = {value for value in allowed_ids if isinstance(value, str)}
+        overlap = sorted(allowed_set & compare_only_ids)
+        if overlap:
+            violations.append(
+                f"asset {asset_id} protection: training allowlist contains compare-only IDs {overlap}"
+            )
+
+        derivative_ids = protection.get("disposition_derives_from_asset_ids", [])
+        if not isinstance(derivative_ids, list):
+            violations.append(
+                f"asset {asset_id} protection.disposition_derives_from_asset_ids: must be an array"
+            )
+            derivative_ids = []
+
+        for action_index, action in enumerate(_queued_actions(asset)):
+            action_location = f"asset {asset_id} disposition action[{action_index}]"
+            evidence = action.get("consumer_evidence")
+            if isinstance(evidence, str):
+                evidence_path = _resolved_evidence_path(evidence, repo_root=repo_root)
+                if evidence_path is None or not evidence_path.exists():
+                    violations.append(
+                        f"{action_location}.consumer_evidence: path does not exist: {evidence}"
+                    )
+            language_implies_training = _has_training_language(action)
+            if language_implies_training and action.get("training_intent") is False:
+                violations.append(
+                    f"{action_location}: training_intent=false conflicts with "
+                    "gradient/training supervision language"
+                )
+            if not _has_training_intent(action):
+                continue
+            action_blob = " ".join(
+                str(action.get(key, "")).casefold()
+                for key in ("next_queue_action", "consumer_evidence")
+            )
+            if protection.get("trainer_forbidden") is True:
+                violations.append(
+                    f"{action_location}: training intent targets global forbidden reference "
+                    f"{asset_id} (trainer_forbidden asset)"
+                )
+            for reference, reasons in forbidden_references.items():
+                if reference.casefold() not in action_blob:
+                    continue
+                violations.append(
+                    f"{action_location}: training intent references global forbidden reference "
+                    f"{reference} ({'; '.join(reasons)})"
+                )
+            for source_id in derivative_ids:
+                source = asset_index.get(source_id)
+                if source is None:
+                    violations.append(
+                        f"{action_location}: derivative source asset is absent: {source_id}"
+                    )
+                elif source.get("protection", {}).get("trainer_forbidden") is True:
+                    violations.append(
+                        f"{action_location}: training intent uses derivative of frozen asset {source_id}"
+                    )
+            if allowed_set:
+                action_text = str(action.get("next_queue_action", ""))
+                missing_allowed = sorted(value for value in allowed_set if value not in action_text)
+                if missing_allowed:
+                    violations.append(
+                        f"{action_location}: training action does not enumerate the full allowed ID set; "
+                        f"missing {missing_allowed}"
+                    )
+                referenced_compare = sorted(
+                    value for value in compare_only_ids if value in action_text
+                )
+                if referenced_compare:
+                    violations.append(
+                        f"{action_location}: training action references compare-only IDs "
+                        f"{referenced_compare}"
+                    )
+    return sorted(violations)
+
+
+def _uses_recorded_only_integrity(asset: dict[str, Any]) -> bool:
+    """Keep governance checks from opening protected, frozen, or compare-only artifacts."""
+    protection = asset.get("protection", {})
+    if not isinstance(protection, dict):
+        return False
+    if protection.get("trainer_forbidden") is True:
+        return True
+    return any(
+        isinstance(identity, dict)
+        and identity.get("posture") in {"compare_only", "protected"}
+        for identity in protection.get("identities", [])
+    )
+
+
+def verify_hashes(
+    ledger: dict[str, Any],
+    repo_root: Path,
+    *,
+    protection_ledger: dict[str, Any] | None = None,
+) -> list[str]:
+    errors: list[str] = []
+    policy_ledger = ledger if protection_ledger is None else protection_ledger
+    recorded_only_paths = {
+        binding.get("path")
+        for asset in policy_ledger.get("assets", [])
+        if isinstance(asset, dict) and _uses_recorded_only_integrity(asset)
+        for binding in asset.get("immutable_hashes", [])
+        if isinstance(binding, dict) and isinstance(binding.get("path"), str)
+    }
     for asset in ledger.get("assets", []):
         asset_id = asset["asset_id"]
+        if _uses_recorded_only_integrity(asset):
+            continue
         for binding in asset["immutable_hashes"]:
+            if binding["path"] in recorded_only_paths:
+                continue
             path = repo_root / binding["path"]
             if not path.is_file():
                 errors.append(f"{asset_id}: hash input is absent: {binding['path']}")
@@ -242,7 +584,7 @@ def never_queued_assets(ledger: dict[str, Any], *, as_of: datetime) -> list[dict
         age_hours = (as_of.astimezone(timezone.utc) - _parse_utc(asset["acquired_utc"])).total_seconds() / 3600
         counts = asset["counts"]
         has_payload = counts["byte_count"] > 0 or counts["label_count"] > 0
-        has_disposition = asset["state"] in TERMINAL_UNQUEUED_STATES
+        has_disposition = not disposition_violations({"assets": [asset]})
         if age_hours > 24 and has_payload and not asset["consumers"] and not has_disposition:
             report.append(
                 {
@@ -303,6 +645,190 @@ def _path_contains(parent: Path, child: Path) -> bool:
         return True
     except ValueError:
         return False
+
+
+def path_registered_to_asset(
+    asset: dict[str, Any],
+    candidate: Path,
+    *,
+    repo_root: Path,
+) -> bool:
+    """Return whether a resolved input path is inside the asset's recorded path set."""
+    resolved_candidate = candidate.resolve(strict=False)
+    registered_values = [
+        entry.get("path")
+        for entry in asset.get("paths", [])
+        if isinstance(entry, dict)
+    ]
+    registered_values.extend(
+        binding.get("path")
+        for binding in asset.get("immutable_hashes", [])
+        if isinstance(binding, dict)
+    )
+    registered_values.extend(
+        subset.get("selector_path")
+        for subset in asset.get("protection", {}).get("clean_subsets", [])
+        if isinstance(subset, dict)
+    )
+    for value in registered_values:
+        if not isinstance(value, str):
+            continue
+        registered = _normalized_path(value, repo_root)
+        if registered is not None and (
+            resolved_candidate == registered
+            or _path_contains(registered, resolved_candidate)
+        ):
+            return True
+    return False
+
+
+def recorded_sha256s_for_asset_path(
+    asset: dict[str, Any],
+    candidate: Path,
+    *,
+    repo_root: Path,
+) -> set[str]:
+    """Return exact SHA-256 bindings recorded for one resolved asset path."""
+    resolved_candidate = candidate.resolve(strict=False)
+    return {
+        str(binding["digest"]).casefold()
+        for binding in asset.get("immutable_hashes", [])
+        if isinstance(binding, dict)
+        and binding.get("algorithm") == "sha256"
+        and isinstance(binding.get("digest"), str)
+        and isinstance(binding.get("path"), str)
+        and _normalized_path(binding["path"], repo_root) == resolved_candidate
+    }
+
+
+def training_queue_authorization_errors(
+    asset: dict[str, Any],
+    *,
+    source_id: str | None = None,
+    component: str | None = None,
+) -> list[tuple[str, str]]:
+    """Return typed reasons why a ledger row does not authorize training use."""
+    asset_id = str(asset.get("asset_id", "<unknown>"))
+    errors: list[tuple[str, str]] = []
+    state = asset.get("state")
+    if state in TRAIN_REFUSAL_STATES:
+        errors.append(
+            (
+                "LEDGER_STATE_FORBIDS_TRAINING",
+                f"asset {asset_id} has training-refusal state {state}",
+            )
+        )
+
+    protection = asset.get("protection", {})
+    if not isinstance(protection, dict):
+        protection = {}
+    if protection.get("trainer_forbidden") is True:
+        errors.append(
+            (
+                "LEDGER_PROVENANCE_FORBIDS_TRAINING",
+                f"asset {asset_id} is marked trainer_forbidden",
+            )
+        )
+
+    training_actions = [
+        action for action in _queued_actions(asset) if _has_training_intent(action)
+    ]
+    if not training_actions:
+        errors.append(
+            (
+                "LEDGER_QUEUE_NOT_AUTHORIZED",
+                f"asset {asset_id} has no queue-authorized training disposition",
+            )
+        )
+
+    forbidden_identities = {
+        identity.get("identity")
+        for identity in protection.get("identities", [])
+        if isinstance(identity, dict)
+        and identity.get("posture") in FORBIDDEN_IDENTITY_POSTURES
+        and isinstance(identity.get("identity"), str)
+    }
+    training_allowed_ids = {
+        value
+        for value in protection.get("training_allowed_ids", [])
+        if isinstance(value, str)
+    }
+    if source_id is not None and source_id in forbidden_identities:
+        errors.append(
+            (
+                "LEDGER_PROVENANCE_FORBIDS_TRAINING",
+                f"source {source_id} has a training-refusal provenance posture in asset {asset_id}",
+            )
+        )
+    elif forbidden_identities and source_id is None:
+        errors.append(
+            (
+                "LEDGER_PROVENANCE_FORBIDS_TRAINING",
+                f"asset {asset_id} mixes training-refusal identities and requires an explicit source_id",
+            )
+        )
+    if training_allowed_ids and source_id is not None and source_id not in training_allowed_ids:
+        errors.append(
+            (
+                "LEDGER_PROVENANCE_FORBIDS_TRAINING",
+                f"source {source_id} is absent from asset {asset_id}'s training allowlist",
+            )
+        )
+
+    if component is not None:
+        ruling = asset.get("rights", {}).get("component_rulings", {}).get(component)
+        if not isinstance(ruling, dict):
+            errors.append(
+                (
+                    "LEDGER_COMPONENT_NOT_AUTHORIZED",
+                    f"asset {asset_id} has no {component} component ruling",
+                )
+            )
+        elif ruling.get("decision") != "ALLOW":
+            errors.append(
+                (
+                    "LEDGER_COMPONENT_NOT_AUTHORIZED",
+                    f"asset {asset_id} has {component}={ruling.get('decision')}",
+                )
+            )
+    return sorted(set(errors))
+
+
+def forbidden_ledger_sha256s(ledger: dict[str, Any]) -> dict[str, tuple[str, ...]]:
+    """Index recorded content hashes whose ledger row refuses unscoped training."""
+    reasons_by_digest: dict[str, set[str]] = {}
+    for asset in ledger.get("assets", []):
+        if not isinstance(asset, dict):
+            continue
+        protection = asset.get("protection", {})
+        if not isinstance(protection, dict):
+            protection = {}
+        has_refusal_identity = any(
+            isinstance(identity, dict)
+            and identity.get("posture") in FORBIDDEN_IDENTITY_POSTURES
+            for identity in protection.get("identities", [])
+        )
+        refuses = (
+            asset.get("state") in TRAIN_REFUSAL_STATES
+            or protection.get("trainer_forbidden") is True
+            or has_refusal_identity
+        )
+        if not refuses:
+            continue
+        asset_id = str(asset.get("asset_id", "<unknown>"))
+        for binding in asset.get("immutable_hashes", []):
+            if (
+                isinstance(binding, dict)
+                and binding.get("algorithm") == "sha256"
+                and isinstance(binding.get("digest"), str)
+            ):
+                reasons_by_digest.setdefault(
+                    binding["digest"].casefold(), set()
+                ).add(f"ledger asset {asset_id}")
+    return {
+        digest: tuple(sorted(reasons))
+        for digest, reasons in reasons_by_digest.items()
+    }
 
 
 def _command_pairs(argv: list[str]) -> tuple[list[tuple[str | None, str, int]], list[str]]:
@@ -702,6 +1228,7 @@ def audit_dispatch_contract(
     current_hash_errors = verify_hashes(
         {"assets": [assets[asset_id] for asset_id in resolved]},
         repo_root,
+        protection_ledger=ledger,
     )
     errors.extend(f"dispatch.current_hash: {error}" for error in current_hash_errors)
     return sorted(set(errors))
@@ -720,16 +1247,26 @@ def render_markdown(ledger: dict[str, Any]) -> str:
         f"- Snapshot UTC: `{ledger['generated_utc']}`",
         f"- Assets: `{len(assets)}`",
         "- States: " + ", ".join(f"`{key}={state_counts[key]}`" for key in sorted(state_counts)),
+        f"- License state gate: `{ledger['policy_directives']['license_is_state_gate']}` (license is FYI only)",
+        f"- Directive: {ledger['policy_directives']['license_fyi_directive']}",
         "",
-        "| Asset ID | State | Bytes | Raw | Kept | Decoded | Labels | Authority | Owner | Next check |",
-        "|---|---:|---:|---:|---:|---:|---:|---|---|---|",
+        "| Asset ID | State | Disposition | Bytes | Raw | Kept | Decoded | Labels | Authority | Owner | Next check |",
+        "|---|---:|---|---:|---:|---:|---:|---:|---|---|---|",
     ]
     for asset in assets:
         counts = asset["counts"]
         authority = ", ".join(asset["label_authority"])
         next_check = asset["next_check"].replace("|", "\\|").replace("\n", " ")
+        disposition = asset["disposition"]
+        if "not_usable_because" in disposition:
+            disposition_summary = f"RULED OUT: {disposition['not_usable_because']}"
+        else:
+            disposition_summary = (
+                f"Track {disposition['consumer_track']}: {disposition['next_queue_action']}"
+            )
+        disposition_summary = disposition_summary.replace("|", "\\|").replace("\n", " ")
         lines.append(
-            f"| `{asset['asset_id']}` | `{asset['state']}` | {counts['byte_count']} | "
+            f"| `{asset['asset_id']}` | `{asset['state']}` | {disposition_summary} | {counts['byte_count']} | "
             f"{counts['raw_count']} {counts['raw_unit']} | {counts['dedup_kept_count']} "
             f"{counts['dedup_unit']} | {counts['decoded_count']} {counts['decoded_unit']} | "
             f"{counts['label_count']} {counts['label_unit']} | {authority} | {asset['owner']} | {next_check} |"
@@ -749,6 +1286,14 @@ def render_markdown(ledger: dict[str, Any]) -> str:
                 f"- Overlap coverage: {asset['protection']['overlap_check_coverage']['status']} — {asset['protection']['overlap_check_coverage']['scope']}",
                 f"- Immutable clean-subset selectors: {len(asset['protection'].get('clean_subsets', []))}",
                 f"- Consumers: {len(asset['consumers'])}",
+                f"- License FYI: {asset['license_fyi']}",
+                (
+                    f"- Disposition: not usable because {asset['disposition']['not_usable_because']}"
+                    if "not_usable_because" in asset["disposition"]
+                    else f"- Disposition: Track {asset['disposition']['consumer_track']} — "
+                    f"{asset['disposition']['next_queue_action']} "
+                    f"(evidence: `{asset['disposition']['consumer_evidence']}`)"
+                ),
                 "",
             ]
         )
@@ -762,6 +1307,7 @@ def build_report(
     as_of: datetime,
     contract: dict[str, Any] | None = None,
     check_view: Path | None = None,
+    enforce_queued: bool = False,
 ) -> dict[str, Any]:
     ledger_errors = validate_ledger(ledger)
     hash_errors = [] if ledger_errors else verify_hashes(ledger, repo_root)
@@ -777,12 +1323,20 @@ def build_report(
             view_errors.append(f"generated view differs: {check_view}")
 
     never_queued = [] if ledger_errors else never_queued_assets(ledger, as_of=as_of)
+    queue_errors = (
+        sorted(
+            set(disposition_violations(ledger))
+            | set(enforced_queue_violations(ledger, repo_root=repo_root))
+        )
+        if enforce_queued
+        else []
+    )
     state_distribution = (
         dict(sorted(Counter(asset["state"] for asset in ledger.get("assets", [])).items()))
         if not ledger_errors
         else {}
     )
-    errors = ledger_errors + hash_errors + dispatch_errors + view_errors
+    errors = ledger_errors + hash_errors + dispatch_errors + view_errors + queue_errors
     return {
         "artifact_type": "data_utilization_audit",
         "status": "fail" if errors else "pass",
@@ -794,6 +1348,8 @@ def build_report(
         "hash_errors": hash_errors,
         "dispatch_errors": dispatch_errors,
         "view_errors": view_errors,
+        "queue_errors": queue_errors,
+        "queue_violation_count": len(queue_errors),
     }
 
 
@@ -806,6 +1362,14 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--dispatch-contract", type=Path)
     parser.add_argument("--write-view", type=Path)
     parser.add_argument("--check-view", type=Path)
+    parser.add_argument(
+        "--enforce-queued",
+        action="store_true",
+        help=(
+            "Fail on missing contract assets, invalid dispositions, absent consumer evidence, "
+            "or training intent that conflicts with protected/compare-only/frozen-audit protocol."
+        ),
+    )
     parser.add_argument("--as-of", help="UTC/offset ISO timestamp used by the >24h never-queued audit")
     parser.add_argument("--json", action="store_true", help="Emit the full machine-readable audit report")
     return parser
@@ -842,6 +1406,7 @@ def main(argv: list[str] | None = None) -> int:
             as_of=as_of,
             contract=contract,
             check_view=check_view,
+            enforce_queued=args.enforce_queued,
         )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         report = {
@@ -855,6 +1420,8 @@ def main(argv: list[str] | None = None) -> int:
             "hash_errors": [],
             "dispatch_errors": [],
             "view_errors": [],
+            "queue_errors": [],
+            "queue_violation_count": 0,
         }
 
     if args.json:
@@ -869,6 +1436,9 @@ def main(argv: list[str] | None = None) -> int:
                 f"{row['acquired_utc']} {row['asset_id']} bytes={row['byte_count']} "
                 f"labels={row['label_count']} state={row['state']}"
             )
+        print(f"QUEUE-DISPOSITION VIOLATIONS ({report['queue_violation_count']})")
+        for error in report["queue_errors"]:
+            print(f"QUEUE ERROR: {error}", file=sys.stderr)
         for category in ("ledger_errors", "hash_errors", "dispatch_errors", "view_errors"):
             for error in report[category]:
                 print(f"ERROR {category}: {error}", file=sys.stderr)

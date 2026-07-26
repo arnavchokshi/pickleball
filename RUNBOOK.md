@@ -123,9 +123,13 @@ be called CAL promotion.
 After argument parsing and option construction succeed, `process_video.py`
 writes `PIPELINE_SUMMARY.json` even on partial runs. Pre-flight argument/path
 failures can exit before any run directory or `PIPELINE_SUMMARY.json` exists.
-The default serial path has 23 stage outcomes. Optional `rally_gating` makes
-24, and optional viewer verification also makes 24; enabling both makes 25. The
-order below is projected from `AUTHORITATIVE_STAGE_GRAPH` in
+The selection-enabled serial path has 24 stage outcomes. Optional
+`rally_gating` makes 25, and optional viewer verification also makes 25;
+enabling both makes 26. Player selection remains default OFF, so the no-flag
+and explicit-`--no-player-selection` projections retain the legacy 23/24/24/25
+counts and emit byte-identical artifact trees, including both pipeline
+summaries and resolved best-stack metadata. The order below is projected from
+`AUTHORITATIVE_STAGE_GRAPH` in
 `scripts/racketsport/process_video.py`; overlap mode uses the same graph and
 only moves `frames` ahead of the four overlapped BALL/event stages:
 
@@ -149,29 +153,42 @@ only moves `frames` ahead of the four overlapped BALL/event stages:
    no-flag default until both frozen rows pass
    `runs/lanes/trk_rfdetr_integrate_20260717/VM_REPRO_PLAN.md`. `VERIFIED=0`
    remains binding.
-5. **camera_motion** - optional/auto preview camera-motion compensation before
+5. **player_selection** - default-OFF preview selection layer between tracking
+   and every downstream person-track consumer. Enable with
+   `--player-selection`; disable explicitly with `--no-player-selection`.
+   When ON, it preserves the association result byte-for-byte as
+   `tracks_preselection.json`, publishes selected `tracks.json` last, and writes
+   full input/config/hash provenance to `selection_report.json`. The registered
+   hard constraints are an exactly-four export cap and
+   `COURT_REGION_HARD_BOUND_M=1.0`; the report records `frames_ambiguous`,
+   `reid_invoked`, `reid_skipped_unambiguous`, and `reid_unavailable`.
+   Provider/checkpoint absence emits a typed `reid_unavailable` warning even on
+   empty or exactly-four input. Missing/malformed required inputs and invariant
+   violations fail loudly without a loose-pool fallback. This entry remains
+   `PENDING`, preview-only, `do_not_promote`, and `VERIFIED=0`.
+6. **camera_motion** - optional/auto preview camera-motion compensation before
    placement homography projection.
-6. **placement** - project tracks into court/world placement when inputs exist.
-Optional insertion after stage 6: **rally_gating**. On a cold run it occurs
+7. **placement** - project tracks into court/world placement when inputs exist.
+Optional insertion after stage 7: **rally_gating**. On a cold run it occurs
 before fresh BALL/audio and does not yet trim all downstream decoding.
 
-7. **ball** - run/reuse ball track, bounce, and court in/out artifacts.
-8. **ball_arc** - default 3D ball chain: auto-bounce anchors, arc solver, and
+8. **ball** - run/reuse ball track, bounce, and court in/out artifacts.
+9. **ball_arc** - default 3D ball chain: auto-bounce anchors, arc solver, and
    flight-sanity gate. Use `--no-ball-arc` to skip it.
-9. **events** - fuse ball/audio/wrist cues into `contact_windows.json` and
+10. **events** - fuse ball/audio/wrist cues into `contact_windows.json` and
     `frame_compute_plan.json`. On a cold serial run BODY does not exist yet, so
     wrist cues are explicitly blocked.
-10. **ball_fill** - render-honest fill from accepted ball arc/contact evidence.
-11. **frames** - materialize BODY frames from tracks and the event/mesh plan.
-12. **body** - dispatch SAM-3D-Body to the configured remote GPU path by
+11. **ball_fill** - render-honest fill from accepted ball arc/contact evidence.
+12. **frames** - materialize BODY frames from tracks and the event/mesh plan.
+13. **body** - dispatch SAM-3D-Body to the configured remote GPU path by
    default, run local BODY only with `--body-local`, or skip with `--no-gpu`.
    RTMW/RTMW3D/RTMPose are retired; the pipeline is SAM-3D-Body only for
    offline body joints/mesh.
-13. **placement_refine** - currently always skipped by the R3 same-pass safety
+14. **placement_refine** - currently always skipped by the R3 same-pass safety
     rule; BODY foot pixels require a true second pass before a fresh BODY run.
-14. **grounding_refine** - render-honest BODY grounding
+15. **grounding_refine** - render-honest BODY grounding
     refinement when inputs exist.
-15. **placement_trajectory_refine** - default-OFF preview stage after grounding.
+16. **placement_trajectory_refine** - default-OFF preview stage after grounding.
     Enable it with `--placement-trajectory-refine` (or a future enabled
     `body.placement_trajectory_refine` best-stack value) to write the separate
     `placement_trajectory_refined.json` artifact from current TRK footpoints,
@@ -179,30 +196,30 @@ before fresh BALL/audio and does not yet trim all downstream decoding.
     typed skip/degrade; malformed inputs fail loudly. Raw tracks, placement,
     skeleton, phase, and grounding artifacts remain immutable. The output stays
     preview-band, `do_not_promote`, and `VERIFIED=0`.
-16. **paddle_pose** - write a fail-closed, render-only estimated paddle artifact
+17. **paddle_pose** - write a fail-closed, render-only estimated paddle artifact
     when BODY wrist/palm evidence exists.
-17. **events_refined** - build the separately versioned post-BODY
+18. **events_refined** - build the separately versioned post-BODY
     `contact_windows_refined_v1.json` from dependency-current BODY, paddle,
     ball, timebase, and audio evidence. Raw `contact_windows.json` remains
     immutable; content hashes gate reuse.
-18. **ball_arc_refined** - re-run the render-only arc chain from current
+19. **ball_arc_refined** - re-run the render-only arc chain from current
     refined contacts when its dependency hashes changed. Segment guard
     timeouts remain typed degraded outcomes and this stage records their real
     wall time.
-19. **world** - compose `virtual_world.json` and `trust_bands.json` from the
+20. **world** - compose `virtual_world.json` and `trust_bands.json` from the
     already-finished refined artifacts; refinement time is not folded into
     this stage.
-20. **confidence_gate** - write `confidence_gated_world.json` unless
+21. **confidence_gate** - write `confidence_gated_world.json` unless
     `--no-confidence-gate` is set.
-21. **match_stats** - default-on fail-open placement/court movement stats.
-22. **coaching_facts** - build deterministic rally metrics and coaching facts,
+22. **match_stats** - default-on fail-open placement/court movement stats.
+23. **coaching_facts** - build deterministic rally metrics and coaching facts,
     then run the zero-fabrication audit before the manifest. This stage fails
     closed: on audit failure the facts are excluded and the bundle stays
     `partial`.
-23. **manifest** - write `replay_viewer_manifest.json` and optional point scene,
+24. **manifest** - write `replay_viewer_manifest.json` and optional point scene,
     linking only finished current stats and audited coaching facts.
-Optional final stage: **verify** via `--verify-viewer`. It is stage 24 without
-rally gating and stage 25 with rally gating.
+Optional final stage: **verify** via `--verify-viewer`. It is stage 25 without
+rally gating and stage 26 with rally gating when player selection is enabled.
 
 `match_stats` and audited deterministic `coaching_facts` run before `manifest`.
 
@@ -225,6 +242,8 @@ not simulate that target by leaving stale artifacts in the clip directory.
 | `--no-global-association` | Skip raw-pool global association after loose-pool tracking. |
 | `--global-association-profile` | Explicit internal-val tuning profile. Defaults are not universal proof. |
 | `--reid-model` | OSNet ReID checkpoint used by global association. Treat path changes as a new run condition. |
+| `--player-selection` | Enable the default-OFF, PENDING preview selection layer after tracking. It requires the registered exactly-four configuration and fails loudly on missing/malformed required inputs or export-cap violations. |
+| `--no-player-selection` | Explicitly disable player selection. This is byte-identical to leaving the default-OFF flag absent, including summary/config metadata. |
 | `--allow-auto-ball-track` | Opt into clip-id discovery of old ball tracks under `runs/`; preview reuse only. |
 | `--skip-ball` | Omit ball stage. Downstream ball/event outputs will be absent or degraded. |
 | `--skip-audio` | Omit audio onsets from contact fusion. |
@@ -321,6 +340,8 @@ Common outputs include:
 - `court_calibration.json`
 - `input_quality.json`
 - `tracks.json`
+- `tracks_preselection.json` only when player selection is ON; byte-exact association output preserved before selected `tracks.json` is published
+- `selection_report.json` only when player selection is ON; includes input/config/content-hash provenance, constraint decisions, selective-ReID counters, and typed availability warnings
 - `camera_motion.json` when camera-motion estimation or explicit reuse is active
 - `ball_track.json`
 - `ball_track_arc_solved.json` (default ball 3D arc, render-only, self-kill gated)
@@ -394,7 +415,7 @@ Common traps and fixes:
 | Remote BODY failed or looks silent | Inspect `remote_body_stdout.log`, then SSH/disk/`nvidia-smi`/lock state. |
 | VM timings or outputs look suspicious after a sync/rebuild | Run `scripts/racketsport/remote_body_dispatch.py --verify-version-stamp` before trusting VM numbers; use `--sync-remote-code` when the VM checkout is stale. |
 | Recycled fleet IP causes host-key failures | Refresh the pinned known_hosts entry with `scripts/fleet/refresh_remote_host.sh`. |
-| Storage audit fails immediately after tests/builds | Rerun with `--ignore-generated-artifacts` or remove fresh generated caches. |
+| Storage audit fails immediately after tests/builds | Rerun with `--ignore-generated-artifacts` or remove fresh generated caches. Directory quotas still apply. Never put pytest `--basetemp` inside the repo; omit it or use `/tmp`. |
 
 ## Status Interpretation
 

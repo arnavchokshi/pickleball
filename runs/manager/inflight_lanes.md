@@ -8,6 +8,112 @@ Standing fence: `brand-exploration/` is the OWNER'S untracked brand work — no 
 `cvat_upload/court_diversity_20260712/` + `w7_audit_stratum_20260709/` are staged local-only owner
 labeling packages (storage-allowlisted, intentionally untracked).
 
+## Current live state — 2026-07-23 resume (integration manager session)
+
+Resume executed per runs/handoff_20260722/LIMIT_RECOVERY.md. Baseline re-verified at resume:
+HEAD 28d5b971 (2 ahead of origin, unpushed), index empty, zero repo processes, CVAT down,
+zero running compute, ball-f VM TERMINATED + disk READY, cache image/disk/snapshot READY.
+
+| lane | tier | pid | state | fence |
+|---|---|---|---|---|
+| ball_b1_race_repair_20260723 | xhigh | 76270 | RUNNING | build_pbvision_ball_sst.py + its tests + lane dir |
+| trackE_cache_safety_20260723 | xhigh | 76272 | RUNNING | verify_training_inputs.py NEW + audit_data_utilization.py + lane_vm_startup.sh + finetune_event_head.py gate seam + fleetcache manifest/report corrections |
+| trackD_cacheswap_20260723 | high | 76274 | RUNNING | trackD_ev2_design docs only (VM_RUN_PLAN/REGISTRATION/INPUT_LOCK) |
+| court_pbv_sep_review_20260723 | xhigh | 76276 | RUNNING | READ-ONLY review; separation map A1-safety vs A2 |
+| trkC_constraints_rebuild_20260722_review | ultra | 76278 | RUNNING | READ-ONLY review; live diff + banked rev-15 hunk |
+| trkC watchdog Step-0 | sonnet agent | — | RUNNING | e2 spot VM ≤$0.50; writes only trkC_watchdog_fix_20260722/ |
+
+
+### BINDING LIFTED 2026-07-23 by integration manager — DO_NOT_DISPATCH_B1_GPU_RESUME
+
+Rationale (recorded): (1) The DO_NOT_DISPATCH_B1 root cause was the reproduced dependency check/use
+race. That race is now FIXED via structural immutable-snapshot consumption, deciding-review ACCEPT
+(ball_b1_race_review4), COMMITTED+PUSHED (f07929bb8, builder pin 4bc196f0). Root cause resolved.
+(2) The cache-safety gate protects against training on compare-only/forbidden data. For the BALL
+run specifically, that exclusion is enforced STRUCTURALLY IN THE BUILD CODE: build_pbvision_ball_sst.py
+only iterates TRAIN_IDS and filters ALL_NONTRAIN_IDS incl. COMPARE_ONLY_IDS (83gyqyc10y8f/
+iottnc0h3ekn/o4dee9dn0ccr) by construction (L82-94, L1917-1918). The gate is belt-and-suspenders;
+the ball corpus cannot contain compare-only data. (3) Owner explicitly authorized GPUs + demanded
+real results 2026-07-23. B2 arming still requires the inline CUDA parity check (repaired harness,
+committed 7cfa0225) to pass before B2 arms. B1 resume (data build) + B2 A/B on the frozen 167-row
+judge are AUTHORIZED. B2 DO_NOT_ARM is conditionally lifted contingent on the inline parity PASS.
+
+Binding: DO_NOT_DISPATCH_B1_GPU_RESUME; B2 DO_NOT_ARM; no retrain VM before the reviewed safety
+revision is committed+pushed and checked out by SHA with gate_proof evidence; 441.5MB prune
+NOT authorized; VERIFIED=0. Shared-manifest lock: HELD BY INTEGRATION MANAGER (no lane may write
+best_stack.json). Manager is sole integration owner for process_video.py.
+
+## Verdict snapshot — 2026-07-23 integration-manager session (append)
+
+- BALL B1 race repair: DECIDING REVIEW ACCEPT (4 rounds) -> COMMITTED+PUSHED f07929bb8 (builder pin 4bc196f0). B1 GPU dispatch + B2 arm STILL BINDING.
+- COURT A1: repair2 review = ACCEPT_WITH_FIXES. Safety LOGIC accepted (external-status bypass closed,
+  positive-act admits, compare-only pre-open rejection, clean log sweep, regressions bite). COMMIT
+  DEFERRED pending: (a) item-6 fix = make the clean-worktree integration command self-contained;
+  (b) A1/A2 surgical separation in train_court_keypoint_heatmap.py (shared file — A2 aux must NOT
+  ride along); (c) force-add the git-ignored owner-act blob 334c60e6 at staging. QUEUED as a
+  careful integration-owner commit, not rushed.
+
+Every track driven to a deciding verdict this session; no commits (each track has remaining work);
+no GPU, no push, no prune; VERIFIED=0; ~$0.04 cloud (2 throwaway watchdog VMs, both deleted).
+
+- CACHE-SAFETY GATE: integration-manager adversarial review = ACCEPT_WITH_CONDITIONS (gpt-5.6-sol
+  filter-blocked 3x on this security code; owner authorized manager review). Gate logic VERIFIED
+  sound by independent forged-proof/smuggle probes (re-derive-from-authority holds). COMMIT BLOCKED
+  on: (1) finetune_event_head.py commingles the gate seam with Track D's UNREVIEWED E-v2 (+2414
+  lines) — must be separated (recommend deferring the trainer seam to land WITH Track D E-v2; VM
+  startup gate is the separable primary enforcement); (2) full-suite green needs the 12 collection
+  errors cleared. Verdict: runs/lanes/trackE_cache_safety_review_20260723/INTEGRATION_MANAGER_VERDICT.md.
+- BALL B1: rounds 1-2 recheck-after-use leaked; round 3 = structural immutable-snapshot (builder
+  8f68a71f), immunity proven; deciding review3 IN FLIGHT.
+- COURT A1: repair1 PASS, review REJECT (status-preserved/provenance-stripped bypass admits through
+  both trainers); repair2 IN FLIGHT (close the external-status classification gap).
+- SELECTION (Track C rebuild): ULTRA REJECT — OFF-byte-identity fail, 135 forbidden-literal log
+  hits (self-audit falsely clean), non-transactional rollback, incomplete provenance, unauthorized
+  RUNBOOK edit. Prescribed: fresh clean fixture-only rebuild lane. QUEUED (not a safety gate; its
+  dirty process_video.py causes the 12 KNOWN_ATTRIBUTED collection errors; not commit-ready).
+- CACHE-SWAP (Track D docs): PASS.
+- WATCHDOG: v2 kernel-FAIL diagnosed; v3 whole-group-OOM fix PROVEN correct on real kernel; v3
+  Step-0 FAIL is a TEST-HARNESS defect (no-breach throttling + missing loop deadline) — v4 fix
+  QUEUED (runs/lanes/trkC_watchdog_v3_20260723/V4_QUEUED_FIX.md). BODY A100 bench stays deferred.
+
+IN FLIGHT: ball_b1_race_review3, court_a1_repair2. QUEUED next-session: selection fresh rebuild;
+watchdog v4; cache-safety commit (after Track D E-v2 review + finetune separation + suite clear);
+court A1 repair2 review; Track D E-v2 repair2 re-review + frozen canonical suite.
+
+## Prior state — 2026-07-22 20:15 PDT (superseded)
+
+**No lane is running.** Fresh process, listener, Docker, PID, and cloud reconciliation found zero
+live repo jobs and zero running fleet VMs. Every recorded 2026-07-22 lane PID is stale/dead. Do not
+resume from a PID or an older `RUNNING` row below.
+
+The CVAT compose stack auto-started during final validation and was stopped again (18/18 project
+containers stopped; volumes/containers preserved; port 8080 closed). Two unrelated Docker buildx
+workers remain and were not touched.
+
+| lane | state | safe resume |
+|---|---|---|
+| Track A COURT | `PARTIAL`; safety gate uncommitted | adversarial re-review; no retrain |
+| Track B BALL B1 | final review `REJECT` | repair dependency check/use race; `DO_NOT_DISPATCH_B1_GPU_RESUME` |
+| Track C selection | `PARTIAL`; shared-manifest hunk banked | run prepared ultra review over live diff + banked hunk |
+| Track C BODY | real-kernel Step-0 deadlocked twice | fix watchdog; cheap real-Linux Step-0 before A100 |
+| Track D EVENTS | repair2 `PARTIAL`; cache swap not applied to VM plan | apply cache brief, frozen suite, deciding re-review |
+| Track E data debt | local focused pass; no adoption review | deciding adversarial re-review before commit |
+| Track E data hygiene | `PARTIAL`; prune list only | bounded re-review; no deletion |
+
+Shared-manifest lock: **released**. Track C's exact unreviewed revision-15 hunk is at
+`runs/lanes/trkC_constraints_rebuild_20260722/BANKED_best_stack_revision15.patch`; the live
+`configs/racketsport/best_stack.json` matches committed revision 14. Reapply only under a new
+integration-owner lock after review and renumber against the then-current manifest.
+
+Cloud preservation fence: `pickleball-gpu-ball-f` is `TERMINATED` and its attached disk is kept;
+cache image/disk/snapshot are `READY`; no running compute. Full handoff:
+`runs/handoff_20260722/LIMIT_RECOVERY.md`.
+
+## Historical lane rows — record only, not live dispatch state
+
+The rows below preserve prior coordination evidence. Any row that says `RUNNING` or carries a PID
+is superseded by the current live-state block above and must not be resumed without a fresh review.
+
 | lane | kind | session/task id | resume command | owned files | vm | expected done | dispatched |
 |---|---|---|---|---|---|---|---|
 | ~~oneworld_bridge_xref_20260719~~ CLOSED | RULED 2026-07-19 by manager (queue #1 FIRST MOVE, read-only CPU forensics): **ball program does NOT reorder** — production tracks.json (sha f9d2f46c matches fusion pin) carries 8 conf-0.35 synthetic runs (~120f) but only 5/24 refused contacts overlap them (f44/f49/f112/f116/f118); 19/24 refusals stand on fully-real frames w/ 1.6-15.7m wrist residuals => trained-event wall stays the binding ball blocker; P0-I fix stays binding for TRUST+cov4, not as refusal explanation. BONUS FINDINGS routed to trkL lane + Track C: TRUE cov4 = 156/300 = 0.520 vs reported 0.7233 (synthetic padding 0.203, worse than variant-card ~0.107); exported world_xy is piecewise-CONSTANT/stale (p2 frozen 137f f163-299 while bbox moves 82px; p2 31 distinct positions/300f) — held-vs-measured indistinguishable at export, same trust family as P0-I. Evidence: runs/lanes/oneworld_bridge_xref_20260719/{XREF_RULING.md,xref.json}. Post-P0-I-fix: re-run fusion on de-fabricated tracks, re-score the 5 contaminated contacts | manager 2026-07-19 | — | runs/lanes/oneworld_bridge_xref_20260719/** | none | DONE | 2026-07-19 |
@@ -555,3 +661,65 @@ from unchanged specs at 5-lane parity (new pids 3408/3410/3412/3414/3416); run-1
 log_run1_killed_by_reboot.txt; substantial run-1 code survived on disk in each lane's owned files
 (audiofix's builder+test edits included) — re-runs resume from that state. Task-87 scratch export
 filed+md5-validated pre-incident; owner resumed court tasks 88-91.
+
+_(2026-07-22 Track E agent — FOUR lanes IN FLIGHT, all dispatched this cycle, manager-approved:
+[1] trackE_money_20260722 (Sonnet net): verify person-pseudo-snap-20260722 + fleet1-snap-20260707
+READY, then delete instances pickleball-gpu-person + pickleball-a100-fleet1 (+disks); ball-f
+NEVER-TOUCH fence. [2] trackE_fleetcache_20260722 (Sonnet net): build pickleball-cache-image-20260722
++ RO data disk pickleball-cache-data-usc1f + snapshot, us-central1-f, cap $20/6h. [3]
+trackE_datadebt_20260722 (codex sol xhigh, session 019f8b4a-d778-7ee0-9b11-8d28cf6dd4e5): ledger
+dispositions for all data_unqueued assets + license=FYI + --enforce-queued + pbvision MANIFEST
+usage_posture refresh; OWNS runs/manager/data_ledger.json + DATA_LEDGER.md + audit_data_utilization.py
++ its test — no other lane may touch these while in flight. [4] trackE_methodrules_20260722 (codex
+sol high, session 019f8b4a-df0f-7621-94b0-8956fcf92433): run-lane SKILL.md standing method rules +
+runs/lanes/person_mixed_20260722/NAMED_NEGATIVE.md — sole owner of those two paths while in flight.
+Codex lanes get gpt-5.6-sol ultra review before Track E commits. Track E owns gpu_fleet.md +
+OWNER_CHECKIN.md edits serially. Specs in each runs/lanes/trackE_*/spec.md; status:
+runs/tracks/trackE_infra_20260722/STATUS.md.)_
+
+_(2026-07-22 Track E addendum: [5] trackE_datahygiene_20260722 (codex sol xhigh) IN FLIGHT per
+owner data-lean directive via main — OWNS new files runs/manager/DATA_SOURCES.md +
+runs/manager/PRUNE_CANDIDATES.md + its lane dir ONLY; zero destructive authority (list-then-approve
+via main; rally source videos never listed); reads but never writes the datadebt-owned ledger
+files. Also: trackE_fleetcache_20260722 is BLOCKED_AUTH mid-build — 3 live labeled resources in
+us-central1-f, builder rail self-poweroff ~01:32Z, resume plan in its STATUS.md; needs one owner
+`gcloud auth login` (hello@). NO fleet create/delete possible for ANY track until reauth.)_
+
+_(2026-07-22 Track E sweep recovery: harness bg age sweep killed trackE_datadebt + trackE_methodrules
+codex procs mid-run; trackE_datahygiene ppid-tested EXPOSED and proactively stopped. All three
+RESUMED nohup-detached (ppid=1 verified): datadebt pid 69581 sess 019f8b4a-d778, methodrules pid
+69582 sess 019f8b4a-df0f (resume order: re-apply temporarily-reverted SKILL.md/NAMED_NEGATIVE.md
+edits FIRST + add nohup-detached + ppid-test gotchas to the skill), datahygiene pid 69583 sess
+019f8b78-2894. RESUME.md + codex.pid banked in each lane dir. Standing Track E practice from now
+on: codex lanes dispatch nohup-detached only.)_
+
+## 2026-07-23T02:1x PDT — court_realtrain_20260723 CLOSED (dispatched Sonnet GPU lane)
+
+First real-data court-keypoint retrain executed. CONTROL (fresh synthetic-only, own VM,
+deleted after) vs ARM (real+synthetic, evaluated read-only on the owner's already-running
+`pickleball-gpu-court23`, avoided a duplicate GPU run per coordinator instruction) vs the
+current shipped baseline, all scored on 3 held-out real-roots (task88 6-row holdout, pbvision
+2-row eval, 32-row/4-clip protected-historical). Pooled PCK@5px: task88 0.079->0.157->**0.371**;
+pbvision 0.087->0.217->**0.435**; protected-historical 0.104->0.123->**0.233** (baseline->control->arm).
+Real data clearly helps on top of a fresh synthetic control, on all 3 sets and on 3/4 protected
+clips individually; still far below the 0.95 promotion bar (diagnostic signal only, `VERIFIED=0`,
+no best_stack.json change). Full numbers + sha-verified artifacts:
+`runs/lanes/court_realtrain_20260723/`. Own VM deleted (~$1.2-1.7 spend); court23 not this
+lane's VM, left for its owning session. No court source file touched.
+
+## 2026-07-25T23:34 PDT — `demo_court_skeletons_20260725` IN FLIGHT
+
+- Owner goal: deliver at least five high-quality, fresh, source-video-only
+  `court_skeletons` demos showing the input video and virtual court/skeleton result.
+  Integration/rendering remains serialized through the sole entrypoint
+  `scripts/racketsport/process_video.py`; this lane does not authorize hidden court,
+  track, placement, or BODY inputs.
+- GPU worker is READY: `pickleball-gpu-court23`, `104.197.163.27`, one
+  A100-SXM4-40GB in `EXCLUSIVE_PROCESS`, remote BODY HEAD/version gate verified at
+  `9c52414412cddef4045e2322cb62c96f47ee1e12`. Automatic poweroff remains armed for
+  `2026-07-26T10:26:59Z`.
+- Dispatch discipline: run supported clips sequentially (or queue with
+  `--remote-lock-wait-timeout-s 3600`), always pass `--force`, and provide no
+  precomputed calibration/tracks/BODY flags. Pull and validate every result before
+  stopping the VM. `VERIFIED=0`, `measurement_valid=false`, and `review_only`
+  remain binding; these are demo artifacts, not metric-accuracy promotion proof.

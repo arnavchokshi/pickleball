@@ -64,6 +64,7 @@ class SolvePnPCorrespondences:
 
 
 COURT_UNET_V2_ARCHITECTURE = "court_unet_v2"
+COURT_UNET_V2_AUX_ARCHITECTURE = "court_unet_v2_aux"
 # 5-class combined line-family+surface segmentation head taxonomy (CAL-MODEL, 2026-07-05). Merged
 # from CAL-SYNTH's two separate targets (threed.racketsport.court_synth_stream:
 # LINE_FAMILY_CLASSES {other,pickleball_line,tennis_line,net} + SURFACE_CLASSES
@@ -251,8 +252,21 @@ def make_court_keypoint_heatmap_model(
 ) -> Any:
     if isinstance(keypoint_count, bool) or not isinstance(keypoint_count, int) or keypoint_count <= 0:
         raise ValueError("keypoint_count must be a positive integer")
-    if architecture not in {"encoder_decoder_v1", "local_conv_v1", COURT_UNET_V2_ARCHITECTURE}:
+    if architecture not in {
+        "encoder_decoder_v1",
+        "local_conv_v1",
+        COURT_UNET_V2_ARCHITECTURE,
+        COURT_UNET_V2_AUX_ARCHITECTURE,
+    }:
         raise ValueError("unsupported court keypoint heatmap architecture")
+    if architecture == COURT_UNET_V2_AUX_ARCHITECTURE:
+        expected_keypoint_count = len(ALL_PICKLEBALL_KEYPOINTS)
+        if keypoint_count != expected_keypoint_count:
+            raise ValueError(
+                f"{COURT_UNET_V2_AUX_ARCHITECTURE} requires exactly "
+                f"{expected_keypoint_count} keypoint channels"
+            )
+        return make_court_unet_v2_model(keypoint_count, encoder_weights_path=encoder_weights_path)
     if architecture == COURT_UNET_V2_ARCHITECTURE:
         return make_court_unet_v2_model(keypoint_count, encoder_weights_path=encoder_weights_path)
     import torch.nn as nn

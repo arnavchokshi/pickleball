@@ -18,6 +18,8 @@ draw_translucent_joint_avatar = MODULE["draw_translucent_joint_avatar"]
 stabilize_world_frames_for_presentation = MODULE["stabilize_world_frames_for_presentation"]
 stabilize_bboxes_for_presentation = MODULE["stabilize_bboxes_for_presentation"]
 center_joints_for_studio = MODULE["center_joints_for_studio"]
+center_mesh_for_studio = MODULE["center_mesh_for_studio"]
+draw_person_studio_panel = MODULE["draw_person_studio_panel"]
 studio_orbit_angle = MODULE["studio_orbit_angle"]
 tracked_person_crop_geometry = MODULE["tracked_person_crop_geometry"]
 fit_tracked_person_panel = MODULE["fit_tracked_person_panel"]
@@ -198,6 +200,107 @@ def test_body_local_centering_removes_court_xy_but_preserves_pose_and_height() -
         world[1:] - world[:-1],
         atol=5e-7,
     )
+
+
+def test_native_mesh_body_local_centering_preserves_exact_surface_pose() -> None:
+    rng = np.random.default_rng(29)
+    vertices = rng.normal(size=(18439, 3)).astype(np.float32)
+    joints = rng.normal(size=(70, 3)).astype(np.float32)
+    joints[9] = [3.0, -2.0, 0.82]
+    joints[10] = [3.2, -1.8, 0.86]
+    confidence = np.ones(70, dtype=np.float32)
+
+    centered = center_mesh_for_studio((vertices, joints, confidence))
+
+    assert centered is not None
+    local_vertices, local_joints, local_confidence = centered
+    assert np.allclose(local_joints[9:11, :2].mean(axis=0), 0.0, atol=5e-7)
+    assert np.allclose(local_vertices[:, 2], vertices[:, 2], atol=5e-7)
+    assert np.allclose(local_joints[:, 2], joints[:, 2], atol=5e-7)
+    assert np.allclose(
+        local_vertices[1:] - local_vertices[:-1],
+        vertices[1:] - vertices[:-1],
+        atol=5e-7,
+    )
+    assert np.array_equal(local_confidence, confidence)
+
+
+def test_native_mesh_studio_path_never_invokes_joint_avatar_proxy() -> None:
+    joints = np.zeros((70, 3), dtype=np.float32)
+    joints[:, 2] = 0.9
+    joints[9] = [-0.1, 0.0, 0.9]
+    joints[10] = [0.1, 0.0, 0.9]
+    vertices = np.asarray(
+        [[-0.2, 0.0, 0.0], [0.2, 0.0, 0.0], [0.0, 0.0, 1.7]],
+        dtype=np.float32,
+    )
+    faces = np.asarray([[0, 1, 2]], dtype=np.int32)
+    frame = WorldFrame(
+        joints_m=joints,
+        joint_conf=np.ones(70, dtype=np.float32),
+        mesh_player_id=1,
+    )
+    calls = {"mesh": 0, "avatar": 0}
+    globals_ = draw_person_studio_panel.__globals__
+    original_mesh = globals_["draw_translucent_mesh"]
+    original_avatar = globals_["draw_translucent_joint_avatar"]
+
+    def record_mesh(*args, **kwargs):
+        calls["mesh"] += 1
+
+    def record_avatar(*args, **kwargs):
+        calls["avatar"] += 1
+
+    globals_["draw_translucent_mesh"] = record_mesh
+    globals_["draw_translucent_joint_avatar"] = record_avatar
+    try:
+        draw_person_studio_panel(
+            640,
+            360,
+            frame,
+            1,
+            0.0,
+            mesh_sample=(vertices, joints, np.ones(70, dtype=np.float32)),
+            faces=faces,
+            require_native_mesh=True,
+        )
+    finally:
+        globals_["draw_translucent_mesh"] = original_mesh
+        globals_["draw_translucent_joint_avatar"] = original_avatar
+
+    assert calls == {"mesh": 1, "avatar": 0}
+
+
+def test_required_native_mesh_refuses_absent_or_invalid_surface() -> None:
+    joints = np.zeros((70, 3), dtype=np.float32)
+    joints[9] = [-0.1, 0.0, 0.9]
+    joints[10] = [0.1, 0.0, 0.9]
+    frame = WorldFrame(
+        joints_m=joints,
+        joint_conf=np.ones(70, dtype=np.float32),
+        mesh_player_id=1,
+    )
+    faces = np.asarray([[0, 1, 2]], dtype=np.int32)
+
+    with np.testing.assert_raises(ValueError):
+        draw_person_studio_panel(
+            640, 360, frame, 1, 0.0, faces=faces, require_native_mesh=True
+        )
+    with np.testing.assert_raises(ValueError):
+        draw_person_studio_panel(
+            640,
+            360,
+            frame,
+            1,
+            0.0,
+            mesh_sample=(
+                np.zeros((3, 2), dtype=np.float32),
+                joints,
+                np.ones(70, dtype=np.float32),
+            ),
+            faces=faces,
+            require_native_mesh=True,
+        )
 
 
 def test_tracked_bbox_stabilization_preserves_keys_gaps_and_raw_boxes() -> None:

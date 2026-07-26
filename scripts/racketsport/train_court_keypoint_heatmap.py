@@ -33,6 +33,10 @@ if str(ROOT) not in sys.path:
 from threed.racketsport.court_calibration import homography_from_planar_points, project_planar_points
 from threed.racketsport.court_keypoint_geometric_loss import court_geometric_consistency_loss
 from threed.racketsport.court_keypoint_net import (
+    ALL_PICKLEBALL_KEYPOINTS,
+    AUX_PICKLEBALL_KEYPOINTS,
+    COURT_UNET_V2_AUX_ARCHITECTURE,
+    COURT_UNET_V2_HEATMAP_STRIDE,
     PICKLEBALL_KEYPOINT_BY_NAME,
     PICKLEBALL_KEYPOINTS,
     court_keypoint_heatmap_loss,
@@ -42,6 +46,7 @@ from threed.racketsport.court_keypoint_net import (
     make_court_keypoint_heatmap_model,
     refine_keypoint_xy_with_planar_homography,
 )
+from threed.racketsport.court_synth_stream import iter_synthetic_court_samples
 from threed.racketsport.court_keypoint_lines import (
     COURT_LINE_FAMILIES,
     fit_court_lines_from_masks,
@@ -79,6 +84,189 @@ ACCEPTED_ITEM_STATUSES = {
     SYNTHETIC_STATUS,
     EXTERNAL_DATASET_STATUS,
 }
+
+
+def resolve_keypoint_training_contract(*, aux_keypoints: bool, line_segmentation: bool) -> dict[str, Any]:
+    """Resolve the flag-gated channel and network contract without constructing a model.
+
+    The canonical tuple remains the public 15-channel contract.  The auxiliary architecture is
+    deliberately a separate, dormant checkpoint family whose channel order is canonical-first;
+    production ``court_model_infer`` continues to accept only ``court_unet_v2`` checkpoints.
+    """
+
+    if aux_keypoints and line_segmentation:
+        raise ValueError("--aux-keypoints cannot be combined with line_segmentation_intersection_v1")
+    if line_segmentation:
+        return {
+            "aux_keypoints": False,
+            "keypoint_names": tuple(point.name for point in PICKLEBALL_KEYPOINTS),
+            "network_architecture": "local_conv_v1",
+            "heatmap_stride": 1,
+            "canonical_keypoint_count": len(PICKLEBALL_KEYPOINTS),
+            "aux_keypoint_count": 0,
+        }
+    if not aux_keypoints:
+        return {
+            "aux_keypoints": False,
+            "keypoint_names": tuple(point.name for point in PICKLEBALL_KEYPOINTS),
+            "network_architecture": "encoder_decoder_v1",
+            "heatmap_stride": 1,
+            "canonical_keypoint_count": len(PICKLEBALL_KEYPOINTS),
+            "aux_keypoint_count": 0,
+        }
+
+    canonical_names = tuple(point.name for point in PICKLEBALL_KEYPOINTS)
+    aux_names = tuple(point.name for point in AUX_PICKLEBALL_KEYPOINTS)
+    all_names = tuple(point.name for point in ALL_PICKLEBALL_KEYPOINTS)
+    if all_names[: len(canonical_names)] != canonical_names or all_names[len(canonical_names) :] != aux_names:
+        raise RuntimeError("ALL_PICKLEBALL_KEYPOINTS must preserve canonical-first channel order")
+    if len(all_names) != 33:
+        raise RuntimeError(f"auxiliary court architecture requires 33 channels, got {len(all_names)}")
+    return {
+        "aux_keypoints": True,
+        "keypoint_names": all_names,
+        "network_architecture": COURT_UNET_V2_AUX_ARCHITECTURE,
+        "heatmap_stride": COURT_UNET_V2_HEATMAP_STRIDE,
+        "canonical_keypoint_count": len(canonical_names),
+        "aux_keypoint_count": len(aux_names),
+    }
+
+
+def keypoint_checkpoint_metadata(contract: dict[str, Any]) -> dict[str, Any]:
+    """Checkpoint/report metadata shared by the save path and focused contract tests."""
+
+    return {
+        "aux_keypoints": bool(contract["aux_keypoints"]),
+        "canonical_keypoint_count": int(contract["canonical_keypoint_count"]),
+        "aux_keypoint_count": int(contract["aux_keypoint_count"]),
+        "heatmap_stride": int(contract["heatmap_stride"]),
+    }
+
+
+def aux_synthetic_stream_config(*, width: int, height: int, sigma: float) -> dict[str, Any]:
+    """Build the dormant aux stream config from trainer arguments.
+
+    Keeping this as a pure helper makes it explicit that ``--sigma`` controls synthetic and
+    real auxiliary heatmap targets alike.  The helper is called only in the flag-on branch.
+    """
+
+    return {
+        "image_size": [width, height],
+        "aux_keypoints": True,
+        "paint_texture_randomization": True,
+        "aux_partial_visibility": True,
+        "heatmap_sigma_px": float(sigma),
+    }
+
+
+def legacy_training_image_tensor(
+    image_rgb: Any,
+    *,
+    width: int,
+    height: int,
+    np: Any,
+    torch: Any,
+) -> Any:
+    """The pre-existing PIL-resize training transform, exposed for a stamped parity test.
+
+    PIL's default RGB resize kernel is intentionally retained.  It differs from production's
+    OpenCV INTER_AREA resize for non-native-size inputs; changing it would violate flag-off
+    checkpoint reproducibility, so the acceptance artifact records that deterministic mapping.
+    """
+
+    resized = image_rgb.resize((width, height))
+    arr = np.asarray(resized, dtype=np.float32) / 255.0
+    return torch.from_numpy(arr).permute(2, 0, 1)
+
+
+def aux_training_image_tensor(
+    image_bgr: Any,
+    *,
+    width: int,
+    height: int,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+) -> Any:
+    """The auxiliary dataloader image transform, numerically identical to production inference."""
+
+    if image_bgr is None or getattr(image_bgr, "ndim", None) != 3 or image_bgr.shape[2] != 3:
+        raise ValueError("image_bgr must be an HxWx3 array")
+    resized_bgr = cv2.resize(np.asarray(image_bgr), (width, height), interpolation=cv2.INTER_AREA)
+    resized_rgb = cv2.cvtColor(resized_bgr, cv2.COLOR_BGR2RGB)
+    arr = resized_rgb.astype(np.float32) / 255.0
+    return torch.from_numpy(arr).permute(2, 0, 1)
+
+
+def aux_synthetic_sample_training_tensors(
+    sample: dict[str, Any],
+    *,
+    width: int,
+    height: int,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+) -> tuple[Any, Any, Any]:
+    """Convert the flag-on stream contract into one image/heatmap/mask tensor triple."""
+
+    contract = resolve_keypoint_training_contract(aux_keypoints=True, line_segmentation=False)
+    keypoint_count = len(contract["keypoint_names"])
+    stride = int(contract["heatmap_stride"])
+
+    image = aux_training_image_tensor(
+        sample["image_bgr"], width=width, height=height, cv2=cv2, np=np, torch=torch
+    )
+    heatmaps = np.asarray(sample["keypoint_heatmaps"], dtype=np.float32)
+    expected_shape = (
+        keypoint_count,
+        (height + stride - 1) // stride,
+        (width + stride - 1) // stride,
+    )
+    if heatmaps.shape != expected_shape:
+        raise ValueError(f"aux keypoint_heatmaps must have shape {expected_shape}, got {heatmaps.shape}")
+    mask = np.asarray(sample["keypoint_heatmap_mask"], dtype=np.float32)
+    if mask.shape == (keypoint_count,):
+        mask = np.broadcast_to(mask[:, None, None], heatmaps.shape).copy()
+    if mask.shape != heatmaps.shape:
+        raise ValueError(f"aux keypoint_heatmap_mask must have shape {(keypoint_count,)} or {heatmaps.shape}")
+    return image, torch.from_numpy(heatmaps), torch.from_numpy(mask)
+
+
+def aux_real_sample_training_tensors(
+    image_bgr: Any,
+    points_source_px: dict[str, list[float] | tuple[float, float]],
+    *,
+    source_width: float,
+    source_height: float,
+    width: int,
+    height: int,
+    sigma: float,
+    cv2: Any,
+    np: Any,
+    torch: Any,
+) -> tuple[Any, Any, Any]:
+    """Build a real-row auxiliary batch item; absent aux labels remain wholly unsupervised."""
+
+    contract = resolve_keypoint_training_contract(aux_keypoints=True, line_segmentation=False)
+    stride = int(contract["heatmap_stride"])
+    image = aux_training_image_tensor(image_bgr, width=width, height=height, cv2=cv2, np=np, torch=torch)
+    head_width = (width + stride - 1) // stride
+    head_height = (height + stride - 1) // stride
+    points_head = {
+        name: [
+            float(xy[0]) * width / float(source_width) / stride,
+            float(xy[1]) * height / float(source_height) / stride,
+        ]
+        for name, xy in points_source_px.items()
+    }
+    heatmaps, mask = heatmaps_for_points(
+        points_head,
+        list(contract["keypoint_names"]),
+        head_width,
+        head_height,
+        sigma=sigma,
+    )
+    return image, torch.from_numpy(heatmaps), torch.from_numpy(mask)
 
 
 def court_corner_keypoint_labels(payload: dict[str, Any], *, clip_root: Path | None = None) -> dict[str, Any]:
@@ -827,6 +1015,63 @@ def _random_quad(width: int, height: int, rng: random.Random) -> list[tuple[floa
     return [near_left, near_right, far_right, far_left]
 
 
+def legacy_synthetic_training_sample(
+    *,
+    width: int,
+    height: int,
+    sigma: float,
+    line_width: int,
+    use_line_segmentation: bool,
+    rng: random.Random,
+    np: Any,
+    torch: Any,
+    image_module: Any,
+    image_draw_module: Any,
+) -> tuple[Any, Any, Any]:
+    """Build one pre-A2 synthetic trainer item without changing its RNG or tensor mapping.
+
+    This is the legacy flag-off body formerly nested inside ``run_training``. Keeping it as a
+    named helper lets the byte-level acceptance test stamp the tensors that actually enter the
+    dataloader while the training loop continues to consume the identical implementation.
+    """
+
+    quad = _random_quad(width, height, rng)
+    image = image_module.new("RGB", (width, height), tuple(rng.randint(35, 90) for _ in range(3)))
+    draw = image_draw_module.Draw(image)
+    points = {
+        point.name: _bilinear((point.world_xyz_m[0], point.world_xyz_m[1]), quad)
+        for point in PICKLEBALL_KEYPOINTS
+    }
+    line_color = tuple(rng.randint(170, 255) for _ in range(3))
+    for a, b in (
+        ("near_left_corner", "near_right_corner"),
+        ("near_right_corner", "far_right_corner"),
+        ("far_right_corner", "far_left_corner"),
+        ("far_left_corner", "near_left_corner"),
+        ("near_nvz_left", "near_nvz_right"),
+        ("far_nvz_left", "far_nvz_right"),
+        ("net_left_sideline", "net_right_sideline"),
+        ("near_baseline_center", "far_baseline_center"),
+    ):
+        draw.line([points[a], points[b]], fill=line_color, width=rng.randint(1, 3))
+    arr = np.asarray(image, dtype=np.float32) / 255.0
+    if use_line_segmentation:
+        target, mask = line_masks_for_points(points, width, height, line_width=line_width)
+    else:
+        target, mask = heatmaps_for_points(
+            points,
+            [point.name for point in PICKLEBALL_KEYPOINTS],
+            width,
+            height,
+            sigma=sigma,
+        )
+    return (
+        torch.from_numpy(arr).permute(2, 0, 1),
+        torch.from_numpy(target),
+        torch.from_numpy(mask),
+    )
+
+
 def predict_source_keypoints(
     model: Any,
     row: dict[str, Any],
@@ -840,6 +1085,8 @@ def predict_source_keypoints(
     height: int,
     keypoint_names: list[str],
     use_homography_refinement: bool = False,
+    heatmap_stride: int = 1,
+    production_preprocessing: bool = False,
 ) -> dict[str, list[float]]:
     """Run the model on one labeled row, returning predicted keypoints in source-video pixel
     space. This is the single-frame prediction primitive shared by training-time evaluation
@@ -849,20 +1096,45 @@ def predict_source_keypoints(
     """
     image = load_label_image(row, cv2=cv2, image_module=image_module)
     label_w, label_h = _label_coordinate_size(row, fallback_size=image.size)
-    resized = image.resize((width, height))
-    arr = np.asarray(resized, dtype=np.float32) / 255.0
-    tensor = torch.from_numpy(arr).permute(2, 0, 1).unsqueeze(0).to(device)
+    if production_preprocessing:
+        image_rgb = np.asarray(image, dtype=np.uint8)
+        image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+        image_tensor = aux_training_image_tensor(
+            image_bgr,
+            width=width,
+            height=height,
+            cv2=cv2,
+            np=np,
+            torch=torch,
+        )
+    else:
+        # Preserve the legacy PIL resize path byte-for-byte unless an auxiliary checkpoint
+        # explicitly opts into the production OpenCV preprocessor.
+        image_tensor = legacy_training_image_tensor(
+            image, width=width, height=height, np=np, torch=torch
+        )
+    tensor = image_tensor.unsqueeze(0).to(device)
     with torch.no_grad():
         pred = court_keypoint_probabilities(_keypoint_heatmap_logits(model(tensor))).detach().cpu()[0]
     sx, sy = width / label_w, height / label_h
     predicted_source_points: dict[str, list[float]] = {}
     for name in row["keypoints"]:
         idx = keypoint_names.index(name)
-        flat = int(pred[idx].argmax())
-        py, px = divmod(flat, width)
-        predicted_source_points[name] = [px / sx, py / sy]
+        if heatmap_stride == 1:
+            flat = int(pred[idx].argmax())
+            py, px = divmod(flat, width)
+            predicted_source_points[name] = [px / sx, py / sy]
+        else:
+            decoded = decode_subpixel_heatmap(pred[idx].tolist())
+            predicted_source_points[name] = [
+                decoded.x * heatmap_stride / sx,
+                decoded.y * heatmap_stride / sy,
+            ]
     if use_homography_refinement:
-        predicted_source_points = refine_keypoint_xy_with_planar_homography(predicted_source_points)
+        # The planar refiner intentionally knows only the canonical 15-point taxonomy. Preserve
+        # raw auxiliary predictions while replacing just the canonical subset it can refine.
+        refined_canonical = refine_keypoint_xy_with_planar_homography(predicted_source_points)
+        predicted_source_points = {**predicted_source_points, **refined_canonical}
     return predicted_source_points
 
 
@@ -939,6 +1211,8 @@ def aggregate_static_camera_predictions(
     height: int,
     keypoint_names: list[str],
     use_homography_refinement: bool = False,
+    heatmap_stride: int = 1,
+    production_preprocessing: bool = False,
 ) -> dict[str, dict[str, list[float]]]:
     """Per-clip median of per-frame model predictions -- the CAL static-camera aggregation
     policy (`NORTH_STAR_ROADMAP.md`, "Gate ladder" section).
@@ -970,6 +1244,8 @@ def aggregate_static_camera_predictions(
             height=height,
             keypoint_names=keypoint_names,
             use_homography_refinement=use_homography_refinement,
+            heatmap_stride=heatmap_stride,
+            production_preprocessing=production_preprocessing,
         )
         clip_predictions = by_clip.setdefault(clip, {name: [] for name in keypoint_names})
         for name, xy in predicted.items():
@@ -1077,6 +1353,13 @@ def evaluate_checkpoint_against_real_labels(
 
     payload = load_court_keypoint_checkpoint(checkpoint_path, device=device)
     model, keypoint_names, model_width, model_height = build_model_from_checkpoint(payload, device=device)
+    network_architecture = str(
+        payload.get("network_architecture", payload.get("model_architecture", "encoder_decoder_v1"))
+    )
+    heatmap_stride = (
+        COURT_UNET_V2_HEATMAP_STRIDE if network_architecture == COURT_UNET_V2_AUX_ARCHITECTURE else 1
+    )
+    aux_checkpoint = network_architecture == COURT_UNET_V2_AUX_ARCHITECTURE
 
     raw_predictions: list[dict[str, list[float]]] = [
         predict_source_keypoints(
@@ -1091,6 +1374,8 @@ def evaluate_checkpoint_against_real_labels(
             height=model_height,
             keypoint_names=keypoint_names,
             use_homography_refinement=use_homography_refinement,
+            heatmap_stride=heatmap_stride,
+            production_preprocessing=aux_checkpoint,
         )
         for row in rows
     ]
@@ -1106,46 +1391,84 @@ def evaluate_checkpoint_against_real_labels(
         height=model_height,
         keypoint_names=keypoint_names,
         use_homography_refinement=use_homography_refinement,
+        heatmap_stride=heatmap_stride,
+        production_preprocessing=aux_checkpoint,
     )
 
     def _row_errors(row: dict[str, Any], predicted: dict[str, list[float]]) -> list[float]:
-        errors: list[float] = []
+        return [error for _, error in _row_named_errors(row, predicted)]
+
+    def _row_named_errors(
+        row: dict[str, Any], predicted: dict[str, list[float]]
+    ) -> list[tuple[str, float]]:
+        errors: list[tuple[str, float]] = []
         for name, xy in row["keypoints"].items():
             if name not in predicted:
                 continue
             px, py = predicted[name]
-            errors.append(math.hypot(px - xy[0], py - xy[1]))
+            errors.append((name, math.hypot(px - xy[0], py - xy[1])))
         return errors
 
     def _summarize(selected_indices: list[int], *, aggregated: bool) -> dict[str, Any]:
         errors: list[float] = []
+        canonical_errors: list[float] = []
+        aux_errors: list[float] = []
         by_clip: dict[str, list[float]] = {}
+        canonical_by_clip: dict[str, list[float]] = {}
         per_row: list[dict[str, Any]] = []
         for index in selected_indices:
             row = rows[index]
             clip = str(row.get("clip") or "unknown")
             predicted = aggregated_by_clip.get(clip, {}) if aggregated else raw_predictions[index]
-            row_errors = _row_errors(row, predicted) if predicted else []
+            named_errors = _row_named_errors(row, predicted) if predicted else []
+            row_errors = [error for _, error in named_errors]
+            row_canonical_errors = [
+                error for name, error in named_errors if name in PICKLEBALL_KEYPOINT_BY_NAME
+            ]
+            row_aux_errors = [
+                error for name, error in named_errors if name not in PICKLEBALL_KEYPOINT_BY_NAME
+            ]
+            canonical_errors.extend(row_canonical_errors)
+            aux_errors.extend(row_aux_errors)
             errors.extend(row_errors)
             by_clip.setdefault(clip, []).extend(row_errors)
+            canonical_by_clip.setdefault(clip, []).extend(row_canonical_errors)
+            row_gate_errors = row_canonical_errors if aux_checkpoint else row_errors
             per_row.append(
                 {
                     "row_index": index,
                     "clip": clip,
                     "frame_index": row.get("frame_index"),
-                    "keypoint_count": len(row_errors),
-                    "keypoint_error_summary": _error_summary(row_errors),
-                    "pck_at_5px": _pck_at_threshold(row_errors, pck_threshold_px),
+                    "keypoint_count": len(row_gate_errors),
+                    "keypoint_error_summary": _error_summary(row_gate_errors),
+                    "pck_at_5px": _pck_at_threshold(row_gate_errors, pck_threshold_px),
+                    **(
+                        {"combined_keypoints": _pck_error_summary(row_errors, pck_threshold_px)}
+                        if aux_checkpoint
+                        else {}
+                    ),
                 }
             )
+        gate_errors = canonical_errors if aux_checkpoint else errors
+        gate_by_clip = canonical_by_clip if aux_checkpoint else by_clip
         return {
             "mode": "aggregated_static_camera_median" if aggregated else "raw_per_frame",
             "frame_count": len(selected_indices),
-            "keypoint_error_summary": _error_summary(errors),
-            "pck_at_5px": _pck_at_threshold(errors, pck_threshold_px),
+            "keypoint_error_summary": _error_summary(gate_errors),
+            "pck_at_5px": _pck_at_threshold(gate_errors, pck_threshold_px),
+            **(
+                {
+                    "canonical_keypoints": _pck_error_summary(canonical_errors, pck_threshold_px),
+                    "aux_keypoints": _pck_error_summary(aux_errors, pck_threshold_px),
+                    "combined_keypoints": _pck_error_summary(errors, pck_threshold_px),
+                }
+                if aux_checkpoint
+                else {}
+            ),
             "per_row": per_row,
             "per_clip": {
-                clip: _pck_error_summary(clip_errors, pck_threshold_px) for clip, clip_errors in sorted(by_clip.items())
+                clip: _pck_error_summary(clip_errors, pck_threshold_px)
+                for clip, clip_errors in sorted(gate_by_clip.items())
             },
         }
 
@@ -1297,12 +1620,18 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     from PIL import Image, ImageDraw
     import torch
 
-    keypoint_names = [point.name for point in PICKLEBALL_KEYPOINTS]
     width, height = args.image_width, args.image_height
     model_architecture = str(getattr(args, "model_architecture", "keypoint_heatmap_v1"))
     if model_architecture not in {"keypoint_heatmap_v1", "line_segmentation_intersection_v1"}:
         raise ValueError("model_architecture must be keypoint_heatmap_v1 or line_segmentation_intersection_v1")
     use_line_segmentation = model_architecture == "line_segmentation_intersection_v1"
+    aux_keypoints = bool(getattr(args, "aux_keypoints", False))
+    training_contract = resolve_keypoint_training_contract(
+        aux_keypoints=aux_keypoints,
+        line_segmentation=use_line_segmentation,
+    )
+    keypoint_names = list(training_contract["keypoint_names"])
+    heatmap_stride = int(training_contract["heatmap_stride"])
     round3_input_resolution = (
         validate_round3_input_resolution(width, height, patch_size=getattr(args, "patch_size", None))
         if use_line_segmentation
@@ -1357,36 +1686,50 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         ),
     }
 
+    aux_synthetic_samples = (
+        iter_synthetic_court_samples(
+            aux_synthetic_stream_config(width=width, height=height, sigma=args.sigma),
+            seed=args.seed,
+        )
+        if aux_keypoints
+        else None
+    )
+
     def synthetic_batch(batch_size: int) -> tuple[Any, Any, Any]:
+        if aux_keypoints:
+            assert aux_synthetic_samples is not None
+            images, targets, masks = [], [], []
+            for _ in range(batch_size):
+                image, target, mask = aux_synthetic_sample_training_tensors(
+                    next(aux_synthetic_samples),
+                    width=width,
+                    height=height,
+                    cv2=cv2,
+                    np=np,
+                    torch=torch,
+                )
+                images.append(image)
+                targets.append(target)
+                masks.append(mask)
+            return torch.stack(images), torch.stack(targets), torch.stack(masks)
+
         images, targets, masks = [], [], []
         for _ in range(batch_size):
-            quad = _random_quad(width, height, rng)
-            image = Image.new("RGB", (width, height), tuple(rng.randint(35, 90) for _ in range(3)))
-            draw = ImageDraw.Draw(image)
-            points = {
-                point.name: _bilinear((point.world_xyz_m[0], point.world_xyz_m[1]), quad)
-                for point in PICKLEBALL_KEYPOINTS
-            }
-            line_color = tuple(rng.randint(170, 255) for _ in range(3))
-            for a, b in (
-                ("near_left_corner", "near_right_corner"),
-                ("near_right_corner", "far_right_corner"),
-                ("far_right_corner", "far_left_corner"),
-                ("far_left_corner", "near_left_corner"),
-                ("near_nvz_left", "near_nvz_right"),
-                ("far_nvz_left", "far_nvz_right"),
-                ("net_left_sideline", "net_right_sideline"),
-                ("near_baseline_center", "far_baseline_center"),
-            ):
-                draw.line([points[a], points[b]], fill=line_color, width=rng.randint(1, 3))
-            arr = np.asarray(image, dtype=np.float32) / 255.0
-            if use_line_segmentation:
-                target, mask = line_masks_for_points(points, width, height, line_width=line_width)
-            else:
-                target, mask = heatmaps_for_points(points, keypoint_names, width, height, sigma=args.sigma)
-            images.append(torch.from_numpy(arr).permute(2, 0, 1))
-            targets.append(torch.from_numpy(target))
-            masks.append(torch.from_numpy(mask))
+            image, target, mask = legacy_synthetic_training_sample(
+                width=width,
+                height=height,
+                sigma=args.sigma,
+                line_width=line_width,
+                use_line_segmentation=use_line_segmentation,
+                rng=rng,
+                np=np,
+                torch=torch,
+                image_module=Image,
+                image_draw_module=ImageDraw,
+            )
+            images.append(image)
+            targets.append(target)
+            masks.append(mask)
         return torch.stack(images), torch.stack(targets), torch.stack(masks)
 
     def real_batch(rows: list[dict[str, Any]]) -> tuple[Any, Any, Any] | None:
@@ -1396,17 +1739,36 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         for row in rows:
             image = load_label_image(row, cv2=cv2, image_module=Image)
             label_w, label_h = _label_coordinate_size(row, fallback_size=image.size)
-            image = image.resize((width, height))
+            if aux_keypoints:
+                image_rgb = np.asarray(image, dtype=np.uint8)
+                image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
+                image_tensor, target_tensor, mask_tensor = aux_real_sample_training_tensors(
+                    image_bgr,
+                    row["keypoints"],
+                    source_width=label_w,
+                    source_height=label_h,
+                    width=width,
+                    height=height,
+                    sigma=args.sigma,
+                    cv2=cv2,
+                    np=np,
+                    torch=torch,
+                )
+                images.append(image_tensor)
+                targets.append(target_tensor)
+                masks.append(mask_tensor)
+                continue
             scaled = {
                 name: [xy[0] * width / label_w, xy[1] * height / label_h]
                 for name, xy in row["keypoints"].items()
             }
-            arr = np.asarray(image, dtype=np.float32) / 255.0
             if use_line_segmentation:
                 target, mask = line_masks_for_points(scaled, width, height, line_width=line_width)
             else:
                 target, mask = heatmaps_for_points(scaled, keypoint_names, width, height, sigma=args.sigma)
-            images.append(torch.from_numpy(arr).permute(2, 0, 1))
+            images.append(
+                legacy_training_image_tensor(image, width=width, height=height, np=np, torch=torch)
+            )
             targets.append(torch.from_numpy(target))
             masks.append(torch.from_numpy(mask))
         return torch.stack(images), torch.stack(targets), torch.stack(masks)
@@ -1437,6 +1799,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             height=height,
             keypoint_names=keypoint_names,
             use_homography_refinement=use_homography_refinement,
+            heatmap_stride=heatmap_stride,
+            production_preprocessing=aux_keypoints,
         )
 
     def aggregate_static_camera_points(rows: list[dict[str, Any]]) -> dict[str, dict[str, list[float]]]:
@@ -1455,6 +1819,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             height=height,
             keypoint_names=keypoint_names,
             use_homography_refinement=use_homography_refinement,
+            heatmap_stride=heatmap_stride,
+            production_preprocessing=aux_keypoints,
         )
 
     def evaluate(
@@ -1467,8 +1833,14 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         model.eval()
         real_model_input_errors: list[float] = []
         real_source_errors: list[float] = []
+        real_canonical_errors: list[float] = []
+        real_aux_errors: list[float] = []
+        real_canonical_model_input_errors: list[float] = []
         real_source_errors_by_clip: dict[str, list[float]] = {}
+        real_canonical_errors_by_clip: dict[str, list[float]] = {}
         synthetic_errors: list[float] = []
+        synthetic_canonical_errors: list[float] = []
+        synthetic_aux_errors: list[float] = []
         line_fit_rms_values: list[float] = []
         homography_self_consistency_medians: list[float] = []
         static_aggregate = aggregate_static_camera_points(aggregation_rows) if aggregation_rows and not use_line_segmentation else None
@@ -1508,27 +1880,64 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                     if name not in predicted_source_points:
                         continue
                     source_x, source_y = predicted_source_points[name]
-                    real_model_input_errors.append(math.hypot(source_x * sx - xy[0] * sx, source_y * sy - xy[1] * sy))
+                    model_input_error = math.hypot(
+                        source_x * sx - xy[0] * sx,
+                        source_y * sy - xy[1] * sy,
+                    )
+                    real_model_input_errors.append(model_input_error)
                     source_error = math.hypot(source_x - xy[0], source_y - xy[1])
                     real_source_errors.append(source_error)
+                    if name in PICKLEBALL_KEYPOINT_BY_NAME:
+                        real_canonical_errors.append(source_error)
+                        real_canonical_model_input_errors.append(model_input_error)
+                        real_canonical_errors_by_clip.setdefault(
+                            str(row.get("clip") or "unknown"), []
+                        ).append(source_error)
+                    else:
+                        real_aux_errors.append(source_error)
                     real_source_errors_by_clip.setdefault(str(row.get("clip") or "unknown"), []).append(source_error)
             for _ in range(0 if use_line_segmentation else synthetic_batches):
-                x, target, _ = synthetic_batch(args.batch_size)
+                x, target, target_mask = synthetic_batch(args.batch_size)
                 pred = court_keypoint_probabilities(_keypoint_heatmap_logits(model(x.to(device)))).detach().cpu()
                 for batch_i in range(pred.shape[0]):
                     for idx in range(pred.shape[1]):
+                        if aux_keypoints and float(target_mask[batch_i, idx].amax()) <= 0.0:
+                            continue
                         pred_flat = int(pred[batch_i, idx].argmax())
                         target_flat = int(target[batch_i, idx].argmax())
-                        py, px = divmod(pred_flat, width)
-                        ty, tx = divmod(target_flat, width)
-                        synthetic_errors.append(math.hypot(px - tx, py - ty))
-        real_model_input_summary = _error_summary(real_model_input_errors)
-        real_source_summary = _error_summary(real_source_errors)
+                        if aux_keypoints:
+                            head_width = int(pred.shape[-1])
+                            py, px = divmod(pred_flat, head_width)
+                            ty, tx = divmod(target_flat, head_width)
+                            error = math.hypot(
+                                (px - tx) * heatmap_stride,
+                                (py - ty) * heatmap_stride,
+                            )
+                            synthetic_errors.append(error)
+                            if idx < len(PICKLEBALL_KEYPOINTS):
+                                synthetic_canonical_errors.append(error)
+                            else:
+                                synthetic_aux_errors.append(error)
+                        else:
+                            py, px = divmod(pred_flat, width)
+                            ty, tx = divmod(target_flat, width)
+                            error = math.hypot(px - tx, py - ty)
+                            synthetic_errors.append(error)
+                            synthetic_canonical_errors.append(error)
+        real_gate_model_input_errors = (
+            real_canonical_model_input_errors if aux_keypoints else real_model_input_errors
+        )
+        real_gate_source_errors = real_canonical_errors if aux_keypoints else real_source_errors
+        real_gate_source_errors_by_clip = (
+            real_canonical_errors_by_clip if aux_keypoints else real_source_errors_by_clip
+        )
+        real_model_input_summary = _error_summary(real_gate_model_input_errors)
+        real_source_summary = _error_summary(real_gate_source_errors)
         synthetic_summary = _error_summary(synthetic_errors)
-        real_source_pck_at_5 = _pck_at_threshold(real_source_errors, 5.0)
+        real_source_pck_at_5 = _pck_at_threshold(real_gate_source_errors, 5.0)
         real_source_pck_per_clip = {
             clip: _pck_error_summary(errors, 5.0)
-            for clip, errors in sorted(real_source_errors_by_clip.items())
+            for clip, errors in sorted(real_gate_source_errors_by_clip.items())
         }
         return {
             "real_metric_coordinate_space": "source_video_pixels",
@@ -1562,10 +1971,27 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "real_keypoint_median_model_input_px": real_model_input_summary["median"],
             "real_keypoint_p95_model_input_px": real_model_input_summary["p95"],
             "real_keypoint_max_model_input_px": real_model_input_summary["max"],
+            **(
+                {
+                    "real_canonical_keypoints": _pck_error_summary(real_canonical_errors, 5.0),
+                    "real_aux_keypoints": _pck_error_summary(real_aux_errors, 5.0),
+                    "real_combined_keypoints": _pck_error_summary(real_source_errors, 5.0),
+                }
+                if aux_keypoints
+                else {}
+            ),
             "synthetic_mean_px": synthetic_summary["mean"],
             "synthetic_median_px": synthetic_summary["median"],
             "synthetic_p95_px": synthetic_summary["p95"],
             "synthetic_count": synthetic_summary["count"],
+            **(
+                {
+                    "synthetic_canonical_keypoints": _pck_error_summary(synthetic_canonical_errors, 5.0),
+                    "synthetic_aux_keypoints": _pck_error_summary(synthetic_aux_errors, 5.0),
+                }
+                if aux_keypoints
+                else {}
+            ),
             "prediction_mode": "line_segmentation_intersection" if use_line_segmentation else "keypoint_heatmap_argmax",
             "line_fit_rms_px": _error_summary(line_fit_rms_values) if use_line_segmentation else None,
             "homography_self_consistency_px": {
@@ -1578,7 +2004,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         }
 
     output_count = len(line_names) if use_line_segmentation else len(keypoint_names)
-    net_architecture = "local_conv_v1" if use_line_segmentation else "encoder_decoder_v1"
+    net_architecture = str(training_contract["network_architecture"])
     model = make_court_keypoint_heatmap_model(output_count, architecture=net_architecture).to(device)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     # EVAL INTEGRITY: aggregation_rows must be the held-out rows themselves, never train_real.
@@ -1631,7 +2057,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
                 mask = torch.cat([mask, rm], dim=0)
         x, y, mask = x.to(device), y.to(device), mask.to(device)
         optimizer.zero_grad()
-        logits = model(x)
+        model_output = model(x)
+        logits = _keypoint_heatmap_logits(model_output) if aux_keypoints else model_output
         if use_line_segmentation:
             import torch.nn.functional as F
 
@@ -1643,11 +2070,12 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
         if geometric_loss_weight > 0.0 and use_line_segmentation:
             raise ValueError("--geometric-loss-weight is only valid for keypoint_heatmap_v1")
         if geometric_loss_weight > 0.0:
+            geometric_logits = logits[:, : len(PICKLEBALL_KEYPOINTS)] if aux_keypoints else logits
             geometric = court_geometric_consistency_loss(
-                logits,
-                keypoint_names=keypoint_names,
-                image_width=float(width),
-                image_height=float(height),
+                geometric_logits,
+                keypoint_names=[point.name for point in PICKLEBALL_KEYPOINTS] if aux_keypoints else keypoint_names,
+                image_width=float(geometric_logits.shape[-1]) if aux_keypoints else float(width),
+                image_height=float(geometric_logits.shape[-2]) if aux_keypoints else float(height),
                 colinearity_weight=geometric_colinearity_weight,
                 homography_weight=geometric_homography_weight,
             )
@@ -1671,6 +2099,9 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
     after = evaluate(model, holdout_real, synthetic_batches=8, aggregation_rows=aggregation_rows)
     args.out.mkdir(parents=True, exist_ok=True)
     checkpoint = args.out / "court_keypoint_heatmap.pt"
+    checkpoint_args = dict(vars(args))
+    if not aux_keypoints:
+        checkpoint_args.pop("aux_keypoints", None)
     torch.save(
         {
             "model": model.state_dict(),
@@ -1681,7 +2112,8 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "line_names": line_names if use_line_segmentation else [],
             "heatmap_activation": "sigmoid" if use_line_segmentation else "spatial_softmax",
             "loss": "binary_cross_entropy_line_masks" if use_line_segmentation else "spatial_softmax_cross_entropy",
-            "args": vars(args),
+            **(keypoint_checkpoint_metadata(training_contract) if aux_keypoints else {}),
+            "args": checkpoint_args,
         },
         checkpoint,
     )
@@ -1755,6 +2187,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             "network_architecture": net_architecture,
             "line_names": line_names if use_line_segmentation else [],
             "net_keypoint_height_convention": "regulation_net_top",
+            **(keypoint_checkpoint_metadata(training_contract) if aux_keypoints else {}),
         },
         "round3_input_resolution": round3_input_resolution,
         "geometric_loss": {
@@ -1786,6 +2219,7 @@ def run_training(args: argparse.Namespace) -> dict[str, Any]:
             model_height=height,
             out_dir=args.out,
             use_homography_refinement=use_homography_refinement,
+            heatmap_stride=heatmap_stride,
         )
         _write_training_summary(args.out, summary)
     return summary
@@ -1858,6 +2292,7 @@ def _write_holdout_prediction_artifacts(
     model_height: int,
     out_dir: Path,
     use_homography_refinement: bool,
+    heatmap_stride: int = 1,
 ) -> list[dict[str, Any]]:
     prediction_dir = out_dir / "holdout_predictions"
     overlay_dir = out_dir / "holdout_overlays"
@@ -1921,6 +2356,7 @@ def _write_holdout_prediction_artifacts(
                     model_width=model_width,
                     model_height=model_height,
                     use_homography_refinement=use_homography_refinement,
+                    heatmap_stride=heatmap_stride,
                 )
                 frames.append({"frame_index": frame_index, "keypoints": keypoints})
                 for label_row in labels_by_frame.get(frame_index, []):
@@ -1978,6 +2414,7 @@ def _predict_frame_keypoints(
     model_width: int,
     model_height: int,
     use_homography_refinement: bool,
+    heatmap_stride: int = 1,
 ) -> dict[str, dict[str, Any]]:
     frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
     resized = cv2.resize(frame_rgb, (model_width, model_height), interpolation=cv2.INTER_AREA)
@@ -1991,7 +2428,7 @@ def _predict_frame_keypoints(
     for idx, name in enumerate(keypoint_names):
         decoded = decode_subpixel_heatmap(pred[idx].tolist())
         keypoints[name] = {
-            "xy": [decoded.x * scale_x, decoded.y * scale_y],
+            "xy": [decoded.x * heatmap_stride * scale_x, decoded.y * heatmap_stride * scale_y],
             "confidence": max(0.0, min(1.0, float(decoded.score))),
             "heatmap_score": float(decoded.score),
         }
@@ -2087,6 +2524,15 @@ def main(argv: list[str] | None = None) -> int:
             "Court detector architecture. keypoint_heatmap_v1 is the legacy 15-channel "
             "point heatmap. line_segmentation_intersection_v1 is the CAL-R3 line-mask head "
             "followed by fitted line equations and intersections."
+        ),
+    )
+    parser.add_argument(
+        "--aux-keypoints",
+        action="store_true",
+        help=(
+            "Opt into the dormant 33-channel canonical+auxiliary court_unet_v2_aux architecture, "
+            "stride-4 synthetic targets, and enhanced paint/texture stream. Default off; this "
+            "does not change the production 15-keypoint inference or solver contract."
         ),
     )
     parser.add_argument(

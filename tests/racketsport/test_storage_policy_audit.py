@@ -5,6 +5,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+from scripts.racketsport import audit_storage_policy
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -51,6 +53,31 @@ def test_storage_policy_audit_reports_generated_artifacts_in_temp_repo(tmp_path:
     ]
 
 
+def test_storage_policy_audit_finds_pytest_trees_inside_ignored_runs(tmp_path: Path) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    (tmp_path / ".gitignore").write_text("runs/\n", encoding="utf-8")
+    pytest_tree = tmp_path / "runs" / "lanes" / "experiment" / ".pytest_focused"
+    pytest_tree.mkdir(parents=True)
+    (pytest_tree / "checkpoint.pt").write_bytes(b"checkpoint")
+
+    report = audit_storage_policy.build_storage_report(tmp_path)
+
+    assert report["status"] == "fail"
+    assert report["generated_artifacts"] == ["runs/lanes/experiment/.pytest_focused"]
+
+
+def test_storage_policy_audit_enforces_directory_size_limits(tmp_path: Path, monkeypatch) -> None:
+    subprocess.run(["git", "init"], cwd=tmp_path, check=True, capture_output=True, text=True)
+    (tmp_path / "runs").mkdir()
+    (tmp_path / "runs" / "payload.bin").write_bytes(b"12345")
+    monkeypatch.setattr(audit_storage_policy, "DIRECTORY_SIZE_LIMIT_BYTES", {"runs": 4})
+
+    report = audit_storage_policy.build_storage_report(tmp_path, check_generated_artifacts=False)
+
+    assert report["status"] == "fail"
+    assert report["oversized_directories"] == {"runs": {"bytes": 5, "limit_bytes": 4}}
+
+
 def test_storage_policy_readme_names_generated_artifact_check() -> None:
     text = (ROOT / "README.md").read_text(encoding="utf-8")
 
@@ -58,3 +85,5 @@ def test_storage_policy_readme_names_generated_artifact_check() -> None:
     assert "__pycache__" in text
     assert "ios/.build" in text
     assert "web/replay/dist" in text
+    assert "25 GiB" in text
+    assert "in-repo `--basetemp`" in text

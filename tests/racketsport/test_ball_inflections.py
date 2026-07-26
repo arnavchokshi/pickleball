@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import importlib
 import importlib.util
@@ -172,6 +173,55 @@ def test_ball_inflection_builder_uses_frame_time_table_when_track_times_are_miss
     candidate = payload["candidates"][0]
     assert candidate["frame"] == 1
     assert candidate["time_s"] == pytest.approx(0.04)
+
+
+def test_ball_inflection_file_payload_emits_media_and_pts_sha256_identity(
+    tmp_path: Path,
+) -> None:
+    module = importlib.import_module("threed.racketsport.ball_inflections")
+    media_sha256 = hashlib.sha256(b"synthetic-media").hexdigest()
+    frame_times = tmp_path / "frame_times.json"
+    frame_times.write_text(json.dumps({
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_times",
+        "source_video_sha256": media_sha256,
+        "frames": [
+            {"frame": 0, "pts_s": 0.0},
+            {"frame": 1, "pts_s": 0.1},
+            {"frame": 2, "pts_s": 0.2},
+        ],
+    }, sort_keys=True) + "\n")
+    frame_times_sha256 = hashlib.sha256(frame_times.read_bytes()).hexdigest()
+    ball_track = tmp_path / "ball_track.json"
+    ball_track.write_text(json.dumps({
+        **_ball_track([
+            {"frame": 0, "xy": [0.0, 0.0], "visible": True, "conf": 0.9},
+            {"frame": 1, "xy": [10.0, 0.0], "visible": True, "conf": 0.9},
+            {"frame": 2, "xy": [10.0, 10.0], "visible": True, "conf": 0.9},
+        ]),
+        "source_video_sha256": media_sha256,
+        "frame_times_sha256": frame_times_sha256,
+    }, sort_keys=True) + "\n")
+
+    payload = module.build_ball_inflections_from_ball_track_file(
+        ball_track,
+        frame_times_path=frame_times,
+        min_turn_degrees=35.0,
+        min_speed_px_per_s=25.0,
+    )
+
+    assert payload["media_sha256"] == media_sha256
+    assert payload["source_video_sha256"] == media_sha256
+    assert payload["frame_times_sha256"] == frame_times_sha256
+    assert payload["pts_source"] == {
+        "path": str(frame_times),
+        "sha256": frame_times_sha256,
+        "source_video_sha256": media_sha256,
+    }
+    assert payload["ball_track_source"] == {
+        "path": str(ball_track),
+        "sha256": hashlib.sha256(ball_track.read_bytes()).hexdigest(),
+    }
 
 
 def test_ball_inflection_builder_detects_image_turn_over_wider_window() -> None:

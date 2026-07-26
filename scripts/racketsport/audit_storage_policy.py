@@ -9,6 +9,10 @@ from typing import Iterable
 
 LARGE_TRACKED_THRESHOLD_BYTES = 5 * 1024 * 1024
 LARGE_UNTRACKED_SOURCE_THRESHOLD_BYTES = 1 * 1024 * 1024
+DIRECTORY_SIZE_LIMIT_BYTES = {
+    ".git": 2 * 1024 * 1024 * 1024,
+    "runs": 25 * 1024 * 1024 * 1024,
+}
 IGNORED_DIR_PARTS = {
     ".git",
     ".venv",
@@ -47,11 +51,18 @@ ALLOWED_LARGE_TRACKED_FILES = {
     "runs/lanes/event_head_scaffold_20260716/dataset/manifest_a.json",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_matched_seed_official_aug/checkpoints/latest.pt",
     "runs/lanes/w7_ballretrain2_20260709/vm_pull/arm_finetunes/E3k_seed_official_aug/checkpoints/latest.pt",
-    "cvat_upload/04_indoor_doubles_fwuks_0500_long_mid_baseline_30s.mp4",
     "cvat_upload/court_keypoints_20260707/packages/court_keypoints_metric15_20260707_6frames.zip",
     "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/source.mp4",
     "models_coreml/yolo26m_img416_int8/yolo26m.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
     "models_coreml/yolo26s_img416_int8/yolo26s.mlpackage/Data/com.apple.CoreML/weights/weight.bin",
+    # Frozen 2026-07-21 holdout payloads. These are selected/tracked evaluation
+    # evidence, not disposable generated caches.
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/selection/indoor_doubles_fwuks_0500_long_mid_baseline/tracks.selected.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/placement.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/raw_tracked_detections.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/indoor_doubles_fwuks_0500_long_mid_baseline/indoor_doubles_fwuks_0500_long_mid_baseline/tracked_detections.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_out/track/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/placement.json",
+    "runs/lanes/holdout_eval_20260721/vm_pull/holdout_pull.tar.gz",
 }
 
 W6_LABELPACK_IMAGE_ZIPS = {
@@ -116,6 +127,15 @@ ALLOWED_LARGE_UNTRACKED_SOURCE_FILES = {
     "data/pbvision_11min_20260713/source_video.mp4",
     "ios/Replay/Sources/PickleballReplay/Resources/WorldFixture/virtual_world.json",
     "tests/racketsport/fixtures/solid_mesh_real_window_000/body_mesh_faces.json",
+    # Current court-diversity label inputs and the pb.vision replay source.
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_0tmdeghtfvjx_f013835.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_98z43hspqz13_f010560.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_pldtjpw3h0jw_f017042.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_st0epgnab7dr_f008229.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_tqjlrcntpjvt_f017862.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_utasf5hnozwz_f010264.png",
+    "cvat_upload/court_diversity_followup_20260723/frames/pbv_xkadsq9bli3h_f005822.png",
+    "data/pbv_replay_20260720/xkadsq9bli3h/max.mp4",
 } | W6_LABELPACK_IMAGE_ZIPS
 
 
@@ -131,6 +151,19 @@ def build_storage_report(root: Path, *, check_generated_artifacts: bool = True) 
     unknown_tracked = tracked_large - ALLOWED_LARGE_TRACKED_FILES
     unknown_untracked = untracked_large - ALLOWED_LARGE_UNTRACKED_SOURCE_FILES
     generated_artifacts = _generated_artifacts(root) if check_generated_artifacts else set()
+    directory_usage = {
+        relpath: _directory_size_bytes(root / relpath)
+        for relpath in DIRECTORY_SIZE_LIMIT_BYTES
+        if (root / relpath).exists()
+    }
+    oversized_directories = {
+        relpath: {
+            "bytes": directory_usage[relpath],
+            "limit_bytes": DIRECTORY_SIZE_LIMIT_BYTES[relpath],
+        }
+        for relpath in directory_usage
+        if directory_usage[relpath] > DIRECTORY_SIZE_LIMIT_BYTES[relpath]
+    }
 
     return {
         "root": root.as_posix(),
@@ -148,7 +181,10 @@ def build_storage_report(root: Path, *, check_generated_artifacts: bool = True) 
         "missing_allowed_large_untracked_source_files": sorted(ALLOWED_LARGE_UNTRACKED_SOURCE_FILES - untracked_large),
         "check_generated_artifacts": check_generated_artifacts,
         "generated_artifacts": sorted(generated_artifacts),
-        "status": "fail" if unknown_tracked or unknown_untracked or generated_artifacts else "pass",
+        "directory_size_limits_bytes": DIRECTORY_SIZE_LIMIT_BYTES,
+        "directory_usage_bytes": directory_usage,
+        "oversized_directories": oversized_directories,
+        "status": "fail" if unknown_tracked or unknown_untracked or generated_artifacts or oversized_directories else "pass",
     }
 
 
@@ -186,7 +222,54 @@ def _generated_artifacts(root: Path) -> set[str]:
             artifacts.add(relpath)
         elif path.is_file() and (path.name in GENERATED_FILE_NAMES or path.suffix in GENERATED_FILE_SUFFIXES):
             artifacts.add(relpath)
+    artifacts.update(_in_repo_pytest_artifacts(root))
     return artifacts
+
+
+def _in_repo_pytest_artifacts(root: Path) -> set[str]:
+    """Find pytest basetemp trees even under ignored ``runs/`` evidence."""
+
+    runs_root = root / "runs"
+    if not runs_root.is_dir():
+        return set()
+    artifacts: set[str] = set()
+    stack = [runs_root]
+    while stack:
+        current = stack.pop()
+        try:
+            children = current.iterdir()
+        except OSError:
+            continue
+        for child in children:
+            if not child.is_dir():
+                continue
+            if child.name.startswith(".pytest") or child.name.startswith("pytest_"):
+                artifacts.add(child.relative_to(root).as_posix())
+                continue
+            stack.append(child)
+    return artifacts
+
+
+def _directory_size_bytes(path: Path) -> int:
+    total = 0
+    stack = [path]
+    while stack:
+        current = stack.pop()
+        try:
+            children = current.iterdir()
+        except OSError:
+            continue
+        for child in children:
+            try:
+                if child.is_symlink():
+                    continue
+                if child.is_dir():
+                    stack.append(child)
+                elif child.is_file():
+                    total += child.stat().st_size
+            except OSError:
+                continue
+    return total
 
 
 def _walk_non_ignored(root: Path) -> Iterable[Path]:
@@ -220,6 +303,12 @@ def _format_human_report(report: dict[str, object]) -> str:
     lines.append("")
     lines.append("generated_artifacts:")
     lines.extend(f"- {path}" for path in report["generated_artifacts"])
+    if lines[-1].endswith(":"):
+        lines.append("- none")
+    lines.append("")
+    lines.append("oversized_directories:")
+    for path, details in report["oversized_directories"].items():
+        lines.append(f"- {path}: {details['bytes']} bytes (limit {details['limit_bytes']} bytes)")
     if lines[-1].endswith(":"):
         lines.append("- none")
     return "\n".join(lines)

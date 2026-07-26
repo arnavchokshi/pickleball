@@ -38,6 +38,8 @@ RELATED_TEST_OVERRIDES = {
     "build_contact_windows_from_review_inputs": "test_contact_window_review.py",
     "build_event_head_dataset": "test_event_head_dataset.py",
     "build_event_head_anchor_candidates": "test_event_head_anchor_candidates.py",
+    "build_owner_event_manifest": "test_owner_event_manifest.py",
+    "build_person_fewshot_pack": "test_build_person_fewshot_pack.py",
     "build_eval0_index": "test_eval0_index.py",
     "build_refined_placement": "test_placement_refine_clis.py",
     "build_one_world_v1": "test_one_world_clis.py",
@@ -47,6 +49,7 @@ RELATED_TEST_OVERRIDES = {
     "build_variant_comparison": "test_variant_comparison.py",
     "calibrate": "test_court_calibration.py",
     "check_eval_regression": "test_eval_regression.py",
+    "court_diversity_label_server": "test_court_diversity_label_server.py",
     "build_corrections_queue": "test_corrections.py",
     "export_ball_click_review": "test_ball_click_review.py",
     "export_cvat_tasks": "test_label_review_flow.py",
@@ -115,6 +118,8 @@ TASK_HINTS = {
     "build_corrections_queue": ("RPT", "RPT-1"),
     "build_eval0_index": ("EVAL", "EVAL-0"),
     "build_one_world_v1": ("WORLD", "NS-04.6"),
+    "build_owner_event_manifest": ("BALL", "T20"),
+    "build_person_fewshot_pack": ("TRK", "TRACK-C-3"),
     "build_refined_placement": ("BODY", "NS-04.3"),
     "build_report_artifacts": ("RPT", "RPT-1"),
     "build_serving_manifest": ("RPT", "RPT-1"),
@@ -123,6 +128,7 @@ TASK_HINTS = {
     "check_eval_regression": ("EVAL", "EVAL-1"),
     "corpus_dashboard": ("DATA", "P0-4"),
     "court_precision_harness": ("CAL", "CAL-2"),
+    "court_diversity_label_server": ("DATA", "DATA-1"),
     "doctor": ("ENV", "ENV-2"),
     "extract_label_frames": ("DATA", "DATA-1"),
     "finetune_pose": ("BODY", "BODY-4"),
@@ -155,6 +161,8 @@ TASK_HINTS = {
 }
 
 CATEGORY_OVERRIDES = {
+    "build_owner_event_manifest": "dataset",
+    "build_person_fewshot_pack": "dataset",
     "select_players_from_pool": "tracking",
 }
 

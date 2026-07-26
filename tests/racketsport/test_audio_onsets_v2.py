@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import hashlib
+import json
 import math
 import subprocess
 import sys
+import wave
 from pathlib import Path
 
 import numpy as np
@@ -149,3 +152,46 @@ def test_run_build_audio_onsets_v2_cli_fails_closed_on_missing_input(tmp_path: P
 
     assert completed.returncode != 0
     assert not out_path.exists()
+
+
+def test_audio_cli_emits_media_and_pts_sha256_identity(tmp_path: Path) -> None:
+    wav_path = tmp_path / "synthetic.wav"
+    with wave.open(str(wav_path), "wb") as handle:
+        handle.setnchannels(1)
+        handle.setsampwidth(2)
+        handle.setframerate(24_000)
+        handle.writeframes(np.zeros(2_400, dtype=np.int16).tobytes())
+    media_sha256 = hashlib.sha256(wav_path.read_bytes()).hexdigest()
+    frame_times = tmp_path / "frame_times.json"
+    frame_times.write_text(json.dumps({
+        "schema_version": 1,
+        "artifact_type": "racketsport_frame_times",
+        "source_video_sha256": media_sha256,
+        "frames": [{"frame": 0, "pts_s": 0.0}],
+    }, sort_keys=True) + "\n")
+    frame_times_sha256 = hashlib.sha256(frame_times.read_bytes()).hexdigest()
+    out_path = tmp_path / "audio_onsets_v2.json"
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/build_audio_onsets_v2.py",
+            "--input", str(wav_path),
+            "--frame-times", str(frame_times),
+            "--out", str(out_path),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+    assert completed.returncode == 0, completed.stderr
+    payload = json.loads(out_path.read_text())
+    assert payload["media_sha256"] == media_sha256
+    assert payload["source_video_sha256"] == media_sha256
+    assert payload["frame_times_sha256"] == frame_times_sha256
+    assert payload["pts_source"] == {
+        "path": str(frame_times),
+        "sha256": frame_times_sha256,
+        "source_video_sha256": media_sha256,
+    }

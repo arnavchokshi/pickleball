@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import hashlib
 import json
+import random
 import subprocess
 import sys
 from argparse import Namespace
@@ -12,6 +14,9 @@ import pytest
 import scripts.racketsport.train_court_keypoint_heatmap as trainer_module
 
 from scripts.racketsport.train_court_keypoint_heatmap import (
+    aux_real_sample_training_tensors,
+    aux_synthetic_stream_config,
+    aux_synthetic_sample_training_tensors,
     choose_torch_device_name,
     court_keypoint_label_rows,
     court_keypoint_heatmap_loss,
@@ -19,14 +24,25 @@ from scripts.racketsport.train_court_keypoint_heatmap import (
     curriculum_synthetic_fraction,
     evaluate_checkpoint_against_real_labels,
     heatmaps_for_points,
+    keypoint_checkpoint_metadata,
+    legacy_synthetic_training_sample,
+    legacy_training_image_tensor,
     load_real_corner_labels,
     load_real_court_keypoint_labels,
     make_court_keypoint_heatmap_model,
+    predict_source_keypoints,
     run_training,
+    resolve_keypoint_training_contract,
     sample_curriculum_real_batch,
     training_cli_summary,
 )
-from threed.racketsport.court_keypoint_net import PICKLEBALL_KEYPOINTS
+from threed.racketsport.court_keypoint_net import (
+    ALL_PICKLEBALL_KEYPOINTS,
+    AUX_PICKLEBALL_KEYPOINTS,
+    COURT_UNET_V2_AUX_ARCHITECTURE,
+    COURT_UNET_V2_HEATMAP_STRIDE,
+    PICKLEBALL_KEYPOINTS,
+)
 
 
 def _write_json(path: Path, payload: dict) -> None:
@@ -61,11 +77,536 @@ class _FakeTorch:
         self.backends = _FakeBackends(mps_available)
 
 
+def _production_preprocessor_tensor(
+    image_bgr: np.ndarray,
+    *,
+    model_size: tuple[int, int],
+    keypoint_names: list[str],
+    torch: object,
+) -> object:
+    from threed.racketsport.court_model_infer import _infer_court_model_with_loaded_model
+
+    class _CaptureModel(torch.nn.Module):
+        heatmap_stride = COURT_UNET_V2_HEATMAP_STRIDE
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.seen = None
+
+        def forward(self, tensor):
+            self.seen = tensor.detach().cpu().clone()
+            batch = tensor.shape[0]
+            head_height = (model_size[1] + COURT_UNET_V2_HEATMAP_STRIDE - 1) // COURT_UNET_V2_HEATMAP_STRIDE
+            head_width = (model_size[0] + COURT_UNET_V2_HEATMAP_STRIDE - 1) // COURT_UNET_V2_HEATMAP_STRIDE
+            return {
+                "keypoint_heatmaps": torch.zeros(
+                    (batch, len(keypoint_names), head_height, head_width), dtype=tensor.dtype
+                ),
+                "keypoint_vis_logits": torch.zeros((batch, len(keypoint_names)), dtype=tensor.dtype),
+                "line_family_logits": torch.zeros((batch, 5, head_height, head_width), dtype=tensor.dtype),
+            }
+
+    model = _CaptureModel()
+    _infer_court_model_with_loaded_model(
+        image_bgr,
+        model=model,
+        keypoint_names=keypoint_names,
+        model_size=model_size,
+        device="cpu",
+    )
+    assert model.seen is not None
+    return model.seen
+
+
 def test_choose_torch_device_name_honors_mps_when_available() -> None:
     assert choose_torch_device_name("mps", _FakeTorch(cuda_available=False, mps_available=True)) == "mps"
     assert choose_torch_device_name("mps", _FakeTorch(cuda_available=False, mps_available=False)) == "cpu"
     assert choose_torch_device_name("cuda", _FakeTorch(cuda_available=True, mps_available=True)) == "cuda"
     assert choose_torch_device_name("cuda", _FakeTorch(cuda_available=False, mps_available=True)) == "cpu"
+
+
+def test_aux_training_contract_is_canonical_first_and_line_mode_fails_closed() -> None:
+    legacy = resolve_keypoint_training_contract(aux_keypoints=False, line_segmentation=False)
+    assert legacy["network_architecture"] == "encoder_decoder_v1"
+    assert legacy["heatmap_stride"] == 1
+    assert legacy["keypoint_names"] == tuple(point.name for point in PICKLEBALL_KEYPOINTS)
+
+    aux = resolve_keypoint_training_contract(aux_keypoints=True, line_segmentation=False)
+    assert aux["network_architecture"] == COURT_UNET_V2_AUX_ARCHITECTURE
+    assert aux["heatmap_stride"] == COURT_UNET_V2_HEATMAP_STRIDE
+    assert len(aux["keypoint_names"]) == 33
+    assert aux["keypoint_names"][: len(PICKLEBALL_KEYPOINTS)] == tuple(
+        point.name for point in PICKLEBALL_KEYPOINTS
+    )
+    assert aux["keypoint_names"][len(PICKLEBALL_KEYPOINTS) :] == tuple(
+        point.name for point in AUX_PICKLEBALL_KEYPOINTS
+    )
+    assert aux["keypoint_names"] == tuple(point.name for point in ALL_PICKLEBALL_KEYPOINTS)
+    assert keypoint_checkpoint_metadata(aux) == {
+        "aux_keypoints": True,
+        "canonical_keypoint_count": 15,
+        "aux_keypoint_count": 18,
+        "heatmap_stride": 4,
+    }
+
+    with pytest.raises(ValueError, match="cannot be combined"):
+        resolve_keypoint_training_contract(aux_keypoints=True, line_segmentation=True)
+
+
+def test_aux_real_rows_mask_all_aux_channels_and_aux_gradients_are_zero() -> None:
+    cv2 = pytest.importorskip("cv2")
+    torch = pytest.importorskip("torch")
+    image_bgr = np.zeros((72, 128, 3), dtype=np.uint8)
+    points = {
+        point.name: [16.0 + index * 4.0, 18.0 + (index % 3) * 8.0]
+        for index, point in enumerate(PICKLEBALL_KEYPOINTS)
+    }
+
+    image, target, mask = aux_real_sample_training_tensors(
+        image_bgr,
+        points,
+        source_width=128.0,
+        source_height=72.0,
+        width=64,
+        height=36,
+        sigma=1.5,
+        cv2=cv2,
+        np=np,
+        torch=torch,
+    )
+
+    assert image.shape == (3, 36, 64)
+    assert target.shape == (33, 9, 16)
+    assert mask.shape == target.shape
+    assert torch.all(mask[:15] == 1)
+    assert torch.count_nonzero(mask[15:]).item() == 0
+    assert torch.count_nonzero(target[15:]).item() == 0
+
+    logits = torch.zeros((1, *target.shape), dtype=torch.float32, requires_grad=True)
+    loss = court_keypoint_heatmap_loss(logits, target.unsqueeze(0), mask.unsqueeze(0))
+    loss.backward()
+    assert torch.count_nonzero(logits.grad[:, :15]).item() > 0
+    assert torch.count_nonzero(logits.grad[:, 15:]).item() == 0
+
+
+def test_aux_training_tensor_is_exactly_production_preprocessor_tensor() -> None:
+    cv2 = pytest.importorskip("cv2")
+    torch = pytest.importorskip("torch")
+    from threed.racketsport.court_synth_stream import iter_synthetic_court_samples
+
+    # Exercise the existing CLI defaults, including ceil-divided 90 / 4 = 23 rows.
+    target_size = (160, 90)
+    sample = next(
+        iter_synthetic_court_samples(
+            {
+                "count": 1,
+                "image_size": list(target_size),
+                "scenarios": ["dedicated_indoor"],
+                "aux_keypoints": True,
+                "paint_texture_randomization": True,
+                "aux_partial_visibility": True,
+            },
+            seed=20260722,
+        )
+    )
+
+    training_image, _, _ = aux_synthetic_sample_training_tensors(
+        sample,
+        width=target_size[0],
+        height=target_size[1],
+        cv2=cv2,
+        np=np,
+        torch=torch,
+    )
+    production_image = _production_preprocessor_tensor(
+        sample["image_bgr"],
+        model_size=target_size,
+        keypoint_names=[point.name for point in ALL_PICKLEBALL_KEYPOINTS],
+        torch=torch,
+    )
+
+    assert sample["keypoints_xy"].shape == (33, 2)
+    assert sample["keypoint_heatmaps"].shape == (33, 23, 40)
+    assert sample["keypoint_heatmap_mask"].shape == (33, 23, 40)
+    assert torch.equal(training_image.unsqueeze(0), production_image)
+
+
+def test_aux_evaluation_primitive_uses_production_preprocessor(monkeypatch) -> None:
+    cv2 = pytest.importorskip("cv2")
+    torch = pytest.importorskip("torch")
+    from PIL import Image
+    from threed.racketsport.court_synth_stream import iter_synthetic_court_samples
+
+    source_size = (320, 180)
+    model_size = (160, 90)
+    sample = next(
+        iter_synthetic_court_samples(
+            {
+                "count": 1,
+                "image_size": list(source_size),
+                "scenarios": ["dedicated_indoor"],
+                "aux_keypoints": True,
+                "paint_texture_randomization": True,
+                "aux_partial_visibility": True,
+            },
+            seed=20260722,
+        )
+    )
+    image_rgb = Image.fromarray(cv2.cvtColor(sample["image_bgr"], cv2.COLOR_BGR2RGB))
+    monkeypatch.setattr(
+        trainer_module,
+        "load_label_image",
+        lambda row, *, cv2, image_module: image_rgb.copy(),
+    )
+
+    class _CaptureAuxModel(torch.nn.Module):
+        def __init__(self) -> None:
+            super().__init__()
+            self.seen = None
+
+        def forward(self, tensor):
+            self.seen = tensor.detach().cpu().clone()
+            return {
+                "keypoint_heatmaps": torch.zeros(
+                    (tensor.shape[0], len(ALL_PICKLEBALL_KEYPOINTS), 23, 40),
+                    dtype=tensor.dtype,
+                    device=tensor.device,
+                )
+            }
+
+    model = _CaptureAuxModel()
+    keypoint_names = [point.name for point in ALL_PICKLEBALL_KEYPOINTS]
+    predict_source_keypoints(
+        model,
+        {
+            "source_video_size": list(source_size),
+            "keypoints": {keypoint_names[0]: [0.0, 0.0]},
+        },
+        cv2=cv2,
+        np=np,
+        torch=torch,
+        image_module=Image,
+        device="cpu",
+        width=model_size[0],
+        height=model_size[1],
+        keypoint_names=keypoint_names,
+        heatmap_stride=COURT_UNET_V2_HEATMAP_STRIDE,
+        production_preprocessing=True,
+    )
+    expected = _production_preprocessor_tensor(
+        sample["image_bgr"],
+        model_size=model_size,
+        keypoint_names=keypoint_names,
+        torch=torch,
+    )
+
+    assert model.seen is not None
+    assert torch.equal(model.seen, expected)
+
+    legacy_model = _CaptureAuxModel()
+    predict_source_keypoints(
+        legacy_model,
+        {
+            "source_video_size": list(source_size),
+            "keypoints": {keypoint_names[0]: [0.0, 0.0]},
+        },
+        cv2=cv2,
+        np=np,
+        torch=torch,
+        image_module=Image,
+        device="cpu",
+        width=model_size[0],
+        height=model_size[1],
+        keypoint_names=keypoint_names,
+        heatmap_stride=COURT_UNET_V2_HEATMAP_STRIDE,
+    )
+    legacy_expected = legacy_training_image_tensor(
+        image_rgb,
+        width=model_size[0],
+        height=model_size[1],
+        np=np,
+        torch=torch,
+    ).unsqueeze(0)
+    assert legacy_model.seen is not None
+    assert torch.equal(legacy_model.seen, legacy_expected)
+
+
+def test_aux_homography_refinement_preserves_unrefined_aux_predictions(monkeypatch) -> None:
+    cv2 = pytest.importorskip("cv2")
+    torch = pytest.importorskip("torch")
+    from PIL import Image
+
+    canonical_name = PICKLEBALL_KEYPOINTS[0].name
+    aux_name = AUX_PICKLEBALL_KEYPOINTS[0].name
+    source_rgb = np.zeros((90, 160, 3), dtype=np.uint8)
+    monkeypatch.setattr(
+        trainer_module,
+        "load_label_image",
+        lambda row, *, cv2, image_module: Image.fromarray(source_rgb.copy()),
+    )
+
+    class _ZeroAuxModel(torch.nn.Module):
+        def forward(self, tensor):
+            return {
+                "keypoint_heatmaps": torch.zeros(
+                    (tensor.shape[0], len(ALL_PICKLEBALL_KEYPOINTS), 23, 40),
+                    dtype=tensor.dtype,
+                    device=tensor.device,
+                )
+            }
+
+    monkeypatch.setattr(
+        trainer_module,
+        "refine_keypoint_xy_with_planar_homography",
+        lambda points: {canonical_name: [12.5, 34.5]},
+    )
+    predicted = predict_source_keypoints(
+        _ZeroAuxModel(),
+        {
+            "source_video_size": [160, 90],
+            "keypoints": {canonical_name: [0.0, 0.0], aux_name: [0.0, 0.0]},
+        },
+        cv2=cv2,
+        np=np,
+        torch=torch,
+        image_module=Image,
+        device="cpu",
+        width=160,
+        height=90,
+        keypoint_names=[point.name for point in ALL_PICKLEBALL_KEYPOINTS],
+        use_homography_refinement=True,
+        heatmap_stride=COURT_UNET_V2_HEATMAP_STRIDE,
+        production_preprocessing=True,
+    )
+
+    assert predicted[canonical_name] == [12.5, 34.5]
+    assert aux_name in predicted
+    assert predicted[aux_name] == [0.0, 0.0]
+
+
+def test_aux_checkpoint_top_level_gate_stays_canonical_with_divergent_aux_error(
+    tmp_path: Path, monkeypatch
+) -> None:
+    keypoint_names = [point.name for point in ALL_PICKLEBALL_KEYPOINTS]
+    canonical_name = PICKLEBALL_KEYPOINTS[0].name
+    aux_name = AUX_PICKLEBALL_KEYPOINTS[0].name
+    row = {
+        "clip": "canonical-only",
+        "frame_index": 0,
+        "label_status": "reviewed",
+        "keypoints": {
+            canonical_name: [12.0, 34.0],
+            aux_name: [50.0, 60.0],
+        },
+    }
+    payload = {"network_architecture": COURT_UNET_V2_AUX_ARCHITECTURE}
+    monkeypatch.setattr(
+        trainer_module,
+        "load_court_keypoint_checkpoint",
+        lambda checkpoint_path, *, device: payload,
+    )
+    monkeypatch.setattr(
+        trainer_module,
+        "build_model_from_checkpoint",
+        lambda checkpoint_payload, *, device: (object(), keypoint_names, 160, 90),
+    )
+
+    preprocessing_flags = []
+
+    def fake_predict(model, selected_row, **kwargs):
+        preprocessing_flags.append(kwargs["production_preprocessing"])
+        return {
+            canonical_name: [12.0, 34.0],
+            aux_name: [100.0, 60.0],
+        }
+
+    def fake_aggregate(model, rows, **kwargs):
+        preprocessing_flags.append(kwargs["production_preprocessing"])
+        return {
+            "canonical-only": {
+                canonical_name: [12.0, 34.0],
+                aux_name: [100.0, 60.0],
+            }
+        }
+
+    monkeypatch.setattr(trainer_module, "predict_source_keypoints", fake_predict)
+    monkeypatch.setattr(trainer_module, "aggregate_static_camera_predictions", fake_aggregate)
+
+    report = evaluate_checkpoint_against_real_labels(tmp_path / "dormant_aux_checkpoint.pt", [row])
+
+    assert preprocessing_flags == [True, True]
+    for mode in ("raw_independent", "raw_all", "aggregated_independent", "aggregated_all"):
+        assert report[mode]["keypoint_error_summary"]["count"] == 1
+        assert report[mode]["pck_at_5px"] == 1.0
+        assert report[mode]["canonical_keypoints"]["keypoint_count"] == 1
+        assert report[mode]["canonical_keypoints"]["pck_at_5px"] == 1.0
+        assert report[mode]["aux_keypoints"]["keypoint_count"] == 1
+        assert report[mode]["aux_keypoints"]["pck_at_5px"] == 0.0
+        assert report[mode]["combined_keypoints"]["keypoint_count"] == 2
+        assert report[mode]["combined_keypoints"]["pck_at_5px"] == 0.5
+
+
+def test_aux_synthetic_stream_config_propagates_trainer_sigma() -> None:
+    from threed.racketsport.court_synth_stream import iter_synthetic_court_samples
+
+    narrow_config = aux_synthetic_stream_config(width=160, height=90, sigma=0.75)
+    wide_config = aux_synthetic_stream_config(width=160, height=90, sigma=2.75)
+    assert narrow_config["heatmap_sigma_px"] == 0.75
+    assert wide_config["heatmap_sigma_px"] == 2.75
+
+    narrow = next(iter_synthetic_court_samples(narrow_config, seed=20260722))
+    wide = next(iter_synthetic_court_samples(wide_config, seed=20260722))
+    assert np.array_equal(narrow["image_bgr"], wide["image_bgr"])
+    assert np.array_equal(narrow["keypoints_xy"], wide["keypoints_xy"])
+    assert np.array_equal(narrow["keypoint_heatmap_mask"], wide["keypoint_heatmap_mask"])
+    assert not np.array_equal(narrow["keypoint_heatmaps"], wide["keypoint_heatmaps"])
+    assert float(wide["keypoint_heatmaps"].sum()) > float(narrow["keypoint_heatmaps"].sum())
+
+
+def test_run_training_aux_zero_epoch_default_size_smoke(tmp_path: Path, monkeypatch) -> None:
+    actual_iter = trainer_module.iter_synthetic_court_samples
+    captured_configs = []
+
+    def recording_iter(config, *, seed):
+        captured_configs.append(dict(config))
+        return actual_iter(config, seed=seed)
+
+    monkeypatch.setattr(trainer_module, "iter_synthetic_court_samples", recording_iter)
+    summary = run_training(
+        Namespace(
+            real_root=None,
+            out=tmp_path / "aux_zero_epoch",
+            holdout_clip=["nonexistent_clip"],
+            holdout_frame_stride=0,
+            epochs=0,
+            batch_size=1,
+            image_width=160,
+            image_height=90,
+            sigma=1.875,
+            learning_rate=1e-3,
+            real_finetune_start_epoch=0,
+            eval_every=1,
+            seed=20260722,
+            device="cpu",
+            skip_holdout_artifacts=True,
+            static_camera_aggregate=False,
+            enable_homography_refinement=False,
+            disable_homography_refinement=False,
+            aux_keypoints=True,
+        )
+    )
+
+    assert captured_configs == [
+        {
+            "image_size": [160, 90],
+            "aux_keypoints": True,
+            "paint_texture_randomization": True,
+            "aux_partial_visibility": True,
+            "heatmap_sigma_px": 1.875,
+        }
+    ]
+    assert summary["history"] == []
+    assert summary["gate"]["value"] is None
+    assert summary["gate"]["passed"] is False
+    assert summary["architecture"]["network_architecture"] == COURT_UNET_V2_AUX_ARCHITECTURE
+    assert summary["architecture"]["canonical_keypoint_count"] == 15
+    assert summary["architecture"]["aux_keypoint_count"] == 18
+    assert summary["after"]["synthetic_canonical_keypoints"]["keypoint_count"] > 0
+    assert summary["after"]["synthetic_aux_keypoints"]["keypoint_count"] > 0
+
+    checkpoint = trainer_module.load_court_keypoint_checkpoint(Path(summary["checkpoint"]))
+    assert checkpoint["network_architecture"] == COURT_UNET_V2_AUX_ARCHITECTURE
+    assert checkpoint["aux_keypoints"] is True
+    assert checkpoint["canonical_keypoint_count"] == 15
+    assert checkpoint["aux_keypoint_count"] == 18
+    assert checkpoint["heatmap_stride"] == 4
+    assert checkpoint["image_size"] == [160, 90]
+    assert len(checkpoint["keypoint_names"]) == 33
+
+
+def test_flag_off_pil_to_production_resize_mapping_is_stamped() -> None:
+    cv2 = pytest.importorskip("cv2")
+    torch = pytest.importorskip("torch")
+    from PIL import Image
+    from threed.racketsport.court_synth_stream import iter_synthetic_court_samples
+
+    sample = next(
+        iter_synthetic_court_samples(
+            {
+                "count": 1,
+                "scenarios": ["dedicated_indoor"],
+                "image_size": [320, 180],
+                "focal_px_range": [250, 1000],
+            },
+            seed=20260722,
+        )
+    )
+    source = sample["image_bgr"]
+    image_rgb = Image.fromarray(cv2.cvtColor(source, cv2.COLOR_BGR2RGB))
+    legacy = legacy_training_image_tensor(
+        image_rgb, width=160, height=90, np=np, torch=torch
+    ).unsqueeze(0)
+    production = _production_preprocessor_tensor(
+        source,
+        model_size=(160, 90),
+        keypoint_names=[point.name for point in PICKLEBALL_KEYPOINTS],
+        torch=torch,
+    )
+
+    def sha256(value) -> str:
+        return hashlib.sha256(np.ascontiguousarray(value.detach().cpu().numpy()).tobytes()).hexdigest()
+
+    assert hashlib.sha256(np.ascontiguousarray(source).tobytes()).hexdigest() == (
+        "53ff4c751eae1525d68535643a9856d19967f749e2470824679ea866f7a79d71"
+    )
+    assert sha256(legacy) == "22c2fec39882bf11cc1bda3c381c6ed25dedca3ccbc84a09eab7f390ebd9a613"
+    assert sha256(production) == "c15a60047485b1fe1b695a1f47fc92312e8c136afa4497ddac72356dfd2b3940"
+    difference = (legacy - production).abs()
+    assert torch.count_nonzero(difference).item() == 22648
+    assert difference.max().item() == pytest.approx(0.16862744092941284)
+    assert difference.mean().item() == pytest.approx(0.005633624270558357)
+
+
+def test_flag_off_legacy_synthetic_trainer_tensors_match_pre_a2_golden() -> None:
+    torch = pytest.importorskip("torch")
+    from PIL import Image, ImageDraw
+
+    image, target, mask = legacy_synthetic_training_sample(
+        width=160,
+        height=90,
+        sigma=2.5,
+        line_width=3,
+        use_line_segmentation=False,
+        rng=random.Random(20260722),
+        np=np,
+        torch=torch,
+        image_module=Image,
+        image_draw_module=ImageDraw,
+    )
+
+    def sha256(value) -> str:
+        return hashlib.sha256(np.ascontiguousarray(value.detach().cpu().numpy()).tobytes()).hexdigest()
+
+    assert image.shape == (3, 90, 160)
+    assert target.shape == (15, 90, 160)
+    assert mask.shape == (15, 90, 160)
+    assert sha256(image) == "eeca7cd464a35aca8731b7c3bb0fdf46936422bcd50e3a17b0ab49a2f6e2a6d3"
+    assert sha256(target) == "eeb2c27718e06df47345678db9c9f975b76d6efc8445e37e2c1c8cb9d51f8aab"
+    assert sha256(mask) == "94cf6d77b76fc11ec1934a8abe22c97aba76ed51a9c348d36258583d610c1e99"
+
+
+def test_aux_keypoints_cli_flag_defaults_off_without_running_training(tmp_path: Path, monkeypatch) -> None:
+    captured = {}
+
+    def fake_run_training(args):
+        captured["args"] = args
+        return {}
+
+    monkeypatch.setattr(trainer_module, "run_training", fake_run_training)
+    monkeypatch.setattr(trainer_module, "training_cli_summary", lambda summary: summary)
+
+    assert trainer_module.main(["--out", str(tmp_path / "unused")]) == 0
+    assert captured["args"].aux_keypoints is False
 
 
 def test_court_keypoint_heatmap_loss_prioritizes_labeled_peaks() -> None:

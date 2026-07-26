@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -18,6 +20,7 @@ SHELL_SCRIPTS = [
     Path("scripts/racketsport/install_mujoco_mjx_env.sh"),
     Path("scripts/racketsport/gpu_cold_start.sh"),
     Path("scripts/racketsport/run_fast_sam_benchmark.sh"),
+    Path("scripts/fleet/lane_vm_startup.sh"),
 ]
 
 
@@ -31,6 +34,245 @@ def test_shell_scripts_are_executable_and_parse():
         assert script.exists(), script
         assert os.access(script, os.X_OK), script
         subprocess.run(["bash", "-n", str(script)], check=True)
+
+
+def _run_lane_vm_startup(
+    tmp_path: Path,
+    *,
+    env_compute_mode: str | None = None,
+    metadata_compute_mode: str | None = None,
+    env_role: str | None = None,
+    metadata_role: str | None = None,
+    nvidia_smi_exit: int = 0,
+    configure_training_gate: bool = False,
+    omit_gate_proof_path: bool = False,
+) -> tuple[subprocess.CompletedProcess[str], list[str]]:
+    fake_bin = tmp_path / "bin"
+    fake_bin.mkdir()
+    nvidia_log = tmp_path / "nvidia-smi.log"
+
+    fake_nvidia_smi = fake_bin / "nvidia-smi"
+    fake_nvidia_smi.write_text(
+        "#!/usr/bin/env bash\nprintf '%s\\n' \"$*\" >> \"$FAKE_NVIDIA_LOG\"\nexit \"${FAKE_NVIDIA_SMI_EXIT:-0}\"\n",
+        encoding="utf-8",
+    )
+    fake_nvidia_smi.chmod(0o755)
+
+    fake_curl = fake_bin / "curl"
+    fake_curl.write_text(
+        """#!/usr/bin/env bash
+case "$*" in
+  *fable-cuda-compute-mode*)
+    if [ -n "${FAKE_CUDA_METADATA:-}" ]; then
+      printf '%s\\n' "$FAKE_CUDA_METADATA"
+    else
+      exit 22
+    fi
+    ;;
+  *preempted*)
+    printf '%s\\n' FALSE
+    ;;
+  *fable-role*)
+    if [ -n "${FAKE_FABLE_ROLE_METADATA:-}" ]; then
+      printf '%s\\n' "$FAKE_FABLE_ROLE_METADATA"
+    else
+      exit 22
+    fi
+    ;;
+  *)
+    exit 22
+    ;;
+esac
+""",
+        encoding="utf-8",
+    )
+    fake_curl.chmod(0o755)
+
+    fake_sleep = fake_bin / "sleep"
+    fake_sleep.write_text("#!/usr/bin/env bash\nexit 1\n", encoding="utf-8")
+    fake_sleep.chmod(0o755)
+
+    env = {
+        **os.environ,
+        "PATH": f"{fake_bin}{os.pathsep}{os.environ['PATH']}",
+        "FAKE_NVIDIA_LOG": str(nvidia_log),
+        "FAKE_NVIDIA_SMI_EXIT": str(nvidia_smi_exit),
+    }
+    for key in (
+        "FABLE_REPO_DIR",
+        "FABLE_TRAINING_PYTHON",
+        "FABLE_TRAINING_INPUT_MANIFEST",
+        "FABLE_DATA_LEDGER",
+        "FABLE_CACHE_MANIFEST",
+        "FABLE_GATE_PROOF",
+    ):
+        env.pop(key, None)
+    if env_compute_mode is not None:
+        env["FABLE_CUDA_COMPUTE_MODE"] = env_compute_mode
+    else:
+        env.pop("FABLE_CUDA_COMPUTE_MODE", None)
+    if metadata_compute_mode is not None:
+        env["FAKE_CUDA_METADATA"] = metadata_compute_mode
+    else:
+        env.pop("FAKE_CUDA_METADATA", None)
+    if env_role is not None:
+        env["FABLE_ROLE"] = env_role
+    else:
+        env.pop("FABLE_ROLE", None)
+    if metadata_role is not None:
+        env["FAKE_FABLE_ROLE_METADATA"] = metadata_role
+    else:
+        env.pop("FAKE_FABLE_ROLE_METADATA", None)
+    if configure_training_gate:
+        root = Path.cwd().resolve()
+        input_manifest = tmp_path / "training_inputs.json"
+        input_manifest.write_text(
+            json.dumps(
+                {
+                    "schema_version": 1,
+                    "artifact_type": "training_input_manifest",
+                    "inputs": [
+                        {
+                            "path": str(
+                                root
+                                / "data/event_labels_owner_20260719/PROVENANCE.json"
+                            ),
+                            "asset_id": "owner_event_labels_102_20260719",
+                        }
+                    ],
+                },
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        env.update(
+            {
+                "FABLE_REPO_DIR": str(root),
+                "FABLE_TRAINING_PYTHON": sys.executable,
+                "FABLE_TRAINING_INPUT_MANIFEST": str(input_manifest),
+                "FABLE_DATA_LEDGER": str(root / "runs/manager/data_ledger.json"),
+                "FABLE_GATE_PROOF": str(tmp_path / "gate_proof.json"),
+            }
+        )
+        if omit_gate_proof_path:
+            env.pop("FABLE_GATE_PROOF")
+
+    completed = subprocess.run(
+        ["bash", "scripts/fleet/lane_vm_startup.sh"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=env,
+        timeout=10,
+    )
+    calls = nvidia_log.read_text(encoding="utf-8").splitlines() if nvidia_log.exists() else []
+    return completed, calls
+
+
+def test_lane_vm_startup_defaults_pipeline_vms_to_default_compute_mode(tmp_path: Path) -> None:
+    completed, calls = _run_lane_vm_startup(tmp_path)
+
+    assert completed.returncode == 0
+    assert calls == ["-c DEFAULT"]
+    assert "CUDA compute mode DEFAULT" in completed.stdout
+
+
+@pytest.mark.parametrize(
+    ("env_compute_mode", "metadata_compute_mode", "env_role", "metadata_role"),
+    [
+        ("EXCLUSIVE_PROCESS", None, "training", None),
+        (None, "EXCLUSIVE_PROCESS", None, "training"),
+    ],
+)
+def test_lane_vm_startup_allows_explicit_single_context_training_mode(
+    tmp_path: Path,
+    env_compute_mode: str | None,
+    metadata_compute_mode: str | None,
+    env_role: str | None,
+    metadata_role: str | None,
+) -> None:
+    completed, calls = _run_lane_vm_startup(
+        tmp_path,
+        env_compute_mode=env_compute_mode,
+        metadata_compute_mode=metadata_compute_mode,
+        env_role=env_role,
+        metadata_role=metadata_role,
+        configure_training_gate=True,
+    )
+
+    assert completed.returncode == 0
+    assert calls == ["-c EXCLUSIVE_PROCESS"]
+    assert "CUDA compute mode EXCLUSIVE_PROCESS" in completed.stdout
+    proof = json.loads((tmp_path / "gate_proof.json").read_text(encoding="utf-8"))
+    assert proof["status"] == "PASS"
+
+
+def test_lane_vm_startup_training_role_refuses_without_gate_configuration(
+    tmp_path: Path,
+) -> None:
+    completed, calls = _run_lane_vm_startup(
+        tmp_path,
+        env_role="training",
+    )
+
+    assert completed.returncode != 0
+    assert calls == ["-c DEFAULT"]
+    assert "TRAINING_INPUT_MANIFEST_REQUIRED" in completed.stderr
+
+
+def test_lane_vm_startup_training_role_refuses_without_gate_proof_path(
+    tmp_path: Path,
+) -> None:
+    completed, calls = _run_lane_vm_startup(
+        tmp_path,
+        env_role="training",
+        configure_training_gate=True,
+        omit_gate_proof_path=True,
+    )
+
+    assert completed.returncode != 0
+    assert calls == ["-c DEFAULT"]
+    assert "GATE_PROOF_PATH_REQUIRED" in completed.stderr
+
+
+@pytest.mark.parametrize("role", [None, "pipeline", "pickleball-worker"])
+def test_lane_vm_startup_rejects_exclusive_process_without_explicit_training_role(
+    tmp_path: Path,
+    role: str | None,
+) -> None:
+    completed, calls = _run_lane_vm_startup(
+        tmp_path,
+        env_compute_mode="EXCLUSIVE_PROCESS",
+        env_role=role,
+    )
+
+    assert completed.returncode == 64
+    assert calls == []
+    assert "EXCLUSIVE_PROCESS requires explicit fable-role=training" in completed.stderr
+
+
+def test_lane_vm_startup_fails_closed_when_compute_mode_set_fails(tmp_path: Path) -> None:
+    completed, calls = _run_lane_vm_startup(tmp_path, nvidia_smi_exit=42)
+
+    assert completed.returncode != 0
+    assert calls == ["-c DEFAULT"]
+    assert "failed to set CUDA compute mode DEFAULT" in completed.stderr
+
+
+def test_lane_vm_startup_arms_watcher_before_bounded_metadata_lookup() -> None:
+    script = Path("scripts/fleet/lane_vm_startup.sh").read_text(encoding="utf-8")
+
+    assert script.index("# 1. Arm the preemption watcher") < script.index("CUDA_COMPUTE_MODE_METADATA")
+    assert "--connect-timeout 1 --max-time 2" in script
+
+
+def test_lane_vm_startup_rejects_unknown_compute_mode_before_nvidia_call(tmp_path: Path) -> None:
+    completed, calls = _run_lane_vm_startup(tmp_path, env_compute_mode="SHARED")
+
+    assert completed.returncode == 64
+    assert calls == []
+    assert "unsupported CUDA compute mode: SHARED" in completed.stderr
 
 
 def test_fast_sam_wrapper_records_machine_readable_profile_metrics():

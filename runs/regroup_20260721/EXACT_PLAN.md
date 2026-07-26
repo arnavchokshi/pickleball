@@ -109,7 +109,7 @@ Recompute every input/checkpoint/manifest SHA and require `completed_steps == ta
 
 **CHECK:** end with exactly one of `RECOVERED_HASHED`, `A_ARTIFACT_UNRECOVERABLE`, or `METHOD_INVALID_AUDIO_ONLY=n`. Do not score a method-invalid B/C as causal evidence.
 
-**Quarantine:** protected 50 absent; three pb.vision compare IDs absent; owner 41 read only by the evaluator, never the trainer.
+**Quarantine:** protected 50 absent; three pb.vision compare IDs absent; the owner-41 rows are excluded from gradient updates and may select only through the frozen evaluator.
 
 **Effort / GPU:** 1–2 operator hours; $0 new GPU if disk is recoverable.
 
@@ -137,7 +137,7 @@ A omits `--pseudo-manifest`; C uses `pbvision_placebo_manifest.json`. Score all 
 
 **Expected measurable effect:** B should exceed A by at least `+0.10` macro-F1 at +/-2 frames and exceed C if teacher timing contributes causal signal rather than mere pixel exposure.
 
-**CHECK:** seed 20260720 is an early-stop screen: continue only if `B-A >= +0.10`, `B>C`, B negative FP `<=2/22` and `<=A+1`, B timing p90 is non-worse, and event rate is `0.3–1.0/s`. Otherwise record `EVENT_PBV_SEED1_NO_LIFT` and do not buy eight more arms. This early stop is a negative, not the registered three-seed verdict.
+**CHECK:** seed 20260720 is an early-stop screen: continue only if `B-A >= +0.10`, `B>C`, B negative FP `<=2/22` and `<=A+1`, B timing p90 is non-worse, and event rate is `0.3–1.0/s`. Otherwise record `EVENT_PBV_SEED1_NO_LIFT` and do not buy six more arms. This early stop is a negative, not the registered three-seed verdict.
 
 **Effort / GPU:** 2–4 operator hours; at most 3 A100 arm-runs for the first screen, `<=4.5 GPU-h`, approximately `$5–7` at the recorded A100 spot band if all three must be rerun.
 
@@ -171,7 +171,7 @@ Only after E1 passes, run seeds `20260721` and `20260722` for A/B/C with the ide
 
 **Asset and command-level action**
 
-Add `--inventory-only --require-window-frames 64` to `build_public_manifest.py` and emit per-dataset `label_rows / media_files / decodable_windows / semantic_mapping / rights` without training.
+Add `--inventory-only --require-window-frames 64` to `scripts/racketsport/build_event_head_dataset.py` and extend `threed/racketsport/event_head/datasets.py` to emit per-dataset `label_rows / media_files / decodable_windows / semantic_mapping / rights` without training.
 
 Expected disposition to verify, not assume:
 
@@ -508,7 +508,7 @@ Add `--allow-teacher-derived` to `train_person_osnet_reid.py`. It must require t
 
 **Expected measurable effect:** on the frozen non-compare teacher test, rank-1 `>=+0.10` and mAP `>=+0.05` over Market1501 OSNet.
 
-**CHECK:** both metrics pass and neither heldout video regresses. This is only a screen because the labels are teacher-derived. Otherwise `REID_PBV_NO_RETRIEVAL_LIFT` and do not open P0.
+**CHECK:** both metrics pass and neither heldout video regresses. This is only a screen because the labels are teacher-derived. Otherwise `REID_PBV_NO_RETRIEVAL_LIFT` and do not run R2 against the human card.
 
 **Effort / GPU:** 1–2 GPU-hours, approximately `$0.6–8.5`; 2 engineer hours.
 

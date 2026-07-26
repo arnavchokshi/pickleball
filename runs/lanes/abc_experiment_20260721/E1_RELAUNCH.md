@@ -48,3 +48,16 @@ Executor: Sonnet GPU lane. VM: pickleball-gpu-abc us-central1-a (STOPPED, disk k
    sha256 manifest on VM -> pull abc_out_v2 + seed_20260720 B/C + eval JSONs + screen JSON to
    runs/lanes/abc_experiment_20260721/vm_pull_v2/ -> verify two-sided -> gcloud stop (disk kept
    until E2 concludes or experiment closes). Ledger row + spend estimate.
+
+## ADDENDUM 2026-07-21T20:35Z — reviewer dispatch conditions (review_r2b ACCEPT_WITH_FIXES)
+
+Code commit for the VM: 9bbd8011 (audiofix + B0 + ledgers pushed).
+VM PREFLIGHT (before rebuild): verify the six ball-track provenance chains on-VM. KNOWN GAP from
+review: the raw WASB writer does NOT emit source_video_sha256/media_sha256/frame_times_sha256 —
+the runbook's operator-enrichment step must have added them to the VM ball tracks (and the generic
+frame-times writer does not emit media identity). If a required field is absent from a VM artifact,
+ENRICH per VM_ABC_RUN.md §2-4 (recompute + declare the SHAs against the staged media) — never
+weaken the builder.
+TRAINING PRECONDITION (binding): fresh abc_out_v2 build must pass ALL of: audio_only_accepted==0,
+eligible==1,189 (773 kink-only + 416 both), weight tiers correct, C parity, byte-identical
+determinism re-run, completion hashes verify. Only then start arm B.
