@@ -1,0 +1,205 @@
+{
+  "schema_version": 1,
+  "lane": "oneworld_wire_20260724",
+  "date": "2026-07-24",
+  "branch": "fusion-wire-20260724",
+  "base_commit": "9d318ad",
+  "objective_result": "PASS",
+  "VERIFIED": 0,
+  "headline": "Integration progress, NOT capability progress. The product does not have fusion. The fusion stage is default-OFF, nothing downstream reads it, and on the only full-artifact clip it correctly refused to refine all 24 contacts.",
+  "defect_a": {
+    "problem": "PIPELINE_SUMMARY.json declared a bundle capability named 'fusion' satisfied by the 'world' stage, which is a compositor (threed/racketsport/virtual_world.py 'assembles' finished artifacts) and performs no joint refinement.",
+    "capability_renamed_from": "fusion",
+    "capability_renamed_to": "composited_world",
+    "reason_string_renamed_to": "composited world artifact is missing",
+    "naming_rationale": "Matches the repo's own verb for the stage (virtual_world.py 'assemble', RUNBOOK stage 19 'compose') and NORTH_STAR 1.4's habit of naming evidence for what produced it.",
+    "consumers_updated": [
+      "scripts/racketsport/process_video.py (full preset table)",
+      "scripts/racketsport/process_video.py (court_skeletons preset table)",
+      "server/bundle_policy.py _mandatory_requirements()"
+    ],
+    "consumers_checked_with_no_occurrence": ["docs/racketsport/*.json", "web/", "ios/", "threed/"],
+    "compatibility_decision": "outright rename, no dual-key alias, break documented",
+    "compatibility_justification": "The name reaches the outside world only via PIPELINE_SUMMARY.json -> missing_capabilities[].capability, and only when the artifact is ABSENT; a complete bundle never contained the string. No committed JSON schema enumerates capability names. A legacy alias would re-assert the false claim this change exists to correct. The worker and server were renamed in lockstep because server.bundle_policy.gate_reported_status() compares the two lists and a one-sided rename would silently downgrade every complete bundle to partial.",
+    "mixed_version_safety": "An older summary carrying {'capability': 'fusion'} is copied forward by evaluate_bundle; _append_missing is additive and de-duplicates by name, so a stale entry can only add a partial reason to a bundle that was already partial. No bundle is misclassified in either direction.",
+    "regression_test": "tests/racketsport/test_capability_naming_honesty.py"
+  },
+  "defect_b": {
+    "problem": "threed/racketsport/one_world_v1.py (1571 lines), the real confidence-weighted joint-refinement module, had zero pipeline call sites.",
+    "stage_name": "one_world",
+    "serial_order": 185,
+    "overlap_order": 185,
+    "position": "between world (180) and confidence_gate (190)",
+    "enabled_by": "one_world",
+    "default_enabled": false,
+    "best_stack_key": "world.one_world_v1_fusion",
+    "best_stack_status": "PENDING",
+    "best_stack_do_not_promote": true,
+    "best_stack_trust_band": "preview",
+    "best_stack_revision_bumped": false,
+    "best_stack_revision_rationale": "Precedent commit 57239d8 added an R&D-only enabled=false PENDING entry and explicitly recorded 'no revision bump'. Manifest stays at revision 15; only 'updated' moved to 2026-07-24.",
+    "cli_flags": ["--one-world", "--no-one-world"],
+    "excluded_from_presets": ["court_skeletons"],
+    "preset_exclusion_rationale": "court_skeletons has no ball stages at all, so it can never satisfy the required inputs; running it there would guarantee a blocked outcome on every run. Enforced twice: COURT_SKELETON_STAGE_NAMES exclusion and a forced-off in build_options_from_args.",
+    "artifacts_written": ["one_world_v1.json", "one_world_v1_validation.json"],
+    "schema_validated_against": "docs/racketsport/one_world_v1_schema.json",
+    "schema_validation_method": "OneWorldV1.model_validate_json on the exact emitted bytes, before publication; a test asserts OneWorldV1.model_json_schema() == the committed schema so drift is caught.",
+    "byte_identity_when_off": {
+      "mechanism": "authoritative_stage_names(..., one_world=False) default plus omission of the best_stack key from resolved_best_stack_config_from_options while off",
+      "spine_stage_counts_unchanged": [25, 25, 26],
+      "sibling_stage_identity_unchanged": true,
+      "proven_by": "tests/racketsport/test_one_world_stage.py"
+    },
+    "degradation_semantics": {
+      "required_inputs": ["ball_track.json", "court_calibration.json"],
+      "required_inputs_missing": {"status": "blocked", "reason_code": "one_world_required_inputs_missing", "artifact_written": false},
+      "builder_file_not_found": {"status": "blocked", "reason_code": "one_world_required_inputs_missing", "artifact_written": false},
+      "same_run_input_disagreement": {"status": "degraded", "reason_code": "one_world_input_disagreement", "artifact_written": false},
+      "self_validation_failed": {"status": "degraded"},
+      "success": {"status": "ran", "trust_badge": "preview"},
+      "programming_error": {"status": "failed", "reason_code": "unexpected_stage_exception"},
+      "mechanism": "ExpectedOptionalAbsence, the repo's existing typed-absence mechanism",
+      "why_it_matters": "build_one_world hard-raises FileNotFoundError without ball_track.json, and every run in the last four days used --pipeline-preset court_skeletons which produces none; a naive wiring would have hard-failed on 100% of current runs."
+    },
+    "identity_graph_registration": {
+      "RUN_IDENTITY_DEPENDENCIES": ["calibration", "player_selection", "ball", "ball_fill", "body", "placement_refine", "grounding_refine", "paddle_pose", "events_refined", "ball_arc_refined", "world"],
+      "RUN_IDENTITY_CONFIG_KEYS": ["world.one_world_v1_fusion"],
+      "RUN_IDENTITY_OUTPUTS": ["one_world_v1.json", "one_world_v1_validation.json"],
+      "stage_identity_options": true,
+      "stage_explicit_inputs_count": 22,
+      "nothing_depends_on_one_world": true,
+      "reuse_verified_empirically": "ran -> skipped (reused generation) -> ran after mutating ball_track.json"
+    }
+  },
+  "end_to_end": {
+    "attempted": true,
+    "fixture": "runs/lanes/oneworld_impl_20260716/wolverine/ (copied read-only into a scratch run dir)",
+    "drove": "the real pipeline stage via _run_stage_safely, not the scaffold CLI",
+    "note": "smpl_motion.json in that directory is a broken symlink, so the run exercised the real skeleton3d.json fallback path",
+    "status": "ran",
+    "trust_badge": "preview",
+    "wall_seconds": 1.28,
+    "input_artifact_count": 14,
+    "raw_inputs_mutated": 0,
+    "files_created": ["one_world_v1.json", "one_world_v1_validation.json"],
+    "artifact_bytes": 19417996,
+    "self_validation_valid": true,
+    "self_validation_checks_passed": 8,
+    "deterministic_rebuild_byte_identical": true,
+    "frames": 300,
+    "contacts": 24,
+    "bounces": 4,
+    "events": 28,
+    "known_bad_results_reported_not_hidden": {
+      "contacts_resolved": 0,
+      "contacts_abstained": 24,
+      "abstention_unsupported_no_player_wrist_within_1_2m": 20,
+      "abstention_too_close_to_call_probability_or_margin_below_threshold": 4,
+      "ball_contact_distance_m_count": 0,
+      "ball_world_points_total": 300,
+      "ball_world_points_off_court": 185,
+      "ball_world_points_off_court_pct": 61.7,
+      "off_court_method": "court_zones.json polygon, x +/-3.048 m, y +/-6.7056 m, rectangle so bbox is exact; brief cited ~51% on a different basis",
+      "interpretation": "REFUSAL IS CORRECT BEHAVIOUR. With ball 3D that far off-court no player wrist is within the 1.2 m co-location radius, so the co-location likelihood loses to the null hypothesis and the refiner abstains instead of inventing a hitter."
+    },
+    "other_real_numbers": {
+      "paddle_resolved_count": 0,
+      "paddle_ambiguous_denominator": 0,
+      "paddle_unsupported_legacy_wrist_proxy_count": 1102,
+      "world_coverage_fraction": 0.39,
+      "world_complete_frame_count": 117,
+      "ball_tier_arc_measured": 295,
+      "ball_tier_physics_predicted": 5,
+      "bounce_plane_residual_count": 4,
+      "bounce_plane_residual_median_before": 0.0,
+      "bounce_plane_residual_median_after": 0.0,
+      "reprojection_ball_median_px_baseline": 85.97147317185497,
+      "reprojection_ball_median_px_fused": 85.97147317185497,
+      "reprojection_player_median_px_baseline": 19.637710646274734,
+      "reprojection_player_median_px_fused": 19.637674737350746,
+      "regression_kills": [],
+      "honest_reading": "The fusion changed essentially nothing and abstained from every contact. Sixth-significant-figure movement in player reprojection is noise, not improvement, and is not evidence of anything."
+    }
+  },
+  "tests": {
+    "interpreter": ".venv/bin/python (Python 3.14.6)",
+    "env": "MPLBACKEND=Agg, -p no:randomly",
+    "new_focused": {
+      "command": ".venv/bin/python -m pytest tests/racketsport/test_one_world_stage.py tests/racketsport/test_capability_naming_honesty.py -q -p no:randomly",
+      "passed": 28,
+      "failed": 0,
+      "real_exit": 0,
+      "test_counts": {"test_one_world_stage.py": 21, "test_capability_naming_honesty.py": 7}
+    },
+    "blast_radius_suite": {
+      "note": "identical command both sides; the branch run additionally includes the two new test files, which do not exist at base",
+      "base_9d318ad": {"passed": 721, "failed": 4, "real_exit": 1, "wall_seconds": 222.04},
+      "branch": {"passed": 749, "failed": 3, "real_exit": 1, "wall_seconds": 230.50},
+      "failures_caused_by_this_branch": 0,
+      "pre_existing_failures_fixed_by_this_branch": 1,
+      "attribution": [
+        {"test": "test_truthful_capabilities::test_storage_policy_keeps_large_tracked_artifacts_explicit", "base": "FAIL", "branch": "FAIL", "attribution": "pre-existing", "cause": "6 tracked files >5MB under runs/lanes/holdout_eval_20260721/vm_pull/ absent from ALLOWED_LARGE_TRACKED_FILES; introduced by commit f9dc11d, proven an ancestor of 9d318ad"},
+        {"test": "test_truthful_capabilities::test_north_star_is_the_single_product_and_execution_authority", "base": "FAIL", "branch": "FAIL", "attribution": "pre-existing", "cause": "NORTH_STAR_ROADMAP.md is 528 lines against a <=500 assertion"},
+        {"test": "test_scaffold_tool_index::test_real_scaffold_tool_index_matches_checked_in_schema", "base": "FAIL", "branch": "FAIL", "attribution": "pre-existing", "cause": "7 CLIs classify as category unknown"},
+        {"test": "test_truthful_capabilities::test_runbook_documents_current_process_video_entrypoint", "base": "FAIL", "branch": "PASS", "attribution": "FIXED by this branch", "cause": "RUNBOOK.md was missing **player_selection**; this branch documents it and the new one_world stage"}
+      ],
+      "excluded_from_both_runs": {
+        "path": "tests/racketsport/test_audit_data_utilization.py",
+        "reason": "pre-existing collection error: imports REQUIRED_CONTRACT_ASSET_IDS, which does not exist in scripts/racketsport/audit_data_utilization.py at 9d318ad"
+      }
+    },
+    "wide_suite": {
+      "command": ".venv/bin/python -m pytest tests/ -q -p no:randomly --ignore=tests/racketsport/test_audit_data_utilization.py",
+      "time_boxed": true,
+      "time_box_rationale": "The full tests/ tree is single-threaded (pytest-xdist not installed) and slow on this CPU; the source lane oneworld_impl_20260716 time-boxed its own wide run at 1002s for the same reason. Both sides were interrupted at the same symmetric progress point (~33%).",
+      "base_9d318ad": {"passed": 1609, "failed": 54, "skipped": 7, "wall_seconds": 511.22, "terminated_by": "SIGINT"},
+      "branch": {"passed": 1616, "failed": 54, "skipped": 7, "wall_seconds": 509.15, "terminated_by": "SIGINT"},
+      "failure_sets_identical": true,
+      "failures_caused_by_this_branch": 0,
+      "caveat": "Both runs used clean git-archive extracts of their respective commits, which lack untracked data/ and runs/ fixture files that many tests need. That inflates the absolute failure count on BOTH sides equally, so the comparison is valid but the absolute 54 is not a statement about repo health."
+    },
+    "repo_structure_checks": {
+      "list_scaffold_tools": {"command": ".venv/bin/python scripts/racketsport/list_scaffold_tools.py --root .", "real_exit": 0},
+      "audit_dead_code": {"command": ".venv/bin/python scripts/racketsport/audit_dead_code.py --root .", "real_exit": 0, "status": "pass", "python_sources": 631, "unknown_python_sources": 0},
+      "audit_storage_policy": {"command": "python3 scripts/racketsport/audit_storage_policy.py --root . --json", "real_exit": 1, "unknown_large_tracked_files": 6, "unknown_large_untracked_source_files": 0, "attribution": "pre-existing f9dc11d registry drift, identical to the blast-radius storage failure; unchanged by this branch"}
+    }
+  },
+  "incident": {
+    "what": "While interrupting my own two time-boxed wide runs, my process-matching pattern ('pytest tests/') was too broad and also sent SIGINT to a concurrent agent's test run in /Users/arnavchokshi/Desktop/pickleball/.claude/worktrees/ball-lane-20260723.",
+    "impact": "That lane's full suite was killed at 43:05 having reached 71 failed, 3937 passed, 30 skipped, 28 errors. Its partial log survives at scratchpad/postrebase_full.log but no exit file was written, so it will need to re-run to get a clean exit code.",
+    "damage": "No file was modified, no repo state was corrupted, and the main checkout was never written to. The cost is that lane's wall-clock time.",
+    "disclosure": "Reported rather than hidden. The ball-lane-20260723 owner should be told to re-run."
+  },
+  "safety": {
+    "worked_only_in": "/private/tmp/pickleball-fusion-20260724 plus two disposable /private/tmp extracts",
+    "main_checkout_written_to": false,
+    "merged_to_main": false,
+    "pushed": false,
+    "cloud_used": false,
+    "gpu_used": false,
+    "cost_usd": 0
+  },
+  "files_changed": [
+    "scripts/racketsport/process_video.py",
+    "server/bundle_policy.py",
+    "configs/racketsport/best_stack.json",
+    "RUNBOOK.md",
+    "tests/racketsport/test_capability_naming_honesty.py",
+    "tests/racketsport/test_one_world_stage.py"
+  ],
+  "commits": [
+    "027b73d Defect A: stop reporting the compositor as \"fusion\"",
+    "8d70609 Defect B: wire one_world_v1 as a DEFAULT-OFF preview fusion stage (order 185)",
+    "e2ce1a3 one_world stage: pin content-addressed reuse and invalidation",
+    "ee820e0 one_world stage: rename shadowed comprehension variable in _stage_explicit_inputs"
+  ],
+  "remaining_risks": [
+    "No accuracy evidence exists and none was produced; the new best_stack gate is unmet and unattempted.",
+    "The one clip with full artifacts is not a usable judge: 61.7% of its ball world points are off-court.",
+    "Degrade-vs-fail on same-run input disagreement is a judgement call; a reviewer may reasonably want it stricter.",
+    "The 19.4 MB one_world_v1.json is unbudgeted; enabling this stage by default would need a byte budget like mesh.byte_budget_mib.",
+    "build_metrics was deliberately not wired because it imports runs.lanes.oneworld_design_20260716.baseline_probe, a lane directory under runs/.",
+    "RUNBOOK.md is concurrently modified-uncommitted in the main checkout; see MERGE_NOTES.md.",
+    "Flipping world.one_world_v1_fusion to enabled would make every full-preset run without ball artifacts emit a blocked stage outcome; that is honest but is a visible behaviour change."
+  ]
+}

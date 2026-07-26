@@ -244,10 +244,15 @@ def _mandatory_requirements() -> tuple[tuple[str, tuple[str, ...], str], ...]:
         ("events", ("contact_windows.json",), "event/contact artifact is missing"),
         ("ball_arc", ("ball_track_arc_solved.json",), "ball arc artifact is missing"),
         ("paddle", ("racket_pose_estimate.json",), "paddle artifact is missing"),
+        # Must stay lockstep-identical to the worker's capability vocabulary in
+        # scripts/racketsport/process_video.py: gate_reported_status() compares the
+        # worker-reported missing_capabilities list against the list re-derived
+        # here, so a one-sided rename would silently downgrade bundles to partial.
+        # `world` composites finished artifacts; it never jointly refines them.
         (
-            "fusion",
+            "composited_world",
             ("confidence_gated_world.json", "virtual_world.json"),
-            "fused-world artifact is missing",
+            "composited world artifact is missing",
         ),
         ("stats", ("match_stats.json",), "deterministic stats artifact is missing"),
         ("coaching", ("coaching_card_facts.json",), "deterministic coaching facts are missing"),

@@ -1,0 +1,136 @@
+{
+  "artifact_bytes": 19417996,
+  "artifacts": [
+    "one_world_v1.json",
+    "one_world_v1_validation.json"
+  ],
+  "created_files": [
+    "one_world_v1.json",
+    "one_world_v1_validation.json"
+  ],
+  "input_file_count": 14,
+  "metrics": {
+    "VERIFIED": 0,
+    "authority": "never",
+    "ball_contact_distance_m": {
+      "abstained_count": 24.0,
+      "count": 0.0,
+      "median": null,
+      "p90_nearest_rank": null
+    },
+    "bounce_count": 4,
+    "bounce_plane_residual_m": {
+      "baseline_median": 0.0,
+      "baseline_p90_nearest_rank": 0.0,
+      "count": 4.0,
+      "median": 0.0,
+      "p90_nearest_rank": 0.0
+    },
+    "contact_count": 24,
+    "do_not_promote": true,
+    "event_count": 28,
+    "frame_count": 300,
+    "missing_counts": {
+      "paddle_pose": 98,
+      "player_placement": 93
+    },
+    "paddle_resolution": {
+      "ambiguous_denominator": 0.0,
+      "resolved_count": 0.0,
+      "resolved_fraction": 0.0,
+      "unsupported_legacy_wrist_proxy_count": 1102.0
+    },
+    "placement_tier_counts": {
+      "placement_fused": 1107
+    },
+    "preview_only": true,
+    "regression_kills": [],
+    "reprojection_consistency": {
+      "ball": {
+        "baseline": {
+          "count": 295,
+          "median": 85.97147317185497,
+          "p90_nearest_rank": 926.6164635285546
+        },
+        "fused": {
+          "count": 295,
+          "median": 85.97147317185497,
+          "p90_nearest_rank": 926.6164635285546
+        }
+      },
+      "paddle": {
+        "baseline": {
+          "count": 0,
+          "median": null,
+          "p90_nearest_rank": null
+        },
+        "fused": {
+          "count": 0,
+          "median": null,
+          "p90_nearest_rank": null
+        },
+        "unsupported_reason": "no true corners in target run"
+      },
+      "player": {
+        "baseline": {
+          "count": 1107,
+          "median": 19.637710646274734,
+          "p90_nearest_rank": 61.26828379013438
+        },
+        "fused": {
+          "count": 1107,
+          "median": 19.637674737350746,
+          "p90_nearest_rank": 61.266179445406266
+        }
+      }
+    },
+    "validation_checks": {
+      "absence_semantics": true,
+      "band_inheritance": true,
+      "input_sha256s": true,
+      "no_snap_policy": true,
+      "preview_policy": true,
+      "raw_inputs_mutated": true,
+      "reprojection_kills": true,
+      "schema": true
+    },
+    "validation_errors": [],
+    "validation_valid": true,
+    "warnings": [
+      "VERIFIED=0",
+      "not_for_detection_metrics",
+      "not_for_training",
+      "preview_band",
+      "render_only"
+    ],
+    "world_coverage": {
+      "ball_estimate_tier_counts": {
+        "arc_measured": 295,
+        "physics_predicted": 5
+      },
+      "complete_frame_count": 117,
+      "confidence_threshold": 0.5,
+      "coverage_fraction": 0.39,
+      "coverage_measured": {
+        "complete_frame_count": 117,
+        "coverage_fraction": 0.39
+      },
+      "coverage_with_predicted": {
+        "complete_frame_count": 117,
+        "coverage_fraction": 0.39
+      },
+      "rally_frame_count": 300
+    }
+  },
+  "notes": [
+    "one_world_v1 confidence-weighted joint refinement over finished same-run artifacts; preview_only, do_not_promote, VERIFIED=0",
+    "raw observations were not modified; the refinement is a separate artifact carrying its own provenance and covariance",
+    "no downstream stage reads this artifact; it is never product authority",
+    "fusion warnings: VERIFIED=0; not_for_detection_metrics; not_for_training; preview_band; render_only"
+  ],
+  "raw_inputs_mutated": [],
+  "stage": "one_world",
+  "status": "ran",
+  "trust_badge": "preview",
+  "wall_seconds": 1.28
+}

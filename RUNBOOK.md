@@ -208,7 +208,19 @@ before fresh BALL/audio and does not yet trim all downstream decoding.
     wall time.
 20. **world** - compose `virtual_world.json` and `trust_bands.json` from the
     already-finished refined artifacts; refinement time is not folded into
-    this stage.
+    this stage. This stage COMPOSITES; it performs no joint refinement, and the
+    bundle capability it satisfies is named `composited_world` for that reason.
+    Optional stage between 20 and 21: **one_world** via `--one-world`
+    (default OFF, best_stack `world.one_world_v1_fusion`, status PENDING,
+    `do_not_promote`). This is the only stage that performs confidence-weighted
+    joint refinement. It writes `one_world_v1.json` plus
+    `one_world_v1_validation.json`, leaves every raw observation immutable, and is
+    read by nothing downstream, so it can never become product authority. Absent
+    inputs (it requires `ball_track.json` and `court_calibration.json`, which the
+    `court_skeletons` preset never produces) yield a typed `blocked` outcome with
+    reason `one_world_required_inputs_missing` instead of a crash. Wiring it is
+    integration progress, not capability progress: `VERIFIED=0` and there is no
+    accuracy evidence for the refinement.
 21. **confidence_gate** - write `confidence_gated_world.json` unless
     `--no-confidence-gate` is set.
 22. **match_stats** - default-on fail-open placement/court movement stats.
