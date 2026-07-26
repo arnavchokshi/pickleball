@@ -1,0 +1,2492 @@
+{
+  "artifact_type": "racketsport_ball_detector_noise_model",
+  "association_radius_px": 20.0,
+  "ball_verified": false,
+  "blur_association": {
+    "blur_length_px": {
+      "median": 21.530803,
+      "p50": 21.530803,
+      "p90": 36.251066,
+      "p95": 39.648487,
+      "p99": 47.330651
+    },
+    "clips_with_sidecar": [
+      "burlington_gold_0300_low_steep_corner",
+      "wolverine_mixed_0200_mid_steep_corner"
+    ],
+    "n_joined_label_frames": 36,
+    "sidecar_track_caveat": "blur sidecars were computed along the ballcand_20260710 baseline track, not along the human labels; the join is by frame index only",
+    "split_at_median_blur": {
+      "high_blur": {
+        "median_radial_residual_px": 4.162907,
+        "n": 18
+      },
+      "low_blur": {
+        "median_radial_residual_px": 4.725379,
+        "n": 18
+      }
+    }
+  },
+  "by_regime": {
+    "indoor": {
+      "confidence_bins_independent_pairs": [
+        {
+          "conf_range": [
+            0.0,
+            0.7
+          ],
+          "inlier_le_20px_rate": 0.428571,
+          "median_radial_px": 113.92285,
+          "n": 7
+        },
+        {
+          "conf_range": [
+            0.7,
+            0.9
+          ],
+          "inlier_le_20px_rate": 0.733333,
+          "median_radial_px": 6.244341,
+          "n": 15
+        },
+        {
+          "conf_range": [
+            0.9,
+            1.0
+          ],
+          "inlier_le_20px_rate": 0.833333,
+          "median_radial_px": 6.113923,
+          "n": 12
+        }
+      ],
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 27,
+        "n_independent": 34,
+        "n_paired_detections": 61
+      },
+      "rates": {
+        "detector_fired_at_visible": 61,
+        "fp_confidence": {
+          "median": 0.835212,
+          "p90": 0.909691
+        },
+        "fp_count_at_labeled_hidden": 7,
+        "fp_rate_at_labeled_hidden": 0.132075,
+        "labeled_not_visible_frames": 53,
+        "labeled_visible_frames": 86,
+        "miss_count": 25,
+        "miss_rate_at_labeled_visible": 0.290698
+      },
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 5.709594,
+              "p90": 306.361688,
+              "p95": 1052.062428,
+              "p99": 1376.942929
+            },
+            "excess_kurtosis": 6.643948,
+            "mad_px": 3.50733,
+            "mad_sigma_px": 5.199967,
+            "mean_bias_px": -115.683109,
+            "median_px": 2.524152,
+            "n": 34,
+            "std_px": 360.766785
+          },
+          "dy": {
+            "abs": {
+              "p50": 2.462844,
+              "p90": 74.511275,
+              "p95": 96.161262,
+              "p99": 298.939008
+            },
+            "excess_kurtosis": 17.015188,
+            "mad_px": 2.462844,
+            "mad_sigma_px": 3.651413,
+            "mean_bias_px": -14.486077,
+            "median_px": 0.042969,
+            "n": 34,
+            "std_px": 75.144902
+          },
+          "radial": {
+            "frac_gt_100px": 0.264706,
+            "frac_gt_10px": 0.323529,
+            "frac_gt_20px": 0.294118,
+            "frac_gt_50px": 0.294118,
+            "mean_px": 152.899293,
+            "median_px": 6.718496,
+            "n": 34,
+            "p50": 6.718496,
+            "p90": 394.075813,
+            "p95": 1052.742622,
+            "p99": 1380.373248
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "abs": {
+              "p50": 4.465161,
+              "p90": 6.651275,
+              "p95": 6.943539,
+              "p99": 7.722828
+            },
+            "excess_kurtosis": -0.147405,
+            "mad_px": 2.443793,
+            "mad_sigma_px": 3.623167,
+            "mean_bias_px": 2.896781,
+            "median_px": 3.747424,
+            "n": 24,
+            "std_px": 3.651192
+          },
+          "dy": {
+            "abs": {
+              "p50": 1.885248,
+              "p90": 7.222652,
+              "p95": 8.163257,
+              "p99": 8.670118
+            },
+            "excess_kurtosis": 0.502132,
+            "mad_px": 1.719455,
+            "mad_sigma_px": 2.549264,
+            "mean_bias_px": -0.078181,
+            "median_px": 0.405554,
+            "n": 24,
+            "std_px": 3.847909
+          },
+          "frac_le_10px": 0.676471,
+          "n": 24,
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.041667,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 5.378886,
+            "median_px": 5.576314,
+            "n": 24,
+            "p50": 5.576314,
+            "p90": 8.160256,
+            "p95": 8.725224,
+            "p99": 10.279092
+          },
+          "rate": 0.705882
+        },
+        "n_paired_detections": 34,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 270.29859,
+            "p90": 1298.384818,
+            "p95": 1363.112526,
+            "p99": 1414.894692
+          },
+          "n": 10,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 0.294118
+        }
+      }
+    },
+    "outdoor_day": {
+      "confidence_bins_independent_pairs": [
+        {
+          "conf_range": [
+            0.0,
+            0.7
+          ],
+          "inlier_le_20px_rate": 0.555556,
+          "median_radial_px": 13.135494,
+          "n": 9
+        },
+        {
+          "conf_range": [
+            0.7,
+            0.9
+          ],
+          "inlier_le_20px_rate": 0.892857,
+          "median_radial_px": 5.228637,
+          "n": 28
+        },
+        {
+          "conf_range": [
+            0.9,
+            1.0
+          ],
+          "inlier_le_20px_rate": 1.0,
+          "median_radial_px": 4.200573,
+          "n": 25
+        }
+      ],
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 32,
+        "n_independent": 62,
+        "n_paired_detections": 94
+      },
+      "rates": {
+        "detector_fired_at_visible": 94,
+        "fp_confidence": {
+          "median": 0.80726,
+          "p90": 0.888091
+        },
+        "fp_count_at_labeled_hidden": 17,
+        "fp_rate_at_labeled_hidden": 0.274194,
+        "labeled_not_visible_frames": 62,
+        "labeled_visible_frames": 110,
+        "miss_count": 16,
+        "miss_rate_at_labeled_visible": 0.145455
+      },
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 2.934585,
+              "p90": 67.032,
+              "p95": 359.69113,
+              "p99": 748.103178
+            },
+            "excess_kurtosis": 16.362477,
+            "mad_px": 2.828845,
+            "mad_sigma_px": 4.194046,
+            "mean_bias_px": -40.662705,
+            "median_px": -0.10574,
+            "n": 62,
+            "std_px": 155.877746
+          },
+          "dy": {
+            "abs": {
+              "p50": 2.51024,
+              "p90": 14.892327,
+              "p95": 211.318694,
+              "p99": 295.967205
+            },
+            "excess_kurtosis": 17.060467,
+            "mad_px": 2.209042,
+            "mad_sigma_px": 3.275126,
+            "mean_bias_px": 3.361783,
+            "median_px": 0.692169,
+            "n": 62,
+            "std_px": 74.357774
+          },
+          "radial": {
+            "frac_gt_100px": 0.112903,
+            "frac_gt_10px": 0.145161,
+            "frac_gt_20px": 0.112903,
+            "frac_gt_50px": 0.112903,
+            "mean_px": 56.823938,
+            "median_px": 4.759122,
+            "n": 62,
+            "p50": 4.759122,
+            "p90": 121.130431,
+            "p95": 446.229565,
+            "p99": 758.437182
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "abs": {
+              "p50": 2.595325,
+              "p90": 6.388811,
+              "p95": 7.44219,
+              "p99": 10.526957
+            },
+            "excess_kurtosis": 0.834611,
+            "mad_px": 3.037952,
+            "mad_sigma_px": 4.504068,
+            "mean_bias_px": 0.109748,
+            "median_px": 0.799768,
+            "n": 55,
+            "std_px": 4.012033
+          },
+          "dy": {
+            "abs": {
+              "p50": 2.274432,
+              "p90": 5.03531,
+              "p95": 5.889282,
+              "p99": 10.387368
+            },
+            "excess_kurtosis": 2.609529,
+            "mad_px": 2.019231,
+            "mad_sigma_px": 2.993712,
+            "mean_bias_px": 0.751755,
+            "median_px": 0.738689,
+            "n": 55,
+            "std_px": 3.525325
+          },
+          "frac_le_10px": 0.854839,
+          "n": 55,
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.036364,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 4.740163,
+            "median_px": 4.311269,
+            "n": 55,
+            "p50": 4.311269,
+            "p90": 7.152587,
+            "p95": 8.613992,
+            "p99": 13.73979
+          },
+          "rate": 0.887097
+        },
+        "n_paired_detections": 62,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 447.145844,
+            "p90": 760.87666,
+            "p95": 834.061002,
+            "p99": 892.608476
+          },
+          "n": 7,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 0.112903
+        }
+      }
+    },
+    "outdoor_night": {
+      "confidence_bins_independent_pairs": [
+        {
+          "conf_range": [
+            0.0,
+            0.7
+          ],
+          "inlier_le_20px_rate": 0.615385,
+          "median_radial_px": 10.870818,
+          "n": 13
+        },
+        {
+          "conf_range": [
+            0.7,
+            0.9
+          ],
+          "inlier_le_20px_rate": 0.806452,
+          "median_radial_px": 5.850897,
+          "n": 31
+        },
+        {
+          "conf_range": [
+            0.9,
+            1.0
+          ],
+          "inlier_le_20px_rate": 0.583333,
+          "median_radial_px": 7.608245,
+          "n": 12
+        }
+      ],
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 68,
+        "n_independent": 56,
+        "n_paired_detections": 124
+      },
+      "rates": {
+        "detector_fired_at_visible": 124,
+        "fp_confidence": {
+          "median": 0.861357,
+          "p90": 0.918504
+        },
+        "fp_count_at_labeled_hidden": 48,
+        "fp_rate_at_labeled_hidden": 0.505263,
+        "labeled_not_visible_frames": 95,
+        "labeled_visible_frames": 160,
+        "miss_count": 36,
+        "miss_rate_at_labeled_visible": 0.225
+      },
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 4.173786,
+              "p90": 718.530978,
+              "p95": 927.132531,
+              "p99": 1176.624276
+            },
+            "excess_kurtosis": 4.011175,
+            "mad_px": 4.462133,
+            "mad_sigma_px": 6.615559,
+            "mean_bias_px": 22.005272,
+            "median_px": 0.575064,
+            "n": 56,
+            "std_px": 367.570916
+          },
+          "dy": {
+            "abs": {
+              "p50": 4.175131,
+              "p90": 345.52796,
+              "p95": 534.584652,
+              "p99": 582.356171
+            },
+            "excess_kurtosis": 2.925098,
+            "mad_px": 3.664693,
+            "mad_sigma_px": 5.433275,
+            "mean_bias_px": -61.88399,
+            "median_px": 1.215918,
+            "n": 56,
+            "std_px": 177.762684
+          },
+          "radial": {
+            "frac_gt_100px": 0.267857,
+            "frac_gt_10px": 0.357143,
+            "frac_gt_20px": 0.285714,
+            "frac_gt_50px": 0.285714,
+            "mean_px": 198.253493,
+            "median_px": 7.140666,
+            "n": 56,
+            "p50": 7.140666,
+            "p90": 757.466727,
+            "p95": 936.344097,
+            "p99": 1245.631301
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "abs": {
+              "p50": 3.271269,
+              "p90": 6.763042,
+              "p95": 7.504943,
+              "p99": 12.666895
+            },
+            "excess_kurtosis": 0.609848,
+            "mad_px": 3.359943,
+            "mad_sigma_px": 4.981451,
+            "mean_bias_px": -0.414296,
+            "median_px": 0.374029,
+            "n": 40,
+            "std_px": 4.6318
+          },
+          "dy": {
+            "abs": {
+              "p50": 2.626892,
+              "p90": 7.094573,
+              "p95": 8.512287,
+              "p99": 14.177096
+            },
+            "excess_kurtosis": 2.037,
+            "mad_px": 2.314143,
+            "mad_sigma_px": 3.430949,
+            "mean_bias_px": 2.276838,
+            "median_px": 1.860988,
+            "n": 40,
+            "std_px": 4.226626
+          },
+          "frac_le_10px": 0.642857,
+          "n": 40,
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.1,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 5.537311,
+            "median_px": 4.427996,
+            "n": 40,
+            "p50": 4.427996,
+            "p90": 9.404797,
+            "p95": 11.722655,
+            "p99": 16.772112
+          },
+          "rate": 0.714286
+        },
+        "n_paired_detections": 56,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 711.435647,
+            "p90": 1076.959434,
+            "p95": 1207.308524,
+            "p99": 1322.276855
+          },
+          "n": 16,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 0.285714
+        }
+      }
+    }
+  },
+  "by_set": {
+    "A_eval_clips_independent_clicks": {
+      "all_pairs": {
+        "dx": {
+          "abs": {
+            "p50": 3.979706,
+            "p90": 134.742112,
+            "p95": 293.696282,
+            "p99": 1327.639444
+          },
+          "excess_kurtosis": 18.087801,
+          "mad_px": 3.219824,
+          "mad_sigma_px": 4.773711,
+          "mean_bias_px": -57.385537,
+          "median_px": 1.20979,
+          "n": 69,
+          "std_px": 258.643639
+        },
+        "dy": {
+          "abs": {
+            "p50": 2.415344,
+            "p90": 46.87035,
+            "p95": 67.776167,
+            "p99": 95.423364
+          },
+          "excess_kurtosis": 7.305995,
+          "mad_px": 2.557843,
+          "mad_sigma_px": 3.792258,
+          "mean_bias_px": -1.320428,
+          "median_px": 0.71748,
+          "n": 69,
+          "std_px": 26.07019
+        },
+        "radial": {
+          "frac_gt_100px": 0.130435,
+          "frac_gt_10px": 0.173913,
+          "frac_gt_20px": 0.15942,
+          "frac_gt_50px": 0.15942,
+          "mean_px": 75.354199,
+          "median_px": 5.024604,
+          "n": 69,
+          "p50": 5.024604,
+          "p90": 140.376578,
+          "p95": 302.015112,
+          "p99": 1330.029475
+        }
+      },
+      "inliers_le_20px": {
+        "dx": {
+          "abs": {
+            "p50": 3.114255,
+            "p90": 6.099115,
+            "p95": 6.898344,
+            "p99": 7.705075
+          },
+          "excess_kurtosis": -0.603889,
+          "mad_px": 2.485242,
+          "mad_sigma_px": 3.68462,
+          "mean_bias_px": 1.674289,
+          "median_px": 1.301202,
+          "n": 58,
+          "std_px": 3.575333
+        },
+        "dy": {
+          "abs": {
+            "p50": 2.12105,
+            "p90": 5.837162,
+            "p95": 7.2253,
+            "p99": 8.467509
+          },
+          "excess_kurtosis": 0.166955,
+          "mad_px": 1.726883,
+          "mad_sigma_px": 2.560277,
+          "mean_bias_px": 0.376037,
+          "median_px": 0.843579,
+          "n": 58,
+          "std_px": 3.564807
+        },
+        "frac_le_10px": 0.826087,
+        "n": 58,
+        "radial": {
+          "frac_gt_100px": 0.0,
+          "frac_gt_10px": 0.017241,
+          "frac_gt_20px": 0.0,
+          "frac_gt_50px": 0.0,
+          "mean_px": 4.807326,
+          "median_px": 4.733997,
+          "n": 58,
+          "p50": 4.733997,
+          "p90": 7.711341,
+          "p95": 8.333187,
+          "p99": 9.653328
+        },
+        "rate": 0.84058
+      },
+      "n_paired_detections": 69,
+      "outliers_gt_20px": {
+        "displacement_px": {
+          "p50": 154.503724,
+          "p90": 1284.000883,
+          "p95": 1355.920558,
+          "p99": 1413.456298
+        },
+        "n": 11,
+        "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+        "rate": 0.15942
+      }
+    },
+    "B_cvat_coincident_seed_count": 126,
+    "B_cvat_human_moved_only": {
+      "all_pairs": {
+        "dx": {
+          "abs": {
+            "p50": 3.95061,
+            "p90": 641.09003,
+            "p95": 884.936833,
+            "p99": 1158.14536
+          },
+          "excess_kurtosis": 4.918382,
+          "mad_px": 4.563259,
+          "mad_sigma_px": 6.765488,
+          "mean_bias_px": -15.209833,
+          "median_px": -0.830483,
+          "n": 83,
+          "std_px": 331.247071
+        },
+        "dy": {
+          "abs": {
+            "p50": 3.618761,
+            "p90": 251.75332,
+            "p95": 478.716679,
+            "p99": 577.478918
+          },
+          "excess_kurtosis": 3.921021,
+          "mad_px": 3.044089,
+          "mad_sigma_px": 4.513166,
+          "mean_bias_px": -44.078193,
+          "median_px": 0.738689,
+          "n": 83,
+          "std_px": 166.612278
+        },
+        "radial": {
+          "frac_gt_100px": 0.26506,
+          "frac_gt_10px": 0.337349,
+          "frac_gt_20px": 0.26506,
+          "frac_gt_50px": 0.26506,
+          "mean_px": 176.197782,
+          "median_px": 6.506637,
+          "n": 83,
+          "p50": 6.506637,
+          "p90": 725.206838,
+          "p95": 905.85098,
+          "p99": 1193.895553
+        }
+      },
+      "inliers_le_20px": {
+        "dx": {
+          "abs": {
+            "p50": 2.923198,
+            "p90": 7.227021,
+            "p95": 8.454365,
+            "p99": 13.365318
+          },
+          "excess_kurtosis": 0.480497,
+          "mad_px": 2.8143,
+          "mad_sigma_px": 4.172481,
+          "mean_bias_px": -0.624947,
+          "median_px": -0.722336,
+          "n": 61,
+          "std_px": 4.666172
+        },
+        "dy": {
+          "abs": {
+            "p50": 2.389933,
+            "p90": 5.737166,
+            "p95": 8.354969,
+            "p99": 14.897518
+          },
+          "excess_kurtosis": 2.484942,
+          "mad_px": 2.154019,
+          "mad_sigma_px": 3.193549,
+          "mean_bias_px": 1.782517,
+          "median_px": 1.469845,
+          "n": 61,
+          "std_px": 4.124289
+        },
+        "frac_le_10px": 0.662651,
+        "n": 61,
+        "radial": {
+          "frac_gt_100px": 0.0,
+          "frac_gt_10px": 0.098361,
+          "frac_gt_20px": 0.0,
+          "frac_gt_50px": 0.0,
+          "mean_px": 5.450323,
+          "median_px": 4.0806,
+          "n": 61,
+          "p50": 4.0806,
+          "p90": 9.241906,
+          "p95": 13.135494,
+          "p99": 16.379241
+        },
+        "rate": 0.73494
+      },
+      "n_paired_detections": 83,
+      "outliers_gt_20px": {
+        "displacement_px": {
+          "p50": 670.076762,
+          "p90": 986.757852,
+          "p95": 1151.160491,
+          "p99": 1310.780022
+        },
+        "n": 22,
+        "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+        "rate": 0.26506
+      }
+    }
+  },
+  "coincidence_eps_px": 0.5,
+  "definitions": {
+    "coincident_pair": "paired detection where the label sits <= 0.5 px from the detector output; interpreted as an unmoved detector-seeded CVAT prelabel (circular; excluded from residual estimates)",
+    "fp_at_labeled_hidden": "human-asserted not-visible frame where the detector fired",
+    "independent_pair": "paired detection whose label demonstrably did not copy the detector output (> 0.5 px away, or from the independently clicked SET A protocol)",
+    "inlier": "independent pair with radial residual <= 20 px (localization-jitter mode)",
+    "miss": "labeled-visible frame with no visible detection",
+    "missing_detection_gap": "interior run of consecutive frames with no visible detection in the DENSE detector track (upper bound on occlusion gaps; includes detector misses on visible balls)",
+    "outlier_gt_20px": "independent pair > 20 px from the label (false-peak / mis-association mode)",
+    "paired_detection": "labeled-visible frame where the detector emitted a visible detection (any distance)"
+  },
+  "inputs": [
+    {
+      "path": "data/online_harvest_20260706/prelabels/73VurrTKCZ8_rally_0002/ball_track.json",
+      "sha256": "1a7e383d4ecca4e16c4b28db99ffb7075afd778d7a8ecc2064b008f1d93d8a25"
+    },
+    {
+      "path": "data/online_harvest_20260706/prelabels/Ezz6HDNHlnk_rally_0004/ball_track.json",
+      "sha256": "6986223d66007b4b2d77a64925c001bf8dfdc8cf8f02829844fbb89db83f8f9f"
+    },
+    {
+      "path": "data/online_harvest_20260706/prelabels/HyUqT7zFiwk_rally_0001/ball_track.json",
+      "sha256": "e479dff20521f026b7e318e11da26529bfe5c21a49bb9950bbcc48976faa87d5"
+    },
+    {
+      "path": "data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0001/ball_track.json",
+      "sha256": "552e7f743b87c8652319181a60697432e6abf464baa8316c964663126d77a562"
+    },
+    {
+      "path": "data/online_harvest_20260706/prelabels/wBu8bC4OfUY_rally_0001/ball_track.json",
+      "sha256": "2df943784888eb697c418e77f2fc9bb7da738a72501f314eac597dece33019b5"
+    },
+    {
+      "path": "data/online_harvest_20260706/prelabels/zwCtH_i1_S4_rally_0001/ball_track.json",
+      "sha256": "6f044a33ccc02794ea291864108ea66b34c781e84c802ae21bb3cf8d888fdebe"
+    },
+    {
+      "path": "eval_clips/ball/burlington_gold_0300_low_steep_corner/clip_metadata.json",
+      "sha256": "c4b9721d9ada17e17ff4cfa06b407c2bffcd48d269ad9b89441e2c909057d367"
+    },
+    {
+      "path": "eval_clips/ball/burlington_gold_0300_low_steep_corner/labels/ball_points.json",
+      "sha256": "44cf9507059a2f7791eea984d7d67dee426b63a9ef077eefea9ec570540274eb"
+    },
+    {
+      "path": "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/clip_metadata.json",
+      "sha256": "1f4a4e64e4b54944ae65b734f552539a5b8732319e7d4b2d1a704a3ce0ccf9e3"
+    },
+    {
+      "path": "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/labels/ball_points.json",
+      "sha256": "397619a262fc688824b9cd4b86a300b8f7a98e34bf340e4376ed650597de186c"
+    },
+    {
+      "path": "eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/clip_metadata.json",
+      "sha256": "d1f4720b04eed8b630552757bc9e6b684ff77d0ede6877be59f2d79582456ccd"
+    },
+    {
+      "path": "eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/ball_points.json",
+      "sha256": "dfc8e3837490a6fab140f5e5885703f9696949ac294066b3ce0ecca01c111520"
+    },
+    {
+      "path": "eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/clip_metadata.json",
+      "sha256": "425aa3d84690997af40972627007f78690d441cca2189569a83fca77c20bef9b"
+    },
+    {
+      "path": "eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/labels/ball_points.json",
+      "sha256": "c27f260840a5683569b6f8728be360d20c38fd5583c3cac899fdabfa101b2eec"
+    },
+    {
+      "path": "runs/lanes/ball_anchor_boost_20260712/burlington_ball_blur_sidecar.json",
+      "sha256": "4cd5413a1a219c407ea1221d8b7ef0b69f2f8d16398680eb0d39be57fc9682a1"
+    },
+    {
+      "path": "runs/lanes/ball_anchor_boost_20260712/wolverine_ball_blur_sidecar.json",
+      "sha256": "a571df73fa293a483879ceae82c9781571173f10c24992cc0ad8905e6b7e1c40"
+    },
+    {
+      "path": "runs/lanes/ball_tracking_track_regen_20260704/tracks/burlington_gold_0300_low_steep_corner/wasb_tennis_zeroshot_thr_0_500/source_wasb_predictions.csv",
+      "sha256": "43b17618e4dacfbbf1380dcf5e69641677d80dedfb0cd3b438fac6044b93cec8"
+    },
+    {
+      "path": "runs/lanes/ball_tracking_track_regen_20260704/tracks/indoor_doubles_fwuks_0500_long_mid_baseline/wasb_tennis_zeroshot_thr_0_500/source_wasb_predictions.csv",
+      "sha256": "5288c5f73c00c32d52ffa1698a8cc34bb198a46b92097c19b2621ff3018b7a6c"
+    },
+    {
+      "path": "runs/lanes/ball_tracking_track_regen_20260704/tracks/outdoor_webcam_iynbd_1500_long_high_baseline/wasb_tennis_zeroshot_thr_0_500/source_wasb_predictions.csv",
+      "sha256": "0b93ae028ae5ab15b048441e9a114733886673e758444bfbeed506444b1e6d1c"
+    },
+    {
+      "path": "runs/lanes/ball_tracking_track_regen_20260704/tracks/wolverine_mixed_0200_mid_steep_corner/wasb_tennis_zeroshot_thr_0_500/source_wasb_predictions.csv",
+      "sha256": "29a716ccee2d53aade3bc2c6663cd42ecd34484dde223ad746d04163b4bc252d"
+    },
+    {
+      "path": "runs/lanes/w3_reviewimport_20260707/normalized_cvat/73VurrTKCZ8_rally_0002/annotations.xml",
+      "sha256": "2bca24f1c0c6cc0f47a377041f1dcaab05bc3d2a0759dd6993e0794fff269115"
+    },
+    {
+      "path": "runs/lanes/w3_reviewimport_20260707/normalized_cvat/Ezz6HDNHlnk_rally_0004/annotations.xml",
+      "sha256": "cef096baa27dbf97780b9654ad023c0ce69edf7d297bf1351910359c1aa42dfd"
+    },
+    {
+      "path": "runs/lanes/w3_reviewimport_20260707/normalized_cvat/HyUqT7zFiwk_rally_0001/annotations.xml",
+      "sha256": "bb1d1c585fea98903dc7430c2137a1787a7e563289f7b71b44635a317ca6f9d9"
+    },
+    {
+      "path": "runs/lanes/w3_reviewimport_20260707/normalized_cvat/_L0HVmAlCQI_rally_0001/annotations.xml",
+      "sha256": "82e26de2779d11e4075bb90e59f2d0bad3bbf46ff0114a184bbb09c73a882c71"
+    },
+    {
+      "path": "runs/lanes/w3_reviewimport_20260707/normalized_cvat/wBu8bC4OfUY_rally_0001/annotations.xml",
+      "sha256": "c75cbf771d69b37bd111dea03dd278f9fa107096e368127d581c7c107bbb70e0"
+    },
+    {
+      "path": "runs/lanes/w3_reviewimport_20260707/normalized_cvat/zwCtH_i1_S4_rally_0001/annotations.xml",
+      "sha256": "610df5a50236667cd6617d894f49c13810cc45a1ddf88a1ddd8878f4ef271b6f"
+    }
+  ],
+  "label_caveats": [
+    "SET A labels are human-reviewed clicks with status=corrected_unverified and not_ground_truth=true in their own artifact",
+    "SET B labels are sparse CVAT keyframes (stride ~18 frames); outside=1 keyframes are treated as human not-visible assertions at that sampled frame",
+    "SET B CVAT tasks were seeded from the same WASB prelabel tracks scored here: 126/209 paired labels sit <= 0.5 px from the detector output and are excluded from residual estimates as unmoved seeds; 4 of 6 clips are heavily affected, 73VurrTKCZ8_rally_0002 and wBu8bC4OfUY_rally_0001 show zero coincidences",
+    "SET B human-moved residuals are conditioned on the annotator having chosen to move the seed, so they over-represent large errors; SET A is the primary localization-noise source",
+    "regime tags marked visual_screen were assigned by visually inspecting one screening thumbnail per harvest video during WS5 and are approximate",
+    "detector = WASB tennis zero-shot (heatmap threshold 0.5), NOT the w7 owner-retrained model; per-frame owner-retrain predictions do not exist locally (only aggregate LOSO reports were pulled from the VM)"
+  ],
+  "measurement_only": true,
+  "not_ground_truth": true,
+  "per_clip": {
+    "73VurrTKCZ8_rally_0002": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 0,
+        "n_independent": 44,
+        "n_paired_detections": 44
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 0,
+        "detection_coverage": 0.783991,
+        "fps_used_for_ms": 30.0,
+        "gap_frames": {
+          "max": 43.0,
+          "p50": 2.0,
+          "p90": 7.1,
+          "p95": 12.1,
+          "p99": 21.62
+        },
+        "gap_frames_histogram": {
+          "1-2f": 110,
+          "12-29f": 8,
+          "3-5f": 35,
+          "30-59f": 1,
+          "6-11f": 16,
+          "60+f": 0
+        },
+        "gap_ms": {
+          "max": 1433.333333,
+          "p50": 66.666667,
+          "p90": 236.666667,
+          "p95": 403.333333,
+          "p99": 720.666667
+        },
+        "n_frames": 2736,
+        "n_interior_gaps": 170,
+        "n_visible": 2145
+      },
+      "n_labeled_frames": 67,
+      "n_labeled_visible": 47,
+      "rates": {
+        "detector_fired_at_visible": 44,
+        "fp_confidence": {
+          "median": 0.80925,
+          "p90": 0.893157
+        },
+        "fp_count_at_labeled_hidden": 13,
+        "fp_rate_at_labeled_hidden": 0.65,
+        "labeled_not_visible_frames": 20,
+        "labeled_visible_frames": 47,
+        "miss_count": 3,
+        "miss_rate_at_labeled_visible": 0.06383
+      },
+      "regime": "outdoor_day",
+      "regime_source": "visual_screen",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 2.95977,
+              "p90": 55.016,
+              "p95": 151.4757,
+              "p99": 566.299536
+            },
+            "excess_kurtosis": 17.802212,
+            "mad_px": 2.72063,
+            "mad_sigma_px": 4.033606,
+            "mean_bias_px": -29.492666,
+            "median_px": -1.038154,
+            "n": 44,
+            "std_px": 121.34022
+          },
+          "dy": {
+            "abs": {
+              "p50": 2.297791,
+              "p90": 14.746768,
+              "p95": 107.99706,
+              "p99": 332.216678
+            },
+            "excess_kurtosis": 19.950882,
+            "mad_px": 2.131449,
+            "mad_sigma_px": 3.160086,
+            "mean_bias_px": 14.790954,
+            "median_px": 0.976713,
+            "n": 44,
+            "std_px": 73.805199
+          },
+          "radial": {
+            "frac_gt_100px": 0.113636,
+            "frac_gt_10px": 0.159091,
+            "frac_gt_20px": 0.113636,
+            "frac_gt_50px": 0.113636,
+            "mean_px": 47.883347,
+            "median_px": 4.08056,
+            "n": 44,
+            "p50": 4.08056,
+            "p90": 97.423487,
+            "p95": 415.081093,
+            "p99": 571.365226
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "abs": {
+              "p50": 2.642443,
+              "p90": 6.477087,
+              "p95": 7.514065,
+              "p99": 11.247859
+            },
+            "excess_kurtosis": 0.686313,
+            "mad_px": 2.48862,
+            "mad_sigma_px": 3.689628,
+            "mean_bias_px": -0.553747,
+            "median_px": -0.830483,
+            "n": 39,
+            "std_px": 4.162905
+          },
+          "dy": {
+            "abs": {
+              "p50": 2.14,
+              "p90": 4.180728,
+              "p95": 5.398561,
+              "p99": 11.007255
+            },
+            "excess_kurtosis": 5.076496,
+            "mad_px": 1.906919,
+            "mad_sigma_px": 2.827198,
+            "mean_bias_px": 1.292667,
+            "median_px": 0.910984,
+            "n": 39,
+            "std_px": 3.222372
+          },
+          "frac_le_10px": 0.840909,
+          "n": 39,
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.051282,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 4.629684,
+            "median_px": 3.803574,
+            "n": 39,
+            "p50": 3.803574,
+            "p90": 7.108266,
+            "p95": 8.975091,
+            "p99": 13.94998
+          },
+          "rate": 0.886364
+        },
+        "n_paired_detections": 44,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 447.145844,
+            "p90": 577.779108,
+            "p95": 620.538322,
+            "p99": 654.745694
+          },
+          "n": 5,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 0.113636
+        }
+      },
+      "set": "B_online_harvest_cvat"
+    },
+    "Ezz6HDNHlnk_rally_0004": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 21,
+        "n_independent": 8,
+        "n_paired_detections": 29
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 1,
+        "detection_coverage": 0.713731,
+        "fps_used_for_ms": 23.98,
+        "gap_frames": {
+          "max": 28.0,
+          "p50": 1.0,
+          "p90": 6.0,
+          "p95": 10.0,
+          "p99": 20.57
+        },
+        "gap_frames_histogram": {
+          "1-2f": 459,
+          "12-29f": 23,
+          "3-5f": 111,
+          "30-59f": 0,
+          "6-11f": 51,
+          "60+f": 0
+        },
+        "gap_ms": {
+          "max": 1167.6397,
+          "p50": 41.701418,
+          "p90": 250.208507,
+          "p95": 417.014178,
+          "p99": 857.798165
+        },
+        "n_frames": 6183,
+        "n_interior_gaps": 644,
+        "n_visible": 4413
+      },
+      "n_labeled_frames": 81,
+      "n_labeled_visible": 32,
+      "rates": {
+        "detector_fired_at_visible": 29,
+        "fp_confidence": {
+          "median": 0.870776,
+          "p90": 0.917273
+        },
+        "fp_count_at_labeled_hidden": 32,
+        "fp_rate_at_labeled_hidden": 0.653061,
+        "labeled_not_visible_frames": 49,
+        "labeled_visible_frames": 32,
+        "miss_count": 3,
+        "miss_rate_at_labeled_visible": 0.09375
+      },
+      "regime": "outdoor_night",
+      "regime_source": "visual_screen",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 793.381333,
+              "p90": 1166.358212,
+              "p95": 1190.312363,
+              "p99": 1209.475684
+            },
+            "excess_kurtosis": -0.986702,
+            "mad_px": 484.812317,
+            "mad_sigma_px": 718.782741,
+            "mean_bias_px": 244.419122,
+            "median_px": 528.800183,
+            "n": 8,
+            "std_px": 856.00081
+          },
+          "dy": {
+            "abs": {
+              "p50": 248.876921,
+              "p90": 516.003757,
+              "p95": 554.147537,
+              "p99": 584.662561
+            },
+            "excess_kurtosis": -1.01695,
+            "mad_px": 249.842784,
+            "mad_sigma_px": 370.416912,
+            "mean_bias_px": -215.150129,
+            "median_px": -210.50426,
+            "n": 8,
+            "std_px": 288.042971
+          },
+          "radial": {
+            "frac_gt_100px": 1.0,
+            "frac_gt_10px": 1.0,
+            "frac_gt_20px": 1.0,
+            "frac_gt_50px": 1.0,
+            "mean_px": 849.71367,
+            "median_px": 817.974172,
+            "n": 8,
+            "p50": 817.974172,
+            "p90": 1216.889219,
+            "p95": 1283.954078,
+            "p99": 1337.605966
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "n": 0
+          },
+          "dy": {
+            "n": 0
+          },
+          "frac_le_10px": 0.0,
+          "n": 0,
+          "radial": {
+            "n": 0
+          },
+          "rate": 0.0
+        },
+        "n_paired_detections": 8,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 817.974172,
+            "p90": 1216.889219,
+            "p95": 1283.954078,
+            "p99": 1337.605966
+          },
+          "n": 8,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 1.0
+        }
+      },
+      "set": "B_online_harvest_cvat"
+    },
+    "HyUqT7zFiwk_rally_0001": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 26,
+        "n_independent": 1,
+        "n_paired_detections": 27
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 166,
+        "detection_coverage": 0.485273,
+        "fps_used_for_ms": 30.0,
+        "gap_frames": {
+          "max": 178.0,
+          "p50": 4.0,
+          "p90": 24.0,
+          "p95": 36.0,
+          "p99": 73.48
+        },
+        "gap_frames_histogram": {
+          "1-2f": 628,
+          "12-29f": 261,
+          "3-5f": 325,
+          "30-59f": 84,
+          "6-11f": 256,
+          "60+f": 31
+        },
+        "gap_ms": {
+          "max": 5933.333333,
+          "p50": 133.333333,
+          "p90": 800.0,
+          "p95": 1200.0,
+          "p99": 2449.333333
+        },
+        "n_frames": 29130,
+        "n_interior_gaps": 1585,
+        "n_visible": 14136
+      },
+      "n_labeled_frames": 79,
+      "n_labeled_visible": 41,
+      "rates": {
+        "detector_fired_at_visible": 27,
+        "fp_confidence": {
+          "median": 0.835212,
+          "p90": 0.878933
+        },
+        "fp_count_at_labeled_hidden": 3,
+        "fp_rate_at_labeled_hidden": 0.078947,
+        "labeled_not_visible_frames": 38,
+        "labeled_visible_frames": 41,
+        "miss_count": 14,
+        "miss_rate_at_labeled_visible": 0.341463
+      },
+      "regime": "indoor",
+      "regime_source": "visual_screen",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 71.9,
+              "p90": 71.9,
+              "p95": 71.9,
+              "p99": 71.9
+            },
+            "excess_kurtosis": null,
+            "mad_px": 0.0,
+            "mad_sigma_px": 0.0,
+            "mean_bias_px": -71.9,
+            "median_px": -71.9,
+            "n": 1,
+            "std_px": null
+          },
+          "dy": {
+            "abs": {
+              "p50": 390.940039,
+              "p90": 390.940039,
+              "p95": 390.940039,
+              "p99": 390.940039
+            },
+            "excess_kurtosis": null,
+            "mad_px": 0.0,
+            "mad_sigma_px": 0.0,
+            "mean_bias_px": -390.940039,
+            "median_px": -390.940039,
+            "n": 1,
+            "std_px": null
+          },
+          "radial": {
+            "frac_gt_100px": 1.0,
+            "frac_gt_10px": 1.0,
+            "frac_gt_20px": 1.0,
+            "frac_gt_50px": 1.0,
+            "mean_px": 397.496823,
+            "median_px": 397.496823,
+            "n": 1,
+            "p50": 397.496823,
+            "p90": 397.496823,
+            "p95": 397.496823,
+            "p99": 397.496823
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "n": 0
+          },
+          "dy": {
+            "n": 0
+          },
+          "frac_le_10px": 0.0,
+          "n": 0,
+          "radial": {
+            "n": 0
+          },
+          "rate": 0.0
+        },
+        "n_paired_detections": 1,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 397.496823,
+            "p90": 397.496823,
+            "p95": 397.496823,
+            "p99": 397.496823
+          },
+          "n": 1,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 1.0
+        }
+      },
+      "set": "B_online_harvest_cvat"
+    },
+    "_L0HVmAlCQI_rally_0001": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 47,
+        "n_independent": 4,
+        "n_paired_detections": 51
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 14,
+        "detection_coverage": 0.62706,
+        "fps_used_for_ms": 30.0,
+        "gap_frames": {
+          "max": 58.0,
+          "p50": 3.0,
+          "p90": 19.5,
+          "p95": 25.75,
+          "p99": 45.25
+        },
+        "gap_frames_histogram": {
+          "1-2f": 35,
+          "12-29f": 9,
+          "3-5f": 17,
+          "30-59f": 4,
+          "6-11f": 11,
+          "60+f": 0
+        },
+        "gap_ms": {
+          "max": 1933.333333,
+          "p50": 100.0,
+          "p90": 650.0,
+          "p95": 858.333333,
+          "p99": 1508.333333
+        },
+        "n_frames": 1456,
+        "n_interior_gaps": 76,
+        "n_visible": 913
+      },
+      "n_labeled_frames": 80,
+      "n_labeled_visible": 57,
+      "rates": {
+        "detector_fired_at_visible": 51,
+        "fp_confidence": {
+          "median": 0.700182,
+          "p90": 0.841241
+        },
+        "fp_count_at_labeled_hidden": 4,
+        "fp_rate_at_labeled_hidden": 0.173913,
+        "labeled_not_visible_frames": 23,
+        "labeled_visible_frames": 57,
+        "miss_count": 6,
+        "miss_rate_at_labeled_visible": 0.105263
+      },
+      "regime": "outdoor_night",
+      "regime_source": "visual_screen",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 389.686164,
+              "p90": 633.399615,
+              "p95": 684.535916,
+              "p99": 725.444957
+            },
+            "excess_kurtosis": -0.666994,
+            "mad_px": 7.465589,
+            "mad_sigma_px": 11.068482,
+            "mean_bias_px": 105.883119,
+            "median_px": 382.220575,
+            "n": 4,
+            "std_px": 561.071436
+          },
+          "dy": {
+            "abs": {
+              "p50": 540.207173,
+              "p90": 567.394855,
+              "p95": 570.811136,
+              "p99": 573.54416
+            },
+            "excess_kurtosis": -0.702071,
+            "mad_px": 22.632642,
+            "mad_sigma_px": 33.555155,
+            "mean_bias_px": -472.40422,
+            "median_px": -540.207173,
+            "n": 4,
+            "std_px": 159.361146
+          },
+          "radial": {
+            "frac_gt_100px": 1.0,
+            "frac_gt_10px": 1.0,
+            "frac_gt_20px": 1.0,
+            "frac_gt_50px": 1.0,
+            "mean_px": 698.281766,
+            "median_px": 680.405281,
+            "n": 4,
+            "p50": 680.405281,
+            "p90": 747.145865,
+            "p95": 759.716338,
+            "p99": 769.772715
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "n": 0
+          },
+          "dy": {
+            "n": 0
+          },
+          "frac_le_10px": 0.0,
+          "n": 0,
+          "radial": {
+            "n": 0
+          },
+          "rate": 0.0
+        },
+        "n_paired_detections": 4,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 680.405281,
+            "p90": 747.145865,
+            "p95": 759.716338,
+            "p99": 769.772715
+          },
+          "n": 4,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 1.0
+        }
+      },
+      "set": "B_online_harvest_cvat"
+    },
+    "burlington_gold_0300_low_steep_corner": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 0,
+        "n_independent": 19,
+        "n_paired_detections": 19
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 11,
+        "detection_coverage": 0.833333,
+        "fps_used_for_ms": 60.0,
+        "gap_frames": {
+          "max": 25.0,
+          "p50": 1.0,
+          "p90": 4.8,
+          "p95": 7.8,
+          "p99": 20.84
+        },
+        "gap_frames_histogram": {
+          "1-2f": 26,
+          "12-29f": 2,
+          "3-5f": 5,
+          "30-59f": 0,
+          "6-11f": 0,
+          "60+f": 0
+        },
+        "gap_ms": {
+          "max": 416.666667,
+          "p50": 16.666667,
+          "p90": 80.0,
+          "p95": 130.0,
+          "p99": 347.333333
+        },
+        "n_frames": 600,
+        "n_interior_gaps": 33,
+        "n_visible": 500
+      },
+      "n_labeled_frames": 30,
+      "n_labeled_visible": 24,
+      "rates": {
+        "detector_fired_at_visible": 19,
+        "fp_confidence": {
+          "median": 0.895134,
+          "p90": 0.924249
+        },
+        "fp_count_at_labeled_hidden": 3,
+        "fp_rate_at_labeled_hidden": 0.5,
+        "labeled_not_visible_frames": 6,
+        "labeled_visible_frames": 24,
+        "miss_count": 5,
+        "miss_rate_at_labeled_visible": 0.208333
+      },
+      "regime": "indoor",
+      "regime_source": "clip_metadata",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 5.519067,
+              "p90": 998.870226,
+              "p95": 1296.648681,
+              "p99": 1398.072995
+            },
+            "excess_kurtosis": 2.187119,
+            "mad_px": 2.637329,
+            "mad_sigma_px": 3.910104,
+            "mean_bias_px": -194.019551,
+            "median_px": 3.301221,
+            "n": 19,
+            "std_px": 461.189556
+          },
+          "dy": {
+            "abs": {
+              "p50": 1.962555,
+              "p90": 45.464118,
+              "p95": 65.908393,
+              "p99": 102.900907
+            },
+            "excess_kurtosis": 5.089534,
+            "mad_px": 1.757526,
+            "mad_sigma_px": 2.605708,
+            "mean_bias_px": 10.923609,
+            "median_px": 1.242151,
+            "n": 19,
+            "std_px": 30.116251
+          },
+          "radial": {
+            "frac_gt_100px": 0.210526,
+            "frac_gt_10px": 0.210526,
+            "frac_gt_20px": 0.210526,
+            "frac_gt_50px": 0.210526,
+            "mean_px": 201.204533,
+            "median_px": 5.577004,
+            "n": 19,
+            "p50": 5.577004,
+            "p90": 999.375331,
+            "p95": 1298.384818,
+            "p99": 1401.94915
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "abs": {
+              "p50": 4.429614,
+              "p90": 5.903628,
+              "p95": 6.542798,
+              "p99": 7.670728
+            },
+            "excess_kurtosis": -1.162566,
+            "mad_px": 1.421631,
+            "mad_sigma_px": 2.10771,
+            "mean_bias_px": 3.57387,
+            "median_px": 4.429614,
+            "n": 15,
+            "std_px": 2.861408
+          },
+          "dy": {
+            "abs": {
+              "p50": 1.707458,
+              "p90": 3.783214,
+              "p95": 4.941068,
+              "p99": 5.51838
+            },
+            "excess_kurtosis": -0.164079,
+            "mad_px": 1.328907,
+            "mad_sigma_px": 1.970238,
+            "mean_bias_px": 1.029774,
+            "median_px": 0.536774,
+            "n": 15,
+            "std_px": 2.214998
+          },
+          "frac_le_10px": 0.789474,
+          "n": 15,
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.0,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 4.593548,
+            "median_px": 5.552368,
+            "n": 15,
+            "p50": 5.552368,
+            "p90": 6.975303,
+            "p95": 7.609659,
+            "p99": 7.884146
+          },
+          "rate": 0.789474
+        },
+        "n_paired_detections": 19,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 1106.109913,
+            "p90": 1384.688428,
+            "p95": 1406.264331,
+            "p99": 1423.525053
+          },
+          "n": 4,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 0.210526
+        }
+      },
+      "set": "A_eval_clips"
+    },
+    "indoor_doubles_fwuks_0500_long_mid_baseline": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 1,
+        "n_independent": 14,
+        "n_paired_detections": 15
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 1,
+        "detection_coverage": 0.445556,
+        "fps_used_for_ms": 30.0,
+        "gap_frames": {
+          "max": 103.0,
+          "p50": 5.0,
+          "p90": 16.2,
+          "p95": 20.1,
+          "p99": 58.92
+        },
+        "gap_frames_histogram": {
+          "1-2f": 20,
+          "12-29f": 12,
+          "3-5f": 12,
+          "30-59f": 0,
+          "6-11f": 14,
+          "60+f": 1
+        },
+        "gap_ms": {
+          "max": 3433.333333,
+          "p50": 166.666667,
+          "p90": 540.0,
+          "p95": 670.0,
+          "p99": 1964.0
+        },
+        "n_frames": 900,
+        "n_interior_gaps": 59,
+        "n_visible": 401
+      },
+      "n_labeled_frames": 30,
+      "n_labeled_visible": 21,
+      "rates": {
+        "detector_fired_at_visible": 15,
+        "fp_confidence": {
+          "median": 0.537033,
+          "p90": 0.537033
+        },
+        "fp_count_at_labeled_hidden": 1,
+        "fp_rate_at_labeled_hidden": 0.111111,
+        "labeled_not_visible_frames": 9,
+        "labeled_visible_frames": 21,
+        "miss_count": 6,
+        "miss_rate_at_labeled_visible": 0.285714
+      },
+      "regime": "indoor",
+      "regime_source": "clip_metadata",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 6.493018,
+              "p90": 141.86337,
+              "p95": 225.075534,
+              "p99": 345.843535
+            },
+            "excess_kurtosis": 3.643066,
+            "mad_px": 5.726966,
+            "mad_sigma_px": 8.490799,
+            "mean_bias_px": -12.496732,
+            "median_px": 2.524152,
+            "n": 14,
+            "std_px": 123.704792
+          },
+          "dy": {
+            "abs": {
+              "p50": 6.605472,
+              "p90": 74.511275,
+              "p95": 79.650854,
+              "p99": 85.972139
+            },
+            "excess_kurtosis": -0.787793,
+            "mad_px": 4.808609,
+            "mad_sigma_px": 7.129244,
+            "mean_bias_px": -22.081084,
+            "median_px": -4.486673,
+            "n": 14,
+            "std_px": 34.221685
+          },
+          "radial": {
+            "frac_gt_100px": 0.285714,
+            "frac_gt_10px": 0.428571,
+            "frac_gt_20px": 0.357143,
+            "frac_gt_50px": 0.357143,
+            "mean_px": 69.870928,
+            "median_px": 8.529206,
+            "n": 14,
+            "p50": 8.529206,
+            "p90": 153.874197,
+            "p95": 235.56013,
+            "p99": 355.986791
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "abs": {
+              "p50": 4.500708,
+              "p90": 6.901573,
+              "p95": 6.927398,
+              "p99": 6.948058
+            },
+            "excess_kurtosis": -0.992706,
+            "mad_px": 3.69364,
+            "mad_sigma_px": 5.476191,
+            "mean_bias_px": 1.768298,
+            "median_px": 2.403735,
+            "n": 9,
+            "std_px": 4.659029
+          },
+          "dy": {
+            "abs": {
+              "p50": 3.653601,
+              "p90": 8.330449,
+              "p95": 8.568814,
+              "p99": 8.759505
+            },
+            "excess_kurtosis": -0.379119,
+            "mad_px": 3.479382,
+            "mad_sigma_px": 5.158532,
+            "mean_bias_px": -1.924772,
+            "median_px": -1.840363,
+            "n": 9,
+            "std_px": 5.276809
+          },
+          "frac_le_10px": 0.571429,
+          "n": 9,
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.111111,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 6.687782,
+            "median_px": 7.192652,
+            "n": 9,
+            "p50": 7.192652,
+            "p90": 9.191014,
+            "p95": 9.954577,
+            "p99": 10.565428
+          },
+          "rate": 0.642857
+        },
+        "n_paired_detections": 14,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 152.405301,
+            "p90": 293.457563,
+            "p95": 339.77551,
+            "p99": 376.829867
+          },
+          "n": 5,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 0.357143
+        }
+      },
+      "set": "A_eval_clips"
+    },
+    "outdoor_webcam_iynbd_1500_long_high_baseline": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 0,
+        "n_independent": 16,
+        "n_paired_detections": 16
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 54,
+        "detection_coverage": 0.486533,
+        "fps_used_for_ms": 60.0,
+        "gap_frames": {
+          "max": 69.0,
+          "p50": 5.0,
+          "p90": 30.4,
+          "p95": 58.0,
+          "p99": 67.24
+        },
+        "gap_frames_histogram": {
+          "1-2f": 16,
+          "12-29f": 9,
+          "3-5f": 10,
+          "30-59f": 2,
+          "6-11f": 5,
+          "60+f": 3
+        },
+        "gap_ms": {
+          "max": 1150.0,
+          "p50": 83.333333,
+          "p90": 506.666667,
+          "p95": 966.666667,
+          "p99": 1120.666667
+        },
+        "n_frames": 1151,
+        "n_interior_gaps": 45,
+        "n_visible": 560
+      },
+      "n_labeled_frames": 30,
+      "n_labeled_visible": 20,
+      "rates": {
+        "detector_fired_at_visible": 16,
+        "fp_confidence": {
+          "median": 0.520168,
+          "p90": 0.520168
+        },
+        "fp_count_at_labeled_hidden": 1,
+        "fp_rate_at_labeled_hidden": 0.1,
+        "labeled_not_visible_frames": 10,
+        "labeled_visible_frames": 20,
+        "miss_count": 4,
+        "miss_rate_at_labeled_visible": 0.2
+      },
+      "regime": "outdoor_day",
+      "regime_source": "clip_metadata+visual_screen",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 2.08067,
+              "p90": 5.730212,
+              "p95": 6.499188,
+              "p99": 7.314447
+            },
+            "excess_kurtosis": -0.392922,
+            "mad_px": 1.758569,
+            "mad_sigma_px": 2.607254,
+            "mean_bias_px": 1.727016,
+            "median_px": 1.301202,
+            "n": 16,
+            "std_px": 3.179697
+          },
+          "dy": {
+            "abs": {
+              "p50": 3.481497,
+              "p90": 5.591881,
+              "p95": 6.460112,
+              "p99": 6.978253
+            },
+            "excess_kurtosis": -1.288197,
+            "mad_px": 3.078875,
+            "mad_sigma_px": 4.564741,
+            "mean_bias_px": -0.566718,
+            "median_px": -0.565654,
+            "n": 16,
+            "std_px": 3.97746
+          },
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.0,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 5.009454,
+            "median_px": 4.951191,
+            "n": 16,
+            "p50": 4.951191,
+            "p90": 6.771698,
+            "p95": 7.637244,
+            "p99": 8.607488
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "abs": {
+              "p50": 2.08067,
+              "p90": 5.730212,
+              "p95": 6.499188,
+              "p99": 7.314447
+            },
+            "excess_kurtosis": -0.392922,
+            "mad_px": 1.758569,
+            "mad_sigma_px": 2.607254,
+            "mean_bias_px": 1.727016,
+            "median_px": 1.301202,
+            "n": 16,
+            "std_px": 3.179697
+          },
+          "dy": {
+            "abs": {
+              "p50": 3.481497,
+              "p90": 5.591881,
+              "p95": 6.460112,
+              "p99": 6.978253
+            },
+            "excess_kurtosis": -1.288197,
+            "mad_px": 3.078875,
+            "mad_sigma_px": 4.564741,
+            "mean_bias_px": -0.566718,
+            "median_px": -0.565654,
+            "n": 16,
+            "std_px": 3.97746
+          },
+          "frac_le_10px": 1.0,
+          "n": 16,
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.0,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 5.009454,
+            "median_px": 4.951191,
+            "n": 16,
+            "p50": 4.951191,
+            "p90": 6.771698,
+            "p95": 7.637244,
+            "p99": 8.607488
+          },
+          "rate": 1.0
+        },
+        "n_paired_detections": 16,
+        "outliers_gt_20px": {
+          "displacement_px": null,
+          "n": 0,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 0.0
+        }
+      },
+      "set": "A_eval_clips"
+    },
+    "wBu8bC4OfUY_rally_0001": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 0,
+        "n_independent": 24,
+        "n_paired_detections": 24
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 14,
+        "detection_coverage": 0.46062,
+        "fps_used_for_ms": 30.0,
+        "gap_frames": {
+          "max": 111.0,
+          "p50": 4.0,
+          "p90": 24.1,
+          "p95": 35.1,
+          "p99": 67.0
+        },
+        "gap_frames_histogram": {
+          "1-2f": 276,
+          "12-29f": 135,
+          "3-5f": 147,
+          "30-59f": 37,
+          "6-11f": 121,
+          "60+f": 14
+        },
+        "gap_ms": {
+          "max": 3700.0,
+          "p50": 133.333333,
+          "p90": 803.333333,
+          "p95": 1170.0,
+          "p99": 2233.333333
+        },
+        "n_frames": 12811,
+        "n_interior_gaps": 730,
+        "n_visible": 5901
+      },
+      "n_labeled_frames": 64,
+      "n_labeled_visible": 47,
+      "rates": {
+        "detector_fired_at_visible": 24,
+        "fp_confidence": {
+          "median": 0.846252,
+          "p90": 0.924214
+        },
+        "fp_count_at_labeled_hidden": 8,
+        "fp_rate_at_labeled_hidden": 0.470588,
+        "labeled_not_visible_frames": 17,
+        "labeled_visible_frames": 47,
+        "miss_count": 23,
+        "miss_rate_at_labeled_visible": 0.489362
+      },
+      "regime": "outdoor_night",
+      "regime_source": "visual_screen",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 3.841693,
+              "p90": 12.968372,
+              "p95": 85.792066,
+              "p99": 720.028505
+            },
+            "excess_kurtosis": 18.500608,
+            "mad_px": 4.262208,
+            "mad_sigma_px": 6.319149,
+            "mean_bias_px": -42.528402,
+            "median_px": -0.975247,
+            "n": 24,
+            "std_px": 185.005495
+          },
+          "dy": {
+            "abs": {
+              "p50": 3.770198,
+              "p90": 14.571881,
+              "p95": 66.842453,
+              "p99": 127.771226
+            },
+            "excess_kurtosis": 11.019553,
+            "mad_px": 3.535302,
+            "mad_sigma_px": 5.241439,
+            "mean_bias_px": 5.240412,
+            "median_px": 2.846748,
+            "n": 24,
+            "std_px": 33.864802
+          },
+          "radial": {
+            "frac_gt_100px": 0.083333,
+            "frac_gt_10px": 0.25,
+            "frac_gt_20px": 0.083333,
+            "frac_gt_50px": 0.083333,
+            "mean_px": 49.714576,
+            "median_px": 7.170534,
+            "n": 24,
+            "p50": 7.170534,
+            "p90": 16.940486,
+            "p95": 108.266308,
+            "p99": 734.639952
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "abs": {
+              "p50": 3.701693,
+              "p90": 7.329427,
+              "p95": 10.459413,
+              "p99": 13.269849
+            },
+            "excess_kurtosis": -0.076784,
+            "mad_px": 3.541197,
+            "mad_sigma_px": 5.250179,
+            "mean_bias_px": -0.751165,
+            "median_px": -0.269413,
+            "n": 22,
+            "std_px": 5.551962
+          },
+          "dy": {
+            "abs": {
+              "p50": 3.512043,
+              "p90": 8.30939,
+              "p95": 11.344013,
+              "p99": 14.966666
+            },
+            "excess_kurtosis": 0.518221,
+            "mad_px": 3.127987,
+            "mad_sigma_px": 4.637554,
+            "mean_bias_px": 2.650888,
+            "median_px": 2.846748,
+            "n": 22,
+            "std_px": 5.345484
+          },
+          "frac_le_10px": 0.75,
+          "n": 22,
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.181818,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 6.905093,
+            "median_px": 6.808155,
+            "n": 22,
+            "p50": 6.808155,
+            "p90": 11.452344,
+            "p95": 15.425215,
+            "p99": 17.10886
+          },
+          "rate": 0.916667
+        },
+        "n_paired_detections": 24,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 520.618889,
+            "p90": 837.687131,
+            "p95": 877.320661,
+            "p99": 909.027485
+          },
+          "n": 2,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 0.083333
+        }
+      },
+      "set": "B_online_harvest_cvat"
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 0,
+        "n_independent": 20,
+        "n_paired_detections": 20
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 0,
+        "detection_coverage": 0.81,
+        "fps_used_for_ms": 30.0,
+        "gap_frames": {
+          "max": 17.0,
+          "p50": 2.0,
+          "p90": 5.4,
+          "p95": 8.2,
+          "p99": 15.24
+        },
+        "gap_frames_histogram": {
+          "1-2f": 10,
+          "12-29f": 1,
+          "3-5f": 5,
+          "30-59f": 0,
+          "6-11f": 1,
+          "60+f": 0
+        },
+        "gap_ms": {
+          "max": 566.666667,
+          "p50": 66.666667,
+          "p90": 180.0,
+          "p95": 273.333333,
+          "p99": 508.0
+        },
+        "n_frames": 300,
+        "n_interior_gaps": 17,
+        "n_visible": 243
+      },
+      "n_labeled_frames": 30,
+      "n_labeled_visible": 24,
+      "rates": {
+        "detector_fired_at_visible": 20,
+        "fp_confidence": {
+          "median": 0.719262,
+          "p90": 0.865919
+        },
+        "fp_count_at_labeled_hidden": 4,
+        "fp_rate_at_labeled_hidden": 0.666667,
+        "labeled_not_visible_frames": 6,
+        "labeled_visible_frames": 24,
+        "miss_count": 4,
+        "miss_rate_at_labeled_visible": 0.166667
+      },
+      "regime": "outdoor_night",
+      "regime_source": "clip_metadata+visual_screen",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 2.820139,
+              "p90": 9.925358,
+              "p95": 50.618132,
+              "p99": 146.273548
+            },
+            "excess_kurtosis": 12.841301,
+            "mad_px": 2.698746,
+            "mad_sigma_px": 4.00116,
+            "mean_bias_px": -6.29543,
+            "median_px": 0.607636,
+            "n": 20,
+            "std_px": 39.947097
+          },
+          "dy": {
+            "abs": {
+              "p50": 1.860988,
+              "p90": 10.560935,
+              "p95": 45.115082,
+              "p99": 55.15424
+            },
+            "excess_kurtosis": 7.439829,
+            "mad_px": 1.619116,
+            "mad_sigma_px": 2.400501,
+            "mean_bias_px": 0.977228,
+            "median_px": 1.392734,
+            "n": 20,
+            "std_px": 16.907903
+          },
+          "radial": {
+            "frac_gt_100px": 0.05,
+            "frac_gt_10px": 0.1,
+            "frac_gt_20px": 0.1,
+            "frac_gt_50px": 0.1,
+            "mean_px": 15.910466,
+            "median_px": 4.064839,
+            "n": 20,
+            "p50": 4.064839,
+            "p90": 14.130743,
+            "p95": 77.889647,
+            "p99": 156.296006
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "abs": {
+              "p50": 2.188366,
+              "p90": 4.96706,
+              "p95": 6.085929,
+              "p99": 6.099725
+            },
+            "excess_kurtosis": -0.71093,
+            "mad_px": 2.010031,
+            "mad_sigma_px": 2.980072,
+            "mean_bias_px": -0.002568,
+            "median_px": 0.607636,
+            "n": 18,
+            "std_px": 3.288405
+          },
+          "dy": {
+            "abs": {
+              "p50": 1.579596,
+              "p90": 4.330127,
+              "p95": 4.896686,
+              "p99": 6.415314
+            },
+            "excess_kurtosis": -0.122278,
+            "mad_px": 0.972076,
+            "mad_sigma_px": 1.441201,
+            "mean_bias_px": 1.819666,
+            "median_px": 1.392734,
+            "n": 18,
+            "std_px": 2.298492
+          },
+          "frac_le_10px": 0.9,
+          "n": 18,
+          "radial": {
+            "frac_gt_100px": 0.0,
+            "frac_gt_10px": 0.0,
+            "frac_gt_20px": 0.0,
+            "frac_gt_50px": 0.0,
+            "mean_px": 3.865578,
+            "median_px": 3.917727,
+            "n": 18,
+            "p50": 3.917727,
+            "p90": 6.48638,
+            "p95": 7.256472,
+            "p99": 7.546947
+          },
+          "rate": 0.9
+        },
+        "n_paired_detections": 20,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 124.314465,
+            "p90": 165.58097,
+            "p95": 170.739283,
+            "p99": 174.865933
+          },
+          "n": 2,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 0.1
+        }
+      },
+      "set": "A_eval_clips"
+    },
+    "zwCtH_i1_S4_rally_0001": {
+      "frames_without_prediction_row": 0,
+      "label_provenance": {
+        "n_coincident_with_prediction_le_0p5px": 32,
+        "n_independent": 2,
+        "n_paired_detections": 34
+      },
+      "missing_detection_gaps": {
+        "censored_boundary_frames": 120,
+        "detection_coverage": 0.453715,
+        "fps_used_for_ms": 30.0,
+        "gap_frames": {
+          "max": 182.0,
+          "p50": 5.0,
+          "p90": 36.0,
+          "p95": 53.45,
+          "p99": 104.49
+        },
+        "gap_frames_histogram": {
+          "1-2f": 272,
+          "12-29f": 134,
+          "3-5f": 128,
+          "30-59f": 65,
+          "6-11f": 124,
+          "60+f": 29
+        },
+        "gap_ms": {
+          "max": 6066.666667,
+          "p50": 166.666667,
+          "p90": 1200.0,
+          "p95": 1781.666667,
+          "p99": 3483.0
+        },
+        "n_frames": 18181,
+        "n_interior_gaps": 752,
+        "n_visible": 8249
+      },
+      "n_labeled_frames": 75,
+      "n_labeled_visible": 43,
+      "rates": {
+        "detector_fired_at_visible": 34,
+        "fp_confidence": {
+          "median": 0.621083,
+          "p90": 0.772042
+        },
+        "fp_count_at_labeled_hidden": 3,
+        "fp_rate_at_labeled_hidden": 0.09375,
+        "labeled_not_visible_frames": 32,
+        "labeled_visible_frames": 43,
+        "miss_count": 9,
+        "miss_rate_at_labeled_visible": 0.209302
+      },
+      "regime": "outdoor_day",
+      "regime_source": "visual_screen",
+      "residuals_independent_labels": {
+        "all_pairs": {
+          "dx": {
+            "abs": {
+              "p50": 625.521303,
+              "p90": 829.913847,
+              "p95": 855.462915,
+              "p99": 875.902169
+            },
+            "excess_kurtosis": -2.0,
+            "mad_px": 255.490679,
+            "mad_sigma_px": 378.790481,
+            "mean_bias_px": -625.521303,
+            "median_px": -625.521303,
+            "n": 2,
+            "std_px": 361.318384
+          },
+          "dy": {
+            "abs": {
+              "p50": 216.65196,
+              "p90": 216.700102,
+              "p95": 216.706119,
+              "p99": 216.710933
+            },
+            "excess_kurtosis": -2.0,
+            "mad_px": 0.060177,
+            "mad_sigma_px": 0.089218,
+            "mean_bias_px": -216.65196,
+            "median_px": -216.65196,
+            "n": 2,
+            "std_px": 0.085103
+          },
+          "radial": {
+            "frac_gt_100px": 1.0,
+            "frac_gt_10px": 1.0,
+            "frac_gt_20px": 1.0,
+            "frac_gt_50px": 1.0,
+            "mean_px": 668.032801,
+            "median_px": 668.032801,
+            "n": 2,
+            "p50": 668.032801,
+            "p90": 859.402836,
+            "p95": 883.32409,
+            "p99": 902.461093
+          }
+        },
+        "inliers_le_20px": {
+          "dx": {
+            "n": 0
+          },
+          "dy": {
+            "n": 0
+          },
+          "frac_le_10px": 0.0,
+          "n": 0,
+          "radial": {
+            "n": 0
+          },
+          "rate": 0.0
+        },
+        "n_paired_detections": 2,
+        "outliers_gt_20px": {
+          "displacement_px": {
+            "p50": 668.032801,
+            "p90": 859.402836,
+            "p95": 883.32409,
+            "p99": 902.461093
+          },
+          "n": 2,
+          "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+          "rate": 1.0
+        }
+      },
+      "set": "B_online_harvest_cvat"
+    }
+  },
+  "pooled_all": {
+    "confidence_bins_independent_pairs": [
+      {
+        "conf_range": [
+          0.0,
+          0.7
+        ],
+        "inlier_le_20px_rate": 0.551724,
+        "median_radial_px": 13.135494,
+        "n": 29
+      },
+      {
+        "conf_range": [
+          0.7,
+          0.9
+        ],
+        "inlier_le_20px_rate": 0.824324,
+        "median_radial_px": 5.586503,
+        "n": 74
+      },
+      {
+        "conf_range": [
+          0.9,
+          1.0
+        ],
+        "inlier_le_20px_rate": 0.857143,
+        "median_radial_px": 4.797554,
+        "n": 49
+      }
+    ],
+    "label_provenance": {
+      "n_coincident_with_prediction_le_0p5px": 127,
+      "n_independent": 152,
+      "n_paired_detections": 279
+    },
+    "rates": {
+      "detector_fired_at_visible": 279,
+      "fp_confidence": {
+        "median": 0.844442,
+        "p90": 0.916581
+      },
+      "fp_count_at_labeled_hidden": 72,
+      "fp_rate_at_labeled_hidden": 0.342857,
+      "labeled_not_visible_frames": 210,
+      "labeled_visible_frames": 356,
+      "miss_count": 77,
+      "miss_rate_at_labeled_visible": 0.216292
+    },
+    "residuals_independent_labels": {
+      "all_pairs": {
+        "dx": {
+          "abs": {
+            "p50": 3.959609,
+            "p90": 393.748069,
+            "p95": 882.974408,
+            "p99": 1247.731288
+          },
+          "excess_kurtosis": 8.902179,
+          "mad_px": 4.010968,
+          "mad_sigma_px": 5.946662,
+          "mean_bias_px": -34.355383,
+          "median_px": 0.607636,
+          "n": 152,
+          "std_px": 300.258209
+        },
+        "dy": {
+          "abs": {
+            "p50": 3.243768,
+            "p90": 140.83181,
+            "p95": 315.442024,
+            "p99": 562.612063
+          },
+          "excess_kurtosis": 9.900719,
+          "mad_px": 2.956825,
+          "mad_sigma_px": 4.383789,
+          "mean_bias_px": -24.668418,
+          "median_px": 0.728085,
+          "n": 152,
+          "std_px": 125.845253
+        },
+        "radial": {
+          "frac_gt_100px": 0.203947,
+          "frac_gt_10px": 0.263158,
+          "frac_gt_20px": 0.217105,
+          "frac_gt_50px": 0.217105,
+          "mean_px": 130.420103,
+          "median_px": 5.68452,
+          "n": 152,
+          "p50": 5.68452,
+          "p90": 662.970752,
+          "p95": 899.57634,
+          "p99": 1316.83973
+        }
+      },
+      "inliers_le_20px": {
+        "dx": {
+          "abs": {
+            "p50": 2.945972,
+            "p90": 6.71522,
+            "p95": 7.420454,
+            "p99": 12.539439
+          },
+          "excess_kurtosis": 0.659701,
+          "mad_px": 3.165481,
+          "mad_sigma_px": 4.693142,
+          "mean_bias_px": 0.495689,
+          "median_px": 0.799768,
+          "n": 119,
+          "std_px": 4.310211
+        },
+        "dy": {
+          "abs": {
+            "p50": 2.319885,
+            "p90": 5.838577,
+            "p95": 7.930383,
+            "p99": 13.744834
+          },
+          "excess_kurtosis": 2.182691,
+          "mad_px": 2.261121,
+          "mad_sigma_px": 3.352338,
+          "mean_bias_px": 1.097006,
+          "median_px": 1.042443,
+          "n": 119,
+          "std_px": 3.90973
+        },
+        "frac_le_10px": 0.736842,
+        "n": 119,
+        "radial": {
+          "frac_gt_100px": 0.0,
+          "frac_gt_10px": 0.058824,
+          "frac_gt_20px": 0.0,
+          "frac_gt_50px": 0.0,
+          "mean_px": 5.13693,
+          "median_px": 4.611294,
+          "n": 119,
+          "p50": 4.611294,
+          "p90": 8.069111,
+          "p95": 10.733409,
+          "p99": 15.418201
+        },
+        "rate": 0.782895
+      },
+      "n_paired_detections": 152,
+      "outliers_gt_20px": {
+        "displacement_px": {
+          "p50": 660.029691,
+          "p90": 1126.426805,
+          "p95": 1310.808105,
+          "p99": 1403.257419
+        },
+        "n": 33,
+        "note": "detector fired far from the labeled ball at a labeled-visible frame; inject as a mis-association/false-peak mode, not as Gaussian jitter",
+        "rate": 0.217105
+      }
+    }
+  },
+  "schema_version": 1
+}

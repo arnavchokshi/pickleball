@@ -1,0 +1,1013 @@
+{
+  "artifact_type": "racketsport_ball_inflections",
+  "ball_track_source": {
+    "path": "/Users/arnavchokshi/Desktop/pickleball/.claude/worktrees/ball-lane-20260723/data/online_harvest_20260706/prelabels/_L0HVmAlCQI_rally_0002/ball_track.json",
+    "sha256": "1db72cbce67ce22a3fc4b65a71674ec64870abd964e04d426b03c0ce8c615e21"
+  },
+  "candidates": [
+    {
+      "approx": false,
+      "ball_image_xy": [
+        832.408203,
+        600.0
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.591223,
+      "frame": 8,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 95.89491,
+      "speed_before_px_s": 405.419157,
+      "time_s": 0.26666666666666666,
+      "turn_angle_deg": 142.126782,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        871.563721,
+        554.055359
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.833133,
+      "frame": 27,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 189.341731,
+      "speed_before_px_s": 86.043391,
+      "time_s": 0.9,
+      "turn_angle_deg": 169.04146,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        862.404968,
+        539.321045
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.591223,
+      "frame": 29,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 184.456056,
+      "speed_before_px_s": 96.697946,
+      "time_s": 0.9666666666666667,
+      "turn_angle_deg": 94.495856,
+      "window_frames": 4
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        850.557007,
+        528.755859
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.463466,
+      "frame": 31,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 117.239346,
+      "speed_before_px_s": 95.89491,
+      "time_s": 1.0333333333333334,
+      "turn_angle_deg": 70.552046,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        796.32373,
+        505.312561
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.842839,
+      "frame": 42,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 78.977379,
+      "speed_before_px_s": 178.975762,
+      "time_s": 1.4,
+      "turn_angle_deg": 140.560579,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        802.143311,
+        498.974243
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.920099,
+      "frame": 44,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 100.60767,
+      "speed_before_px_s": 142.80927,
+      "time_s": 1.4666666666666666,
+      "turn_angle_deg": 170.130223,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        806.398926,
+        498.738953
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.833133,
+      "frame": 46,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 139.367498,
+      "speed_before_px_s": 108.926205,
+      "time_s": 1.5333333333333334,
+      "turn_angle_deg": 104.576795,
+      "window_frames": 5
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        811.92926,
+        502.870331
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.745163,
+      "frame": 48,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 219.218181,
+      "speed_before_px_s": 78.977379,
+      "time_s": 1.6,
+      "turn_angle_deg": 81.643554,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        826.924988,
+        560.09906
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.769238,
+      "frame": 56,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 94.338184,
+      "speed_before_px_s": 229.422979,
+      "time_s": 1.8666666666666667,
+      "turn_angle_deg": 107.993989,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        835.268982,
+        601.611816
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.755579,
+      "frame": 62,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 252.708677,
+      "speed_before_px_s": 216.669432,
+      "time_s": 2.066666666666667,
+      "turn_angle_deg": 140.552055,
+      "window_frames": 5
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        989.553772,
+        474.259979
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.804371,
+      "frame": 87,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 196.271641,
+      "speed_before_px_s": 260.963557,
+      "time_s": 2.9,
+      "turn_angle_deg": 127.732194,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1009.208801,
+        486.520447
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.806967,
+      "frame": 89,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 297.171482,
+      "speed_before_px_s": 295.651575,
+      "time_s": 2.966666666666667,
+      "turn_angle_deg": 131.591949,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        978.847961,
+        532.552612
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.686282,
+      "frame": 97,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 528.945109,
+      "speed_before_px_s": 161.208179,
+      "time_s": 3.2333333333333334,
+      "turn_angle_deg": 83.562655,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        851.119385,
+        572.221497
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.804371,
+      "frame": 105,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 75.731472,
+      "speed_before_px_s": 479.505161,
+      "time_s": 3.5,
+      "turn_angle_deg": 114.911594,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        852.580688,
+        583.672363
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.70795,
+      "frame": 114,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 232.196058,
+      "speed_before_px_s": 127.604358,
+      "time_s": 3.8,
+      "turn_angle_deg": 111.190524,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        873.63269,
+        592.489502
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.800396,
+      "frame": 117,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 607.413585,
+      "speed_before_px_s": 75.731472,
+      "time_s": 3.9,
+      "turn_angle_deg": 177.787384,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1021.004761,
+        594.928467
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.85212,
+      "frame": 224,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 153.727278,
+      "speed_before_px_s": 361.445175,
+      "time_s": 7.466666666666667,
+      "turn_angle_deg": 106.764221,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1034.958496,
+        592.590332
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.881751,
+      "frame": 227,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 166.913086,
+      "speed_before_px_s": 202.902092,
+      "time_s": 7.566666666666666,
+      "turn_angle_deg": 104.983612,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1068.041626,
+        569.28009
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.89481,
+      "frame": 237,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 137.352174,
+      "speed_before_px_s": 92.69037,
+      "time_s": 7.9,
+      "turn_angle_deg": 97.170467,
+      "window_frames": 5
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1056.967651,
+        529.529724
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.835301,
+      "frame": 246,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 108.08351,
+      "speed_before_px_s": 152.704814,
+      "time_s": 8.2,
+      "turn_angle_deg": 86.570823,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1051.172974,
+        526.008362
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.948806,
+      "frame": 248,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 162.637464,
+      "speed_before_px_s": 117.254688,
+      "time_s": 8.266666666666667,
+      "turn_angle_deg": 91.004739,
+      "window_frames": 5
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1044.745728,
+        527.048401
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.869775,
+      "frame": 250,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 298.888616,
+      "speed_before_px_s": 95.201947,
+      "time_s": 8.333333333333334,
+      "turn_angle_deg": 86.239529,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1003.337952,
+        597.523804
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.702776,
+      "frame": 257,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 298.314871,
+      "speed_before_px_s": 381.712925,
+      "time_s": 8.566666666666666,
+      "turn_angle_deg": 145.792463,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        877.5,
+        600.0
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.500823,
+      "frame": 275,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 1112.899387,
+      "speed_before_px_s": 222.930378,
+      "time_s": 9.166666666666666,
+      "turn_angle_deg": 135.334573,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        924.401123,
+        466.862244
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.482312,
+      "frame": 277,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 724.653718,
+      "speed_before_px_s": 176.105027,
+      "time_s": 9.233333333333333,
+      "turn_angle_deg": 80.850435,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1032.220825,
+        312.701569
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.701667,
+      "frame": 287,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 156.851205,
+      "speed_before_px_s": 325.816845,
+      "time_s": 9.566666666666666,
+      "turn_angle_deg": 84.634152,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1042.537842,
+        314.387268
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.684118,
+      "frame": 289,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 179.13677,
+      "speed_before_px_s": 207.469677,
+      "time_s": 9.633333333333333,
+      "turn_angle_deg": 82.98697,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1049.543945,
+        319.252716
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.579449,
+      "frame": 291,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 219.53165,
+      "speed_before_px_s": 151.672018,
+      "time_s": 9.7,
+      "turn_angle_deg": 68.814002,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1075.182373,
+        441.490265
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.918579,
+      "frame": 305,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 311.3897,
+      "speed_before_px_s": 328.439811,
+      "time_s": 10.166666666666666,
+      "turn_angle_deg": 99.972035,
+      "window_frames": 4
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1087.779785,
+        448.037354
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.873178,
+      "frame": 307,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 516.964325,
+      "speed_before_px_s": 231.852068,
+      "time_s": 10.233333333333333,
+      "turn_angle_deg": 96.357466,
+      "window_frames": 4
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1363.999023,
+        380.33429
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.566563,
+      "frame": 319,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 130.116318,
+      "speed_before_px_s": 889.438146,
+      "time_s": 10.633333333333333,
+      "turn_angle_deg": 119.762484,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1486.89563,
+        390.0
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.531784,
+      "frame": 322,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 475.842163,
+      "speed_before_px_s": 1128.108842,
+      "time_s": 10.733333333333333,
+      "turn_angle_deg": 168.496979,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1399.797852,
+        329.634674
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.687284,
+      "frame": 333,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 959.414602,
+      "speed_before_px_s": 178.275564,
+      "time_s": 11.1,
+      "turn_angle_deg": 147.16302,
+      "window_frames": 5
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1323.279175,
+        324.141663
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.405433,
+      "frame": 335,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 746.851189,
+      "speed_before_px_s": 130.116318,
+      "time_s": 11.166666666666666,
+      "turn_angle_deg": 64.404087,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1004.654846,
+        532.447632
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.815438,
+      "frame": 356,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 212.312468,
+      "speed_before_px_s": 490.499068,
+      "time_s": 11.866666666666667,
+      "turn_angle_deg": 85.879055,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        991.192566,
+        540.920471
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.847911,
+      "frame": 358,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 276.670016,
+      "speed_before_px_s": 343.029298,
+      "time_s": 11.933333333333334,
+      "turn_angle_deg": 101.392799,
+      "window_frames": 4
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        783.351929,
+        583.37439
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.799877,
+      "frame": 375,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 165.636624,
+      "speed_before_px_s": 660.615061,
+      "time_s": 12.5,
+      "turn_angle_deg": 157.800248,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        736.52301,
+        634.922485
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.720584,
+      "frame": 377,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 498.818285,
+      "speed_before_px_s": 843.634271,
+      "time_s": 12.566666666666666,
+      "turn_angle_deg": 178.219644,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        747.518127,
+        571.073914
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.721507,
+      "frame": 384,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 885.594357,
+      "speed_before_px_s": 229.838612,
+      "time_s": 12.8,
+      "turn_angle_deg": 171.517569,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1048.748657,
+        530.433105
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.697045,
+      "frame": 404,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 232.015289,
+      "speed_before_px_s": 260.275625,
+      "time_s": 13.466666666666667,
+      "turn_angle_deg": 85.986168,
+      "window_frames": 1
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1264.365723,
+        714.947754
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.709277,
+      "frame": 422,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 592.534194,
+      "speed_before_px_s": 1138.86438,
+      "time_s": 14.066666666666666,
+      "turn_angle_deg": 124.269414,
+      "window_frames": 1
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1340.618042,
+        648.822693
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.67544,
+      "frame": 426,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 460.261038,
+      "speed_before_px_s": 586.815982,
+      "time_s": 14.2,
+      "turn_angle_deg": 121.110105,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1261.864746,
+        386.25
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.507155,
+      "frame": 439,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 318.873761,
+      "speed_before_px_s": 580.07165,
+      "time_s": 14.633333333333333,
+      "turn_angle_deg": 97.216997,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1183.171387,
+        385.456482
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.67544,
+      "frame": 446,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 319.259912,
+      "speed_before_px_s": 460.261038,
+      "time_s": 14.866666666666667,
+      "turn_angle_deg": 110.606741,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1094.063721,
+        613.11438
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.876525,
+      "frame": 467,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 264.69963,
+      "speed_before_px_s": 243.634294,
+      "time_s": 15.566666666666666,
+      "turn_angle_deg": 166.473074,
+      "window_frames": 4
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        1092.702881,
+        564.446106
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.719276,
+      "frame": 474,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 407.914395,
+      "speed_before_px_s": 182.589739,
+      "time_s": 15.8,
+      "turn_angle_deg": 78.027733,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        896.035583,
+        536.913147
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.745424,
+      "frame": 488,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 248.012784,
+      "speed_before_px_s": 594.733283,
+      "time_s": 16.266666666666666,
+      "turn_angle_deg": 118.258931,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        885.829041,
+        521.290588
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.88422,
+      "frame": 491,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 331.012034,
+      "speed_before_px_s": 391.030873,
+      "time_s": 16.366666666666667,
+      "turn_angle_deg": 138.544339,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        904.879761,
+        497.124939
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.820717,
+      "frame": 493,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 240.140173,
+      "speed_before_px_s": 177.992174,
+      "time_s": 16.433333333333334,
+      "turn_angle_deg": 89.032087,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        948.391479,
+        476.792145
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.700912,
+      "frame": 499,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 163.305906,
+      "speed_before_px_s": 240.140173,
+      "time_s": 16.633333333333333,
+      "turn_angle_deg": 72.731085,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        957.755005,
+        481.795227
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.57332,
+      "frame": 501,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 166.924882,
+      "speed_before_px_s": 174.618976,
+      "time_s": 16.7,
+      "turn_angle_deg": 61.368891,
+      "window_frames": 6
+    },
+    {
+      "approx": false,
+      "ball_image_xy": [
+        971.661499,
+        508.762665
+      ],
+      "ball_world_xyz": null,
+      "ball_world_xyz_source": "missing_from_raw_ball_track",
+      "confidence": 0.792923,
+      "frame": 506,
+      "not_for_detection_metrics": true,
+      "render_only": true,
+      "source": "ball_track_image_motion",
+      "speed_after_px_s": 216.904826,
+      "speed_before_px_s": 199.244023,
+      "time_s": 16.866666666666667,
+      "turn_angle_deg": 83.520546,
+      "window_frames": 4
+    }
+  ],
+  "not_gate_verified": true,
+  "requires_additional_cues": [
+    "wrist_velocity_peaks"
+  ],
+  "schema_version": 1,
+  "source": "ball_track_image_motion",
+  "summary": {
+    "candidate_count": 52,
+    "max_neighbor_gap_s": 0.2,
+    "min_candidate_separation_s": 0.05,
+    "min_speed_px_per_s": 75.0,
+    "min_turn_degrees": 60.0,
+    "raw_candidate_count": 389,
+    "usable_frame_count": 338
+  },
+  "world_frame": "image_xy"
+}

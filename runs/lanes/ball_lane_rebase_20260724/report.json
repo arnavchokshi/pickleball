@@ -1,0 +1,163 @@
+{
+  "schema_version": 1,
+  "artifact_type": "racketsport_lane_rebase_merge_readiness_report",
+  "lane": "ball-lane-20260723",
+  "date": "2026-07-24",
+  "verified": 0,
+  "evidence_class": "integration_only_not_capability",
+  "verdict": "READY_TO_MERGE",
+  "verdict_conditional": true,
+  "verdict_conditions": [
+    "Re-rebase onto current main (2e073c8 or later) and confirm still conflict-free; measured intersection is still 0.",
+    "Re-run at minimum the 9 branch-owned test files after that re-rebase.",
+    "Merge from a checkout provisioned with the gitignored model/run assets so the 28 collection errors cannot mask a real import break."
+  ],
+  "actions_not_taken": ["merge", "push", "cloud_or_gpu", "any_write_to_main_checkout"],
+  "provenance": {
+    "fork_point": "ce32f1f30cdeec5ac556f2fa2479b7d6cbb7f08e",
+    "branch_tip_before_rebase": "ca3d5f427dc1c5ad11ebd7d1b7203e1498671aba",
+    "safety_tag": "ball-lane-prerebase-20260724",
+    "rebase_target_main": "9d318ad0c86ee424a5d01aae5eac0adaac578dd7",
+    "branch_tip_after_rebase": "35b44f39c91f44dab9162c3871c68765b83b52be",
+    "rebased_tree_hash": "a2d62bfa656177c6332e870b9ec675ffebbd72f3",
+    "main_head_at_report_time": "2e073c8d5bd5210dc792a2ca159bbdd1fb813554"
+  },
+  "collision_surface": {
+    "branch_files_changed": 137,
+    "main_files_changed_since_fork": 33,
+    "intersection_count": 0,
+    "intersection_files": [],
+    "high_risk_files_co_edited": 0,
+    "high_risk_file_status": {
+      "scripts/racketsport/process_video.py": {"branch": false, "main": true},
+      "configs/racketsport/best_stack.json": {"branch": false, "main": false},
+      "models/MANIFEST.json": {"branch": false, "main": false},
+      "scripts/racketsport/list_scaffold_tools.py": {"branch": false, "main": false},
+      "threed/racketsport/orchestrator.py": {"branch": false, "main": false}
+    },
+    "semantic_dependency": {
+      "file": "threed/racketsport/virtual_world.py",
+      "modified_by_main": true,
+      "branch_imported_symbols": [
+        "BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX",
+        "BALL_ARC_FAIL_CLOSED_MIN_INLIERS",
+        "BALL_ARC_FAIL_CLOSED_POLICY",
+        "ball_arc_segment_fail_closed_verdicts"
+      ],
+      "all_symbols_present_at_9d318ad": true,
+      "all_symbols_present_at_current_main": true,
+      "defs_removed_by_main": 0
+    }
+  },
+  "rebase": {
+    "succeeded": true,
+    "exit_code": 0,
+    "commits_replayed": 15,
+    "conflicts": 0,
+    "manual_resolutions": 0,
+    "content_drift": "none",
+    "verification": [
+      "dry-run replay in isolated scratchpad clone produced identical tree a2d62bf",
+      "branch delta byte-identical pre/post rebase (two 358577-line patches, diff empty)",
+      "runs/ball_lane_20260723 subtree hash 71d976c139f1abc00eb33129b7634e7c8cc154b2 unchanged; all 118 evidence files preserved"
+    ]
+  },
+  "tests": {
+    "clean_full_run": {
+      "head": "35b44f39c91f44dab9162c3871c68765b83b52be",
+      "invocation_marker": "BALLLANE_REBASE_SUITE_20260724",
+      "pid": 56042,
+      "duration_seconds": 2849.71,
+      "failed": 72,
+      "passed": 4179,
+      "skipped": 35,
+      "errors": 28,
+      "collected": 4286,
+      "complete": true,
+      "truncated": false,
+      "accounting_check": "72+4179+35=4286 equals collected",
+      "exit_code": null,
+      "exit_code_status": "NOT_OBSERVED",
+      "exit_code_note": "Launched with nohup and $? was not written to a file; each tool call gets a fresh shell, so the status was unrecoverable once the process exited. Deliberately not inferred."
+    },
+    "branch_owned_tests": {"files": 9, "passed": 132, "failed": 0, "exit_code": 0, "exit_code_observed": true},
+    "main_touched_tests": {"files": 11, "passed": 264, "failed": 0, "collection_errors": 1, "exit_code": 1, "exit_code_observed": true,
+      "note": "exit 1 caused by the pre-existing test_process_video.py collection error, not a test failure"},
+    "collection": {
+      "main_9d318ad": {"collected": 4169, "errors": 28},
+      "rebased_35b44f3": {"collected": 4286, "errors": 28},
+      "error_module_list_diff": "EMPTY",
+      "rebase_induced_collection_errors": 0
+    },
+    "failure_attribution": {
+      "total_failures": 72,
+      "pre_existing_on_main": 71,
+      "in_suite_ordering_fragility_main_owned": 1,
+      "pre_existing_on_branch_only": 0,
+      "rebase_induced": 0,
+      "in_branch_owned_test_files": 0,
+      "batches": [
+        {"ids": 71, "rerun_at": "9d318ad", "result": "69 failed, 2 passed in 72.20s", "exit_code": 1, "exit_code_observed": true},
+        {"ids": 3, "rerun_at": "9d318ad", "result": "2 failed, 1 passed in 4.16s", "exit_code": 1, "exit_code_observed": true,
+         "note": "test_train_court_model_v2 x2 fail with FileNotFoundError at train_court_model_v2.py:963 (missing gitignored asset)"}
+      ],
+      "residual_case": {
+        "test": "tests/racketsport/test_court_model_infer.py::test_infer_court_model_returns_stable_contract_keys_and_shapes",
+        "standalone_on_branch": "1 passed in 6.73s, exit 0",
+        "standalone_on_main": "passed",
+        "classification": "ordering/shared-state fragility in a main-owned test; branch modifies zero files it depends on",
+        "caveat": "branch adds 117 tests which can perturb execution order, so it may shift which ordering-sensitive tests trip"
+      },
+      "load_flake_documented": {
+        "test": "tests/racketsport/test_flight_simulator.py::test_generate_corpus_is_deterministic_and_fast_for_small_cpu_sample",
+        "assertion": "assert elapsed < 5.0",
+        "observed_elapsed_on_branch": [5.547280124970712, 8.743908584001474, 7.250089416978881, 5.390189750003628],
+        "observed_elapsed_on_main_branch_code_absent": [6.004351457988378, 5.667030249955133],
+        "classification": "environmental load-flake, fails on main too"
+      }
+    },
+    "superseded_truncated_runs": [
+      {"what": "wide run on branch", "result": "71 failed, 3937 passed, 30 skipped, 28 errors in 2585.57s",
+       "status": "SIGINT-killed at 43:05 by concurrent agent matching 'pytest tests/'; ~248 of 4286 never ran"},
+      {"what": "main baseline", "result": "1518 passed, 56 failed, 6 skipped of 1580 (~37%)",
+       "status": "killed, exit 144, no summary emitted; partial"}
+    ]
+  },
+  "collection_errors": {
+    "count": 28,
+    "kind": "collection_import_time_errors_not_test_failures",
+    "attribution": "pre_existing_on_main",
+    "identical_on_main_and_branch": true,
+    "rebase_induced": 0,
+    "root_causes": [
+      {"count": 27, "cause": "BestStackManifestError: best_stack manifest points at gitignored assets absent from this worktree (models/checkpoints/, runs/**)",
+       "representative": "threed.racketsport.best_stack.BestStackManifestError: best_stack entry 'ball.wasb_checkpoint' points at missing path .../models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+       "classification": "worktree provisioning gap, not a code defect"},
+      {"count": 1, "module": "tests/racketsport/test_audit_data_utilization.py",
+       "cause": "ImportError: cannot import name 'REQUIRED_CONTRACT_ASSET_IDS' from 'scripts.racketsport.audit_data_utilization'",
+       "classification": "genuine pre-existing repo defect; confirms the other lane's datapoint; present on BOTH main and branch"}
+    ]
+  },
+  "structure_checks": {
+    "list_scaffold_tools": {"main_exit": 0, "rebased_exit": 0, "tools_main": 323, "tools_rebased": 326, "added": 3, "removed": 0,
+      "new_entries": ["build_ball_observation_log (BALL)", "characterize_ball_solver (BALL)", "build_multimodal_event_dataset (DATA)"],
+      "verdict": "clean additive registry merge; each new CLI has related_test and direct_cli_reference_test"},
+    "audit_dead_code": {"main_exit": 0, "rebased_exit": 0, "status": "pass", "python_sources_main": 631, "python_sources_rebased": 638, "unknown_python_sources": 0},
+    "audit_storage_policy": {"main_exit": 1, "rebased_exit": 1, "status": "fail",
+      "attribution": "pre_existing_on_main",
+      "field_delta_main_vs_rebased": 0,
+      "unknown_large_tracked_files": {"main": 6, "rebased": 6},
+      "missing_allowed_large_untracked_source_files": {"main": 120, "rebased": 120},
+      "observed_large_tracked_files": {"main": 17, "rebased": 17},
+      "new_violations_from_branch": 0,
+      "note": "the 6 unknown large tracked files belong to another lane (runs/lanes/holdout_eval_20260721/vm_pull/...); the 120 missing-allowed entries are gitignored assets absent from this worktree"}
+  },
+  "risks": [
+    "BASE DRIFT: rebased onto 9d318ad but main advanced 4 commits to 2e073c8 (a83ca9b, 244c9c1, 60631f1, 2e073c8); 60631f1 touches virtual_world.py. Re-check required before merge; measured intersection still 0.",
+    "This worktree cannot produce a green suite: models/checkpoints/ and runs/* are gitignored, so 28 modules cannot import and many tests fail on absent fixtures. Equally true of main here.",
+    "tests/racketsport/test_audit_data_utilization.py has a genuine pre-existing defect (missing REQUIRED_CONTRACT_ASSET_IDS export) needing an owner.",
+    "Fixed wall-clock budgets are load-fragile (test_flight_simulator asserts elapsed < 5.0).",
+    "Exit code of the clean full run was not captured and is reported as NOT_OBSERVED rather than inferred.",
+    "VERIFIED=0: nothing here promotes any ball-lane capability."
+  ]
+}

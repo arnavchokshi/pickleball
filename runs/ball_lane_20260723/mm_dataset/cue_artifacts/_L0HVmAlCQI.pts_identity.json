@@ -1,0 +1,15 @@
+{
+ "artifact_type": "audio_alignment_pts_identity",
+ "audio_effective_origin_pts_s": 0.0,
+ "clip_id": "_L0HVmAlCQI",
+ "commands": [
+  "ffprobe -v error -select_streams a:0 -show_entries stream=index,codec_name,codec_type,sample_rate,channels,time_base,start_pts,start_time,duration_ts,duration,nb_frames -of json /Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/raw/_L0HVmAlCQI.mp4",
+  "ffprobe -v error -select_streams a:0 -show_packets -show_entries packet=pts,pts_time,dts_time,duration_time,flags,side_data_list -read_intervals '%+#4' -of json /Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/raw/_L0HVmAlCQI.mp4",
+  "ffprobe -v error -show_entries format=start_time,duration -of json /Users/arnavchokshi/Desktop/pickleball/data/online_harvest_20260706/raw/_L0HVmAlCQI.mp4"
+ ],
+ "media_sha256": "9e454f99bfac00c56eca2bd339a585b9d2ba30c9a8b37868c9a28f49b0ac708a",
+ "probe_scope": "audio_stream_only_no_video_frame_decode",
+ "schema_version": 1,
+ "source_video_sha256": "9e454f99bfac00c56eca2bd339a585b9d2ba30c9a8b37868c9a28f49b0ac708a",
+ "video_effective_origin_pts_s": null
+}
