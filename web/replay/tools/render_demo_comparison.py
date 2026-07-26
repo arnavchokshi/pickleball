@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Render a polished source-video + virtual-baseline comparison MP4.
 
-The renderer intentionally consumes immutable BODY mesh-index output and does
-not alter tracking, court placement, or BODY geometry.  Missing mesh samples
-remain missing.  Optional between-frame interpolation is display-only and is
-used only when both adjacent measured mesh samples exist.
+The renderer consumes the final immutable ``virtual_world.json`` placement and,
+when available, the matching BODY mesh index.  Joint-only runs are displayed as
+translucent articulated avatars built directly from their final grounded joints;
+this is a presentation surface, not fabricated measurement geometry.  Missing
+world samples remain missing.  Optional between-frame interpolation is
+display-only and is used only when both adjacent measured samples exist.
 
 The visual language mirrors the replay viewer: warm white canvas, regulation
 pickleball court, restrained ink lines, translucent per-player surfaces, and a
@@ -534,6 +536,70 @@ def draw_player_shadow(panel: np.ndarray, vertices: np.ndarray, camera: dict) ->
         cv2.addWeighted(shadow, 0.12, panel, 0.88, 0, panel)
 
 
+def draw_translucent_joint_avatar(
+    panel: np.ndarray,
+    joints: np.ndarray,
+    confidence: np.ndarray,
+    color: tuple[int, int, int],
+    camera: dict,
+) -> None:
+    """Draw a soft volumetric avatar without inventing additional pose data.
+
+    Every primitive is centered on an observed final-world joint or bone.  The
+    wider translucent strokes improve demo readability while the thin joint
+    skeleton drawn afterward remains the exact pose reference.
+    """
+    if len(joints) < 70 or len(confidence) < 70:
+        return
+    pixels, depth = project(joints, camera, panel.shape[1], panel.shape[0])
+    overlay = panel.copy()
+
+    # Torso: shoulders and hips are the only anchors.  This is deliberately a
+    # soft silhouette rather than a claimed SMPL surface.
+    torso_indices = (5, 6, 10, 9)
+    if all(confidence[index] >= 0.05 and depth[index] > 0.05 for index in torso_indices):
+        torso = np.asarray([pixels[index] for index in torso_indices], dtype=np.int32)
+        cv2.fillConvexPoly(overlay, torso, _scaled_color(color, 0.94), cv2.LINE_AA)
+
+    limb_specs = (
+        (69, 5, 15), (69, 6, 15),
+        (5, 7, 13), (7, 62, 10),
+        (6, 8, 13), (8, 41, 10),
+        (5, 9, 15), (6, 10, 15), (9, 10, 15),
+        (9, 11, 17), (11, 13, 14),
+        (10, 12, 17), (12, 14, 14),
+        (13, 15, 9), (13, 16, 8), (13, 17, 9),
+        (14, 18, 9), (14, 19, 8), (14, 20, 9),
+    )
+    for left, right, width in limb_specs:
+        if (
+            confidence[left] < 0.05
+            or confidence[right] < 0.05
+            or depth[left] <= 0.05
+            or depth[right] <= 0.05
+        ):
+            continue
+        start = tuple(int(value) for value in pixels[left])
+        end = tuple(int(value) for value in pixels[right])
+        cv2.line(overlay, start, end, _scaled_color(color, 0.98), width, cv2.LINE_AA)
+        radius = max(3, width // 2)
+        cv2.circle(overlay, start, radius, _scaled_color(color, 0.98), -1, cv2.LINE_AA)
+        cv2.circle(overlay, end, radius, _scaled_color(color, 0.98), -1, cv2.LINE_AA)
+
+    # Head volume uses only nose/neck separation for scale.
+    if confidence[0] >= 0.05 and confidence[69] >= 0.05 and depth[0] > 0.05:
+        head_radius = int(np.clip(np.linalg.norm(pixels[0] - pixels[69]) * 0.72, 7, 18))
+        cv2.circle(
+            overlay,
+            tuple(int(value) for value in pixels[0]),
+            head_radius,
+            _scaled_color(color, 1.03),
+            -1,
+            cv2.LINE_AA,
+        )
+    cv2.addWeighted(overlay, 0.30, panel, 0.70, 0, panel)
+
+
 def draw_translucent_mesh(
     panel: np.ndarray,
     vertices: np.ndarray,
@@ -687,7 +753,7 @@ def draw_virtual_panel(
     camera = baseline_camera(width, height, orbit_degrees)
     draw_court(panel, camera)
 
-    samples: list[tuple[int, np.ndarray, np.ndarray]] = []
+    samples: list[tuple[int, np.ndarray | None, np.ndarray, np.ndarray]] = []
     for player_id in sorted(world_frames):
         world_frame = world_sample_at(world_frames[player_id], frame_position, fps)
         if world_frame is None:
@@ -697,27 +763,48 @@ def draw_virtual_panel(
         player_mesh_frames = mesh_frames.get(world_frame.mesh_player_id)
         mesh_sample = mesh_sample_at(player_mesh_frames, frame_position, fps) if player_mesh_frames is not None else None
         if mesh_sample is None:
+            samples.append((player_id, None, world_frame.joints_m, world_frame.joint_conf))
             if alignment_stats is not None:
-                alignment_stats["missing_mesh_player_frames"] += 1
+                alignment_stats["skeleton_avatar_frames"] += 1
             continue
         aligned = align_mesh_to_final_world(mesh_sample, world_frame)
         if aligned is None:
             if alignment_stats is not None:
                 alignment_stats["unalignable_player_frames"] += 1
             continue
-        samples.append((player_id, aligned[0], aligned[1]))
+        samples.append((player_id, aligned[0], aligned[1], world_frame.joint_conf))
         if alignment_stats is not None:
             alignment_stats["aligned_player_frames"] += 1
-    for _, vertices, _ in samples:
-        draw_player_shadow(panel, vertices, camera)
+    for _, vertices, joints, _ in samples:
+        draw_player_shadow(panel, vertices if vertices is not None else joints, camera)
     # Far players render first for stable inter-player occlusion.
-    samples.sort(key=lambda item: float(np.mean(np.linalg.norm(item[1] - camera["eye"], axis=1))), reverse=True)
+    samples.sort(
+        key=lambda item: float(
+            np.mean(
+                np.linalg.norm(
+                    (item[1] if item[1] is not None else item[2]) - camera["eye"],
+                    axis=1,
+                )
+            )
+        ),
+        reverse=True,
+    )
     occupied_labels: list[tuple[int, int, int, int]] = []
-    for player_id, vertices, joints in samples:
+    for player_id, vertices, joints, confidence in samples:
         color = PLAYER_COLORS.get(player_id, (190, 190, 190))
-        draw_translucent_mesh(panel, vertices, faces, color, camera)
+        if vertices is not None and len(faces):
+            draw_translucent_mesh(panel, vertices, faces, color, camera)
+        else:
+            draw_translucent_joint_avatar(panel, joints, confidence, color, camera)
         draw_skeleton(panel, joints, color, camera)
-        draw_player_label(panel, player_id, vertices, color, camera, occupied_labels)
+        draw_player_label(
+            panel,
+            player_id,
+            vertices if vertices is not None else joints,
+            color,
+            camera,
+            occupied_labels,
+        )
     return panel
 
 
@@ -770,7 +857,12 @@ def read_source_frame_at(
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--index", type=Path, required=True)
+    parser.add_argument(
+        "--index",
+        type=Path,
+        default=None,
+        help="optional matching BODY mesh index; omit for joint-avatar rendering",
+    )
     parser.add_argument("--source-video", type=Path, required=True)
     parser.add_argument(
         "--world",
@@ -800,26 +892,46 @@ def main() -> int:
 
     if args.panel_width < 320 or args.panel_height < 240:
         raise ValueError("panel dimensions must be at least 320x240")
-    index, faces, mesh_frames = load_mesh_frames(args.index)
-    fps = float(index.get("fps", 30.0))
-    world_path = args.world or args.index.parent.parent / "virtual_world.json"
+    if args.index is not None:
+        index, faces, mesh_frames = load_mesh_frames(args.index)
+        fps = float(index.get("fps", 30.0))
+    else:
+        index, faces, mesh_frames = {}, np.empty((0, 3), dtype=np.int32), {}
+        fps = 0.0
+    world_path = args.world or (
+        args.index.parent.parent / "virtual_world.json"
+        if args.index is not None
+        else None
+    )
+    if world_path is None:
+        raise ValueError("--world is required when --index is omitted")
     if not world_path.is_file():
         raise ValueError(
             f"final virtual_world.json is required for refined mesh placement: {world_path}"
         )
+    capture = cv2.VideoCapture(str(args.source_video))
+    if not capture.isOpened():
+        raise ValueError(f"could not open source video: {args.source_video}")
+    source_fps = float(capture.get(cv2.CAP_PROP_FPS) or fps or 30.0)
+    if fps <= 0:
+        world_payload = json.loads(world_path.read_text(encoding="utf-8"))
+        fps = float(world_payload.get("fps") or source_fps)
     world_frames = load_world_frames(world_path, fps)
-    frame_start = min(int(window.get("frame_start", 0)) for window in index["windows"])
-    frame_end = max(int(window.get("frame_end", 0)) for window in index["windows"])
-    total_frames = frame_end - frame_start + 1
+    frame_start = (
+        min(int(window.get("frame_start", 0)) for window in index["windows"])
+        if index.get("windows")
+        else 0
+    )
+    if index.get("windows"):
+        frame_end = max(int(window.get("frame_end", 0)) for window in index["windows"])
+        total_frames = frame_end - frame_start + 1
+    else:
+        source_frame_count = int(round(capture.get(cv2.CAP_PROP_FRAME_COUNT)))
+        total_frames = max(1, int(math.ceil(source_frame_count * fps / source_fps)))
     if args.max_frames > 0:
         total_frames = min(total_frames, args.max_frames)
     output_width = args.panel_width * 2
     output_height = args.panel_height
-
-    capture = cv2.VideoCapture(str(args.source_video))
-    if not capture.isOpened():
-        raise ValueError(f"could not open source video: {args.source_video}")
-    source_fps = float(capture.get(cv2.CAP_PROP_FPS) or fps)
     fps_multiplier = resolve_fps_multiplier(fps, source_fps, args.fps_multiplier)
     output_fps = fps * fps_multiplier
     output_frames = total_frames * fps_multiplier
@@ -842,6 +954,7 @@ def main() -> int:
         "missing_world_player_frames": 0,
         "missing_mesh_player_frames": 0,
         "unalignable_player_frames": 0,
+        "skeleton_avatar_frames": 0,
     }
     try:
         for local_frame_idx in range(total_frames):
@@ -934,6 +1047,11 @@ def main() -> int:
                 "camera_motion": args.camera_motion,
                 "renderer_authority": "presentation_only",
                 "mesh_alignment": "virtual_world_skeleton_root_plus_floor_guard",
+                "virtual_representation": (
+                    "body_mesh_plus_exact_skeleton"
+                    if args.index is not None
+                    else "translucent_joint_avatar_plus_exact_skeleton"
+                ),
                 "virtual_world": str(world_path),
                 **alignment_stats,
             }

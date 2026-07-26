@@ -13,6 +13,8 @@ WorldFrame = MODULE["WorldFrame"]
 mesh_sample_at = MODULE["mesh_sample_at"]
 world_sample_at = MODULE["world_sample_at"]
 resolve_fps_multiplier = MODULE["resolve_fps_multiplier"]
+baseline_camera = MODULE["baseline_camera"]
+draw_translucent_joint_avatar = MODULE["draw_translucent_joint_avatar"]
 
 
 def _mesh_frame(x_mm: int, *, window: int = 0):
@@ -61,3 +63,33 @@ def test_native_source_fps_is_default_when_ratio_is_integral() -> None:
     assert resolve_fps_multiplier(60.0, 60.0, None) == 1
     assert resolve_fps_multiplier(30.0, 59.94, None) == 1
     assert resolve_fps_multiplier(30.0, 60.0, 1) == 1
+
+
+def test_joint_only_world_draws_translucent_avatar_without_mesh_geometry() -> None:
+    panel = np.full((360, 640, 3), 244, dtype=np.uint8)
+    before = panel.copy()
+    joints = np.zeros((70, 3), dtype=np.float32)
+    joints[:, 1] = 0.5
+    joints[:, 2] = 1.0
+    joints[69] = [0.0, 0.5, 1.55]
+    joints[0] = [0.0, 0.5, 1.78]
+    joints[5], joints[6] = [-0.22, 0.5, 1.48], [0.22, 0.5, 1.48]
+    joints[9], joints[10] = [-0.16, 0.5, 1.0], [0.16, 0.5, 1.0]
+    joints[7], joints[8] = [-0.34, 0.5, 1.2], [0.34, 0.5, 1.2]
+    joints[62], joints[41] = [-0.42, 0.5, 0.96], [0.42, 0.5, 0.96]
+    joints[11], joints[12] = [-0.17, 0.5, 0.55], [0.17, 0.5, 0.55]
+    joints[13], joints[14] = [-0.18, 0.5, 0.08], [0.18, 0.5, 0.08]
+    for index in (15, 16, 17):
+        joints[index] = [-0.18, 0.64, 0.03]
+    for index in (18, 19, 20):
+        joints[index] = [0.18, 0.64, 0.03]
+
+    draw_translucent_joint_avatar(
+        panel,
+        joints,
+        np.ones(70, dtype=np.float32),
+        (61, 255, 223),
+        baseline_camera(640, 360),
+    )
+
+    assert np.count_nonzero(panel != before) > 100
