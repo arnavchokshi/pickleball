@@ -1,0 +1,232 @@
+{
+  "also_loaded_end_to_end": [
+    {
+      "ball_detection_frames": 243,
+      "bounce_candidates": 10,
+      "calibration_plane_residual_median_m": 0.127,
+      "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+      "frame_count": 300,
+      "note": "needs --video: the run's source.mp4 symlinks to the GPU box that produced it",
+      "player_skeleton_tracks": 4,
+      "solver_3d_prefill_frames": 300
+    },
+    {
+      "ball_detection_frames": 241,
+      "bounce_candidates": 1,
+      "calibration_plane_residual_median_m": 0.231855,
+      "clip_id": "indoor_doubles_20s_fullmesh_final",
+      "frame_count": 600,
+      "note": "arc solver status=degraded, so no 3D prefill is available on this clip",
+      "player_skeleton_tracks": 4,
+      "solver_3d_prefill_frames": 0
+    }
+  ],
+  "artifact_type": "racketsport_lane_report",
+  "branch": "ball-label-tool-20260726",
+  "browser_tooling": {
+    "chrome_headless": "unusable (exit 137 under this sandbox)",
+    "fallback": "node + stub DOM/canvas harness against a real running server, plus a documented manual smoke test",
+    "installed_anything": false,
+    "playwright": "installed but the driver fails to start on Python 3.14"
+  },
+  "cli": "scripts/racketsport/ball_label_studio.py",
+  "cpu_only": true,
+  "demo_labels": {
+    "path": "runs/lanes/ball_label_tool_20260726/demo_labels/outdoor_webcam/ball_human_labels.json",
+    "produced_by": "the tool's own API, driving a real session on the verified clip",
+    "summary": {
+      "by_accuracy_tier": {
+        "plane_solved": 4,
+        "player_referenced": 3,
+        "unreferenced_estimate": 8
+      },
+      "by_depth_source": {
+        "human_drag": 3,
+        "interpolated_arc": 8,
+        "ray_plane_intersection": 4
+      },
+      "by_human_confidence": {
+        "high": 4,
+        "low": 8,
+        "medium": 3
+      },
+      "by_kind": {
+        "bounce": 4,
+        "free_flight": 8,
+        "near_player": 3
+      },
+      "by_origin": {
+        "fresh": 12,
+        "prefill_confirmed": 0,
+        "prefill_corrected": 3
+      },
+      "frame_coverage_fraction": 0.025,
+      "ground_truth_candidate_count": 4,
+      "label_count": 15,
+      "labeled_frame_span": [
+        63,
+        221
+      ]
+    }
+  },
+  "forked_from": "d9dbac9",
+  "head": "33dd12b743f3d32d433779fbdcc791d6f1aac0d0",
+  "known_pre_existing_failures": [
+    "scripts/racketsport/audit_storage_policy.py exits 1 at the base commit for unrelated paths",
+    "tests/racketsport/test_scaffold_tool_index.py::test_real_scaffold_tool_index_matches_checked_in_schema fails on category_counts['unknown']==7; reproduced with this change stashed"
+  ],
+  "label_kinds": {
+    "bounce": {
+      "accuracy_tier": "plane_solved",
+      "depth_is_solved": true,
+      "depth_source": "ray_plane_intersection",
+      "human_depth_input": false,
+      "is_ground_truth_candidate": true,
+      "note": "depth solved by ray-plane intersection at z=BALL_RADIUS_M=0.0371; sigma floored at the clip's measured calibration plane residual",
+      "realised_sigma_along_ray_m": [
+        0.165,
+        0.197
+      ]
+    },
+    "free_flight": {
+      "accuracy_tier": "unreferenced_estimate",
+      "depth_is_solved": false,
+      "depth_source": "human_drag|interpolated_arc",
+      "human_depth_input": true,
+      "is_ground_truth_candidate": false,
+      "note": "unreferenced human estimate; never ground truth",
+      "prior_sigma_along_ray_m": 2.0
+    },
+    "near_player": {
+      "accuracy_tier": "player_referenced",
+      "depth_is_solved": false,
+      "depth_source": "human_drag",
+      "human_depth_input": true,
+      "is_ground_truth_candidate": false,
+      "max_reference_offset_m": 2.5,
+      "note": "human judgement against a tracked skeleton joint; refused when no joint is within 2.5 m of the ray",
+      "prior_sigma_along_ray_m": 0.5,
+      "realised_sigma_along_ray_m": [
+        0.508,
+        0.534
+      ]
+    }
+  },
+  "lane": "BALL",
+  "launch_command": ".venv/bin/python scripts/racketsport/ball_label_studio.py --run-dir /Users/arnavchokshi/Desktop/pickleball/runs/lanes/w7_critique_20260709/wolv_world/wolverine_mixed_0200_mid_steep_corner --video /Users/arnavchokshi/Desktop/pickleball/eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/source.mp4 --out runs/lanes/ball_label_tool_20260726/labels/wolverine",
+  "launch_command_alternate": ".venv/bin/python scripts/racketsport/ball_label_studio.py --run-dir /Users/arnavchokshi/Desktop/pickleball/runs/full_mesh_examples_20260725/outdoor_mesh_final/outdoor_webcam_20s_fullmesh_final --out runs/lanes/ball_label_tool_20260726/labels/outdoor_webcam",
+  "limitations": [
+    "VERIFIED=0: review-only human labels; only bounce labels have a solved depth",
+    "bounce accuracy is capped by each clip's calibration (0.10-0.23 m median measured)",
+    "raw distorted pixels are used for ray casting, matching ball_arc_solver; undistorting first would move the indoor clip's plane residual 0.232 m -> 0.199 m",
+    "near_player (0.5 m) and free_flight (2.0 m) sigmas are honest priors, not measurements",
+    "near_player labels inherit tracked-pose error that is not propagated into their sigma",
+    "interpolation neglects drag; sigma inflation is first order and valid over short spans only",
+    "one label per frame; no multi-ball and no explicit ball-not-visible marker"
+  ],
+  "modules": [
+    "threed/racketsport/ball_label_schema.py",
+    "threed/racketsport/ball_label_geometry.py",
+    "threed/racketsport/ball_label_studio.py",
+    "threed/racketsport/ball_label_studio_page.py"
+  ],
+  "not_ground_truth": true,
+  "output_artifact": "ball_human_labels.json",
+  "output_artifact_type": "racketsport_ball_human_label_set",
+  "output_schema": "docs/racketsport/ball_label_studio_schema.json",
+  "reused": [
+    "threed/racketsport/ball_arc_solver.py:pixel_ray_world",
+    "threed/racketsport/ball_arc_solver.py:intersect_ray_z",
+    "threed/racketsport/ball_arc_solver.py:_project_world_point",
+    "threed/racketsport/ball_arc_solver.py:anchor_sigma_for_bounce",
+    "threed/racketsport/court_templates.py:get_court_template",
+    "threed/racketsport/external_gt_body_prediction_schema.py:MHR70_JOINT_NAMES",
+    "scripts/racketsport/court_keypoint_review_server.py (server + save-token pattern)",
+    "threed/racketsport/ball_bounce_simple_review_server.py (one-page local review pattern)"
+  ],
+  "review_only": true,
+  "safety": {
+    "guard": "open_session raises StudioError if --out resolves inside --run-dir",
+    "main_worktree_touched": false,
+    "merged_or_pushed": false,
+    "run_directory_written": false
+  },
+  "schema_version": 1,
+  "task_prefix": "DATA-1",
+  "tests": [
+    "tests/racketsport/test_ball_label_studio.py",
+    "tests/racketsport/fixtures/ball_label_studio_page_harness.mjs"
+  ],
+  "title": "Ball Label Studio: human 3D ball labels from a single camera",
+  "used_cloud": false,
+  "used_gpu": false,
+  "verification": [
+    {
+      "command": ".venv/bin/python -m pytest tests/racketsport/test_ball_label_studio.py -q",
+      "exit_code": 0,
+      "result": "56 passed in 11.04s"
+    },
+    {
+      "command": "ruff check threed/racketsport/ball_label_*.py scripts/racketsport/ball_label_studio.py tests/racketsport/test_ball_label_studio.py",
+      "exit_code": 0,
+      "result": "All checks passed!"
+    },
+    {
+      "command": ".venv/bin/python scripts/racketsport/list_scaffold_tools.py --root .",
+      "exit_code": 0,
+      "result": "tool_count 324, missing_related_tests 0, missing_direct_cli_reference_tests 0; ball_label_studio registered with related test, direct CLI reference test and matching schema"
+    },
+    {
+      "command": ".venv/bin/python scripts/racketsport/audit_dead_code.py --root .",
+      "exit_code": 0
+    },
+    {
+      "command": "python3 scripts/racketsport/audit_storage_policy.py --root . --json",
+      "exit_code": 1,
+      "pre_existing": true,
+      "result": "fails on unknown_large_tracked_files under runs/lanes/holdout_eval_20260721/ and missing cvat_upload/court_diversity_20260712 frames; zero flagged paths match 'ball_label'"
+    },
+    {
+      "command": "node --check (extracted page script)",
+      "exit_code": 0
+    },
+    {
+      "command": "node tests/racketsport/fixtures/ball_label_studio_page_harness.mjs <live server>",
+      "exit_code": 0,
+      "result": "ok=true, 0 errors, 0 console errors; 600 skeleton frames drawn, 2295 canvas arcs, save/verify/delete round trip through the real server"
+    }
+  ],
+  "verified": 0,
+  "verified_against": {
+    "ball_detection_frames": 306,
+    "bounce_candidate_frames": [
+      158,
+      167,
+      202,
+      221,
+      251,
+      256,
+      325,
+      369,
+      390
+    ],
+    "calibration_plane_residual_m": {
+      "max": 0.447483,
+      "median": 0.100551,
+      "p95": 0.311,
+      "point_count": 15
+    },
+    "clip_id": "outdoor_webcam_20s_fullmesh_final",
+    "fps": 30.0,
+    "frame_count": 600,
+    "image_size": [
+      1920,
+      1080
+    ],
+    "player_skeleton_tracks": 4,
+    "run_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/full_mesh_examples_20260725/outdoor_mesh_final/outdoor_webcam_20s_fullmesh_final",
+    "skeleton_frames": 600,
+    "solver_3d_prefill_frames": 189,
+    "video": "/Users/arnavchokshi/Desktop/pickleball/runs/full_mesh_examples_20260725/inputs/outdoor_webcam_20s_fullmesh_pts.mkv"
+  }
+}

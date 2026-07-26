@@ -1,0 +1,223 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/racketsport/ball_label_studio_schema.json",
+  "title": "Human Ball Label Set (review-only, not verified ground truth)",
+  "description": "ball_human_labels.json, produced by scripts/racketsport/ball_label_studio.py. Human-placed 3D ball positions in the metric court frame. VERIFIED=0: the three label kinds have genuinely different accuracy and must never be aggregated into one number. Only kind=bounce has a geometrically solved depth (ray-plane intersection at one ball radius above the court); near_player and free_flight depths are human estimates. Authoritative validation lives in threed/racketsport/ball_label_schema.py.",
+  "type": "object",
+  "required": [
+    "artifact_type",
+    "schema_version",
+    "world_frame",
+    "clip_id",
+    "fps",
+    "frame_count",
+    "image_size",
+    "labels",
+    "summary",
+    "policy",
+    "verified_ground_truth",
+    "review_only",
+    "not_ground_truth"
+  ],
+  "properties": {
+    "artifact_type": { "const": "racketsport_ball_human_label_set" },
+    "schema_version": { "const": 1 },
+    "world_frame": {
+      "const": "court_netcenter_z_up_m",
+      "description": "x width, y along the baseline direction (net plane y=0), z up, origin under the net centre, court surface z=0, metres."
+    },
+    "verified_ground_truth": { "const": false },
+    "review_only": { "const": true },
+    "not_ground_truth": { "const": true },
+    "human_reviewed": { "const": true },
+    "generated_by": { "type": "string" },
+    "clip_id": { "type": "string", "minLength": 1 },
+    "fps": { "type": "number", "exclusiveMinimum": 0 },
+    "frame_count": { "type": "integer", "exclusiveMinimum": 0 },
+    "image_size": {
+      "type": "array",
+      "items": { "type": "integer" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "source_artifacts": {
+      "type": "object",
+      "description": "Root-relative path + sha256 of every immutable pipeline artifact read. None of them is written.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "sha256": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "calibration_evidence": {
+      "type": "object",
+      "description": "How trustworthy this clip's geometry is, measured rather than asserted.",
+      "properties": {
+        "source": { "type": ["string", "null"] },
+        "metric_confidence": { "type": ["string", "null"] },
+        "sha256": { "type": ["string", "null"] },
+        "reprojection_error_px": { "type": ["object", "null"] },
+        "plane_residual_check": {
+          "type": "object",
+          "description": "Bounce accuracy floor: the calibration's own reviewed correspondences pushed back through pixel_ray_world -> intersect_ray_z(z=0) and compared to their known world positions. Bounce label sigma is floored at median_m.",
+          "properties": {
+            "available": { "type": "boolean" },
+            "point_count": { "type": "integer" },
+            "median_m": { "type": "number" },
+            "p95_m": { "type": "number" },
+            "max_m": { "type": "number" }
+          }
+        }
+      }
+    },
+    "policy": {
+      "type": "object",
+      "required": ["accuracy_tier_by_kind", "ground_truth_candidate_kinds", "notes"],
+      "properties": {
+        "accuracy_tier_by_kind": {
+          "type": "object",
+          "properties": {
+            "bounce": { "const": "plane_solved" },
+            "near_player": { "const": "player_referenced" },
+            "free_flight": { "const": "unreferenced_estimate" }
+          }
+        },
+        "ground_truth_candidate_kinds": {
+          "type": "array",
+          "items": { "const": "bounce" }
+        },
+        "notes": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "labels": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/label" }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["label_count", "by_kind", "by_accuracy_tier", "ground_truth_candidate_count"],
+      "properties": {
+        "label_count": { "type": "integer", "minimum": 0 },
+        "ground_truth_candidate_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Equals by_kind.bounce. Never includes a human depth estimate."
+        },
+        "by_kind": { "type": "object" },
+        "by_accuracy_tier": { "type": "object" },
+        "by_origin": { "type": "object" },
+        "by_human_confidence": { "type": "object" },
+        "by_depth_source": { "type": "object" },
+        "labeled_frame_span": { "type": ["array", "null"] },
+        "frame_coverage_fraction": { "type": "number" }
+      }
+    }
+  },
+  "$defs": {
+    "vec3": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "label": {
+      "type": "object",
+      "required": [
+        "label_id",
+        "frame",
+        "timestamp_s",
+        "pixel_xy",
+        "world_xyz_m",
+        "kind",
+        "accuracy_tier",
+        "is_ground_truth_candidate",
+        "depth_along_ray_m",
+        "ray_origin_m",
+        "ray_direction_unit",
+        "depth_source",
+        "sigma_xyz_m",
+        "sigma_along_ray_m",
+        "sigma_perp_m",
+        "uncertainty_basis",
+        "human_confidence",
+        "origin"
+      ],
+      "properties": {
+        "label_id": { "type": "string" },
+        "frame": { "type": "integer", "minimum": 0 },
+        "timestamp_s": { "type": "number", "minimum": 0 },
+        "pixel_xy": {
+          "type": "array",
+          "items": { "type": "number" },
+          "minItems": 2,
+          "maxItems": 2,
+          "description": "The clicked pixel. This fixes 2 of the 3 degrees of freedom: the camera ray."
+        },
+        "world_xyz_m": { "$ref": "#/$defs/vec3" },
+        "kind": { "enum": ["bounce", "near_player", "free_flight"] },
+        "accuracy_tier": {
+          "enum": ["plane_solved", "player_referenced", "unreferenced_estimate"],
+          "description": "Derived from kind and validated to match; a free-flight estimate cannot be relabelled into the bounce tier."
+        },
+        "is_ground_truth_candidate": {
+          "type": "boolean",
+          "description": "True only for kind=bounce."
+        },
+        "depth_along_ray_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "The third degree of freedom: metres from the camera centre along ray_direction_unit. Always > 0 (in front of the camera). world_xyz_m must equal ray_origin_m + depth_along_ray_m * ray_direction_unit."
+        },
+        "ray_origin_m": { "$ref": "#/$defs/vec3" },
+        "ray_direction_unit": { "$ref": "#/$defs/vec3" },
+        "depth_source": {
+          "enum": ["ray_plane_intersection", "human_drag", "interpolated_arc"],
+          "description": "ray_plane_intersection is reserved for kind=bounce."
+        },
+        "sigma_xyz_m": {
+          "type": "array",
+          "items": { "type": "number", "exclusiveMinimum": 0 },
+          "minItems": 3,
+          "maxItems": 3,
+          "description": "Per-axis honest uncertainty estimate, never a bare xyz. Depth error projects onto the ray axis."
+        },
+        "sigma_along_ray_m": { "type": "number", "exclusiveMinimum": 0 },
+        "sigma_perp_m": { "type": "number", "exclusiveMinimum": 0 },
+        "uncertainty_basis": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Plain-English record of where the sigma came from."
+        },
+        "human_confidence": { "enum": ["low", "medium", "high"] },
+        "origin": { "enum": ["fresh", "prefill_confirmed", "prefill_corrected"] },
+        "prefill": {
+          "type": ["object", "null"],
+          "description": "Required when origin is not 'fresh'. Records the pipeline value shown to the human and how far they moved it, so a prefill can never be silently promoted to a label.",
+          "properties": {
+            "source": { "type": "string" },
+            "world_xyz_m": { "$ref": "#/$defs/vec3" },
+            "pixel_xy": { "type": "array" },
+            "delta_m": { "type": "number" },
+            "delta_px": { "type": "number" }
+          }
+        },
+        "near_player": {
+          "type": ["object", "null"],
+          "description": "Required for kind=near_player: the tracked joint the human judged depth against.",
+          "properties": {
+            "player_id": { "type": "integer" },
+            "joint_index": { "type": "integer" },
+            "joint_name": { "type": "string" },
+            "joint_world_m": { "$ref": "#/$defs/vec3" },
+            "offset_from_ray_m": { "type": "number", "minimum": 0 },
+            "depth_along_ray_m": { "type": "number" },
+            "joint_confidence": { "type": "number" }
+          }
+        },
+        "notes": { "type": "string" }
+      }
+    }
+  }
+}

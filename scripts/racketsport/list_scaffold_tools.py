@@ -113,6 +113,7 @@ SCHEMA_OVERRIDES = {
 TASK_HINTS = {
     "aggregate_roboflow_corpus": ("DATA", "P1-0"),
     "audit_label_drafts": ("DATA", "DATA-1"),
+    "ball_label_studio": ("BALL", "DATA-1"),
     "benchmark_decode": ("EVAL", "EVAL-0"),
     "benchmark_sam3dbody": ("EVAL", "EVAL-0"),
     "build_corrections_queue": ("RPT", "RPT-1"),
