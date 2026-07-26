@@ -31,6 +31,11 @@ class OpenSetDecision(str, Enum):
 EXACTLY_FOUR_HARD_CAP = 4
 COURT_REGION_HARD_BOUND_M = 1.0
 ENROLLED_PLAYER_LONGITUDINAL_CONTINUATION_M = 4.0
+RECOVERY_COURT_HYSTERESIS_M = 0.75
+RECOVERY_DUPLICATE_IOU_THRESHOLD = 0.90
+RECOVERY_IDENTITY_MARGIN = 0.03
+RECOVERY_SOURCE_PERSISTENCE_MIN_FRAMES = 3
+RECOVERY_MAX_BBOX_CENTER_SPEED_DIAG_S = 30.0
 
 
 @dataclass(frozen=True)
@@ -1923,6 +1928,11 @@ def _select_measured_association_fallback(
         selected_indexes = ranked[:4]
     selected_indexes.sort(key=lambda index: int(players[index].get("id", index + 1)))
 
+    duplicate_decisions = _drop_duplicate_association_locations(
+        players,
+        selected_indexes=selected_indexes,
+        matched_by_player=matched_by_player,
+    )
     recovered_count, recovery_decisions = _recover_identity_supported_measured_gaps(
         players,
         selected_indexes=selected_indexes,
@@ -1935,7 +1945,10 @@ def _select_measured_association_fallback(
 
     output_players: list[dict[str, Any]] = []
     track_rows: list[dict[str, Any]] = []
-    decisions: list[dict[str, Any]] = list(recovery_decisions)
+    decisions: list[dict[str, Any]] = [
+        *duplicate_decisions,
+        *recovery_decisions,
+    ]
     used_uids: set[str] = set()
     for player_index in selected_indexes:
         source_player = players[player_index]
@@ -2027,6 +2040,108 @@ def _select_measured_association_fallback(
     )
 
 
+def _drop_duplicate_association_locations(
+    players: Sequence[Mapping[str, Any]],
+    *,
+    selected_indexes: Sequence[int],
+    matched_by_player: Mapping[int, dict[int, SelectionDetection]],
+) -> list[dict[str, Any]]:
+    """Remove duplicate raw boxes already present in association output.
+
+    Some upstream identity rows point two player IDs at separately emitted but
+    effectively identical detector boxes.  They are measured detections, but
+    they cannot represent two people.  Preserve the association whose court
+    side/role agrees with the established player slot and leave the other ID
+    missing for that frame; recovery may then use a genuinely distinct box.
+    """
+
+    decisions: list[dict[str, Any]] = []
+    frame_indexes = sorted(
+        {
+            frame_idx
+            for player_index in selected_indexes
+            for frame_idx in matched_by_player.get(player_index, {})
+        }
+    )
+    source_counts = {
+        player_index: Counter(
+            detection.source_track_id
+            for detection in matched_by_player.get(player_index, {}).values()
+        )
+        for player_index in selected_indexes
+    }
+    for frame_idx in frame_indexes:
+        rows = [
+            (player_index, matched_by_player[player_index][frame_idx])
+            for player_index in selected_indexes
+            if frame_idx in matched_by_player.get(player_index, {})
+        ]
+        while True:
+            conflict = next(
+                (
+                    (left, right, _bbox_iou(left[1].bbox, right[1].bbox))
+                    for position, left in enumerate(rows)
+                    for right in rows[position + 1 :]
+                    if _bbox_iou(left[1].bbox, right[1].bbox)
+                    >= RECOVERY_DUPLICATE_IOU_THRESHOLD
+                ),
+                None,
+            )
+            if conflict is None:
+                break
+            left, right, overlap = conflict
+
+            def priority(
+                row: tuple[int, SelectionDetection],
+            ) -> tuple[int, int, float, int]:
+                player_index, detection = row
+                source_player = players[player_index]
+                side = str(source_player.get("side", ""))
+                role = str(source_player.get("role", ""))
+                if side not in {"near", "far"} or role not in {"left", "right"}:
+                    x, y = _median_world_xy(
+                        tuple(matched_by_player.get(player_index, {}).values())
+                    )
+                    side = "near" if y < 0.0 else "far"
+                    role = "left" if x < 0.0 else "right"
+                slot_match = (side, role) == _provisional_slot_key(detection)
+                return (
+                    1 if slot_match else 0,
+                    source_counts[player_index][detection.source_track_id],
+                    float(detection.conf),
+                    -player_index,
+                )
+
+            keep = max((left, right), key=priority)
+            drop = right if keep is left else left
+            drop_index, drop_detection = drop
+            keep_index, keep_detection = keep
+            del matched_by_player[drop_index][frame_idx]
+            rows = [row for row in rows if row[0] != drop_index]
+            decisions.append(
+                {
+                    "action": "preserve_missing_gap",
+                    "player_id": int(
+                        players[drop_index].get("id", drop_index + 1)
+                    ),
+                    "frame_idx": frame_idx,
+                    "raw_detection_uid": _required_raw_uid(drop_detection),
+                    "duplicate_of_player_id": int(
+                        players[keep_index].get("id", keep_index + 1)
+                    ),
+                    "duplicate_of_raw_detection_uid": _required_raw_uid(
+                        keep_detection
+                    ),
+                    "bbox_iou": overlap,
+                    "reasons": [
+                        "duplicate_location_conflict_in_association",
+                        "one_location_cannot_measure_two_players",
+                    ],
+                }
+            )
+    return decisions
+
+
 def _recover_identity_supported_measured_gaps(
     players: Sequence[Mapping[str, Any]],
     *,
@@ -2039,24 +2154,32 @@ def _recover_identity_supported_measured_gaps(
 ) -> tuple[int, list[dict[str, Any]]]:
     """Recover measured detections for enrolled IDs without inventing bridges.
 
-    Initial enrollment retains the strict one-metre court region. Once an ID is
-    established, a measured detection may continue farther behind a baseline,
-    where real players routinely wait, but never farther laterally. Recovery is
-    intentionally one-to-one: one identity-accepted candidate for one missing
-    side/role slot. Ambiguity remains a visible gap.
+    Recovery is intentionally one-to-one and restricted to raw source IDs that
+    were uniquely owned by an enrolled player in the original association.
+    Court-space and image-space motion remain diagnostic because bbox-bottom
+    projection noise can be severe; they never create a new source handoff.
+    Ambiguity remains a visible gap.
     """
 
-    del fps
     template = get_court_template(config.sport)
     lateral_limit = template.width_m / 2.0 + COURT_REGION_HARD_BOUND_M
     longitudinal_limit = template.length_m / 2.0 + ENROLLED_PLAYER_LONGITUDINAL_CONTINUATION_M
+    hysteresis_lateral_limit = lateral_limit + RECOVERY_COURT_HYSTERESIS_M
+    hysteresis_longitudinal_limit = longitudinal_limit + RECOVERY_COURT_HYSTERESIS_M
     centroids: dict[int, tuple[float, ...]] = {}
     slot_keys: dict[int, tuple[str, str]] = {}
+    # This enrollment evidence is intentionally immutable for the entire
+    # recovery pass.  A speculative recovery must never earn enough frames to
+    # promote its own source track into a trusted identity continuation.
+    enrolled_source_counts: dict[int, Counter[int]] = {}
     for player_index in selected_indexes:
         detections = tuple(matched_by_player.get(player_index, {}).values())
         centroid = _gallery_embedding_centroid(detections)
         if centroid is not None:
             centroids[player_index] = centroid
+        enrolled_source_counts[player_index] = Counter(
+            detection.source_track_id for detection in detections
+        )
         source_player = players[player_index]
         side = str(source_player.get("side", ""))
         role = str(source_player.get("role", ""))
@@ -2066,91 +2189,473 @@ def _recover_identity_supported_measured_gaps(
             role = "left" if x < 0.0 else "right"
         slot_keys[player_index] = (side, role)
 
+    original_source_owners: dict[int, set[int]] = defaultdict(set)
+    for player_index, source_counts in enrolled_source_counts.items():
+        for source_track_id in source_counts:
+            original_source_owners[source_track_id].add(player_index)
+
+    source_pool_counts = Counter(
+        detection.source_track_id
+        for detections in real_by_frame.values()
+        for detection in detections
+        if not detection.interpolated
+    )
+    # Association may use a regularized provisional coordinate without
+    # mutating the measured output observation.  Keeping this state separate
+    # prevents one bbox-bottom projection spike from breaking the remainder of
+    # an otherwise stable immutable-source continuation.
+    association_by_player: dict[int, dict[int, SelectionDetection]] = {
+        player_index: dict(matched_by_player.get(player_index, {}))
+        for player_index in selected_indexes
+    }
+
     recovered = 0
     decisions: list[dict[str, Any]] = []
     for frame_idx in sorted(real_by_frame):
-        used_uids = {
-            _required_raw_uid(detection)
+        occupied = [
+            detection
             for player_index in selected_indexes
             for detection in [matched_by_player.get(player_index, {}).get(frame_idx)]
             if detection is not None
-        }
-        candidates_by_player: dict[int, list[tuple[float, SelectionDetection]]] = defaultdict(list)
-        owners_by_uid: dict[str, list[int]] = defaultdict(list)
-        candidate_rows: dict[tuple[int, str], tuple[float, SelectionDetection]] = {}
+        ]
+        used_uids = {_required_raw_uid(detection) for detection in occupied}
+        candidate_rows_by_uid: dict[
+            str,
+            list[tuple[tuple[float, ...], int, SelectionDetection, dict[str, Any]]],
+        ] = defaultdict(list)
         for detection in real_by_frame.get(frame_idx, ()):
             uid = _required_raw_uid(detection)
             embedding = _consultable_embedding(detection)
-            if uid in used_uids or embedding is None:
+            if uid in used_uids:
                 continue
             x, y = detection.world_xy
-            if abs(x) > lateral_limit or abs(y) > longitudinal_limit:
-                continue
-            candidate_slot = _provisional_slot_key(detection)
+            inside_registered_apron = (
+                abs(x) <= lateral_limit and abs(y) <= longitudinal_limit
+            )
+            inside_hysteresis_apron = (
+                abs(x) <= hysteresis_lateral_limit
+                and abs(y) <= hysteresis_longitudinal_limit
+            )
             for player_index in selected_indexes:
                 if frame_idx in matched_by_player.get(player_index, {}):
                     continue
-                if slot_keys.get(player_index) != candidate_slot:
+                slot_side, _slot_role = slot_keys[player_index]
+                candidate_side, _candidate_role = _provisional_slot_key(detection)
+                # A persistent doubles role is not a frame-local half-court
+                # constraint: partners can cross the service centerline.  The
+                # net side, however, remains binding outside a narrow net-line
+                # ambiguity band.
+                if candidate_side != slot_side and abs(float(y)) > 0.5:
                     continue
-                centroid = centroids.get(player_index)
-                if centroid is None:
-                    continue
-                distance = _identity_distance(
-                    centroid,
-                    embedding,
-                    reid_audit=reid_audit,
-                    trigger_frames=(frame_idx,) if reid_audit is not None else (),
-                    comparison="measured_gap_recovery",
-                    context={
-                        "player_id": int(players[player_index].get("id", player_index + 1)),
-                        "raw_detection_uid": uid,
-                    },
+                known_source_count = enrolled_source_counts[player_index].get(
+                    detection.source_track_id, 0
                 )
-                if open_set_decision(distance, config) is not OpenSetDecision.ACCEPT:
+                source_is_established = (
+                    known_source_count >= RECOVERY_SOURCE_PERSISTENCE_MIN_FRAMES
+                    and original_source_owners.get(detection.source_track_id)
+                    == {player_index}
+                )
+                # New raw source IDs require a separate, fragment-level handoff
+                # decision.  Frame-local recovery may only fill observations
+                # from source IDs established by the original one-to-one
+                # association; otherwise a lookalike can snowball into a
+                # trusted identity after a few speculative frames.
+                if not source_is_established:
                     continue
-                assert distance is not None
-                owners_by_uid[uid].append(player_index)
-                candidate_rows[(player_index, uid)] = (distance, detection)
+                motion = _recovery_motion_evidence(
+                    detection,
+                    detections=association_by_player.get(player_index, {}),
+                    fps=fps,
+                    max_world_speed_m_s=config.recovery_max_speed_m_s,
+                )
+                centroid = centroids.get(player_index)
+                distance = (
+                    _identity_distance(
+                        centroid,
+                        embedding,
+                        reid_audit=reid_audit,
+                        trigger_frames=(frame_idx,) if reid_audit is not None else (),
+                        comparison="measured_gap_recovery",
+                        context={
+                            "player_id": int(
+                                players[player_index].get("id", player_index + 1)
+                            ),
+                            "raw_detection_uid": uid,
+                        },
+                    )
+                    if centroid is not None and embedding is not None
+                    else None
+                )
+                identity_decision = open_set_decision(distance, config)
+                source_is_persistent = (
+                    source_pool_counts[detection.source_track_id]
+                    >= RECOVERY_SOURCE_PERSISTENCE_MIN_FRAMES
+                )
+                bounded_track_hysteresis = (
+                    inside_hysteresis_apron
+                    and source_is_established
+                    and bool(motion["image_consistent"])
+                )
+                two_sided_projection_jitter_continuation = (
+                    inside_hysteresis_apron
+                    and
+                    identity_decision is OpenSetDecision.ACCEPT
+                    and source_is_persistent
+                    and bool(motion["image_consistent"])
+                    and bool(motion["two_sided"])
+                )
+                regularized_world_xy = motion.get("regularized_world_xy")
+                # A temporally regularized coordinate may support association,
+                # but the emitted observation remains the immutable measured
+                # bbox projection.  Post-BODY foot placement owns any later
+                # authoritative correction.
+                output_detection = detection
+                identity_cost = (
+                    float(distance)
+                    if distance is not None
+                    else float(config.identity_accept_distance)
+                )
+                rank = (
+                    -float(known_source_count),
+                    identity_cost,
+                    float(motion["normalized_cost"]),
+                    off_court_excess_m(
+                        output_detection.world_xy, sport=config.sport
+                    ),
+                    -float(detection.conf),
+                )
+                candidate_rows_by_uid[uid].append(
+                    (
+                        rank,
+                        player_index,
+                        output_detection,
+                        {
+                            **motion,
+                            "raw_world_xy": list(detection.world_xy),
+                            "output_world_xy": list(output_detection.world_xy),
+                            "provisional_association_world_xy": (
+                                [
+                                    float(regularized_world_xy[0]),
+                                    float(regularized_world_xy[1]),
+                                ]
+                                if regularized_world_xy is not None
+                                else None
+                            ),
+                            "embedding_distance": distance,
+                            "identity_decision": identity_decision.value,
+                            "source_is_established": source_is_established,
+                            "known_source_frame_count": known_source_count,
+                            "inside_registered_apron": inside_registered_apron,
+                            "inside_hysteresis_apron": inside_hysteresis_apron,
+                            "two_sided_projection_jitter_continuation": (
+                                two_sided_projection_jitter_continuation
+                            ),
+                            "source_pool_frame_count": source_pool_counts[
+                                detection.source_track_id
+                            ],
+                        },
+                    )
+                )
 
-        for (player_index, uid), row in candidate_rows.items():
-            if len(owners_by_uid[uid]) == 1:
-                candidates_by_player[player_index].append(row)
-        for player_index in selected_indexes:
-            candidates = candidates_by_player.get(player_index, [])
-            if len(candidates) != 1:
-                if len(candidates) > 1:
+        candidates_by_player: dict[
+            int,
+            list[tuple[tuple[float, ...], SelectionDetection, dict[str, Any]]],
+        ] = defaultdict(list)
+        for uid, candidate_rows in sorted(candidate_rows_by_uid.items()):
+            ranked_owners = sorted(
+                candidate_rows,
+                key=lambda row: (row[0], row[1], uid),
+            )
+            best = ranked_owners[0]
+            if len(ranked_owners) > 1:
+                best_identity = best[0][1]
+                second_identity = ranked_owners[1][0][1]
+                if (
+                    best[0][0] == ranked_owners[1][0][0]
+                    and second_identity - best_identity < RECOVERY_IDENTITY_MARGIN
+                ):
                     decisions.append(
                         {
                             "action": "preserve_missing_gap",
-                            "player_id": int(players[player_index].get("id", player_index + 1)),
                             "frame_idx": frame_idx,
-                            "candidate_count": len(candidates),
-                            "reasons": ["multiple_identity_accepted_measured_candidates"],
+                            "raw_detection_uid": uid,
+                            "candidate_player_ids": [
+                                int(players[row[1]].get("id", row[1] + 1))
+                                for row in ranked_owners
+                            ],
+                            "reasons": [
+                                "raw_detection_identity_owner_margin_too_small"
+                            ],
                         }
                     )
+                    continue
+            rank, player_index, detection, evidence = best
+            candidates_by_player[player_index].append((rank, detection, evidence))
+
+        proposals: list[
+            tuple[tuple[float, ...], int, SelectionDetection, dict[str, Any]]
+        ] = []
+        for player_index in selected_indexes:
+            candidates = sorted(
+                candidates_by_player.get(player_index, []),
+                key=lambda row: (row[0], _required_raw_uid(row[1])),
+            )
+            if not candidates:
                 continue
-            distance, detection = candidates[0]
+            best = candidates[0]
+            if len(candidates) > 1:
+                same_source_advantage = best[0][0] < candidates[1][0][0]
+                identity_margin = candidates[1][0][1] - best[0][1]
+                if not same_source_advantage and identity_margin < RECOVERY_IDENTITY_MARGIN:
+                    decisions.append(
+                        {
+                            "action": "preserve_missing_gap",
+                            "player_id": int(
+                                players[player_index].get("id", player_index + 1)
+                            ),
+                            "frame_idx": frame_idx,
+                            "candidate_count": len(candidates),
+                            "reasons": [
+                                "multiple_identity_candidates_without_decisive_margin"
+                            ],
+                        }
+                    )
+                    continue
+            proposals.append((best[0], player_index, best[1], best[2]))
+
+        accepted_this_frame = list(occupied)
+        for rank, player_index, detection, evidence in sorted(
+            proposals,
+            key=lambda row: (row[0], row[1], _required_raw_uid(row[2])),
+        ):
+            uid = _required_raw_uid(detection)
+            if uid in used_uids:
+                continue
+            duplicate_of = next(
+                (
+                    existing
+                    for existing in accepted_this_frame
+                    if _bbox_iou(detection.bbox, existing.bbox)
+                    >= RECOVERY_DUPLICATE_IOU_THRESHOLD
+                ),
+                None,
+            )
+            if duplicate_of is not None:
+                decisions.append(
+                    {
+                        "action": "preserve_missing_gap",
+                        "player_id": int(
+                            players[player_index].get("id", player_index + 1)
+                        ),
+                        "frame_idx": frame_idx,
+                        "raw_detection_uid": uid,
+                        "duplicate_of_raw_detection_uid": _required_raw_uid(
+                            duplicate_of
+                        ),
+                        "bbox_iou": _bbox_iou(
+                            detection.bbox, duplicate_of.bbox
+                        ),
+                        "reasons": ["duplicate_location_conflict"],
+                    }
+                )
+                continue
             matched_by_player[player_index][frame_idx] = detection
+            provisional_association_world_xy = evidence[
+                "provisional_association_world_xy"
+            ]
+            association_by_player[player_index][frame_idx] = (
+                replace(
+                    detection,
+                    world_xy=(
+                        float(provisional_association_world_xy[0]),
+                        float(provisional_association_world_xy[1]),
+                    ),
+                )
+                if provisional_association_world_xy is not None
+                else detection
+            )
+            used_uids.add(uid)
+            accepted_this_frame.append(detection)
             recovered += 1
             decisions.append(
                 {
                     "action": "recover_measured_enrolled_player",
                     "player_id": int(players[player_index].get("id", player_index + 1)),
                     "frame_idx": frame_idx,
-                    "raw_detection_uid": _required_raw_uid(detection),
+                    "raw_detection_uid": uid,
                     "source_track_id": detection.source_track_id,
-                    "embedding_distance": distance,
+                    "embedding_distance": evidence["embedding_distance"],
+                    "identity_decision": evidence["identity_decision"],
+                    "source_is_established": evidence["source_is_established"],
+                    "known_source_frame_count": evidence[
+                        "known_source_frame_count"
+                    ],
+                    "world_motion_consistent": evidence[
+                        "world_consistent"
+                    ],
+                    "image_motion_consistent": evidence[
+                        "image_consistent"
+                    ],
+                    "projection_jitter_override": evidence[
+                        "projection_jitter_override"
+                    ],
+                    "world_xy_regularized": False,
+                    "provisional_association_world_xy": evidence[
+                        "provisional_association_world_xy"
+                    ],
+                    "provisional_association_only": evidence[
+                        "provisional_association_world_xy"
+                    ]
+                    is not None,
+                    "raw_world_xy": evidence["raw_world_xy"],
+                    "output_world_xy": evidence["output_world_xy"],
+                    "world_xy_provenance": "measured_bbox_direct_homography",
+                    "inside_registered_apron": evidence[
+                        "inside_registered_apron"
+                    ],
+                    "inside_hysteresis_apron": evidence[
+                        "inside_hysteresis_apron"
+                    ],
+                    "two_sided_projection_jitter_continuation": evidence[
+                        "two_sided_projection_jitter_continuation"
+                    ],
                     "interpolated": False,
                     "reasons": [
-                        "established_player_identity_accept",
-                        "same_side_and_role",
-                        "inside_lateral_one_metre_bound",
-                        "inside_longitudinal_continuation_apron",
-                        "single_measured_candidate",
+                        "immutable_original_source_identity",
+                        "same_net_side",
+                        "one_to_one_measured_candidate",
+                        "not_duplicate_location",
+                        "raw_world_xy_preserved",
                     ],
                 }
             )
     return recovered, decisions
+
+
+def _recovery_motion_evidence(
+    detection: SelectionDetection,
+    *,
+    detections: Mapping[int, SelectionDetection],
+    fps: float,
+    max_world_speed_m_s: float,
+) -> dict[str, Any]:
+    """Evaluate a measured recovery candidate against adjacent bound evidence.
+
+    A bbox-bottom homography can amplify a small vertical box wobble into an
+    impossible court-space jump, especially for far players.  Such a jump may
+    be treated as projection jitter only when normalized image-box motion is
+    independently stable.  If neither coordinate view supports the candidate,
+    the gap remains missing.
+    """
+
+    if fps <= 0.0:
+        raise ValueError("fps must be positive")
+    previous = max(
+        (
+            value
+            for frame_idx, value in detections.items()
+            if frame_idx < detection.frame_idx
+        ),
+        key=lambda value: value.frame_idx,
+        default=None,
+    )
+    following = min(
+        (
+            value
+            for frame_idx, value in detections.items()
+            if frame_idx > detection.frame_idx
+        ),
+        key=lambda value: value.frame_idx,
+        default=None,
+    )
+    anchors = [anchor for anchor in (previous, following) if anchor is not None]
+    if not anchors:
+        return {
+            "supported": False,
+            "world_consistent": False,
+            "image_consistent": False,
+            "projection_jitter_override": False,
+            "two_sided": False,
+            "regularized_world_xy": None,
+            "normalized_cost": math.inf,
+        }
+
+    world_edges: list[bool] = []
+    image_edges: list[bool] = []
+    normalized_costs: list[float] = []
+    for anchor in anchors:
+        frame_delta = abs(detection.frame_idx - anchor.frame_idx)
+        dt_s = frame_delta / fps
+        if dt_s <= 0.0:
+            continue
+        world_speed = _point_distance(
+            anchor.world_xy, detection.world_xy
+        ) / dt_s
+        bbox_speed = _normalized_bbox_center_speed_diag_s(
+            anchor.bbox,
+            detection.bbox,
+            dt_s=dt_s,
+        )
+        world_edges.append(world_speed <= max_world_speed_m_s)
+        image_edges.append(
+            bbox_speed <= RECOVERY_MAX_BBOX_CENTER_SPEED_DIAG_S
+        )
+        normalized_costs.append(
+            min(
+                world_speed / max(max_world_speed_m_s, 1.0e-9),
+                bbox_speed / max(RECOVERY_MAX_BBOX_CENTER_SPEED_DIAG_S, 1.0e-9),
+            )
+        )
+    world_consistent = bool(world_edges) and all(world_edges)
+    image_consistent = bool(image_edges) and all(image_edges)
+    regularized_world_xy: list[float] | None = None
+    if (
+        not world_consistent
+        and image_consistent
+        and previous is not None
+        and following is not None
+    ):
+        span_frames = following.frame_idx - previous.frame_idx
+        span_s = span_frames / fps
+        endpoint_speed = (
+            _point_distance(previous.world_xy, following.world_xy) / span_s
+            if span_s > 0.0
+            else math.inf
+        )
+        if endpoint_speed <= max_world_speed_m_s:
+            alpha = (detection.frame_idx - previous.frame_idx) / span_frames
+            regularized_world_xy = [
+                (1.0 - alpha) * previous.world_xy[axis]
+                + alpha * following.world_xy[axis]
+                for axis in range(2)
+            ]
+    return {
+        "supported": world_consistent or regularized_world_xy is not None,
+        "world_consistent": world_consistent,
+        "image_consistent": image_consistent,
+        "projection_jitter_override": regularized_world_xy is not None,
+        "two_sided": previous is not None and following is not None,
+        "regularized_world_xy": regularized_world_xy,
+        "normalized_cost": max(normalized_costs, default=math.inf),
+    }
+
+
+def _normalized_bbox_center_speed_diag_s(
+    left: Sequence[float],
+    right: Sequence[float],
+    *,
+    dt_s: float,
+) -> float:
+    if dt_s <= 0.0:
+        return math.inf
+    left_x1, left_y1, left_x2, left_y2 = (float(value) for value in left)
+    right_x1, right_y1, right_x2, right_y2 = (float(value) for value in right)
+    left_center = ((left_x1 + left_x2) / 2.0, (left_y1 + left_y2) / 2.0)
+    right_center = ((right_x1 + right_x2) / 2.0, (right_y1 + right_y2) / 2.0)
+    left_diag = math.hypot(left_x2 - left_x1, left_y2 - left_y1)
+    right_diag = math.hypot(right_x2 - right_x1, right_y2 - right_y1)
+    average_diag = max((left_diag + right_diag) / 2.0, 1.0)
+    return _point_distance(left_center, right_center) / average_diag / dt_s
 
 
 def _pool_fragments(

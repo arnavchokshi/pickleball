@@ -296,6 +296,9 @@ def test_measured_association_fallback_recovers_one_identity_supported_baseline_
     selected, _unbound, decisions, _rows, counts = result
     player_four = next(player for player in selected if player["id"] == 4)
     recovered = next(frame for frame in player_four["frames"] if frame["frame_idx"] == 5)
+    # The box is a real measured crop.  Temporal regularization may support its
+    # association, but the emitted measured coordinate stays the immutable raw
+    # bbox projection for later post-BODY foot placement.
     assert recovered["world_xy"] == [1.0, 9.5]
     assert recovered.get("interpolated") is not True
     assert counts["recovered_real_detections"] == 1
@@ -305,6 +308,288 @@ def test_measured_association_fallback_recovers_one_identity_supported_baseline_
         and decision.get("frame_idx") == 5
         for decision in decisions
     )
+    recovery = next(
+        decision
+        for decision in decisions
+        if decision.get("action") == "recover_measured_enrolled_player"
+        and decision.get("player_id") == 4
+        and decision.get("frame_idx") == 5
+    )
+    assert recovery["raw_world_xy"] == [1.0, 9.5]
+    assert recovery["output_world_xy"] == [1.0, 9.5]
+    assert recovery["world_xy_regularized"] is False
+    assert recovery["provisional_association_world_xy"] == [1.0, 2.0]
+    assert recovery["provisional_association_only"] is True
+    assert recovery["world_xy_provenance"] == "measured_bbox_direct_homography"
+
+
+def test_measured_gap_recovery_uses_established_track_hysteresis_not_frame_local_court_reject() -> None:
+    players = [
+        {"id": 1, "side": "near", "role": "right", "frames": []},
+    ]
+    matched = {
+        0: {
+            frame_idx: _detection(
+                frame_idx,
+                1,
+                (3.0, -2.0),
+                (1.0, 0.0),
+                bbox=(100.0 + frame_idx, 100.0, 140.0 + frame_idx, 200.0),
+                raw_detection_uid=f"raw:{frame_idx}:1",
+            )
+            for frame_idx in (0, 1, 2, 4)
+        }
+    }
+    # x=4.3m is just outside the registered 1m apron (4.048m), but within the
+    # bounded continuation hysteresis for an already-established measured ID.
+    continuation = _detection(
+        3,
+        1,
+        (4.3, -2.0),
+        (1.0, 0.0),
+        bbox=(103.0, 100.0, 143.0, 200.0),
+        raw_detection_uid="raw:3:1",
+    )
+
+    recovered, decisions = player_selection_module._recover_identity_supported_measured_gaps(
+        players,
+        selected_indexes=[0],
+        matched_by_player=matched,
+        real_by_frame={3: [continuation]},
+        fps=30.0,
+        config=PlayerSelectionConfig(expected_players=2),
+        reid_audit=None,
+    )
+
+    assert recovered == 1
+    assert matched[0][3].bbox == continuation.bbox
+    assert matched[0][3].raw_detection_uid == continuation.raw_detection_uid
+    assert matched[0][3].world_xy == continuation.world_xy
+    row = next(row for row in decisions if row["action"] == "recover_measured_enrolled_player")
+    assert row["inside_registered_apron"] is False
+    assert row["inside_hysteresis_apron"] is True
+    assert row["source_is_established"] is True
+    assert row["projection_jitter_override"] is True
+    assert row["world_xy_regularized"] is False
+    assert row["provisional_association_world_xy"] == [3.0, -2.0]
+
+
+def test_measured_gap_recovery_rejects_two_sided_candidate_outside_hysteresis() -> None:
+    players = [{"id": 1, "side": "near", "role": "right", "frames": []}]
+    matched = {
+        0: {
+            frame_idx: _detection(
+                frame_idx,
+                1,
+                (0.0, -2.0),
+                (1.0, 0.0),
+                bbox=(100.0 + frame_idx, 100.0, 140.0 + frame_idx, 200.0),
+                raw_detection_uid=f"raw:{frame_idx}:1",
+            )
+            for frame_idx in (0, 2, 3)
+        }
+    }
+    # Image motion and both temporal anchors agree, but x=5.5m lies outside
+    # both the one-metre apron and the bounded recovery hysteresis.
+    off_hysteresis = _detection(
+        1,
+        99,
+        (5.5, -2.0),
+        (1.0, 0.0),
+        bbox=(101.0, 100.0, 141.0, 200.0),
+        raw_detection_uid="raw:1:1",
+    )
+
+    recovered, _decisions = player_selection_module._recover_identity_supported_measured_gaps(
+        players,
+        selected_indexes=[0],
+        matched_by_player=matched,
+        real_by_frame={1: [off_hysteresis]},
+        fps=30.0,
+        config=PlayerSelectionConfig(expected_players=2),
+        reid_audit=None,
+    )
+
+    assert recovered == 0
+    assert 1 not in matched[0]
+
+
+def test_measured_gap_recovery_never_promotes_speculative_source_after_three_frames() -> None:
+    players = [{"id": 1, "side": "near", "role": "right", "frames": []}]
+    matched = {
+        0: {
+            frame_idx: _detection(
+                frame_idx,
+                1,
+                (1.0, -2.0),
+                (1.0, 0.0),
+                bbox=(100.0 + frame_idx, 100.0, 140.0 + frame_idx, 200.0),
+                raw_detection_uid=f"raw:{frame_idx}:1",
+            )
+            for frame_idx in (0, 1, 2, 7)
+        }
+    }
+    speculative = [
+        _detection(
+            frame_idx,
+            99,
+            (1.0, -2.0),
+            (1.0, 0.0),
+            bbox=(100.0 + frame_idx, 100.0, 140.0 + frame_idx, 200.0),
+            raw_detection_uid=f"raw:{frame_idx}:99",
+        )
+        # Frames 1-2 overlap the originally enrolled source, proving that this
+        # is a second detection/identity rather than a source handoff.
+        for frame_idx in (1, 2, 3, 4, 5, 6)
+    ]
+
+    recovered, decisions = player_selection_module._recover_identity_supported_measured_gaps(
+        players,
+        selected_indexes=[0],
+        matched_by_player=matched,
+        real_by_frame={detection.frame_idx: [detection] for detection in speculative},
+        fps=30.0,
+        config=PlayerSelectionConfig(expected_players=2),
+        reid_audit=None,
+    )
+
+    assert recovered == 0
+    assert set(matched[0]) == {0, 1, 2, 7}
+    assert not any(
+        row.get("action") == "recover_measured_enrolled_player"
+        and row.get("source_track_id") == 99
+        for row in decisions
+    )
+
+
+def test_measured_gap_recovery_preserves_unique_original_source_despite_bbox_motion() -> None:
+    players = [{"id": 1, "side": "near", "role": "right", "frames": []}]
+    anchors = {
+        frame_idx: _detection(
+            frame_idx,
+            1,
+            (0.0, -2.0),
+            (1.0, 0.0),
+            bbox=(100.0 + frame_idx, 100.0, 140.0 + frame_idx, 200.0),
+            raw_detection_uid=f"raw:{frame_idx}:1",
+        )
+        for frame_idx in (0, 2, 3)
+    }
+    impossible = _detection(
+        1,
+        1,
+        (3.0, -2.0),
+        (1.0, 0.0),
+        bbox=(900.0, 100.0, 940.0, 200.0),
+        raw_detection_uid="raw:1:1",
+    )
+    matched = {0: anchors}
+
+    recovered, _decisions = player_selection_module._recover_identity_supported_measured_gaps(
+        players,
+        selected_indexes=[0],
+        matched_by_player=matched,
+        real_by_frame={1: [impossible]},
+        fps=30.0,
+        config=PlayerSelectionConfig(expected_players=2),
+        reid_audit=None,
+    )
+
+    assert recovered == 1
+    assert matched[0][1] == impossible
+
+
+def test_measured_gap_recovery_never_binds_duplicate_detection_location() -> None:
+    players = [
+        {"id": 1, "side": "near", "role": "left", "frames": []},
+        {"id": 2, "side": "near", "role": "right", "frames": []},
+    ]
+    occupied = _detection(
+        1,
+        1,
+        (-1.0, -2.0),
+        (1.0, 0.0),
+        bbox=(100.0, 100.0, 140.0, 200.0),
+        raw_detection_uid="raw:1:1",
+    )
+    player_two_anchors = {
+        frame_idx: _detection(
+            frame_idx,
+            2,
+            (1.0, -2.0),
+            (0.0, 1.0),
+            bbox=(99.0 + frame_idx, 100.0, 139.0 + frame_idx, 200.0),
+            raw_detection_uid=f"raw:{frame_idx}:2",
+        )
+        for frame_idx in (0, 2, 3)
+    }
+    duplicate = _detection(
+        1,
+        2,
+        (1.0, -2.0),
+        (0.0, 1.0),
+        bbox=occupied.bbox,
+        raw_detection_uid="raw:1:2",
+    )
+    matched = {0: {1: occupied}, 1: player_two_anchors}
+
+    recovered, decisions = player_selection_module._recover_identity_supported_measured_gaps(
+        players,
+        selected_indexes=[0, 1],
+        matched_by_player=matched,
+        real_by_frame={1: [occupied, duplicate]},
+        fps=30.0,
+        config=PlayerSelectionConfig(expected_players=2),
+        reid_audit=None,
+    )
+
+    assert recovered == 0
+    assert 1 not in matched[1]
+    assert any(
+        row.get("reasons") == ["duplicate_location_conflict"]
+        for row in decisions
+    )
+
+
+def test_measured_fallback_drops_duplicate_upstream_association_by_slot() -> None:
+    players = [
+        {"id": 3, "side": "far", "role": "left", "frames": []},
+        {"id": 4, "side": "far", "role": "right", "frames": []},
+    ]
+    far_left = _detection(
+        5,
+        3,
+        (-2.0, 3.0),
+        (1.0, 0.0),
+        bbox=(100.0, 100.0, 140.0, 200.0),
+        conf=0.6,
+        raw_detection_uid="raw:5:left",
+    )
+    duplicate_wrong_slot = _detection(
+        5,
+        4,
+        (-2.0, 3.0),
+        (0.0, 1.0),
+        bbox=(100.2, 100.0, 140.2, 200.0),
+        conf=0.95,
+        raw_detection_uid="raw:5:duplicate",
+    )
+    matched = {0: {5: far_left}, 1: {5: duplicate_wrong_slot}}
+
+    decisions = player_selection_module._drop_duplicate_association_locations(
+        players,
+        selected_indexes=[0, 1],
+        matched_by_player=matched,
+    )
+
+    assert matched[0][5] is far_left
+    assert 5 not in matched[1]
+    assert decisions[0]["player_id"] == 4
+    assert decisions[0]["duplicate_of_player_id"] == 3
+    assert decisions[0]["reasons"] == [
+        "duplicate_location_conflict_in_association",
+        "one_location_cannot_measure_two_players",
+    ]
 
 
 def _fragment(

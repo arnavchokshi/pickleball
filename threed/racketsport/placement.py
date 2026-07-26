@@ -3525,11 +3525,15 @@ def _ground_contact_proxy_pixel(
     ]
     if not contact_rows:
         return _xy(fallback_pixel, name="fallback_contact_pixel"), []
-    lowest = sorted(
-        contact_rows,
-        key=lambda candidate: float(candidate["pixel_xy"][1]),
-        reverse=True,
-    )[:2]
+    bottom_y = max(float(candidate["pixel_xy"][1]) for candidate in contact_rows)
+    # Combine only points that lie on the same visible bottom edge.  Averaging
+    # a true lower sole pixel with a visibly higher toe/semantic-repair point
+    # lifts the contact off the floor and can flip support-foot selection.
+    lowest = [
+        candidate
+        for candidate in contact_rows
+        if float(candidate["pixel_xy"][1]) >= bottom_y - 2.0
+    ]
     combined = _combine_weighted_pixels(
         [
             (
@@ -3729,6 +3733,18 @@ def _load_native2d_foot_pixels_by_foot(
             frame_idx = int(frame.get("frame_idx", round(float(frame.get("t", 0.0)) * float(payload.get("fps") or 30.0))))
             by_name = {str(joint.get("name")): joint for joint in frame.get("joints", []) or [] if isinstance(joint, Mapping)}
             for foot, names in NATIVE2D_FOOT_NAMES.items():
+                keypoint_candidates = tuple(
+                    _native2d_named_candidates(
+                        by_name,
+                        names,
+                        conf_min=config.keypoint_conf_min,
+                    )
+                )
+                # An ankle is useful kinematic evidence, but it is not a sole
+                # contact observation.  Do not let an ankle-only side win the
+                # support-foot decoder or authorize a floor anchor.
+                if not _has_sole_contact_candidate(keypoint_candidates):
+                    continue
                 point = _weighted_named_pixel(by_name, names, conf_min=config.keypoint_conf_min)
                 if point is not None:
                     out[(player_id, foot, frame_idx)] = _FootPixelObservation(
@@ -3737,13 +3753,7 @@ def _load_native2d_foot_pixels_by_foot(
                         pixel_xy=point[0],
                         confidence=point[1],
                         sidecar_player_id=player_id,
-                        keypoint_candidates=tuple(
-                            _native2d_named_candidates(
-                                by_name,
-                                names,
-                                conf_min=config.keypoint_conf_min,
-                            )
-                        ),
+                        keypoint_candidates=keypoint_candidates,
                     )
     return out
 
@@ -3793,6 +3803,19 @@ def _load_sam3d_foot_pixels_by_foot(
             frame_idx = int(frame["frame_idx"])
             by_name = _canonical_sam3d_sidecar_keypoints(frame)
             for foot, names in foot_names.items():
+                keypoint_candidates = tuple(
+                    _sam3d_named_candidates(
+                        by_name,
+                        names,
+                        conf_min=config.sam3d_conf_min,
+                    )
+                )
+                # The legacy MHR70 sidecar can contain an ankle for a side
+                # whose heel/toes are absent (or whose legacy toe semantic was
+                # repaired onto the opposite foot).  That side is not a valid
+                # contact foot until at least one heel/toe observation exists.
+                if not _has_sole_contact_candidate(keypoint_candidates):
+                    continue
                 point = _weighted_sidecar_pixel(by_name, names, conf_min=config.sam3d_conf_min)
                 if point is not None:
                     out[(player_id, foot, frame_idx)] = _FootPixelObservation(
@@ -3801,15 +3824,21 @@ def _load_sam3d_foot_pixels_by_foot(
                         pixel_xy=point[0],
                         confidence=point[1],
                         sidecar_player_id=player_id,
-                        keypoint_candidates=tuple(
-                            _sam3d_named_candidates(
-                                by_name,
-                                names,
-                                conf_min=config.sam3d_conf_min,
-                            )
-                        ),
+                        keypoint_candidates=keypoint_candidates,
                     )
     return out
+
+
+def _has_sole_contact_candidate(
+    candidates: Sequence[Mapping[str, Any]],
+) -> bool:
+    """Return whether heel/toe evidence exists independently of an ankle."""
+
+    return any(
+        "heel" in str(candidate.get("semantic_name") or "").lower()
+        or "toe" in str(candidate.get("semantic_name") or "").lower()
+        for candidate in candidates
+    )
 
 
 def _canonical_sam3d_sidecar_keypoints(
