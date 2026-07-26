@@ -4,6 +4,24 @@ This module does not synthesize or repair ball positions. It only inspects a
 rendered arc artifact and returns frame-level demotion flags for airborne
 segments whose rendered world trajectory is not plausibly parabolic.
 
+Two independent checks run here:
+
+1. A *segment-scoped* kinematic check (vertical multi-apex, horizontal
+   reversal, speed jump, court volume). It only ever reached frames that fall
+   between two bounce/contact anchors and belong to a segment with at least
+   ``min_segment_samples`` world samples.
+2. A *whole-track* physical plausibility sweep
+   (:mod:`threed.racketsport.ball_position_plausibility`) over every frame
+   that carries a ``world_xyz`` at all -- bridges, weak tails, frames in no
+   evaluated segment. This exists because check 1 left those frames ungated
+   and because neither the solver's nor this module's court-volume bound had
+   an upper z limit, so a ball solved twenty metres in the air passed both.
+
+Neither check can validate depth: reprojection error, the quantity these
+arcs were fit against, is blind to motion along the camera ray (see the
+module docstring of ``ball_position_plausibility``). Frames that survive
+here are marked ``depth_unvalidated`` rather than implied to be correct.
+
 Constants intentionally reuse the solver's physical sanity scale where that
 scale applies:
 
@@ -25,13 +43,19 @@ import math
 from typing import Any, Mapping, Sequence
 
 from .ball_arc_solver import BallArcSolverConfig, PhysicsParameters
+from .ball_position_plausibility import (
+    DEPTH_UNVALIDATED_NOTE,
+    BallPlausibilityBounds,
+    evaluate_ball_track_plausibility,
+)
 from .court_templates import get_court_template
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 ARTIFACT_TYPE = "racketsport_ball_flight_sanity"
 SOURCE = "ball_flight_sanity_render_gate_v1"
 DEMOTED_BAND = "arc_weak"
+HIDDEN_BAND = "hidden"
 MEASURED_BAND = "anchored_measured"
 _BAND_COUNT_KEYS = {
     "anchored_measured": "anchored_measured_count",
@@ -90,12 +114,14 @@ def evaluate_ball_flight_sanity(
     config: FlightSanityConfig | None = None,
     solver_config: BallArcSolverConfig | None = None,
     physics: PhysicsParameters | None = None,
+    plausibility_bounds: BallPlausibilityBounds | None = None,
 ) -> dict[str, Any]:
     """Evaluate rendered airborne segments and return per-frame demotion flags."""
 
     gate_config = config or FlightSanityConfig()
     solver_cfg = solver_config or _solver_config_from_artifact(arc_solved)
     phys = physics or _physics_from_artifact(arc_solved)
+    bounds = plausibility_bounds or BallPlausibilityBounds.from_solver_config(solver_cfg)
     frames = list(arc_solved.get("frames") or [])
     fps = _fps(arc_solved, frames)
     anchors = _anchors(arc_solved)
@@ -141,6 +167,26 @@ def evaluate_ball_flight_sanity(
                 if not reasons:
                     demote_reasons_by_frame.pop(sample.frame, None)
 
+    # Whole-track physical plausibility. This is the only check that reaches
+    # frames belonging to no evaluated segment, and the only one that can see
+    # depth at all -- the fit residual these positions were scored against
+    # cannot.
+    plausibility = evaluate_ball_track_plausibility(frames, bounds=bounds)
+    suppress_frames: dict[int, list[str]] = {}
+    for item in plausibility["frames"]:
+        frame_index = int(item["frame"])
+        if not 0 <= frame_index < len(frame_reports):
+            continue
+        names = [str(name) for name in item["violations"]]
+        demote_reasons_by_frame.setdefault(frame_index, set()).update(names)
+        if item["absurd"]:
+            absurd_names = [str(name) for name in item["absurd_violations"]]
+            demote_reasons_by_frame[frame_index].update(absurd_names)
+            suppress_frames[frame_index] = sorted(set(names) | set(absurd_names))
+        frame_reports[frame_index]["plausibility_violations"] = sorted(names)
+        frame_reports[frame_index]["plausibility_absurd"] = bool(item["absurd"])
+        frame_reports[frame_index]["plausibility_max_overage_m"] = item["max_overage_m"]
+
     for frame_index, reasons in demote_reasons_by_frame.items():
         if 0 <= frame_index < len(frame_reports):
             frame_reports[frame_index]["demote"] = True
@@ -158,9 +204,12 @@ def evaluate_ball_flight_sanity(
         "policy": {
             "render_gate_only": True,
             "suppresses_world_xyz_on_court_volume_failure": True,
+            "suppresses_world_xyz_on_absurd_position": True,
             "world_xyz_replacement_source": "bvp_anchor_fallback_or_null",
             "demotion_only_removes_measured_status": True,
             "demoted_band": DEMOTED_BAND,
+            "depth_unvalidated": True,
+            "depth_unvalidated_reason": DEPTH_UNVALIDATED_NOTE,
         },
         "summary": {
             "segment_count": len(segments),
@@ -168,7 +217,11 @@ def evaluate_ball_flight_sanity(
             "failed_segment_count": failed_segment_count,
             "skipped_segment_count": skipped_segment_count,
             "demoted_frame_count": len(demote_reasons_by_frame),
+            "implausible_frame_count": int(plausibility["summary"]["implausible_frame_count"]),
+            "absurd_frame_count": int(plausibility["summary"]["absurd_frame_count"]),
         },
+        "plausibility": plausibility,
+        "suppress_frames": {str(index): reasons for index, reasons in sorted(suppress_frames.items())},
         "segments": segments,
         "frames": frame_reports,
     }
@@ -178,6 +231,7 @@ def apply_flight_sanity_demotions(arc_solved: Mapping[str, Any], report: Mapping
     """Return a copy of an arc artifact with failing-segment frames demoted."""
 
     demoted = _demoted_frames(report)
+    suppressed = _suppressed_frames(report)
     segment_status_by_id = _segment_status_by_id(arc_solved)
     payload = dict(arc_solved)
     frames: list[dict[str, Any]] = []
@@ -196,12 +250,24 @@ def apply_flight_sanity_demotions(arc_solved: Mapping[str, Any], report: Mapping
                 }
             frame["flight_sanity_demoted"] = True
             frame["flight_sanity_reasons"] = sorted(set(reasons))
-            if "outside_court_volume" in reasons and segment_status != "fit_bvp_fallback":
+            # A physically impossible position is suppressed with no escape
+            # hatch. The BVP-fallback exemption below deliberately keeps a
+            # merely-outside-court position so a depth-ambiguous arc is not
+            # thrown away, but there is no depth estimate to salvage from a
+            # ball twenty metres in the air or metres underground.
+            if index in suppressed:
                 frame["world_xyz"] = None
                 frame["sigma_m"] = None
-                frame["band"] = "hidden"
-            elif _has_world_xyz(frame) and str(frame.get("band") or "") != "hidden":
+                frame["band"] = HIDDEN_BAND
+                frame["depth_unvalidated"] = True
+            elif "outside_court_volume" in reasons and segment_status != "fit_bvp_fallback":
+                frame["world_xyz"] = None
+                frame["sigma_m"] = None
+                frame["band"] = HIDDEN_BAND
+                frame["depth_unvalidated"] = True
+            elif _has_world_xyz(frame) and str(frame.get("band") or "") != HIDDEN_BAND:
                 frame["band"] = DEMOTED_BAND
+                frame["depth_unvalidated"] = True
         frames.append(frame)
     payload["frames"] = frames
     payload["summary"] = _summary_with_demotions(arc_solved.get("summary"), frames, report)
@@ -215,6 +281,7 @@ def apply_product_view_flight_sanity_demotions(product_view: Mapping[str, Any], 
     """Return a copy of a 2D product view with the same demotion flags applied."""
 
     demoted = _demoted_frames(report)
+    suppressed = _suppressed_frames(report)
     payload = dict(product_view)
     frames: list[dict[str, Any]] = []
     for index, raw_frame in enumerate(list(product_view.get("frames") or [])):
@@ -222,8 +289,9 @@ def apply_product_view_flight_sanity_demotions(product_view: Mapping[str, Any], 
         if index in demoted:
             frame["flight_sanity_demoted"] = True
             frame["flight_sanity_reasons"] = demoted[index]
-            frame["band"] = DEMOTED_BAND
+            frame["band"] = HIDDEN_BAND if index in suppressed else DEMOTED_BAND
             frame["approx"] = True
+            frame["depth_unvalidated"] = True
         frames.append(frame)
     payload["frames"] = frames
     payload["flight_sanity"] = dict(report.get("summary") or {})
@@ -490,6 +558,8 @@ def _summary_with_demotions(raw_summary: Any, frames: Sequence[Mapping[str, Any]
     report_summary = dict(report.get("summary") or {})
     summary["flight_sanity_demoted_frame_count"] = int(report_summary.get("demoted_frame_count") or 0)
     summary["flight_sanity_failed_segment_count"] = int(report_summary.get("failed_segment_count") or 0)
+    summary["implausible_frame_count"] = int(report_summary.get("implausible_frame_count") or 0)
+    summary["absurd_frame_suppressed_count"] = len(_suppressed_frames(report))
     return summary
 
 
@@ -504,6 +574,25 @@ def _demoted_frames(report: Mapping[str, Any]) -> dict[int, list[str]]:
         reasons = item.get("reasons")
         demoted[frame] = [str(reason) for reason in reasons] if isinstance(reasons, Sequence) and not isinstance(reasons, (str, bytes)) else []
     return demoted
+
+
+def _suppressed_frames(report: Mapping[str, Any]) -> dict[int, list[str]]:
+    """Frames whose position is physically impossible and must be removed."""
+
+    raw = report.get("suppress_frames")
+    output: dict[int, list[str]] = {}
+    if not isinstance(raw, Mapping):
+        return output
+    for key, value in raw.items():
+        frame = _int_or_none(key)
+        if frame is None:
+            continue
+        output[frame] = (
+            [str(item) for item in value]
+            if isinstance(value, Sequence) and not isinstance(value, (str, bytes))
+            else []
+        )
+    return output
 
 
 def _segment_status_by_id(arc_solved: Mapping[str, Any]) -> dict[str, str]:
@@ -647,6 +736,7 @@ def _angle_deg(left: tuple[float, float], right: tuple[float, float]) -> float:
 __all__ = [
     "ARTIFACT_TYPE",
     "DEMOTED_BAND",
+    "HIDDEN_BAND",
     "FlightSanityConfig",
     "apply_flight_sanity_demotions",
     "apply_product_view_flight_sanity_demotions",
