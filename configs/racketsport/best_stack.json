@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": 16,
+  "revision": 17,
   "updated": "2026-07-27",
   "invariants": [
     "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
@@ -1475,20 +1475,21 @@
         "card": "TT3D external validation: 816 scored bounces (136 x 3 views x 2 noise conditions)",
         "sport": "table tennis, NOT pickleball",
         "bounce_error_median_m_before": 0.091096,
-        "bounce_error_median_m_after": 0.030602,
+        "bounce_error_median_m_after": 0.030562,
         "bounce_error_p90_m_before": 0.245462,
-        "bounce_error_p90_m_after": 0.090266,
+        "bounce_error_p90_m_after": 0.090303,
         "bounce_error_p95_m_before": 0.316761,
-        "bounce_error_p95_m_after": 0.124189,
+        "bounce_error_p95_m_after": 0.124241,
         "bounce_error_max_m_before": 0.449812,
-        "bounce_error_max_m_after": 0.406128,
+        "bounce_error_max_m_after": 0.406093,
         "along_ray_bias_m_before": 0.099274,
-        "along_ray_bias_m_after": -0.007619,
+        "along_ray_bias_m_after": -0.007621,
         "refined_fraction": 0.967,
         "pickleball_gate_passed": false,
-        "verified_status_for_pickleball": 0
+        "verified_status_for_pickleball": 0,
+        "downstream_weak_segment_3d": "MEASURED NEGATIVE: median 0.1336 -> 0.1071 m but p90 0.792 -> 0.914, p95 1.403 -> 1.713, max 4.75 -> 5.09, and fitted trajectories 498 -> 473. E2 is nondeterministic run to run by a comparable margin, so the direction is unsettled; either way the downstream reconstruction is NOT demonstrated to improve."
       },
-      "notes": "Default OFF. The bounce-anchor overshoot is caused by anchoring at the wrong INSTANT, not by a noisy pixel: contact falls between frames, the marked frame still shows the ball above the plane, and forcing that ray to z=ball_radius overshoots along the ray by height/|ray_z| -- a quantity that is never negative, hence a bias. This entry finds the instant instead of widening the error bar around the wrong one. World position is continuous through a bounce and world velocity is not, so the 2D track has a kink at exactly the contact instant; fitting the incoming and outgoing image branches with a shared meeting point yields the instant and the sub-frame pixel from one fit, with no calibration input. On TT3D the median 3D bounce error falls 0.0911 -> 0.0306 m and the systematic along-ray bias falls +0.0993 -> -0.0076 m over the same 816 bounces. PENDING because (a) that is TABLE TENNIS -- 25 fps, a 40 mm ball with 3.3x the drag; the timing GEOMETRY transfers exactly but the magnitudes do not, and (b) it MOVES the anchor and its time, so it changes solver output and must not switch on without pickleball ground truth. On the owner's 7 wolverine bounce labels the estimator fires on 4 (median shift 0.19 m, |dt| 0.13-0.36 frames) and abstains on 3; those labels are ray-plane intersections at a marked frame themselves, so they carry the same overshoot and are NOT independent ground truth. The timing sigma is floored at 0.25 frame intervals because propagating pixel noise alone was measured 5.4x optimistic against TT3D. The reported bias term shrinks by the timing error removed and no more: it still reads +0.055..+0.092 m on TT3D against a measured residual of -0.008..-0.014 m, i.e. deliberately conservative. apply_bias_correction remains OFF and separately PENDING under ball.bounce_anchor_uncertainty. VERIFIED=0 for pickleball."
+      "notes": "Default OFF. The bounce-anchor overshoot is caused by anchoring at the wrong INSTANT, not by a noisy pixel: contact falls between frames, the marked frame still shows the ball above the plane, and forcing that ray to z=ball_radius overshoots along the ray by height/|ray_z| -- a quantity that is never negative, hence a bias. This entry finds the instant instead of widening the error bar around the wrong one. World position is continuous through a bounce and world velocity is not, so the 2D track has a kink at exactly the contact instant; fitting the incoming and outgoing image branches with a shared meeting point yields the instant and the sub-frame pixel from one fit, with no calibration input. On TT3D the median 3D bounce error falls 0.0911 -> 0.0306 m and the systematic along-ray bias falls +0.0993 -> -0.0076 m over the same 816 bounces. The downstream weak-segment 3D metric did NOT follow: median improved 19.8% while p90/p95/max regressed, inside a metric with comparable run-to-run spread. PENDING because (a) that is TABLE TENNIS -- 25 fps, a 40 mm ball with 3.3x the drag; the timing GEOMETRY transfers exactly but the magnitudes do not, and (b) it MOVES the anchor and its time, so it changes solver output and must not switch on without pickleball ground truth. On the owner's 7 wolverine bounce labels the estimator fires on 4 (median shift 0.19 m, |dt| 0.13-0.36 frames) and abstains on 3; those labels are ray-plane intersections at a marked frame themselves, so they carry the same overshoot and are NOT independent ground truth. The timing sigma is floored at 0.25 frame intervals because propagating pixel noise alone was measured 5.4x optimistic against TT3D. The reported bias term shrinks by the timing error removed and no more: it still reads +0.055..+0.092 m on TT3D against a measured residual of -0.008..-0.014 m, i.e. deliberately conservative. apply_bias_correction remains OFF and separately PENDING under ball.bounce_anchor_uncertainty. VERIFIED=0 for pickleball."
     }
   },
   "selection_constant_coverage": {
