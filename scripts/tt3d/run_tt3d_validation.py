@@ -52,6 +52,7 @@ from threed.racketsport.ball_arc_solver import (  # noqa: E402
     fit_weak_flight_segment,
     intersect_ray_z,
     pixel_ray_world,
+    refine_bounce_contact_time,
 )
 
 DATA_ROOT = REPO_ROOT / "data" / "external" / "tt3d_repo" / "data" / "evaluation"
@@ -170,6 +171,21 @@ def summarize(values: Sequence[float]) -> dict[str, Any]:
 # --------------------------------------------------------------------------
 # E1 : bounce anchor
 # --------------------------------------------------------------------------
+def bounce_observations(traj: TT3DTrajectory) -> list[BallObservation]:
+    """The 2D track exactly as a detector would hand it to the solver."""
+
+    return [
+        BallObservation(
+            frame=int(k),
+            t=float(traj.t[k]),
+            xy=(float(traj.uv[k][0]), float(traj.uv[k][1])),
+            confidence=1.0,
+            visible=True,
+        )
+        for k in range(len(traj))
+    ]
+
+
 def run_bounce_anchor(view: TT3DView, trajs: Sequence[TT3DTrajectory]) -> dict[str, Any]:
     calib = view.calibration()
     cam_c = view.camera_center_world
@@ -179,7 +195,14 @@ def run_bounce_anchor(view: TT3DView, trajs: Sequence[TT3DTrajectory]) -> dict[s
     err_math_only = []
     sigmas = []
     horiz_err = []
+    depth_signed = []
     skipped = 0
+
+    # Sub-frame variant, scored on exactly the same bounces in the same pass.
+    sf_total, sf_depth, sf_i1, sf_i2, sf_depth_signed = [], [], [], [], []
+    sf_timing_error_s: list[float] = []
+    sf_timing_sd_s: list[float] = []
+    sf_status: dict[str, int] = {}
 
     for traj in trajs:
         contact = estimate_contact(traj)
@@ -210,18 +233,58 @@ def run_bounce_anchor(view: TT3DView, trajs: Sequence[TT3DTrajectory]) -> dict[s
         horiz_err.append(float(np.hypot(e[0], e[1])))
         a, b, c = decompose(e, gt_c, cam_c, cam_right)
         err_depth.append(abs(a))
+        depth_signed.append(a)
         err_i1.append(abs(b))
         err_i2.append(abs(c))
         sigmas.append(
             anchor_sigma_for_bounce(calib, (float(uv[0]), float(uv[1])), base_sigma_m=0.05)
         )
 
+        # (c) SUB-FRAME: same marked frame, same 2D track, contact instant
+        # recovered from the track's own kink.  No ground truth is consulted.
+        timing = refine_bounce_contact_time(
+            bounce_observations(traj), j, fps=traj.fps
+        )
+        status = "unavailable" if timing is None else timing.status
+        sf_status[status] = sf_status.get(status, 0) + 1
+        sf_anchor = build_bounce_anchor(
+            {"frame": j, "t": float(t_c), "xy": [float(uv[0]), float(uv[1])]},
+            calib,
+            ball_radius_m=TT_BALL_RADIUS_M,
+            status="human_reviewed",
+            subframe_timing=timing,
+        )
+        e_sf = np.array(sf_anchor.world_xyz, dtype=float) - gt_c
+        sf_total.append(float(np.linalg.norm(e_sf)))
+        a2, b2, c2 = decompose(e_sf, gt_c, cam_c, cam_right)
+        sf_depth.append(abs(a2))
+        sf_depth_signed.append(a2)
+        sf_i1.append(abs(b2))
+        sf_i2.append(abs(c2))
+        if timing is not None and timing.refined:
+            sf_timing_error_s.append(float(timing.t_contact_s - t_c))
+            sf_timing_sd_s.append(float(timing.timing_sd_s))
+
     errs = np.asarray(err_total)
     sig = np.asarray(sigmas)
     within1 = float(np.mean(errs <= sig)) if errs.size else float("nan")
     within2 = float(np.mean(errs <= 2 * sig)) if errs.size else float("nan")
+    timing_err = np.asarray(sf_timing_error_s)
     return {
-        "_raw": {"err_3d": err_total, "depth": err_depth, "img1": err_i1, "img2": err_i2},
+        "_raw": {
+            "err_3d": err_total,
+            "depth": err_depth,
+            "img1": err_i1,
+            "img2": err_i2,
+            "depth_signed": depth_signed,
+            "sf_err_3d": sf_total,
+            "sf_depth": sf_depth,
+            "sf_img1": sf_i1,
+            "sf_img2": sf_i2,
+            "sf_depth_signed": sf_depth_signed,
+            "sf_timing_error_s": sf_timing_error_s,
+            "sf_timing_sd_s": sf_timing_sd_s,
+        },
         "view": view.name,
         "n_scored": len(err_total),
         "n_skipped": skipped,
@@ -234,6 +297,18 @@ def run_bounce_anchor(view: TT3DView, trajs: Sequence[TT3DTrajectory]) -> dict[s
         "reported_sigma_m": summarize(sigmas),
         "frac_within_1sigma": within1,
         "frac_within_2sigma": within2,
+        "subframe": {
+            "error_3d_m": summarize(sf_total),
+            "error_depth_axis_m": summarize(sf_depth),
+            "depth_bias_m": float(np.mean(depth_signed)) if depth_signed else float("nan"),
+            "subframe_depth_bias_m": float(np.mean(sf_depth_signed)) if sf_depth_signed else float("nan"),
+            "statuses": sf_status,
+            "n_refined": len(sf_timing_error_s),
+            "timing_error_mean_s": float(np.mean(timing_err)) if timing_err.size else float("nan"),
+            "timing_error_rms_s": float(np.sqrt(np.mean(timing_err**2))) if timing_err.size else float("nan"),
+            "timing_error_p95_abs_s": float(np.percentile(np.abs(timing_err), 95)) if timing_err.size else float("nan"),
+            "reported_timing_sd_s_median": float(np.median(sf_timing_sd_s)) if sf_timing_sd_s else float("nan"),
+        },
         "ratio_p95_err_to_2sigma": float(np.percentile(errs, 95) / (2 * np.median(sig))) if errs.size else float("nan"),
     }
 
@@ -438,6 +513,56 @@ def main() -> int:
     report["bounce_error_m"] = summarize(pool(e1, "err_3d"))
     report["bounce_error_depth_axis_m"] = summarize(pool(e1, "depth"))
     report["bounce_error_image_axes_m"] = summarize(e1_img)
+
+    # ---- sub-frame bounce timing: same bounces, one pass ------------------
+    sf_img = [
+        float(np.hypot(a, b))
+        for v in e1.values()
+        for a, b in zip(v["_raw"]["sf_img1"], v["_raw"]["sf_img2"])
+    ]
+    timing_err = np.asarray(pool(e1, "sf_timing_error_s"))
+    timing_sd = np.asarray(pool(e1, "sf_timing_sd_s"))
+    statuses: dict[str, int] = {}
+    for block in e1.values():
+        for key, count in block["subframe"]["statuses"].items():
+            statuses[key] = statuses.get(key, 0) + count
+    depth_before = np.asarray(pool(e1, "depth_signed"))
+    depth_after = np.asarray(pool(e1, "sf_depth_signed"))
+    report["subframe_bounce_timing"] = {
+        "method": "image_branch_kink_v1",
+        "default_state": "OFF (best_stack ball.subframe_bounce_timing, PENDING, do_not_promote)",
+        "n_bounces": int(depth_before.size),
+        "n_refined": int(timing_err.size),
+        "guard_statuses": statuses,
+        "before": {
+            "error_3d_m": summarize(pool(e1, "err_3d")),
+            "error_depth_axis_m": summarize(pool(e1, "depth")),
+            "error_image_axes_m": summarize(e1_img),
+            "depth_bias_m": float(np.mean(depth_before)),
+        },
+        "after": {
+            "error_3d_m": summarize(pool(e1, "sf_err_3d")),
+            "error_depth_axis_m": summarize(pool(e1, "sf_depth")),
+            "error_image_axes_m": summarize(sf_img),
+            "depth_bias_m": float(np.mean(depth_after)),
+        },
+        "timing_error_s": {
+            "mean": float(np.mean(timing_err)) if timing_err.size else float("nan"),
+            "rms": float(np.sqrt(np.mean(timing_err**2))) if timing_err.size else float("nan"),
+            "p95_abs": float(np.percentile(np.abs(timing_err), 95)) if timing_err.size else float("nan"),
+            "reported_sd_median": float(np.median(timing_sd)) if timing_sd.size else float("nan"),
+            "reported_sd_over_measured_rms": (
+                float(np.median(timing_sd) / np.sqrt(np.mean(timing_err**2)))
+                if timing_err.size and np.mean(timing_err**2) > 0
+                else float("nan")
+            ),
+        },
+        "sport_caveat": (
+            "Table tennis at 25 fps: a 40 mm ball with 3.3x the drag of a pickleball. The "
+            "timing GEOMETRY transfers exactly (a bounce falls between frames in every sport); "
+            "the MAGNITUDES do not. VERIFIED=0 for pickleball."
+        ),
+    }
     report["depth_to_image_error_ratio"] = float(
         np.median(pool(e2, "depth")) / max(np.median(e2_img), 1e-12)
     )

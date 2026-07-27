@@ -253,6 +253,10 @@ class BallArcSolverConfig:
     court_sport: str = "pickleball"
     court_margin_m: float = 4.0
     court_z_min_m: float = -0.15
+    # Default OFF: it MOVES bounce anchors and shifts their times, so it changes
+    # solver output. best_stack ball.subframe_bounce_timing, PENDING,
+    # do_not_promote -- validated on table tennis only.
+    enable_subframe_bounce_timing: bool = False
 
     def __post_init__(self) -> None:
         if self.robust_pixel_sigma <= 0.0:
@@ -778,6 +782,19 @@ def refine_bounce_contact_time(
     if scale > 0.0 and jump / scale < abs(float(min_velocity_jump_ratio)):
         return replace(timing, status="rejected_weak_kink")
     return timing
+
+
+def _subframe_timing_for_bounce(
+    frame: int,
+    *,
+    observations_by_frame: Mapping[int, BallObservation],
+    config: BallArcSolverConfig,
+) -> SubFrameBounceTiming | None:
+    """Refined contact instant for one bounce frame, or ``None`` when disabled."""
+
+    if not config.enable_subframe_bounce_timing:
+        return None
+    return refine_bounce_contact_time(tuple(observations_by_frame.values()), int(frame))
 
 
 def _median_frame_interval(times: Sequence[float], fps: float | None) -> float:
@@ -6123,6 +6140,11 @@ def _discover_bounce_anchors(
                     ball_xy=obs.xy,
                     status="solver_proposed",
                     sigma_m=config.proposed_bounce_sigma_m,
+                    subframe_timing=_subframe_timing_for_bounce(
+                        frame,
+                        observations_by_frame=observations_by_frame,
+                        config=config,
+                    ),
                 )
             except ValueError:
                 continue
@@ -6329,6 +6351,11 @@ def _auto_bounce_candidate_anchors(
                     "method": item.get("method", "unknown"),
                     "candidate_index": index,
                 },
+                subframe_timing=_subframe_timing_for_bounce(
+                    obs.frame if obs is not None else frame,
+                    observations_by_frame=observations_by_frame,
+                    config=config,
+                ),
             )
         except ValueError:
             continue
@@ -6381,6 +6408,11 @@ def _reviewed_bounce_anchors(
                         "not_ground_truth": False,
                         "review_source": item.get("source"),
                     },
+                    subframe_timing=_subframe_timing_for_bounce(
+                        obs.frame,
+                        observations_by_frame=observations_by_frame,
+                        config=config,
+                    ),
                 )
             )
         except ValueError:
