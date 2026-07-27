@@ -388,8 +388,14 @@ Diffing the sorted `FAILED`/`ERROR` lists:
 - Two failures appear only at BASE and pass at HEAD --
   `test_flight_simulator.py::test_generate_corpus_is_deterministic_and_fast_for_small_cpu_sample`
   and `test_ball_arc_solver.py::test_fit_flight_segment_recovers_simulated_scalar_magnus_spin`.
-  Both are wall-clock / optimizer-sensitive and the base run was executed under CPU contention
-  from a sibling lane's suite. Claimed as flakiness, not as a fix.
+  Both are wall-clock / optimizer-sensitive. Claimed as flakiness, not as a fix; `magnus_spin`
+  was then re-run in isolation at BOTH commits and **fails at base and at HEAD alike**, which is
+  what flaky means here rather than fixed.
+
+`test_ball_arc_solver.py` is itself contention-sensitive: it reports 1 failure when run alone
+and 3 when the machine is loaded, the two extras being `magnus_spin` and
+`test_fit_flight_segment_shoots_drag_bvp_to_anchor_with_diagnostics`. The latter passes in
+isolation at HEAD. Only the `wolverine_seg6` failure is stable, and it is stable at base too.
 
 ### Wide suite
 

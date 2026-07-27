@@ -201,7 +201,11 @@ def main() -> int:
             "VERIFIED=0 for pickleball bounce position."
         ),
         "inputs": {
-            "labels": str(label_path),
+            "labels": (
+                str(label_path.relative_to(REPO_ROOT))
+                if label_path.is_relative_to(REPO_ROOT)
+                else str(label_path)
+            ),
             "calibration": str(CALIBRATION.relative_to(REPO_ROOT)),
             "ball_track": str(ARC_SOLVED.relative_to(REPO_ROOT)),
         },
