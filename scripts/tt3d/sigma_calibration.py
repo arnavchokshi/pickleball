@@ -40,7 +40,13 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "scripts" / "tt3d"))
 
 from tt3d_adapter import TT_BALL_RADIUS_M, TT3DView, iter_trajectories  # noqa: E402
-from run_tt3d_validation import DATA_ROOT, VIEWS, decompose, estimate_contact  # noqa: E402
+from run_tt3d_validation import (  # noqa: E402
+    DATA_ROOT,
+    VIEWS,
+    bounce_observations,
+    decompose,
+    estimate_contact,
+)
 from threed.racketsport import ball_arc_solver as solver  # noqa: E402
 from threed.racketsport.ball_arc_solver import (  # noqa: E402
     BALL_RADIUS_M,
@@ -48,6 +54,7 @@ from threed.racketsport.ball_arc_solver import (  # noqa: E402
     build_bounce_anchor,
     intersect_ray_z,
     pixel_ray_world,
+    refine_bounce_contact_time,
 )
 
 
@@ -119,6 +126,9 @@ def analyse(view: TT3DView, sub: str) -> dict:
         "measured_physics": {"along": [], "perp": [], "bias": []},
         "library_defaults": {"along": [], "perp": [], "bias": []},
     }
+    sf_depth, sf_img1, sf_img2 = [], [], []
+    sf_along, sf_perp, sf_bias = [], [], []
+    sf_refined = 0
 
     for traj in iter_trajectories(DATA_ROOT, sub):
         contact = estimate_contact(traj)
@@ -164,6 +174,37 @@ def analyse(view: TT3DView, sub: str) -> dict:
             ray[key]["along"].append(u.sigma_along_ray_m)
             ray[key]["perp"].append(u.sigma_perp_m)
             ray[key]["bias"].append(u.bias_along_ray_m)
+
+        # --- sub-frame variant, same bounce, same pass ---------------------
+        timing = refine_bounce_contact_time(bounce_observations(traj), j, fps=traj.fps)
+        sf_anchor = build_bounce_anchor(
+            {"frame": j, "t": float(t_c), "xy": [float(uv[0]), float(uv[1])]},
+            calib,
+            ball_radius_m=TT_BALL_RADIUS_M,
+            status="human_reviewed",
+            subframe_timing=timing,
+        )
+        e_sf = np.array(sf_anchor.world_xyz, dtype=float) - gt
+        a2, b2, c2 = decompose(e_sf, gt, cam_c, cam_right)
+        sf_depth.append(a2)
+        sf_img1.append(b2)
+        sf_img2.append(c2)
+        applied = timing is not None and timing.refined
+        sf_refined += int(applied)
+        u_sf = anchor_uncertainty_for_bounce(
+            calib,
+            sf_anchor.details["pixel_xy"],
+            base_sigma_m=0.05,
+            ball_radius_m=TT_BALL_RADIUS_M,
+            fps=traj.fps,
+            vertical_speed_mps=TT_BOUNCE_VERTICAL_SPEED_MPS,
+            horizontal_speed_mps=TT_BOUNCE_HORIZONTAL_SPEED_MPS,
+            speed_cv=TT_BOUNCE_SPEED_CV,
+            subframe_timing_sd_s=timing.timing_sd_s if applied else None,
+        )
+        sf_along.append(u_sf.sigma_along_ray_m)
+        sf_perp.append(u_sf.sigma_perp_m)
+        sf_bias.append(u_sf.bias_along_ray_m)
 
     depth = np.asarray(depth)
     img1 = np.asarray(img1)
@@ -213,6 +254,28 @@ def analyse(view: TT3DView, sub: str) -> dict:
             "img2": _axis_stats(img2, perp),
             "image_plane_pooled": _axis_stats(img, np.concatenate([perp, perp])),
         }
+
+    # SUB-FRAME: the anchor is placed at the estimated contact instant instead
+    # of at the marked frame, and its uncertainty carries the estimator's own
+    # timing sigma. Scored against the same ground-truth contacts.
+    sfd = np.asarray(sf_depth)
+    sfi = np.concatenate([np.asarray(sf_img1), np.asarray(sf_img2)])
+    sfa = np.asarray(sf_along)
+    sfp = np.asarray(sf_perp)
+    sfb = np.asarray(sf_bias)
+    out["ray_aligned__subframe_measured_physics"] = {
+        "n_refined": int(sf_refined),
+        "n": int(sfd.size),
+        "sigma_along_ray_m_median": float(np.median(sfa)),
+        "sigma_perp_m_median": float(np.median(sfp)),
+        "bias_along_ray_m_median": float(np.median(sfb)),
+        "anisotropy_along_over_perp": float(np.median(sfa) / np.median(sfp)),
+        "depth_bias_uncorrected": _axis_stats(sfd, sfa),
+        "depth_bias_corrected": _axis_stats(sfd - sfb, sfa),
+        "img1": _axis_stats(np.asarray(sf_img1), sfp),
+        "img2": _axis_stats(np.asarray(sf_img2), sfp),
+        "image_plane_pooled": _axis_stats(sfi, np.concatenate([sfp, sfp])),
+    }
     return out
 
 
@@ -265,6 +328,19 @@ def _print_table(results: dict) -> None:
         dep = r["ray_aligned__measured_physics"]["depth_bias_uncorrected"]
         print(f"{k:<18}{dep['implied_sigma_over_reported']:>9.2f}"
               f"{dep['frac_within_1sigma']:>8.2f}{dep['bias_m']:>9.4f}")
+
+    print("\nSUB-FRAME -- anchor placed at the estimated contact instant, bias NOT removed")
+    print(f"{'view/cond':<18}{'refined':>8}{'sig_along':>10}{'sig_perp':>9}{'bias':>8}"
+          f"{'d_rms':>8}{'d_ratio':>9}{'d_in1s':>8}{'i_ratio':>9}{'i_in1s':>8}{'d_bias':>9}")
+    for k, r in results.items():
+        s = r["ray_aligned__subframe_measured_physics"]
+        dep = s["depth_bias_uncorrected"]
+        img = s["image_plane_pooled"]
+        print(f"{k:<18}{s['n_refined']:>4}/{s['n']:<3}{s['sigma_along_ray_m_median']:>10.4f}"
+              f"{s['sigma_perp_m_median']:>9.4f}{s['bias_along_ray_m_median']:>8.4f}"
+              f"{dep['rms_m']:>8.4f}{dep['implied_sigma_over_reported']:>9.2f}"
+              f"{dep['frac_within_1sigma']:>8.2f}{img['implied_sigma_over_reported']:>9.2f}"
+              f"{img['frac_within_1sigma']:>8.2f}{dep['bias_m']:>9.4f}")
 
 
 def main() -> int:

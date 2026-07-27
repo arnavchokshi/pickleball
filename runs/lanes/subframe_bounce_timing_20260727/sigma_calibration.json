@@ -1,0 +1,1151 @@
+{
+  "measured_tt3d_bounce_physics": {
+    "vertical_speed_mps": 1.94,
+    "horizontal_speed_mps": 5.1,
+    "speed_cv": 0.3,
+    "note": "Measured from TT3D ground truth, supplied as model INPUT. These are physical properties of table tennis, not parameters fitted to the error being predicted."
+  },
+  "coverage_note": "rms_ratio ~ 1.0 and frac_within_1sigma ~ 0.683 cannot both hold unless the error is Gaussian. The dominant bounce-anchor term is sub-frame timing, which is uniform; a uniform error at rms_ratio 1.0 gives frac_within_1sigma 0.577, not 0.683.",
+  "views": {
+    "back/no_noise": {
+      "n": 136,
+      "pre_fix_f29145a_isotropic": {
+        "reported_sigma_m_median": 0.056637216978960556,
+        "depth": {
+          "bias_m": 0.10826376294520344,
+          "rms_m": 0.14691505182210776,
+          "sigma_m_median": 0.056637216978960556,
+          "implied_sigma_over_reported": 2.5939666469961504,
+          "frac_within_1sigma": 0.38235294117647056,
+          "p95_abs_m": 0.32156984058883914
+        },
+        "img1": {
+          "bias_m": -0.0020288402877843745,
+          "rms_m": 0.01087338676107965,
+          "sigma_m_median": 0.056637216978960556,
+          "implied_sigma_over_reported": 0.19198306945623522,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.023066092255297925
+        },
+        "img2": {
+          "bias_m": -0.019451082176493682,
+          "rms_m": 0.026331861636550113,
+          "sigma_m_median": 0.056637216978960556,
+          "implied_sigma_over_reported": 0.4649215311255813,
+          "frac_within_1sigma": 0.9485294117647058,
+          "p95_abs_m": 0.05661032494789869
+        }
+      },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.09467653700811962,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.0014078224794780109,
+          "rms_m": 0.09825313189941264,
+          "sigma_m_median": 0.09467653700811962,
+          "implied_sigma_over_reported": 1.0377769931634306,
+          "frac_within_1sigma": 0.6838235294117647,
+          "p95_abs_m": 0.20858414566383088
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.010739961232139028,
+          "rms_m": 0.02014444683904775,
+          "sigma_m_median": 0.09467653700811962,
+          "implied_sigma_over_reported": 0.21277126810542435,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.046034913051514255
+        }
+      },
+      "ray_aligned__measured_physics": {
+        "sigma_along_ray_m_median": 0.09467653700811962,
+        "sigma_perp_m_median": 0.05085695497465037,
+        "bias_along_ray_m_median": 0.11127777241648547,
+        "anisotropy_along_over_perp": 1.8616241781544158,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.10826376294520344,
+          "rms_m": 0.14691505182210776,
+          "sigma_m_median": 0.09467653700811962,
+          "implied_sigma_over_reported": 1.551757768764906,
+          "frac_within_1sigma": 0.5588235294117647,
+          "p95_abs_m": 0.32156984058883914
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.0014078224794780109,
+          "rms_m": 0.09825313189941264,
+          "sigma_m_median": 0.09467653700811962,
+          "implied_sigma_over_reported": 1.0377769931634306,
+          "frac_within_1sigma": 0.6838235294117647,
+          "p95_abs_m": 0.20858414566383088
+        },
+        "img1": {
+          "bias_m": -0.0020288402877843745,
+          "rms_m": 0.01087338676107965,
+          "sigma_m_median": 0.05085695497465037,
+          "implied_sigma_over_reported": 0.21380333853058023,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.023066092255297925
+        },
+        "img2": {
+          "bias_m": -0.019451082176493682,
+          "rms_m": 0.026331861636550113,
+          "sigma_m_median": 0.05085695497465037,
+          "implied_sigma_over_reported": 0.5177632370965823,
+          "frac_within_1sigma": 0.9117647058823529,
+          "p95_abs_m": 0.05661032494789869
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.010739961232139028,
+          "rms_m": 0.02014444683904775,
+          "sigma_m_median": 0.05085695497465037,
+          "implied_sigma_over_reported": 0.3961001371216335,
+          "frac_within_1sigma": 0.9558823529411765,
+          "p95_abs_m": 0.046034913051514255
+        }
+      },
+      "ray_aligned__library_defaults": {
+        "sigma_along_ray_m_median": 0.17289090590554174,
+        "sigma_perp_m_median": 0.08489252731899377,
+        "bias_along_ray_m_median": 0.22943870601337207,
+        "anisotropy_along_over_perp": 2.036585685049564,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.10826376294520344,
+          "rms_m": 0.14691505182210776,
+          "sigma_m_median": 0.17289090590554174,
+          "implied_sigma_over_reported": 0.8497558101891965,
+          "frac_within_1sigma": 0.7794117647058824,
+          "p95_abs_m": 0.32156984058883914
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.1178632173118717,
+          "rms_m": 0.1527976516249673,
+          "sigma_m_median": 0.17289090590554174,
+          "implied_sigma_over_reported": 0.8837807334322587,
+          "frac_within_1sigma": 0.6102941176470589,
+          "p95_abs_m": 0.22007611690712564
+        },
+        "img1": {
+          "bias_m": -0.0020288402877843745,
+          "rms_m": 0.01087338676107965,
+          "sigma_m_median": 0.08489252731899377,
+          "implied_sigma_over_reported": 0.12808414479429509,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.023066092255297925
+        },
+        "img2": {
+          "bias_m": -0.019451082176493682,
+          "rms_m": 0.026331861636550113,
+          "sigma_m_median": 0.08489252731899377,
+          "implied_sigma_over_reported": 0.31017879274114446,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.05661032494789869
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.010739961232139028,
+          "rms_m": 0.02014444683904775,
+          "sigma_m_median": 0.08489252731899377,
+          "implied_sigma_over_reported": 0.23729352247168464,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.046034913051514255
+        }
+      },
+      "ray_aligned__subframe_measured_physics": {
+        "n_refined": 132,
+        "n": 136,
+        "sigma_along_ray_m_median": 0.09183045167236786,
+        "sigma_perp_m_median": 0.044303729479831605,
+        "bias_along_ray_m_median": 0.08844182643040482,
+        "anisotropy_along_over_perp": 2.07274766143947,
+        "depth_bias_uncorrected": {
+          "bias_m": -0.00887138750496317,
+          "rms_m": 0.053919284145268455,
+          "sigma_m_median": 0.09183045167236786,
+          "implied_sigma_over_reported": 0.5871612647364662,
+          "frac_within_1sigma": 0.9632352941176471,
+          "p95_abs_m": 0.07236456324973187
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.0966374433287036,
+          "rms_m": 0.10875627630257817,
+          "sigma_m_median": 0.09183045167236786,
+          "implied_sigma_over_reported": 1.1843160337553187,
+          "frac_within_1sigma": 0.2426470588235294,
+          "p95_abs_m": 0.14063132764432879
+        },
+        "img1": {
+          "bias_m": -0.0004185850291899719,
+          "rms_m": 0.00270753263221262,
+          "sigma_m_median": 0.044303729479831605,
+          "implied_sigma_over_reported": 0.06111297319665087,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.005635049525294348
+        },
+        "img2": {
+          "bias_m": 0.0016979709841489585,
+          "rms_m": 0.009623044595128673,
+          "sigma_m_median": 0.044303729479831605,
+          "implied_sigma_over_reported": 0.217206197042833,
+          "frac_within_1sigma": 0.9926470588235294,
+          "p95_abs_m": 0.013232723913918016
+        },
+        "image_plane_pooled": {
+          "bias_m": 0.0006396929774794933,
+          "rms_m": 0.007068724079858095,
+          "sigma_m_median": 0.044303729479831605,
+          "implied_sigma_over_reported": 0.15955144550699715,
+          "frac_within_1sigma": 0.9963235294117647,
+          "p95_abs_m": 0.010908288178164263
+        }
+      }
+    },
+    "back/noise": {
+      "n": 136,
+      "pre_fix_f29145a_isotropic": {
+        "reported_sigma_m_median": 0.05663407539661992,
+        "depth": {
+          "bias_m": 0.10699934723413264,
+          "rms_m": 0.15447791649892845,
+          "sigma_m_median": 0.05663407539661992,
+          "implied_sigma_over_reported": 2.7276496599809965,
+          "frac_within_1sigma": 0.29411764705882354,
+          "p95_abs_m": 0.32623652041382806
+        },
+        "img1": {
+          "bias_m": -0.003432654341684366,
+          "rms_m": 0.015192119001097565,
+          "sigma_m_median": 0.05663407539661992,
+          "implied_sigma_over_reported": 0.2682504992745811,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.030658526298270185
+        },
+        "img2": {
+          "bias_m": -0.01918812462480895,
+          "rms_m": 0.027676722801941337,
+          "sigma_m_median": 0.05663407539661992,
+          "implied_sigma_over_reported": 0.4886938227227271,
+          "frac_within_1sigma": 0.9411764705882353,
+          "p95_abs_m": 0.05940743133066126
+        }
+      },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.09466477469347576,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.002666791858841088,
+          "rms_m": 0.11020510750508539,
+          "sigma_m_median": 0.09466477469347576,
+          "implied_sigma_over_reported": 1.164161726068954,
+          "frac_within_1sigma": 0.6397058823529411,
+          "p95_abs_m": 0.22715896201069752
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.011310389483246657,
+          "rms_m": 0.02232489042301226,
+          "sigma_m_median": 0.09466477469347576,
+          "implied_sigma_over_reported": 0.23583102051740137,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.051166846026411944
+        }
+      },
+      "ray_aligned__measured_physics": {
+        "sigma_along_ray_m_median": 0.09466477469347576,
+        "sigma_perp_m_median": 0.05085685017907644,
+        "bias_along_ray_m_median": 0.11126361991163844,
+        "anisotropy_along_over_perp": 1.8613967314165831,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.10699934723413264,
+          "rms_m": 0.15447791649892845,
+          "sigma_m_median": 0.09466477469347576,
+          "implied_sigma_over_reported": 1.6318415904873536,
+          "frac_within_1sigma": 0.47058823529411764,
+          "p95_abs_m": 0.32623652041382806
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.002666791858841088,
+          "rms_m": 0.11020510750508539,
+          "sigma_m_median": 0.09466477469347576,
+          "implied_sigma_over_reported": 1.164161726068954,
+          "frac_within_1sigma": 0.6397058823529411,
+          "p95_abs_m": 0.22715896201069752
+        },
+        "img1": {
+          "bias_m": -0.003432654341684366,
+          "rms_m": 0.015192119001097565,
+          "sigma_m_median": 0.05085685017907644,
+          "implied_sigma_over_reported": 0.29872316015646433,
+          "frac_within_1sigma": 0.9852941176470589,
+          "p95_abs_m": 0.030658526298270185
+        },
+        "img2": {
+          "bias_m": -0.01918812462480895,
+          "rms_m": 0.027676722801941337,
+          "sigma_m_median": 0.05085685017907644,
+          "implied_sigma_over_reported": 0.5442083555014996,
+          "frac_within_1sigma": 0.9044117647058824,
+          "p95_abs_m": 0.05940743133066126
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.011310389483246657,
+          "rms_m": 0.02232489042301226,
+          "sigma_m_median": 0.05085685017907644,
+          "implied_sigma_over_reported": 0.43897509075772806,
+          "frac_within_1sigma": 0.9448529411764706,
+          "p95_abs_m": 0.051166846026411944
+        }
+      },
+      "ray_aligned__library_defaults": {
+        "sigma_along_ray_m_median": 0.17287097907218907,
+        "sigma_perp_m_median": 0.08489260298809961,
+        "bias_along_ray_m_median": 0.22940952559100708,
+        "anisotropy_along_over_perp": 2.0363491398234355,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.10699934723413264,
+          "rms_m": 0.15447791649892845,
+          "sigma_m_median": 0.17287097907218907,
+          "implied_sigma_over_reported": 0.8936023693972377,
+          "frac_within_1sigma": 0.7867647058823529,
+          "p95_abs_m": 0.32623652041382806
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.11911640347302974,
+          "rms_m": 0.16143643427122048,
+          "sigma_m_median": 0.17287097907218907,
+          "implied_sigma_over_reported": 0.9338550353428978,
+          "frac_within_1sigma": 0.6470588235294118,
+          "p95_abs_m": 0.2608703351663285
+        },
+        "img1": {
+          "bias_m": -0.003432654341684366,
+          "rms_m": 0.015192119001097565,
+          "sigma_m_median": 0.08489260298809961,
+          "implied_sigma_over_reported": 0.17895692282197098,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.030658526298270185
+        },
+        "img2": {
+          "bias_m": -0.01918812462480895,
+          "rms_m": 0.027676722801941337,
+          "sigma_m_median": 0.08489260298809961,
+          "implied_sigma_over_reported": 0.3260204284915272,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.05940743133066126
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.011310389483246657,
+          "rms_m": 0.02232489042301226,
+          "sigma_m_median": 0.08489260298809961,
+          "implied_sigma_over_reported": 0.26297804092709703,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.051166846026411944
+        }
+      },
+      "ray_aligned__subframe_measured_physics": {
+        "n_refined": 129,
+        "n": 136,
+        "sigma_along_ray_m_median": 0.09179462801217692,
+        "sigma_perp_m_median": 0.04430576384120981,
+        "bias_along_ray_m_median": 0.0885845972960082,
+        "anisotropy_along_over_perp": 2.07184393301886,
+        "depth_bias_uncorrected": {
+          "bias_m": -0.0037583592918997138,
+          "rms_m": 0.09738450417169235,
+          "sigma_m_median": 0.09179462801217692,
+          "implied_sigma_over_reported": 1.0608954606665426,
+          "frac_within_1sigma": 0.7794117647058824,
+          "p95_abs_m": 0.20842979418986973
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.09203025869935827,
+          "rms_m": 0.13113079907723396,
+          "sigma_m_median": 0.09179462801217692,
+          "implied_sigma_over_reported": 1.4285236719935175,
+          "frac_within_1sigma": 0.34558823529411764,
+          "p95_abs_m": 0.22772457630431975
+        },
+        "img1": {
+          "bias_m": -0.0016317751874333206,
+          "rms_m": 0.010903076635961028,
+          "sigma_m_median": 0.04430576384120981,
+          "implied_sigma_over_reported": 0.24608709320614006,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.021347844603737592
+        },
+        "img2": {
+          "bias_m": 0.000810687402569157,
+          "rms_m": 0.01759341766103681,
+          "sigma_m_median": 0.04430576384120981,
+          "implied_sigma_over_reported": 0.39709094564063846,
+          "frac_within_1sigma": 0.9558823529411765,
+          "p95_abs_m": 0.03904456048500377
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.0004105438924320818,
+          "rms_m": 0.01463566577107651,
+          "sigma_m_median": 0.04430576384120981,
+          "implied_sigma_over_reported": 0.3303332230887653,
+          "frac_within_1sigma": 0.9779411764705882,
+          "p95_abs_m": 0.02683873515504926
+        }
+      }
+    },
+    "side/no_noise": {
+      "n": 136,
+      "pre_fix_f29145a_isotropic": {
+        "reported_sigma_m_median": 0.05170209985101239,
+        "depth": {
+          "bias_m": 0.06772299156447711,
+          "rms_m": 0.08556289773050346,
+          "sigma_m_median": 0.05170209985101239,
+          "implied_sigma_over_reported": 1.6549211342878958,
+          "frac_within_1sigma": 0.47058823529411764,
+          "p95_abs_m": 0.1567057661379385
+        },
+        "img1": {
+          "bias_m": 0.004225438741873104,
+          "rms_m": 0.05908652894957789,
+          "sigma_m_median": 0.05170209985101239,
+          "implied_sigma_over_reported": 1.142826483253966,
+          "frac_within_1sigma": 0.6102941176470589,
+          "p95_abs_m": 0.1178154982516948
+        },
+        "img2": {
+          "bias_m": -0.01938620350719406,
+          "rms_m": 0.024583414976171884,
+          "sigma_m_median": 0.05170209985101239,
+          "implied_sigma_over_reported": 0.47548194458276943,
+          "frac_within_1sigma": 0.9705882352941176,
+          "p95_abs_m": 0.042156392455054634
+        }
+      },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.06582619322209052,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.002748835379274775,
+          "rms_m": 0.05129323673390977,
+          "sigma_m_median": 0.06582619322209052,
+          "implied_sigma_over_reported": 0.7792222855854947,
+          "frac_within_1sigma": 0.8602941176470589,
+          "p95_abs_m": 0.08406775142163668
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.007580382382660476,
+          "rms_m": 0.04525241537862911,
+          "sigma_m_median": 0.06582619322209052,
+          "implied_sigma_over_reported": 0.6874530208051424,
+          "frac_within_1sigma": 0.8676470588235294,
+          "p95_abs_m": 0.10388119895745566
+        }
+      },
+      "ray_aligned__measured_physics": {
+        "sigma_along_ray_m_median": 0.06582619322209052,
+        "sigma_perp_m_median": 0.05122200316826302,
+        "bias_along_ray_m_median": 0.07031215778480344,
+        "anisotropy_along_over_perp": 1.2851155587541763,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.06772299156447711,
+          "rms_m": 0.08556289773050346,
+          "sigma_m_median": 0.06582619322209052,
+          "implied_sigma_over_reported": 1.2998305620047543,
+          "frac_within_1sigma": 0.5735294117647058,
+          "p95_abs_m": 0.1567057661379385
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.002748835379274775,
+          "rms_m": 0.05129323673390977,
+          "sigma_m_median": 0.06582619322209052,
+          "implied_sigma_over_reported": 0.7792222855854947,
+          "frac_within_1sigma": 0.8602941176470589,
+          "p95_abs_m": 0.08406775142163668
+        },
+        "img1": {
+          "bias_m": 0.004225438741873104,
+          "rms_m": 0.05908652894957789,
+          "sigma_m_median": 0.05122200316826302,
+          "implied_sigma_over_reported": 1.1535380362903829,
+          "frac_within_1sigma": 0.6029411764705882,
+          "p95_abs_m": 0.1178154982516948
+        },
+        "img2": {
+          "bias_m": -0.01938620350719406,
+          "rms_m": 0.024583414976171884,
+          "sigma_m_median": 0.05122200316826302,
+          "implied_sigma_over_reported": 0.4799385704502023,
+          "frac_within_1sigma": 0.9705882352941176,
+          "p95_abs_m": 0.042156392455054634
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.007580382382660476,
+          "rms_m": 0.04525241537862911,
+          "sigma_m_median": 0.05122200316826302,
+          "implied_sigma_over_reported": 0.8834565729492468,
+          "frac_within_1sigma": 0.7867647058823529,
+          "p95_abs_m": 0.10388119895745566
+        }
+      },
+      "ray_aligned__library_defaults": {
+        "sigma_along_ray_m_median": 0.11903617680549952,
+        "sigma_perp_m_median": 0.08577285144817651,
+        "bias_along_ray_m_median": 0.14497352120578028,
+        "anisotropy_along_over_perp": 1.3878071533790681,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.06772299156447711,
+          "rms_m": 0.08556289773050346,
+          "sigma_m_median": 0.11903617680549952,
+          "implied_sigma_over_reported": 0.7187974280315631,
+          "frac_within_1sigma": 0.8161764705882353,
+          "p95_abs_m": 0.1567057661379385
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.07757974440202162,
+          "rms_m": 0.09252100470816875,
+          "sigma_m_median": 0.11903617680549952,
+          "implied_sigma_over_reported": 0.7772511449132348,
+          "frac_within_1sigma": 0.7132352941176471,
+          "p95_abs_m": 0.14007117090058846
+        },
+        "img1": {
+          "bias_m": 0.004225438741873104,
+          "rms_m": 0.05908652894957789,
+          "sigma_m_median": 0.08577285144817651,
+          "implied_sigma_over_reported": 0.688872154206948,
+          "frac_within_1sigma": 0.8529411764705882,
+          "p95_abs_m": 0.1178154982516948
+        },
+        "img2": {
+          "bias_m": -0.01938620350719406,
+          "rms_m": 0.024583414976171884,
+          "sigma_m_median": 0.08577285144817651,
+          "implied_sigma_over_reported": 0.28661067646824184,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.042156392455054634
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.007580382382660476,
+          "rms_m": 0.04525241537862911,
+          "sigma_m_median": 0.08577285144817651,
+          "implied_sigma_over_reported": 0.5275843651527707,
+          "frac_within_1sigma": 0.9264705882352942,
+          "p95_abs_m": 0.10388119895745566
+        }
+      },
+      "ray_aligned__subframe_measured_physics": {
+        "n_refined": 133,
+        "n": 136,
+        "sigma_along_ray_m_median": 0.06180810089310716,
+        "sigma_perp_m_median": 0.044531396444770895,
+        "bias_along_ray_m_median": 0.055430903202192155,
+        "anisotropy_along_over_perp": 1.387966824030846,
+        "depth_bias_uncorrected": {
+          "bias_m": -0.006834397355608892,
+          "rms_m": 0.025251861446821462,
+          "sigma_m_median": 0.06180810089310716,
+          "implied_sigma_over_reported": 0.40855261821573857,
+          "frac_within_1sigma": 0.9705882352941176,
+          "p95_abs_m": 0.044868167688543216
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.062475138952900744,
+          "rms_m": 0.06658563141892049,
+          "sigma_m_median": 0.06180810089310716,
+          "implied_sigma_over_reported": 1.0772961870172282,
+          "frac_within_1sigma": 0.3088235294117647,
+          "p95_abs_m": 0.08414731245267087
+        },
+        "img1": {
+          "bias_m": -0.001268762355891563,
+          "rms_m": 0.017252653888436175,
+          "sigma_m_median": 0.044531396444770895,
+          "implied_sigma_over_reported": 0.3874267430583141,
+          "frac_within_1sigma": 0.9705882352941176,
+          "p95_abs_m": 0.03709225027309699
+        },
+        "img2": {
+          "bias_m": 0.00225639497400373,
+          "rms_m": 0.007475528664604183,
+          "sigma_m_median": 0.044531396444770895,
+          "implied_sigma_over_reported": 0.16787096883151972,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.013780192537509742
+        },
+        "image_plane_pooled": {
+          "bias_m": 0.0004938163090560837,
+          "rms_m": 0.013295442734438945,
+          "sigma_m_median": 0.044531396444770895,
+          "implied_sigma_over_reported": 0.29856334622086983,
+          "frac_within_1sigma": 0.9852941176470589,
+          "p95_abs_m": 0.023441162255437253
+        }
+      }
+    },
+    "side/noise": {
+      "n": 136,
+      "pre_fix_f29145a_isotropic": {
+        "reported_sigma_m_median": 0.051704312834945115,
+        "depth": {
+          "bias_m": 0.07026838259588862,
+          "rms_m": 0.09140196750604133,
+          "sigma_m_median": 0.051704312834945115,
+          "implied_sigma_over_reported": 1.7677822698818653,
+          "frac_within_1sigma": 0.41911764705882354,
+          "p95_abs_m": 0.1737186081352417
+        },
+        "img1": {
+          "bias_m": 0.0034072953073055016,
+          "rms_m": 0.05909378755261073,
+          "sigma_m_median": 0.051704312834945115,
+          "implied_sigma_over_reported": 1.142917956211021,
+          "frac_within_1sigma": 0.6029411764705882,
+          "p95_abs_m": 0.11784062519895984
+        },
+        "img2": {
+          "bias_m": -0.020160098749675764,
+          "rms_m": 0.02633378111209058,
+          "sigma_m_median": 0.051704312834945115,
+          "implied_sigma_over_reported": 0.5093149810569092,
+          "frac_within_1sigma": 0.9558823529411765,
+          "p95_abs_m": 0.049157418567446876
+        }
+      },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.06582756586934024,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.0002421972577401972,
+          "rms_m": 0.057302434899990894,
+          "sigma_m_median": 0.06582756586934024,
+          "implied_sigma_over_reported": 0.8704929939795936,
+          "frac_within_1sigma": 0.7647058823529411,
+          "p95_abs_m": 0.10538613660781679
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.008376401721185131,
+          "rms_m": 0.04574682368740255,
+          "sigma_m_median": 0.06582756586934024,
+          "implied_sigma_over_reported": 0.6949493435349632,
+          "frac_within_1sigma": 0.8713235294117647,
+          "p95_abs_m": 0.10118880865250379
+        }
+      },
+      "ray_aligned__measured_physics": {
+        "sigma_along_ray_m_median": 0.06582756586934024,
+        "sigma_perp_m_median": 0.051222812665757164,
+        "bias_along_ray_m_median": 0.07038208438741442,
+        "anisotropy_along_over_perp": 1.2851220470629576,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.07026838259588862,
+          "rms_m": 0.09140196750604133,
+          "sigma_m_median": 0.06582756586934024,
+          "implied_sigma_over_reported": 1.3885059594556965,
+          "frac_within_1sigma": 0.5073529411764706,
+          "p95_abs_m": 0.1737186081352417
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.0002421972577401972,
+          "rms_m": 0.057302434899990894,
+          "sigma_m_median": 0.06582756586934024,
+          "implied_sigma_over_reported": 0.8704929939795936,
+          "frac_within_1sigma": 0.7647058823529411,
+          "p95_abs_m": 0.10538613660781679
+        },
+        "img1": {
+          "bias_m": 0.0034072953073055016,
+          "rms_m": 0.05909378755261073,
+          "sigma_m_median": 0.051222812665757164,
+          "implied_sigma_over_reported": 1.1536615128539276,
+          "frac_within_1sigma": 0.6029411764705882,
+          "p95_abs_m": 0.11784062519895984
+        },
+        "img2": {
+          "bias_m": -0.020160098749675764,
+          "rms_m": 0.02633378111209058,
+          "sigma_m_median": 0.051222812665757164,
+          "implied_sigma_over_reported": 0.5141025988542584,
+          "frac_within_1sigma": 0.9485294117647058,
+          "p95_abs_m": 0.049157418567446876
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.008376401721185131,
+          "rms_m": 0.04574682368740255,
+          "sigma_m_median": 0.051222812665757164,
+          "implied_sigma_over_reported": 0.8930947229687105,
+          "frac_within_1sigma": 0.7757352941176471,
+          "p95_abs_m": 0.10118880865250379
+        }
+      },
+      "ray_aligned__library_defaults": {
+        "sigma_along_ray_m_median": 0.11912123505966637,
+        "sigma_perp_m_median": 0.08577213164904582,
+        "bias_along_ray_m_median": 0.14511769976786476,
+        "anisotropy_along_over_perp": 1.3888104768933016,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.07026838259588862,
+          "rms_m": 0.09140196750604133,
+          "sigma_m_median": 0.11912123505966637,
+          "implied_sigma_over_reported": 0.767302047030147,
+          "frac_within_1sigma": 0.8161764705882353,
+          "p95_abs_m": 0.1737186081352417
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.07511425627757284,
+          "rms_m": 0.09391897112811592,
+          "sigma_m_median": 0.11912123505966637,
+          "implied_sigma_over_reported": 0.7884318113481031,
+          "frac_within_1sigma": 0.7647058823529411,
+          "p95_abs_m": 0.14656598676282456
+        },
+        "img1": {
+          "bias_m": 0.0034072953073055016,
+          "rms_m": 0.05909378755261073,
+          "sigma_m_median": 0.08577213164904582,
+          "implied_sigma_over_reported": 0.6889625618074298,
+          "frac_within_1sigma": 0.8455882352941176,
+          "p95_abs_m": 0.11784062519895984
+        },
+        "img2": {
+          "bias_m": -0.020160098749675764,
+          "rms_m": 0.02633378111209058,
+          "sigma_m_median": 0.08577213164904582,
+          "implied_sigma_over_reported": 0.30702024778678255,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.049157418567446876
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.008376401721185131,
+          "rms_m": 0.04574682368740255,
+          "sigma_m_median": 0.08577213164904582,
+          "implied_sigma_over_reported": 0.5333529994868849,
+          "frac_within_1sigma": 0.9227941176470589,
+          "p95_abs_m": 0.10118880865250379
+        }
+      },
+      "ray_aligned__subframe_measured_physics": {
+        "n_refined": 131,
+        "n": 136,
+        "sigma_along_ray_m_median": 0.06209923215507778,
+        "sigma_perp_m_median": 0.04452924693079888,
+        "bias_along_ray_m_median": 0.05572403771052899,
+        "anisotropy_along_over_perp": 1.3945718024736353,
+        "depth_bias_uncorrected": {
+          "bias_m": -0.0015235345418674107,
+          "rms_m": 0.042144376588401256,
+          "sigma_m_median": 0.06209923215507778,
+          "implied_sigma_over_reported": 0.6786617986379588,
+          "frac_within_1sigma": 0.8602941176470589,
+          "p95_abs_m": 0.07457202926178168
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.057443029570960535,
+          "rms_m": 0.07033738345377266,
+          "sigma_m_median": 0.06209923215507778,
+          "implied_sigma_over_reported": 1.1326610815109934,
+          "frac_within_1sigma": 0.4852941176470588,
+          "p95_abs_m": 0.11809563889659422
+        },
+        "img1": {
+          "bias_m": -0.002734238337344364,
+          "rms_m": 0.029596749902486688,
+          "sigma_m_median": 0.04452924693079888,
+          "implied_sigma_over_reported": 0.664658666886548,
+          "frac_within_1sigma": 0.8897058823529411,
+          "p95_abs_m": 0.06413165349307937
+        },
+        "img2": {
+          "bias_m": 0.0006980593139500212,
+          "rms_m": 0.012339593620135507,
+          "sigma_m_median": 0.04452924693079888,
+          "implied_sigma_over_reported": 0.2771121110427036,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.022877146652108507
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.0010180895116971714,
+          "rms_m": 0.022674139184326654,
+          "sigma_m_median": 0.04452924693079888,
+          "implied_sigma_over_reported": 0.5091965561322792,
+          "frac_within_1sigma": 0.9448529411764706,
+          "p95_abs_m": 0.047227964616783
+        }
+      }
+    },
+    "oblique/no_noise": {
+      "n": 136,
+      "pre_fix_f29145a_isotropic": {
+        "reported_sigma_m_median": 0.05488359643109193,
+        "depth": {
+          "bias_m": 0.12357722944374927,
+          "rms_m": 0.1587017871796802,
+          "sigma_m_median": 0.05488359643109193,
+          "implied_sigma_over_reported": 2.8916069189987437,
+          "frac_within_1sigma": 0.33088235294117646,
+          "p95_abs_m": 0.3290824649388086
+        },
+        "img1": {
+          "bias_m": 0.00429790545848101,
+          "rms_m": 0.050876645339000354,
+          "sigma_m_median": 0.05488359643109193,
+          "implied_sigma_over_reported": 0.9269918272006386,
+          "frac_within_1sigma": 0.7132352941176471,
+          "p95_abs_m": 0.09392356767538369
+        },
+        "img2": {
+          "bias_m": -0.021070321647732898,
+          "rms_m": 0.02732267815342778,
+          "sigma_m_median": 0.05488359643109193,
+          "implied_sigma_over_reported": 0.4978295871651242,
+          "frac_within_1sigma": 0.9411764705882353,
+          "p95_abs_m": 0.056597563629433106
+        }
+      },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.09673157758519482,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": 0.004219768515400653,
+          "rms_m": 0.09692773799212781,
+          "sigma_m_median": 0.09673157758519482,
+          "implied_sigma_over_reported": 1.0020278838806307,
+          "frac_within_1sigma": 0.7205882352941176,
+          "p95_abs_m": 0.1979100455290716
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.008386208094625943,
+          "rms_m": 0.04083480000211968,
+          "sigma_m_median": 0.09673157758519482,
+          "implied_sigma_over_reported": 0.42214549810432966,
+          "frac_within_1sigma": 0.9632352941176471,
+          "p95_abs_m": 0.08249865128326107
+        }
+      },
+      "ray_aligned__measured_physics": {
+        "sigma_along_ray_m_median": 0.09673157758519482,
+        "sigma_perp_m_median": 0.05052023499958463,
+        "bias_along_ray_m_median": 0.11816181475376324,
+        "anisotropy_along_over_perp": 1.914709573025346,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.12357722944374927,
+          "rms_m": 0.1587017871796802,
+          "sigma_m_median": 0.09673157758519482,
+          "implied_sigma_over_reported": 1.6406409482974273,
+          "frac_within_1sigma": 0.4632352941176471,
+          "p95_abs_m": 0.3290824649388086
+        },
+        "depth_bias_corrected": {
+          "bias_m": 0.004219768515400653,
+          "rms_m": 0.09692773799212781,
+          "sigma_m_median": 0.09673157758519482,
+          "implied_sigma_over_reported": 1.0020278838806307,
+          "frac_within_1sigma": 0.7205882352941176,
+          "p95_abs_m": 0.1979100455290716
+        },
+        "img1": {
+          "bias_m": 0.00429790545848101,
+          "rms_m": 0.050876645339000354,
+          "sigma_m_median": 0.05052023499958463,
+          "implied_sigma_over_reported": 1.0070548036726008,
+          "frac_within_1sigma": 0.6691176470588235,
+          "p95_abs_m": 0.09392356767538369
+        },
+        "img2": {
+          "bias_m": -0.021070321647732898,
+          "rms_m": 0.02732267815342778,
+          "sigma_m_median": 0.05052023499958463,
+          "implied_sigma_over_reported": 0.5408264263547552,
+          "frac_within_1sigma": 0.9338235294117647,
+          "p95_abs_m": 0.056597563629433106
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.008386208094625943,
+          "rms_m": 0.04083480000211968,
+          "sigma_m_median": 0.05052023499958463,
+          "implied_sigma_over_reported": 0.808286026429913,
+          "frac_within_1sigma": 0.8014705882352942,
+          "p95_abs_m": 0.08249865128326107
+        }
+      },
+      "ray_aligned__library_defaults": {
+        "sigma_along_ray_m_median": 0.1806239542936366,
+        "sigma_perp_m_median": 0.08462723914991516,
+        "bias_along_ray_m_median": 0.243632607739718,
+        "anisotropy_along_over_perp": 2.1343477124861123,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.12357722944374927,
+          "rms_m": 0.1587017871796802,
+          "sigma_m_median": 0.1806239542936366,
+          "implied_sigma_over_reported": 0.8786308981015997,
+          "frac_within_1sigma": 0.7720588235294118,
+          "p95_abs_m": 0.3290824649388086
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.1225206281404747,
+          "rms_m": 0.15579330753019727,
+          "sigma_m_median": 0.1806239542936366,
+          "implied_sigma_over_reported": 0.8625284954006008,
+          "frac_within_1sigma": 0.6176470588235294,
+          "p95_abs_m": 0.25001756571246503
+        },
+        "img1": {
+          "bias_m": 0.00429790545848101,
+          "rms_m": 0.050876645339000354,
+          "sigma_m_median": 0.08462723914991516,
+          "implied_sigma_over_reported": 0.6011852194406765,
+          "frac_within_1sigma": 0.9044117647058824,
+          "p95_abs_m": 0.09392356767538369
+        },
+        "img2": {
+          "bias_m": -0.021070321647732898,
+          "rms_m": 0.02732267815342778,
+          "sigma_m_median": 0.08462723914991516,
+          "implied_sigma_over_reported": 0.32285914591903797,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.056597563629433106
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.008386208094625943,
+          "rms_m": 0.04083480000211968,
+          "sigma_m_median": 0.08462723914991516,
+          "implied_sigma_over_reported": 0.48252548957412866,
+          "frac_within_1sigma": 0.9522058823529411,
+          "p95_abs_m": 0.08249865128326107
+        }
+      },
+      "ray_aligned__subframe_measured_physics": {
+        "n_refined": 133,
+        "n": 136,
+        "sigma_along_ray_m_median": 0.09160115207739208,
+        "sigma_perp_m_median": 0.04390876936649153,
+        "bias_along_ray_m_median": 0.09197478828627027,
+        "anisotropy_along_over_perp": 2.0861698790241303,
+        "depth_bias_uncorrected": {
+          "bias_m": -0.01443199752361416,
+          "rms_m": 0.04387759599969578,
+          "sigma_m_median": 0.09160115207739208,
+          "implied_sigma_over_reported": 0.47900703216728574,
+          "frac_within_1sigma": 0.9632352941176471,
+          "p95_abs_m": 0.09118479202163973
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.10707519969417799,
+          "rms_m": 0.11569383357944255,
+          "sigma_m_median": 0.09160115207739208,
+          "implied_sigma_over_reported": 1.263017232378202,
+          "frac_within_1sigma": 0.15441176470588236,
+          "p95_abs_m": 0.1621907572337442
+        },
+        "img1": {
+          "bias_m": -0.005049597975855148,
+          "rms_m": 0.017212942840588934,
+          "sigma_m_median": 0.04390876936649153,
+          "implied_sigma_over_reported": 0.3920160616873219,
+          "frac_within_1sigma": 0.9705882352941176,
+          "p95_abs_m": 0.036526635934032915
+        },
+        "img2": {
+          "bias_m": 0.0023221866389411434,
+          "rms_m": 0.007666715703604886,
+          "sigma_m_median": 0.04390876936649153,
+          "implied_sigma_over_reported": 0.1746055700084287,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.01401722144568619
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.0013637056684570024,
+          "rms_m": 0.013324112182680009,
+          "sigma_m_median": 0.04390876936649153,
+          "implied_sigma_over_reported": 0.3034499115989379,
+          "frac_within_1sigma": 0.9852941176470589,
+          "p95_abs_m": 0.024957644144653113
+        }
+      }
+    },
+    "oblique/noise": {
+      "n": 136,
+      "pre_fix_f29145a_isotropic": {
+        "reported_sigma_m_median": 0.054764794464243316,
+        "depth": {
+          "bias_m": 0.11880001275635278,
+          "rms_m": 0.16260484430515187,
+          "sigma_m_median": 0.054764794464243316,
+          "implied_sigma_over_reported": 2.9691491750474626,
+          "frac_within_1sigma": 0.3014705882352941,
+          "p95_abs_m": 0.33417051277174115
+        },
+        "img1": {
+          "bias_m": 0.004518203998091346,
+          "rms_m": 0.051304631111398616,
+          "sigma_m_median": 0.054764794464243316,
+          "implied_sigma_over_reported": 0.9368177423708969,
+          "frac_within_1sigma": 0.7058823529411765,
+          "p95_abs_m": 0.09576933800182207
+        },
+        "img2": {
+          "bias_m": -0.020278945717691784,
+          "rms_m": 0.028017666918877936,
+          "sigma_m_median": 0.054764794464243316,
+          "implied_sigma_over_reported": 0.5115999647761128,
+          "frac_within_1sigma": 0.9485294117647058,
+          "p95_abs_m": 0.05887526043172727
+        }
+      },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.09643821525169922,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.00042364158895743425,
+          "rms_m": 0.10805588573406626,
+          "sigma_m_median": 0.09643821525169922,
+          "implied_sigma_over_reported": 1.120467497786489,
+          "frac_within_1sigma": 0.6544117647058824,
+          "p95_abs_m": 0.20854517500826547
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.007880370859800218,
+          "rms_m": 0.04133494183529159,
+          "sigma_m_median": 0.09643821525169922,
+          "implied_sigma_over_reported": 0.4286157901969601,
+          "frac_within_1sigma": 0.9632352941176471,
+          "p95_abs_m": 0.08504685385175838
+        }
+      },
+      "ray_aligned__measured_physics": {
+        "sigma_along_ray_m_median": 0.09643821525169922,
+        "sigma_perp_m_median": 0.05052172515597775,
+        "bias_along_ray_m_median": 0.11807538475647092,
+        "anisotropy_along_over_perp": 1.9088464408917483,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.11880001275635278,
+          "rms_m": 0.16260484430515187,
+          "sigma_m_median": 0.09643821525169922,
+          "implied_sigma_over_reported": 1.6861038321868653,
+          "frac_within_1sigma": 0.49264705882352944,
+          "p95_abs_m": 0.33417051277174115
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.00042364158895743425,
+          "rms_m": 0.10805588573406626,
+          "sigma_m_median": 0.09643821525169922,
+          "implied_sigma_over_reported": 1.120467497786489,
+          "frac_within_1sigma": 0.6544117647058824,
+          "p95_abs_m": 0.20854517500826547
+        },
+        "img1": {
+          "bias_m": 0.004518203998091346,
+          "rms_m": 0.051304631111398616,
+          "sigma_m_median": 0.05052172515597775,
+          "implied_sigma_over_reported": 1.0154964216483853,
+          "frac_within_1sigma": 0.6911764705882353,
+          "p95_abs_m": 0.09576933800182207
+        },
+        "img2": {
+          "bias_m": -0.020278945717691784,
+          "rms_m": 0.028017666918877936,
+          "sigma_m_median": 0.05052172515597775,
+          "implied_sigma_over_reported": 0.5545667103088397,
+          "frac_within_1sigma": 0.9117647058823529,
+          "p95_abs_m": 0.05887526043172727
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.007880370859800218,
+          "rms_m": 0.04133494183529159,
+          "sigma_m_median": 0.05052172515597775,
+          "implied_sigma_over_reported": 0.8181617256274716,
+          "frac_within_1sigma": 0.8014705882352942,
+          "p95_abs_m": 0.08504685385175838
+        }
+      },
+      "ray_aligned__library_defaults": {
+        "sigma_along_ray_m_median": 0.18040431639096732,
+        "sigma_perp_m_median": 0.08463185473754786,
+        "bias_along_ray_m_median": 0.24345440155973386,
+        "anisotropy_along_over_perp": 2.131636095538964,
+        "depth_bias_uncorrected": {
+          "bias_m": 0.11880001275635278,
+          "rms_m": 0.16260484430515187,
+          "sigma_m_median": 0.18040431639096732,
+          "implied_sigma_over_reported": 0.9013356640134879,
+          "frac_within_1sigma": 0.75,
+          "p95_abs_m": 0.33417051277174115
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.12702195496593635,
+          "rms_m": 0.16606079160081802,
+          "sigma_m_median": 0.18040431639096732,
+          "implied_sigma_over_reported": 0.9204923414411859,
+          "frac_within_1sigma": 0.6102941176470589,
+          "p95_abs_m": 0.2847483259782937
+        },
+        "img1": {
+          "bias_m": 0.004518203998091346,
+          "rms_m": 0.051304631111398616,
+          "sigma_m_median": 0.08463185473754786,
+          "implied_sigma_over_reported": 0.6062094617978016,
+          "frac_within_1sigma": 0.8970588235294118,
+          "p95_abs_m": 0.09576933800182207
+        },
+        "img2": {
+          "bias_m": -0.020278945717691784,
+          "rms_m": 0.028017666918877936,
+          "sigma_m_median": 0.08463185473754786,
+          "implied_sigma_over_reported": 0.33105344324266106,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.05887526043172727
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.007880370859800218,
+          "rms_m": 0.04133494183529159,
+          "sigma_m_median": 0.08463185473754786,
+          "implied_sigma_over_reported": 0.48840879079721844,
+          "frac_within_1sigma": 0.9485294117647058,
+          "p95_abs_m": 0.08504685385175838
+        }
+      },
+      "ray_aligned__subframe_measured_physics": {
+        "n_refined": 131,
+        "n": 136,
+        "sigma_along_ray_m_median": 0.0914726239695253,
+        "sigma_perp_m_median": 0.043914942771575316,
+        "bias_along_ray_m_median": 0.09244289913336795,
+        "anisotropy_along_over_perp": 2.082949861629616,
+        "depth_bias_uncorrected": {
+          "bias_m": -0.010306847700699766,
+          "rms_m": 0.07250914877594679,
+          "sigma_m_median": 0.0914726239695253,
+          "implied_sigma_over_reported": 0.7926868786458305,
+          "frac_within_1sigma": 0.8602941176470589,
+          "p95_abs_m": 0.1478309998912108
+        },
+        "depth_bias_corrected": {
+          "bias_m": -0.1033679207192223,
+          "rms_m": 0.1254910749743672,
+          "sigma_m_median": 0.0914726239695253,
+          "implied_sigma_over_reported": 1.3718976184194234,
+          "frac_within_1sigma": 0.34558823529411764,
+          "p95_abs_m": 0.1952425401794483
+        },
+        "img1": {
+          "bias_m": -0.003149181963857045,
+          "rms_m": 0.027548168821782487,
+          "sigma_m_median": 0.043914942771575316,
+          "implied_sigma_over_reported": 0.6273074057064125,
+          "frac_within_1sigma": 0.9117647058823529,
+          "p95_abs_m": 0.0540406900124476
+        },
+        "img2": {
+          "bias_m": 0.001524479974440157,
+          "rms_m": 0.012478599901936316,
+          "sigma_m_median": 0.043914942771575316,
+          "implied_sigma_over_reported": 0.2841538463762567,
+          "frac_within_1sigma": 0.9926470588235294,
+          "p95_abs_m": 0.026957506738560517
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.000812350994708444,
+          "rms_m": 0.021384773332280536,
+          "sigma_m_median": 0.043914942771575316,
+          "implied_sigma_over_reported": 0.48695892520033496,
+          "frac_within_1sigma": 0.9522058823529411,
+          "p95_abs_m": 0.044167447795821185
+        }
+      }
+    }
+  }
+}
