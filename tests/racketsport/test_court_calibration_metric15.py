@@ -240,7 +240,7 @@ def test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed
     legacy_digest = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     ).hexdigest()
-    assert legacy_digest == "d161a98337131962749783b06935181db95342793894d9ecd32d28db37a14bbf"
+    assert legacy_digest == "d7ddc0d6aee45b19b4b0b22f3851b54ee839d1cdc34407710d00b8a62b874526"
     assert payload["world_pts"][9:12] == [[-3.048, 0.0, 0.0], [0.0, 0.0, 0.0], [3.048, 0.0, 0.0]]
     assert payload["intrinsics"]["dist"][0] == pytest.approx(-0.1789, abs=1e-3)
     assert contract == {

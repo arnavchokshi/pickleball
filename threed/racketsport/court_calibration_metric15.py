@@ -472,7 +472,7 @@ def fit_single_view_metric_camera(
     if len(parsed) > 1:
         runners = sorted((score, name) for name, score in variant_scores.items() if name != best_variant)
         variant_notes.append(
-            f"object-point variant '{best_variant}' selected on {CROSS_VALIDATION} held-out "
+            f"object-point variant '{best_variant}' selected on {CROSS_VALIDATION} "
             f"{selection_metric} {variant_scores[best_variant]:.4f}, against "
             + ", ".join(f"'{name}' {score:.4f}" for score, name in runners)
             + ". The pixels cannot say which world height a label source meant; the held-out "
@@ -954,9 +954,7 @@ def metric_calibration_from_reviewed_keypoints_15pt(
             }
         )
 
-    metric_confidence = _confidence_from_reprojection(
-        fit.reprojection_error_px, held_out_median_px=fit.held_out_median_px
-    )
+    metric_confidence = _confidence_from_reprojection(fit.reprojection_error_px)
 
     base_quality = score_capture_quality(
         corners_visible=len(PICKLEBALL_COURT_KEYPOINT_NAMES),
@@ -975,6 +973,9 @@ def metric_calibration_from_reviewed_keypoints_15pt(
         provenance_reasons.append(
             f"held_out_median_plane_error_{fit.held_out_median_plane_error_m:.4f}m"
         )
+    advisory = held_out_confidence_would_be(fit.held_out_median_px)
+    if advisory is not None:
+        provenance_reasons.append(f"advisory_held_out_metric_confidence={advisory}")
     reasons = list(
         dict.fromkeys(
             [
@@ -1028,35 +1029,39 @@ def metric_calibration_from_reviewed_keypoints_15pt(
     return CourtCalibration.model_validate(payload)
 
 
-_CONFIDENCE_ORDER = ("low", "med", "high")
+def _confidence_from_reprojection(error: ReprojectionError) -> str:
+    """Unchanged: training-residual thresholds, so before/after stays comparable.
 
-
-def _confidence_from_reprojection(
-    error: ReprojectionError, *, held_out_median_px: float | None = None
-) -> str:
-    """Confidence from the training residual, capped by what held-out data supports.
-
-    The training thresholds are unchanged, so before/after comparisons stay
-    apples-to-apples. The cap can only ever lower the grade: a fit that looks tight
-    on the 15 points it was fit to, but predicts a held-out point badly, has not
-    earned the higher label.
+    Deliberately NOT tightened to use the held-out median, even though the
+    held-out number is the more honest basis. `metric_confidence` is what the
+    in/out gate abstains on, and moving that threshold is trust-band policy owned
+    elsewhere. The held-out numbers are published in `capture_quality.reasons`
+    and in the fit's `model_selection` so that owner can adopt them; applying
+    them here would silently demote clips (indoor and outdoor both go med -> low
+    under a held-out rule) as a side effect of a fit change.
     """
 
     if error.median <= 2.0 and error.p95 <= 5.0:
-        grade = "high"
-    elif error.median <= 6.0 and error.p95 <= 15.0:
-        grade = "med"
-    else:
-        grade = "low"
+        return "high"
+    if error.median <= 6.0 and error.p95 <= 15.0:
+        return "med"
+    return "low"
+
+
+def held_out_confidence_would_be(held_out_median_px: float | None) -> str | None:
+    """What `metric_confidence` would read under a held-out rule, for the gate owner.
+
+    Advisory only -- nothing in this module consumes it. Published so the trust-band
+    owner can see the cost of adopting held-out thresholds before adopting them.
+    """
+
     if held_out_median_px is None or not math.isfinite(held_out_median_px):
-        return grade
+        return None
     if held_out_median_px <= 2.0:
-        cap = "high"
-    elif held_out_median_px <= 6.0:
-        cap = "med"
-    else:
-        cap = "low"
-    return min(grade, cap, key=_CONFIDENCE_ORDER.index)
+        return "high"
+    if held_out_median_px <= 6.0:
+        return "med"
+    return "low"
 
 
 def _net_label_height_variants(
