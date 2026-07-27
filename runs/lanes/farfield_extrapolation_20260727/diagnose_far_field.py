@@ -240,8 +240,43 @@ def main() -> int:
             }
         )
 
+    # --- 5. the distortion question, with a full refit at each candidate ----
+    # Not the frozen-camera sweep of step 2 but the honest version: focal AND
+    # pose are re-fit under each candidate k1, then the six bounces are
+    # re-solved and leave-one-out is re-scored. This is the comparison the
+    # calibration lane's refusal rests on, extended to the four far bounces the
+    # refusal never looked at.
+    refit_rows = []
+    for k1 in (-0.20, -0.10, -0.05, 0.0, 0.05, 0.10, 0.16, 0.20):
+        errors = []
+        for index in range(len(image)):
+            mask = np.ones(len(image), bool)
+            mask[index] = False
+            _, _, fold = fit_focal(image[mask], world[mask], k1)
+            point = back_project(fold, image[index], world[index][2])
+            errors.append(
+                float(math.hypot(point[0] - world[index][0], point[1] - world[index][1]))
+                if point is not None
+                else float("nan")
+            )
+        _, focal, fit = fit_focal(image, world, k1)
+        court_x = {}
+        for frame, pixel in bounces:
+            point = back_project(fit, pixel, BALL_RADIUS_M)
+            court_x[str(frame)] = None if point is None else round(float(point[0]), 4)
+        refit_rows.append(
+            {
+                "brown_k1": k1,
+                "refit_focal_px": round(float(focal), 2),
+                "leave_one_out_median_plane_error_m": round(float(np.median(errors)), 4),
+                "leave_one_out_p95_plane_error_m": round(float(np.percentile(errors, 95)), 4),
+                "bounce_court_x_m": court_x,
+            }
+        )
+
     report = {
         "policy": "calibration_extrapolation_v1",
+        "distortion_refit_sweep": refit_rows,
         "clip_id": labels.get("clip_id"),
         "calibration": {
             "intrinsics_source": calibration["intrinsics"]["source"],
@@ -284,6 +319,18 @@ def main() -> int:
     for row in distortion_rows:
         worst = max(abs(value) for value in row["k1"].values())
         print("  frame %-4s %.4f" % (row["frame"], worst))
+    print("\nfull refit (focal+pose) under each candidate distortion:")
+    print("  brown_k1  focal_px  LOO_median_m  court_x@414_m")
+    for row in refit_rows:
+        print(
+            "  %+8.2f  %8.2f  %12.4f  %13s"
+            % (
+                row["brown_k1"],
+                row["refit_focal_px"],
+                row["leave_one_out_median_plane_error_m"],
+                row["bounce_court_x_m"].get("414"),
+            )
+        )
     print("\nresampled refit spread of court_x, metres:")
     for row in spread_rows:
         print(

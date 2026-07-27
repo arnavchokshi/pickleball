@@ -1,0 +1,212 @@
+{
+ "lane": "farfield_extrapolation_20260727",
+ "branch": "farfield-20260727",
+ "base_commit": "e46a190",
+ "date": "2026-07-27",
+ "verified": 0,
+ "verified_note": "Nothing here makes a position more accurate. It stops the pipeline presenting extrapolated positions as trustworthy and puts a number on how far past its own evidence each position sits.",
+
+ "diagnosis": {
+  "premise_reproduced": true,
+  "named_mechanism": "uncorrected barrel distortion back-projecting edge pixels too close to the centre",
+  "named_mechanism_verdict": "refuted",
+  "clip": "outdoor_webcam_20s_fullmesh_final",
+  "correspondence_radius_pct_of_half_diagonal": {
+   "count": 15,
+   "min": 2.0,
+   "median": 32.6,
+   "max": 50.01,
+   "structural_note": "The two outermost correspondences ARE the near-baseline corners. The pickleball court projects into 50% of this frame's radius, so no court keypoint can ever supply leverage past 50% on this camera."
+  },
+  "bounces": [
+   {"frame": 124, "radius_pct": 15.09, "court_x_m": 0.7534, "metres_outside_sideline": -2.2946, "envelope_verdict": "within_calibrated_envelope"},
+   {"frame": 168, "radius_pct": 17.93, "court_x_m": 1.1533, "metres_outside_sideline": -1.8947, "envelope_verdict": "within_calibrated_envelope"},
+   {"frame": 368, "radius_pct": 42.79, "court_x_m": -3.1628, "metres_outside_sideline": 0.1148, "envelope_verdict": "within_calibrated_envelope"},
+   {"frame": 388, "radius_pct": 56.22, "court_x_m": -3.6994, "metres_outside_sideline": 0.6514, "envelope_verdict": "extrapolated"},
+   {"frame": 402, "radius_pct": 68.21, "court_x_m": -4.0728, "metres_outside_sideline": 1.0248, "envelope_verdict": "far_extrapolated"},
+   {"frame": 414, "radius_pct": 79.58, "court_x_m": -4.4410, "metres_outside_sideline": 1.3930, "envelope_verdict": "far_extrapolated"}
+  ],
+
+  "discriminating_test_a_plumb_lines": {
+   "principle": "A straight world line images as a straight image line under any rectilinear pinhole, whatever the pose or focal length. Curvature is distortion and nothing else, so this is independent of the ball travelling further out while also travelling toward the frame edge.",
+   "camera_static_check_px": 0.53,
+   "sign_convention_asserted_against_synthetic_brown_lines": true,
+   "control": {
+    "structure": "composited broadcast scoreboard separator (drawn after the lens)",
+    "radius_pct_span": [49.0, 91.2],
+    "straight_line_rms_px": 0.002,
+    "implied_brown_k1": -0.0,
+    "reading": "The measurement is unbiased at exactly the radii in dispute."
+   },
+   "lines": [
+    {"structure": "sponsor-wall top edge (physical)", "points": 778, "radius_pct_span": [44.2, 85.7], "straight_line_rms_px": 0.751, "implied_brown_k1": 0.052, "rms_px_zero_to_best": [0.751, 0.259]},
+    {"structure": "highlight strip above the wall (physical)", "points": 796, "radius_pct_span": [44.6, 87.8], "straight_line_rms_px": 0.753, "implied_brown_k1": 0.038, "rms_px_zero_to_best": [0.753, 0.524]},
+    {"structure": "wall meets the surround (physical)", "points": 500, "radius_pct_span": [27.0, 64.0], "straight_line_rms_px": 0.63, "implied_brown_k1": 0.162, "rms_px_zero_to_best": [0.63, 0.391]},
+    {"structure": "painted near baseline (physical)", "points": 256, "radius_pct_span": [15.3, 48.9], "straight_line_rms_px": 0.207, "implied_brown_k1": 0.004, "rms_px_zero_to_best": [0.207, 0.207]},
+    {"structure": "painted far baseline (physical)", "points": 285, "radius_pct_span": [19.7, 32.5], "straight_line_rms_px": 0.223, "implied_brown_k1": 0.004, "rms_px_zero_to_best": [0.223, 0.223]}
+   ],
+   "conclusion": "The measured sign is PINCUSHION, the opposite of the barrel term the hypothesis needs; correcting it would move far-field points further TOWARD the court. The three physical lines disagree with each other (+0.038 / +0.052 / +0.162), so part of the bow is the wall rather than one lens coefficient."
+  },
+
+  "discriminating_test_b_magnitude_bound": {
+   "frozen_camera_sweep_max_abs_court_x_shift_m": {
+    "124": 0.0008, "168": 0.0027, "368": 0.0318, "388": 0.059, "402": 0.0902, "414": 0.1296
+   },
+   "full_refit_sweep_court_x_at_frame_414_m": {
+    "-0.20": -4.4879, "-0.10": -4.4632, "-0.05": -4.4518, "0.00": -4.441,
+    "0.05": -4.4306, "0.10": -4.4208, "0.16": -4.4095, "0.20": -4.4024
+   },
+   "total_range_over_the_whole_sweep_m": 0.0855,
+   "conclusion": "Across a distortion sweep far wider than the image evidence admits, frame 414's court x moves 0.0855 m in total. The owner reports a metre-scale discrepancy. Distortion is a centimetre-scale term here and the measured sign moves the ball the wrong way.",
+   "why": "At fx=2537.9 a pixel at r=876 px sits at normalised radius 0.345, so r^2=0.119 and even k1=0.2 perturbs the ray angle by 2.4%. A metre at 14 m depth needs ~7% angular error, i.e. k1 ~ 0.6, a model that folds back on itself inside the frame and has no inverse."
+  },
+
+  "what_the_evidence_does_support": [
+   "The extrapolation is real and unvalidated: three of six labelled bounces are back-projected by a model with no correspondence within 6-30 percentage points of their radius, and no test in this repo has leverage there.",
+   "Within the models this pipeline can express, the far-field positions cannot be metres wrong: 55 resampled refits disagree about frame 414 by sd 0.0205 m / range 0.0800 m, with the spread growing monotonically with radius (0.0091 -> 0.0205 m from 15% to 80%).",
+   "A much better candidate for the reported symptom: the pipeline's own solved track emits world_xyz for frames 158-390 ONLY. The labelled bounces at 402 and 414 are banded hidden with world_xyz null, and virtual_world.json has no ball past frame 360. The last rendered position is frame 390 at x=-3.811 while the video shows the ball reaching -4.441. The render stops short. That is a coverage failure, not a camera-model failure."
+  ],
+  "resampled_refit_caveat": "Every refit is the same model class fit to the same central correspondences. Their agreement bounds sampling noise, never model-class error. It is not an accuracy bound.",
+  "render_coverage_candidate_confidence": "strong candidate, not confirmed - the render itself was not viewed",
+
+  "epistemic_lesson": "A held-out validation whose held-out samples share the training distribution's blind spot is not independent validation. The outdoor leave-one-out refit focal, distortion and pose per fold and scored in metres on unseen data, and still could not see past 50% radius, because no fold ever contained a point past 50% radius. The protocol was sound; the sampling frame was the defect. Any calibration whose correspondences are court keypoints inherits the same ceiling."
+ },
+
+ "envelope_design": {
+  "module": "threed/racketsport/calibration_extrapolation.py",
+  "policy": "calibration_extrapolation_v1",
+  "schema_version": 1,
+  "computed_from": "the calibration's own image_pts, so no artifact must be regenerated for the envelope to exist",
+  "geometry": "radial about the frame centre",
+  "geometry_rationale": "That is the axis along which a rectilinear model degrades: an unmodelled distortion term and a focal length fit against one are both radial. The correspondence bounding box is carried as descriptive provenance but does NOT decide the verdict - a court seen from behind a baseline is never azimuthally uniform, so a box test would fire on nearly every pixel.",
+  "calibrated_radius": "the MAXIMUM correspondence radius, not a percentile, so the model is credited with everything it saw and the gate errs towards silence",
+  "tiers": {
+   "extrapolated": {"threshold": "r > r_cal", "consequence": "keep the position, widen sigma, never promote"},
+   "far_extrapolated": {"threshold": "r > 2**(1/3) * r_cal ~ 1.2599 r_cal", "consequence": "keep the position, do not use as evidence about accuracy", "rationale": "exactly where the unvalidated radial term first equals the entire residual the calibration measured, i.e. (r/r_cal)^3 - 1 = 1"}
+  },
+  "nothing_is_suppressed": "Deliberate divergence from ball_position_plausibility, whose hard absurd tier suppresses. A ball twenty metres underground is not a measurement of anything; an extrapolated position may be entirely correct. Deleting a real observation because we cannot vouch for it is a worse lie than labelling it.",
+  "allowance_model": {
+   "formula": "allowance_px = eps_px * max(0, (r / r_cal)**3 - 1)",
+   "derivation": "The first term any rectilinear fit leaves unmodelled is radial and cubic. A cubic term of amplitude a displaces a pixel at radius r by a*r^3. The fit could not have detected it if its displacement at r_cal stayed inside the fit's own residual eps_px, so a <= eps_px / r_cal^3, and at query radius r the term the calibration cannot exclude is bounded by eps_px*(r/r_cal)^3. Subtract the part the residual already covers.",
+   "eps_px_source": "the calibration's own median reprojection error",
+   "eps_px_caveat": "in-sample, the same caveat calib_distortion_fit_20260726 REPORT.md 3.1 raises about the plane-residual floor, so the allowance is a LOWER bound on the unvalidated term",
+   "zero_inside_calibrated_radius": true,
+   "ratio_cap": 3.0
+  },
+  "outdoor_allowances_px": {"368": 0.0, "388": 1.999, "402": 7.344, "414": 14.488},
+  "wired_into": [
+   "ball_arc_solver.anchor_uncertainty_for_bounce - new term 5, converted to metres with the ray-plane sensitivity term 1 already finite-differences; one localised block, no signature change, because the sub-frame timing lane is concurrently editing term 2",
+   "ball_label_geometry.pixel_extrapolation",
+   "ball_label_schema.BallLabel.extrapolation - optional, emitted only when computed",
+   "ball_label_studio records it on every label it writes",
+   "calibration_extrapolation.with_calibration_envelope - additive and idempotent calibration block with provenance; does NOT edit the metric-15pt fit path another lane owns"
+  ],
+  "sigma_effect_along_ray_m": [
+   {"frame": 124, "radius_pct": 15.1, "off": 0.147379, "on": 0.147379, "verdict": "within_calibrated_envelope"},
+   {"frame": 168, "radius_pct": 17.9, "off": 0.195415, "on": 0.195415, "verdict": "within_calibrated_envelope"},
+   {"frame": 368, "radius_pct": 42.8, "off": 0.155411, "on": 0.155411, "verdict": "within_calibrated_envelope"},
+   {"frame": 388, "radius_pct": 56.2, "off": 0.148175, "on": 0.153490, "verdict": "extrapolated"},
+   {"frame": 402, "radius_pct": 68.2, "off": 0.143177, "on": 0.189758, "verdict": "far_extrapolated"},
+   {"frame": 414, "radius_pct": 79.6, "off": 0.140165, "on": 0.259706, "verdict": "far_extrapolated"}
+  ]
+ },
+
+ "product_wide_impact": {
+  "source": "runs/lanes/farfield_extrapolation_20260727/impact.json",
+  "method_note": "Each emitted position is re-keyed to the pixel it PROJECTS to rather than the stored detection xy, because bridged and physics-filled frames carry the sentinel [0.0, 0.0], which sits exactly on the frame corner. Trusting it inflated the count from 1305 to 3026 with positions never observed there.",
+  "emitted_position_count": 13329,
+  "extrapolated_frame_count": 1305,
+  "extrapolated_fraction": 0.0979,
+  "far_extrapolated_frame_count": 714,
+  "by_clip": [
+   {"clip": "outdoor", "extrapolated": 426, "evaluated": 920, "far": 338, "calibrated_to_pct": 50.01, "worst_emitted_pct": 169.5},
+   {"clip": "wolverine_mixed_0200_mid_steep_corner", "extrapolated": 255, "evaluated": 3304, "far": 115, "calibrated_to_pct": 83.31, "worst_emitted_pct": 395.92},
+   {"clip": "outdoor_webcam_iynbd_1500_long_high_baseline", "extrapolated": 271, "evaluated": 1757, "far": 78, "calibrated_to_pct": 50.01, "worst_emitted_pct": 69.44},
+   {"clip": "wolverine", "extrapolated": 174, "evaluated": 901, "far": 144, "calibrated_to_pct": 83.31, "worst_emitted_pct": 307.14},
+   {"clip": "source", "extrapolated": 45, "evaluated": 460, "far": 13, "calibrated_to_pct": 50.01, "worst_emitted_pct": 69.31},
+   {"clip": "xkadsq9bli3h", "extrapolated": 26, "evaluated": 26, "far": 26, "calibrated_to_pct": 37.86, "worst_emitted_pct": 73.7},
+   {"clip": "outdoor_webcam_20s_fullmesh_final", "extrapolated": 11, "evaluated": 202, "far": 0, "calibrated_to_pct": 50.01, "worst_emitted_pct": 58.26},
+   {"clip": "manager_rebuild_wolverine_20260702T23Z", "extrapolated": 16, "evaluated": 295, "far": 0, "calibrated_to_pct": 83.31, "worst_emitted_pct": 88.23},
+   {"clip": "manager_stage_sam3d_wolverine_20260703T0843Z", "extrapolated": 16, "evaluated": 295, "far": 0, "calibrated_to_pct": 83.31, "worst_emitted_pct": 88.23},
+   {"clip": "manager_stage_sam3d_wolverine_v2_20260703T0939Z", "extrapolated": 16, "evaluated": 295, "far": 0, "calibrated_to_pct": 83.31, "worst_emitted_pct": 88.23},
+   {"clip": "manager_stage_sam3d_wolverine_v4_20260703T1922Z", "extrapolated": 16, "evaluated": 295, "far": 0, "calibrated_to_pct": 83.31, "worst_emitted_pct": 88.23},
+   {"clip": "v4_staged", "extrapolated": 16, "evaluated": 295, "far": 0, "calibrated_to_pct": 83.31, "worst_emitted_pct": 88.23},
+   {"clip": "wolverine_regen", "extrapolated": 16, "evaluated": 295, "far": 0, "calibrated_to_pct": 83.31, "worst_emitted_pct": 88.23},
+   {"clip": "wolverine_v1_chain", "extrapolated": 1, "evaluated": 75, "far": 0, "calibrated_to_pct": 83.31, "worst_emitted_pct": 88.09}
+  ],
+  "notable": "Several positions reproject past 100% of the half-diagonal, i.e. outside the frame entirely: a position claiming to have been seen where the camera cannot see. Those overlap frames ball_position_plausibility already calls implausible, reached from a different direction."
+ },
+
+ "outdoor_distortion_refusal": {
+  "prior_decision": "calib_distortion_fit_20260726 refused distortion for outdoor: held-out plane error 0.1273 zero / 0.1304 k1 / 0.1296 k1k2",
+  "objection": "every held-out point was also central, so the test had no leverage where the extrapolation happens",
+  "leverage_built": "court-adjacent straight structures at 27-88% radius, via the plumb-line test",
+  "verdict": "refusal corroborated for barrel distortion, and the question turns out not to matter for the far field",
+  "evidence": [
+   "High-radius image evidence shows PINCUSHION, k1 = +0.038..+0.162, not the barrel a pulled-toward-the-court error would need, and it disagrees line-to-line so some of it is the wall.",
+   "Leave-one-out is flat across the whole sweep: 0.1250 m at k1 = -0.20 through 0.1300 m at k1 = +0.16. Best and worst differ by 4% against a 15% acceptance gate. Leave-one-out on these 15 points cannot resolve distortion at all - now measured rather than inferred.",
+   "After a full focal+pose refit, the entire admissible distortion range moves frame 414 by 0.0855 m."
+  ],
+  "recommendation": "Do NOT reverse the refusal. Zero distortion remains the right shipped model and there is now positive high-radius evidence that the missing term is not barrel.",
+  "what_cannot_be_claimed": "That the outdoor camera has no radial distortion at all. The plumb lines weakly favour a small pincushion term the leave-one-out is blind to. The refusal is correct for the term that mattered and irrelevant at the scale in dispute."
+ },
+
+ "owner_label_recommendation": {
+  "headline": "Keep all four, do not re-derive, flag three, and stop treating any of them as accuracy evidence at high radius.",
+  "per_label": [
+   {"frame": 368, "radius_pct": 42.8, "verdict": "within_calibrated_envelope", "action": "keep unflagged", "reason": "Inside the 50.0% the correspondences reach. It is out of BOUNDS (0.115 m outside the sideline) but out-of-court is a court fact and out-of-envelope is a camera fact. The brief grouped it with the other three; the measurement separates it."},
+   {"frame": 388, "radius_pct": 56.2, "verdict": "extrapolated", "action": "keep, flag, widen sigma", "sigma_along_ray_m": [0.148175, 0.153490]},
+   {"frame": 402, "radius_pct": 68.2, "verdict": "far_extrapolated", "action": "keep, flag, widen sigma", "sigma_along_ray_m": [0.143177, 0.189758]},
+   {"frame": 414, "radius_pct": 79.6, "verdict": "far_extrapolated", "action": "keep, flag, widen sigma", "sigma_along_ray_m": [0.140165, 0.259706]}
+  ],
+  "do_not_re_derive": "There is nothing to re-derive to: every admissible camera model puts frame 414 between -4.49 and -4.40 m. Re-deriving under a different distortion would move it by centimetres and would be choosing a model on no evidence.",
+  "do_not_delete": "The clicks are correct. The positions are the best this camera can give, and the honest complaint about them is that their uncertainty was understated, which the new term fixes.",
+  "do_not_use_as_validation": "They are the only far-field data we have and they were produced by the model under test.",
+  "artifact_support": "BallLabel.extrapolation carries the verdict; BallLabelSet.summary() reports extrapolated_ground_truth_candidate_count and a by_extrapolation_verdict breakdown. is_ground_truth_candidate is deliberately unchanged - the click being correct and the camera model under it being unvalidated are different claims and are counted separately.",
+  "bigger_service_to_the_owner": "The render has no ball at all for frames 391+, so the labelled bounces at 402 and 414 are not merely mispositioned in the render, they are absent. That is a ball-track coverage ticket, not a calibration one."
+ },
+
+ "tests": {
+  "new_suite": {"command": "python3 -m pytest tests/racketsport/test_calibration_extrapolation.py -q -p no:cacheprovider", "result": "38 passed, 6 warnings in 0.25s", "exit_code": 0},
+  "label_surfaces": {"command": "python3 -m pytest tests/racketsport/test_ball_label_studio.py tests/racketsport/test_owner_ball_label_ingest.py -q -p no:cacheprovider", "result": "61 passed, 6 warnings in 13.93s", "exit_code": 0},
+  "real_label_artifact_round_trip": "BallLabelSet.from_json_dict(...).to_json_dict() reproduces the existing outdoor label set's `labels` list identically",
+  "arc_solver": {"command": "python3 -m pytest tests/racketsport/test_ball_arc_solver.py -q -p no:cacheprovider", "result": "1 failed, 64 passed, 1 skipped, 6 warnings in 52.52s", "exit_code": 1, "attribution": "test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds is PRE-EXISTING. The fixture was solved directly at e46a190 and on the branch; both give identical status degraded / segment_budget_exceeded / blocked:segment_budget_exceeded. Run three times each side, it fails identically at 'degraded' == 'ran'. The segment budget is wall-clock, so the failure point moves with machine load."},
+  "wide_suite": {
+   "file_list": "runs/lanes/farfield_extrapolation_20260727/suite_filelist.txt (135 files on branch, 134 at base)",
+   "base": {"commit": "e46a190", "result": "30 failed, 1084 passed, 8 skipped, 14 warnings in 293.76s", "exit_code": 1, "log": "suite_base_e46a190.txt"},
+   "branch": {"result": "24 failed, 1128 passed, 8 skipped, 14 warnings in 372.43s", "exit_code": 1, "log": "suite_branch.txt"},
+   "diff_of_sorted_failed_lists": "six lines present only at base, zero present only on the branch",
+   "new_failures": 0,
+   "passing_delta": "+44 = 38 new tests plus 6 environment",
+   "base_only_failures_attribution": "all in test_ball_stage2_training.py, all FileNotFoundError on data/online_harvest_20260706/rallies, models/checkpoints/wasb/wasb_tennis_best.pth.tar and runs/lanes/ball_b1b2_prep_20260721/schema_valid_sample_manifest.json. The base tree was extracted with git archive and lacks gitignored data the worktree has. Environment, not code - that file still has 8 such failures on the branch."
+  },
+  "collection": {"command": "python3 -m pytest tests/racketsport -q -p no:cacheprovider --co", "result": "4536 tests collected, 30 errors in 44.01s", "exit_code": 2, "attribution": "the same 30 collection errors the calibration lane recorded, all missing model artifacts in this CPU-only environment"},
+  "structure_checks": {
+   "list_scaffold_tools": {"command": "python3 scripts/racketsport/list_scaffold_tools.py --root .", "exit_code": 0, "note": "output byte-identical to base (diff exit 0). No new CLI: the three lane scripts live under runs/lanes/, following calib_distortion_fit_20260726/refit_and_measure.py."},
+   "audit_dead_code": {"command": "python3 scripts/racketsport/audit_dead_code.py --root .", "exit_code": 1, "status": "PRE-EXISTING", "note": "same two unknown files both sides (scripts/tt3d/run_tt3d_validation.py, scripts/tt3d/tt3d_adapter.py). Measured by removing this lane's new files and re-running: only diff is python_sources 649 -> 650, the new calibration_extrapolation.py, which is recognised. unknown_python_sources stays 2."},
+   "audit_storage_policy": {"command": "python3 scripts/racketsport/audit_storage_policy.py --root . --json", "exit_code": 1, "status": "PRE-EXISTING, CONFIRMED UNCHANGED", "note": "same NotADirectoryError on .git - the checker assumes .git is a directory and a git worktree makes it a file"}
+  }
+ },
+
+ "scope": {
+  "not_touched": [
+   "court_calibration_metric15.py and the promotion pointer - the envelope is derived from the artifact's own image_pts and offered as an additive block, so the calibration-promotion lane can adopt it without a merge conflict. The refit used for evidence is a local reimplementation inside diagnose_far_field.py (reproduces the shipped focal to 0.06 px), not an import.",
+   "ball_position_plausibility.py - this gate is a sibling, not a rewrite",
+   "any run directory that was scanned; the main worktree was read only"
+  ],
+  "ball_arc_solver_collision_note": "Two edits, both in anchor_uncertainty_for_bounce, both outside the sub-frame timing lane's hunks (their term 2 and the signature; mine is a new term 5 and the combine block). No signature change on purpose. If it still conflicts, the whole hunk is the '--- 5. radial extrapolation' block plus '+ extrapolation_along_m**2' and '+ extrapolation_perp_m**2' in the two math.sqrt calls."
+ },
+
+ "incident": {
+  "what": "git stash was run in this worktree while measuring before/after sigmas. Git stashes are shared across all worktrees of a repository, so the pop took another session's entry (WIP on main: 253ebd32e DinkVision UI repair), conflicted on runs/manager/inflight_lanes.md, and it was then dropped.",
+  "resolution": "The stash was restored from its still-live commit d90c3862db9c7f14d5e3ca827086b6af0fcae1ab via git stash store and is back as stash@{0}. runs/manager/inflight_lanes.md was reset to HEAD in this worktree; nothing else was touched.",
+  "prevention": "Never use git stash in a shared-repo worktree. The base comparison here was done with git archive into a scratch directory instead."
+ },
+
+ "reproduce": [
+  "python3 runs/lanes/farfield_extrapolation_20260727/diagnose_far_field.py --run <run dir> --labels <ball_human_labels.json> --out runs/lanes/farfield_extrapolation_20260727/diagnosis.json",
+  "python3 runs/lanes/farfield_extrapolation_20260727/plumbline_distortion_test.py --frames <dir of NNNNNN.jpg> --out runs/lanes/farfield_extrapolation_20260727/plumbline.json",
+  "python3 runs/lanes/farfield_extrapolation_20260727/measure_envelope_impact.py --root <repo> --out runs/lanes/farfield_extrapolation_20260727/impact.json"
+ ],
+ "reproduce_note": "All three are read-only and CPU-only; together about three minutes. The run directory and frames used here (runs/full_mesh_examples_20260725/... and runs/lanes/ball_label_tool_20260726/labels/outdoor_webcam_20s/frames/) are not present at e46a190; they were read from the main worktree."
+}
