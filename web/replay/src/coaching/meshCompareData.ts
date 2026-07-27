@@ -279,7 +279,13 @@ async function loadNativeMeshSource({
     }
     const chunkUrl = resolveManifestChildUrl(indexUrl, window.url);
     const chunkAsset = await fetchBinaryAsset(chunkUrl, fetchImpl);
-    assertEvidenceSha256(comparison, evidenceRole, "racketsport_body_mesh_chunk", chunkUrl, chunkAsset.sha256);
+    assertEvidenceSha256(
+      comparison,
+      evidenceRole,
+      "racketsport_body_mesh_chunk_decoded",
+      chunkUrl,
+      chunkAsset.sha256,
+    );
     const integrityUrl = appendIntegrityQuery(window.url, chunkAsset.sha256);
     const resolvedIntegrityUrl = resolveBodyMeshAssetUrl(indexUrl, integrityUrl);
     verifiedChunkBytes.set(resolvedIntegrityUrl, chunkAsset.bytes);
@@ -343,9 +349,23 @@ async function fetchBinaryAsset(
   const response = await fetchImpl(url);
   if (!response.ok) throw new Error(`asset request failed (${response.status}): ${url}`);
   const bytes = new Uint8Array(await response.arrayBuffer());
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  // Browsers transparently decode a `.gz` response when the server declares
+  // `Content-Encoding: gzip`, while file-backed tests receive the compressed
+  // bytes. Bind integrity to the canonical decoded chunk so both transports
+  // verify the same immutable BODY payload.
+  const canonicalBytes = await canonicalBodyMeshChunkBytes(bytes);
+  const digest = await crypto.subtle.digest("SHA-256", canonicalBytes);
   const sha256 = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
   return { bytes, sha256 };
+}
+
+async function canonicalBodyMeshChunkBytes(bytes: Uint8Array): Promise<Uint8Array> {
+  if (bytes.length < 2 || bytes[0] !== 0x1f || bytes[1] !== 0x8b) return bytes;
+  if (typeof DecompressionStream === "undefined") {
+    throw new Error("gzip mesh integrity verification is unavailable in this runtime");
+  }
+  const stream = new Blob([bytes.slice().buffer]).stream().pipeThrough(new DecompressionStream("gzip"));
+  return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
 function assertEvidenceSha256(

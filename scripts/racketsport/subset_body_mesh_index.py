@@ -35,6 +35,25 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _gzip_payload_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with gzip.open(path, "rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _output_asset_provenance(path: Path) -> dict[str, Any]:
+    item: dict[str, Any] = {
+        "path": str(path.resolve()),
+        "sha256": _sha256(path),
+        "bytes": path.stat().st_size,
+    }
+    if path.name.endswith(".gz"):
+        item["canonical_payload_sha256"] = _gzip_payload_sha256(path)
+    return item
+
+
 def _read_json(path: Path) -> Mapping[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(value, Mapping):
@@ -345,14 +364,7 @@ def main(argv: list[str] | None = None) -> int:
         output_assets.append(compact_world_path)
     if compact_manifest_path is not None:
         output_assets.append(compact_manifest_path)
-    provenance["output_assets"] = [
-        {
-            "path": str(path.resolve()),
-            "sha256": _sha256(path),
-            "bytes": path.stat().st_size,
-        }
-        for path in output_assets
-    ]
+    provenance["output_assets"] = [_output_asset_provenance(path) for path in output_assets]
     provenance_path = out_dir / "subset_provenance.json"
     provenance_path.write_text(json.dumps(provenance, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(

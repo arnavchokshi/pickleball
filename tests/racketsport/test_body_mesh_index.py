@@ -438,6 +438,8 @@ def test_subset_body_mesh_index_cli_preserves_dense_frames_without_skeleton_fall
     assert provenance["vertex_count"] == 3
     assert provenance["skeleton_fallback"] is False
     assert len(provenance["output_assets"]) == 5
+    chunk_provenance = next(asset for asset in provenance["output_assets"] if asset["path"].endswith(".gz"))
+    assert len(chunk_provenance["canonical_payload_sha256"]) == 64
     assert compact_manifest["mesh_status"] == "windowed_index"
     assert compact_manifest["body_mesh_index_url"] == "body_mesh_index.json"
     assert compact_world["summary"]["floor_placed_player_frame_count"] == 1
