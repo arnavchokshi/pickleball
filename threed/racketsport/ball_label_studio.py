@@ -80,6 +80,7 @@ from .ball_label_schema import (
     write_label_set,
 )
 from .ball_label_studio_page import HTML, SAVE_TOKEN_PLACEHOLDER
+from .ball_position_plausibility import BallPlausibilityBounds, evaluate_position
 from .court_templates import get_court_template
 from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
 
@@ -180,6 +181,7 @@ class ClipBundle:
     detections: dict[int, dict[str, Any]] = field(default_factory=dict)
     candidates: dict[int, list[dict[str, Any]]] = field(default_factory=dict)
     prefill: dict[int, dict[str, Any]] = field(default_factory=dict)
+    prefill_refused_implausible: int = 0
     players: list[dict[str, Any]] = field(default_factory=list)
     bounce_candidate_frames: list[int] = field(default_factory=list)
     physics: dict[str, Any] = field(default_factory=lambda: dict(DEFAULT_PHYSICS))
@@ -345,6 +347,13 @@ def _load_prefill(bundle: ClipBundle, missing: list[str]) -> None:
     every correction is itself a measurement of the solver's error. Prefills
     are never labels: they carry ``source`` and stay visually distinct until
     the owner confirms one.
+
+    Physically impossible prefills are REFUSED rather than offered. Stored
+    ``ball_track_arc_solved.json`` artifacts predate the plausibility gate and
+    can carry positions twenty metres airborne or below the court; seeding the
+    labeller with one of those is worse than offering nothing, because the
+    reviewer has to drag it back across the whole frame. The count is recorded
+    so the refusal is visible rather than silent.
     """
 
     path = bundle.run_dir / ARC_SOLVED_FILE
@@ -352,6 +361,7 @@ def _load_prefill(bundle: ClipBundle, missing: list[str]) -> None:
     if payload is None:
         missing.append(ARC_SOLVED_FILE)
         return
+    refused_implausible = 0
     bundle.source_artifacts[ARC_SOLVED_FILE] = _artifact_ref(path, bundle.run_dir)
     physics = payload.get("physics_parameters")
     if isinstance(physics, Mapping):
@@ -361,6 +371,13 @@ def _load_prefill(bundle: ClipBundle, missing: list[str]) -> None:
             continue
         world = entry.get("world_xyz")
         if not isinstance(world, Sequence) or len(world) != 3:
+            continue
+        verdict = evaluate_position(
+            (float(world[0]), float(world[1]), float(world[2])),
+            bounds=BallPlausibilityBounds(),
+        )
+        if not verdict.get("plausible", True):
+            refused_implausible += 1
             continue
         try:
             pixel = project_world_to_pixel(bundle.calibration, world)
@@ -374,6 +391,7 @@ def _load_prefill(bundle: ClipBundle, missing: list[str]) -> None:
             "sigma_m": entry.get("sigma_m"),
             "not_ground_truth": True,
         }
+    bundle.prefill_refused_implausible = refused_implausible
 
 
 def _load_skeletons(bundle: ClipBundle, missing: list[str]) -> None:
