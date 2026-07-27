@@ -28,6 +28,43 @@ ARTIFACT_TYPE = "racketsport_ball_track_arc_solved"
 LANE = "BALL-ARC-SOLVER"
 SOURCE = "event_anchored_drag_arc_solver"
 BALL_RADIUS_M = 0.0371
+
+# --- Bounce-anchor uncertainty model ---------------------------------------
+#
+# A bounce anchor is a ray-plane intersection.  Its error is NOT isotropic and
+# NOT zero-mean, so a single scalar sigma cannot describe it.  Measured against
+# 139 TT3D trajectories with multi-camera ground truth
+# (runs/lanes/tt3d_external_validation_20260726/), the old scalar was
+# optimistic on depth by 1.65-2.97x, conservative in the image plane by
+# 0.36-0.88x, and omitted a systematic +0.068..+0.124 m offset directed away
+# from the camera.  The parameterisation below is ray-aligned:
+# (sigma_along_ray, sigma_perp, bias_along_ray, ray_direction_unit).
+BOUNCE_UNCERTAINTY_SCHEMA_VERSION = 1
+
+# Detector/click precision on the bounce pixel.  The label studio uses 2.0 px
+# for a hand-placed click; an automatic bounce pixel is nominally tighter.
+DEFAULT_ANCHOR_PIXEL_SIGMA_PX = 1.5
+
+# A bounce almost never happens exactly on a sampled frame.  The observed pixel
+# is therefore up to half a frame interval away from true contact, during which
+# the ball is still ABOVE the plane.  Forcing that pixel's ray down to
+# z=ball_radius overshoots ALONG the ray, away from the camera, by exactly
+# height / |ray_direction_z| -- a one-sided, systematic error.
+DEFAULT_BOUNCE_FPS = 30.0
+# Vertical descent speed at contact.  Pickleball prior: a ball falling from a
+# ~0.8 m apex arrives at sqrt(2*g*0.8) ~ 4 m/s.  Supply the real value per
+# sport/clip when it is known; it scales the bias term linearly.
+DEFAULT_BOUNCE_VERTICAL_SPEED_MPS = 4.0
+# Horizontal ball speed at contact; drives a zero-mean in-plane error because
+# the ball also travels sideways during the same sub-frame interval.
+DEFAULT_BOUNCE_HORIZONTAL_SPEED_MPS = 8.0
+# Relative spread of those speeds across bounces (they are priors, not
+# measurements), used to widen the sigma without moving the bias.
+DEFAULT_BOUNCE_SPEED_CV = 0.3
+# A bounce anchor worse than this is not evidence of anything.  The cap is
+# recorded in `terms` when it binds so it is never a silent lie.
+MAX_BOUNCE_ANCHOR_SIGMA_M = 1.0
+MIN_BOUNCE_ANCHOR_SIGMA_M = 1e-3
 STEYN_CL_PER_SPIN = 0.195
 SPIN_SCALAR_MAX_ABS = 0.8
 SPIN_SCALAR_REGULARIZATION_LAMBDA = 0.05
@@ -2880,24 +2917,431 @@ def intersect_ray_z(
     return (origin[0] + direction[0] * scale, origin[1] + direction[1] * scale, float(z))
 
 
+def sigma_xyz_from_ray(
+    direction: Sequence[float], *, sigma_along_m: float, sigma_perp_m: float
+) -> tuple[float, float, float]:
+    """Project along-ray and across-ray sigmas onto the world axes.
+
+    The error ellipsoid is a cigar: ``sigma_along`` down the line of sight,
+    ``sigma_perp`` isotropic across it. For unit direction ``d``, the variance
+    on axis ``i`` is ``sigma_along^2 * d_i^2 + sigma_perp^2 * (1 - d_i^2)``.
+    A ray straight down +y therefore puts all the depth error on y and leaves
+    x and z at the (small) click error, which is the whole reason monocular
+    ball 3D is hard.
+
+    This is the single definition of the ray-aligned -> per-axis conversion;
+    ``ball_label_geometry`` re-exports it rather than keeping a second copy.
+    """
+
+    along = float(sigma_along_m)
+    perp = float(sigma_perp_m)
+    unit = _normalize(direction)
+    out: list[float] = []
+    for axis in range(3):
+        component = unit[axis] * unit[axis]
+        variance = along * along * component + perp * perp * (1.0 - component)
+        out.append(max(1e-4, math.sqrt(max(0.0, variance))))
+    return (out[0], out[1], out[2])
+
+
+def calibration_plane_residuals(calibration: Mapping[str, Any]) -> dict[str, Any]:
+    """Measure this clip's court-plane accuracy floor from its own calibration.
+
+    The calibration stores the reviewed image/world correspondences it was fit
+    to. Pushing each of those pixels back through the exact bounce path
+    (``pixel_ray_world`` then ``intersect_ray_z`` at z=0) and comparing to the
+    known world point gives the real court-plane error a perfect click still
+    inherits. It is normally the dominant term in a bounce anchor's uncertainty
+    and it is measured, not assumed.
+
+    Measured floors on our own clips (runs/lanes/ball_label_tool_20260726/):
+    0.101 m outdoor, 0.127 m wolverine, 0.232 m indoor -- all of which
+    ``anchor_sigma_for_bounce`` used to omit entirely.
+    """
+
+    image_pts = calibration.get("image_pts")
+    world_pts = calibration.get("world_pts")
+    if (
+        not isinstance(image_pts, Sequence)
+        or isinstance(image_pts, (str, bytes))
+        or not isinstance(world_pts, Sequence)
+        or isinstance(world_pts, (str, bytes))
+    ):
+        return {
+            "available": False,
+            "reason": "calibration has no image_pts/world_pts correspondences",
+        }
+    errors: list[float] = []
+    for pixel, world in zip(image_pts, world_pts):
+        try:
+            origin, direction = pixel_ray_world(calibration, pixel)
+            solved = intersect_ray_z(origin, direction, 0.0)
+            errors.append(
+                math.dist((solved[0], solved[1]), (float(world[0]), float(world[1])))
+            )
+        except (TypeError, ValueError, IndexError, KeyError):
+            continue
+    if not errors:
+        return {"available": False, "reason": "no correspondence could be back-projected"}
+    errors.sort()
+    return {
+        "available": True,
+        "method": (
+            "pixel_ray_world -> intersect_ray_z(z=0) on the calibration's own reviewed "
+            "correspondences, compared to their known world positions"
+        ),
+        "point_count": len(errors),
+        "median_m": round(_percentile(errors, 50.0), 6),
+        "p95_m": round(_percentile(errors, 95.0), 6),
+        "max_m": round(errors[-1], 6),
+        "note": (
+            "This is the court-plane accuracy floor a perfect bounce click still inherits "
+            "from this clip's calibration. Bounce anchor sigma is floored at the median."
+        ),
+    }
+
+
+def ray_frame_plane_pixel_sigma(
+    calibration: Mapping[str, Any],
+    xy: Sequence[float],
+    z: float,
+    *,
+    pixel_sigma_px: float = DEFAULT_ANCHOR_PIXEL_SIGMA_PX,
+) -> dict[str, Any] | None:
+    """Ray-plane intersection sensitivity to a pixel nudge, split by direction.
+
+    Nudge the pixel by +-``pixel_sigma_px`` on each image axis, re-intersect the
+    plane, and decompose the displacement into a component ALONG the camera ray
+    and a component ACROSS it.  Near the horizon a grazing ray makes the
+    along-ray component enormous while the across-ray component stays tiny --
+    which is precisely the anisotropy a single scalar cannot express.
+
+    Returns ``None`` when the geometry is unusable (ray parallel to the plane,
+    intersection behind the camera, malformed calibration).
+    """
+
+    try:
+        origin, direction = pixel_ray_world(calibration, xy)
+        base = intersect_ray_z(origin, direction, z)
+        offset = _sub(base, origin)
+        depth = _norm(offset)
+        if not math.isfinite(depth) or depth <= 1e-9:
+            return None
+        ray_unit = _scale(offset, 1.0 / depth)
+    except (TypeError, ValueError, IndexError, KeyError):
+        return None
+
+    sigma_px = abs(float(pixel_sigma_px))
+    along_slides: list[float] = []
+    perp_slides: list[float] = []
+    for axis in (0, 1):
+        for delta in (-sigma_px, sigma_px):
+            nudged = [float(xy[0]), float(xy[1])]
+            nudged[axis] += delta
+            try:
+                n_origin, n_direction = pixel_ray_world(calibration, nudged)
+                nudged_point = intersect_ray_z(n_origin, n_direction, z)
+            except (TypeError, ValueError, IndexError, KeyError):
+                # The nudged ray no longer meets the plane in front of the
+                # camera: this pixel is at or past the horizon.  Report the cap
+                # rather than pretending the geometry is fine.
+                along_slides.append(MAX_BOUNCE_ANCHOR_SIGMA_M)
+                perp_slides.append(0.0)
+                continue
+            displacement = _sub(nudged_point, base)
+            along = _dot(displacement, ray_unit)
+            perpendicular = _sub(displacement, _scale(ray_unit, along))
+            along_slides.append(abs(along))
+            perp_slides.append(_norm(perpendicular))
+    if not along_slides:
+        return None
+    return {
+        "sigma_along_ray_m": max(along_slides),
+        "sigma_perp_m": max(perp_slides),
+        "ray_direction_unit": (float(ray_unit[0]), float(ray_unit[1]), float(ray_unit[2])),
+        "depth_m": float(depth),
+        "world_xyz": (float(base[0]), float(base[1]), float(base[2])),
+    }
+
+
+@dataclass(frozen=True)
+class BounceAnchorUncertainty:
+    """Ray-aligned uncertainty of a bounce anchor: anisotropic AND biased.
+
+    ``sigma_along_ray_m`` and ``sigma_perp_m`` describe a zero-mean error
+    ellipsoid elongated down the camera ray.  ``bias_along_ray_m`` is a
+    SEPARATE, signed, systematic offset (positive = away from the camera); it is
+    deliberately NOT folded into the sigmas, because least squares would then
+    treat a predictable geometric error as random noise.
+    """
+
+    sigma_along_ray_m: float
+    sigma_perp_m: float
+    bias_along_ray_m: float
+    ray_direction_unit: tuple[float, float, float]
+    sigma_xyz_m: tuple[float, float, float]
+    sigma_isotropic_m: float
+    depth_m: float
+    basis: str
+    terms: Mapping[str, Any]
+    schema_version: int = BOUNCE_UNCERTAINTY_SCHEMA_VERSION
+
+    def bias_vector_m(self) -> tuple[float, float, float]:
+        """The systematic offset as a world vector (points away from camera)."""
+
+        return _scale(self.ray_direction_unit, self.bias_along_ray_m)
+
+    def bias_corrected_xyz(
+        self, world_xyz: Sequence[float]
+    ) -> tuple[float, float, float]:
+        """``world_xyz`` with the modelled systematic offset removed."""
+
+        bias = self.bias_vector_m()
+        return (
+            float(world_xyz[0]) - bias[0],
+            float(world_xyz[1]) - bias[1],
+            float(world_xyz[2]) - bias[2],
+        )
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "schema_version": int(self.schema_version),
+            "model": "ray_aligned_anisotropic_biased",
+            "sigma_along_ray_m": _round(self.sigma_along_ray_m, 6),
+            "sigma_perp_m": _round(self.sigma_perp_m, 6),
+            "bias_along_ray_m": _round(self.bias_along_ray_m, 6),
+            "bias_sign_convention": "positive = away from the camera, along the ray",
+            "ray_direction_unit": [_round(value, 9) for value in self.ray_direction_unit],
+            "sigma_xyz_m": [_round(value, 6) for value in self.sigma_xyz_m],
+            "sigma_isotropic_m": _round(self.sigma_isotropic_m, 6),
+            "depth_m": _round(self.depth_m, 6),
+            "basis": self.basis,
+            "terms": {
+                key: (_round(value, 6) if isinstance(value, float) else value)
+                for key, value in self.terms.items()
+            },
+        }
+
+
+def anchor_uncertainty_for_bounce(
+    calibration: Mapping[str, Any],
+    xy: Sequence[float],
+    *,
+    base_sigma_m: float,
+    ball_radius_m: float = BALL_RADIUS_M,
+    pixel_sigma_px: float = DEFAULT_ANCHOR_PIXEL_SIGMA_PX,
+    fps: float | None = None,
+    vertical_speed_mps: float = DEFAULT_BOUNCE_VERTICAL_SPEED_MPS,
+    horizontal_speed_mps: float = DEFAULT_BOUNCE_HORIZONTAL_SPEED_MPS,
+    speed_cv: float = DEFAULT_BOUNCE_SPEED_CV,
+    calibration_residual_m: float | None = None,
+) -> BounceAnchorUncertainty | None:
+    """Anisotropic, calibration-floored, bias-aware uncertainty for a bounce.
+
+    Terms, all first-principles; none of them is fitted to the error it is
+    meant to predict:
+
+    1. **Pixel sensitivity** -- finite-difference the ray-plane intersection at
+       ``+-pixel_sigma_px``, decomposed along/across the ray
+       (:func:`ray_frame_plane_pixel_sigma`).
+    2. **Sub-frame timing.** The bounce happens between samples, so the observed
+       pixel shows the ball ``h = v_vertical * |dt|`` ABOVE the plane with
+       ``dt ~ U(-1/2fps, +1/2fps)``.  Forcing that ray down to the plane
+       overshoots along the ray by exactly ``h / |ray_z|``.  Because ``h >= 0``
+       always, this has a NON-ZERO MEAN: it is reported as
+       ``bias_along_ray_m``, and only its spread enters the sigma.  The same
+       interval lets the ball travel ``v_horizontal * sd(dt)`` sideways, which
+       is genuinely zero-mean and is split over an unknown heading.
+    3. **Calibration residual floor** -- the in-plane error a perfect pixel
+       still inherits, measured from the calibration's own correspondences
+       (:func:`calibration_plane_residuals`) or supplied directly.  The old
+       scalar omitted this entirely.
+    4. **Plane-constraint shadow.** The anchor is pinned to ``z=ball_radius_m``,
+       so an along-ray error of ``a`` forces an across-ray component of
+       ``a * |ray_z|`` just to stay on the plane.  It is a consequence of the
+       other terms, not an independent error.
+
+    Returns ``None`` when the geometry is unusable, so callers can fall back.
+    """
+
+    geometry = ray_frame_plane_pixel_sigma(
+        calibration, xy, ball_radius_m, pixel_sigma_px=pixel_sigma_px
+    )
+    if geometry is None:
+        return None
+    ray_unit = geometry["ray_direction_unit"]
+    ray_z = max(1e-6, abs(float(ray_unit[2])))
+    cos_elevation = math.sqrt(max(0.0, 1.0 - ray_z * ray_z))
+
+    terms: dict[str, Any] = {
+        "pixel_sigma_px": float(pixel_sigma_px),
+        "pixel_along_ray_m": float(geometry["sigma_along_ray_m"]),
+        "pixel_perp_m": float(geometry["sigma_perp_m"]),
+        "ray_vertical_component": float(ray_z),
+        "depth_m": float(geometry["depth_m"]),
+    }
+
+    # --- 2. sub-frame timing ------------------------------------------------
+    effective_fps = _float_or_none(fps)
+    if effective_fps is None or effective_fps <= 0.0:
+        effective_fps = DEFAULT_BOUNCE_FPS
+        terms["fps_provenance"] = "default"
+    else:
+        terms["fps_provenance"] = "supplied"
+    terms["fps"] = float(effective_fps)
+    half_frame_s = 0.5 / float(effective_fps)
+    sd_dt_s = half_frame_s / math.sqrt(3.0)  # dt ~ U(-half_frame, +half_frame)
+
+    v_vertical = max(0.0, float(vertical_speed_mps))
+    v_horizontal = max(0.0, float(horizontal_speed_mps))
+    cv = max(0.0, float(speed_cv))
+    # h = v * |dt|, with v itself uncertain (coefficient of variation `cv`):
+    #   E[h]   = mean_v * half_frame / 2
+    #   Var[h] = half_frame^2 * (mean_v^2 / 12 + sd_v^2 / 3)
+    mean_height_m = v_vertical * half_frame_s / 2.0
+    sd_height_m = half_frame_s * math.sqrt(
+        (v_vertical * v_vertical) / 12.0 + ((cv * v_vertical) ** 2) / 3.0
+    )
+    bias_along_ray_m = mean_height_m / ray_z
+    timing_along_ray_m = sd_height_m / ray_z
+    # Sideways travel over the same interval, direction unknown: the expected
+    # squared share on any one in-plane axis is 1/2.
+    inplane_travel_m = v_horizontal * sd_dt_s * math.sqrt(1.0 + cv * cv)
+    timing_inplane_along_m = inplane_travel_m * cos_elevation / math.sqrt(2.0)
+    timing_inplane_perp_m = inplane_travel_m / math.sqrt(2.0)
+    terms.update(
+        {
+            "timing_sd_dt_s": float(sd_dt_s),
+            "timing_mean_height_m": float(mean_height_m),
+            "timing_sd_height_m": float(sd_height_m),
+            "timing_along_ray_m": float(timing_along_ray_m),
+            "timing_inplane_travel_m": float(inplane_travel_m),
+            "vertical_speed_mps": float(v_vertical),
+            "horizontal_speed_mps": float(v_horizontal),
+            "speed_cv": float(cv),
+        }
+    )
+
+    # --- 3. calibration residual floor --------------------------------------
+    residual_m = _float_or_none(calibration_residual_m)
+    if residual_m is None:
+        measured = calibration_plane_residuals(calibration)
+        if measured.get("available"):
+            residual_m = float(measured["median_m"])
+            terms["calibration_residual_provenance"] = "measured_from_correspondences"
+            terms["calibration_residual_point_count"] = int(measured["point_count"])
+        else:
+            gsd_sigma = _gsd_sigma(calibration, xy)
+            if gsd_sigma is not None:
+                residual_m = float(gsd_sigma)
+                terms["calibration_residual_provenance"] = "gsd_model"
+            else:
+                residual_m = 0.0
+                terms["calibration_residual_provenance"] = "unavailable"
+                terms["calibration_residual_reason"] = str(measured.get("reason", ""))
+    else:
+        residual_m = max(0.0, float(residual_m))
+        terms["calibration_residual_provenance"] = "supplied"
+    terms["calibration_residual_m"] = float(residual_m)
+
+    # A large reprojection residual means the calibration itself is shaky; keep
+    # the existing signal as an additional in-plane allowance.
+    reprojection = calibration.get("reprojection_error_px")
+    reproj_p95 = (
+        _float_or_none(reprojection.get("p95"))
+        if isinstance(reprojection, Mapping)
+        else None
+    )
+    reproj_m = 0.0
+    if reproj_p95 is not None:
+        reproj_m = min(0.18, 0.004 * float(reproj_p95))
+    terms["reprojection_allowance_m"] = float(reproj_m)
+    inplane_floor_m = math.hypot(residual_m, reproj_m)
+
+    # --- combine ------------------------------------------------------------
+    sigma_along = math.sqrt(
+        float(geometry["sigma_along_ray_m"]) ** 2
+        + timing_along_ray_m**2
+        + timing_inplane_along_m**2
+        + (inplane_floor_m * cos_elevation) ** 2
+    )
+    sigma_perp = math.sqrt(
+        float(geometry["sigma_perp_m"]) ** 2
+        + timing_inplane_perp_m**2
+        + inplane_floor_m**2
+    )
+    floor_m = max(MIN_BOUNCE_ANCHOR_SIGMA_M, abs(float(base_sigma_m)))
+    sigma_along = max(sigma_along, floor_m)
+    # --- 4. plane-constraint shadow -----------------------------------------
+    sigma_perp = math.sqrt(
+        sigma_perp**2 + (sigma_along * ray_z) ** 2 + (bias_along_ray_m * ray_z) ** 2
+    )
+    terms["base_sigma_floor_m"] = float(floor_m)
+
+    capped = sigma_along > MAX_BOUNCE_ANCHOR_SIGMA_M
+    terms["capped_at_max"] = bool(capped)
+    sigma_along = min(MAX_BOUNCE_ANCHOR_SIGMA_M, sigma_along)
+    sigma_perp = max(MIN_BOUNCE_ANCHOR_SIGMA_M, min(MAX_BOUNCE_ANCHOR_SIGMA_M, sigma_perp))
+    bias_along_ray_m = max(
+        -MAX_BOUNCE_ANCHOR_SIGMA_M, min(MAX_BOUNCE_ANCHOR_SIGMA_M, bias_along_ray_m)
+    )
+
+    basis = (
+        f"ray-plane bounce anchor at z={ball_radius_m:g} m, depth {geometry['depth_m']:.2f} m; "
+        f"pixel +-{pixel_sigma_px:g} px -> {geometry['sigma_along_ray_m']:.3f} m along / "
+        f"{geometry['sigma_perp_m']:.3f} m across; sub-frame timing at {effective_fps:g} fps -> "
+        f"{bias_along_ray_m:+.3f} m systematic overshoot away from the camera "
+        f"(+-{timing_along_ray_m:.3f} m); calibration plane residual floor "
+        f"{residual_m:.3f} m. Anisotropy along/across = "
+        f"{sigma_along / max(sigma_perp, 1e-9):.1f}x."
+    )
+    return BounceAnchorUncertainty(
+        sigma_along_ray_m=float(sigma_along),
+        sigma_perp_m=float(sigma_perp),
+        bias_along_ray_m=float(bias_along_ray_m),
+        ray_direction_unit=(float(ray_unit[0]), float(ray_unit[1]), float(ray_unit[2])),
+        sigma_xyz_m=sigma_xyz_from_ray(
+            ray_unit, sigma_along_m=sigma_along, sigma_perp_m=sigma_perp
+        ),
+        # The one honest scalar is the WORST axis.  For a grazing court camera
+        # that is the along-ray depth; for a near-nadir camera the ray pins
+        # depth against the plane and a horizontal axis is worse instead.
+        sigma_isotropic_m=float(max(sigma_along, sigma_perp)),
+        depth_m=float(geometry["depth_m"]),
+        basis=basis,
+        terms=terms,
+    )
+
+
 def anchor_sigma_for_bounce(
     calibration: Mapping[str, Any],
     xy: Sequence[float],
     *,
     base_sigma_m: float,
+    ball_radius_m: float = BALL_RADIUS_M,
+    **uncertainty_kwargs: Any,
 ) -> float:
-    gsd_sigma = _gsd_sigma(calibration, xy)
-    finite_diff = _ray_plane_pixel_sigma(calibration, xy, BALL_RADIUS_M)
-    components = [base_sigma_m]
-    if gsd_sigma is not None:
-        components.append(gsd_sigma)
-    if finite_diff is not None:
-        components.append(min(0.15, finite_diff))
-    reproj_p95 = _float_or_none(calibration.get("reprojection_error_px", {}).get("p95") if isinstance(calibration.get("reprojection_error_px"), Mapping) else None)
-    if reproj_p95 is not None:
-        components.append(min(0.18, 0.004 * reproj_p95))
-    sigma = math.sqrt(sum(value * value for value in components))
-    return max(base_sigma_m, min(0.35, sigma))
+    """Legacy single-scalar bounce sigma.
+
+    DEPRECATED in favour of :func:`anchor_uncertainty_for_bounce`.  A bounce
+    anchor's error is ~7x larger along the camera ray than across it on a
+    grazing court camera, so no single scalar is honest in both directions.
+    This returns the WORST axis, i.e. the conservative choice: over-trusting a
+    depth-blind anchor is the dangerous failure, under-trusting it is merely
+    wasteful.  It still cannot express the systematic away-from-camera bias at
+    all -- read ``bias_along_ray_m`` from the full uncertainty for that.
+    """
+
+    uncertainty = anchor_uncertainty_for_bounce(
+        calibration,
+        xy,
+        base_sigma_m=base_sigma_m,
+        ball_radius_m=ball_radius_m,
+        **uncertainty_kwargs,
+    )
+    if uncertainty is None:
+        return max(MIN_BOUNCE_ANCHOR_SIGMA_M, abs(float(base_sigma_m)))
+    return uncertainty.sigma_isotropic_m
 
 
 def _fit_segments_from_anchors(
