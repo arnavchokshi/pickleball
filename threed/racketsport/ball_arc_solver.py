@@ -6198,13 +6198,17 @@ def _project_world_point(
     camera = _camera_arrays(calibration)
     camera_point = _add(_mat_vec(camera["rotation"], world_xyz), camera["translation"])
     depth = camera_point[2] if abs(camera_point[2]) > 1e-9 else 1e-9
-    x = camera_point[0] / depth
-    y = camera_point[1] / depth
     # Forward lens distortion, so this stays the exact inverse of
-    # `pixel_ray_world`. Zero/absent `dist` short-circuits to the pinhole.
+    # `pixel_ray_world`. Zero/absent `dist` keeps the original expression
+    # verbatim -- `fx * a / d` and `fx * (a / d)` can differ in the last ULP,
+    # and the zero-distortion path is claimed bit-for-bit unchanged.
     coefficients = distortion_coefficients(intrinsics)
-    if any(coefficients):
-        x, y = distort_normalized(x, y, coefficients)
+    if not any(coefficients):
+        return (
+            float(intrinsics["fx"]) * camera_point[0] / depth + float(intrinsics["cx"]),
+            float(intrinsics["fy"]) * camera_point[1] / depth + float(intrinsics["cy"]),
+        )
+    x, y = distort_normalized(camera_point[0] / depth, camera_point[1] / depth, coefficients)
     return (
         float(intrinsics["fx"]) * x + float(intrinsics["cx"]),
         float(intrinsics["fy"]) * y + float(intrinsics["cy"]),
