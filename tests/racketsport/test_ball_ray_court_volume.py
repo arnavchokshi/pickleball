@@ -13,6 +13,7 @@ adjacent-court ray is still *contained*, so this gate cannot catch it.
 from __future__ import annotations
 
 import math
+import pathlib
 
 import pytest
 
@@ -235,6 +236,39 @@ def test_missing_ray_is_reported_not_guessed() -> None:
     assert report["evaluated_frame_count"] == 0
     assert report["disjoint_rate"] == 0.0
     assert report["frames"][0]["marks"] == []
+
+
+def test_gate_is_default_off_and_non_promotable_in_the_manifest() -> None:
+    from threed.racketsport.best_stack import load_best_stack_manifest
+
+    entry = load_best_stack_manifest().entries["ball.ray_court_volume_gate"]
+    assert entry.status == "PENDING"
+    assert entry.raw["do_not_promote"] is True
+    assert entry.value["enabled"] is False
+    assert entry.value["suppresses_detections"] is False
+
+
+def test_module_stays_unwired_while_the_gate_is_disabled() -> None:
+    """Byte-identity when off, proven structurally rather than by a pipeline run.
+
+    A disabled gate that nothing calls cannot change any artifact. Keep that
+    true: the only importers may be this test and the lane's own measurement
+    script. If production code starts importing it, the default-OFF claim has
+    to be re-proven against real outputs instead.
+    """
+
+    repo_root = pathlib.Path(__file__).resolve().parents[2]
+    importers = set()
+    for path in repo_root.rglob("*.py"):
+        if any(part in {".venv", "third_party", "node_modules"} for part in path.parts):
+            continue
+        text = path.read_text(errors="ignore")
+        if "ball_ray_court_volume" in text and path.name != "ball_ray_court_volume.py":
+            importers.add(path.relative_to(repo_root).as_posix())
+    assert importers == {
+        "tests/racketsport/test_ball_ray_court_volume.py",
+        "runs/lanes/background_ball_20260727/measure_background_ball.py",
+    }, f"unexpected importers: {sorted(importers)}"
 
 
 def test_bounds_serialise_with_the_refutation_attached() -> None:
