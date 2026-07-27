@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import random
 import subprocess
 import sys
 import time
@@ -3275,6 +3276,49 @@ def test_build_bounce_anchor_attaches_uncertainty_and_leaves_position_unbiased()
     assert math.dist(corrected.world_xyz, world) == pytest.approx(
         payload["bias_along_ray_m"], abs=1e-5
     )
+
+
+def test_ray_whitening_reduces_exactly_to_the_isotropic_form() -> None:
+    """The anisotropic weighting must be a strict generalisation, not a rewrite.
+
+    When sigma_along == sigma_perp the ray frame carries no information, and the
+    new residual has to equal the old one to floating-point precision. That is
+    what makes the change safe for every anchor with no ray attached.
+    """
+
+    random.seed(20260726)
+    worst_isotropic = 0.0
+    worst_whitening = 0.0
+    for _ in range(500):
+        ray = ball_arc_solver_module._normalize(
+            (random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))
+        )
+        if ball_arc_solver_module._norm(ray) < 0.5:
+            continue
+        delta = (random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))
+        sigma = random.uniform(0.01, 1.0)
+        isotropic = ball_arc_solver_module._scaled_vec(delta, sigma)
+        ray_form = ball_arc_solver_module._ray_scaled_vec(delta, ray, sigma, sigma)
+        worst_isotropic = max(
+            worst_isotropic, abs(math.hypot(*ray_form) - math.hypot(*isotropic))
+        )
+        # ...and for unequal sigmas it must be the exact ray-frame whitening.
+        along_sigma = random.uniform(0.01, 1.0)
+        perp_sigma = random.uniform(0.01, 1.0)
+        got = math.hypot(
+            *ball_arc_solver_module._ray_scaled_vec(delta, ray, along_sigma, perp_sigma)
+        )
+        along = ball_arc_solver_module._dot(delta, ray)
+        perpendicular = ball_arc_solver_module._sub(
+            delta, ball_arc_solver_module._scale(ray, along)
+        )
+        expected = math.sqrt(
+            (along / along_sigma) ** 2
+            + (ball_arc_solver_module._norm(perpendicular) / perp_sigma) ** 2
+        )
+        worst_whitening = max(worst_whitening, abs(got - expected))
+    assert worst_isotropic < 1e-12, worst_isotropic
+    assert worst_whitening < 1e-9, worst_whitening
 
 
 def _project_world_pixel(calibration: dict, world_xyz: tuple[float, float, float]) -> tuple[float, float]:
