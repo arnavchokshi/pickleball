@@ -1,0 +1,599 @@
+{
+  "artifact_type": "racketsport_ball_human_label_set",
+  "calibration_evidence": {
+    "metric_confidence": "med",
+    "note": "plane_residual_check is this clip's measured bounce accuracy floor: even a perfect click inherits it. It is the sigma floor for every bounce label.",
+    "plane_residual_check": {
+      "available": true,
+      "max_m": 0.903792,
+      "median_m": 0.199033,
+      "method": "pixel_ray_world -> intersect_ray_z(z=0) on the calibration's own reviewed correspondences, compared to their known world positions",
+      "note": "This is the court-plane accuracy floor a perfect bounce click still inherits from this clip's calibration. Bounce anchor sigma is floored at the median.",
+      "p95_m": 0.689095,
+      "point_count": 15
+    },
+    "reprojection_error_px": {
+      "median": 3.719087,
+      "p95": 8.813795
+    },
+    "sha256": "339e55e9cbe4f875af10c6a8b9f528f9c0692717eede966323a141523989e73a",
+    "source": "metric_15pt_reviewed"
+  },
+  "clip_id": "indoor_doubles_20s_fullmesh_final",
+  "fps": 30.0,
+  "frame_count": 600,
+  "generated_by": "scripts/racketsport/ball_label_studio.py",
+  "human_reviewed": true,
+  "image_size": [
+    1920,
+    1080
+  ],
+  "labels": [
+    {
+      "accuracy_tier": "plane_solved",
+      "depth_along_ray_m": 8.576827,
+      "depth_source": "ray_plane_intersection",
+      "frame": 58,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": true,
+      "kind": "bounce",
+      "label_id": "f000058",
+      "near_player": null,
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        1267.4,
+        619.9
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        0.287886,
+        0.940078,
+        -0.182689
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.25475,
+      "sigma_perp_m": 0.015969,
+      "sigma_xyz_m": [
+        0.074917,
+        0.239547,
+        0.049117
+      ],
+      "timestamp_s": 1.933,
+      "uncertainty_basis": "ray-plane bounce anchor at z=0.0371 m, depth 8.58 m; pixel +-2 px -> 0.085 m along / 0.016 m across; sub-frame timing at 30 fps -> +0.182 m systematic overshoot away from the camera (+-0.123 m); calibration plane residual floor 0.199 m. Anisotropy along/across = 1.2x. Systematic offset +0.182 m along the ray is reported separately as a bias, not folded into this sigma.",
+      "world_xyz_m": [
+        2.391675,
+        -1.913148,
+        0.0371
+      ]
+    },
+    {
+      "accuracy_tier": "player_referenced",
+      "depth_along_ray_m": 8.3883,
+      "depth_source": "human_drag",
+      "frame": 70,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": false,
+      "kind": "near_player",
+      "label_id": "f000070",
+      "near_player": {
+        "depth_along_ray_m": 8.3883,
+        "joint_confidence": 0.925,
+        "joint_index": 62,
+        "joint_name": "left_wrist",
+        "joint_world_m": [
+          2.8731,
+          -2.1447,
+          0.915
+        ],
+        "offset_from_ray_m": 0.3829,
+        "player_id": 1
+      },
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        1307.2,
+        548.2
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        0.322681,
+        0.939265,
+        -0.116869
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.57658,
+      "sigma_perp_m": 0.015618,
+      "sigma_xyz_m": [
+        0.186638,
+        0.541588,
+        0.069146
+      ],
+      "timestamp_s": 2.333,
+      "uncertainty_basis": "human depth judgement against a tracked player joint 0.38 m off the ray; prior 0.5 m widened by the off-ray offset. This is a human estimate, not a measurement.",
+      "world_xyz_m": [
+        2.629271,
+        -2.097197,
+        0.62366
+      ]
+    },
+    {
+      "accuracy_tier": "player_referenced",
+      "depth_along_ray_m": 8.465,
+      "depth_source": "human_drag",
+      "frame": 99,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": false,
+      "kind": "near_player",
+      "label_id": "f000099",
+      "near_player": {
+        "depth_along_ray_m": 7.978,
+        "joint_confidence": 0.919,
+        "joint_index": 41,
+        "joint_name": "right_wrist",
+        "joint_world_m": [
+          2.5263,
+          -2.4462,
+          1.1394
+        ],
+        "offset_from_ray_m": 0.2143,
+        "player_id": 1
+      },
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        1331.5,
+        461.0
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        0.342832,
+        0.938642,
+        -0.037645
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.54286,
+      "sigma_perp_m": 0.01576,
+      "sigma_xyz_m": [
+        0.186698,
+        0.50958,
+        0.025801
+      ],
+      "timestamp_s": 3.3,
+      "uncertainty_basis": "human depth judgement against a tracked player joint 0.21 m off the ray; prior 0.5 m widened by the off-ray offset. This is a human estimate, not a measurement.",
+      "world_xyz_m": [
+        2.824596,
+        -2.030426,
+        1.285323
+      ]
+    },
+    {
+      "accuracy_tier": "plane_solved",
+      "depth_along_ray_m": 12.356016,
+      "depth_source": "ray_plane_intersection",
+      "frame": 116,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": true,
+      "kind": "bounce",
+      "label_id": "f000116",
+      "near_player": null,
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        1055.0,
+        552.9
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        0.096644,
+        0.987208,
+        -0.126812
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.328495,
+      "sigma_perp_m": 0.023005,
+      "sigma_xyz_m": [
+        0.039143,
+        0.324314,
+        0.047498
+      ],
+      "timestamp_s": 3.867,
+      "uncertainty_basis": "ray-plane bounce anchor at z=0.0371 m, depth 12.36 m; pixel +-2 px -> 0.182 m along / 0.023 m across; sub-frame timing at 30 fps -> +0.263 m systematic overshoot away from the camera (+-0.177 m); calibration plane residual floor 0.199 m. Anisotropy along/across = 1.5x. Systematic offset +0.263 m along the ray is reported separately as a bias, not folded into this sigma.",
+      "world_xyz_m": [
+        1.11666,
+        2.22192,
+        0.0371
+      ]
+    },
+    {
+      "accuracy_tier": "plane_solved",
+      "depth_along_ray_m": 9.136541,
+      "depth_source": "ray_plane_intersection",
+      "frame": 149,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": true,
+      "kind": "bounce",
+      "label_id": "f000149",
+      "near_player": null,
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        794.0,
+        602.8
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        -0.145229,
+        0.974422,
+        -0.171497
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.263698,
+      "sigma_perp_m": 0.017011,
+      "sigma_xyz_m": [
+        0.041832,
+        0.256981,
+        0.048229
+      ],
+      "timestamp_s": 4.967,
+      "uncertainty_basis": "ray-plane bounce anchor at z=0.0371 m, depth 9.14 m; pixel +-2 px -> 0.098 m along / 0.017 m across; sub-frame timing at 30 fps -> +0.194 m systematic overshoot away from the camera (+-0.131 m); calibration plane residual floor 0.199 m. Anisotropy along/across = 1.2x. Systematic offset +0.194 m along the ray is reported separately as a bias, not folded into this sigma.",
+      "world_xyz_m": [
+        -1.404367,
+        -1.07319,
+        0.0371
+      ]
+    },
+    {
+      "accuracy_tier": "plane_solved",
+      "depth_along_ray_m": 11.198899,
+      "depth_source": "ray_plane_intersection",
+      "frame": 186,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": true,
+      "kind": "bounce",
+      "label_id": "f000186",
+      "near_player": null,
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        1227.5,
+        570.9
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        0.253262,
+        0.957226,
+        -0.139915
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.300979,
+      "sigma_perp_m": 0.020851,
+      "sigma_xyz_m": [
+        0.07885,
+        0.288168,
+        0.0469
+      ],
+      "timestamp_s": 6.2,
+      "uncertainty_basis": "ray-plane bounce anchor at z=0.0371 m, depth 11.20 m; pixel +-2 px -> 0.147 m along / 0.021 m across; sub-frame timing at 30 fps -> +0.238 m systematic overshoot away from the camera (+-0.160 m); calibration plane residual floor 0.199 m. Anisotropy along/across = 1.4x. Systematic offset +0.238 m along the ray is reported separately as a bias, not folded into this sigma.",
+      "world_xyz_m": [
+        2.75878,
+        0.743849,
+        0.0371
+      ]
+    },
+    {
+      "accuracy_tier": "plane_solved",
+      "depth_along_ray_m": 8.150231,
+      "depth_source": "ray_plane_intersection",
+      "frame": 225,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": true,
+      "kind": "bounce",
+      "label_id": "f000225",
+      "near_player": null,
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        1105.8,
+        625.2
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        0.143149,
+        0.970849,
+        -0.192251
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.249246,
+      "sigma_perp_m": 0.015174,
+      "sigma_xyz_m": [
+        0.038711,
+        0.242008,
+        0.050178
+      ],
+      "timestamp_s": 7.5,
+      "uncertainty_basis": "ray-plane bounce anchor at z=0.0371 m, depth 8.15 m; pixel +-2 px -> 0.078 m along / 0.015 m across; sub-frame timing at 30 fps -> +0.173 m systematic overshoot away from the camera (+-0.117 m); calibration plane residual floor 0.199 m. Anisotropy along/across = 1.1x. Systematic offset +0.173 m along the ray is reported separately as a bias, not folded into this sigma.",
+      "world_xyz_m": [
+        1.089224,
+        -2.063388,
+        0.0371
+      ]
+    },
+    {
+      "accuracy_tier": "player_referenced",
+      "depth_along_ray_m": 8.275,
+      "depth_source": "human_drag",
+      "frame": 286,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": false,
+      "kind": "near_player",
+      "label_id": "f000286",
+      "near_player": {
+        "depth_along_ray_m": 8.5798,
+        "joint_confidence": 0.94,
+        "joint_index": 41,
+        "joint_name": "right_wrist",
+        "joint_world_m": [
+          -1.592,
+          -1.5631,
+          0.8299
+        ],
+        "offset_from_ray_m": 0.2386,
+        "player_id": 2
+      },
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        787.3,
+        526.9
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        -0.151406,
+        0.98321,
+        -0.101854
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.54772,
+      "sigma_perp_m": 0.015407,
+      "sigma_xyz_m": [
+        0.084315,
+        0.538531,
+        0.057855
+      ],
+      "timestamp_s": 9.533,
+      "uncertainty_basis": "human depth judgement against a tracked player joint 0.24 m off the ray; prior 0.5 m widened by the off-ray offset. This is a human estimate, not a measurement.",
+      "world_xyz_m": [
+        -1.330362,
+        -1.839969,
+        0.761145
+      ]
+    },
+    {
+      "accuracy_tier": "player_referenced",
+      "depth_along_ray_m": 13.0893,
+      "depth_source": "human_drag",
+      "frame": 296,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": false,
+      "kind": "near_player",
+      "label_id": "f000296",
+      "near_player": {
+        "depth_along_ray_m": 13.0893,
+        "joint_confidence": 0.884,
+        "joint_index": 8,
+        "joint_name": "right_elbow",
+        "joint_world_m": [
+          -1.7096,
+          3.0003,
+          1.0677
+        ],
+        "offset_from_ray_m": 0.0832,
+        "player_id": 3
+      },
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        809.4,
+        459.6
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        -0.130931,
+        0.990582,
+        -0.040047
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.51664,
+      "sigma_perp_m": 0.02437,
+      "sigma_xyz_m": [
+        0.071829,
+        0.511785,
+        0.031953
+      ],
+      "timestamp_s": 9.867,
+      "uncertainty_basis": "human depth judgement against a tracked player joint 0.08 m off the ray; prior 0.5 m widened by the off-ray offset. This is a human estimate, not a measurement.",
+      "world_xyz_m": [
+        -1.791268,
+        2.989997,
+        1.0798
+      ]
+    },
+    {
+      "accuracy_tier": "player_referenced",
+      "depth_along_ray_m": 12.315,
+      "depth_source": "human_drag",
+      "frame": 320,
+      "human_confidence": "medium",
+      "is_ground_truth_candidate": false,
+      "kind": "near_player",
+      "label_id": "f000320",
+      "near_player": {
+        "depth_along_ray_m": 13.0497,
+        "joint_confidence": 0.922,
+        "joint_index": 41,
+        "joint_name": "right_wrist",
+        "joint_world_m": [
+          -1.9124,
+          2.9138,
+          0.708
+        ],
+        "offset_from_ray_m": 0.1484,
+        "player_id": 3
+      },
+      "notes": "",
+      "origin": "fresh",
+      "pixel_xy": [
+        789.5,
+        498.5
+      ],
+      "prefill": null,
+      "ray_direction_unit": [
+        -0.149323,
+        0.985884,
+        -0.075728
+      ],
+      "ray_origin_m": [
+        -0.077477,
+        -9.976032,
+        1.603989
+      ],
+      "sigma_along_ray_m": 0.52968,
+      "sigma_perp_m": 0.022929,
+      "sigma_xyz_m": [
+        0.082279,
+        0.522217,
+        0.04617
+      ],
+      "timestamp_s": 10.667,
+      "uncertainty_basis": "human depth judgement against a tracked player joint 0.15 m off the ray; prior 0.5 m widened by the off-ray offset. This is a human estimate, not a measurement.",
+      "world_xyz_m": [
+        -1.916389,
+        2.165134,
+        0.6714
+      ]
+    }
+  ],
+  "not_ground_truth": true,
+  "policy": {
+    "accuracy_tier_by_kind": {
+      "bounce": "plane_solved",
+      "free_flight": "unreferenced_estimate",
+      "near_player": "player_referenced"
+    },
+    "ground_truth_candidate_kinds": [
+      "bounce"
+    ],
+    "notes": [
+      "Human review-only labels. VERIFIED=0: this artifact is not verified ground truth.",
+      "Depth along the camera ray is SOLVED only for kind=bounce (ray-plane intersection at z=BALL_RADIUS_M). near_player depth is a human judgement against a tracked skeleton; free_flight depth is an unreferenced human estimate.",
+      "Only kind=bounce carries is_ground_truth_candidate=true. Do not aggregate the three kinds into one accuracy number.",
+      "Per-label sigma_xyz_m is an honest estimate, not a measured covariance.",
+      "Raw pipeline observations are immutable and were read, never written."
+    ]
+  },
+  "review_only": true,
+  "schema_version": 1,
+  "source_artifacts": {
+    "ball_bounce_candidates.json": {
+      "path": "ball_bounce_candidates.json",
+      "sha256": "e0b03034d5d1eaac41edb9ca7c89009d35728f4404694024d5643666f3336681"
+    },
+    "ball_candidates.json": {
+      "path": "ball_candidates.json",
+      "sha256": "e780774c91a0348272383baa2126f1e4e217c62c235154d69108df40d0e4b103"
+    },
+    "ball_track.json": {
+      "path": "ball_track.json",
+      "sha256": "b3fdc06c5ec97d48ea27a663e6f27821a786b9ca416041569ae5b63d7764e3c8"
+    },
+    "ball_track_arc_solved.json": {
+      "path": "ball_track_arc_solved.json",
+      "sha256": "8efc99be017e632bc9f6ebc9ed34b4d315167989d7b196e820e85bf73171f56a"
+    },
+    "court_calibration.json": {
+      "path": "court_calibration.json",
+      "sha256": "339e55e9cbe4f875af10c6a8b9f528f9c0692717eede966323a141523989e73a"
+    },
+    "net_plane.json": {
+      "path": "net_plane.json",
+      "sha256": "8e6d67898b7bcf8023bacd3c806471ab0f5b179d1b72671a4e6d781d47f7a057"
+    },
+    "skeleton3d.json": {
+      "path": "skeleton3d.json",
+      "sha256": "925a636f38bef900e69cdd1dbb4ff82c3cea2effd4e9c4adf9538d9654010755"
+    }
+  },
+  "summary": {
+    "by_accuracy_tier": {
+      "plane_solved": 5,
+      "player_referenced": 5,
+      "unreferenced_estimate": 0
+    },
+    "by_depth_source": {
+      "human_drag": 5,
+      "interpolated_arc": 0,
+      "ray_plane_intersection": 5
+    },
+    "by_human_confidence": {
+      "high": 0,
+      "low": 0,
+      "medium": 10
+    },
+    "by_kind": {
+      "bounce": 5,
+      "free_flight": 0,
+      "near_player": 5
+    },
+    "by_origin": {
+      "fresh": 10,
+      "prefill_confirmed": 0,
+      "prefill_corrected": 0
+    },
+    "frame_coverage_fraction": 0.016667,
+    "ground_truth_candidate_count": 5,
+    "label_count": 10,
+    "labeled_frame_span": [
+      58,
+      320
+    ]
+  },
+  "verified_ground_truth": false,
+  "world_frame": "court_netcenter_z_up_m"
+}
