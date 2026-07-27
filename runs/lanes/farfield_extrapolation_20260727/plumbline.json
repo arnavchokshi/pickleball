@@ -1,0 +1,89 @@
+{
+ "focal_px_used_for_normalisation": 2537.9139649536,
+ "lines": [
+  {
+   "best_scan_k": -0.052,
+   "description": "top edge of the sponsor wall (physical)",
+   "implied_brown_k1": 0.052,
+   "line": "wall_top_dark",
+   "point_count": 778,
+   "radius_pct_max": 85.7,
+   "radius_pct_min": 44.22,
+   "rms_px_at_best_k": 0.2588,
+   "rms_px_at_k_zero": 0.751,
+   "straight_line_rms_px": 0.751,
+   "tracked": true
+  },
+  {
+   "best_scan_k": -0.038,
+   "description": "highlight strip above it (physical)",
+   "implied_brown_k1": 0.038,
+   "line": "wall_top_bright",
+   "point_count": 796,
+   "radius_pct_max": 87.8,
+   "radius_pct_min": 44.65,
+   "rms_px_at_best_k": 0.5245,
+   "rms_px_at_k_zero": 0.7533,
+   "straight_line_rms_px": 0.7533,
+   "tracked": true
+  },
+  {
+   "best_scan_k": -0.162,
+   "description": "wall meets the surround (physical)",
+   "implied_brown_k1": 0.162,
+   "line": "wall_base",
+   "point_count": 500,
+   "radius_pct_max": 64.01,
+   "radius_pct_min": 26.96,
+   "rms_px_at_best_k": 0.3909,
+   "rms_px_at_k_zero": 0.6303,
+   "straight_line_rms_px": 0.6303,
+   "tracked": true
+  },
+  {
+   "best_scan_k": -0.004,
+   "description": "painted court line (physical)",
+   "implied_brown_k1": 0.004,
+   "line": "court_near_baseline",
+   "point_count": 256,
+   "radius_pct_max": 48.92,
+   "radius_pct_min": 15.34,
+   "rms_px_at_best_k": 0.2071,
+   "rms_px_at_k_zero": 0.2071,
+   "straight_line_rms_px": 0.2071,
+   "tracked": true
+  },
+  {
+   "best_scan_k": -0.004,
+   "description": "painted court line (physical)",
+   "implied_brown_k1": 0.004,
+   "line": "court_far_baseline",
+   "point_count": 285,
+   "radius_pct_max": 32.53,
+   "radius_pct_min": 19.7,
+   "rms_px_at_best_k": 0.2227,
+   "rms_px_at_k_zero": 0.2227,
+   "straight_line_rms_px": 0.2227,
+   "tracked": true
+  },
+  {
+   "best_scan_k": 0.0,
+   "description": "CONTROL: composited overlay",
+   "implied_brown_k1": -0.0,
+   "line": "scoreboard_separator",
+   "point_count": 287,
+   "radius_pct_max": 91.2,
+   "radius_pct_min": 49.02,
+   "rms_px_at_best_k": 0.0015,
+   "rms_px_at_k_zero": 0.0015,
+   "straight_line_rms_px": 0.0015,
+   "tracked": true
+  }
+ ],
+ "method": "plumb_line_straightness_v1",
+ "sign_convention": "scan k ~ -brown_k1 (asserted above against synthetic lines)",
+ "sign_convention_check_recovered_scan_k": {
+  "brown_k1=+0.10": -0.09599999999999975,
+  "brown_k1=-0.10": 0.10400000000000043
+ }
+}

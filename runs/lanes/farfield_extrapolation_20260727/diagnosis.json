@@ -1,0 +1,557 @@
+{
+ "bounces": [
+  {
+   "court_x_m": 0.7535,
+   "court_y_m": -5.7781,
+   "envelope_verdict": "within_calibrated_envelope",
+   "frame": 124,
+   "metres_outside_sideline": -2.2945,
+   "pixel_xy": [
+    1081.6,
+    653.2
+   ],
+   "radius_pct_of_half_diagonal": 15.08
+  },
+  {
+   "court_x_m": 1.1529,
+   "court_y_m": 2.9115,
+   "envelope_verdict": "within_calibrated_envelope",
+   "frame": 168,
+   "metres_outside_sideline": -1.8951,
+   "pixel_xy": [
+    1077.1,
+    381.5
+   ],
+   "radius_pct_of_half_diagonal": 17.89
+  },
+  {
+   "court_x_m": -3.1627,
+   "court_y_m": -4.2179,
+   "envelope_verdict": "within_calibrated_envelope",
+   "frame": 368,
+   "metres_outside_sideline": 0.1147,
+   "pixel_xy": [
+    490.6,
+    585.7
+   ],
+   "radius_pct_of_half_diagonal": 42.82
+  },
+  {
+   "court_x_m": -3.6993,
+   "court_y_m": -5.9392,
+   "envelope_verdict": "extrapolated",
+   "frame": 388,
+   "metres_outside_sideline": 0.6513,
+   "pixel_xy": [
+    353.4,
+    662.2
+   ],
+   "radius_pct_of_half_diagonal": 56.18
+  },
+  {
+   "court_x_m": -4.0734,
+   "court_y_m": -7.2417,
+   "envelope_verdict": "far_extrapolated",
+   "frame": 402,
+   "metres_outside_sideline": 1.0254,
+   "pixel_xy": [
+    233.9,
+    732.0
+   ],
+   "radius_pct_of_half_diagonal": 68.19
+  },
+  {
+   "court_x_m": -4.441,
+   "court_y_m": -8.1164,
+   "envelope_verdict": "far_extrapolated",
+   "frame": 414,
+   "metres_outside_sideline": 1.393,
+   "pixel_xy": [
+    118.9,
+    786.3
+   ],
+   "radius_pct_of_half_diagonal": 79.57
+  }
+ ],
+ "calibration": {
+  "correspondence_radius_pct": [
+   2.0,
+   8.91,
+   12.35,
+   15.49,
+   20.08,
+   32.05,
+   32.51,
+   32.6,
+   33.15,
+   33.64,
+   33.7,
+   36.42,
+   37.02,
+   49.74,
+   50.01
+  ],
+  "dist": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "envelope": {
+   "calibrated_radius_pct_of_half_diagonal": 50.006,
+   "calibrated_radius_px": 550.797,
+   "center_px": [
+    960.0,
+    540.0
+   ],
+   "correspondence_bbox_px": {
+    "x_max": 1485.874,
+    "x_min": 438.601,
+    "y_max": 710.524,
+    "y_min": 318.916
+   },
+   "correspondence_count": 15,
+   "correspondence_radius_pct_of_half_diagonal": {
+    "max": 50.006,
+    "median": 32.604,
+    "min": 2.001,
+    "p95": 49.821
+   },
+   "correspondence_radius_px": {
+    "max": 550.797,
+    "median": 359.115,
+    "min": 22.037,
+    "p95": 548.758
+   },
+   "extrapolation_unvalidated_note": "This pixel lies outside the image region the calibration's own correspondences cover. The camera model is being extrapolated there and no held-out evidence in this repo tests it at that radius. The position is kept and is not claimed to be wrong -- it is claimed to be unvalidated.",
+   "far_radius_pct_of_half_diagonal": 63.004,
+   "far_radius_px": 693.961,
+   "far_ratio": 1.259921,
+   "half_diagonal_px": 1101.454,
+   "image_size_px": [
+    1920.0,
+    1080.0
+   ],
+   "policy": "calibration_extrapolation_v1",
+   "provenance": "calibration_image_pts",
+   "schema_version": 1
+  },
+  "fx": 2537.9139649536,
+  "intrinsics_source": "metric_15pt_reviewed",
+  "reprojection_error_px": {
+   "median": 4.7834997281882865,
+   "p95": 12.276624313829716
+  }
+ },
+ "clip_id": "outdoor_webcam_20s_fullmesh_final",
+ "distortion_refit_sweep": [
+  {
+   "bounce_court_x_m": {
+    "124": 0.7487,
+    "168": 1.1491,
+    "368": -3.1613,
+    "388": -3.71,
+    "402": -4.0997,
+    "414": -4.4879
+   },
+   "brown_k1": -0.2,
+   "leave_one_out_median_plane_error_m": 0.125,
+   "leave_one_out_p95_plane_error_m": 0.4761,
+   "refit_focal_px": 2527.12
+  },
+  {
+   "bounce_court_x_m": {
+    "124": 0.7511,
+    "168": 1.151,
+    "368": -3.162,
+    "388": -3.7045,
+    "402": -4.086,
+    "414": -4.4632
+   },
+   "brown_k1": -0.1,
+   "leave_one_out_median_plane_error_m": 0.1263,
+   "leave_one_out_p95_plane_error_m": 0.4824,
+   "refit_focal_px": 2532.56
+  },
+  {
+   "bounce_court_x_m": {
+    "124": 0.7523,
+    "168": 1.152,
+    "368": -3.1624,
+    "388": -3.7018,
+    "402": -4.0796,
+    "414": -4.4518
+   },
+   "brown_k1": -0.05,
+   "leave_one_out_median_plane_error_m": 0.1269,
+   "leave_one_out_p95_plane_error_m": 0.4855,
+   "refit_focal_px": 2535.24
+  },
+  {
+   "bounce_court_x_m": {
+    "124": 0.7535,
+    "168": 1.1529,
+    "368": -3.1627,
+    "388": -3.6993,
+    "402": -4.0734,
+    "414": -4.441
+   },
+   "brown_k1": 0.0,
+   "leave_one_out_median_plane_error_m": 0.1275,
+   "leave_one_out_p95_plane_error_m": 0.4886,
+   "refit_focal_px": 2537.86
+  },
+  {
+   "bounce_court_x_m": {
+    "124": 0.7546,
+    "168": 1.1538,
+    "368": -3.163,
+    "388": -3.6968,
+    "402": -4.0675,
+    "414": -4.4306
+   },
+   "brown_k1": 0.05,
+   "leave_one_out_median_plane_error_m": 0.1281,
+   "leave_one_out_p95_plane_error_m": 0.4916,
+   "refit_focal_px": 2540.46
+  },
+  {
+   "bounce_court_x_m": {
+    "124": 0.7558,
+    "168": 1.1547,
+    "368": -3.1633,
+    "388": -3.6944,
+    "402": -4.0617,
+    "414": -4.4208
+   },
+   "brown_k1": 0.1,
+   "leave_one_out_median_plane_error_m": 0.1287,
+   "leave_one_out_p95_plane_error_m": 0.4947,
+   "refit_focal_px": 2543.0
+  },
+  {
+   "bounce_court_x_m": {
+    "124": 0.7571,
+    "168": 1.1557,
+    "368": -3.1637,
+    "388": -3.6916,
+    "402": -4.0552,
+    "414": -4.4095
+   },
+   "brown_k1": 0.16,
+   "leave_one_out_median_plane_error_m": 0.13,
+   "leave_one_out_p95_plane_error_m": 0.4982,
+   "refit_focal_px": 2546.02
+  },
+  {
+   "bounce_court_x_m": {
+    "124": 0.758,
+    "168": 1.1564,
+    "368": -3.1639,
+    "388": -3.6898,
+    "402": -4.051,
+    "414": -4.4024
+   },
+   "brown_k1": 0.2,
+   "leave_one_out_median_plane_error_m": 0.1299,
+   "leave_one_out_p95_plane_error_m": 0.5006,
+   "refit_focal_px": 2548.02
+  }
+ ],
+ "distortion_sensitivity_court_x_delta_m": [
+  {
+   "frame": 124,
+   "k1": {
+    "+0.05": -0.0001,
+    "+0.10": -0.0003,
+    "+0.20": -0.0005,
+    "+0.30": -0.0008,
+    "-0.05": 0.0001,
+    "-0.10": 0.0003,
+    "-0.20": 0.0005,
+    "-0.30": 0.0008
+   },
+   "k1_zero_court_x_m": 0.7535
+  },
+  {
+   "frame": 168,
+   "k1": {
+    "+0.05": -0.0004,
+    "+0.10": -0.0009,
+    "+0.20": -0.0018,
+    "+0.30": -0.0027,
+    "-0.05": 0.0005,
+    "-0.10": 0.0009,
+    "-0.20": 0.0018,
+    "-0.30": 0.0027
+   },
+   "k1_zero_court_x_m": 1.1529
+  },
+  {
+   "frame": 368,
+   "k1": {
+    "+0.05": 0.0051,
+    "+0.10": 0.0102,
+    "+0.20": 0.0201,
+    "+0.30": 0.0299,
+    "-0.05": -0.0052,
+    "-0.10": -0.0104,
+    "-0.20": -0.021,
+    "-0.30": -0.0318
+   },
+   "k1_zero_court_x_m": -3.1627
+  },
+  {
+   "frame": 388,
+   "k1": {
+    "+0.05": 0.0093,
+    "+0.10": 0.0183,
+    "+0.20": 0.0361,
+    "+0.30": 0.0533,
+    "-0.05": -0.0094,
+    "-0.10": -0.019,
+    "-0.20": -0.0386,
+    "-0.30": -0.059
+   },
+   "k1_zero_court_x_m": -3.6993
+  },
+  {
+   "frame": 402,
+   "k1": {
+    "+0.05": 0.0137,
+    "+0.10": 0.0271,
+    "+0.20": 0.053,
+    "+0.30": 0.0778,
+    "-0.05": -0.0141,
+    "-0.10": -0.0285,
+    "-0.20": -0.0585,
+    "-0.30": -0.0902
+   },
+   "k1_zero_court_x_m": -4.0734
+  },
+  {
+   "frame": 414,
+   "k1": {
+    "+0.05": 0.0191,
+    "+0.10": 0.0376,
+    "+0.20": 0.0729,
+    "+0.30": 0.1063,
+    "-0.05": -0.0197,
+    "-0.10": -0.0401,
+    "-0.20": -0.0831,
+    "-0.30": -0.1296
+   },
+   "k1_zero_court_x_m": -4.441
+  }
+ ],
+ "leave_one_out": [
+  {
+   "held_out_plane_error_m": 0.0498,
+   "radius_pct_of_half_diagonal": 49.74,
+   "refit_focal_px": 2510.58,
+   "world_xyz_m": [
+    -3.048,
+    -6.7056,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.1112,
+   "radius_pct_of_half_diagonal": 15.49,
+   "refit_focal_px": 2542.34,
+   "world_xyz_m": [
+    0.0,
+    -6.7056,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.0816,
+   "radius_pct_of_half_diagonal": 50.01,
+   "refit_focal_px": 2560.26,
+   "world_xyz_m": [
+    3.048,
+    -6.7056,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.093,
+   "radius_pct_of_half_diagonal": 32.05,
+   "refit_focal_px": 2528.92,
+   "world_xyz_m": [
+    3.048,
+    6.7056,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.0734,
+   "radius_pct_of_half_diagonal": 20.08,
+   "refit_focal_px": 2538.94,
+   "world_xyz_m": [
+    0.0,
+    6.7056,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.4141,
+   "radius_pct_of_half_diagonal": 32.6,
+   "refit_focal_px": 2534.84,
+   "world_xyz_m": [
+    -3.048,
+    6.7056,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.1745,
+   "radius_pct_of_half_diagonal": 37.02,
+   "refit_focal_px": 2530.5,
+   "world_xyz_m": [
+    -3.048,
+    -2.1336,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.105,
+   "radius_pct_of_half_diagonal": 2.0,
+   "refit_focal_px": 2534.84,
+   "world_xyz_m": [
+    0.0,
+    -2.1336,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.1325,
+   "radius_pct_of_half_diagonal": 36.42,
+   "refit_focal_px": 2533.22,
+   "world_xyz_m": [
+    3.048,
+    -2.1336,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.5424,
+   "radius_pct_of_half_diagonal": 33.7,
+   "refit_focal_px": 2575.14,
+   "world_xyz_m": [
+    -3.048,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.4656,
+   "radius_pct_of_half_diagonal": 8.91,
+   "refit_focal_px": 2547.02,
+   "world_xyz_m": [
+    0.0,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.1884,
+   "radius_pct_of_half_diagonal": 33.15,
+   "refit_focal_px": 2559.84,
+   "world_xyz_m": [
+    3.048,
+    0.0,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.1275,
+   "radius_pct_of_half_diagonal": 33.64,
+   "refit_focal_px": 2505.8,
+   "world_xyz_m": [
+    -3.048,
+    2.1336,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.1026,
+   "radius_pct_of_half_diagonal": 12.35,
+   "refit_focal_px": 2537.18,
+   "world_xyz_m": [
+    0.0,
+    2.1336,
+    0.0
+   ]
+  },
+  {
+   "held_out_plane_error_m": 0.1357,
+   "radius_pct_of_half_diagonal": 32.51,
+   "refit_focal_px": 2522.48,
+   "world_xyz_m": [
+    3.048,
+    2.1336,
+    0.0
+   ]
+  }
+ ],
+ "policy": "calibration_extrapolation_v1",
+ "resampled_refit_caveat": "Every refit is the same model class fit to the same central correspondences. Their agreement bounds sampling noise, never model-class error, and cannot see past 50% radius any better than the original fit could.",
+ "resampled_refit_spread": [
+  {
+   "court_x_max_m": 0.7745,
+   "court_x_mean_m": 0.7546,
+   "court_x_min_m": 0.7341,
+   "court_x_sd_m": 0.0091,
+   "frame": 124,
+   "radius_pct_of_half_diagonal": 15.08,
+   "refit_count": 55
+  },
+  {
+   "court_x_max_m": 1.1723,
+   "court_x_mean_m": 1.1531,
+   "court_x_min_m": 1.14,
+   "court_x_sd_m": 0.0061,
+   "frame": 168,
+   "radius_pct_of_half_diagonal": 17.89,
+   "refit_count": 55
+  },
+  {
+   "court_x_max_m": -3.1339,
+   "court_x_mean_m": -3.1605,
+   "court_x_min_m": -3.1759,
+   "court_x_sd_m": 0.0104,
+   "frame": 368,
+   "radius_pct_of_half_diagonal": 42.82,
+   "refit_count": 55
+  },
+  {
+   "court_x_max_m": -3.662,
+   "court_x_mean_m": -3.6963,
+   "court_x_min_m": -3.7174,
+   "court_x_sd_m": 0.014,
+   "frame": 388,
+   "radius_pct_of_half_diagonal": 56.18,
+   "refit_count": 55
+  },
+  {
+   "court_x_max_m": -4.0284,
+   "court_x_mean_m": -4.0697,
+   "court_x_min_m": -4.0955,
+   "court_x_sd_m": 0.0175,
+   "frame": 402,
+   "radius_pct_of_half_diagonal": 68.19,
+   "refit_count": 55
+  },
+  {
+   "court_x_max_m": -4.3867,
+   "court_x_mean_m": -4.4367,
+   "court_x_min_m": -4.4667,
+   "court_x_sd_m": 0.0205,
+   "frame": 414,
+   "radius_pct_of_half_diagonal": 79.57,
+   "refit_count": 55
+  }
+ ]
+}

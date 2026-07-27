@@ -62,6 +62,7 @@ from .ball_label_geometry import (
     is_in_front_of_camera,
     near_player_depth_sigma_m,
     perpendicular_sigma_m,
+    pixel_extrapolation,
     project_world_to_pixel,
     ray_for_pixel,
     sigma_xyz_from_ray,
@@ -845,6 +846,7 @@ def build_label(
         prefill=prefill_payload,
         near_player=near_player_payload,
         notes=str(notes or ""),
+        extrapolation=pixel_extrapolation(bundle.calibration, pixel_xy),
     )
     label.validate()
     return label

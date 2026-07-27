@@ -30,6 +30,11 @@ import math
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
+from .calibration_extrapolation import (
+    EXTRAPOLATION_UNVALIDATED_NOTE,
+    calibrated_image_envelope,
+    radial_extrapolation_pixel_allowance,
+)
 from .ball_arc_solver import (
     BALL_RADIUS_M,
     DEFAULT_BOUNCE_SPEED_CV,
@@ -187,6 +192,48 @@ def bounce_world_point(
     origin, direction = pixel_ray_world(calibration, pixel_xy)
     world = intersect_ray_z(origin, direction, BALL_RADIUS_M)
     return (float(world[0]), float(world[1]), float(world[2])), depth
+
+
+def pixel_extrapolation(
+    calibration: Mapping[str, Any], pixel_xy: Sequence[float]
+) -> dict[str, Any]:
+    """Where a clicked pixel sits relative to the calibrated image envelope.
+
+    A click can be perfectly correct and still land where the camera model was
+    never fit. This is the record that says so, small enough to sit on every
+    label: the verdict, how far past the evidence the pixel is, and the pixels
+    of radial error the calibration could not have detected. It changes no
+    position and refuses nothing -- an extrapolated label is kept, flagged, and
+    given a wider sigma, because deleting a real observation would be worse.
+    """
+
+    envelope = calibrated_image_envelope(calibration)
+    allowance = radial_extrapolation_pixel_allowance(
+        calibration, pixel_xy, envelope=envelope
+    )
+    if not allowance.get("available"):
+        return {
+            "available": False,
+            "verdict": "within_calibrated_envelope",
+            "extrapolated": False,
+            "reason": str(allowance.get("reason", "")),
+            "note": EXTRAPOLATION_UNVALIDATED_NOTE,
+        }
+    return {
+        "available": True,
+        "policy": allowance["policy"],
+        "verdict": allowance["verdict"],
+        "extrapolated": allowance["extrapolated"],
+        "far_extrapolated": allowance["far_extrapolated"],
+        "radius_pct_of_half_diagonal": allowance["radius_pct_of_half_diagonal"],
+        "calibrated_radius_pct_of_half_diagonal": allowance[
+            "calibrated_radius_pct_of_half_diagonal"
+        ],
+        "extrapolation_ratio": allowance["extrapolation_ratio"],
+        "allowance_px": allowance["allowance_px"],
+        "basis": allowance["basis"],
+        "note": EXTRAPOLATION_UNVALIDATED_NOTE if allowance["extrapolated"] else "",
+    }
 
 
 def project_world_to_pixel(
@@ -460,6 +507,7 @@ __all__ = [
     "is_in_front_of_camera",
     "near_player_depth_sigma_m",
     "perpendicular_sigma_m",
+    "pixel_extrapolation",
     "project_world_to_pixel",
     "ray_for_pixel",
     "sigma_xyz_from_ray",

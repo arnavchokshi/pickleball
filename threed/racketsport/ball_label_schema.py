@@ -96,6 +96,14 @@ HUMAN_CONFIDENCE = ("low", "medium", "high")
 _UNIT_NORM_TOLERANCE = 1e-4
 _BOUNCE_HEIGHT_TOLERANCE_M = 1e-6
 
+# Verdicts a label's optional ``extrapolation`` block may carry. Mirrors
+# ``calibration_extrapolation.VERDICT_*``; duplicated as literals so this
+# contract module keeps its no-import-cycle independence, and pinned equal by
+# test.
+_EXTRAPOLATION_VERDICTS = frozenset(
+    {"within_calibrated_envelope", "extrapolated", "far_extrapolated"}
+)
+
 
 class LabelContractError(ValueError):
     """Raised when a payload violates the human-label contract."""
@@ -128,6 +136,13 @@ class BallLabel:
     prefill: Mapping[str, Any] | None = None
     near_player: Mapping[str, Any] | None = None
     notes: str = ""
+    # Where this pixel sits relative to the image region the calibration's own
+    # correspondences cover (``calibration_extrapolation.evaluate_pixel``). A
+    # click can be perfectly correct and still land where the camera model was
+    # never fit; the owner needs to see that on the label rather than have the
+    # label quietly disappear. Optional so every label set written before this
+    # existed still validates and still round-trips byte-identically.
+    extrapolation: Mapping[str, Any] | None = None
 
     @property
     def accuracy_tier(self) -> str:
@@ -248,14 +263,38 @@ class BallLabel:
                     raise LabelContractError(f"{path}.near_player.{key}: required")
         if self.prefill is not None and not isinstance(self.prefill, Mapping):
             raise LabelContractError(f"{path}.prefill: expected object or null")
+        if self.extrapolation is not None:
+            if not isinstance(self.extrapolation, Mapping):
+                raise LabelContractError(f"{path}.extrapolation: expected object or null")
+            verdict = self.extrapolation.get("verdict")
+            if verdict not in _EXTRAPOLATION_VERDICTS:
+                raise LabelContractError(
+                    f"{path}.extrapolation.verdict: unknown {verdict!r}; "
+                    f"known: {sorted(_EXTRAPOLATION_VERDICTS)}"
+                )
         if self.origin != "fresh" and self.prefill is None:
             raise LabelContractError(
                 f"{path}.prefill: origin={self.origin!r} claims a prefill was used but none "
                 f"is recorded; a prefill must never be silently promoted"
             )
 
+    @property
+    def is_extrapolated(self) -> bool:
+        """True when this pixel lies outside the calibrated image envelope.
+
+        False when no envelope was recorded: an old label set says nothing
+        about extrapolation, and silence is not evidence of safety. Read
+        ``extrapolation`` itself to tell "checked and inside" from "never
+        checked".
+        """
+
+        record = self.extrapolation
+        if not isinstance(record, Mapping):
+            return False
+        return bool(record.get("extrapolated", False))
+
     def to_json_dict(self) -> dict[str, Any]:
-        return {
+        payload = {
             "accuracy_tier": self.accuracy_tier,
             "depth_along_ray_m": _round(self.depth_along_ray_m),
             "depth_source": self.depth_source,
@@ -278,6 +317,12 @@ class BallLabel:
             "uncertainty_basis": str(self.uncertainty_basis),
             "world_xyz_m": [_round(v) for v in self.world_xyz_m],
         }
+        # Emitted only when it was actually computed, so a label set written
+        # before the envelope existed serializes byte-identically and an
+        # absent key stays honest about never having been checked.
+        if self.extrapolation is not None:
+            payload["extrapolation"] = _round_tree(self.extrapolation)
+        return payload
 
     @classmethod
     def from_json_dict(cls, payload: Any, *, path: str = "label") -> "BallLabel":
@@ -302,6 +347,7 @@ class BallLabel:
                 prefill=record.get("prefill"),
                 near_player=record.get("near_player"),
                 notes=str(record.get("notes") or ""),
+                extrapolation=record.get("extrapolation"),
             )
         except KeyError as exc:
             raise LabelContractError(f"{path}.{exc.args[0]}: required") from exc
@@ -386,18 +432,36 @@ class BallLabelSet:
         by_origin = {origin: 0 for origin in sorted(ORIGINS)}
         by_confidence = {level: 0 for level in HUMAN_CONFIDENCE}
         by_depth_source = {source: 0 for source in sorted(DEPTH_SOURCES)}
+        by_extrapolation = {verdict: 0 for verdict in sorted(_EXTRAPOLATION_VERDICTS)}
+        unchecked = 0
         for label in self.labels:
             by_kind[label.kind] += 1
             by_tier[label.accuracy_tier] += 1
             by_origin[label.origin] += 1
             by_confidence[label.human_confidence] += 1
             by_depth_source[label.depth_source] += 1
+            record = label.extrapolation
+            if isinstance(record, Mapping) and record.get("verdict") in by_extrapolation:
+                by_extrapolation[str(record["verdict"])] += 1
+            else:
+                unchecked += 1
+        by_extrapolation["not_checked"] = unchecked
         frames = [label.frame for label in self.labels]
         return {
             "label_count": len(self.labels),
             "ground_truth_candidate_count": sum(
                 1 for label in self.labels if label.is_ground_truth_candidate
             ),
+            # A ground-truth candidate whose pixel sits outside the calibrated
+            # image envelope is still a correct click, but its 3D position
+            # rests on an extrapolated camera model. Counted separately so no
+            # consumer aggregates the two without noticing.
+            "extrapolated_ground_truth_candidate_count": sum(
+                1
+                for label in self.labels
+                if label.is_ground_truth_candidate and label.is_extrapolated
+            ),
+            "by_extrapolation_verdict": by_extrapolation,
             "by_kind": by_kind,
             "by_accuracy_tier": by_tier,
             "by_origin": by_origin,

@@ -1,0 +1,1110 @@
+.........................sF............................................. [  6%]
+s.....F................................................................. [ 12%]
+........................................................................ [ 18%]
+........................................................................ [ 24%]
+..........................................FF............................ [ 31%]
+........................................................................ [ 37%]
+......................................s....................F.F..FF.FFF.. [ 43%]
+F....................................................................... [ 49%]
+........................................................................ [ 55%]
+.......s................................................................ [ 62%]
+.............FF...F..................................................... [ 68%]
+......................s.....s...s..F.................................... [ 74%]
+...........................s...............................FF........... [ 80%]
+........................................................................ [ 86%]
+..................F..F................................................FF [ 93%]
+FF...................................................................... [ 99%]
+........                                                                 [100%]
+=================================== FAILURES ===================================
+___________ test_default_chain_config_matches_frozen_row22_manifest ____________
+
+    def test_default_chain_config_matches_frozen_row22_manifest() -> None:
+>       frozen_configs = json.loads(FROZEN_ROW22_MANIFEST.read_text(encoding="utf-8"))["configs"]
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_ball_arc_chain.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.11/pathlib.py:1058: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-farfield-20260727/runs/lanes/ball_heldout_chain_run_20260704/chain_runs/outdoor_webcam_iynbd_1500_long_high_baseline/ball_chain_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-farfield-20260727/runs/lanes/ball_heldout_chain_run_20260704/chain_runs/outdoor_webcam_iynbd_1500_long_high_baseline/ball_chain_manifest.json'
+
+/opt/anaconda3/lib/python3.11/pathlib.py:1044: FileNotFoundError
+_ test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_wolverine_seg6_fixture_fa0')
+
+    def test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds(tmp_path: Path) -> None:
+        fixture_path = Path(__file__).resolve().parent / "fixtures" / "wolverine_seg6_bvp_regression.json"
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    
+        artifact = solve_ball_arc_track(
+            ball_track=fixture["ball_track"],
+            calibration=fixture["court_calibration"],
+            auto_bounce_candidates=fixture["auto_bounce_candidates"],
+            physics=PhysicsParameters.for_ball_type("outdoor"),
+            config=BallArcSolverConfig(
+                enable_event_subset_selection=False,
+                enable_event_discovery=True,
+                enable_weak_segments=False,
+                max_reprojection_inlier_px=18.0,
+            ),
+            clip_id=fixture["clip_id"],
+        )
+    
+>       assert artifact["status"] == "ran"
+E       AssertionError: assert 'degraded' == 'ran'
+E         
+E         - ran
+E         + degraded
+
+tests/racketsport/test_ball_arc_solver.py:1009: AssertionError
+______ test_live_b0_split_scores_final_labels_and_binds_prediction_media _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_live_b0_split_scores_fina0')
+
+    def test_live_b0_split_scores_final_labels_and_binds_prediction_media(tmp_path: Path) -> None:
+        split_dir = Path("runs/lanes/ball_b0_split_20260721/split")
+        validation_rows = [
+            json.loads(line)
+            for line in (split_dir / "validation.jsonl").read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+        clips = sorted({row["clip_id"] for row in validation_rows})
+        assert len(validation_rows) == 167
+        assert len(clips) == 8
+        args = ["--out-dir", str(tmp_path / "live_out"), "--parent-source-split", str(split_dir)]
+        for clip in clips:
+            track = Path("data/online_harvest_20260706/prelabels") / clip / "ball_track.json"
+            args.extend(["--candidate-track", f"wasb={clip}={track}"])
+    
+        completed = _run_cli(args)
+    
+>       assert completed.returncode == 0, completed.stderr
+E       AssertionError: ball_loso_validation.py: error: missing B0 source video for Ezz6HDNHlnk_rally_0001: /private/tmp/pb-farfield-20260727/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4
+E         
+E       assert 2 == 0
+E        +  where 2 = CompletedProcess(args=['/opt/anaconda3/bin/python3', 'scripts/racketsport/ball_loso_validation.py', '--out-dir', '/pri...0001: /private/tmp/pb-farfield-20260727/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4\n').returncode
+
+tests/racketsport/test_ball_loso_validation.py:740: AssertionError
+________ test_live_b0_split_refuses_same_hyu_prediction_reused_for_ezz _________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_live_b0_split_refuses_sam0')
+
+    def test_live_b0_split_refuses_same_hyu_prediction_reused_for_ezz(tmp_path: Path) -> None:
+        split_dir = Path("runs/lanes/ball_b0_split_20260721/split")
+        clips = sorted(
+            {
+                json.loads(line)["clip_id"]
+                for line in (split_dir / "validation.jsonl").read_text(encoding="utf-8").splitlines()
+                if line.strip()
+            }
+        )
+        hyu_clip = "HyUqT7zFiwk_rally_0001"
+        hyu_track = Path("data/online_harvest_20260706/prelabels") / hyu_clip / "ball_track.json"
+        args = ["--out-dir", str(tmp_path / "out"), "--parent-source-split", str(split_dir)]
+        for index, clip in enumerate(clips):
+            track = (
+                hyu_track
+                if index == 0
+                else Path("data/online_harvest_20260706/prelabels") / clip / "ball_track.json"
+            )
+            args.extend(["--candidate-track", f"wasb={clip}={track}"])
+    
+        completed = _run_cli(args)
+    
+        assert completed.returncode == 2
+>       assert "canonical path is bound to 'HyUqT7zFiwk_rally_0001'" in completed.stderr
+E       assert "canonical path is bound to 'HyUqT7zFiwk_rally_0001'" in 'ball_loso_validation.py: error: missing B0 source video for Ezz6HDNHlnk_rally_0001: /private/tmp/pb-farfield-20260727/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4\n'
+E        +  where 'ball_loso_validation.py: error: missing B0 source video for Ezz6HDNHlnk_rally_0001: /private/tmp/pb-farfield-20260727/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4\n' = CompletedProcess(args=['/opt/anaconda3/bin/python3', 'scripts/racketsport/ball_loso_validation.py', '--out-dir', '/pri...0001: /private/tmp/pb-farfield-20260727/data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4\n').stderr
+
+tests/racketsport/test_ball_loso_validation.py:782: AssertionError
+____ test_frozen_b0_media_inventory_is_exact_and_symlink_roots_are_refused _____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_frozen_b0_media_inventory0')
+
+    def test_frozen_b0_media_inventory_is_exact_and_symlink_roots_are_refused(tmp_path: Path) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        rows, _ = stage2.load_and_validate_b0_split(stage2.DEFAULT_B0_SPLIT_ROOT)
+>       observed = stage2._validate_b0_source_media(
+            rows,
+            rally_root=stage2.DEFAULT_RALLY_ROOT,
+        )
+
+tests/racketsport/test_ball_stage2_training.py:761: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:693: in _validate_b0_source_media
+    root = _required_canonical_directory(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = PosixPath('data/online_harvest_20260706/rallies')
+field = 'B0 rally_root'
+
+    def _required_canonical_directory(value: Any, field: str, *, expected: Path | None = None) -> Path:
+        if not isinstance(value, (str, Path)) or not str(value):
+            raise ValueError(f"{field} must be a path string")
+        path = Path(value)
+        if not path.is_dir():
+>           raise FileNotFoundError(f"missing {field}: {path}")
+E           FileNotFoundError: missing B0 rally_root: data/online_harvest_20260706/rallies
+
+scripts/racketsport/train_ball_stage2.py:1117: FileNotFoundError
+_ test_generic_cvat_loader_refuses_renamed_ezz_judge_row_by_media_content_sha __
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_generic_cvat_loader_refus0')
+
+    def test_generic_cvat_loader_refuses_renamed_ezz_judge_row_by_media_content_sha(
+        tmp_path: Path,
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        alias_clip = "allowedalias_rally_0001"
+        cvat_root = tmp_path / "cvat"
+        clip_dir = cvat_root / alias_clip
+        clip_dir.mkdir(parents=True)
+        payload = _cvat_payload(
+            frame_count=335,
+            reviewed_frame_indices=[334],
+            ball_frames={334: (10.0, 12.0, 4.0, 6.0)},
+            ball_visibility_levels={334: "clear"},
+        )
+        payload["clip_id"] = alias_clip
+        (clip_dir / "reviewed_boxes.json").write_text(json.dumps(payload), encoding="utf-8")
+        ezz_judge_media = Path(
+            "data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4"
+        )
+    
+        with pytest.raises(ValueError, match="resolves by content SHA to frozen B0 judge media"):
+>           stage2.CvatBallStage2Dataset.from_export_root(
+                cvat_root,
+                video_paths={alias_clip: ezz_judge_media},
+                image_size=(32, 32),
+                frames_in=3,
+                heatmap_radius_px=2.0,
+            )
+
+tests/racketsport/test_ball_stage2_training.py:812: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+cls = <class 'scripts.racketsport.train_ball_stage2.CvatBallStage2Dataset'>
+cvat_export_root = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_generic_cvat_loader_refus0/cvat')
+
+    @classmethod
+    def from_export_root(
+        cls,
+        cvat_export_root: str | Path,
+        *,
+        rally_root: str | Path = DEFAULT_RALLY_ROOT,
+        video_paths: Mapping[str, str | Path] | None = None,
+        image_size: tuple[int, int] = DEFAULT_BALL_PRETRAIN_IMAGE_SIZE,
+        frames_in: int = DEFAULT_BALL_PRETRAIN_FRAMES_IN,
+        heatmap_radius_px: float = DEFAULT_BALL_PRETRAIN_HEATMAP_RADIUS_PX,
+        image_path_rewrites: Mapping[str, str] | Sequence[str] | None = None,
+        max_samples: int | None = None,
+    ) -> "CvatBallStage2Dataset":
+        root = Path(cvat_export_root)
+        if not root.is_dir():
+            raise FileNotFoundError(f"missing CVAT export root: {root}")
+        normalized_videos = {str(clip): Path(path) for clip, path in (video_paths or {}).items()}
+        normalized_rewrites = _parse_image_path_rewrites(image_path_rewrites)
+        records: list[Stage2SampleRecord] = []
+        media_sha_cache: dict[Path, str] = {}
+        for clip_dir in sorted(path for path in root.iterdir() if path.is_dir()):
+            annotations = load_cvat_annotations_from_export_clip(clip_dir)
+            video_path = normalized_videos.get(annotations.clip_id) or _resolve_rally_video(Path(rally_root), annotations.clip_id)
+            decoded_video_path = _rewrite_path(video_path, normalized_rewrites)
+            if not decoded_video_path.is_file():
+>               raise FileNotFoundError(
+                    f"missing CVAT source video for {annotations.clip_id}: {decoded_video_path}"
+                )
+E               FileNotFoundError: missing CVAT source video for allowedalias_rally_0001: data/online_harvest_20260706/rallies/Ezz6HDNHlnk/Ezz6HDNHlnk_rally_0001.mp4
+
+scripts/racketsport/train_ball_stage2.py:339: FileNotFoundError
+_______ test_failed_gate_sst_fixture_and_sst_only_invocation_are_refused _______
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_failed_gate_sst_fixture_a0')
+
+    def test_failed_gate_sst_fixture_and_sst_only_invocation_are_refused(tmp_path: Path) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        failed_manifest = Path("runs/lanes/ball_b1b2_prep_20260721/schema_valid_sample_manifest.json")
+        with pytest.raises(ValueError, match="gate verdict must be PASS"):
+>           stage2.load_and_validate_production_sst_manifest(failed_manifest)
+
+tests/racketsport/test_ball_stage2_training.py:923: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:779: in load_and_validate_production_sst_manifest
+    manifest = _read_json_object(path)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('runs/lanes/ball_b1b2_prep_20260721/schema_valid_sample_manifest.json')
+
+    def _read_json_object(path: Path) -> dict[str, Any]:
+        if not path.is_file():
+>           raise FileNotFoundError(path)
+E           FileNotFoundError: runs/lanes/ball_b1b2_prep_20260721/schema_valid_sample_manifest.json
+
+scripts/racketsport/train_ball_stage2.py:4009: FileNotFoundError
+_ test_sst_trust_boundary_recounts_and_refuses_forged_row_authority_hashes_and_bounds _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_sst_trust_boundary_recoun0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x31a273450>
+
+    def test_sst_trust_boundary_recounts_and_refuses_forged_row_authority_hashes_and_bounds(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(tmp_path, stage2=stage2, monkeypatch=monkeypatch)
+>       validated, rows = stage2.load_and_validate_production_sst_manifest(manifest_path)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_ball_stage2_training.py:946: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:886: in load_and_validate_production_sst_manifest
+    checkpoint_path = _required_canonical_file(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = '/private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar'
+field = 'SST wasb_checkpoint'
+
+    def _required_canonical_file(value: Any, field: str, *, expected: Path | None = None) -> Path:
+        if not isinstance(value, (str, Path)) or not str(value):
+            raise ValueError(f"{field} must be a path string")
+        path = Path(value)
+        if not path.is_file():
+>           raise FileNotFoundError(f"missing {field}: {path}")
+E           FileNotFoundError: missing SST wasb_checkpoint: /private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar
+
+scripts/racketsport/train_ball_stage2.py:1130: FileNotFoundError
+_ test_sst_rejects_semantic_metadata_forgery_after_all_dependent_hashes_are_recomputed _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_sst_rejects_semantic_meta0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x3087af710>
+
+    def test_sst_rejects_semantic_metadata_forgery_after_all_dependent_hashes_are_recomputed(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(
+            tmp_path,
+            stage2=stage2,
+            monkeypatch=monkeypatch,
+        )
+        clip = manifest["clips"][0]
+        metadata_path = Path(clip["dependencies"]["wasb_metadata_path"])
+        forged_metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        forged_metadata["source_mode"] = "wasb_csv"
+        metadata_path.write_text(json.dumps(forged_metadata), encoding="utf-8")
+        forged_sha = hashlib.sha256(metadata_path.read_bytes()).hexdigest()
+        clip["dependencies"]["wasb_metadata_sha256"] = forged_sha
+        clip["dependencies"]["wasb_runtime"] = forged_metadata
+        for row in clip["samples"]:
+            row["dependency_hashes"]["wasb_metadata_sha256"] = forged_sha
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    
+        with pytest.raises(ValueError, match="source_mode is not production-authentic"):
+>           stage2.load_and_validate_production_sst_manifest(manifest_path)
+
+tests/racketsport/test_ball_stage2_training.py:1187: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:886: in load_and_validate_production_sst_manifest
+    checkpoint_path = _required_canonical_file(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = '/private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar'
+field = 'SST wasb_checkpoint'
+
+    def _required_canonical_file(value: Any, field: str, *, expected: Path | None = None) -> Path:
+        if not isinstance(value, (str, Path)) or not str(value):
+            raise ValueError(f"{field} must be a path string")
+        path = Path(value)
+        if not path.is_file():
+>           raise FileNotFoundError(f"missing {field}: {path}")
+E           FileNotFoundError: missing SST wasb_checkpoint: /private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar
+
+scripts/racketsport/train_ball_stage2.py:1130: FileNotFoundError
+_ test_sst_rejects_invalid_prediction_csv_with_self_consistent_hashes_and_replay_proof _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_sst_rejects_invalid_predi0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x3087a6290>
+
+    def test_sst_rejects_invalid_prediction_csv_with_self_consistent_hashes_and_replay_proof(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(
+            tmp_path,
+            stage2=stage2,
+            monkeypatch=monkeypatch,
+        )
+        clip = manifest["clips"][0]
+        csv_path = Path(clip["dependencies"]["wasb_predictions_csv_path"])
+        with csv_path.open("r", encoding="utf-8", newline="") as handle:
+            rows = list(csv.reader(handle))
+        rows[1][1] = "2"
+        with csv_path.open("w", encoding="utf-8", newline="") as handle:
+            csv.writer(handle).writerows(rows)
+        csv_sha = hashlib.sha256(csv_path.read_bytes()).hexdigest()
+    
+        metadata_path = Path(clip["dependencies"]["wasb_metadata_path"])
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+        metadata["builder_bindings"]["wasb_predictions_csv_sha256"] = csv_sha
+        metadata_path.write_text(json.dumps(metadata), encoding="utf-8")
+        metadata_sha = hashlib.sha256(metadata_path.read_bytes()).hexdigest()
+        clip["dependencies"]["wasb_predictions_csv_sha256"] = csv_sha
+        clip["dependencies"]["wasb_metadata_sha256"] = metadata_sha
+        clip["dependencies"]["wasb_runtime"] = metadata
+        for row in clip["samples"]:
+            row["dependency_hashes"]["wasb_predictions_csv_sha256"] = csv_sha
+            row["dependency_hashes"]["wasb_metadata_sha256"] = metadata_sha
+        manifest["artifact_verification"]["replayed_prediction_sha256_by_clip"][
+            clip["clip_id"]
+        ] = csv_sha
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    
+        with pytest.raises(ValueError, match="visibility must be exactly 0 or 1"):
+>           stage2.load_and_validate_production_sst_manifest(manifest_path)
+
+tests/racketsport/test_ball_stage2_training.py:1226: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:886: in load_and_validate_production_sst_manifest
+    checkpoint_path = _required_canonical_file(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = '/private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar'
+field = 'SST wasb_checkpoint'
+
+    def _required_canonical_file(value: Any, field: str, *, expected: Path | None = None) -> Path:
+        if not isinstance(value, (str, Path)) or not str(value):
+            raise ValueError(f"{field} must be a path string")
+        path = Path(value)
+        if not path.is_file():
+>           raise FileNotFoundError(f"missing {field}: {path}")
+E           FileNotFoundError: missing SST wasb_checkpoint: /private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar
+
+scripts/racketsport/train_ball_stage2.py:1130: FileNotFoundError
+_ test_sst_rejects_replay_mismatch_adapter_forgery_and_symlink_dependency_root _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_sst_rejects_replay_mismat0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x31862b550>
+
+    def test_sst_rejects_replay_mismatch_adapter_forgery_and_symlink_dependency_root(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(
+            tmp_path,
+            stage2=stage2,
+            monkeypatch=monkeypatch,
+        )
+        forged = copy.deepcopy(manifest)
+        forged["preregistration"]["wasb_adapter_code_sha256"] = "f" * 64
+        forged["preregistered_parameters"] = dict(forged["preregistration"])
+        manifest_path.write_text(json.dumps(forged), encoding="utf-8")
+        with pytest.raises(ValueError, match="adapter code identity"):
+            stage2.load_and_validate_production_sst_manifest(manifest_path)
+    
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+        monkeypatch.setattr(stage2, "_run_official_wasb_replay", lambda **_kwargs: b"different")
+        with pytest.raises(ValueError, match="official WASB inference replay differs"):
+>           stage2.load_and_validate_production_sst_manifest(manifest_path)
+
+tests/racketsport/test_ball_stage2_training.py:1249: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:886: in load_and_validate_production_sst_manifest
+    checkpoint_path = _required_canonical_file(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = '/private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar'
+field = 'SST wasb_checkpoint'
+
+    def _required_canonical_file(value: Any, field: str, *, expected: Path | None = None) -> Path:
+        if not isinstance(value, (str, Path)) or not str(value):
+            raise ValueError(f"{field} must be a path string")
+        path = Path(value)
+        if not path.is_file():
+>           raise FileNotFoundError(f"missing {field}: {path}")
+E           FileNotFoundError: missing SST wasb_checkpoint: /private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar
+
+scripts/racketsport/train_ball_stage2.py:1130: FileNotFoundError
+____ test_sst_rejects_monotonic_rehashed_pts_that_differ_from_encoded_media ____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_sst_rejects_monotonic_reh0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x318933850>
+
+    def test_sst_rejects_monotonic_rehashed_pts_that_differ_from_encoded_media(
+        tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from scripts.racketsport import train_ball_stage2 as stage2
+    
+        manifest_path, manifest = _write_production_sst_fixture(
+            tmp_path,
+            stage2=stage2,
+            monkeypatch=monkeypatch,
+        )
+        clip = manifest["clips"][0]
+        dependencies = clip["dependencies"]
+        frame_times_path = Path(dependencies["frame_times_path"])
+        frame_times = json.loads(frame_times_path.read_text(encoding="utf-8"))
+        for row in frame_times["frames"]:
+            row["pts_s"] = float(row["pts_s"]) + 1e-6
+        frame_times_path.write_text(json.dumps(frame_times), encoding="utf-8")
+        frame_times_sha = hashlib.sha256(frame_times_path.read_bytes()).hexdigest()
+    
+        wasb_track_path = Path(dependencies["wasb_ball_track"])
+        regenerated_track = stage2.wasb_csv_to_ball_track(
+            Path(dependencies["wasb_predictions_csv_path"]),
+            fps=30.0,
+            frame_times=frame_times_path,
+            visible_threshold=0.9,
+            input_preprocessing="official",
+        )
+        wasb_track_path.write_text(json.dumps(regenerated_track), encoding="utf-8")
+        wasb_track_sha = hashlib.sha256(wasb_track_path.read_bytes()).hexdigest()
+    
+        wasb_metadata_path = Path(dependencies["wasb_metadata_path"])
+        wasb_metadata = json.loads(wasb_metadata_path.read_text(encoding="utf-8"))
+        wasb_metadata["builder_bindings"]["frame_times_sha256"] = frame_times_sha
+        wasb_metadata["builder_bindings"]["wasb_ball_track_sha256"] = wasb_track_sha
+        wasb_metadata_path.write_text(json.dumps(wasb_metadata), encoding="utf-8")
+        wasb_metadata_sha = hashlib.sha256(wasb_metadata_path.read_bytes()).hexdigest()
+    
+        dependencies["frame_times_sha256"] = frame_times_sha
+        dependencies["wasb_ball_track_sha256"] = wasb_track_sha
+        dependencies["wasb_metadata_sha256"] = wasb_metadata_sha
+        dependencies["wasb_runtime"] = wasb_metadata
+        for sample in clip["samples"]:
+            sample["t"] = float(sample["t"]) + 1e-6
+            sample["frame_ref"]["t"] = float(sample["frame_ref"]["t"]) + 1e-6
+            sample["dependency_hashes"]["frame_times_sha256"] = frame_times_sha
+            sample["dependency_hashes"]["wasb_ball_track_sha256"] = wasb_track_sha
+            sample["dependency_hashes"]["wasb_metadata_sha256"] = wasb_metadata_sha
+        manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    
+        with pytest.raises(ValueError, match="frame PTS differ from canonical encoded media"):
+>           stage2.load_and_validate_production_sst_manifest(manifest_path)
+
+tests/racketsport/test_ball_stage2_training.py:1376: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/train_ball_stage2.py:886: in load_and_validate_production_sst_manifest
+    checkpoint_path = _required_canonical_file(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+value = '/private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar'
+field = 'SST wasb_checkpoint'
+
+    def _required_canonical_file(value: Any, field: str, *, expected: Path | None = None) -> Path:
+        if not isinstance(value, (str, Path)) or not str(value):
+            raise ValueError(f"{field} must be a path string")
+        path = Path(value)
+        if not path.is_file():
+>           raise FileNotFoundError(f"missing {field}: {path}")
+E           FileNotFoundError: missing SST wasb_checkpoint: /private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar
+
+scripts/racketsport/train_ball_stage2.py:1130: FileNotFoundError
+__________ test_run_court_detector_v2_img1605_writes_blocked_proposal __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_run_court_detector_v2_img0')
+
+    def test_run_court_detector_v2_img1605_writes_blocked_proposal(tmp_path: Path) -> None:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/racketsport/run_court_detector_v2.py",
+                "--input",
+                "runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/"
+                "owner_IMG_1605_8a193402780b/frame_000151.jpg",
+                "--clip-id",
+                "owner_IMG_1605_8a193402780b",
+                "--out-dir",
+                str(tmp_path),
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: ERROR: court detector v2 failed: input does not exist: runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/owner_IMG_1605_8a193402780b/frame_000151.jpg
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/opt/anaconda3/bin/python3', 'scripts/racketsport/run_court_detector_v2.py', '--input', 'runs/...t: runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/owner_IMG_1605_8a193402780b/frame_000151.jpg\n').returncode
+
+tests/racketsport/test_court_detector_v2_eval.py:27: AssertionError
+_____________ test_detector_v2_eval_includes_img1605_partial_clip ______________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_detector_v2_eval_includes0')
+
+    def test_detector_v2_eval_includes_img1605_partial_clip(tmp_path: Path) -> None:
+        out = tmp_path / "court_detector_v2_eval.json"
+        result = subprocess.run(
+            [
+                sys.executable,
+                "scripts/racketsport/evaluate_court_detector_v2.py",
+                "--eval-root",
+                "eval_clips/ball",
+                "--include-partial",
+                "owner_IMG_1605_8a193402780b",
+                "--out",
+                str(out),
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+    
+>       assert result.returncode == 0, result.stderr
+E       AssertionError: [ WARN:0@0.011] global loadsave.cpp:268 findDecoder imread_('eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames/frame_000060.jpg'): can't open/read file: check file path/integrity
+E         ERROR: court detector v2 eval failed: failed to read image: eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames/frame_000060.jpg
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/opt/anaconda3/bin/python3', 'scripts/racketsport/evaluate_court_detector_v2.py', '--eval-root...ed to read image: eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoint_partial_frames/frame_000060.jpg\n").returncode
+
+tests/racketsport/test_court_detector_v2_eval.py:54: AssertionError
+___________ test_img1605_net_evidence_is_anchor_not_floor_homography ___________
+
+    def test_img1605_net_evidence_is_anchor_not_floor_homography() -> None:
+        frame = cv2.imread(
+            "runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/"
+            "owner_IMG_1605_8a193402780b/frame_000151.jpg"
+        )
+>       assert frame is not None
+E       assert None is not None
+
+tests/racketsport/test_court_detector_v2_net.py:13: AssertionError
+----------------------------- Captured stderr call -----------------------------
+[ WARN:0@303.585] global loadsave.cpp:268 findDecoder imread_('runs/owner_data/owner_IMG_1605_8a193402780b/prelabels/review_frames/owner_IMG_1605_8a193402780b/frame_000151.jpg'): can't open/read file: check file path/integrity
+__________ test_img1605_progress_builds_partial_visible_label_payload __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_img1605_progress_builds_p0')
+
+    def test_img1605_progress_builds_partial_visible_label_payload(tmp_path: Path) -> None:
+>       progress = json.loads(IMG1605_PROGRESS.read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_partial_labels.py:20: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.11/pathlib.py:1058: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json'
+
+/opt/anaconda3/lib/python3.11/pathlib.py:1044: FileNotFoundError
+_________ test_visible_floor_homography_infers_img1605_occluded_corner _________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_visible_floor_homography_0')
+
+    def test_visible_floor_homography_infers_img1605_occluded_corner(tmp_path):
+>       partial = _img1605_partial_labels(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_partial_geometry.py:43: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_partial_geometry.py:20: in _img1605_partial_labels
+    progress = json.loads(IMG1605_PROGRESS.read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.11/pathlib.py:1058: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json'
+
+/opt/anaconda3/lib/python3.11/pathlib.py:1044: FileNotFoundError
+___________ test_visible_floor_homography_requires_four_floor_points ___________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_visible_floor_homography_1')
+
+    def test_visible_floor_homography_requires_four_floor_points(tmp_path):
+>       partial = _img1605_partial_labels(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_partial_geometry.py:69: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_partial_geometry.py:20: in _img1605_partial_labels
+    progress = json.loads(IMG1605_PROGRESS.read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.11/pathlib.py:1058: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json'
+
+/opt/anaconda3/lib/python3.11/pathlib.py:1044: FileNotFoundError
+___________ test_best_stack_records_structured_v3_review_only_winner ___________
+
+    def test_best_stack_records_structured_v3_review_only_winner() -> None:
+>       entry = load_best_stack_manifest().entry("court.court_unet_v2")
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_structured_v3_selection.py:15: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+threed/racketsport/best_stack.py:164: in load_best_stack_manifest
+    manifest = _build_manifest(manifest_path, raw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+threed/racketsport/best_stack.py:236: in _build_manifest
+    _validate_path_value(manifest, key)
+threed/racketsport/best_stack.py:250: in _validate_path_value
+    manifest.path_value(key)
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = BestStackManifest(path=PosixPath('/private/tmp/pb-farfield-20260727/configs/racketsport/best_stack.json'), raw={'schem...een measured against pickleball ground truth. External validation is table tennis only. VERIFIED=0 for pickleball.'})})
+key = 'ball.wasb_checkpoint'
+
+    def path_value(self, key: str, *, must_exist: bool = True) -> Path:
+        value = self.value(key)
+        if isinstance(value, str):
+            path_text = value
+            sha256 = None
+            required = True
+        elif isinstance(value, Mapping):
+            path_raw = value.get("path")
+            if not isinstance(path_raw, str) or not path_raw:
+                raise BestStackManifestError(f"best_stack entry {key!r} has no value.path")
+            path_text = path_raw
+            sha256 = value.get("sha256")
+            required = bool(value.get("required", True))
+        else:
+            raise BestStackManifestError(f"best_stack entry {key!r} is not path-like")
+    
+        path = Path(path_text)
+        if not path.is_absolute():
+            path = REPO_ROOT / path
+        path = path.resolve()
+        if must_exist and required and not path.exists():
+>           raise BestStackManifestError(f"best_stack entry {key!r} points at missing path {path}")
+E           threed.racketsport.best_stack.BestStackManifestError: best_stack entry 'ball.wasb_checkpoint' points at missing path /private/tmp/pb-farfield-20260727/models/checkpoints/wasb/wasb_tennis_best.pth.tar
+
+threed/racketsport/best_stack.py:119: BestStackManifestError
+____ test_default_off_matches_pre_a2_golden_and_explicit_false_is_identical ____
+
+    def test_default_off_matches_pre_a2_golden_and_explicit_false_is_identical() -> None:
+        """Stamp the legacy six-key sample before any A2 RNG draw or target-channel change."""
+    
+        config = {
+            "count": 1,
+            "image_size": [160, 90],
+            "scenarios": ["dedicated_indoor"],
+            "focal_px_range": [125, 500],
+            "apply_jpeg_roundtrip": False,
+        }
+        implicit = _take(config, seed=20260722, count=1)[0]
+        explicit = _take(
+            {
+                **config,
+                "aux_keypoints": False,
+                "paint_texture_randomization": False,
+                "aux_partial_visibility": False,
+            },
+            seed=20260722,
+            count=1,
+        )[0]
+    
+        assert set(implicit) == {
+            "image_bgr",
+            "keypoints_xy",
+            "keypoints_vis",
+            "line_family_mask",
+            "surface_mask",
+            "meta",
+        }
+        expected_hashes = {
+            "image_bgr": "085e0e6d31440d1bd5c3b887a700b4c0e69c74dfd465c5f188661ad5bb9f5038",
+            "keypoints_xy": "42b46e78b6f2b5f2981bf03d766fbe1811fee5bcfa51aa016eb072540bd0f5f5",
+            "keypoints_vis": "a1c8eb44beeb0c6e4ba983416ef7a86807c8f77110974fd4979c28c315f28ea0",
+            "line_family_mask": "4e03417b660f9dcf13c466eb29cc1866b161f00d62935db728ed343fcb4d8694",
+            "surface_mask": "e02f8f85ecc7d17e692dec5205739e0656888525353fab2e071b41bbf5c56559",
+        }
+        for name, expected_hash in expected_hashes.items():
+>           assert _array_sha256(implicit[name]) == expected_hash
+E           AssertionError: assert 'b78dd63b0019...87debf108a3d5' == '085e0e6d3144...61ad5bb9f5038'
+E             
+E             - 085e0e6d31440d1bd5c3b887a700b4c0e69c74dfd465c5f188661ad5bb9f5038
+E             + b78dd63b00193b8864326e6a9027f31395b3f5ebc86b6e06d1887debf108a3d5
+
+tests/racketsport/test_court_synth_stream.py:75: AssertionError
+___ test_owner_102_manifest_is_deterministic_current_schema_and_source_held ____
+
+    def test_owner_102_manifest_is_deterministic_current_schema_and_source_held() -> None:
+>       first = build_owner_manifest()
+                ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_owner_event_manifest.py:28: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/build_owner_event_manifest.py:193: in build_owner_manifest
+    protected_payload = _read_json(protected_path, role="protected inventory")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/private/tmp/pb-farfield-20260727/runs/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json')
+
+    def _read_json(path: Path, *, role: str) -> dict[str, Any]:
+        if not path.is_file():
+>           raise OwnerManifestBuildError(f"{role} is absent: {path}")
+E           scripts.racketsport.build_owner_event_manifest.OwnerManifestBuildError: protected inventory is absent: /private/tmp/pb-farfield-20260727/runs/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json
+
+scripts/racketsport/build_owner_event_manifest.py:46: OwnerManifestBuildError
+_______ test_no_protected_seed_frame_is_inside_any_owner_training_window _______
+
+    def test_no_protected_seed_frame_is_inside_any_owner_training_window() -> None:
+>       manifest = build_owner_manifest()
+                   ^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_owner_event_manifest.py:65: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/build_owner_event_manifest.py:193: in build_owner_manifest
+    protected_payload = _read_json(protected_path, role="protected inventory")
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+path = PosixPath('/private/tmp/pb-farfield-20260727/runs/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json')
+
+    def _read_json(path: Path, *, role: str) -> dict[str, Any]:
+        if not path.is_file():
+>           raise OwnerManifestBuildError(f"{role} is absent: {path}")
+E           scripts.racketsport.build_owner_event_manifest.OwnerManifestBuildError: protected inventory is absent: /private/tmp/pb-farfield-20260727/runs/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json
+
+scripts/racketsport/build_owner_event_manifest.py:46: OwnerManifestBuildError
+_____ test_owner_102_manifest_passes_finetune_and_protected_overlap_guards _____
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_owner_102_manifest_passes0')
+
+    def test_owner_102_manifest_passes_finetune_and_protected_overlap_guards(
+        tmp_path: Path,
+    ) -> None:
+>       owner, _, pseudo, _ = validate_manifests(
+            OWNER_MANIFEST, None, window_frames=64
+        )
+
+tests/racketsport/test_owner_event_manifest.py:97: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+scripts/racketsport/finetune_event_head.py:419: in validate_manifests
+    _reject_protected_rows(owner["rows"], seed_path=seed_path)
+scripts/racketsport/finetune_event_head.py:346: in _reject_protected_rows
+    protected = _protected_frames(seed_path)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+seed_path = PosixPath('/private/tmp/pb-farfield-20260727/runs/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json')
+
+    def _protected_frames(seed_path: Path = SEED) -> list[dict[str, Any]]:
+        if not seed_path.is_file():
+>           raise FineTuneInputError(
+                f"protected seed inventory is absent, refusing training: {seed_path}", 2
+            )
+E           scripts.racketsport.finetune_event_head.FineTuneInputError: protected seed inventory is absent, refusing training: /private/tmp/pb-farfield-20260727/runs/lanes/event_bootstrap_20260713/spot_check_tier_a_50.json
+
+scripts/racketsport/finetune_event_head.py:170: FineTuneInputError
+______________ test_owner_manifest_cli_emits_the_frozen_artifact _______________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_owner_manifest_cli_emits_0')
+
+    def test_owner_manifest_cli_emits_the_frozen_artifact(tmp_path: Path) -> None:
+        output = tmp_path / "owner_102_manifest.json"
+>       completed = subprocess.run(
+            [str(ROOT / ".venv/bin/python"), CLI, "--out", str(output)],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+tests/racketsport/test_owner_event_manifest.py:119: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.11/subprocess.py:548: in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.11/subprocess.py:1026: in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <Popen: returncode: 255 args: ['/private/tmp/pb-farfield-20260727/.venv/bin/...>
+args = ['/private/tmp/pb-farfield-20260727/.venv/bin/python', 'scripts/racketsport/build_owner_event_manifest.py', '--out', '...dn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1271/test_owner_manifest_cli_emits_0/owner_102_manifest.json']
+executable = b'/private/tmp/pb-farfield-20260727/.venv/bin/python'
+preexec_fn = None, close_fds = True, pass_fds = ()
+cwd = PosixPath('/private/tmp/pb-farfield-20260727'), env = None
+startupinfo = None, creationflags = 0, shell = False, p2cread = -1
+p2cwrite = -1, c2pread = 13, c2pwrite = 14, errread = 16, errwrite = 17
+restore_signals = True, gid = None, gids = None, uid = None, umask = -1
+start_new_session = False, process_group = -1
+
+    def _execute_child(self, args, executable, preexec_fn, close_fds,
+                       pass_fds, cwd, env,
+                       startupinfo, creationflags, shell,
+                       p2cread, p2cwrite,
+                       c2pread, c2pwrite,
+                       errread, errwrite,
+                       restore_signals,
+                       gid, gids, uid, umask,
+                       start_new_session, process_group):
+        """Execute program (POSIX version)"""
+    
+        if isinstance(args, (str, bytes)):
+            args = [args]
+        elif isinstance(args, os.PathLike):
+            if shell:
+                raise TypeError('path-like args is not allowed when '
+                                'shell is true')
+            args = [args]
+        else:
+            args = list(args)
+    
+        if shell:
+            # On Android the default shell is at '/system/bin/sh'.
+            unix_shell = ('/system/bin/sh' if
+                      hasattr(sys, 'getandroidapilevel') else '/bin/sh')
+            args = [unix_shell, "-c"] + args
+            if executable:
+                args[0] = executable
+    
+        if executable is None:
+            executable = args[0]
+    
+        sys.audit("subprocess.Popen", executable, args, cwd, env)
+    
+        if (_USE_POSIX_SPAWN
+                and os.path.dirname(executable)
+                and preexec_fn is None
+                and not close_fds
+                and not pass_fds
+                and cwd is None
+                and (p2cread == -1 or p2cread > 2)
+                and (c2pwrite == -1 or c2pwrite > 2)
+                and (errwrite == -1 or errwrite > 2)
+                and not start_new_session
+                and process_group == -1
+                and gid is None
+                and gids is None
+                and uid is None
+                and umask < 0):
+            self._posix_spawn(args, executable, env, restore_signals,
+                              p2cread, p2cwrite,
+                              c2pread, c2pwrite,
+                              errread, errwrite)
+            return
+    
+        orig_executable = executable
+    
+        # For transferring possible exec failure from child to parent.
+        # Data format: "exception name:hex errno:description"
+        # Pickle is not used; it is complex and involves memory allocation.
+        errpipe_read, errpipe_write = os.pipe()
+        # errpipe_write must not be in the standard io 0, 1, or 2 fd range.
+        low_fds_to_close = []
+        while errpipe_write < 3:
+            low_fds_to_close.append(errpipe_write)
+            errpipe_write = os.dup(errpipe_write)
+        for low_fd in low_fds_to_close:
+            os.close(low_fd)
+        try:
+            try:
+                # We must avoid complex work that could involve
+                # malloc or free in the child process to avoid
+                # potential deadlocks, thus we do all this here.
+                # and pass it to fork_exec()
+    
+                if env is not None:
+                    env_list = []
+                    for k, v in env.items():
+                        k = os.fsencode(k)
+                        if b'=' in k:
+                            raise ValueError("illegal environment variable name")
+                        env_list.append(k + b'=' + os.fsencode(v))
+                else:
+                    env_list = None  # Use execv instead of execve.
+                executable = os.fsencode(executable)
+                if os.path.dirname(executable):
+                    executable_list = (executable,)
+                else:
+                    # This matches the behavior of os._execvpe().
+                    executable_list = tuple(
+                        os.path.join(os.fsencode(dir), executable)
+                        for dir in os.get_exec_path(env))
+                fds_to_keep = set(pass_fds)
+                fds_to_keep.add(errpipe_write)
+                self.pid = _fork_exec(
+                        args, executable_list,
+                        close_fds, tuple(sorted(map(int, fds_to_keep))),
+                        cwd, env_list,
+                        p2cread, p2cwrite, c2pread, c2pwrite,
+                        errread, errwrite,
+                        errpipe_read, errpipe_write,
+                        restore_signals, start_new_session,
+                        process_group, gid, gids, uid, umask,
+                        preexec_fn, _USE_VFORK)
+                self._child_created = True
+            finally:
+                # be sure the FD is closed no matter what
+                os.close(errpipe_write)
+    
+            self._close_pipe_fds(p2cread, p2cwrite,
+                                 c2pread, c2pwrite,
+                                 errread, errwrite)
+    
+            # Wait for exec to fail or succeed; possibly raising an
+            # exception (limited in size)
+            errpipe_data = bytearray()
+            while True:
+                part = os.read(errpipe_read, 50000)
+                errpipe_data += part
+                if not part or len(errpipe_data) > 50000:
+                    break
+        finally:
+            # be sure the FD is closed no matter what
+            os.close(errpipe_read)
+    
+        if errpipe_data:
+            try:
+                pid, sts = os.waitpid(self.pid, 0)
+                if pid == self.pid:
+                    self._handle_exitstatus(sts)
+                else:
+                    self.returncode = sys.maxsize
+            except ChildProcessError:
+                pass
+    
+            try:
+                exception_name, hex_errno, err_msg = (
+                        errpipe_data.split(b':', 2))
+                # The encoding here should match the encoding
+                # written in by the subprocess implementations
+                # like _posixsubprocess
+                err_msg = err_msg.decode()
+            except ValueError:
+                exception_name = b'SubprocessError'
+                hex_errno = b'0'
+                err_msg = 'Bad exception data from child: {!r}'.format(
+                              bytes(errpipe_data))
+            child_exception_type = getattr(
+                    builtins, exception_name.decode('ascii'),
+                    SubprocessError)
+            if issubclass(child_exception_type, OSError) and hex_errno:
+                errno_num = int(hex_errno, 16)
+                child_exec_never_called = (err_msg == "noexec")
+                if child_exec_never_called:
+                    err_msg = ""
+                    # The error must be from chdir(cwd).
+                    err_filename = cwd
+                else:
+                    err_filename = orig_executable
+                if errno_num != 0:
+                    err_msg = os.strerror(errno_num)
+>               raise child_exception_type(errno_num, err_msg, err_filename)
+E               FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-farfield-20260727/.venv/bin/python'
+
+/opt/anaconda3/lib/python3.11/subprocess.py:1950: FileNotFoundError
+=============================== warnings summary ===============================
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+  /opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076: PydanticDeprecatedSince20: Using extra keyword arguments on `Field` is deprecated and will be removed. Use `json_schema_extra` instead. (Extra keys: 'exclude_if'). Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+    warn(
+
+tests/racketsport/test_court_synth_stream.py::test_aux_contract_is_canonical_first_and_emits_stride_four_masked_targets
+tests/racketsport/test_court_synth_stream.py::test_paint_texture_randomization_is_opt_in_deterministic_and_changes_pixels
+tests/racketsport/test_court_synth_stream.py::test_paint_texture_randomization_is_opt_in_deterministic_and_changes_pixels
+tests/racketsport/test_court_synth_stream.py::test_worn_away_aux_paint_is_unsupervised
+  /private/tmp/pb-farfield-20260727/threed/racketsport/court_synth_scenes.py:1258: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+    Image.fromarray(encoded, mode="L").resize((width, height), resample=resampling.BICUBIC),
+
+tests/racketsport/test_court_synth_stream.py::test_aux_contract_is_canonical_first_and_emits_stride_four_masked_targets
+tests/racketsport/test_court_synth_stream.py::test_paint_texture_randomization_is_opt_in_deterministic_and_changes_pixels
+tests/racketsport/test_court_synth_stream.py::test_paint_texture_randomization_is_opt_in_deterministic_and_changes_pixels
+tests/racketsport/test_court_synth_stream.py::test_worn_away_aux_paint_is_unsupervised
+  /private/tmp/pb-farfield-20260727/threed/racketsport/court_synth_scenes.py:1266: DeprecationWarning: 'mode' parameter is deprecated and will be removed in Pillow 13 (2026-10-15)
+    return Image.fromarray(np.clip(arr, 0.0, 255.0).astype(np.uint8), mode="RGB")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/racketsport/test_ball_arc_chain.py::test_default_chain_config_matches_frozen_row22_manifest
+FAILED tests/racketsport/test_ball_arc_solver.py::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds
+FAILED tests/racketsport/test_ball_loso_validation.py::test_live_b0_split_scores_final_labels_and_binds_prediction_media
+FAILED tests/racketsport/test_ball_loso_validation.py::test_live_b0_split_refuses_same_hyu_prediction_reused_for_ezz
+FAILED tests/racketsport/test_ball_stage2_training.py::test_frozen_b0_media_inventory_is_exact_and_symlink_roots_are_refused
+FAILED tests/racketsport/test_ball_stage2_training.py::test_generic_cvat_loader_refuses_renamed_ezz_judge_row_by_media_content_sha
+FAILED tests/racketsport/test_ball_stage2_training.py::test_failed_gate_sst_fixture_and_sst_only_invocation_are_refused
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_trust_boundary_recounts_and_refuses_forged_row_authority_hashes_and_bounds
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_rejects_semantic_metadata_forgery_after_all_dependent_hashes_are_recomputed
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_rejects_invalid_prediction_csv_with_self_consistent_hashes_and_replay_proof
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_rejects_replay_mismatch_adapter_forgery_and_symlink_dependency_root
+FAILED tests/racketsport/test_ball_stage2_training.py::test_sst_rejects_monotonic_rehashed_pts_that_differ_from_encoded_media
+FAILED tests/racketsport/test_court_detector_v2_eval.py::test_run_court_detector_v2_img1605_writes_blocked_proposal
+FAILED tests/racketsport/test_court_detector_v2_eval.py::test_detector_v2_eval_includes_img1605_partial_clip
+FAILED tests/racketsport/test_court_detector_v2_net.py::test_img1605_net_evidence_is_anchor_not_floor_homography
+FAILED tests/racketsport/test_court_keypoint_partial_labels.py::test_img1605_progress_builds_partial_visible_label_payload
+FAILED tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_infers_img1605_occluded_corner
+FAILED tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_requires_four_floor_points
+FAILED tests/racketsport/test_court_structured_v3_selection.py::test_best_stack_records_structured_v3_review_only_winner
+FAILED tests/racketsport/test_court_synth_stream.py::test_default_off_matches_pre_a2_golden_and_explicit_false_is_identical
+FAILED tests/racketsport/test_owner_event_manifest.py::test_owner_102_manifest_is_deterministic_current_schema_and_source_held
+FAILED tests/racketsport/test_owner_event_manifest.py::test_no_protected_seed_frame_is_inside_any_owner_training_window
+FAILED tests/racketsport/test_owner_event_manifest.py::test_owner_102_manifest_passes_finetune_and_protected_overlap_guards
+FAILED tests/racketsport/test_owner_event_manifest.py::test_owner_manifest_cli_emits_the_frozen_artifact
+24 failed, 1128 passed, 8 skipped, 14 warnings in 372.43s (0:06:12)
+BRANCH_SUITE_EXIT=1
