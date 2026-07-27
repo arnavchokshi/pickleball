@@ -464,5 +464,64 @@
     "The calibration residual floor could not be exercised by TT3D at all: TT3D's calibration is synthetic and exact (mapping reproduces its own pixels to 5.4e-13 px), so the floor term was 0 there. It is evidenced only by our own clips' measured floors and by the outdoor label set.",
     "Bias correction of the anchor POSITION is off by default. In that default posture the depth RMS ratio is 1.30-1.69 and coverage 0.46-0.57 -- better than the 1.65-2.97 / 0.29-0.47 before, but the bias still dominates until a consumer acts on it.",
     "External validation is table tennis. VERIFIED=0 for pickleball."
-  ]
+  ],
+  "counterfactual_corrected_but_isotropic": {
+    "why": "Answers 'why not just make the old scalar bigger?'. Depth becomes honest, and the image plane becomes over-conservative: a different lie in the opposite direction.",
+    "per_view": {
+      "back/no_noise": {
+        "sigma_m": 0.09467653700811962,
+        "depth_rms_ratio": 1.0377769931634306,
+        "depth_coverage": 0.6838235294117647,
+        "image_rms_ratio": 0.21277126810542435,
+        "image_coverage": 1.0
+      },
+      "back/noise": {
+        "sigma_m": 0.09466477469347576,
+        "depth_rms_ratio": 1.164161726068954,
+        "depth_coverage": 0.6397058823529411,
+        "image_rms_ratio": 0.23583102051740137,
+        "image_coverage": 1.0
+      },
+      "side/no_noise": {
+        "sigma_m": 0.06582619322209052,
+        "depth_rms_ratio": 0.7792222855854947,
+        "depth_coverage": 0.8602941176470589,
+        "image_rms_ratio": 0.6874530208051424,
+        "image_coverage": 0.8676470588235294
+      },
+      "side/noise": {
+        "sigma_m": 0.06582756586934024,
+        "depth_rms_ratio": 0.8704929939795936,
+        "depth_coverage": 0.7647058823529411,
+        "image_rms_ratio": 0.6949493435349632,
+        "image_coverage": 0.8713235294117647
+      },
+      "oblique/no_noise": {
+        "sigma_m": 0.09673157758519482,
+        "depth_rms_ratio": 1.0020278838806307,
+        "depth_coverage": 0.7205882352941176,
+        "image_rms_ratio": 0.42214549810432966,
+        "image_coverage": 0.9632352941176471
+      },
+      "oblique/noise": {
+        "sigma_m": 0.09643821525169922,
+        "depth_rms_ratio": 1.120467497786489,
+        "depth_coverage": 0.6544117647058824,
+        "image_rms_ratio": 0.4286157901969601,
+        "image_coverage": 0.9632352941176471
+      }
+    },
+    "image_rms_ratio_range": {
+      "min": 0.21277126810542435,
+      "max": 0.6949493435349632
+    },
+    "image_coverage_range": {
+      "min": 0.8676470588235294,
+      "max": 1.0
+    },
+    "compare_ray_aligned_image_rms_ratio_range": {
+      "min": 0.3961001371216335,
+      "max": 0.8930947229687105
+    }
+  }
 }
