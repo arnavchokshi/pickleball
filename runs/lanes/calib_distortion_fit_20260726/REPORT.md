@@ -358,14 +358,62 @@ Pre-existing failures at `f29145a`:
 After the seam fix, the same ball set was `2 failed, 87 passed, 1 skipped` -- the same two
 pre-existing `test_ball_arc_solver.py` failures, no new ones.
 
-### Wide
+### Wide: the whole CAL + BALL test surface, base vs branch
 
-See `wide_suite.txt` in this directory for the full run and its exit code.
+103 test files (`suite_filelist.txt`): every `test_ball_*`, `test_court_*`,
+`test_calib*`, `test_camera_*`, `test_trust_band*`, minus a handful of
+training/detector/dataset files that run for tens of minutes and touch nothing this change
+goes near. Identical invocation both sides (the branch adds the 2 new test files, which do
+not exist at base). Full logs: `suite_base_f29145a.txt`, `suite_branch.txt`.
 
-`tests/racketsport/test_ball_stage_runner.py` fails to **collect** at both `f29145a` and
-here: `BestStackManifestError: best_stack entry 'ball.wasb_checkpoint' points at missing
-path models/checkpoints/wasb/wasb_tennis_best.pth.tar`. Missing model artifact in this
-environment, not a code defect and not caused by this change.
+```
+base f29145a:  7 failed, 752 passed, 7 skipped, 6 warnings, 1 error in 167.65s   exit 1
+branch:        6 failed, 774 passed, 7 skipped, 6 warnings, 1 error in 265.61s   exit 1
+```
+
+`diff` of the two sorted FAILED/ERROR lists is **exactly one line** -- the pre-existing
+failure this change repairs:
+
+```
+4d3
+< FAILED tests/racketsport/test_court_calibration_metric15.py::test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed_contract
+```
+
+**Zero new failures. One pre-existing failure fixed. +22 passing** = 10 new
+`test_camera_distortion` + 5 new `test_ball_arc_solver_distortion_seams` + 6 new
+`test_court_calibration_metric15` + the repaired one.
+
+The 6 failures common to both sides, all pre-existing and untouched:
+
+| test | |
+|---|---|
+| `test_ball_arc_chain::test_default_chain_config_matches_frozen_row22_manifest` | frozen manifest drift |
+| `test_ball_arc_solver::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds` | |
+| `test_court_fusion_default::test_default_checkpoint_resolution_precedence_and_sha_logging` | missing checkpoint |
+| `test_court_keypoint_partial_labels::test_img1605_progress_builds_partial_visible_label_payload` | |
+| `test_court_partial_geometry::test_visible_floor_homography_infers_img1605_occluded_corner` | |
+| `test_court_partial_geometry::test_visible_floor_homography_requires_four_floor_points` | |
+
+The 1 collection error common to both sides,
+`test_calpolicy_line_evidence_preview.py`, is the same missing-model-artifact class as
+below.
+
+`test_ball_arc_solver::test_fit_flight_segment_recovers_simulated_scalar_magnus_spin` is
+**flaky**: it failed at both base and branch in an earlier focused run and passed on both
+sides here. Nondeterministic optimizer, not this change.
+
+### Not run: 30 files that cannot be collected in this environment
+
+`python3 -m pytest tests/racketsport -q --co` gives **30 collection errors at `f29145a`**
+and the same 30 here, all
+`BestStackManifestError: best_stack entry 'ball.wasb_checkpoint' points at missing path
+models/checkpoints/wasb/wasb_tennis_best.pth.tar` and siblings. Missing model artifacts in
+this CPU-only environment, not code defects and not caused by this change. 4446 tests
+collect either way.
+
+The full `tests/racketsport` run was started but did not finish inside the session; the
+103-file CAL/BALL set above is what completed on both sides and is what the attribution
+claim rests on.
 
 ### AGENTS.md structure checks
 
