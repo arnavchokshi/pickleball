@@ -495,26 +495,61 @@ def build_bounce_anchor(
     sigma_m: float | None = None,
     source: str | None = None,
     details: Mapping[str, Any] | None = None,
+    uncertainty_kwargs: Mapping[str, Any] | None = None,
+    apply_bias_correction: bool = False,
 ) -> AnchorEvent:
-    """Build an exact court-plane anchor from a reviewed or proposed bounce."""
+    """Build an exact court-plane anchor from a reviewed or proposed bounce.
+
+    The full ray-aligned uncertainty is attached under
+    ``details["uncertainty"]`` so downstream fits can weight the anchor
+    anisotropically instead of dividing all three world axes by one scalar.
+    ``sigma_m`` stays the legacy worst-axis scalar for existing consumers.
+
+    ``apply_bias_correction`` is OFF by default: the modelled systematic
+    overshoot away from the camera is REPORTED, not silently applied, because
+    moving the anchor changes solver output. Turn it on deliberately.
+    """
 
     frame = _frame_from_mapping(bounce)
     if frame is None:
         raise ValueError("bounce anchor requires frame/frame_index")
+    fps = _float_or_none(bounce.get("fps"))
     t = _float_or_none(bounce.get("t"))
     if t is None:
-        fps = _float_or_none(bounce.get("fps")) or 30.0
-        t = frame / fps
+        t = frame / (fps or 30.0)
     xy = _xy_tuple(ball_xy if ball_xy is not None else bounce.get("xy"))
     if xy is None:
         raise ValueError("bounce anchor requires a visible ball xy at the bounce frame")
     origin, direction = pixel_ray_world(calibration, xy)
     world_xyz = intersect_ray_z(origin, direction, ball_radius_m)
+
+    extra = dict(uncertainty_kwargs or {})
+    extra.setdefault("fps", fps)
+    uncertainty = anchor_uncertainty_for_bounce(
+        calibration,
+        xy,
+        base_sigma_m=0.05 if status == "human_reviewed" else 0.12,
+        ball_radius_m=ball_radius_m,
+        **extra,
+    )
     if sigma_m is None:
-        sigma_m = anchor_sigma_for_bounce(calibration, xy, base_sigma_m=0.05 if status == "human_reviewed" else 0.12)
+        sigma_m = (
+            uncertainty.sigma_isotropic_m
+            if uncertainty is not None
+            else (0.05 if status == "human_reviewed" else 0.12)
+        )
+    if apply_bias_correction and uncertainty is not None:
+        world_xyz = uncertainty.bias_corrected_xyz(world_xyz)
+
     review_id = bounce.get("review_id")
     anchor_id = str(review_id) if isinstance(review_id, str) and review_id else f"{status}_bounce_{frame:06d}"
-    anchor_details = {"pixel_xy": [float(xy[0]), float(xy[1])], "ball_radius_m": ball_radius_m}
+    anchor_details: dict[str, Any] = {
+        "pixel_xy": [float(xy[0]), float(xy[1])],
+        "ball_radius_m": ball_radius_m,
+    }
+    if uncertainty is not None:
+        anchor_details["uncertainty"] = uncertainty.to_json()
+        anchor_details["bias_correction_applied"] = bool(apply_bias_correction)
     if details:
         anchor_details.update(dict(details))
     return AnchorEvent(
@@ -948,17 +983,23 @@ def _fit_soft_split_segment_once(
         residual: list[float] = []
         if not soft_start:
             residual.extend(
-                _scaled_vec(
+                _anchor_scaled_vec(
                     _sub(initial_position, start_anchor.world_xyz),
-                    hard_start_sigma / cfg.endpoint_anchor_weight,
+                    start_anchor,
+                    cfg,
+                    hard_start_sigma,
+                    weight_divisor=cfg.endpoint_anchor_weight,
                 )
             )
         endpoint = by_time[round(end_anchor.t, 9)]
         if not soft_end:
             residual.extend(
-                _scaled_vec(
+                _anchor_scaled_vec(
                     _sub(endpoint, end_anchor.world_xyz),
-                    hard_end_sigma / cfg.endpoint_anchor_weight,
+                    end_anchor,
+                    cfg,
+                    hard_end_sigma,
+                    weight_divisor=cfg.endpoint_anchor_weight,
                 )
             )
         for obs in observations:
@@ -1189,9 +1230,9 @@ def _fit_free_flight_segment_once(
         )
         by_time = {round(t, 9): point for t, point in zip(times, predicted, strict=True)}
         residual: list[float] = []
-        residual.extend(_scaled_vec(_sub(initial_position, start_anchor.world_xyz), start_sigma / cfg.endpoint_anchor_weight))
+        residual.extend(_anchor_scaled_vec(_sub(initial_position, start_anchor.world_xyz), start_anchor, cfg, start_sigma, weight_divisor=cfg.endpoint_anchor_weight))
         endpoint = by_time[round(end_anchor.t, 9)]
-        residual.extend(_scaled_vec(_sub(endpoint, end_anchor.world_xyz), end_sigma / cfg.endpoint_anchor_weight))
+        residual.extend(_anchor_scaled_vec(_sub(endpoint, end_anchor.world_xyz), end_anchor, cfg, end_sigma, weight_divisor=cfg.endpoint_anchor_weight))
         if fit_spin:
             residual.append(math.sqrt(SPIN_SCALAR_REGULARIZATION_LAMBDA) * spin_scalar)
         for obs in observations:
@@ -2391,7 +2432,7 @@ def _fit_weak_flight_segment_unbounded(
         predicted = _integrate_positions(initial_position, velocity, times, t0=anchor.t, physics=phys, config=cfg)
         by_time = {round(t, 9): point for t, point in zip(times, predicted, strict=True)}
         residual: list[float] = []
-        residual.extend(_scaled_vec(_sub(initial_position, anchor.world_xyz), anchor_sigma))
+        residual.extend(_anchor_scaled_vec(_sub(initial_position, anchor.world_xyz), anchor, cfg, anchor_sigma))
         for obs in observations:
             point = by_time[round(obs.t, 9)]
             projected = _project_world_point(calibration, point)
@@ -7248,17 +7289,13 @@ def _gsd_sigma(calibration: Mapping[str, Any], xy: Sequence[float]) -> float | N
     return None
 
 
-def _ray_plane_pixel_sigma(calibration: Mapping[str, Any], xy: Sequence[float], z: float) -> float | None:
-    try:
-        base_origin, base_dir = pixel_ray_world(calibration, xy)
-        base = intersect_ray_z(base_origin, base_dir, z)
-        x_origin, x_dir = pixel_ray_world(calibration, (float(xy[0]) + 1.0, float(xy[1])))
-        y_origin, y_dir = pixel_ray_world(calibration, (float(xy[0]), float(xy[1]) + 1.0))
-        dx = _distance(base, intersect_ray_z(x_origin, x_dir, z))
-        dy = _distance(base, intersect_ray_z(y_origin, y_dir, z))
-        return math.sqrt(dx * dx + dy * dy)
-    except Exception:
-        return None
+# `_ray_plane_pixel_sigma` is gone. It collapsed the ray-plane pixel
+# sensitivity into one scalar, and its only caller passed the module constant
+# `BALL_RADIUS_M` instead of that caller's own `ball_radius_m`, so it silently
+# ignored the ball radius it was handed. `ray_frame_plane_pixel_sigma` replaces
+# it: the plane height is a required positional argument, and the result is
+# split into along-ray and across-ray components instead of being averaged into
+# a single number that describes neither.
 
 
 def _nearest_observation_by_frame(
@@ -7443,6 +7480,97 @@ def _scale(a: Sequence[float], scalar: float) -> tuple[float, ...]:
 def _scaled_vec(a: Sequence[float], sigma: float) -> list[float]:
     safe = max(float(sigma), 1e-9)
     return [float(value) / safe for value in a]
+
+
+def _anchor_ray_weighting(
+    anchor: AnchorEvent, config: BallArcSolverConfig
+) -> tuple[tuple[float, float, float], float, float] | None:
+    """Ray direction and (sigma_along, sigma_perp) from an anchor's uncertainty.
+
+    Returns ``None`` for anchors built before the anisotropic model existed, or
+    without calibration, so the caller falls back to the legacy isotropic
+    scaling and behaviour is unchanged.
+    """
+
+    details = anchor.details
+    if not isinstance(details, Mapping):
+        return None
+    uncertainty = details.get("uncertainty")
+    if not isinstance(uncertainty, Mapping):
+        return None
+    if int(uncertainty.get("schema_version", 0)) != BOUNCE_UNCERTAINTY_SCHEMA_VERSION:
+        return None
+    ray = _vec3_from_json(uncertainty.get("ray_direction_unit"))
+    along = _float_or_none(uncertainty.get("sigma_along_ray_m"))
+    perp = _float_or_none(uncertainty.get("sigma_perp_m"))
+    if ray is None or along is None or perp is None:
+        return None
+    if _norm(ray) <= 1e-9 or along <= 0.0 or perp <= 0.0:
+        return None
+    floor = max(config.min_anchor_sigma_m, 1e-9)
+    return _normalize(ray), max(along, floor), max(perp, floor)
+
+
+def _ray_scaled_vec(
+    delta: Sequence[float],
+    ray_unit: Sequence[float],
+    sigma_along: float,
+    sigma_perp: float,
+) -> list[float]:
+    """Whiten a world-frame offset by a covariance that is diagonal in the ray frame.
+
+    The isotropic form divides all three world components by one scalar, which
+    forces the fit to trust depth exactly as much as it trusts the image plane.
+    For a bounce anchor those differ by ~7x. Here the offset is split into its
+    along-ray and across-ray parts and each is divided by its own sigma, which
+    is an exact whitening for the modelled covariance
+    ``sigma_along^2 * d d^T + sigma_perp^2 * (I - d d^T)``.
+
+    LIMITATION: exact only because the model asserts the covariance is DIAGONAL
+    in the ray frame. Any real along/across correlation is still unmodelled, and
+    the systematic bias is not applied here -- it is carried separately so that
+    least squares never treats it as noise.
+    """
+
+    along_component = _dot(delta, ray_unit)
+    perpendicular = _sub(delta, _scale(ray_unit, along_component))
+    # Two orthonormal axes across the ray, so the residual keeps 3 components
+    # and least_squares still sees a full-rank 3D constraint.
+    basis_seed = (0.0, 0.0, 1.0) if abs(float(ray_unit[2])) < 0.9 else (1.0, 0.0, 0.0)
+    axis_1 = _normalize(_cross_vec3(ray_unit, basis_seed))
+    if _norm(axis_1) <= 1e-9:
+        return _scaled_vec(delta, max(sigma_along, sigma_perp))
+    axis_2 = _normalize(_cross_vec3(ray_unit, axis_1))
+    safe_along = max(float(sigma_along), 1e-9)
+    safe_perp = max(float(sigma_perp), 1e-9)
+    return [
+        along_component / safe_along,
+        _dot(perpendicular, axis_1) / safe_perp,
+        _dot(perpendicular, axis_2) / safe_perp,
+    ]
+
+
+def _anchor_scaled_vec(
+    delta: Sequence[float],
+    anchor: AnchorEvent,
+    config: BallArcSolverConfig,
+    sigma: float,
+    *,
+    weight_divisor: float = 1.0,
+) -> list[float]:
+    """Anisotropic anchor residual when we have a ray frame, isotropic when not."""
+
+    weighting = _anchor_ray_weighting(anchor, config)
+    if weighting is None:
+        return _scaled_vec(delta, sigma / weight_divisor)
+    ray_unit, sigma_along, sigma_perp = weighting
+    scale = max(float(sigma), 1e-9) / max(_anchor_sigma_m(anchor, config), 1e-9)
+    return _ray_scaled_vec(
+        delta,
+        ray_unit,
+        sigma_along * scale / weight_divisor,
+        sigma_perp * scale / weight_divisor,
+    )
 
 
 def _dot(a: Sequence[float], b: Sequence[float]) -> float:
