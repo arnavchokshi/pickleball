@@ -1,0 +1,1631 @@
+{
+  "clips": {
+    "burlington_gold_0300_low_steep_corner": {
+      "after": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.550384,
+          "median_m": 0.219627,
+          "p95_m": 0.424025
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.288879,
+          "median_m": 0.197479,
+          "p95_m": 0.286656
+        },
+        "dist": [
+          -0.17885552705801672,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1210.2337776772038,
+        "held_out_floor_m": 0.269263,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.80076,
+            "uncertainty_m": 4.90279
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.79494,
+            "uncertainty_m": 2.46313
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.24736,
+            "uncertainty_m": 0.65996
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.94789,
+            "uncertainty_m": 1.17293
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 8.910392205574576,
+          "p95": 25.77484450807873
+        }
+      },
+      "before": {
+        "calibration_floor_m_all15": {
+          "max_m": 1.473868,
+          "median_m": 0.368417,
+          "p95_m": 1.08454
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 1.473868,
+          "median_m": 0.356521,
+          "p95_m": 1.167967
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1252.7783900978502,
+        "held_out_floor_m": 0.347469,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.38278,
+            "uncertainty_m": 4.93251
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.59399,
+            "uncertainty_m": 2.42539
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.17945,
+            "uncertainty_m": 0.62181
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.69755,
+            "uncertainty_m": 0.86204
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 6.3901815068357175,
+          "p95": 19.782933882839167
+        }
+      },
+      "floor_change_all15_in_sample": {
+        "after_m": 0.219627,
+        "before_m": 0.368417,
+        "caveat": "in-sample: back-projects the calibration's own fitted correspondences",
+        "delta_m": -0.14879,
+        "improved": true
+      },
+      "floor_change_held_out": {
+        "after_m": 0.269263,
+        "before_m": 0.347469,
+        "delta_m": -0.078206,
+        "improved": true
+      },
+      "raw_calibration": "eval_clips/ball/burlington_gold_0300_low_steep_corner/labels/court_calibration_metric15pt.json",
+      "refined_calibration": "runs/lanes/calib_distortion_fit_20260726/refined/burlington_gold_0300_low_steep_corner/court_calibration_metric15pt_refined.json",
+      "refit_seconds": 23.5,
+      "reviewed_keypoints": "eval_clips/ball/burlington_gold_0300_low_steep_corner/labels/court_keypoints.json",
+      "selection_reasons": [
+        "net_keypoint_label_height_m=0.0000",
+        "net_keypoint_label_height_variant=ground_net_line"
+      ],
+      "state_a_baseline_f29145a": {
+        "calibration_floor_m_all15": {
+          "max_m": 1.473868,
+          "median_m": 0.368417,
+          "p95_m": 1.08454
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 1.473868,
+          "median_m": 0.356521,
+          "p95_m": 1.167967
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1252.7783900978502,
+        "held_out_floor_m": 0.347469,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.38278,
+            "uncertainty_m": 4.93251
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.59399,
+            "uncertainty_m": 2.42539
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.17945,
+            "uncertainty_m": 0.62181
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.69755,
+            "uncertainty_m": 0.86204
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 6.3901815068357175,
+          "p95": 19.782933882839167
+        }
+      },
+      "state_b_seam_fix_only": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.535184,
+          "median_m": 0.190686,
+          "p95_m": 0.409829
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.336431,
+          "median_m": 0.178864,
+          "p95_m": 0.284264
+        },
+        "dist": [
+          -0.30035182958629364,
+          0.09861181595540636,
+          0.0,
+          0.0
+        ],
+        "fx": 1252.7783900978502,
+        "held_out_floor_m": 0.268336,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.33134,
+            "uncertainty_m": 4.72632
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.59537,
+            "uncertainty_m": 2.42735
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.18856,
+            "uncertainty_m": 0.66209
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.71447,
+            "uncertainty_m": 1.04663
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 6.3901815068357175,
+          "p95": 19.782933882839167
+        }
+      },
+      "state_c_refit": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.550384,
+          "median_m": 0.219627,
+          "p95_m": 0.424025
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.288879,
+          "median_m": 0.197479,
+          "p95_m": 0.286656
+        },
+        "dist": [
+          -0.17885552705801672,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1210.2337776772038,
+        "held_out_floor_m": 0.269263,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.80076,
+            "uncertainty_m": 4.90279
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.79494,
+            "uncertainty_m": 2.46313
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.24736,
+            "uncertainty_m": 0.65996
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.94789,
+            "uncertainty_m": 1.17293
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 8.910392205574576,
+          "p95": 25.77484450807873
+        }
+      }
+    },
+    "indoor_doubles_fwuks_0500_long_mid_baseline": {
+      "after": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.882567,
+          "median_m": 0.183546,
+          "p95_m": 0.638865
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.882567,
+          "median_m": 0.118234,
+          "p95_m": 0.691087
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1053.1584,
+        "held_out_floor_m": 0.190812,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.73726,
+            "uncertainty_m": 4.35502
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.16102,
+            "uncertainty_m": 0.7582
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.04516,
+            "uncertainty_m": 0.88279
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.4789,
+            "uncertainty_m": 0.92556
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 5.446086455345454,
+          "p95": 8.26069948576681
+        }
+      },
+      "before": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.92838,
+          "median_m": 0.231855,
+          "p95_m": 0.696614
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.92838,
+          "median_m": 0.112894,
+          "p95_m": 0.746278
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1074.208851740269,
+        "held_out_floor_m": 0.190812,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.77065,
+            "uncertainty_m": 4.36751
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.16751,
+            "uncertainty_m": 0.76419
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.04649,
+            "uncertainty_m": 0.87636
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.49987,
+            "uncertainty_m": 0.93734
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 3.719086939495673,
+          "p95": 8.813794890651005
+        }
+      },
+      "floor_change_all15_in_sample": {
+        "after_m": 0.183546,
+        "before_m": 0.231855,
+        "caveat": "in-sample: back-projects the calibration's own fitted correspondences",
+        "delta_m": -0.048309,
+        "improved": true
+      },
+      "floor_change_held_out": {
+        "after_m": 0.190812,
+        "before_m": 0.190812,
+        "delta_m": 0.0,
+        "improved": false
+      },
+      "raw_calibration": "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/labels/court_calibration_metric15pt.json",
+      "refined_calibration": "runs/lanes/calib_distortion_fit_20260726/refined/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration_metric15pt_refined.json",
+      "refit_seconds": 12.2,
+      "reviewed_keypoints": "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/labels/court_keypoints.json",
+      "selection_reasons": [
+        "net_keypoint_label_height_m=0.0000",
+        "net_keypoint_label_height_variant=ground_net_line"
+      ],
+      "state_a_baseline_f29145a": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.92838,
+          "median_m": 0.231855,
+          "p95_m": 0.696614
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.92838,
+          "median_m": 0.112894,
+          "p95_m": 0.746278
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1074.208851740269,
+        "held_out_floor_m": 0.190812,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.77065,
+            "uncertainty_m": 4.36751
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.16751,
+            "uncertainty_m": 0.76419
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.04649,
+            "uncertainty_m": 0.87636
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.49987,
+            "uncertainty_m": 0.93734
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 3.719086939495673,
+          "p95": 8.813794890651005
+        }
+      },
+      "state_b_seam_fix_only": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.903792,
+          "median_m": 0.199033,
+          "p95_m": 0.689095
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.903792,
+          "median_m": 0.120416,
+          "p95_m": 0.735102
+        },
+        "dist": [
+          -0.25552688757783326,
+          0.24351098535745186,
+          0.0,
+          0.0
+        ],
+        "fx": 1074.208851740269,
+        "held_out_floor_m": 0.23378,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.77062,
+            "uncertainty_m": 4.36743
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.17267,
+            "uncertainty_m": 0.75025
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.04807,
+            "uncertainty_m": 0.89491
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.50028,
+            "uncertainty_m": 0.93039
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 3.719086939495673,
+          "p95": 8.813794890651005
+        }
+      },
+      "state_c_refit": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.882567,
+          "median_m": 0.183546,
+          "p95_m": 0.638865
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.882567,
+          "median_m": 0.118234,
+          "p95_m": 0.691087
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1053.1584,
+        "held_out_floor_m": 0.190812,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.73726,
+            "uncertainty_m": 4.35502
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.16102,
+            "uncertainty_m": 0.7582
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.04516,
+            "uncertainty_m": 0.88279
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.4789,
+            "uncertainty_m": 0.92556
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 5.446086455345454,
+          "p95": 8.26069948576681
+        }
+      }
+    },
+    "outdoor_webcam_iynbd_1500_long_high_baseline": {
+      "after": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.447255,
+          "median_m": 0.10078,
+          "p95_m": 0.434721
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.325692,
+          "median_m": 0.095105,
+          "p95_m": 0.224345
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 2537.1648,
+        "held_out_floor_m": 0.127254,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.46053,
+            "uncertainty_m": 2.47327
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.21991,
+            "uncertainty_m": 0.34029
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.15,
+            "uncertainty_m": 1.2656
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.36159,
+            "uncertainty_m": 0.45416
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 4.793773434949169,
+          "p95": 12.26732868386675
+        }
+      },
+      "before": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.447483,
+          "median_m": 0.100551,
+          "p95_m": 0.434946
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.326178,
+          "median_m": 0.094932,
+          "p95_m": 0.224434
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 2537.9139649536,
+        "held_out_floor_m": 0.127254,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.46081,
+            "uncertainty_m": 2.47318
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.22008,
+            "uncertainty_m": 0.34036
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.15014,
+            "uncertainty_m": 1.26576
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.36183,
+            "uncertainty_m": 0.45431
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 4.7834997281882865,
+          "p95": 12.276624313829716
+        }
+      },
+      "floor_change_all15_in_sample": {
+        "after_m": 0.10078,
+        "before_m": 0.100551,
+        "caveat": "in-sample: back-projects the calibration's own fitted correspondences",
+        "delta_m": 0.000229,
+        "improved": false
+      },
+      "floor_change_held_out": {
+        "after_m": 0.127254,
+        "before_m": 0.127254,
+        "delta_m": 0.0,
+        "improved": false
+      },
+      "owner_bounce_labels": {
+        "after": {
+          "bounce_label_count": 0,
+          "unsolvable": 0
+        },
+        "before": {
+          "bounce_label_count": 0,
+          "unsolvable": 0
+        },
+        "labels_path": "/private/tmp/pickleball-balllabel-20260726/runs/lanes/ball_label_tool_20260726/labels/outdoor_webcam/ball_human_labels.json"
+      },
+      "raw_calibration": "eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_calibration_metric15pt.json",
+      "refined_calibration": "runs/lanes/calib_distortion_fit_20260726/refined/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration_metric15pt_refined.json",
+      "refit_seconds": 9.9,
+      "reviewed_keypoints": "eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_keypoints.json",
+      "selection_reasons": [
+        "net_keypoint_label_height_m=0.0000",
+        "net_keypoint_label_height_variant=ground_net_line"
+      ],
+      "state_a_baseline_f29145a": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.447483,
+          "median_m": 0.100551,
+          "p95_m": 0.434946
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.326178,
+          "median_m": 0.094932,
+          "p95_m": 0.224434
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 2537.9139649536,
+        "held_out_floor_m": 0.127254,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.46081,
+            "uncertainty_m": 2.47318
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.22008,
+            "uncertainty_m": 0.34036
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.15014,
+            "uncertainty_m": 1.26576
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.36183,
+            "uncertainty_m": 0.45431
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 4.7834997281882865,
+          "p95": 12.276624313829716
+        }
+      },
+      "state_b_seam_fix_only": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.447483,
+          "median_m": 0.100551,
+          "p95_m": 0.434946
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.326178,
+          "median_m": 0.094932,
+          "p95_m": 0.224434
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 2537.9139649536,
+        "held_out_floor_m": 0.127254,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.46081,
+            "uncertainty_m": 2.47318
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.22008,
+            "uncertainty_m": 0.34036
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.15014,
+            "uncertainty_m": 1.26576
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.36183,
+            "uncertainty_m": 0.45431
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 4.7834997281882865,
+          "p95": 12.276624313829716
+        }
+      },
+      "state_c_refit": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.447255,
+          "median_m": 0.10078,
+          "p95_m": 0.434721
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.325692,
+          "median_m": 0.095105,
+          "p95_m": 0.224345
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 2537.1648,
+        "held_out_floor_m": 0.127254,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.46053,
+            "uncertainty_m": 2.47327
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.21991,
+            "uncertainty_m": 0.34029
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.15,
+            "uncertainty_m": 1.2656
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.36159,
+            "uncertainty_m": 0.45416
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 4.793773434949169,
+          "p95": 12.26732868386675
+        }
+      }
+    },
+    "owner_IMG_1605_8a193402780b": {
+      "after": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.626887,
+          "median_m": 0.089907,
+          "p95_m": 0.40691
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.626887,
+          "median_m": 0.079932,
+          "p95_m": 0.454048
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 865.635,
+        "held_out_floor_m": 0.106518,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.55022,
+            "uncertainty_m": 3.74088
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.20286,
+            "uncertainty_m": 1.6326
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.0606,
+            "uncertainty_m": 0.65824
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.30077,
+            "uncertainty_m": 0.40971
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 2.588079695423893,
+          "p95": 6.083629957310203
+        }
+      },
+      "before": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.575437,
+          "median_m": 0.093304,
+          "p95_m": 0.412838
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.575437,
+          "median_m": 0.073124,
+          "p95_m": 0.447681
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 867.5152916480001,
+        "held_out_floor_m": 2.41981,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.56204,
+            "uncertainty_m": 3.73202
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.20729,
+            "uncertainty_m": 1.62786
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.06209,
+            "uncertainty_m": 0.65944
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.30751,
+            "uncertainty_m": 0.41459
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.9144,
+        "reprojection_error_px": {
+          "median": 2.8848279134500148,
+          "p95": 6.233070699523442
+        }
+      },
+      "floor_change_all15_in_sample": {
+        "after_m": 0.089907,
+        "before_m": 0.093304,
+        "caveat": "in-sample: back-projects the calibration's own fitted correspondences",
+        "delta_m": -0.003397,
+        "improved": true
+      },
+      "floor_change_held_out": {
+        "after_m": 0.106518,
+        "before_m": 2.41981,
+        "delta_m": -2.313292,
+        "improved": true
+      },
+      "raw_calibration": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_calibration_metric15pt.json",
+      "refined_calibration": "runs/lanes/calib_distortion_fit_20260726/refined/owner_IMG_1605_8a193402780b/court_calibration_metric15pt_refined.json",
+      "refit_seconds": 9.9,
+      "reviewed_keypoints": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_keypoints.json",
+      "selection_reasons": [
+        "net_keypoint_label_height_m=0.0000",
+        "net_keypoint_label_height_variant=ground_net_line"
+      ],
+      "state_a_baseline_f29145a": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.575437,
+          "median_m": 0.093304,
+          "p95_m": 0.412838
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.575437,
+          "median_m": 0.073124,
+          "p95_m": 0.447681
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 867.5152916480001,
+        "held_out_floor_m": 2.41981,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.56204,
+            "uncertainty_m": 3.73202
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.20729,
+            "uncertainty_m": 1.62786
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.06209,
+            "uncertainty_m": 0.65944
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.30751,
+            "uncertainty_m": 0.41459
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.9144,
+        "reprojection_error_px": {
+          "median": 2.8848279134500148,
+          "p95": 6.233070699523442
+        }
+      },
+      "state_b_seam_fix_only": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.575437,
+          "median_m": 0.093304,
+          "p95_m": 0.412838
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.575437,
+          "median_m": 0.073124,
+          "p95_m": 0.447681
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 867.5152916480001,
+        "held_out_floor_m": 2.41981,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.56204,
+            "uncertainty_m": 3.73202
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.20729,
+            "uncertainty_m": 1.62786
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.06209,
+            "uncertainty_m": 0.65944
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.30751,
+            "uncertainty_m": 0.41459
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.9144,
+        "reprojection_error_px": {
+          "median": 2.8848279134500148,
+          "p95": 6.233070699523442
+        }
+      },
+      "state_c_refit": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.626887,
+          "median_m": 0.089907,
+          "p95_m": 0.40691
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.626887,
+          "median_m": 0.079932,
+          "p95_m": 0.454048
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 865.635,
+        "held_out_floor_m": 0.106518,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.55022,
+            "uncertainty_m": 3.74088
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.20286,
+            "uncertainty_m": 1.6326
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.0606,
+            "uncertainty_m": 0.65824
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 0.30077,
+            "uncertainty_m": 0.40971
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 2.588079695423893,
+          "p95": 6.083629957310203
+        }
+      }
+    },
+    "pbvision_11min_20260713_demo_seed": {
+      "after": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.386046,
+          "median_m": 0.144385,
+          "p95_m": 0.376616
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.386046,
+          "median_m": 0.138259,
+          "p95_m": 0.378637
+        },
+        "dist": [
+          -0.1311701032596218,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 753.4459345029547,
+        "held_out_floor_m": 0.176952,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.23025,
+            "uncertainty_m": 4.38726
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.62676,
+            "uncertainty_m": 2.45294
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.22693,
+            "uncertainty_m": 0.71652
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.66018,
+            "uncertainty_m": 1.03727
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 3.6760021842422645,
+          "p95": 11.423185135807742
+        }
+      },
+      "before": {
+        "calibration_floor_m_all15": {
+          "max_m": 4.480219,
+          "median_m": 1.906196,
+          "p95_m": 4.177696
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 4.480219,
+          "median_m": 1.701804,
+          "p95_m": 4.242522
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 719.3009061888,
+        "held_out_floor_m": 2.745214,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 5.99105,
+            "uncertainty_m": 7.26808
+          },
+          "left_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 2.85344,
+            "uncertainty_m": 3.61148
+          },
+          "near_baseline_centre": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 1.04439,
+            "uncertainty_m": 1.23301
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 3.18631,
+            "uncertainty_m": 3.25775
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.9144,
+        "reprojection_error_px": {
+          "median": 19.164802773724485,
+          "p95": 51.705978976514146
+        }
+      },
+      "floor_change_all15_in_sample": {
+        "after_m": 0.144385,
+        "before_m": 1.906196,
+        "caveat": "in-sample: back-projects the calibration's own fitted correspondences",
+        "delta_m": -1.761811,
+        "improved": true
+      },
+      "floor_change_held_out": {
+        "after_m": 0.176952,
+        "before_m": 2.745214,
+        "delta_m": -2.568262,
+        "improved": true
+      },
+      "raw_calibration": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_metric15pt.json",
+      "refined_calibration": "runs/lanes/calib_distortion_fit_20260726/refined/pbvision_11min_20260713_demo_seed/court_calibration_metric15pt_refined.json",
+      "refit_seconds": 14.8,
+      "reviewed_keypoints": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_keypoints_reviewed.json",
+      "selection_reasons": [
+        "net_keypoint_label_height_m=0.0000",
+        "net_keypoint_label_height_variant=ground_net_line"
+      ],
+      "state_a_baseline_f29145a": {
+        "calibration_floor_m_all15": {
+          "max_m": 4.480219,
+          "median_m": 1.906196,
+          "p95_m": 4.177696
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 4.480219,
+          "median_m": 1.701804,
+          "p95_m": 4.242522
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 719.3009061888,
+        "held_out_floor_m": 2.745214,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 5.99105,
+            "uncertainty_m": 7.26808
+          },
+          "left_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 2.85344,
+            "uncertainty_m": 3.61148
+          },
+          "near_baseline_centre": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 1.04439,
+            "uncertainty_m": 1.23301
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 3.18631,
+            "uncertainty_m": 3.25775
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.9144,
+        "reprojection_error_px": {
+          "median": 19.164802773724485,
+          "p95": 51.705978976514146
+        }
+      },
+      "state_b_seam_fix_only": {
+        "calibration_floor_m_all15": {
+          "max_m": 4.480219,
+          "median_m": 1.906196,
+          "p95_m": 4.177696
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 4.480219,
+          "median_m": 1.701804,
+          "p95_m": 4.242522
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 719.3009061888,
+        "held_out_floor_m": 2.745214,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 5.99105,
+            "uncertainty_m": 7.26808
+          },
+          "left_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 2.85344,
+            "uncertainty_m": 3.61148
+          },
+          "near_baseline_centre": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 1.04439,
+            "uncertainty_m": 1.23301
+          },
+          "right_sideline_mid": {
+            "dominant_term": "calibration_reprojection",
+            "sigma_reproj_m": 3.18631,
+            "uncertainty_m": 3.25775
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.9144,
+        "reprojection_error_px": {
+          "median": 19.164802773724485,
+          "p95": 51.705978976514146
+        }
+      },
+      "state_c_refit": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.386046,
+          "median_m": 0.144385,
+          "p95_m": 0.376616
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.386046,
+          "median_m": 0.138259,
+          "p95_m": 0.378637
+        },
+        "dist": [
+          -0.1311701032596218,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 753.4459345029547,
+        "held_out_floor_m": 0.176952,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.23025,
+            "uncertainty_m": 4.38726
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.62676,
+            "uncertainty_m": 2.45294
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.22693,
+            "uncertainty_m": 0.71652
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.66018,
+            "uncertainty_m": 1.03727
+          }
+        },
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 3.6760021842422645,
+          "p95": 11.423185135807742
+        }
+      }
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "after": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.621665,
+          "median_m": 0.126132,
+          "p95_m": 0.377056
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.621665,
+          "median_m": 0.11376,
+          "p95_m": 0.364682
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1390.2336000000003,
+        "held_out_floor_m": 0.158241,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.12726,
+            "uncertainty_m": 3.92829
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.21124,
+            "uncertainty_m": 0.50715
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.16053,
+            "uncertainty_m": 0.61539
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.94466,
+            "uncertainty_m": 2.10271
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 5.018710799287933,
+          "p95": 19.868662139217818
+        }
+      },
+      "before": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.611554,
+          "median_m": 0.126773,
+          "p95_m": 0.373934
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.611554,
+          "median_m": 0.115476,
+          "p95_m": 0.360191
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1391.1788814336,
+        "held_out_floor_m": 0.158241,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.12913,
+            "uncertainty_m": 3.92612
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.21177,
+            "uncertainty_m": 0.50749
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.16095,
+            "uncertainty_m": 0.61581
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.94626,
+            "uncertainty_m": 2.10228
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 5.004391918498315,
+          "p95": 19.920538155647392
+        }
+      },
+      "floor_change_all15_in_sample": {
+        "after_m": 0.126132,
+        "before_m": 0.126773,
+        "caveat": "in-sample: back-projects the calibration's own fitted correspondences",
+        "delta_m": -0.000641,
+        "improved": true
+      },
+      "floor_change_held_out": {
+        "after_m": 0.158241,
+        "before_m": 0.158241,
+        "delta_m": 0.0,
+        "improved": false
+      },
+      "owner_bounce_labels": {
+        "after": {
+          "bounce_label_count": 7,
+          "plane_residual_floor_m": 0.126132,
+          "sigma_along_ray_max_m": 0.281298,
+          "sigma_along_ray_median_m": 0.224934,
+          "sigma_along_ray_min_m": 0.158953,
+          "unsolvable": 0
+        },
+        "before": {
+          "bounce_label_count": 7,
+          "plane_residual_floor_m": 0.126773,
+          "sigma_along_ray_max_m": 0.281397,
+          "sigma_along_ray_median_m": 0.225264,
+          "sigma_along_ray_min_m": 0.159563,
+          "unsolvable": 0
+        },
+        "labels_path": "/private/tmp/pickleball-balllabel-20260726/runs/lanes/ball_label_tool_20260726/labels/wolverine/ball_human_labels.json"
+      },
+      "raw_calibration": "eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/labels/court_calibration_metric15pt.json",
+      "refined_calibration": "runs/lanes/calib_distortion_fit_20260726/refined/wolverine_mixed_0200_mid_steep_corner/court_calibration_metric15pt_refined.json",
+      "refit_seconds": 10.0,
+      "reviewed_keypoints": "eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/labels/court_keypoints.json",
+      "selection_reasons": [
+        "net_keypoint_label_height_m=0.0000",
+        "net_keypoint_label_height_variant=ground_net_line"
+      ],
+      "state_a_baseline_f29145a": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.611554,
+          "median_m": 0.126773,
+          "p95_m": 0.373934
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.611554,
+          "median_m": 0.115476,
+          "p95_m": 0.360191
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1391.1788814336,
+        "held_out_floor_m": 0.158241,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.12913,
+            "uncertainty_m": 3.92612
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.21177,
+            "uncertainty_m": 0.50749
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.16095,
+            "uncertainty_m": 0.61581
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.94626,
+            "uncertainty_m": 2.10228
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 5.004391918498315,
+          "p95": 19.920538155647392
+        }
+      },
+      "state_b_seam_fix_only": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.611554,
+          "median_m": 0.126773,
+          "p95_m": 0.373934
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.611554,
+          "median_m": 0.115476,
+          "p95_m": 0.360191
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1391.1788814336,
+        "held_out_floor_m": 0.158241,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.12913,
+            "uncertainty_m": 3.92612
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.21177,
+            "uncertainty_m": 0.50749
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.16095,
+            "uncertainty_m": 0.61581
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.94626,
+            "uncertainty_m": 2.10228
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 5.004391918498315,
+          "p95": 19.920538155647392
+        }
+      },
+      "state_c_refit": {
+        "calibration_floor_m_all15": {
+          "max_m": 0.621665,
+          "median_m": 0.126132,
+          "p95_m": 0.377056
+        },
+        "calibration_floor_m_floor12": {
+          "max_m": 0.621665,
+          "median_m": 0.11376,
+          "p95_m": 0.364682
+        },
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1390.2336000000003,
+        "held_out_floor_m": 0.158241,
+        "inout_uncertainty_radius_m": {
+          "far_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 1.12726,
+            "uncertainty_m": 3.92829
+          },
+          "left_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.21124,
+            "uncertainty_m": 0.50715
+          },
+          "near_baseline_centre": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.16053,
+            "uncertainty_m": 0.61539
+          },
+          "right_sideline_mid": {
+            "dominant_term": "camera_geometry_elevation_parallax",
+            "sigma_reproj_m": 0.94466,
+            "uncertainty_m": 2.10271
+          }
+        },
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px": {
+          "median": 5.018710799287933,
+          "p95": 19.868662139217818
+        }
+      }
+    }
+  },
+  "generated_by": "runs/lanes/calib_distortion_fit_20260726/refit_and_measure.py",
+  "note": "Engineering improvement to the metric-15pt calibration fit. Promotes no capability; the ball is not verified. Raw solves are read-only here.",
+  "summary": {
+    "clip_count": 6,
+    "held_out_floor_improved_clip_count": 3,
+    "held_out_floor_improved_clips": [
+      "burlington_gold_0300_low_steep_corner",
+      "owner_IMG_1605_8a193402780b",
+      "pbvision_11min_20260713_demo_seed"
+    ],
+    "in_sample_floor_improved_clips": [
+      "burlington_gold_0300_low_steep_corner",
+      "indoor_doubles_fwuks_0500_long_mid_baseline",
+      "wolverine_mixed_0200_mid_steep_corner",
+      "owner_IMG_1605_8a193402780b",
+      "pbvision_11min_20260713_demo_seed"
+    ]
+  },
+  "verified": 0
+}
