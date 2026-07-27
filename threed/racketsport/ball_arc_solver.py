@@ -992,6 +992,10 @@ def build_bounce_anchor(
     if uncertainty is not None:
         anchor_details["uncertainty"] = uncertainty.to_json()
         anchor_details["bias_correction_applied"] = bool(apply_bias_correction)
+    if subframe_timing is not None:
+        # Recorded whether or not it was applied: a guard that fired is
+        # evidence, and silently dropping it would hide the abstention.
+        anchor_details["subframe_timing"] = subframe_timing.to_json()
     if details:
         anchor_details.update(dict(details))
     return AnchorEvent(
@@ -3631,6 +3635,7 @@ def anchor_uncertainty_for_bounce(
     horizontal_speed_mps: float = DEFAULT_BOUNCE_HORIZONTAL_SPEED_MPS,
     speed_cv: float = DEFAULT_BOUNCE_SPEED_CV,
     calibration_residual_m: float | None = None,
+    subframe_timing_sd_s: float | None = None,
 ) -> BounceAnchorUncertainty | None:
     """Anisotropic, calibration-floored, bias-aware uncertainty for a bounce.
 
@@ -3648,6 +3653,12 @@ def anchor_uncertainty_for_bounce(
        ``bias_along_ray_m``, and only its spread enters the sigma.  The same
        interval lets the ball travel ``v_horizontal * sd(dt)`` sideways, which
        is genuinely zero-mean and is split over an unknown heading.
+       ``subframe_timing_sd_s`` replaces that half-frame prior when the anchor
+       was placed at an ESTIMATED contact instant
+       (:func:`refine_bounce_contact_time`): ``dt`` becomes zero-mean with the
+       supplied 1-sigma, so the term shrinks by exactly the timing error the
+       estimator removed and by no more.  It does not become zero -- ``|dt|``
+       is still one-sided -- and the estimator's own error is not assumed away.
     3. **Calibration residual floor** -- the in-plane error a perfect pixel
        still inherits, measured from the calibration's own correspondences
        (:func:`calibration_plane_residuals`) or supplied directly.  The old
@@ -3686,18 +3697,45 @@ def anchor_uncertainty_for_bounce(
         terms["fps_provenance"] = "supplied"
     terms["fps"] = float(effective_fps)
     half_frame_s = 0.5 / float(effective_fps)
-    sd_dt_s = half_frame_s / math.sqrt(3.0)  # dt ~ U(-half_frame, +half_frame)
 
     v_vertical = max(0.0, float(vertical_speed_mps))
     v_horizontal = max(0.0, float(horizontal_speed_mps))
     cv = max(0.0, float(speed_cv))
-    # h = v * |dt|, with v itself uncertain (coefficient of variation `cv`):
-    #   E[h]   = mean_v * half_frame / 2
-    #   Var[h] = half_frame^2 * (mean_v^2 / 12 + sd_v^2 / 3)
-    mean_height_m = v_vertical * half_frame_s / 2.0
-    sd_height_m = half_frame_s * math.sqrt(
-        (v_vertical * v_vertical) / 12.0 + ((cv * v_vertical) ** 2) / 3.0
-    )
+    refined_sd_s = _float_or_none(subframe_timing_sd_s)
+    if refined_sd_s is not None and refined_sd_s > 0.0:
+        # The anchor was placed at an ESTIMATED contact instant instead of at
+        # the marked frame, so `dt` is now the estimator's own error: zero-mean
+        # with the reported 1-sigma, rather than U(-half_frame, +half_frame).
+        # The height h = v_vertical * |dt| is still one-sided -- |dt| >= 0 -- so
+        # the term keeps its shape and sign and only shrinks by the timing error
+        # actually removed.  Nothing here claims the bias cancels.
+        #   E[|dt|] = s * sqrt(2/pi),  E[dt^2] = s^2
+        sd_dt_s = refined_sd_s
+        mean_abs_dt_s = refined_sd_s * math.sqrt(2.0 / math.pi)
+        mean_height_m = v_vertical * mean_abs_dt_s
+        sd_height_m = math.sqrt(
+            max(
+                0.0,
+                (v_vertical * v_vertical)
+                * (1.0 + cv * cv)
+                * (refined_sd_s * refined_sd_s)
+                - (v_vertical * mean_abs_dt_s) ** 2,
+            )
+        )
+        terms["timing_model"] = "subframe_refined_zero_mean_gaussian"
+        terms["subframe_timing_sd_s"] = float(refined_sd_s)
+        terms["unrefined_timing_sd_s"] = float(half_frame_s / math.sqrt(3.0))
+    else:
+        sd_dt_s = half_frame_s / math.sqrt(3.0)  # dt ~ U(-half_frame, +half_frame)
+        # h = v * |dt|, with v itself uncertain (coefficient of variation `cv`):
+        #   E[h]   = mean_v * half_frame / 2
+        #   Var[h] = half_frame^2 * (mean_v^2 / 12 + sd_v^2 / 3)
+        mean_height_m = v_vertical * half_frame_s / 2.0
+        sd_height_m = half_frame_s * math.sqrt(
+            (v_vertical * v_vertical) / 12.0 + ((cv * v_vertical) ** 2) / 3.0
+        )
+        # No `timing_model` key on this path: the unrefined payload must stay
+        # byte-identical to the pre-lane artifact.
     bias_along_ray_m = mean_height_m / ray_z
     timing_along_ray_m = sd_height_m / ray_z
     # Sideways travel over the same interval, direction unknown: the expected
@@ -8180,6 +8218,7 @@ __all__ = [
     "FlightSegmentFit",
     "PhysicsParameters",
     "SoftSegmentBoundary",
+    "SubFrameBounceTiming",
     "anchor_sigma_for_bounce",
     "build_bounce_anchor",
     "fit_flight_segment",
@@ -8187,5 +8226,6 @@ __all__ = [
     "intersect_ray_z",
     "order_event_anchors",
     "pixel_ray_world",
+    "refine_bounce_contact_time",
     "solve_ball_arc_track",
 ]
