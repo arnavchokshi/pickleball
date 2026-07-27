@@ -1,0 +1,664 @@
+{
+ "artifact_type": "racketsport_lane_report",
+ "lane": "BALL / GATE-POLICY",
+ "branch": "fix-reproj-20260726",
+ "forked_from": "f29145a",
+ "head": "156143c9e2180bf96738b6cee34600342eb3dae8",
+ "date": "2026-07-26",
+ "verified": 0,
+ "one_line": "Reprojection error is retired as a 3D quality criterion. It is kept, and relabelled, wherever it was a genuine 2D-consistency or calibration check; every place it was taken as evidence a 3D position is good now has a depth-aware physical-plausibility criterion beside it and an explicit depth_unvalidated marker.",
+ "cpu_only": true,
+ "premise": {
+  "source": "runs/lanes/tt3d_external_validation_20260726/report.json",
+  "ray_slide_1m_changes_reprojection_px": 1.6e-13,
+  "note_on_ray_slide": "E0_mapping_gate no_noise rows: mean 1.6e-13 px over 2055 points x 3 views. Round-trip mapping error is at machine precision, so depth slide is invisible to reprojection by construction.",
+  "subpixel_reprojection_coexists_with": {
+   "median_reprojection_px": 0.323,
+   "median_3d_error_m": 0.305,
+   "p95_3d_error_m": 1.381
+  },
+  "error_is_depth": {
+   "mean_total_3d_error_m": 0.3118,
+   "mean_depth_axis_error_m": 0.3115,
+   "mean_image_plane_error_m": 0.0047,
+   "ratio": 40
+  }
+ },
+ "owner_label_claim_status": {
+  "claim_in_task": "19 owner labels at runs/lanes/ball_label_tool_20260726/labels/wolverine/ball_human_labels.json show arc_weak prefills wrong by 2.5-24.8 m, solver placing the ball at z=+21..+23 m and at negative z",
+  "verified": false,
+  "reason": "That path does not exist in the repository at f29145a or on this branch. The only committed label set from that lane is runs/lanes/ball_label_tool_20260726/demo_labels/outdoor_webcam/ball_human_labels.json: 15 labels, 3 prefills, bands anchored_measured and arc_interpolated only, no arc_weak prefill, deltas 0.016-0.034 m. The wolverine launch command is documented in that lane's REPORT.md but its output was never committed.",
+  "substitute_evidence": "The underlying phenomenon was confirmed directly against solver output instead. See wolverine_twenty_metres_case and artifact_scan below: on the wolverine clip the solver emitted 79 frames between 15.1 m and 23.53 m of altitude and 3 frames underground, all banded arc_weak, all carrying sigma_m = 0.196641, and none of them flagged by any pre-existing check."
+ },
+ "evidence": {
+  "artifact_scan": {
+   "artifact_count": 15,
+   "bands_before": {
+    "anchored_measured": 565,
+    "arc_extrapolated": 24,
+    "arc_interpolated": 159,
+    "arc_weak": 16549,
+    "hidden": 56471
+   },
+   "bands_after": {
+    "anchored_measured": 565,
+    "arc_extrapolated": 24,
+    "arc_interpolated": 159,
+    "arc_weak": 3683,
+    "hidden": 69337
+   },
+   "total_frames_suppressed": 12866,
+   "per_artifact": [
+    {
+     "artifact": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_arc_seed/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 588,
+     "frames_with_world_xyz_after": 588,
+     "frames_suppressed": 0,
+     "bands_before": {
+      "anchored_measured": 153,
+      "arc_extrapolated": 12,
+      "arc_interpolated": 60,
+      "arc_weak": 363,
+      "hidden": 12
+     },
+     "bands_after": {
+      "anchored_measured": 153,
+      "arc_extrapolated": 12,
+      "arc_interpolated": 60,
+      "arc_weak": 363,
+      "hidden": 12
+     },
+     "implausible_frame_count": 15,
+     "absurd_frame_count": 0,
+     "segment_count": 13,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/burlington_gold_0300_low_steep_corner/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 588,
+     "frames_with_world_xyz_after": 588,
+     "frames_suppressed": 0,
+     "bands_before": {
+      "anchored_measured": 130,
+      "arc_extrapolated": 11,
+      "arc_interpolated": 39,
+      "arc_weak": 408,
+      "hidden": 12
+     },
+     "bands_after": {
+      "anchored_measured": 130,
+      "arc_extrapolated": 11,
+      "arc_interpolated": 39,
+      "arc_weak": 408,
+      "hidden": 12
+     },
+     "implausible_frame_count": 15,
+     "absurd_frame_count": 0,
+     "segment_count": 13,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_arc_seed/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 473,
+     "frames_with_world_xyz_after": 473,
+     "frames_suppressed": 0,
+     "bands_before": {
+      "anchored_measured": 72,
+      "arc_interpolated": 26,
+      "arc_weak": 375,
+      "hidden": 678
+     },
+     "bands_after": {
+      "anchored_measured": 72,
+      "arc_interpolated": 26,
+      "arc_weak": 375,
+      "hidden": 678
+     },
+     "implausible_frame_count": 74,
+     "absurd_frame_count": 0,
+     "segment_count": 7,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/outdoor_webcam_iynbd_1500_long_high_baseline/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 473,
+     "frames_with_world_xyz_after": 473,
+     "frames_suppressed": 0,
+     "bands_before": {
+      "anchored_measured": 72,
+      "arc_interpolated": 26,
+      "arc_weak": 375,
+      "hidden": 678
+     },
+     "bands_after": {
+      "anchored_measured": 72,
+      "arc_interpolated": 26,
+      "arc_weak": 375,
+      "hidden": 678
+     },
+     "implausible_frame_count": 74,
+     "absurd_frame_count": 0,
+     "segment_count": 7,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/wolverine_mixed_0200_mid_steep_corner/ball_arc_seed/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 290,
+     "frames_with_world_xyz_after": 290,
+     "frames_suppressed": 0,
+     "bands_before": {
+      "anchored_measured": 51,
+      "arc_interpolated": 4,
+      "arc_weak": 235,
+      "hidden": 10
+     },
+     "bands_after": {
+      "anchored_measured": 51,
+      "arc_interpolated": 4,
+      "arc_weak": 235,
+      "hidden": 10
+     },
+     "implausible_frame_count": 8,
+     "absurd_frame_count": 0,
+     "segment_count": 10,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ball_p3a_bvp_solver_20260705/three_clip_default_chain/wolverine_mixed_0200_mid_steep_corner/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 290,
+     "frames_with_world_xyz_after": 290,
+     "frames_suppressed": 0,
+     "bands_before": {
+      "anchored_measured": 51,
+      "arc_interpolated": 4,
+      "arc_weak": 235,
+      "hidden": 10
+     },
+     "bands_after": {
+      "anchored_measured": 51,
+      "arc_interpolated": 4,
+      "arc_weak": 235,
+      "hidden": 10
+     },
+     "implausible_frame_count": 8,
+     "absurd_frame_count": 0,
+     "segment_count": 10,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_adopted_guard30/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 96,
+     "frames_with_world_xyz_after": 70,
+     "frames_suppressed": 26,
+     "bands_before": {
+      "arc_weak": 96,
+      "hidden": 54
+     },
+     "bands_after": {
+      "arc_weak": 70,
+      "hidden": 80
+     },
+     "implausible_frame_count": 41,
+     "absurd_frame_count": 26,
+     "segment_count": 2,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ballarc_anchorfusion_20260716/demo_short_slice_current_no_soft30/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 96,
+     "frames_with_world_xyz_after": 70,
+     "frames_suppressed": 26,
+     "bands_before": {
+      "arc_weak": 96,
+      "hidden": 54
+     },
+     "bands_after": {
+      "arc_weak": 70,
+      "hidden": 80
+     },
+     "implausible_frame_count": 41,
+     "absurd_frame_count": 26,
+     "segment_count": 2,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ballarc_anchorfusion_20260716/demo_slice_adopted_guard30/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 0,
+     "frames_with_world_xyz_after": 0,
+     "frames_suppressed": 0,
+     "bands_before": {
+      "hidden": 2100
+     },
+     "bands_after": {
+      "hidden": 2100
+     },
+     "implausible_frame_count": 0,
+     "absurd_frame_count": 0,
+     "segment_count": 2,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ballarc_anchorfusion_20260716/demo_slice_adopted_guard_r2/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 0,
+     "frames_with_world_xyz_after": 0,
+     "frames_suppressed": 0,
+     "bands_before": {
+      "hidden": 2100
+     },
+     "bands_after": {
+      "hidden": 2100
+     },
+     "implausible_frame_count": 0,
+     "absurd_frame_count": 0,
+     "segment_count": 12,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ballarc_anchorfusion_20260716/demo_slice_current_no_soft/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 0,
+     "frames_with_world_xyz_after": 0,
+     "frames_suppressed": 0,
+     "bands_before": {
+      "hidden": 2100
+     },
+     "bands_after": {
+      "hidden": 2100
+     },
+     "implausible_frame_count": 0,
+     "absurd_frame_count": 0,
+     "segment_count": 15,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ballarc_anchorfusion_20260716/preset_balanced/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 4358,
+     "frames_with_world_xyz_after": 422,
+     "frames_suppressed": 3936,
+     "bands_before": {
+      "arc_weak": 4358,
+      "hidden": 16564
+     },
+     "bands_after": {
+      "arc_weak": 422,
+      "hidden": 20500
+     },
+     "implausible_frame_count": 4165,
+     "absurd_frame_count": 3936,
+     "segment_count": 361,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ballarc_anchorfusion_20260716/preset_broad/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 6997,
+     "frames_with_world_xyz_after": 691,
+     "frames_suppressed": 6306,
+     "bands_before": {
+      "arc_weak": 6997,
+      "hidden": 13925
+     },
+     "bands_after": {
+      "arc_weak": 691,
+      "hidden": 20231
+     },
+     "implausible_frame_count": 6715,
+     "absurd_frame_count": 6306,
+     "segment_count": 367,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ballarc_anchorfusion_20260716/preset_conservative/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 2748,
+     "frames_with_world_xyz_after": 255,
+     "frames_suppressed": 2493,
+     "bands_before": {
+      "arc_weak": 2748,
+      "hidden": 18174
+     },
+     "bands_after": {
+      "arc_weak": 255,
+      "hidden": 20667
+     },
+     "implausible_frame_count": 2652,
+     "absurd_frame_count": 2493,
+     "segment_count": 371,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    },
+    {
+     "artifact": "runs/lanes/ballarc_anchorfusion_20260716/wolverine_no_soft_current/ball_track_arc_solved.json",
+     "frames_with_world_xyz_before": 300,
+     "frames_with_world_xyz_after": 221,
+     "frames_suppressed": 79,
+     "bands_before": {
+      "anchored_measured": 36,
+      "arc_extrapolated": 1,
+      "arc_weak": 263
+     },
+     "bands_after": {
+      "anchored_measured": 36,
+      "arc_extrapolated": 1,
+      "arc_weak": 184,
+      "hidden": 79
+     },
+     "implausible_frame_count": 112,
+     "absurd_frame_count": 79,
+     "segment_count": 11,
+     "segments_newly_allowed_by_v2": [],
+     "segments_newly_suppressed_by_v2": []
+    }
+   ]
+  },
+  "segment_verdict_parity": {
+   "segments": 1203,
+   "suppressed_both": 301,
+   "trusted_both": 902
+  },
+  "segments_rejected_by_reprojection_alone": 2,
+  "wolverine_twenty_metres_case": {
+   "artifact": "runs/lanes/ballarc_anchorfusion_20260716/wolverine_no_soft_current/ball_track_arc_solved.json",
+   "frames_above_15m_before": 79,
+   "max_height_m_before": 23.5302,
+   "sigma_m_claimed_on_those_frames": [
+    0.196641
+   ],
+   "band_on_those_frames_before": [
+    "arc_weak"
+   ],
+   "flight_sanity_reasons_before": [
+    "fit_bvp_fallback"
+   ],
+   "frames_above_15m_after": 0,
+   "frames_below_ground_before": 3,
+   "frames_below_ground_after_still_rendered": 3,
+   "max_height_m_after": 14.9737
+  }
+ },
+ "site_classification": {
+  "method": "grep for reproj/reprojection/rmse_px/residual_px across threed/, scripts/, server/, web/replay/src/, configs/, docs/, tests/, then read every hit in context. 1512 matching lines across ~230 files. server/ has zero hits; the replay viewer's ball trail has zero hits and only ever sees world_xyz==null after suppression.",
+  "categories": {
+   "A_calibration_residual": "Reprojection of court/charuco/keypoint correspondences to score or accept a CAMERA CALIBRATION. Genuinely 2D. KEEP.",
+   "B_2d_consistency": "Is this detection/track consistent with this 2D model? Association, outlier rejection, RANSAC. KEEP.",
+   "C_3d_acceptance": "Passing reprojection is taken as evidence a 3D position is good, or it gates emission/acceptance/trust/confidence/band of a 3D quantity. THE PROBLEM.",
+   "D_diagnostic": "Recorded into an artifact but drives no branch. KEEP.",
+   "E_test": "Asserts on one of the above."
+  },
+  "counts": {
+   "category_A_keep": 61,
+   "category_B_keep": 21,
+   "category_C_addressed": 6,
+   "category_C_kept_and_flagged": 9,
+   "category_D_keep": 14,
+   "sites_total_reviewed": 111
+  },
+  "category_C_changed": [
+   {
+    "file": "threed/racketsport/virtual_world.py",
+    "lines": "377-460",
+    "function": "ball_arc_segment_fail_closed_verdicts",
+    "verdict": "RECLASSIFIED + REPLACED",
+    "category": "C",
+    "reasoning": "The primary 3D suppression gate. v1 trusted a fallback/weak segment when it had enough inliers and a bounded reprojection error, and its docstring said exactly that. A pass was read downstream as 'the 3D is supported'. Reprojection cannot support that.",
+    "action": "Reprojection and inlier terms KEPT and documented as 2D-consistency checks (removing them regressed 2 real segments: measured, see segments_rejected_by_reprojection_alone). Policy renamed arc_segment_fail_closed_v1 -> v2.",
+    "replacement": "segment_physical_sanity_violations() from ball_position_plausibility, evaluated on the segment's own apex / court-volume / speed; every verdict stamped depth_unvalidated:true and carries reprojection_error_px_diagnostic."
+   },
+   {
+    "file": "threed/racketsport/ball_arc_solver.py",
+    "lines": "5646-5680",
+    "function": "_solved_frames",
+    "verdict": "REPLACED (band may now only be capped)",
+    "category": "C",
+    "reasoning": "The quietest and most consequential site. band='anchored_measured' -- the strongest band in the system, the one the label tool prefills from and the viewer renders solid -- was awarded purely on reprojection-inlier membership (error <= max_reprojection_inlier_px=18.0). Depth is entirely unconstrained by that test, so a frame metres wrong along the ray got the measured band.",
+    "action": "Inlier membership still assigns the band, but plausibility can now only LOWER it, never raise it. Every emitted frame gains depth_unvalidated:true; violating frames gain plausibility_violations.",
+    "replacement": "evaluate_position() on the predicted world position."
+   },
+   {
+    "file": "threed/racketsport/ball_flight_sanity.py",
+    "lines": "whole module",
+    "function": "evaluate_ball_flight_sanity / apply_flight_sanity_demotions",
+    "verdict": "REPLACED (main fix)",
+    "category": "C",
+    "reasoning": "Not itself a reprojection site, but the gate that was supposed to catch what reprojection could not -- and it had two holes. (1) Its court-volume bound had NO upper z limit, so a ball at 23.53 m was inside the volume. (2) It only evaluated frames sitting between two bounce/contact anchors in a segment with >= 5 world samples; bridge frames, weak tails and frames in no segment were never checked at all.",
+    "action": "Added a whole-track per-frame plausibility sweep independent of segment membership, with an upper height bound. Absurd positions are suppressed with no BVP-fallback exemption -- that exemption is precisely what kept the 79 real frames alive. schema_version 2 -> 3.",
+    "replacement": "evaluate_ball_track_plausibility() over every frame carrying world_xyz."
+   },
+   {
+    "file": "threed/racketsport/ball_arc_chain.py",
+    "lines": "1416-1447",
+    "function": "_segment_confidence",
+    "verdict": "RECLASSIFIED + CAPPED",
+    "category": "C",
+    "reasoning": "Reprojection RMSE scaled a 3D arc's confidence (base *= 1 - rmse/48), and that confidence decides the rendered band at line 1200 (confidence < 0.45 -> arc_weak). A clean-reprojecting fallback segment could therefore be rendered as arc_interpolated.",
+    "action": "The rmse and inlier-share penalties are KEPT (removing a penalty loosens) and documented as 2D. A hard cap is added after them.",
+    "replacement": "segment_physical_sanity_violations() pins an implausible segment to WEAK_BAND_CONFIDENCE_CEILING=0.44, below the 0.45 arc_weak threshold."
+   },
+   {
+    "file": "threed/racketsport/ball_physics3d.py",
+    "lines": "107-235",
+    "function": "reconstruct_bounce_arcs_from_image_track",
+    "verdict": "RECLASSIFIED + REPLACED",
+    "category": "C",
+    "reasoning": "Docstring stated 'The fit is accepted only when reprojection error stays under max_reprojection_rmse_px' -- an explicit claim that a reprojection bound is what accepts a 3D two-arc reconstruction. status='ran' was then read as an accepted 3D result.",
+    "action": "Reprojection bound KEPT as a 2D condition; docstring corrected to say what it can and cannot mean.",
+    "replacement": "New status no_fit_under_physical_plausibility_gate when the reconstructed samples break the bounds; summary() now always reports depth_validated:false plus the reason, on accepted results too."
+   },
+   {
+    "file": "threed/racketsport/ball_physics_fill.py",
+    "lines": "317-345, 405-412",
+    "function": "fill_ball_track_physics",
+    "verdict": "RECLASSIFIED + REPLACED",
+    "category": "C",
+    "reasoning": "A frame was admitted into the 3D fill on image-plane evidence alone: reproject the lifted position, reject if it lands >18 px from the detection, otherwise accept the 3D position.",
+    "action": "Reprojection rejection KEPT and documented as 2D (it is a real necessary condition).",
+    "replacement": "A plausibility rejection added beside it (rejection reason physical_plausibility_violation:<names>), plus implausible_rejected_frame_count and depth_validated:false in the summary."
+   },
+   {
+    "file": "threed/racketsport/trust_band.py",
+    "lines": "245-300",
+    "function": "derive_ball_trust_band",
+    "verdict": "HONESTY MARKER",
+    "category": "C",
+    "reasoning": "The BALL trust band explained why the track is low_confidence in detection terms and said nothing about depth, leaving a reader free to assume depth was fine.",
+    "replacement": "Reason text now states ball depth is unvalidated and cites the measurement."
+   }
+  ],
+  "category_C_kept_and_flagged": [
+   {
+    "file": "threed/racketsport/ball_arc_solver.py",
+    "lines": "6748-6753",
+    "function": "_frame_sigma",
+    "verdict": "KEEP - FLAG - OUT OF LANE",
+    "category": "C",
+    "reasoning": "reproj_component = min(0.25, reprojection_rmse_px * 0.01) is folded into the per-frame 3D sigma. Sizing a depth uncertainty from a quantity blind to depth is illegitimate. NOT EDITED: this is the uncertainty model, owned by the concurrent anisotropic-uncertainty lane. Flagged for that owner."
+   },
+   {
+    "file": "threed/racketsport/ball_arc_solver.py",
+    "lines": "2896-2902",
+    "function": "anchor_sigma_for_bounce",
+    "verdict": "KEEP - FLAG - FENCED",
+    "category": "C",
+    "reasoning": "Calibration reprojection p95 contributes min(0.18, 0.004*p95) to a 3D anchor sigma. Explicitly fenced off for the concurrent uncertainty-model agent. NOT EDITED."
+   },
+   {
+    "file": "threed/racketsport/ball_physics_fill.py",
+    "lines": "946-949",
+    "function": "_physics3d_uncertainty_m",
+    "verdict": "KEEP - FLAG",
+    "category": "C",
+    "reasoning": "Same pattern as _frame_sigma: reprojection RMSE folded into a 3D uncertainty. Left for the uncertainty lane rather than changed from the gate lane."
+   },
+   {
+    "file": "threed/racketsport/shot_taxonomy.py",
+    "lines": "346-348, 364-388",
+    "function": "_uncertainty_ellipse / _segment_confidence",
+    "verdict": "KEEP - FLAG",
+    "category": "C",
+    "reasoning": "Reprojection RMSE sizes the 3D landing-uncertainty ellipse and contributes 0.15 * 1/(1+rmse/20) to shot confidence. Illegitimate in the same way, but it consumes segments the arc solver has already banded, so it inherits the cap added upstream. Left unchanged to avoid touching shot semantics from this lane."
+   },
+   {
+    "file": "threed/racketsport/one_world_v1.py",
+    "lines": "1125-1133, 1314-1321, 1546-1548",
+    "function": "build_one_world / validate_one_world",
+    "verdict": "KEEP",
+    "category": "C (fail-closed direction)",
+    "reasoning": "A refinement is REVERTED when reprojection gets worse by >max(2 px, 10%). This is a regression detector, not an acceptance certificate, and it only ever suppresses. Removing it would loosen. Keeping."
+   },
+   {
+    "file": "threed/racketsport/ball_3d_events_gate.py",
+    "lines": "311-320",
+    "function": "_physics_segments_summary",
+    "verdict": "KEEP",
+    "category": "C (fail-closed direction)",
+    "reasoning": "Blocks the 3D events gate when the RANSAC arc residual exceeds 5 px or is missing. Fail-closed, 2D-consistency-shaped, only suppresses."
+   },
+   {
+    "file": "threed/racketsport/racket_stage_runner.py + racket_pose_preview.py + racket6dof.py",
+    "lines": "136-138 / 70-72 / 266-271",
+    "function": "run / build_racket_pose_preview / estimate_planar_paddle_pose_with_diagnostics",
+    "verdict": "KEEP - FLAG",
+    "category": "C",
+    "reasoning": "Paddle 6DoF frames are dropped above 6 px and pose confidence is 1/(1+px/3). Same structural flaw for the RKT lane. Out of scope here (BALL/gate lane); RKT is already box-derived preview with 0 true corner labels, so nothing downstream reads it as verified."
+   },
+   {
+    "file": "threed/racketsport/capture_quality.py -> trust_band.derive_court_trust_band",
+    "lines": "39-43 -> 155-240",
+    "function": "score_capture_quality",
+    "verdict": "KEEP",
+    "category": "A feeding C",
+    "reasoning": "reprojection_rmse_px > 10 -> grade poor -> world-scale trust band. The input is a CALIBRATION residual (category A, genuinely 2D) and the band it produces is already 'preview, never verified' on every path. Legitimate."
+   },
+   {
+    "file": "threed/racketsport/ball_inout_uncertainty.py",
+    "lines": "117-120, 301-313",
+    "function": "passes_reprojection_gate / bounce_geometric_uncertainty_m",
+    "verdict": "KEEP",
+    "category": "A feeding C",
+    "reasoning": "sigma_reproj_m = calibration reprojection p95 * ground-sample-distance. This converts a calibration residual into metres on the court PLANE, where the mapping is real, and it widens uncertainty rather than certifying anything. Legitimate."
+   }
+  ],
+  "category_B_keep_examples": [
+   "threed/racketsport/ball_arc_solver.py max_reprojection_inlier_px=18.0 partitions inlier/outlier sightings (which detections belong to this arc) - 2D association, legitimate.",
+   "threed/racketsport/ball_temporal_filter.py ballistic outlier rejection at 60 px.",
+   "threed/racketsport/ball_ransac_arc_gate.py 5 px RANSAC arc residual.",
+   "threed/racketsport/ball_2d_post_gate.py ransac_residual_over_5px.",
+   "threed/racketsport/camera_motion.py ransacReprojThreshold=3.0 homography/similarity inliers.",
+   "threed/racketsport/ball_global_track.py minimum-reprojection-residual candidate membership.",
+   "threed/racketsport/court_proposal_optimizer.py MAGSAC 5 px."
+  ],
+  "category_A_keep_summary": "All court/charuco/keypoint calibration residual gates are kept untouched: court_calibration.py (CALIBRATION_REPROJECTION_MEDIAN_GATE_PX=8.0, P95=15.0, passes_reprojection_gate), court_calibration_metric15.py, court_keypoint_eval.py, court_line_evidence.py, court_static_lock.py, court_structured_metrics.py, court_partial_geometry.py, drift_guard.py, court_positioning.py, court_lock_visualization.py, net_anchor_court.py, eval/calib_eval.py, calibrate_harvest_courts.py, calibrate_charuco_device.py, adapt_roboflow_court_keypoints.py, train_court_structured_v3.py and the rest. Reprojection of a 2D correspondence against a 2D prediction is the correct and complete measure of a calibration's image-space fit; nothing here was changed. A separate concurrent lane owns calibration distortion fitting."
+ },
+ "verification": {
+  "python": "/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python (3.14.6)",
+  "note": "The worktree has no .venv. The main checkout's interpreter was used read-only with PYTHONPATH set to the worktree. models/checkpoints/* and two runs/ paths referenced by best_stack.json are gitignored and absent from the worktree; they were symlinked from the main checkout so the wide suite could collect. No tracked file was touched by that.",
+  "runs": [
+   {
+    "name": "new plausibility tests + flight sanity",
+    "command": "PYTHONPATH=. .venv/bin/python -m pytest tests/racketsport/test_ball_position_plausibility.py tests/racketsport/test_ball_flight_sanity.py -q",
+    "result": "24 passed",
+    "exit_code": 0
+   },
+   {
+    "name": "focused blast-radius suite at HEAD",
+    "command": "PYTHONPATH=. .venv/bin/python -m pytest tests/racketsport/ -q --continue-on-collection-errors -p no:cacheprovider -k 'ball or arc or virtual_world or trust or shot or one_world or flight or physics or plausib or characterize or chain or solver'",
+    "result": "41 failed, 1371 passed, 4 skipped, 3664 deselected in 298.00s",
+    "exit_code": 1
+   },
+   {
+    "name": "same suite at base f29145a",
+    "command": "git checkout f29145a && <same pytest command>",
+    "result": "41 failed, 1352 passed, 4 skipped, 3664 deselected in 314.85s",
+    "exit_code": 1
+   },
+   {
+    "name": "failure attribution",
+    "command": "comm -23 head_failures.txt base_failures.txt  /  comm -13 head_failures.txt base_failures.txt",
+    "result": "empty both directions: the 41 failing node ids are byte-identical at base and HEAD. 0 failures caused by this change; +19 passing tests added.",
+    "exit_code": 0
+   },
+   {
+    "name": "AGENTS.md structure check 1",
+    "command": ".venv/bin/python scripts/racketsport/list_scaffold_tools.py --root .",
+    "result": "clean at HEAD and at base",
+    "exit_code": 0,
+    "base_exit_code": 0
+   },
+   {
+    "name": "AGENTS.md structure check 2",
+    "command": ".venv/bin/python scripts/racketsport/audit_dead_code.py --root .",
+    "result": "status: fail, unknown_python_sources=2 (scripts/tt3d/run_tt3d_validation.py, scripts/tt3d/tt3d_adapter.py). IDENTICAL at base. python_sources 646 -> 647: the new ball_position_plausibility.py module is recognised, not unknown.",
+    "exit_code": 1,
+    "base_exit_code": 1,
+    "pre_existing": true
+   },
+   {
+    "name": "AGENTS.md structure check 3",
+    "command": "python3 scripts/racketsport/audit_storage_policy.py --root . --json",
+    "result": "exit 1 at HEAD and at base. Pre-existing, unchanged, as stated in the task.",
+    "exit_code": 1,
+    "base_exit_code": 1,
+    "pre_existing": true
+   }
+  ],
+  "tests_added": [
+   "tests/racketsport/test_ball_position_plausibility.py (18 tests): the five real 15-23.5 m frames and three real underground frames from wolverine_no_soft_current as parametrised regression cases; absurd-vs-implausible tiering; off-court tiering with real |x|=28.98 m and |y|=13.39 m values; speed ceiling that never flags slow arcs; segment-level classification of the real 23.52 m apex whose max_reprojection_error_px was 3585 px; the anisotropic-sigma seam proven off by default and unable to change a verdict; end-to-end suppression of a 23.52 m frame in a track with NO segments at all (every segment-scoped check inert); and suppression surviving the BVP-fallback exemption.",
+   "tests/racketsport/test_ball_flight_sanity.py: new test_flight_sanity_demotes_kinematically_clean_parabola_that_ends_underground."
+  ],
+  "tests_modified": [
+   {
+    "test": "test_flight_sanity_leaves_clean_parabola_untouched",
+    "change": "Its synthetic 'clean' parabola ended at z = -0.103 m, i.e. underground, which the new ground-plane bound correctly demotes. The motion was raised by 0.2 m/s so it ends at +0.097 m and the test asserts what it always meant to assert; the original motion is now covered by a new sibling test that asserts the demotion explicitly.",
+    "is_a_weakening": false
+   },
+   {
+    "test": "test_flight_sanity_flags_only_outside_court_volume_frames_from_solver_config",
+    "change": "schema_version 2 -> 3, and the reasons list for the out-of-court frame now also contains outside_court_footprint because the independent plausibility sweep agrees with the segment-scoped court-volume check. Both names asserted.",
+    "is_a_weakening": false
+   }
+  ]
+ },
+ "what_replaced_what": {
+  "new_module": "threed/racketsport/ball_position_plausibility.py (policy ball_position_plausibility_v1)",
+  "tiers": {
+   "implausible_soft": {
+    "z_m": [
+     -0.1,
+     8.0
+    ],
+    "court_margin_m": 4.0,
+    "consequence": "band demoted to arc_weak, depth_unvalidated stamped, position KEPT"
+   },
+   "absurd_hard": {
+    "z_m": [
+     -0.5,
+     15.0
+    ],
+    "court_margin_m": 10.0,
+    "consequence": "world_xyz and sigma_m nulled, band hidden, no BVP-fallback exemption"
+   },
+   "speed": {
+    "plausible_max_mps": 35.0,
+    "absurd_max_mps": 60.0,
+    "note": "upper ceiling only; slow arcs are deliberately never flagged, preserving the documented w7_ball3ddiag rationale"
+   }
+  },
+  "why_two_tiers": "This project's own measured calibration plane residual is 0.10-0.23 m median (runs/lanes/ball_label_tool_20260726/report.json). A single hard floor at -0.10 m would suppress genuinely grounded balls on calibration error alone. Demotion is honest there; suppression is honest at half a metre underground and at fifteen metres up.",
+  "anisotropic_uncertainty_seam": {
+   "where": "evaluate_ball_track_plausibility(frames, depth_sigma_m_by_frame=None, sigma_multiple=3.0)",
+   "default": "off",
+   "behaviour_when_supplied": "purely descriptive: each frame report gains depth_sigma_m and overage_within_claimed_sigma. It never changes a verdict.",
+   "hard_dependency_on_sibling_lane": false
+  }
+ }
+}
