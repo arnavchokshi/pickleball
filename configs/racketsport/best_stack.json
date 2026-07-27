@@ -21,7 +21,7 @@
    "selection": "fail-closed 3D ball emission (world overlay + dense render trail)",
    "value": {
     "enabled": true,
-    "policy": "arc_segment_fail_closed_v1",
+    "policy": "arc_segment_fail_closed_v2",
     "min_inlier_count": 3,
     "max_reprojection_error_px": 40.0,
     "spatial_sanity_violations": [
@@ -30,7 +30,23 @@
      "net_clearance_below_slack"
     ],
     "fit_segments_always_trusted": true,
-    "escape_hatch": "fail_closed=False parameter (instrument use only)"
+    "escape_hatch": "fail_closed=False parameter (instrument use only)",
+    "reprojection_is_a_2d_consistency_check_only": true,
+    "depth_unvalidated": true,
+    "physical_plausibility_bounds": {
+     "module": "threed/racketsport/ball_position_plausibility.py",
+     "policy": "ball_position_plausibility_v1",
+     "implausible_z_m": [
+      -0.1,
+      8.0
+     ],
+     "absurd_z_m": [
+      -0.5,
+      15.0
+     ],
+     "court_margin_m": 4.0,
+     "hard_court_margin_m": 10.0
+    }
    },
    "status": "WIRED_DEFAULT",
    "gate": null,
@@ -60,7 +76,7 @@
     "wolverine_max_speed_mps_after": 10.3,
     "wolverine_max_speed_mps_before": 41.0
    },
-   "notes": "SHIP-FIRST ruling from runs/research_ball3d_20260709 (RULINGS adopt item 1) implementing the w7_ball3ddiag single fix: fallback/weak arc segments whose own fit statistics or spatial sanity say the solver ignored the 2D evidence contribute world_xyz=null and are dropped from the dense render trail; the confidence gate bands them hidden. Emission-policy honesty parity with pb.vision (they omit 3D on 31% of frames; we rendered fallback junk on 88-91%). Default selection, NOT a VERIFIED accuracy claim; VERIFIED=0 binding. Depth-ambiguity recovery of suppressed coverage = TT3D joint-anchor-search lane (adopt item 2), not this entry. Before/after measured on runs/lanes/w7_critique_20260709/wolv_world artifacts via re-composition."
+   "notes": "SHIP-FIRST ruling from runs/research_ball3d_20260709 (RULINGS adopt item 1) implementing the w7_ball3ddiag single fix: fallback/weak arc segments whose own fit statistics or spatial sanity say the solver ignored the 2D evidence contribute world_xyz=null and are dropped from the dense render trail; the confidence gate bands them hidden. Emission-policy honesty parity with pb.vision (they omit 3D on 31% of frames; we rendered fallback junk on 88-91%). Default selection, NOT a VERIFIED accuracy claim; VERIFIED=0 binding. Depth-ambiguity recovery of suppressed coverage = TT3D joint-anchor-search lane (adopt item 2), not this entry. Before/after measured on runs/lanes/w7_critique_20260709/wolv_world artifacts via re-composition. v2 (retire_reprojection_gate_20260726): the reprojection and inlier terms are kept but reclassified as 2D-consistency checks, and a depth-aware physical plausibility criterion is added alongside them. Reprojection error is structurally blind to depth (1.00 m along the camera ray = 1.6e-13 px; 0.323 px median reprojection measured alongside 0.305 m median 3D error, runs/lanes/tt3d_external_validation_20260726/report.json), so a pass here has never meant the depth was checked and every verdict now says depth_unvalidated. Segment-verdict parity with v1 on all 1203 committed segments (0 newly allowed, 0 newly suppressed); the frame-level plausibility sweep in ball_flight_sanity additionally suppresses 12866 previously-emitted arc_weak positions, 0 from any confident band. See runs/lanes/retire_reprojection_gate_20260726/REPORT.md."
   },
   "ball.wasb_checkpoint": {
    "stage": "ball",
@@ -1085,7 +1101,7 @@
     },
     "fresh_clip_full_gate_passed": false
    },
-   "notes": "PENDING and non-default; NOT an accuracy promotion. On the frozen historical-internal card this detector IMPROVES burlington (IDF1 0.8831→0.9220, cov4 0.7117→0.9933, all FP axes zero) and REGRESSES wolverine (IDF1 0.8516→0.8036, cov4 0.7600→0.7233, 0→1 identity switch, 0→4 true-spectator false-positive frames). CORRECTED CAUSAL TEXT: the four wolverine spectator ghosts are P0-I's fabricated f45-86 association bridge with confidence pinned 0.35, not detector output; a preregistered conf-0.30 attempt made every wolverine axis worse, so threshold suppression is exhausted for the wrong reason. The fix belongs in a downstream selection layer (stitch veto + slot re-bind), owned by a separate track. RF-DETR may be selected explicitly only for its frozen reproduction; it cannot become the no-flag default unless both frozen rows reproduce within 0.0001 on a GPU-class environment. YOLO26m remains default. TRK stays preview; do_not_promote=true; VERIFIED=0.",
+   "notes": "PENDING and non-default; NOT an accuracy promotion. On the frozen historical-internal card this detector IMPROVES burlington (IDF1 0.8831\u21920.9220, cov4 0.7117\u21920.9933, all FP axes zero) and REGRESSES wolverine (IDF1 0.8516\u21920.8036, cov4 0.7600\u21920.7233, 0\u21921 identity switch, 0\u21924 true-spectator false-positive frames). CORRECTED CAUSAL TEXT: the four wolverine spectator ghosts are P0-I's fabricated f45-86 association bridge with confidence pinned 0.35, not detector output; a preregistered conf-0.30 attempt made every wolverine axis worse, so threshold suppression is exhausted for the wrong reason. The fix belongs in a downstream selection layer (stitch veto + slot re-bind), owned by a separate track. RF-DETR may be selected explicitly only for its frozen reproduction; it cannot become the no-flag default unless both frozen rows reproduce within 0.0001 on a GPU-class environment. YOLO26m remains default. TRK stays preview; do_not_promote=true; VERIFIED=0.",
    "gate": {
     "name": "rfdetr_gpu_production_reproduction_then_trk_fresh_clip_full_gate",
     "metric_key": "burlington_and_wolverine_frozen_card_axes",
@@ -1217,7 +1233,7 @@
     "untouched_judge_accuracy_gate": "TBD by manager ruling",
     "accuracy_promotion_passed": false
    },
-   "notes": "PENDING, default OFF, preview, do_not_promote=true; fixture-mechanics wiring only; VERIFIED=0. GPU card NO-GO on Wolverine/Burlington for this component — scorer-guided development burned them as an accuracy judge; they can prove reproduction only. The frozen card cannot support an accuracy claim; promotion requires the manager-named untouched-judge gate."
+   "notes": "PENDING, default OFF, preview, do_not_promote=true; fixture-mechanics wiring only; VERIFIED=0. GPU card NO-GO on Wolverine/Burlington for this component \u2014 scorer-guided development burned them as an accuracy judge; they can prove reproduction only. The frozen card cannot support an accuracy claim; promotion requires the manager-named untouched-judge gate."
   },
   "ball.recovery_policy_v2_one_sided": {
    "stage": "ball_arc",

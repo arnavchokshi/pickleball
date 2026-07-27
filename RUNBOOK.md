@@ -438,6 +438,51 @@ proof through the runner, worker, database, and API path; app-side propagation
 is code-wired, but the owner-gated physical end-to-end trace remains open.
 Promotion still depends on the gates in `NORTH_STAR_ROADMAP.md`.
 
+## Reading 3D ball output: what the gates do and do not certify
+
+Reprojection error is not a 3D quality criterion anywhere in this pipeline, and
+no artifact field should be read as if it were. It is structurally blind to
+depth. Measured against external ground truth in
+`runs/lanes/tt3d_external_validation_20260726/report.json`:
+
+- moving a solved ball 1.00 m along its own camera ray changes its reprojection
+  by 1.6e-13 px — zero to machine precision;
+- one view produced 0.323 px median reprojection (sub-pixel; below every
+  threshold in this repo) alongside 0.305 m median and 1.381 m p95 3D error;
+- of 0.3118 m mean total 3D error, 0.3115 m was along the depth axis and
+  0.0047 m in the image plane.
+
+So when you read `reprojection_rmse_px` or `max_reprojection_error_px` in
+`ball_track_arc_solved.json`, in the `arc_segment_fail_closed_v2` block of
+`virtual_world.json`, or in a `ball_physics3d` summary, read it as a **2D
+consistency** number: does this arc explain the pixels it was fit to? A bad
+value is a real defect. A good value says nothing about where the ball is in
+depth. Those blocks now carry
+`reprojection_is_a_2d_consistency_check_only: true` and
+`depth_unvalidated: true` so this cannot be misread from the artifact alone.
+
+The criterion that *can* see depth is physical plausibility
+(`threed/racketsport/ball_position_plausibility.py`, policy
+`ball_position_plausibility_v1`). It bounds where a pickleball can be:
+
+| Tier | Bound | Consequence |
+|---|---|---|
+| implausible | z outside [-0.10, 8.0] m, or outside the court footprint + 4.0 m | band demoted to `arc_weak`, frame stamped `depth_unvalidated`, position kept |
+| absurd | z outside [-0.50, 15.0] m, or outside the court footprint + 10.0 m | `world_xyz` and `sigma_m` set to null, band `hidden` |
+
+The absurd tier has no escape hatch. It overrides the BVP-fallback exemption
+that spares `outside_court_volume` frames, because that exemption is what
+previously let 79 frames of a wolverine clip render at 15–23 m of altitude
+while carrying `sigma_m = 0.197`.
+
+This is still a **necessary condition only**. A ball solved three metres too
+deep along the camera ray but still over the court passes every bound above.
+Nothing in the pipeline validates ball depth today; `depth_unvalidated: true`
+is the honest statement, and it is on every emitted 3D ball frame.
+
+Evidence and the full retire-vs-keep site classification:
+`runs/lanes/retire_reprojection_gate_20260726/REPORT.md`.
+
 ## Legacy Contract CLI
 
 The duplicate `threed/racketsport/pipeline_cli.py` runner was removed. The sole

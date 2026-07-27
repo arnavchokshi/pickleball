@@ -242,6 +242,24 @@ def derive_court_trust_band(
     )
 
 
+#: Every 3D ball position in this project is fitted against image-plane
+#: residuals, and image-plane residuals are blind to depth: sliding a solved
+#: ball a full metre along its own camera ray changes its reprojection by
+#: ~1e-13 px, and a view measured at 0.323 px median reprojection carried
+#: 0.305 m median / 1.381 m p95 3D error, almost all of it along the depth
+#: axis (runs/lanes/tt3d_external_validation_20260726/report.json). Nothing
+#: downstream may present a ball depth as checked.
+_BALL_DEPTH_UNVALIDATED_NOTE = (
+    "Ball depth is unvalidated. Every 3D ball position is fitted against "
+    "image-plane residuals, which cannot see error along the camera ray: a "
+    "sub-pixel reprojection has been measured alongside 0.305 m median and "
+    "1.381 m p95 3D error, ~98% of it in depth "
+    "(runs/lanes/tt3d_external_validation_20260726/report.json). Physical "
+    "plausibility bounds reject absurd positions but confirm nothing about "
+    "depth accuracy."
+)
+
+
 def derive_ball_trust_band(
     *,
     source: str | None,
@@ -258,7 +276,8 @@ def derive_ball_trust_band(
         reason=(
             f"BALL track source is {source or 'unknown'}; the M1 gate "
             "(F1@20>=0.90, recall@20>=0.75, hidden-FP<=0.05) has not passed for any milestone "
-            "(0/8 per NORTH_STAR_ROADMAP.md); treat ball position as a rough cue, not a verified track."
+            "(0/8 per NORTH_STAR_ROADMAP.md); treat ball position as a rough cue, not a verified track. "
+            + _BALL_DEPTH_UNVALIDATED_NOTE
         ),
         evidence_path=evidence_path,
     )

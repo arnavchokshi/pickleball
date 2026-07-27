@@ -9,6 +9,10 @@ from typing import Any, Callable, Literal, Mapping, Sequence
 
 from pydantic import ValidationError
 
+from .ball_position_plausibility import (
+    BallPlausibilityBounds,
+    segment_physical_sanity_violations,
+)
 from .coordinates import (
     CoordinateSpace,
     homography_pixel_space,
@@ -375,14 +379,20 @@ def _normalize_ball_world_policy(policy: BallWorldPolicy | str) -> BallWorldPoli
 
 
 BALL_ARC_FAIL_CLOSED_MIN_INLIERS = 3
+# 2D-consistency bound only. An arc whose own sightings land 40+ px from where
+# it says they should is not explaining the pixels it was fit to, and that is
+# a real defect — in the image plane. It says nothing about whether the arc is
+# at the right depth, so it is NOT a 3D acceptance criterion; see the note on
+# `ball_arc_segment_fail_closed_verdicts`.
 BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX = 40.0
-BALL_ARC_FAIL_CLOSED_POLICY = "arc_segment_fail_closed_v1"
+BALL_ARC_FAIL_CLOSED_POLICY = "arc_segment_fail_closed_v2"
 _BALL_ARC_UNTRUSTED_STATUSES = frozenset({"fit_bvp_fallback", "fit_weak"})
 # Sanity violations that place the trajectory somewhere spatially absurd
 # (behind the fence, 20 m in the air, through the net). Speed-policy
-# violations are deliberately excluded: a slow-but-pixel-consistent arc is
-# depth-ambiguous, not junk, and hiding it would trade honest coverage for
-# nothing (see w7_ball3ddiag segment 7/9/10 classifications).
+# violations are deliberately excluded here: a slow-but-pixel-consistent arc
+# is depth-ambiguous, not junk, and hiding it would trade honest coverage for
+# nothing (see w7_ball3ddiag segment 7/9/10 classifications). An *absurdly
+# fast* arc is still caught, via `speed_absurd` from the plausibility gate.
 _BALL_ARC_SPATIAL_VIOLATIONS = frozenset(
     {
         "outside_court_volume",
@@ -394,16 +404,39 @@ _BALL_ARC_SPATIAL_VIOLATIONS = frozenset(
 
 def ball_arc_segment_fail_closed_verdicts(
     segments: Any,
+    *,
+    plausibility_bounds: BallPlausibilityBounds | None = None,
 ) -> dict[int, dict[str, Any]]:
     """Per-segment trust verdicts for fail-closed 3D ball emission.
 
     A ``fit`` segment is always trusted. A fallback/weak segment is trusted
-    only when its own fit statistics show the 2D evidence actually supports
-    it: enough inlier sightings, inliers not outnumbered by rejected
-    sightings, and a bounded reprojection error. Fallback segments with
-    missing statistics are not trusted — the boundary fails closed.
+    only when its 2D evidence checks out *and* its solved geometry is
+    physically possible. Fallback segments with missing statistics are not
+    trusted — the boundary fails closed.
+
+    What v2 changes is what a pass is allowed to mean. The inlier/outlier and
+    reprojection terms are 2D-consistency checks: they ask whether the fitted
+    arc explains the pixels it was fit to. They are kept, because failing them
+    is a real defect. What they cannot do is certify the 3D position, and v1
+    let a pass on them stand as exactly that. Sliding a solved ball a full
+    metre along its own camera ray changes its reprojection by ~1e-13 px, and
+    a view measured at 0.323 px median reprojection carried 0.305 m median 3D
+    error, 0.3115 m of a 0.3118 m mean total lying along the depth axis
+    (``runs/lanes/tt3d_external_validation_20260726/report.json``).
+
+    So v2 adds a criterion that can see depth —
+    :func:`~threed.racketsport.ball_position_plausibility.segment_physical_sanity_violations`
+    — and stamps every verdict ``depth_unvalidated: True``. A trusted verdict
+    now means "not visibly broken in 2D and not physically absurd in 3D". It
+    has never meant, and must not be read as, "the depth was checked".
+
+    Nothing was loosened: the reprojection term still fires exactly where it
+    did, and the plausibility term only adds rejections. Measured on every
+    committed ``ball_track_arc_solved.json`` artifact in
+    ``runs/lanes/retire_reprojection_gate_20260726/report.json``.
     """
 
+    bounds = plausibility_bounds or BallPlausibilityBounds()
     verdicts: dict[int, dict[str, Any]] = {}
     for segment in segments if isinstance(segments, list) else []:
         if not isinstance(segment, Mapping):
@@ -413,6 +446,7 @@ def ball_arc_segment_fail_closed_verdicts(
             continue
         status = str(segment.get("status") or "")
         reasons: list[str] = []
+        plausibility_violations: tuple[str, ...] = ()
         if status in _BALL_ARC_UNTRUSTED_STATUSES:
             inliers = _optional_float(segment.get("inlier_count"))
             outliers = _optional_float(segment.get("outlier_count"))
@@ -424,6 +458,9 @@ def ball_arc_segment_fail_closed_verdicts(
                     reasons.append("insufficient_inliers")
                 if outliers > inliers:
                     reasons.append("outliers_exceed_inliers")
+                # 2D-consistency terms. Retained because failing them is a real
+                # defect in the image plane; they carry no depth information and
+                # passing them is not evidence the 3D position is right.
                 if max_reproj is None:
                     reasons.append("missing_reprojection_error")
                 elif max_reproj > BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX:
@@ -435,10 +472,16 @@ def ball_arc_segment_fail_closed_verdicts(
                     str(item) in _BALL_ARC_SPATIAL_VIOLATIONS for item in violations
                 ):
                     reasons.append("spatial_sanity_violation")
+            plausibility_violations = segment_physical_sanity_violations(sanity, bounds)
+            if any(name != "speed_above_plausible_range" for name in plausibility_violations):
+                reasons.append("physical_plausibility_violation")
         verdicts[raw_id] = {
             "trusted": not reasons,
             "status": status,
             "reasons": reasons,
+            "plausibility_violations": list(plausibility_violations),
+            "depth_unvalidated": True,
+            "reprojection_error_px_diagnostic": _optional_float(segment.get("max_reprojection_error_px")),
             "frame_start": segment.get("frame_start"),
             "frame_end": segment.get("frame_end"),
         }
@@ -572,6 +615,9 @@ def apply_ball_track_arc_solved_overlay(
             "policy": BALL_ARC_FAIL_CLOSED_POLICY,
             "min_inlier_count": BALL_ARC_FAIL_CLOSED_MIN_INLIERS,
             "max_reprojection_error_px": BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX,
+            "reprojection_is_a_2d_consistency_check_only": True,
+            "plausibility_bounds": BallPlausibilityBounds().to_json(),
+            "depth_unvalidated": True,
             "suppressed_frame_count": suppressed_count,
             "suppressed_segment_ids": sorted(untrusted_ids),
             "segment_verdicts": {

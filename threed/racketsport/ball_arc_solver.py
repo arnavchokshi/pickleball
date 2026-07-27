@@ -18,6 +18,7 @@ import time
 from typing import Any, Callable, Mapping, Sequence
 
 from .ball_physics3d import _project_world_array, reconstruct_bounce_arcs_from_image_track
+from .ball_position_plausibility import BallPlausibilityBounds, evaluate_position
 from .court_templates import get_court_template
 from .io_decode import frame_time_lookup, nearest_frame_for_time, time_for_frame
 from .skeleton3d import semanticize_skeleton_payload
@@ -5613,8 +5614,11 @@ def _solved_frames(
     segments: Sequence[FlightSegmentFit],
     physics: PhysicsParameters,
     config: BallArcSolverConfig,
+    plausibility_bounds: BallPlausibilityBounds | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     payloads: list[dict[str, Any]] = []
+    if plausibility_bounds is None:
+        plausibility_bounds = BallPlausibilityBounds.from_solver_config(config)
     counts = {
         "coverage_world_xyz_count": 0,
         "anchored_measured_count": 0,
@@ -5654,9 +5658,20 @@ def _solved_frames(
             band = "arc_extrapolated"
         else:
             band = "arc_interpolated"
+        # `anchored_measured` above is awarded on reprojection-inlier
+        # membership alone, and reprojection is blind to depth: a frame can sit
+        # metres wrong along its own camera ray and still be an inlier. So the
+        # band is capped, never raised, by a criterion that can see depth. A
+        # position outside the physical bounds cannot be called measured.
+        plausibility = evaluate_position(predicted, plausibility_bounds)
+        if not plausibility["plausible"]:
+            band = "arc_weak"
         frame["world_xyz"] = _vec_json(predicted)
         frame["sigma_m"] = _round(sigma, 6)
         frame["band"] = band
+        frame["depth_unvalidated"] = True
+        if not plausibility["plausible"]:
+            frame["plausibility_violations"] = list(plausibility["violations"])
         frame["source"] = SOURCE
         frame["render_only"] = True
         frame["not_for_detection_metrics"] = True
