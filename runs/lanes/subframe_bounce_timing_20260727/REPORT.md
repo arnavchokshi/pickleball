@@ -325,6 +325,9 @@ guards behave on real data.**
   table tennis and inherits that sport's frame rate.
 - **No independent pickleball 3D bounce ground truth exists.** Until it does, the gate in
   `best_stack` cannot be satisfied by anything in this report.
+- **Cost: ~25 ms per bounce** (81 grid points x 2 image axes x a 5x5 solve, pure Python), i.e.
+  ~1.5 s on a 60-bounce clip. Acceptable while default OFF; the grid could be halved with the
+  parabolic step absorbing the loss if this is ever switched on.
 - **Audio was not used.** See section 2.
 
 ---
