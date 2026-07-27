@@ -509,3 +509,148 @@ def test_bounce_sigma_reports_an_unknown_verdict_without_correspondences() -> No
     assert uncertainty is not None
     assert uncertainty.terms["extrapolation_verdict"] == "unknown"
     assert "extrapolation_along_ray_m" not in uncertainty.terms
+
+
+# ---------------------------------------------------------------------------
+# the human-label artifact seam
+# ---------------------------------------------------------------------------
+
+
+def _label(**overrides):
+    from threed.racketsport.ball_label_schema import BALL_RADIUS_M, BallLabel
+
+    base = dict(
+        frame=414,
+        timestamp_s=13.8,
+        pixel_xy=(118.9, 786.3),
+        world_xyz_m=(-4.441, -8.116, BALL_RADIUS_M),
+        kind="bounce",
+        depth_along_ray_m=14.15,
+        ray_origin_m=(0.0, 0.0, 0.0),
+        ray_direction_unit=(0.0, 0.0, 1.0),
+        depth_source="ray_plane_intersection",
+        sigma_xyz_m=(0.1, 0.2, 0.1),
+        sigma_along_ray_m=0.26,
+        sigma_perp_m=0.17,
+        uncertainty_basis="test",
+        human_confidence="medium",
+        origin="fresh",
+    )
+    base.update(overrides)
+    # keep world_xyz_m on the ray so the contract's own consistency guard holds
+    base["world_xyz_m"] = tuple(
+        base["ray_origin_m"][i] + base["depth_along_ray_m"] * base["ray_direction_unit"][i]
+        for i in range(3)
+    )
+    base["world_xyz_m"] = (base["world_xyz_m"][0], base["world_xyz_m"][1], BALL_RADIUS_M)
+    base["ray_origin_m"] = (0.0, 0.0, BALL_RADIUS_M)
+    base["ray_direction_unit"] = (1.0, 0.0, 0.0)
+    base["world_xyz_m"] = (base["depth_along_ray_m"], 0.0, BALL_RADIUS_M)
+    return BallLabel(**base)
+
+
+def test_label_schema_verdicts_match_the_gate_module() -> None:
+    from threed.racketsport.ball_label_schema import _EXTRAPOLATION_VERDICTS
+
+    assert _EXTRAPOLATION_VERDICTS == {
+        VERDICT_WITHIN,
+        VERDICT_EXTRAPOLATED,
+        VERDICT_FAR_EXTRAPOLATED,
+    }
+
+
+def test_label_without_an_extrapolation_block_serializes_unchanged() -> None:
+    label = _label()
+    label.validate()
+    payload = label.to_json_dict()
+
+    assert "extrapolation" not in payload
+    assert label.is_extrapolated is False
+
+
+def test_label_records_and_round_trips_a_far_extrapolated_verdict() -> None:
+    from threed.racketsport.ball_label_schema import BallLabel
+
+    label = _label(
+        extrapolation={
+            "available": True,
+            "verdict": VERDICT_FAR_EXTRAPOLATED,
+            "extrapolated": True,
+            "far_extrapolated": True,
+            "radius_pct_of_half_diagonal": 79.6,
+            "calibrated_radius_pct_of_half_diagonal": 50.0,
+        }
+    )
+    label.validate()
+    payload = label.to_json_dict()
+
+    assert payload["extrapolation"]["verdict"] == VERDICT_FAR_EXTRAPOLATED
+    assert label.is_extrapolated is True
+    # Still a ground-truth candidate: the click is correct, the camera model
+    # under it is unvalidated. Those are different claims.
+    assert label.is_ground_truth_candidate is True
+    restored = BallLabel.from_json_dict(payload)
+    assert restored.extrapolation == payload["extrapolation"]
+    assert restored.is_extrapolated is True
+
+
+def test_label_rejects_an_unknown_extrapolation_verdict() -> None:
+    from threed.racketsport.ball_label_schema import LabelContractError
+
+    label = _label(extrapolation={"verdict": "probably_fine"})
+
+    with pytest.raises(LabelContractError, match="extrapolation.verdict"):
+        label.validate()
+
+
+def test_label_set_summary_separates_extrapolated_ground_truth_candidates() -> None:
+    from threed.racketsport.ball_label_schema import BallLabelSet
+
+    labels = [
+        _label(frame=10, extrapolation={"verdict": VERDICT_WITHIN, "extrapolated": False}),
+        _label(
+            frame=20,
+            extrapolation={"verdict": VERDICT_EXTRAPOLATED, "extrapolated": True},
+        ),
+        _label(
+            frame=30,
+            extrapolation={"verdict": VERDICT_FAR_EXTRAPOLATED, "extrapolated": True},
+        ),
+        _label(frame=40),  # never checked
+    ]
+    label_set = BallLabelSet(
+        clip_id="test",
+        fps=30.0,
+        frame_count=600,
+        image_size=(1920, 1080),
+        labels=labels,
+        calibration_evidence={},
+        source_artifacts={},
+    )
+    summary = label_set.summary()
+
+    assert summary["ground_truth_candidate_count"] == 4
+    assert summary["extrapolated_ground_truth_candidate_count"] == 2
+    assert summary["by_extrapolation_verdict"] == {
+        VERDICT_EXTRAPOLATED: 1,
+        VERDICT_FAR_EXTRAPOLATED: 1,
+        VERDICT_WITHIN: 1,
+        "not_checked": 1,
+    }
+
+
+def test_geometry_helper_flags_the_owner_far_bounce() -> None:
+    from threed.racketsport.ball_label_geometry import pixel_extrapolation
+
+    record = pixel_extrapolation(_OUTDOOR_CALIBRATION, [118.9, 786.3])
+
+    assert record["available"] is True
+    assert record["verdict"] == VERDICT_FAR_EXTRAPOLATED
+    assert record["extrapolated"] is True
+    assert record["radius_pct_of_half_diagonal"] == pytest.approx(79.6, abs=0.1)
+    assert record["note"]
+
+    inside = pixel_extrapolation(_OUTDOOR_CALIBRATION, [490.6, 585.7])
+    assert inside["verdict"] == VERDICT_WITHIN
+    assert inside["extrapolated"] is False
+    assert inside["note"] == ""
