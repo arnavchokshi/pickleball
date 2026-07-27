@@ -719,10 +719,6 @@ def refine_bounce_contact_time(
 
     t_contact = float(best["t_c"])
     dt = t_contact - t_frame
-    # The search bound is a bound, not an answer: an optimum pinned against it
-    # means the kink is outside the window we are entitled to move within.
-    if abs(dt) >= 0.98 * span:
-        return rejected("rejected_search_bound")
 
     low = max(0, marked_index - 2)
     high = min(len(pixels), marked_index + 3)
@@ -777,6 +773,15 @@ def refine_bounce_contact_time(
         branch_order=order,
         status="refined",
     )
+    # Guards run on a fully populated object so a refusal is still evidence:
+    # the caller can read WHY the fit was refused, not just that it was.
+    #
+    # The search span is a bound, not an answer. An optimum pinned against it
+    # means the kink is outside the window this lane is entitled to move
+    # within, i.e. the marked frame is wrong by more than a frame. That is a
+    # detection defect and sliding the anchor would paper over it.
+    if abs(dt) >= 0.98 * span:
+        return replace(timing, status="rejected_search_bound")
     if max_step_px > 0.0 and displacement > abs(float(max_displacement_factor)) * max_step_px:
         return replace(timing, status="rejected_displacement")
     if scale > 0.0 and jump / scale < abs(float(min_velocity_jump_ratio)):
