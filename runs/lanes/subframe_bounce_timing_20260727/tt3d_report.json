@@ -636,6 +636,19 @@
     },
     "E2_weak_segment_3d": {
       "back/no_noise": {
+        "subframe_seeded": {
+          "n_trajectories_fit": 81,
+          "n_blocked": 2,
+          "n_points_scored": 438,
+          "error_3d_m": {
+            "n": 438,
+            "mean": 0.5431538023516179,
+            "median": 0.30763224982347104,
+            "p90": 1.2836898173348918,
+            "p95": 1.767554856818763,
+            "max": 5.091333486018784
+          }
+        },
         "view": "back",
         "n_trajectories_fit": 83,
         "n_blocked": 0,
@@ -710,6 +723,19 @@
         }
       },
       "back/noise": {
+        "subframe_seeded": {
+          "n_trajectories_fit": 77,
+          "n_blocked": 6,
+          "n_points_scored": 422,
+          "error_3d_m": {
+            "n": 422,
+            "mean": 1.103401312664727,
+            "median": 0.6719189319324275,
+            "p90": 2.8370706088031814,
+            "p95": 3.373669792987941,
+            "max": 4.655038799150571
+          }
+        },
         "view": "back",
         "n_trajectories_fit": 83,
         "n_blocked": 0,
@@ -784,6 +810,19 @@
         }
       },
       "side/no_noise": {
+        "subframe_seeded": {
+          "n_trajectories_fit": 81,
+          "n_blocked": 2,
+          "n_points_scored": 438,
+          "error_3d_m": {
+            "n": 438,
+            "mean": 0.07759075687421511,
+            "median": 0.03773288889640525,
+            "p90": 0.18364875514704565,
+            "p95": 0.2457269282839466,
+            "max": 0.8555573266839024
+          }
+        },
         "view": "side",
         "n_trajectories_fit": 83,
         "n_blocked": 0,
@@ -858,6 +897,19 @@
         }
       },
       "side/noise": {
+        "subframe_seeded": {
+          "n_trajectories_fit": 77,
+          "n_blocked": 6,
+          "n_points_scored": 422,
+          "error_3d_m": {
+            "n": 422,
+            "mean": 0.15163682278918392,
+            "median": 0.08592772387190203,
+            "p90": 0.36800035608628495,
+            "p95": 0.4809906335445316,
+            "max": 1.0303914773929979
+          }
+        },
         "view": "side",
         "n_trajectories_fit": 83,
         "n_blocked": 0,
@@ -932,6 +984,19 @@
         }
       },
       "oblique/no_noise": {
+        "subframe_seeded": {
+          "n_trajectories_fit": 81,
+          "n_blocked": 2,
+          "n_points_scored": 438,
+          "error_3d_m": {
+            "n": 438,
+            "mean": 0.0780579825045976,
+            "median": 0.05000725402535402,
+            "p90": 0.18657452110441292,
+            "p95": 0.25781497292028077,
+            "max": 0.5385688401894662
+          }
+        },
         "view": "oblique",
         "n_trajectories_fit": 83,
         "n_blocked": 0,
@@ -1006,6 +1071,19 @@
         }
       },
       "oblique/noise": {
+        "subframe_seeded": {
+          "n_trajectories_fit": 76,
+          "n_blocked": 7,
+          "n_points_scored": 418,
+          "error_3d_m": {
+            "n": 418,
+            "mean": 0.1477103555973178,
+            "median": 0.09030986439116383,
+            "p90": 0.3625549710729362,
+            "p95": 0.4741377047882617,
+            "max": 1.2430013934702622
+          }
+        },
         "view": "oblique",
         "n_trajectories_fit": 83,
         "n_blocked": 0,
@@ -1321,6 +1399,27 @@
       "p95_abs": 0.011508433513654936,
       "reported_sd_median": 0.01,
       "reported_sd_over_measured_rms": 2.0307316451644843
+    },
+    "downstream_weak_segment_3d": {
+      "note": "E2 refitted from the sub-frame anchor: same observations, same config, only the seeding anchor differs. This is the product question -- does a better bounce anchor give a better reconstructed trajectory.",
+      "before": {
+        "n": 2676,
+        "mean": 0.33051557121858943,
+        "median": 0.13364070354421453,
+        "p90": 0.7919430646451242,
+        "p95": 1.4030427151833962,
+        "max": 4.745548638731634
+      },
+      "after": {
+        "n": 2576,
+        "mean": 0.3483868536797973,
+        "median": 0.10714212594438255,
+        "p90": 0.9139520856562827,
+        "p95": 1.7133329684429015,
+        "max": 5.091333486018784
+      },
+      "n_trajectories_before": 498,
+      "n_trajectories_after": 473
     },
     "sport_caveat": "Table tennis at 25 fps: a 40 mm ball with 3.3x the drag of a pickleball. The timing GEOMETRY transfers exactly (a bounce falls between frames in every sport); the MAGNITUDES do not. VERIFIED=0 for pickleball."
   },

@@ -326,6 +326,8 @@ def run_weak_segment(view: TT3DView, trajs: Sequence[TT3DTrajectory], config: Ba
     reproj = []
     n_fit = n_blocked = n_skipped = 0
     statuses: dict[str, int] = {}
+    sf_e3d: list[float] = []
+    sf_n_fit = sf_n_blocked = 0
 
     for traj in trajs:
         contact = estimate_contact(traj)
@@ -343,12 +345,6 @@ def run_weak_segment(view: TT3DView, trajs: Sequence[TT3DTrajectory], config: Ba
 
         j = int(np.argmin(np.abs(traj.t - t_c)))
         uv_b = traj.uv[j]
-        anchor = build_bounce_anchor(
-            {"frame": j, "t": float(t_c), "xy": [float(uv_b[0]), float(uv_b[1])]},
-            calib,
-            ball_radius_m=TT_BALL_RADIUS_M,
-            status="human_reviewed",
-        )
         obs = [
             BallObservation(
                 frame=int(k),
@@ -359,15 +355,38 @@ def run_weak_segment(view: TT3DView, trajs: Sequence[TT3DTrajectory], config: Ba
             )
             for k in post
         ]
-        fit = fit_weak_flight_segment(
-            segment_id=0,
-            anchor=anchor,
-            observations=obs,
-            calibration=calib,
-            physics=TT_PHYSICS,
-            config=config,
-        )
+        timing = refine_bounce_contact_time(bounce_observations(traj), j, fps=traj.fps)
+        # Both segments are fitted from the same observations and the same
+        # config; only the seeding anchor differs.
+        fits: dict[str, Any] = {}
+        for label, seed_timing in (("baseline", None), ("subframe", timing)):
+            anchor = build_bounce_anchor(
+                {"frame": j, "t": float(t_c), "xy": [float(uv_b[0]), float(uv_b[1])]},
+                calib,
+                ball_radius_m=TT_BALL_RADIUS_M,
+                status="human_reviewed",
+                subframe_timing=seed_timing,
+            )
+            fits[label] = fit_weak_flight_segment(
+                segment_id=0,
+                anchor=anchor,
+                observations=obs,
+                calibration=calib,
+                physics=TT_PHYSICS,
+                config=config,
+            )
+        fit = fits["baseline"]
         statuses[fit.status] = statuses.get(fit.status, 0) + 1
+        sf_fit = fits["subframe"]
+        if sf_fit.status.startswith("fit"):
+            for k in post:
+                pred = np.array(
+                    sf_fit.predict(float(traj.t[k]), TT_PHYSICS, config), dtype=float
+                )
+                sf_e3d.append(float(np.linalg.norm(pred - traj.xyz[k])))
+            sf_n_fit += 1
+        else:
+            sf_n_blocked += 1
         if not fit.status.startswith("fit"):
             n_blocked += 1
             continue
@@ -390,7 +409,13 @@ def run_weak_segment(view: TT3DView, trajs: Sequence[TT3DTrajectory], config: Ba
     return {
         "_raw": {
             "err_3d": e3d, "depth": edepth, "img1": ei1, "img2": ei2,
-            "reproj": reproj, "n_traj": n_fit,
+            "reproj": reproj, "n_traj": n_fit, "sf_err_3d": sf_e3d,
+        },
+        "subframe_seeded": {
+            "n_trajectories_fit": sf_n_fit,
+            "n_blocked": sf_n_blocked,
+            "n_points_scored": len(sf_e3d),
+            "error_3d_m": summarize(sf_e3d),
         },
         "view": view.name,
         "n_trajectories_fit": n_fit,
@@ -555,6 +580,19 @@ def main() -> int:
                 float(np.median(timing_sd) / np.sqrt(np.mean(timing_err**2)))
                 if timing_err.size and np.mean(timing_err**2) > 0
                 else float("nan")
+            ),
+        },
+        "downstream_weak_segment_3d": {
+            "note": (
+                "E2 refitted from the sub-frame anchor: same observations, same config, "
+                "only the seeding anchor differs. This is the product question -- does a "
+                "better bounce anchor give a better reconstructed trajectory."
+            ),
+            "before": summarize(pool(e2, "err_3d")),
+            "after": summarize(pool(e2, "sf_err_3d")),
+            "n_trajectories_before": int(sum(v["_raw"]["n_traj"] for v in e2.values())),
+            "n_trajectories_after": int(
+                sum(v["subframe_seeded"]["n_trajectories_fit"] for v in e2.values())
             ),
         },
         "sport_caveat": (

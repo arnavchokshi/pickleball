@@ -1,0 +1,299 @@
+{
+  "lane": "subframe_bounce_timing_20260727",
+  "branch": "subframe-20260727",
+  "forked_from": "e209112",
+  "date": "2026-07-27",
+  "cpu_only": true,
+  "default_state": "OFF",
+  "best_stack_entry": "ball.subframe_bounce_timing",
+  "best_stack_status": "PENDING",
+  "do_not_promote": true,
+  "verified_status_for_pickleball": 0,
+  "defect": {
+    "statement": "A bounce happens between video frames, so the nearest frame still shows the ball above the plane. Forcing that frame's camera ray to z=BALL_RADIUS_M overshoots along the ray by height_above_plane/|ray_direction_z|, a quantity that is never negative -- hence a systematic push away from the camera, not scatter.",
+    "prior_lane": "sigma_anisotropic_fix_20260726 reported this as bias_along_ray_m but left the anchor at the marked frame"
+  },
+  "method": {
+    "name": "image_branch_kink_v1",
+    "schema_version": 1,
+    "principle": "World position is continuous through a bounce and world velocity is not. Projection is smooth, so the 2D track has a kink at exactly the contact instant. Two polynomial image branches sharing a meeting point (t_c, u_c, v_c) are fitted; the meeting point is the sub-frame contact and yields both the instant and the sub-frame pixel.",
+    "reads_calibration": false,
+    "reads_physics_constants": false,
+    "branch_order": 2,
+    "branch_samples": 6,
+    "search_span_frames": 1.0,
+    "grid_steps": 81,
+    "max_displacement_factor": 0.6,
+    "min_velocity_jump_ratio": 0.05,
+    "timing_sd_floor_frames": 0.25,
+    "audio_used": false,
+    "audio_reason": "TT3D carries no audio track, so audio refinement could not be measured. Shipping an unmeasured second timing source next to a measured one was refused."
+  },
+  "headline_tt3d_bounce_position": {
+    "dataset": "TT3D evaluation set (cogsys-tuebingen/tt3d), table tennis, 25 fps",
+    "n_bounces": 816,
+    "n_refined": 789,
+    "guard_statuses": {
+      "refined": 789,
+      "rejected_search_bound": 18,
+      "rejected_displacement": 9
+    },
+    "measured_in_one_pass": true,
+    "baseline_reproduces_committed_report": true,
+    "before": {
+      "error_3d_m": {
+        "n": 816,
+        "mean": 0.11412326569297494,
+        "median": 0.09109645935738225,
+        "p90": 0.2454619335679452,
+        "p95": 0.31676144753290736,
+        "max": 0.44981235144390236
+      },
+      "error_depth_axis_m": {
+        "n": 816,
+        "mean": 0.10323331131166837,
+        "median": 0.08050055939927078,
+        "p90": 0.23297329176649234,
+        "p95": 0.3077985169107594,
+        "max": 0.4424927609033529
+      },
+      "error_image_axes_m": {
+        "n": 816,
+        "mean": 0.04120864450939337,
+        "median": 0.030923910137989827,
+        "p90": 0.08728906939625404,
+        "p95": 0.1108820920796618,
+        "max": 0.15770620033847546
+      },
+      "depth_bias_m": 0.09927195442330064
+    },
+    "after": {
+      "error_3d_m": {
+        "n": 816,
+        "mean": 0.04432375004647999,
+        "median": 0.030562192915664498,
+        "p90": 0.09030257636747652,
+        "p95": 0.12424135093847659,
+        "max": 0.40609347060059614
+      },
+      "error_depth_axis_m": {
+        "n": 816,
+        "mean": 0.03932817387312406,
+        "median": 0.026496442428229704,
+        "p90": 0.08253203501323164,
+        "p95": 0.11769893584946076,
+        "max": 0.39909191609157285
+      },
+      "error_image_axes_m": {
+        "n": 816,
+        "mean": 0.015931906585766088,
+        "median": 0.010866938992307645,
+        "p90": 0.033184351605359035,
+        "p95": 0.048094717796669725,
+        "max": 0.14265483498032686
+      },
+      "depth_bias_m": -0.007621087319775519
+    },
+    "timing_error_s": {
+      "mean": -4.969715742857191e-05,
+      "rms": 0.004924333564117983,
+      "p95_abs": 0.011508433513654936,
+      "reported_sd_median": 0.01,
+      "reported_sd_over_measured_rms": 2.0307316451644843
+    }
+  },
+  "downstream_weak_segment_3d": {
+    "note": "E2 refitted from the sub-frame anchor: same observations, same config, only the seeding anchor differs. This is the product question -- does a better bounce anchor give a better reconstructed trajectory.",
+    "before": {
+      "n": 2676,
+      "mean": 0.33051557121858943,
+      "median": 0.13364070354421453,
+      "p90": 0.7919430646451242,
+      "p95": 1.4030427151833962,
+      "max": 4.745548638731634
+    },
+    "after": {
+      "n": 2576,
+      "mean": 0.3483868536797973,
+      "median": 0.10714212594438255,
+      "p90": 0.9139520856562827,
+      "p95": 1.7133329684429015,
+      "max": 5.091333486018784
+    },
+    "n_trajectories_before": 498,
+    "n_trajectories_after": 473
+  },
+  "downstream_verdict": "MEASURED NEGATIVE. Median improved 19.8% (0.1336 -> 0.1071 m) while p90, p95 and max all regressed (0.792 -> 0.914, 1.403 -> 1.713, 4.75 -> 5.09 m) and fitted trajectories fell from 498 to 473. E2 is measurably nondeterministic run to run -- a fresh baseline of the UNMODIFIED script gave p90 0.792 / p95 1.403 where the committed report records 0.675 / 1.217 -- so the tail movement is of comparable size to the run-to-run spread and the direction is suggestive rather than settled. Either way the downstream reconstruction is NOT demonstrated to improve, which alone justifies default OFF.",
+  "uncertainty_honesty": {
+    "timing_sigma_floor_rationale": "Propagating pixel noise through the branch crossing predicts ~0.9 ms 1-sigma; the measured spread on TT3D is 4.9 ms rms, 5.4x wider, because the dominant error is the local polynomial branch model rather than the pixel. The reported instant is floored at 0.25 frame intervals: a declared round prior above the table-tennis measurement (0.123) and below the unrefined half-frame uniform sigma (0.289).",
+    "reported_over_measured_timing_sd": 2.0307316451644843,
+    "bias_term_change": "anchor_uncertainty_for_bounce gains subframe_timing_sd_s; dt becomes zero-mean Gaussian with that sigma instead of U(-half_frame, +half_frame). The one-sided h = v_vertical * |dt| term keeps its shape and sign, so the modelled overshoot shrinks by the timing error removed and no more. The two-sided cancellation the meeting-point construction actually achieves is NOT claimed.",
+    "modelled_bias_m_range": [
+      0.0554,
+      0.0924
+    ],
+    "measured_residual_bias_m_range": [
+      -0.0144,
+      -0.0015
+    ],
+    "model_is_conservative_by": "roughly 6-8x on the bias",
+    "per_view": {
+      "back/no_noise": {
+        "before_depth_rms_m": 0.14691505182210776,
+        "before_rms_over_sigma": 1.551757768764906,
+        "before_frac_within_1sigma": 0.5588235294117647,
+        "before_bias_m": 0.10826376294520344,
+        "after_depth_rms_m": 0.053919284145268455,
+        "after_rms_over_sigma": 0.5871612647364662,
+        "after_frac_within_1sigma": 0.9632352941176471,
+        "after_bias_m": -0.00887138750496317,
+        "after_modelled_bias_m": 0.08844182643040482
+      },
+      "back/noise": {
+        "before_depth_rms_m": 0.15447791649892845,
+        "before_rms_over_sigma": 1.6318415904873536,
+        "before_frac_within_1sigma": 0.47058823529411764,
+        "before_bias_m": 0.10699934723413264,
+        "after_depth_rms_m": 0.09738450417169235,
+        "after_rms_over_sigma": 1.0608954606665426,
+        "after_frac_within_1sigma": 0.7794117647058824,
+        "after_bias_m": -0.0037583592918997138,
+        "after_modelled_bias_m": 0.0885845972960082
+      },
+      "side/no_noise": {
+        "before_depth_rms_m": 0.08556289773050346,
+        "before_rms_over_sigma": 1.2998305620047543,
+        "before_frac_within_1sigma": 0.5735294117647058,
+        "before_bias_m": 0.06772299156447711,
+        "after_depth_rms_m": 0.025251861446821462,
+        "after_rms_over_sigma": 0.40855261821573857,
+        "after_frac_within_1sigma": 0.9705882352941176,
+        "after_bias_m": -0.006834397355608892,
+        "after_modelled_bias_m": 0.055430903202192155
+      },
+      "side/noise": {
+        "before_depth_rms_m": 0.09140196750604133,
+        "before_rms_over_sigma": 1.3885059594556965,
+        "before_frac_within_1sigma": 0.5073529411764706,
+        "before_bias_m": 0.07026838259588862,
+        "after_depth_rms_m": 0.042144376588401256,
+        "after_rms_over_sigma": 0.6786617986379588,
+        "after_frac_within_1sigma": 0.8602941176470589,
+        "after_bias_m": -0.0015235345418674107,
+        "after_modelled_bias_m": 0.05572403771052899
+      },
+      "oblique/no_noise": {
+        "before_depth_rms_m": 0.1587017871796802,
+        "before_rms_over_sigma": 1.6406409482974273,
+        "before_frac_within_1sigma": 0.4632352941176471,
+        "before_bias_m": 0.12357722944374927,
+        "after_depth_rms_m": 0.04387759599969578,
+        "after_rms_over_sigma": 0.47900703216728574,
+        "after_frac_within_1sigma": 0.9632352941176471,
+        "after_bias_m": -0.01443199752361416,
+        "after_modelled_bias_m": 0.09197478828627027
+      },
+      "oblique/noise": {
+        "before_depth_rms_m": 0.16260484430515187,
+        "before_rms_over_sigma": 1.6861038321868653,
+        "before_frac_within_1sigma": 0.49264705882352944,
+        "before_bias_m": 0.11880001275635278,
+        "after_depth_rms_m": 0.07250914877594679,
+        "after_rms_over_sigma": 0.7926868786458305,
+        "after_frac_within_1sigma": 0.8602941176470589,
+        "after_bias_m": -0.010306847700699766,
+        "after_modelled_bias_m": 0.09244289913336795
+      }
+    }
+  },
+  "owner_pickleball_labels": {
+    "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+    "fps": 30.0,
+    "brief_said_8_bounce_labels": true,
+    "file_actually_contains": "19 labels, of which 7 are kind=bounce (plus 7 free_flight and 5 near_player)",
+    "bounce_label_count": 7,
+    "timing_applied_count": 4,
+    "guard_statuses": {
+      "no_observation_at_frame": 1,
+      "refined": 4,
+      "rejected_search_bound": 2
+    },
+    "median_abs_dt_frames": 0.3108,
+    "median_anchor_shift_m": 0.19436,
+    "anchored_measured_prefills": {
+      "count": 2,
+      "delta_before_m": [
+        0.316015,
+        0.276075
+      ],
+      "delta_after_m": [
+        0.316015,
+        0.276074
+      ]
+    },
+    "did_error_improve": false,
+    "why_not": "The two anchored_measured labels (frames 12 and 25) are exactly the two the estimator refuses. Their 2D track is strictly monotone in image-y across the whole +-1-frame window -- there is no kink -- because the detector has no sighting at frames 8-9 and 28 where contact actually falls. The marked frame is off by more than a frame, so the search-bound guard fires and the anchor is left alone. The 0.316 and 0.276 m deltas are UNCHANGED. That is a bounce-DETECTION defect, not a timing defect.",
+    "what_was_learned": "On the 4 labels where it does fire, the median 3D anchor shift is 0.19 m -- comparable to the entire claimed sigma of 0.18 m -- and every estimated dt is negative (-0.13 to -0.36 frames), i.e. contact consistently preceded the marked frame. Sub-frame timing is a first-order effect on real pickleball at 30 fps.",
+    "not_independent_ground_truth": true,
+    "interpretation_limit": "The human label's 3D position is itself a ray-plane intersection at a marked frame, so it carries the SAME sub-frame overshoot as the solver anchor. These numbers measure the SIZE of the correction on real pickleball, not its accuracy. VERIFIED=0 for pickleball bounce position."
+  },
+  "limits": [
+    "TT3D is TABLE TENNIS: 25 fps, 40 mm ball, ~3.3x the drag of a pickleball, synthetic 2D observations. The timing GEOMETRY transfers exactly; the MAGNITUDES do not.",
+    "The downstream weak-segment 3D metric did not uniformly improve (median better, tails worse).",
+    "It cannot repair a mis-marked bounce frame: with the marked frame displaced by +-1 frame the guards refuse ~79% of bounces and the survivors improve only 0.444 -> 0.399 m median.",
+    "The refined t moves the anchor's time, shifting downstream segment boundaries. A real behaviour change, hence default OFF.",
+    "The 0.25-frame timing sigma floor is a declared prior, conservative against table tennis by 2.03x, never checked against a pickleball bounce.",
+    "The modelled bias stays ~6-8x larger than the measured residual bias.",
+    "Branch order and sample count were selected by sweep on TT3D and inherit that sport's frame rate; the chosen point is not a sharp optimum (5, 6 and 7 samples agree within 0.002 m on median).",
+    "No independent pickleball 3D bounce ground truth exists, so the best_stack gate cannot be satisfied by anything here.",
+    "Audio was not used: TT3D has no audio track, so it could not be measured."
+  ],
+  "tests": {
+    "focused": {
+      "command": "PYTHONPATH=. python3 -m pytest tests/racketsport/test_ball_subframe_bounce_timing.py -q",
+      "result": "16 passed",
+      "exit_code": 0
+    },
+    "touched_module": {
+      "command": "PYTHONPATH=. python3 -m pytest tests/racketsport/test_ball_arc_solver.py -q",
+      "head": "64 passed, 1 failed, 1 skipped",
+      "base_e209112": "64 passed, 1 failed, 1 skipped",
+      "exit_code": 1,
+      "attribution": "pre-existing",
+      "failing_test": "test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds"
+    },
+    "wide": {
+      "command": "PYTHONPATH=. python3 -m pytest tests/racketsport -q",
+      "head": "30 collection errors, exit 2",
+      "base_e209112": "30 collection errors, exit 2",
+      "diff_of_error_module_lists": "identical",
+      "attribution": "pre-existing, environmental",
+      "cause": "models/checkpoints/wasb/wasb_tennis_best.pth.tar is gitignored and absent, so threed.racketsport.best_stack raises at import in 30 test modules"
+    },
+    "byte_identity_when_off": {
+      "golden_sha256": "58dd3851a35b35284937141304b3bf2c5c179a46a8af3a19491e744be39266ac",
+      "golden_generated_at": "e209112",
+      "proof_1": "test_default_bounce_anchor_payload_is_byte_identical_to_the_base_commit hashes the default build_bounce_anchor payload; a single new key in uncertainty.terms breaks it",
+      "proof_2": "test_solver_default_never_calls_the_estimator monkeypatches refine_bounce_contact_time to raise and runs solve_ball_arc_track with the default config -- the new code is never reached, not merely inert",
+      "proof_2_is_not_vacuous": "test_enabling_the_knob_reaches_the_estimator"
+    },
+    "structure_checks": {
+      "list_scaffold_tools": {
+        "head": 0,
+        "base": 0,
+        "verdict": "unchanged"
+      },
+      "audit_dead_code": {
+        "head": 1,
+        "base": 1,
+        "verdict": "pre-existing fail, status unchanged"
+      },
+      "audit_storage_policy": {
+        "head": 1,
+        "base": 1,
+        "verdict": "pre-existing fail, confirmed unchanged"
+      }
+    }
+  },
+  "verdict": "Sub-frame bounce timing removes most of the bounce-anchor error on TT3D (median 0.0911 -> 0.0306 m, p90 0.2455 -> 0.0903 m, p95 0.3168 -> 0.1242 m) and removes the systematic along-ray component almost entirely (+0.0993 -> -0.0076 m) over 816 bounces scored against external ground truth, with the baseline reproducing the committed report exactly. The downstream weak-segment trajectory metric did NOT follow. This is table tennis, it is not a pickleball capability claim, it is not promoted, and it stays default OFF. VERIFIED=0."
+}
