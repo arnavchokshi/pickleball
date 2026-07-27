@@ -235,12 +235,18 @@
     "why_not": "The two anchored_measured labels (frames 12 and 25) are exactly the two the estimator refuses. Their 2D track is strictly monotone in image-y across the whole +-1-frame window -- there is no kink -- because the detector has no sighting at frames 8-9 and 28 where contact actually falls. The marked frame is off by more than a frame, so the search-bound guard fires and the anchor is left alone. The 0.316 and 0.276 m deltas are UNCHANGED. That is a bounce-DETECTION defect, not a timing defect.",
     "what_was_learned": "On the 4 labels where it does fire, the median 3D anchor shift is 0.19 m -- comparable to the entire claimed sigma of 0.18 m -- and every estimated dt is negative (-0.13 to -0.36 frames), i.e. contact consistently preceded the marked frame. Sub-frame timing is a first-order effect on real pickleball at 30 fps.",
     "not_independent_ground_truth": true,
-    "interpretation_limit": "The human label's 3D position is itself a ray-plane intersection at a marked frame, so it carries the SAME sub-frame overshoot as the solver anchor. These numbers measure the SIZE of the correction on real pickleball, not its accuracy. VERIFIED=0 for pickleball bounce position."
+    "interpretation_limit": "The human label's 3D position is itself a ray-plane intersection at a marked frame, so it carries the SAME sub-frame overshoot as the solver anchor. These numbers measure the SIZE of the correction on real pickleball, not its accuracy. VERIFIED=0 for pickleball bounce position.",
+    "anchor_shift_m_per_refined_label": [
+      0.0512,
+      0.1772,
+      0.1944,
+      0.2262
+    ]
   },
   "limits": [
     "TT3D is TABLE TENNIS: 25 fps, 40 mm ball, ~3.3x the drag of a pickleball, synthetic 2D observations. The timing GEOMETRY transfers exactly; the MAGNITUDES do not.",
     "The downstream weak-segment 3D metric did not uniformly improve (median better, tails worse).",
-    "It cannot repair a mis-marked bounce frame: with the marked frame displaced by +-1 frame the guards refuse ~79% of bounces and the survivors improve only 0.444 -> 0.399 m median.",
+    "It cannot repair a mis-marked bounce frame: with the marked frame displaced by +-1 frame the guards refuse 648 of 816 bounces (79%) and the systematic along-ray bias only moves +0.444 -> +0.399 m, against +0.099 -> -0.008 m when the frame is marked correctly.",
     "The refined t moves the anchor's time, shifting downstream segment boundaries. A real behaviour change, hence default OFF.",
     "The 0.25-frame timing sigma floor is a declared prior, conservative against table tennis by 2.03x, never checked against a pickleball bounce.",
     "The modelled bias stays ~6-8x larger than the measured residual bias.",
@@ -303,6 +309,33 @@
         "base": 1,
         "verdict": "pre-existing fail, confirmed unchanged"
       }
+    },
+    "blast_radius_base_vs_head": {
+      "scope": "26 test modules mentioning ball_arc_solver, best_stack, build_bounce_anchor, anchor_uncertainty or BallArcSolverConfig",
+      "command": "cat blast.txt | xargs python3 -m pytest -q -p no:randomly --continue-on-collection-errors",
+      "head": {
+        "failed": 25,
+        "passed": 299,
+        "skipped": 1,
+        "errors": 7,
+        "exit_code": 1
+      },
+      "base_e209112": {
+        "failed": 27,
+        "passed": 281,
+        "skipped": 1,
+        "errors": 7,
+        "exit_code": 1,
+        "note": "16 fewer tests than HEAD: the new test file does not exist at base"
+      },
+      "failures_only_at_head": [],
+      "regressions": 0,
+      "common_failures_or_errors": 32,
+      "failures_only_at_base": [
+        "tests/racketsport/test_ball_arc_solver.py::test_fit_flight_segment_recovers_simulated_scalar_magnus_spin",
+        "tests/racketsport/test_flight_simulator.py::test_generate_corpus_is_deterministic_and_fast_for_small_cpu_sample"
+      ],
+      "failures_only_at_base_interpretation": "Both are wall-clock / optimizer-sensitive and the base run executed under CPU contention from a sibling lane's suite. Claimed as flakiness, not as a fix."
     }
   },
   "verdict": "Sub-frame bounce timing removes most of the bounce-anchor error on TT3D (median 0.0911 -> 0.0306 m, p90 0.2455 -> 0.0903 m, p95 0.3168 -> 0.1242 m) and removes the systematic along-ray component almost entirely (+0.0993 -> -0.0076 m) over 816 bounces scored against external ground truth, with the baseline reproducing the committed report exactly. The downstream weak-segment trajectory metric did NOT follow. This is table tennis, it is not a pickleball capability claim, it is not promoted, and it stays default OFF. VERIFIED=0."

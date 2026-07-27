@@ -277,9 +277,9 @@ they cannot prove the position got more accurate.
 
 **Findings.**
 
-1. **The correction is large on real pickleball.** Median 3D anchor shift **0.19 m** across the
-   4 refined labels -- comparable to the whole claimed sigma of 0.18 m. At 30 fps with a
-   grazing court camera, sub-frame timing is not a second-order effect.
+1. **The correction is large on real pickleball.** The 4 refined labels move by 0.051, 0.177,
+   0.194 and 0.226 m (median **0.19 m**) -- comparable to the whole claimed sigma of 0.18 m. At
+   30 fps with a grazing court camera, sub-frame timing is not a second-order effect.
 2. **Every estimated `dt` is negative** (-0.13 to -0.36 frames): contact consistently happened
    *before* the frame that was marked. That is the expected signature of marking the first
    frame where the ball reads as being at the ground.
@@ -308,9 +308,10 @@ guards behave on real data.**
 - **The downstream trajectory metric did not uniformly improve** (section 4). Median better,
   tails worse, inside a metric with known run-to-run spread.
 - **It cannot fix a mis-marked bounce frame.** Measured directly: with the marked frame
-  displaced by +-1 frame, the guards refuse ~79% of bounces and the ones that pass improve only
-  from 0.444 to 0.399 m median. The method fixes *timing*, not *detection*. This is by design --
-  the +-1-frame search bound is a fence, not a tuning knob.
+  displaced by +-1 frame, the guards refuse **648 of 816** bounces (79%), and across the whole
+  set the systematic along-ray bias only moves from **+0.444 to +0.399 m** -- against +0.099 ->
+  -0.008 m when the frame is marked correctly. The method fixes *timing*, not *detection*. This
+  is by design: the +-1-frame search bound is a fence, not a tuning knob.
 - **The refined `t` moves the anchor's time**, so segment boundaries shift downstream. That is a
   real behaviour change and is exactly why the knob is default OFF.
 - **The timing sigma floor (0.25 frame intervals) is a declared prior, not a pickleball
@@ -351,6 +352,28 @@ Real commands, real exit codes, unpiped.
 fails **identically at base commit e209112 and at HEAD** (64 passed / 1 failed / 1 skipped in
 both). Verified by checking out the base file and re-running. **Pre-existing, not caused by
 this lane.**
+
+### Blast radius, base vs HEAD
+
+Every test module that mentions `ball_arc_solver`, `best_stack`, `build_bounce_anchor`,
+`anchor_uncertainty` or `BallArcSolverConfig` -- 26 modules, 325 tests -- run at both commits
+with `--continue-on-collection-errors`.
+
+```
+cat blast.txt | xargs python3 -m pytest -q -p no:randomly --continue-on-collection-errors
+HEAD  : 25 failed, 299 passed, 1 skipped, 7 errors    exit 1
+base  : 27 failed, 281 passed, 1 skipped, 7 errors    exit 1   (16 fewer tests: the new file)
+```
+
+Diffing the sorted `FAILED`/`ERROR` lists:
+
+- **Failures present at HEAD but not at base: ZERO.** No regression.
+- 32 failures/errors are common to both.
+- Two failures appear only at BASE and pass at HEAD --
+  `test_flight_simulator.py::test_generate_corpus_is_deterministic_and_fast_for_small_cpu_sample`
+  and `test_ball_arc_solver.py::test_fit_flight_segment_recovers_simulated_scalar_magnus_spin`.
+  Both are wall-clock / optimizer-sensitive and the base run was executed under CPU contention
+  from a sibling lane's suite. Claimed as flakiness, not as a fix.
 
 ### Wide suite
 
