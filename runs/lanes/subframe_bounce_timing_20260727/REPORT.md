@@ -381,11 +381,14 @@ Two independent proofs, both in `tests/racketsport/test_ball_subframe_bounce_tim
 | `audit_dead_code.py --root .` | 1 | 1 | **pre-existing fail**, unchanged status |
 | `audit_storage_policy.py --root . --json` | 1 | 1 | **pre-existing fail**, unchanged, as expected |
 
-`audit_dead_code` reports `status: fail` at both commits. At base the unknown set is
-`scripts/tt3d/run_tt3d_validation.py` and `scripts/tt3d/tt3d_adapter.py`; this report documents
-the exact commands for `scripts/tt3d/run_tt3d_validation.py`, `scripts/tt3d/sigma_calibration.py`,
-`scripts/tt3d/tt3d_adapter.py` and `scripts/tt3d/owner_bounce_label_check.py`, which is what
-that audit looks for.
+`audit_dead_code` reports `status: fail` at both commits, but **this lane makes it one entry
+worse and that is not hidden**. At base the unknown set is 2 files
+(`scripts/tt3d/run_tt3d_validation.py`, `scripts/tt3d/tt3d_adapter.py`); at HEAD it is 3, the
+extra one being this lane's `scripts/tt3d/owner_bounce_label_check.py`. It is the same class of
+entry as the two already there: a validation CLI referenced only from lane evidence. It cannot
+be resolved by documenting it here, because `runs/` is in the audit's `IGNORED_PARTS` and lane
+reports are invisible to it. Resolving all three needs a decision about where external-validation
+CLIs are registered, which is a repo-policy question this lane did not take unilaterally.
 
 ---
 

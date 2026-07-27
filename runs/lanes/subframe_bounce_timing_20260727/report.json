@@ -286,7 +286,17 @@
       "audit_dead_code": {
         "head": 1,
         "base": 1,
-        "verdict": "pre-existing fail, status unchanged"
+        "verdict": "pre-existing fail; this lane makes it one entry worse",
+        "unknown_at_base": [
+          "scripts/tt3d/run_tt3d_validation.py",
+          "scripts/tt3d/tt3d_adapter.py"
+        ],
+        "unknown_at_head": [
+          "scripts/tt3d/owner_bounce_label_check.py",
+          "scripts/tt3d/run_tt3d_validation.py",
+          "scripts/tt3d/tt3d_adapter.py"
+        ],
+        "note": "The added entry is the same class as the two already failing: an external-validation CLI referenced only from lane evidence. It cannot be fixed by citing it in the lane report because runs/ is in the audit's IGNORED_PARTS. Fixing all three requires a repo-policy decision about where validation CLIs are registered; not taken here."
       },
       "audit_storage_policy": {
         "head": 1,
