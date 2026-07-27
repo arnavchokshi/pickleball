@@ -20,6 +20,10 @@ from .coordinates import (
     resolve_homography_pixel_convention,
     unproject_image_points_to_world,
 )
+from .court_calibration_selection import (
+    SELECTION_POINTER_FILENAME,
+    resolve_selected_calibration_path,
+)
 from .court_templates import get_court_template
 from .eval_guard import assert_not_training_on_eval_clip
 from .external_gt_body_prediction_schema import MHR70_JOINT_NAMES
@@ -341,6 +345,15 @@ def resolve_best_court_calibration_path(
 
     Precedence is explicit path, metric-15pt run artifact, metric-15pt eval-label
     artifact for the inferred clip, then the run's existing `court_calibration.json`.
+
+    Whichever candidate wins is then passed through
+    `court_calibration_selection.resolve_selected_calibration_path`, so a clip
+    whose label directory carries a validated `court_calibration_selected.json`
+    promotion pointer reads the promoted artifact instead of the raw solve the
+    pointer supersedes. Clips without a pointer are unaffected.
+
+    An `explicit` path is never redirected by a sibling pointer -- an explicit
+    choice stays explicit. Naming the pointer file itself explicitly does resolve.
     """
 
     root = Path(run_dir)
@@ -359,8 +372,11 @@ def resolve_best_court_calibration_path(
             candidates.append(EVAL_CLIPS_ROOT / inferred / "labels" / "court_calibration_metric15pt.json")
         candidates.append(root / "court_calibration.json")
     for candidate in candidates:
-        if candidate.is_file():
+        if not candidate.is_file():
+            continue
+        if explicit is not None and candidate.name != SELECTION_POINTER_FILENAME:
             return candidate
+        return resolve_selected_calibration_path(candidate)
     rendered = ", ".join(str(candidate) for candidate in candidates)
     raise FileNotFoundError(f"no court calibration artifact found; checked: {rendered}")
 
