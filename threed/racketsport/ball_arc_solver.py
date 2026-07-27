@@ -19,6 +19,7 @@ from typing import Any, Callable, Mapping, Sequence
 
 from .ball_physics3d import _project_world_array, reconstruct_bounce_arcs_from_image_track
 from .ball_position_plausibility import BallPlausibilityBounds, evaluate_position
+from .calibration_extrapolation import radial_extrapolation_pixel_allowance
 from .camera_distortion import distort_normalized, distortion_coefficients, undistort_normalized
 from .court_templates import get_court_template
 from .io_decode import frame_time_lookup, nearest_frame_for_time, time_for_frame
@@ -3216,6 +3217,15 @@ def anchor_uncertainty_for_bounce(
        so an along-ray error of ``a`` forces an across-ray component of
        ``a * |ray_z|`` just to stay on the plane.  It is a consequence of the
        other terms, not an independent error.
+    5. **Radial extrapolation.** Terms 1-4 assume the camera model is as good
+       at this pixel as it was where it was fit.  Past the outermost
+       correspondence nothing tests that, and the fit's own residual could not
+       have detected an unmodelled cubic radial term
+       (:func:`~.calibration_extrapolation.radial_extrapolation_pixel_allowance`).
+       On ``outdoor_webcam_20s`` the correspondences stop at 50.0% of the
+       half-diagonal while an owner bounce label sits at 79.6%.  This term is
+       exactly zero inside the calibrated radius, so no pixel the fit actually
+       saw is affected.
 
     Returns ``None`` when the geometry is unusable, so callers can fall back.
     """
@@ -3314,17 +3324,52 @@ def anchor_uncertainty_for_bounce(
     terms["reprojection_allowance_m"] = float(reproj_m)
     inplane_floor_m = math.hypot(residual_m, reproj_m)
 
+    # --- 5. radial extrapolation past the calibrated envelope ---------------
+    # Terms 1-4 all assume the camera model is as good here as it was where it
+    # was fit.  Past the outermost correspondence that assumption is untested,
+    # and the calibration's own residual cannot have detected an unmodelled
+    # cubic radial term whose displacement there was under the noise.
+    # `radial_extrapolation_pixel_allowance` returns exactly that bound in
+    # pixels; it is zero inside the calibrated radius, so this term is a no-op
+    # for every pixel the fit actually saw.  It is converted to metres with the
+    # ray-plane sensitivity already finite-differenced in term 1, so no new
+    # geometry is introduced.
+    extrapolation = radial_extrapolation_pixel_allowance(calibration, xy)
+    extrapolation_along_m = 0.0
+    extrapolation_perp_m = 0.0
+    if extrapolation.get("available"):
+        allowance_px = max(0.0, float(extrapolation["allowance_px"]))
+        per_px = 1.0 / max(1e-9, abs(float(pixel_sigma_px)))
+        extrapolation_along_m = allowance_px * float(geometry["sigma_along_ray_m"]) * per_px
+        extrapolation_perp_m = allowance_px * float(geometry["sigma_perp_m"]) * per_px
+        terms["extrapolation_verdict"] = str(extrapolation["verdict"])
+        terms["extrapolation_ratio"] = float(extrapolation["extrapolation_ratio"])
+        terms["extrapolation_radius_pct_of_half_diagonal"] = float(
+            extrapolation["radius_pct_of_half_diagonal"]
+        )
+        terms["calibrated_radius_pct_of_half_diagonal"] = float(
+            extrapolation["calibrated_radius_pct_of_half_diagonal"]
+        )
+        terms["extrapolation_allowance_px"] = float(allowance_px)
+        terms["extrapolation_along_ray_m"] = float(extrapolation_along_m)
+        terms["extrapolation_perp_m"] = float(extrapolation_perp_m)
+    else:
+        terms["extrapolation_verdict"] = "unknown"
+        terms["extrapolation_reason"] = str(extrapolation.get("reason", ""))
+
     # --- combine ------------------------------------------------------------
     sigma_along = math.sqrt(
         float(geometry["sigma_along_ray_m"]) ** 2
         + timing_along_ray_m**2
         + timing_inplane_along_m**2
         + (inplane_floor_m * cos_elevation) ** 2
+        + extrapolation_along_m**2
     )
     sigma_perp = math.sqrt(
         float(geometry["sigma_perp_m"]) ** 2
         + timing_inplane_perp_m**2
         + inplane_floor_m**2
+        + extrapolation_perp_m**2
     )
     floor_m = max(MIN_BOUNCE_ANCHOR_SIGMA_M, abs(float(base_sigma_m)))
     sigma_along = max(sigma_along, floor_m)
@@ -3351,6 +3396,16 @@ def anchor_uncertainty_for_bounce(
         f"{residual_m:.3f} m. Anisotropy along/across = "
         f"{sigma_along / max(sigma_perp, 1e-9):.1f}x."
     )
+    if extrapolation_along_m > 0.0:
+        basis = (
+            f"{basis} This pixel sits at "
+            f"{terms['extrapolation_radius_pct_of_half_diagonal']:.1f}% of the half-diagonal "
+            f"while the calibration's correspondences stop at "
+            f"{terms['calibrated_radius_pct_of_half_diagonal']:.1f}%, so the camera model is "
+            f"EXTRAPOLATED here ({terms['extrapolation_verdict']}); "
+            f"{extrapolation_along_m:.3f} m along / {extrapolation_perp_m:.3f} m across was "
+            f"added for the radial term no held-out evidence rules out."
+        )
     return BounceAnchorUncertainty(
         sigma_along_ray_m=float(sigma_along),
         sigma_perp_m=float(sigma_perp),

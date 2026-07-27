@@ -89,6 +89,15 @@ _OUTDOOR_CALIBRATION = {
         "source": "metric_15pt_reviewed",
     },
     "reprojection_error_px": {"median": 4.7834997281882865, "p95": 12.276624313829716},
+    "extrinsics": {
+        "R": [
+            [0.9999897798981388, -0.004512286365101776, -0.0002817286488120169],
+            [-0.0014155890752480592, -0.25331620184779297, -0.9673824982854395],
+            [0.0042937404255827104, 0.9673730103497655, -0.2533200004736898],
+        ],
+        "t": [-0.029131474628101135, -0.7281538153162044, 21.25745651752845],
+        "camera_height_m": 4.680527430922098,
+    },
     "image_pts": _OUTDOOR_IMAGE_PTS,
     "world_pts": _OUTDOOR_WORLD_PTS,
 }
@@ -425,3 +434,78 @@ def test_a_symmetric_synthetic_calibration_flags_by_radius_alone() -> None:
         assert pixel_verdict(inside, envelope) == VERDICT_WITHIN
         assert pixel_verdict(soft, envelope) == VERDICT_EXTRAPOLATED
         assert pixel_verdict(hard, envelope) == VERDICT_FAR_EXTRAPOLATED
+
+
+# ---------------------------------------------------------------------------
+# the bounce-anchor uncertainty seam
+# ---------------------------------------------------------------------------
+
+
+def _uncertainty(pixel_xy: list[float]):
+    from threed.racketsport.ball_arc_solver import anchor_uncertainty_for_bounce
+
+    return anchor_uncertainty_for_bounce(
+        _OUTDOOR_CALIBRATION,
+        pixel_xy,
+        base_sigma_m=0.05,
+        pixel_sigma_px=2.0,
+        fps=30.0,
+        calibration_residual_m=0.100551,
+    )
+
+
+def test_bounce_sigma_is_untouched_inside_the_calibrated_radius() -> None:
+    for frame, pixel, _, _, verdict in _OUTDOOR_BOUNCES:
+        if verdict != VERDICT_WITHIN:
+            continue
+        uncertainty = _uncertainty(pixel)
+        assert uncertainty is not None, frame
+        assert uncertainty.terms["extrapolation_verdict"] == VERDICT_WITHIN, frame
+        assert uncertainty.terms["extrapolation_allowance_px"] == 0.0, frame
+        assert uncertainty.terms["extrapolation_along_ray_m"] == 0.0, frame
+        assert uncertainty.terms["extrapolation_perp_m"] == 0.0, frame
+        assert "EXTRAPOLATED" not in uncertainty.basis, frame
+
+
+def test_bounce_sigma_grows_materially_past_the_calibrated_radius() -> None:
+    """A position at 79.6% radius on a model fit to 50.0% earns a bigger sigma."""
+
+    inside = _uncertainty([490.6, 585.7])  # frame 368, 42.8%
+    far = _uncertainty([118.9, 786.3])  # frame 414, 79.6%
+
+    assert inside is not None and far is not None
+    assert far.terms["extrapolation_verdict"] == VERDICT_FAR_EXTRAPOLATED
+    assert far.terms["extrapolation_along_ray_m"] == pytest.approx(0.219, abs=0.01)
+    assert far.sigma_along_ray_m > inside.sigma_along_ray_m
+    # Materially larger, not a rounding nudge: the 79.6% anchor's along-ray
+    # sigma is at least half again the 42.8% one's.
+    assert far.sigma_along_ray_m / inside.sigma_along_ray_m > 1.5
+    assert "EXTRAPOLATED" in far.basis
+    assert "79.6% of the half-diagonal" in far.basis
+    assert "50.0%" in far.basis
+
+
+def test_bounce_sigma_is_monotone_in_radius_across_the_four_far_bounces() -> None:
+    sigmas = []
+    for _, pixel, _, _, _ in _OUTDOOR_BOUNCES[2:]:
+        uncertainty = _uncertainty(pixel)
+        assert uncertainty is not None
+        sigmas.append(uncertainty.terms["extrapolation_along_ray_m"])
+
+    assert sigmas == sorted(sigmas)
+    assert sigmas[0] == 0.0
+
+
+def test_bounce_sigma_reports_an_unknown_verdict_without_correspondences() -> None:
+    from threed.racketsport.ball_arc_solver import anchor_uncertainty_for_bounce
+
+    calibration = {
+        key: value for key, value in _OUTDOOR_CALIBRATION.items() if key != "image_pts"
+    }
+    uncertainty = anchor_uncertainty_for_bounce(
+        calibration, [118.9, 786.3], base_sigma_m=0.05, calibration_residual_m=0.1
+    )
+
+    assert uncertainty is not None
+    assert uncertainty.terms["extrapolation_verdict"] == "unknown"
+    assert "extrapolation_along_ray_m" not in uncertainty.terms
