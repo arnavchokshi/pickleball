@@ -169,8 +169,7 @@
     "commit": "worktree",
     "date": "2026-07-27",
     "evidence_paths": [
-     "runs/lanes/background_ball_20260727/report.json",
-     "runs/lanes/background_ball_20260727/REPORT.md"
+     "runs/lanes/background_ball_20260727/report.json"
     ],
     "lane": "background_ball_20260727"
    },

@@ -64,6 +64,98 @@ MARGIN_SETTINGS = [
 GROSS_ERROR_PX = 100.0
 HIT_RADIUS_PX = 20.0
 
+#: Conclusions this lane established. Recorded in the artifact so the report is
+#: self-describing: the numeric blocks below are the evidence for each claim.
+FINDINGS = {
+    "background_ball_acquisition": {
+        "verdict": "CONFIRMED",
+        "basis": (
+            "Visual adjudication of every hidden false positive in the frozen judge, from "
+            "the judge's own image zip. Indoor: 11 of 11 are real pickleballs that are not "
+            "the ball in play (stray balls on our own court and just outside the sideline, "
+            "balls in the walkway beyond the far baseline). Outdoor night: roughly 14 of 25 "
+            "are real balls elsewhere in the venue; the rest are lights, night-sky specks "
+            "and fence clutter. On burlington frames 30 and 369 the detector is locked on a "
+            "game being played on the adjacent court."
+        ),
+    },
+    "correct_ball_among_top_k": {
+        "verdict": "REFUTED -- this is not a cheap selection fix",
+        "basis": (
+            "WASB picks argmax(blob score) among blobs within 300 px of the previous "
+            "accepted position. For a selection fix to work the right ball must be present "
+            "but unselected. It is not: 11 of 11 indoor hidden-FP frames had exactly one "
+            "blob, and 6 of 9 outdoor gross mislocalisations had exactly one blob, with the "
+            "nearest blob to the true ball 280, 294 and 497 px away in the other three. The "
+            "ball in play produced no heatmap response at all. Any suppression-based fix is "
+            "therefore precision-only; recall is capped by the detector."
+        ),
+    },
+    "ray_court_volume_discriminator": {
+        "verdict": "SOUND BUT USELESS -- refuted",
+        "basis": (
+            "Flags 0.0-1.3 percent of detections at margin 2 m / apex 8 m across 1269 "
+            "emitted detections on four owner clips with reviewed metric_15pt calibrations. "
+            "The only settings that flag anything also suppress owner-clicked real-ball "
+            "pixels. Mechanism: a camera behind the baseline sees an adjacent court through "
+            "its own airspace. On burlington frame 30 a ball 19 m outside our sideline has a "
+            "ray that hits the ground at x=-21.9 m but crosses our near-baseline plane at "
+            "x=-2.95 m, z=0.95 m -- inside the volume, and an ordinary place for a real "
+            "ball. At the 2 m margin the burlington camera centre itself lies inside the "
+            "volume, making the test vacuous on that clip. Chord length separates burlington "
+            "frame 30 (0.61 m wrong vs 11.37 m real) but inverts on frame 369."
+        ),
+    },
+    "other_discriminators_measured": {
+        "heatmap_blob_radius": "no separation; quantised identically for true and false positives (it measures the heatmap Gaussian, not the ball)",
+        "image_apparent_radius": "weak and abstains where it matters; indoor median 4.4 px FP vs 6.6 px GT with heavy overlap, abstains on 24 of 25 outdoor FPs",
+        "stationarity": "no separation; indoor FP local displacement median 134.7 px vs TP 157.0 px",
+        "teleport_continuity_structure": "no separation and inverted; indoor FPs sit in longer, smoother runs than TPs (median run 31 frames vs 17.5, 16.9 px/frame vs 20.4)",
+        "image_position_2d": "no separation; hidden FPs are spatially interleaved with true positives",
+        "detector_confidence": "no separation; sweeping 0.5 to 0.85 moves indoor precision 0.800 to 0.750 while recall collapses 0.688 to 0.328",
+    },
+    "why_hidden_fp_exceeds_the_owner_click_error_rate": (
+        "The two measure different frame populations and do not contradict each other. "
+        "Hidden-FP is computed only over frames where the reviewer recorded no ball; the "
+        "owner labelled only frames where the ball was visible. Where a real ball is "
+        "present the detector is usually right -- indoor 44 of 44 within 20 px, median "
+        "error 4.3 px. The wrong-ball problem lives in the frames where the ball in play is "
+        "absent or invisible."
+    ),
+    "ball_3d_coverage_knock_on": {
+        "verdict": "CONTRIBUTING BUT NOT DOMINANT -- partly refuted",
+        "basis": (
+            "Of the outdoor clip's 411 missing 3D frames, 294 (72 percent) were never "
+            "emitted in 2D at all, 65 emitted sightings were pruned as false positives by "
+            "the solver (the genuine wrong-ball contribution, ~21 percent of emitted), and "
+            "2 segments were dropped for segment_budget_exceeded -- a wall-clock timeout, "
+            "not a physics failure. The indoor clip's 0 percent coverage is entirely "
+            "segment_budget_exceeded: both segments timed out, so no wrong-ball explanation "
+            "is needed or supported there."
+        ),
+    },
+    "what_does_partially_work": (
+        "Sequence-level 3D reasoning, which already exists. Gravity fixes the depth scale, "
+        "so an adjacent-court ball fitted as a ballistic arc lands at its true off-court "
+        "position: on burlington frame 369 the solver placed the wrong ball at x=-14.9 m, "
+        "flagged outside_court_footprint and absurd by ball_position_plausibility. Across "
+        "burlington, 97 of 508 solved frames violate the footprint bound and 57 are absurd. "
+        "It is noisy -- frame 30 was placed on the sideline and not flagged, and on "
+        "wolverine the check fires 107 times for an unrelated above_plausible_apex solver "
+        "defect -- but it is the only signal measured in this lane that separates the "
+        "classes at all."
+    ),
+    "recommendation": [
+        "Do not pursue single-frame geometric filtering; measured dead.",
+        "The largest measured headroom is detector recall, not precision: 20 of 64 indoor "
+        "and 10 of 30 outdoor present-ball frames get no detection.",
+        "Fix segment_budget_exceeded; it alone explains 100 percent of indoor's zero 3D coverage.",
+        "Give the frozen judge a calibration; both its sources have none, which blocks every "
+        "geometric hypothesis from ever being scored on the repo's own gate.",
+        "If wrong-ball suppression is still wanted, pursue rally-level 3D association.",
+    ],
+}
+
 
 def load_json(path: Path) -> Any:
     with path.open() as handle:
@@ -371,6 +463,7 @@ def main() -> int:
         "verified": 0,
         "not_ground_truth": True,
         "language": "measurement-only; VERIFIED=0 remains binding; no promotion claims",
+        "findings": FINDINGS,
         "judge": {
             "rows": len(rows),
             "reproduces_published_scores": True,
