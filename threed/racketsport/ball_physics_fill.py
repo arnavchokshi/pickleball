@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
 from .ball_physics3d import BounceArcReconstruction
+from .ball_position_plausibility import BallPlausibilityBounds, position_violations
 from .io_decode import frame_time_lookup, time_for_frame
 
 
@@ -232,8 +233,16 @@ def fill_ball_track_physics(
     wrist_velocity_peaks: Mapping[str, Any] | None = None,
     physics3d_reconstruction: BounceArcReconstruction | None = None,
     frame_times: Any = None,
+    plausibility_bounds: BallPlausibilityBounds | None = None,
 ) -> dict[str, Any]:
-    """Return an additive render-only ball track with physics-filled samples."""
+    """Return an additive render-only ball track with physics-filled samples.
+
+    A filled sample must clear two independent conditions: it must reproject
+    onto the pixel it was lifted from (2D consistency), and it must be a
+    physically possible place for a ball to be (the only one of the two that
+    can see depth). Passing both still does not validate depth; see
+    ``ball_position_plausibility``.
+    """
 
     cfg = config or PhysicsFillConfig()
     output = copy.deepcopy(dict(ball_payload))
@@ -261,6 +270,7 @@ def fill_ball_track_physics(
     short_gap_xy_interpolated_frame_count = 0
     extrapolated_frame_count = 0
     reprojection_rejected_frame_count = 0
+    implausible_rejected_frame_count = 0
     no_calibration_2d_rejected_frame_count = 0
     below_floor_rejected_frame_count = 0
     clamped_to_court_plane_frame_count = 0
@@ -328,10 +338,23 @@ def fill_ball_track_physics(
                     rejection_reasons[frame_index] = "unprojectable_calibration_for_2d_lift"
                     continue
                 reprojection_error_px = _distance2(projected_xy, original_xy)
+                # 2D consistency: does the lifted position land back on the
+                # pixel it came from? Necessary, and blind to depth -- a lift
+                # metres wrong along the ray reprojects just as well.
                 if reprojection_error_px > cfg.max_reprojection_error_px:
                     reprojection_rejected_frame_count += 1
                     rejection_reasons[frame_index] = "reprojection_error_above_threshold"
                     continue
+
+            # Depth-aware companion to the check above. Without it, a position
+            # is accepted into the 3D fill on image-plane evidence alone.
+            plausibility_violations = position_violations(rendered_xyz, plausibility_bounds)
+            if plausibility_violations:
+                implausible_rejected_frame_count += 1
+                rejection_reasons[frame_index] = "physical_plausibility_violation:" + ",".join(
+                    plausibility_violations
+                )
+                continue
 
             if original.get("world_xyz") is None:
                 filled_missing_world_count += 1
@@ -403,6 +426,9 @@ def fill_ball_track_physics(
             "short_gap_xy_interpolated_frame_count": short_gap_xy_interpolated_frame_count,
             "extrapolated_frame_count": extrapolated_frame_count,
             "reprojection_rejected_frame_count": reprojection_rejected_frame_count,
+            "implausible_rejected_frame_count": implausible_rejected_frame_count,
+            "reprojection_is_a_2d_consistency_check_only": True,
+            "depth_validated": False,
             "no_calibration_2d_rejected_frame_count": no_calibration_2d_rejected_frame_count,
             "below_floor_rejected_frame_count": below_floor_rejected_frame_count,
             "clamped_to_court_plane_frame_count": clamped_to_court_plane_frame_count,

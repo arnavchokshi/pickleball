@@ -196,6 +196,8 @@ def build_characterization_manifest(
                 "policy": BALL_ARC_FAIL_CLOSED_POLICY,
                 "min_inlier_count": BALL_ARC_FAIL_CLOSED_MIN_INLIERS,
                 "max_reprojection_error_px": BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX,
+                "reprojection_is_a_2d_consistency_check_only": True,
+                "depth_unvalidated": True,
             },
             "default_chain_configs": default_ball_chain_configs(),
             "default_solver_config": asdict(default_ball_arc_solver_config()),
@@ -986,6 +988,8 @@ def build_characterization_report(
             "policy": BALL_ARC_FAIL_CLOSED_POLICY,
             "min_inlier_count": BALL_ARC_FAIL_CLOSED_MIN_INLIERS,
             "max_reprojection_error_px": BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX,
+            "reprojection_is_a_2d_consistency_check_only": True,
+            "depth_unvalidated": True,
         },
         "pooled": pooled,
         "clips": [dict(result) for result in clip_results],
@@ -1125,10 +1129,12 @@ def render_report_markdown(report: Mapping[str, Any]) -> str:
         lines.append("")
     lines.append("---")
     lines.append(
-        "Accepted = segment passes `arc_segment_fail_closed_v1` "
+        f"Accepted = segment passes `{BALL_ARC_FAIL_CLOSED_POLICY}` "
         f"(min inliers {BALL_ARC_FAIL_CLOSED_MIN_INLIERS}, max reprojection "
-        f"{BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX} px) and the frame carries a solver world "
-        "position. Physics-fill artifacts are render-only and reported separately, never counted."
+        f"{BALL_ARC_FAIL_CLOSED_MAX_REPROJECTION_PX} px as a 2D-consistency bound, plus "
+        "physical plausibility) and the frame carries a solver world position. Accepted does "
+        "NOT mean the depth was validated: reprojection is blind to motion along the camera "
+        "ray. Physics-fill artifacts are render-only and reported separately, never counted."
     )
     lines.append("")
     return "\n".join(lines)

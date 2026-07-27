@@ -6,6 +6,11 @@ from dataclasses import dataclass
 from math import sqrt
 from typing import Any, Iterable, Mapping, Sequence
 
+from .ball_position_plausibility import (
+    DEPTH_UNVALIDATED_NOTE,
+    BallPlausibilityBounds,
+    position_violations,
+)
 from .court_auto_evidence import calibration_for_image_size
 from .coordinates import (
     CoordinateSpace,
@@ -67,6 +72,9 @@ class BounceArcReconstruction:
             "bounce_count": self.bounce_count,
             "reprojection_rmse_px": self.reprojection_rmse_px,
             "max_reprojection_error_px": self.max_reprojection_error_px,
+            "reprojection_is_a_2d_consistency_check_only": True,
+            "depth_validated": False,
+            "depth_unvalidated_reason": DEPTH_UNVALIDATED_NOTE,
             "candidate_count": self.candidate_count,
             "selected_bounce_time_s": self.selected_bounce_time_s,
             "effective_accel_z_mps2": self.effective_accel_z_mps2,
@@ -113,13 +121,24 @@ def reconstruct_bounce_arcs_from_image_track(
     max_neighbor_gap_s: float | None = None,
     min_samples: int = 5,
     max_fit_samples: int = 21,
+    plausibility_bounds: BallPlausibilityBounds | None = None,
 ) -> BounceArcReconstruction:
     """Fit a calibrated two-arc bounce model to image-only ball observations.
 
     A bounce is a collision discontinuity, so this uses two vertical arcs joined
-    at an observed bounce candidate instead of a single smooth parabola. The fit
-    is accepted only when reprojection error stays under
-    ``max_reprojection_rmse_px``.
+    at an observed bounce candidate instead of a single smooth parabola.
+
+    Two independent conditions must hold for the fit to be reported as ``ran``:
+    its reprojection RMSE must stay under ``max_reprojection_rmse_px``, and
+    every reconstructed 3D sample must be physically possible.
+
+    The reprojection bound is a 2D-consistency condition and nothing more.
+    Reprojection error cannot see depth -- sliding a solved sample a metre
+    along its camera ray moves it ~1e-13 px
+    (``runs/lanes/tt3d_external_validation_20260726/report.json``) -- so
+    passing it is not evidence the reconstructed z is right. Every returned
+    reconstruction is therefore stamped ``depth_validated = False``, including
+    the accepted ones.
     """
 
     if max_reprojection_rmse_px <= 0.0:
@@ -199,6 +218,24 @@ def reconstruct_bounce_arcs_from_image_track(
             notes=(f"best fit exceeded {max_reprojection_rmse_px:.3f}px reprojection RMSE gate",),
         )
 
+    implausible = _implausible_sample_violations(best["samples"], plausibility_bounds)
+    if implausible:
+        return BounceArcReconstruction(
+            status="no_fit_under_physical_plausibility_gate",
+            samples=tuple(best["samples"]),
+            bounces=best["bounces"],
+            frame_indices=tuple(best["frame_indices"]),
+            reprojection_rmse_px=float(best["reprojection_rmse_px"]),
+            max_reprojection_error_px=float(best["max_reprojection_error_px"]),
+            candidate_count=candidate_count,
+            selected_bounce_time_s=float(best["bounce_time_s"]),
+            effective_accel_z_mps2=float(best["accel_z_mps2"]),
+            notes=(
+                "best fit reprojects cleanly but places the ball outside the physical "
+                f"bounds ({', '.join(implausible)}); reprojection cannot see this error",
+            ),
+        )
+
     return BounceArcReconstruction(
         status="ran",
         samples=tuple(best["samples"]),
@@ -211,6 +248,18 @@ def reconstruct_bounce_arcs_from_image_track(
         effective_accel_z_mps2=float(best["accel_z_mps2"]),
         notes=("fit calibrated two-arc bounce model from image observations",),
     )
+
+
+def _implausible_sample_violations(
+    samples: Iterable[BallSample3D],
+    bounds: BallPlausibilityBounds | None,
+) -> list[str]:
+    """Distinct physical-bound violations across the reconstructed samples."""
+
+    found: set[str] = set()
+    for sample in samples:
+        found.update(position_violations((sample.x, sample.y, sample.z), bounds))
+    return sorted(found)
 
 
 def _scaled_calibration(

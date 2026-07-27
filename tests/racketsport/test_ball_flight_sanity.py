@@ -7,13 +7,42 @@ from threed.racketsport.ball_flight_sanity import apply_flight_sanity_demotions,
 
 
 def test_flight_sanity_leaves_clean_parabola_untouched() -> None:
-    artifact = _artifact_from_motion(lambda t: (6.0 * t, 0.25 * t, 0.6 + 4.2 * t - 0.5 * 9.80665 * t * t))
+    # Stays above the ground plane for the whole 1.0 s window: at t=1.0 this
+    # is z = 0.6 + 4.4 - 4.903 = +0.097 m.
+    artifact = _artifact_from_motion(lambda t: (6.0 * t, 0.25 * t, 0.6 + 4.4 * t - 0.5 * 9.80665 * t * t))
 
     report = evaluate_ball_flight_sanity(artifact)
 
     assert report["summary"]["failed_segment_count"] == 0
     assert report["summary"]["demoted_frame_count"] == 0
+    assert report["summary"]["implausible_frame_count"] == 0
+    assert report["summary"]["absurd_frame_count"] == 0
     assert all(item["demote"] is False for item in report["frames"])
+
+
+def test_flight_sanity_demotes_kinematically_clean_parabola_that_ends_underground() -> None:
+    # Same shape, 0.2 m/s slower off the bounce: kinematically it is a perfect
+    # parabola and every segment-scoped check passes, but its final sample sits
+    # at z = -0.103 m. Only a bound that looks at where the ball actually is
+    # can see that.
+    artifact = _artifact_from_motion(lambda t: (6.0 * t, 0.25 * t, 0.6 + 4.2 * t - 0.5 * 9.80665 * t * t))
+
+    report = evaluate_ball_flight_sanity(artifact)
+
+    assert report["summary"]["failed_segment_count"] == 0
+    assert report["summary"]["implausible_frame_count"] == 1
+    assert report["summary"]["absurd_frame_count"] == 0
+    demoted = [item for item in report["frames"] if item["demote"] is True]
+    assert [item["frame"] for item in demoted] == [30]
+    assert demoted[0]["reasons"] == ["below_ground_plane"]
+
+    gated = apply_flight_sanity_demotions(artifact, report)
+
+    # Demoted, not suppressed: 10 cm of ground penetration is inside this
+    # project's measured calibration plane residual, so the position is kept.
+    assert gated["frames"][30]["world_xyz"] is not None
+    assert gated["frames"][30]["band"] == "arc_weak"
+    assert gated["frames"][30]["depth_unvalidated"] is True
 
 
 def test_flight_sanity_demotes_segment_with_multiple_vertical_reversals() -> None:
@@ -53,12 +82,18 @@ def test_flight_sanity_flags_only_outside_court_volume_frames_from_solver_config
 
     report = evaluate_ball_flight_sanity(artifact)
 
-    assert report["schema_version"] == 2
+    assert report["schema_version"] == 3
     assert report["policy"]["suppresses_world_xyz_on_court_volume_failure"] is True
+    assert report["policy"]["suppresses_world_xyz_on_absurd_position"] is True
+    assert report["policy"]["depth_unvalidated"] is True
     assert report["policy"]["world_xyz_replacement_source"] == "bvp_anchor_fallback_or_null"
     assert "does_not_create_or_adjust_world_xyz" not in report["policy"]
     assert report["frames"][10]["demote"] is True
-    assert report["frames"][10]["reasons"] == ["outside_court_volume"]
+    # Both the segment-scoped court-volume check and the independent
+    # whole-track plausibility sweep flag the same frame, under their own names.
+    assert report["frames"][10]["reasons"] == ["outside_court_footprint", "outside_court_volume"]
+    assert report["frames"][10]["plausibility_violations"] == ["outside_court_footprint"]
+    assert report["frames"][10]["plausibility_absurd"] is False
     assert report["frames"][9]["demote"] is False
     assert "outside_court_volume" in report["segments"][0]["reasons"]
     assert report["config"]["court_sport"] == "pickleball"

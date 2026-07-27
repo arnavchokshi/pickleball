@@ -30,6 +30,7 @@ from threed.racketsport.ball_joint_anchor_search import (
 )
 from threed.racketsport.ball_bounce_candidates import BounceCandidateConfig, write_bounce_candidate_payload
 from threed.racketsport.ball_flight_sanity import apply_flight_sanity_demotions, evaluate_ball_flight_sanity
+from threed.racketsport.ball_position_plausibility import segment_physical_sanity_violations
 from threed.racketsport.ball_ransac_arc_gate import write_ransac_arc_filtered_ball_track
 from threed.racketsport.ball_ukf_fallback import (
     RecoveryPolicyV2Config,
@@ -59,6 +60,9 @@ BALL_ARC_RENDER_ARTIFACT_TYPE = "racketsport_ball_arc_render"
 BALL_ARC_RENDER_SOURCE = "parametric_ball_arc_render_v1"
 MPS_TO_MPH = 2.2369362920544
 BRIDGE_CONFIDENCE = 0.2
+# Below the 0.45 threshold that `_render_segment_samples` uses to band a
+# sample `arc_weak`. Physically impossible segments are pinned under it.
+WEAK_BAND_CONFIDENCE_CEILING = 0.44
 
 
 FROZEN_ROW22_CHAIN_CONFIGS: dict[str, dict[str, Any]] = {
@@ -1420,6 +1424,10 @@ def _segment_confidence(segment: Mapping[str, Any], flight_report: Mapping[str, 
         base = 0.38
     else:
         base = 0.92
+    # Reprojection RMSE and inlier share are 2D-consistency penalties: a fit
+    # that does not explain its own pixels really is bad, in the image plane.
+    # Neither carries depth information, so neither is allowed to lift this
+    # confidence past the physical-plausibility cap applied at the end.
     rmse = _float_or_none(segment.get("reprojection_rmse_px"))
     if rmse is not None:
         base *= max(0.35, min(1.0, 1.0 - (rmse / 48.0)))
@@ -1435,7 +1443,12 @@ def _segment_confidence(segment: Mapping[str, Any], flight_report: Mapping[str, 
     physical = segment.get("physical_sanity")
     if isinstance(physical, Mapping) and physical.get("violation") is True:
         base *= 0.50
-    return max(0.05, min(0.98, base))
+    base = max(0.05, min(0.98, base))
+    # Hard cap: a physically impossible segment stays inside the weak band no
+    # matter how cleanly it reprojects.
+    if segment_physical_sanity_violations(physical):
+        base = min(base, WEAK_BAND_CONFIDENCE_CEILING)
+    return base
 
 
 def _physics_from_arc_artifact(artifact: Mapping[str, Any]) -> PhysicsParameters:
