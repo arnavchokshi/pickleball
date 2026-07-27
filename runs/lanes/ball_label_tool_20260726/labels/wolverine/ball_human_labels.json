@@ -8,7 +8,7 @@
       "max_m": 0.611554,
       "median_m": 0.126773,
       "method": "pixel_ray_world -> intersect_ray_z(z=0) on the calibration's own reviewed correspondences, compared to their known world positions",
-      "note": "This is the court-plane accuracy floor a perfect bounce click still inherits from this clip's calibration. Bounce label sigma is floored at the median.",
+      "note": "This is the court-plane accuracy floor a perfect bounce click still inherits from this clip's calibration. Bounce anchor sigma is floored at the median.",
       "p95_m": 0.373934,
       "point_count": 15
     },
@@ -1176,18 +1176,76 @@
         -9.077023,
         1.733697
       ],
-      "sigma_along_ray_m": 0.175016,
+      "sigma_along_ray_m": 0.207882,
       "sigma_perp_m": 0.013001,
       "sigma_xyz_m": [
-        0.060224,
-        0.161557,
-        0.035229
+        0.071102,
+        0.191869,
+        0.041036
       ],
       "timestamp_s": 9.633333,
-      "uncertainty_basis": "bounce solved by ray-plane intersection at z=0.0371 m; click sensitivity 0.066 m at +-2 px, solver anchor sigma 0.101 m, calibration plane residual floor 0.127 m",
+      "uncertainty_basis": "ray-plane bounce anchor at z=0.0371 m, depth 9.04 m; pixel +-2 px -> 0.064 m along / 0.012 m across; sub-frame timing at 30 fps -> +0.178 m systematic overshoot away from the camera (+-0.120 m); calibration plane residual floor 0.127 m. Anisotropy along/across = 1.2x. Systematic offset +0.178 m along the ray is reported separately as a bias, not folded into this sigma.",
       "world_xyz_m": [
         -1.822796,
         -0.732818,
+        0.0371
+      ]
+    },
+    {
+      "accuracy_tier": "plane_solved",
+      "depth_along_ray_m": 9.6475,
+      "depth_source": "ray_plane_intersection",
+      "frame": 299,
+      "human_confidence": "high",
+      "is_ground_truth_candidate": true,
+      "kind": "bounce",
+      "label_id": "f000299",
+      "near_player": null,
+      "notes": "",
+      "origin": "prefill_corrected",
+      "pixel_xy": [
+        497.9,
+        455.9
+      ],
+      "prefill": {
+        "band": "arc_weak",
+        "delta_m": 0.255395,
+        "delta_px": 2.279,
+        "not_ground_truth": true,
+        "pixel_xy": [
+          498.26,
+          458.15
+        ],
+        "sigma_m": 1.999835,
+        "source": "ball_track_arc_solved.json",
+        "world_xyz_m": [
+          -1.613232,
+          -0.426087,
+          0.067692
+        ]
+      },
+      "ray_direction_unit": [
+        0.346731,
+        0.921331,
+        -0.175859
+      ],
+      "ray_origin_m": [
+        -4.869814,
+        -9.077023,
+        1.733697
+      ],
+      "sigma_along_ray_m": 0.215809,
+      "sigma_perp_m": 0.01387,
+      "sigma_xyz_m": [
+        0.07595,
+        0.198905,
+        0.040333
+      ],
+      "timestamp_s": 9.966667,
+      "uncertainty_basis": "ray-plane bounce anchor at z=0.0371 m, depth 9.65 m; pixel +-2 px -> 0.074 m along / 0.013 m across; sub-frame timing at 30 fps -> +0.190 m systematic overshoot away from the camera (+-0.128 m); calibration plane residual floor 0.127 m. Anisotropy along/across = 1.3x. Systematic offset +0.190 m along the ray is reported separately as a bias, not folded into this sigma.",
+      "world_xyz_m": [
+        -1.52473,
+        -0.188478,
         0.0371
       ]
     }
@@ -1244,36 +1302,36 @@
   },
   "summary": {
     "by_accuracy_tier": {
-      "plane_solved": 7,
+      "plane_solved": 8,
       "player_referenced": 5,
       "unreferenced_estimate": 7
     },
     "by_depth_source": {
       "human_drag": 12,
       "interpolated_arc": 0,
-      "ray_plane_intersection": 7
+      "ray_plane_intersection": 8
     },
     "by_human_confidence": {
-      "high": 19,
+      "high": 20,
       "low": 0,
       "medium": 0
     },
     "by_kind": {
-      "bounce": 7,
+      "bounce": 8,
       "free_flight": 7,
       "near_player": 5
     },
     "by_origin": {
       "fresh": 0,
       "prefill_confirmed": 0,
-      "prefill_corrected": 19
+      "prefill_corrected": 20
     },
-    "frame_coverage_fraction": 0.063333,
-    "ground_truth_candidate_count": 7,
-    "label_count": 19,
+    "frame_coverage_fraction": 0.066667,
+    "ground_truth_candidate_count": 8,
+    "label_count": 20,
     "labeled_frame_span": [
       12,
-      289
+      299
     ]
   },
   "verified_ground_truth": false,
