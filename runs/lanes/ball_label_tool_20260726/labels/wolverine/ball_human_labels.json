@@ -808,6 +808,64 @@
       ]
     },
     {
+      "accuracy_tier": "unreferenced_estimate",
+      "depth_along_ray_m": 11.35,
+      "depth_source": "human_drag",
+      "frame": 194,
+      "human_confidence": "high",
+      "is_ground_truth_candidate": false,
+      "kind": "free_flight",
+      "label_id": "f000194",
+      "near_player": null,
+      "notes": "",
+      "origin": "prefill_corrected",
+      "pixel_xy": [
+        761.4,
+        169.2
+      ],
+      "prefill": {
+        "band": "arc_weak",
+        "delta_m": 5.574577,
+        "delta_px": 525.649,
+        "not_ground_truth": true,
+        "pixel_xy": [
+          322.92,
+          -120.7
+        ],
+        "sigma_m": 0.18,
+        "source": "ball_track_arc_solved.json",
+        "world_xyz_m": [
+          -0.587862,
+          5.222383,
+          4.488223
+        ]
+      },
+      "ray_direction_unit": [
+        0.523307,
+        0.852071,
+        0.011149
+      ],
+      "ray_origin_m": [
+        -4.869814,
+        -9.077023,
+        1.733697
+      ],
+      "sigma_along_ray_m": 2.0,
+      "sigma_perp_m": 0.016317,
+      "sigma_xyz_m": [
+        1.046706,
+        1.704164,
+        0.02763
+      ],
+      "timestamp_s": 6.466667,
+      "uncertainty_basis": "unreferenced human depth estimate; prior 2 m along the camera ray. No geometric or tracked-object constraint fixes depth here. Do not treat as ground truth.",
+      "world_xyz_m": [
+        1.069717,
+        0.593988,
+        1.860238
+      ]
+    },
+    {
       "accuracy_tier": "player_referenced",
       "depth_along_ray_m": 8.4967,
       "depth_source": "human_drag",
@@ -1304,31 +1362,31 @@
     "by_accuracy_tier": {
       "plane_solved": 8,
       "player_referenced": 5,
-      "unreferenced_estimate": 7
+      "unreferenced_estimate": 8
     },
     "by_depth_source": {
-      "human_drag": 12,
+      "human_drag": 13,
       "interpolated_arc": 0,
       "ray_plane_intersection": 8
     },
     "by_human_confidence": {
-      "high": 20,
+      "high": 21,
       "low": 0,
       "medium": 0
     },
     "by_kind": {
       "bounce": 8,
-      "free_flight": 7,
+      "free_flight": 8,
       "near_player": 5
     },
     "by_origin": {
       "fresh": 0,
       "prefill_confirmed": 0,
-      "prefill_corrected": 20
+      "prefill_corrected": 21
     },
-    "frame_coverage_fraction": 0.066667,
+    "frame_coverage_fraction": 0.07,
     "ground_truth_candidate_count": 8,
-    "label_count": 20,
+    "label_count": 21,
     "labeled_frame_span": [
       12,
       299
