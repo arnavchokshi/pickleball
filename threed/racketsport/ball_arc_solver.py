@@ -601,7 +601,10 @@ class SubFrameBounceTiming:
             "frame_pixel_xy": [_round(value, 4) for value in self.frame_pixel_xy],
             "displacement_px": _round(self.displacement_px, 4),
             "max_local_step_px": _round(self.max_local_step_px, 4),
-            "fit_rms_px": _round(self.fit_rms_px, 4),
+            # NaN when the fit never ran; emit null rather than a non-JSON NaN.
+            "fit_rms_px": (
+                _round(self.fit_rms_px, 4) if math.isfinite(self.fit_rms_px) else None
+            ),
             "velocity_jump_px_s": _round(self.velocity_jump_px_s, 4),
             "timing_sd_s": _round(self.timing_sd_s, 9),
             "unrefined_timing_sd_s": _round(self.unrefined_timing_sd_s, 9),
@@ -664,7 +667,9 @@ def refine_bounce_contact_time(
     order = max(1, int(branch_order))
     per_branch = max(order + 1, int(branch_samples))
 
-    def rejected(status: str, *, timing_sd: float | None = None) -> SubFrameBounceTiming:
+    def rejected(status: str) -> SubFrameBounceTiming:
+        """A refusal that ran no fit: the marked frame, unmoved, with a reason."""
+
         unrefined = interval / (2.0 * math.sqrt(3.0)) if interval > 0.0 else 0.0
         return SubFrameBounceTiming(
             frame=int(frame),
@@ -678,7 +683,7 @@ def refine_bounce_contact_time(
             fit_rms_px=float("nan"),
             velocity_jump_px_s=0.0,
             velocity_scale_px_s=0.0,
-            timing_sd_s=unrefined if timing_sd is None else timing_sd,
+            timing_sd_s=unrefined,
             unrefined_timing_sd_s=unrefined,
             frame_interval_s=interval,
             observations_before=0,
