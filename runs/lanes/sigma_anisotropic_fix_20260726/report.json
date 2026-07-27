@@ -1,0 +1,612 @@
+{
+  "lane": "sigma_anisotropic_fix_20260726",
+  "date": "2026-07-26",
+  "branch": "fix-sigma-20260726",
+  "base_commit": "f29145a",
+  "verified_status_for_pickleball": 0,
+  "claim_type": "correctness_fix_not_accuracy_improvement",
+  "headline": "The bounce anchor is no more accurate than it was. The uncertainty it reports was wrong in three ways and is now materially less wrong; the reported sigma is LARGER, i.e. it claims LESS confidence than before, which is the correct outcome.",
+  "defect": {
+    "optimistic_on_depth": "measured RMS 1.65-2.97x the reported sigma; 29-47% coverage vs 68.3%",
+    "conservative_in_image_plane": "0.36-0.88x; 78-97% coverage",
+    "biased": "+0.068 to +0.124 m systematically away from the camera; a zero-mean sigma cannot express this",
+    "consumed_isotropically": "ball_arc_solver.py:2357 divided all three world components by one scalar",
+    "omitted_calibration_floor": "measured 0.101 m outdoor / 0.127 m wolverine / 0.232 m indoor",
+    "non_radius_agnostic": "_ray_plane_pixel_sigma was called with the module constant BALL_RADIUS_M, not the caller's ball_radius_m"
+  },
+  "dataset": {
+    "name": "TT3D evaluation set (cogsys-tuebingen/tt3d), CVPR 2025 CVSports",
+    "commit": "a2ef524ea0400262d6808db6cacf4a0b90bd0ad7",
+    "sport": "table tennis, NOT pickleball",
+    "integrity": "all 977 files match runs/lanes/tt3d_external_validation_20260726/data_manifest.sha256",
+    "license_constraint": "upstream repo has NO LICENSE file; internal validation only, never train, never ship",
+    "scored_bounces_per_view_condition": 136
+  },
+  "model_inputs": {
+    "tt3d_measured_bounce_physics": {
+      "vertical_speed_mps": 1.94,
+      "horizontal_speed_mps": 5.1,
+      "speed_cv": 0.3,
+      "provenance": "measured from TT3D ground truth; a physical property of table tennis supplied as model INPUT, not a parameter fitted to the error being predicted"
+    },
+    "library_defaults_pickleball": {
+      "vertical_speed_mps": 4.0,
+      "horizontal_speed_mps": 8.0,
+      "speed_cv": 0.3,
+      "pixel_sigma_px": 1.5,
+      "provenance": "priors, NOT measured against pickleball ground truth"
+    }
+  },
+  "per_view": {
+    "back/no_noise": {
+      "n": 136,
+      "before": {
+        "sigma_m": 0.056637216978960556,
+        "depth_rms_m": 0.14691505182210776,
+        "depth_rms_ratio": 2.5939666469961504,
+        "depth_coverage": 0.38235294117647056,
+        "depth_bias_m": 0.10826376294520344,
+        "image_rms_m": 0.02014444683904775,
+        "image_rms_ratio": 0.35567508280872906,
+        "image_coverage": 0.9742647058823529
+      },
+      "after_measured_physics": {
+        "sigma_along_ray_m": 0.09467653700811962,
+        "sigma_perp_m": 0.05085695497465037,
+        "anisotropy": 1.8616241781544158,
+        "bias_along_ray_m": 0.11127777241648547,
+        "depth_rms_ratio_bias_corrected": 1.0377769931634306,
+        "depth_coverage_bias_corrected": 0.6838235294117647,
+        "depth_residual_bias_m": -0.0014078224794780109,
+        "depth_rms_ratio_bias_reported_only": 1.551757768764906,
+        "depth_coverage_bias_reported_only": 0.5588235294117647,
+        "image_rms_ratio": 0.3961001371216335,
+        "image_coverage": 0.9558823529411765
+      },
+      "after_library_pickleball_defaults": {
+        "sigma_along_ray_m": 0.17289090590554174,
+        "sigma_perp_m": 0.08489252731899377,
+        "bias_along_ray_m": 0.22943870601337207,
+        "depth_rms_ratio_bias_corrected": 0.8837807334322587,
+        "depth_coverage_bias_corrected": 0.6102941176470589,
+        "depth_residual_bias_m": -0.1178632173118717,
+        "image_rms_ratio": 0.23729352247168464,
+        "image_coverage": 1.0
+      }
+    },
+    "back/noise": {
+      "n": 136,
+      "before": {
+        "sigma_m": 0.05663407539661992,
+        "depth_rms_m": 0.15447791649892845,
+        "depth_rms_ratio": 2.7276496599809965,
+        "depth_coverage": 0.29411764705882354,
+        "depth_bias_m": 0.10699934723413264,
+        "image_rms_m": 0.02232489042301226,
+        "image_rms_ratio": 0.39419537207355326,
+        "image_coverage": 0.9705882352941176
+      },
+      "after_measured_physics": {
+        "sigma_along_ray_m": 0.09466477469347576,
+        "sigma_perp_m": 0.05085685017907644,
+        "anisotropy": 1.8613967314165831,
+        "bias_along_ray_m": 0.11126361991163844,
+        "depth_rms_ratio_bias_corrected": 1.164161726068954,
+        "depth_coverage_bias_corrected": 0.6397058823529411,
+        "depth_residual_bias_m": -0.002666791858841088,
+        "depth_rms_ratio_bias_reported_only": 1.6318415904873536,
+        "depth_coverage_bias_reported_only": 0.47058823529411764,
+        "image_rms_ratio": 0.43897509075772806,
+        "image_coverage": 0.9448529411764706
+      },
+      "after_library_pickleball_defaults": {
+        "sigma_along_ray_m": 0.17287097907218907,
+        "sigma_perp_m": 0.08489260298809961,
+        "bias_along_ray_m": 0.22940952559100708,
+        "depth_rms_ratio_bias_corrected": 0.9338550353428978,
+        "depth_coverage_bias_corrected": 0.6470588235294118,
+        "depth_residual_bias_m": -0.11911640347302974,
+        "image_rms_ratio": 0.26297804092709703,
+        "image_coverage": 1.0
+      }
+    },
+    "side/no_noise": {
+      "n": 136,
+      "before": {
+        "sigma_m": 0.05170209985101239,
+        "depth_rms_m": 0.08556289773050346,
+        "depth_rms_ratio": 1.6549211342878958,
+        "depth_coverage": 0.47058823529411764,
+        "depth_bias_m": 0.06772299156447711,
+        "image_rms_m": 0.04525241537862912,
+        "image_rms_ratio": 0.8752529492811891,
+        "image_coverage": 0.7904411764705883
+      },
+      "after_measured_physics": {
+        "sigma_along_ray_m": 0.06582619322209052,
+        "sigma_perp_m": 0.05122200316826302,
+        "anisotropy": 1.2851155587541763,
+        "bias_along_ray_m": 0.07031215778480344,
+        "depth_rms_ratio_bias_corrected": 0.7792222855854947,
+        "depth_coverage_bias_corrected": 0.8602941176470589,
+        "depth_residual_bias_m": -0.002748835379274775,
+        "depth_rms_ratio_bias_reported_only": 1.2998305620047543,
+        "depth_coverage_bias_reported_only": 0.5735294117647058,
+        "image_rms_ratio": 0.8834565729492468,
+        "image_coverage": 0.7867647058823529
+      },
+      "after_library_pickleball_defaults": {
+        "sigma_along_ray_m": 0.11903617680549952,
+        "sigma_perp_m": 0.08577285144817651,
+        "bias_along_ray_m": 0.14497352120578028,
+        "depth_rms_ratio_bias_corrected": 0.7772511449132348,
+        "depth_coverage_bias_corrected": 0.7132352941176471,
+        "depth_residual_bias_m": -0.07757974440202162,
+        "image_rms_ratio": 0.5275843651527707,
+        "image_coverage": 0.9264705882352942
+      }
+    },
+    "side/noise": {
+      "n": 136,
+      "before": {
+        "sigma_m": 0.051704312834945115,
+        "depth_rms_m": 0.09140196750604133,
+        "depth_rms_ratio": 1.7677822698818653,
+        "depth_coverage": 0.41911764705882354,
+        "depth_bias_m": 0.07026838259588862,
+        "image_rms_m": 0.04574682368740255,
+        "image_rms_ratio": 0.8847777134847422,
+        "image_coverage": 0.7794117647058824
+      },
+      "after_measured_physics": {
+        "sigma_along_ray_m": 0.06582756586934024,
+        "sigma_perp_m": 0.051222812665757164,
+        "anisotropy": 1.2851220470629576,
+        "bias_along_ray_m": 0.07038208438741442,
+        "depth_rms_ratio_bias_corrected": 0.8704929939795936,
+        "depth_coverage_bias_corrected": 0.7647058823529411,
+        "depth_residual_bias_m": -0.0002421972577401972,
+        "depth_rms_ratio_bias_reported_only": 1.3885059594556965,
+        "depth_coverage_bias_reported_only": 0.5073529411764706,
+        "image_rms_ratio": 0.8930947229687105,
+        "image_coverage": 0.7757352941176471
+      },
+      "after_library_pickleball_defaults": {
+        "sigma_along_ray_m": 0.11912123505966637,
+        "sigma_perp_m": 0.08577213164904582,
+        "bias_along_ray_m": 0.14511769976786476,
+        "depth_rms_ratio_bias_corrected": 0.7884318113481031,
+        "depth_coverage_bias_corrected": 0.7647058823529411,
+        "depth_residual_bias_m": -0.07511425627757284,
+        "image_rms_ratio": 0.5333529994868849,
+        "image_coverage": 0.9227941176470589
+      }
+    },
+    "oblique/no_noise": {
+      "n": 136,
+      "before": {
+        "sigma_m": 0.05488359643109193,
+        "depth_rms_m": 0.1587017871796802,
+        "depth_rms_ratio": 2.8916069189987437,
+        "depth_coverage": 0.33088235294117646,
+        "depth_bias_m": 0.12357722944374927,
+        "image_rms_m": 0.04083480000211968,
+        "image_rms_ratio": 0.7440255861036557,
+        "image_coverage": 0.8272058823529411
+      },
+      "after_measured_physics": {
+        "sigma_along_ray_m": 0.09673157758519482,
+        "sigma_perp_m": 0.05052023499958463,
+        "anisotropy": 1.914709573025346,
+        "bias_along_ray_m": 0.11816181475376324,
+        "depth_rms_ratio_bias_corrected": 1.0020278838806307,
+        "depth_coverage_bias_corrected": 0.7205882352941176,
+        "depth_residual_bias_m": 0.004219768515400653,
+        "depth_rms_ratio_bias_reported_only": 1.6406409482974273,
+        "depth_coverage_bias_reported_only": 0.4632352941176471,
+        "image_rms_ratio": 0.808286026429913,
+        "image_coverage": 0.8014705882352942
+      },
+      "after_library_pickleball_defaults": {
+        "sigma_along_ray_m": 0.1806239542936366,
+        "sigma_perp_m": 0.08462723914991516,
+        "bias_along_ray_m": 0.243632607739718,
+        "depth_rms_ratio_bias_corrected": 0.8625284954006008,
+        "depth_coverage_bias_corrected": 0.6176470588235294,
+        "depth_residual_bias_m": -0.1225206281404747,
+        "image_rms_ratio": 0.48252548957412866,
+        "image_coverage": 0.9522058823529411
+      }
+    },
+    "oblique/noise": {
+      "n": 136,
+      "before": {
+        "sigma_m": 0.054764794464243316,
+        "depth_rms_m": 0.16260484430515187,
+        "depth_rms_ratio": 2.9691491750474626,
+        "depth_coverage": 0.3014705882352941,
+        "depth_bias_m": 0.11880001275635278,
+        "image_rms_m": 0.041334941835291586,
+        "image_rms_ratio": 0.7547721531627355,
+        "image_coverage": 0.8272058823529411
+      },
+      "after_measured_physics": {
+        "sigma_along_ray_m": 0.09643821525169922,
+        "sigma_perp_m": 0.05052172515597775,
+        "anisotropy": 1.9088464408917483,
+        "bias_along_ray_m": 0.11807538475647092,
+        "depth_rms_ratio_bias_corrected": 1.120467497786489,
+        "depth_coverage_bias_corrected": 0.6544117647058824,
+        "depth_residual_bias_m": -0.00042364158895743425,
+        "depth_rms_ratio_bias_reported_only": 1.6861038321868653,
+        "depth_coverage_bias_reported_only": 0.49264705882352944,
+        "image_rms_ratio": 0.8181617256274716,
+        "image_coverage": 0.8014705882352942
+      },
+      "after_library_pickleball_defaults": {
+        "sigma_along_ray_m": 0.18040431639096732,
+        "sigma_perp_m": 0.08463185473754786,
+        "bias_along_ray_m": 0.24345440155973386,
+        "depth_rms_ratio_bias_corrected": 0.9204923414411859,
+        "depth_coverage_bias_corrected": 0.6102941176470589,
+        "depth_residual_bias_m": -0.12702195496593635,
+        "image_rms_ratio": 0.48840879079721844,
+        "image_coverage": 0.9485294117647058
+      }
+    }
+  },
+  "summary_ranges": {
+    "before_depth_rms_ratio": {
+      "min": 1.6549211342878958,
+      "max": 2.9691491750474626
+    },
+    "before_depth_coverage": {
+      "min": 0.29411764705882354,
+      "max": 0.47058823529411764
+    },
+    "before_image_rms_ratio": {
+      "min": 0.35567508280872906,
+      "max": 0.8847777134847422
+    },
+    "before_image_coverage": {
+      "min": 0.7794117647058824,
+      "max": 0.9742647058823529
+    },
+    "before_depth_bias_m": {
+      "min": 0.06772299156447711,
+      "max": 0.12357722944374927
+    },
+    "after_depth_rms_ratio_bias_corrected": {
+      "min": 0.7792222855854947,
+      "max": 1.164161726068954
+    },
+    "after_depth_coverage_bias_corrected": {
+      "min": 0.6397058823529411,
+      "max": 0.8602941176470589
+    },
+    "after_image_rms_ratio": {
+      "min": 0.3961001371216335,
+      "max": 0.8930947229687105
+    },
+    "after_image_coverage": {
+      "min": 0.7757352941176471,
+      "max": 0.9558823529411765
+    },
+    "after_depth_residual_bias_m": {
+      "min": -0.002748835379274775,
+      "max": 0.004219768515400653
+    },
+    "after_depth_rms_ratio_bias_reported_only": {
+      "min": 1.2998305620047543,
+      "max": 1.6861038321868653
+    },
+    "after_depth_coverage_bias_reported_only": {
+      "min": 0.4632352941176471,
+      "max": 0.5735294117647058
+    }
+  },
+  "coverage_criterion_note": "rms_ratio ~ 1.0 and coverage ~ 0.683 cannot both hold unless the error is Gaussian. The dominant bounce-anchor term is sub-frame timing, which is uniform; a uniform error at rms_ratio 1.0 gives coverage 0.577, not 0.683. Both are reported rather than picking the flattering one.",
+  "owner_labels": {
+    "wolverine": {
+      "path": "runs/lanes/ball_label_tool_20260726/labels/wolverine/ball_human_labels.json (owner-made, UNCOMMITTED in the main worktree)",
+      "label_count": 19,
+      "bounce_labels_with_prefill": 7,
+      "rows": [
+        {
+          "id": "f000012",
+          "frame": 12,
+          "err_total": 0.3160151214894631,
+          "err_along": 0.31254910379285433,
+          "err_perp": 0.04667563313211405,
+          "claimed_sigma": 0.180536,
+          "old_solver_sigma": 0.11919398643329357,
+          "new_along": 0.2663120913783526,
+          "new_perp": 0.1672481301246197,
+          "bias": 0.2753256318448067,
+          "band": "anchored_measured"
+        },
+        {
+          "id": "f000025",
+          "frame": 25,
+          "err_total": 0.2760746859203147,
+          "err_along": -0.27451308584507716,
+          "err_perp": 0.02932231071750141,
+          "claimed_sigma": 0.180536,
+          "old_solver_sigma": 0.14051903338579735,
+          "new_along": 0.31924075558312476,
+          "new_perp": 0.16726393760914227,
+          "bias": 0.34030113962837033,
+          "band": "anchored_measured"
+        },
+        {
+          "id": "f000104",
+          "frame": 104,
+          "err_total": 24.752715737405808,
+          "err_along": 0.085870118152602,
+          "err_perp": 24.752566790125535,
+          "claimed_sigma": 0.196641,
+          "old_solver_sigma": 0.09596733823481787,
+          "new_along": 0.15511056038382207,
+          "new_perp": 0.1761427782942712,
+          "bias": 0.07934048063858173,
+          "band": "arc_weak"
+        },
+        {
+          "id": "f000157",
+          "frame": 157,
+          "err_total": 0.37598478914711436,
+          "err_along": 0.156655798607198,
+          "err_perp": 0.34179456173663886,
+          "claimed_sigma": 0.18,
+          "old_solver_sigma": 0.1308514977927195,
+          "new_along": 0.29028358852098346,
+          "new_perp": 0.1674028666330187,
+          "bias": 0.30062635750407374,
+          "band": "arc_weak"
+        },
+        {
+          "id": "f000217",
+          "frame": 217,
+          "err_total": 1.572223533071554,
+          "err_along": 1.5685091567210672,
+          "err_perp": 0.10800862570261374,
+          "claimed_sigma": 0.182439,
+          "old_solver_sigma": 0.12178794012214347,
+          "new_along": 0.2687279617047084,
+          "new_perp": 0.16737906043667686,
+          "bias": 0.27481775867878816,
+          "band": "arc_weak"
+        },
+        {
+          "id": "f000272",
+          "frame": 272,
+          "err_total": 0.6624201963512285,
+          "err_along": -0.6618589119853221,
+          "err_perp": 0.027263476660282154,
+          "claimed_sigma": 0.182308,
+          "old_solver_sigma": 0.10232587466536026,
+          "new_along": 0.2083952051342225,
+          "new_perp": 0.16805151516563108,
+          "bias": 0.1865746289730722,
+          "band": "arc_weak"
+        },
+        {
+          "id": "f000289",
+          "frame": 289,
+          "err_total": 0.20999472649569087,
+          "err_along": 0.20465787658579673,
+          "err_perp": 0.04704188248138887,
+          "claimed_sigma": 0.18262,
+          "old_solver_sigma": 0.10124896442950082,
+          "new_along": 0.20344250325966512,
+          "new_perp": 0.16823708050357555,
+          "bias": 0.17768314046637287,
+          "band": "arc_weak"
+        }
+      ],
+      "verdict": "INCONCLUSIVE -- see REPORT.md. Only 2 of the 7 bounce prefills came from the anchored_measured band; the other 5 are arc_weak, including a 24.75 m error that no anchor-uncertainty model can or should cover."
+    },
+    "outdoor_demo": {
+      "path": "runs/lanes/ball_label_tool_20260726/demo_labels/outdoor_webcam/ball_human_labels.json",
+      "bounce_labels": 4,
+      "rows": [
+        {
+          "id": "f000158",
+          "frame": 158,
+          "tool_sigma": 0.197288,
+          "old_solver_sigma": 0.11122398657372956,
+          "new_along": 0.20490792244201575,
+          "new_perp": 0.13534640158773026,
+          "bias": 0.19769930152548132,
+          "prefill_delta": 0.021285,
+          "prefill_sigma": 0.180367
+        },
+        {
+          "id": "f000167",
+          "frame": 167,
+          "tool_sigma": 0.177508,
+          "old_solver_sigma": 0.10434710359762862,
+          "new_along": 0.18711379131030478,
+          "new_perp": 0.1353549318251012,
+          "bias": 0.1765582080013613,
+          "prefill_delta": 0.015674,
+          "prefill_sigma": 0.180367
+        },
+        {
+          "id": "f000202",
+          "frame": 202,
+          "tool_sigma": 0.165036,
+          "old_solver_sigma": 0.100151468707087,
+          "new_along": 0.17460651414306397,
+          "new_perp": 0.13549379057303765,
+          "bias": 0.1600185301251798,
+          "prefill_delta": null,
+          "prefill_sigma": null
+        },
+        {
+          "id": "f000221",
+          "frame": 221,
+          "tool_sigma": 0.18682,
+          "old_solver_sigma": 0.1075529141288472,
+          "new_along": 0.19568652799067293,
+          "new_perp": 0.1353329784945591,
+          "bias": 0.18701640697585692,
+          "prefill_delta": 0.033928,
+          "prefill_sigma": 0.184695
+        }
+      ]
+    }
+  },
+  "residual_limitations": [
+    "The bias term needs a per-sport bounce vertical-speed prior. It is the one input the model cannot derive, and it scales the bias linearly. TT3D's measured 1.94 m/s vs the pickleball default 4.0 m/s changes the modelled bias by ~2x.",
+    "sigma_perp assumes an UNKNOWN ball heading, so it splits the sub-frame horizontal travel isotropically in the plane. In the TT3D back view the ball flies along the camera axis and has almost no cross-track motion, so sigma_perp is over-stated there by ~2.5x (image RMS ratio 0.40-0.44). Modelling heading would need the ball velocity, which the uncertainty function is not given.",
+    "The ray-frame covariance is assumed DIAGONAL. Any real along/across correlation is unmodelled.",
+    "The calibration residual floor could not be exercised by TT3D at all: TT3D's calibration is synthetic and exact (mapping reproduces its own pixels to 5.4e-13 px), so the floor term was 0 there. It is evidenced only by our own clips' measured floors and by the outdoor label set.",
+    "Bias correction of the anchor POSITION is off by default. In that default posture the depth RMS ratio is 1.30-1.69 and coverage 0.46-0.57 -- better than the 1.65-2.97 / 0.29-0.47 before, but the bias still dominates until a consumer acts on it.",
+    "External validation is table tennis. VERIFIED=0 for pickleball."
+  ],
+  "counterfactual_corrected_but_isotropic": {
+    "why": "Answers 'why not just make the old scalar bigger?'. Depth becomes honest, and the image plane becomes over-conservative: a different lie in the opposite direction.",
+    "per_view": {
+      "back/no_noise": {
+        "sigma_m": 0.09467653700811962,
+        "depth_rms_ratio": 1.0377769931634306,
+        "depth_coverage": 0.6838235294117647,
+        "image_rms_ratio": 0.21277126810542435,
+        "image_coverage": 1.0
+      },
+      "back/noise": {
+        "sigma_m": 0.09466477469347576,
+        "depth_rms_ratio": 1.164161726068954,
+        "depth_coverage": 0.6397058823529411,
+        "image_rms_ratio": 0.23583102051740137,
+        "image_coverage": 1.0
+      },
+      "side/no_noise": {
+        "sigma_m": 0.06582619322209052,
+        "depth_rms_ratio": 0.7792222855854947,
+        "depth_coverage": 0.8602941176470589,
+        "image_rms_ratio": 0.6874530208051424,
+        "image_coverage": 0.8676470588235294
+      },
+      "side/noise": {
+        "sigma_m": 0.06582756586934024,
+        "depth_rms_ratio": 0.8704929939795936,
+        "depth_coverage": 0.7647058823529411,
+        "image_rms_ratio": 0.6949493435349632,
+        "image_coverage": 0.8713235294117647
+      },
+      "oblique/no_noise": {
+        "sigma_m": 0.09673157758519482,
+        "depth_rms_ratio": 1.0020278838806307,
+        "depth_coverage": 0.7205882352941176,
+        "image_rms_ratio": 0.42214549810432966,
+        "image_coverage": 0.9632352941176471
+      },
+      "oblique/noise": {
+        "sigma_m": 0.09643821525169922,
+        "depth_rms_ratio": 1.120467497786489,
+        "depth_coverage": 0.6544117647058824,
+        "image_rms_ratio": 0.4286157901969601,
+        "image_coverage": 0.9632352941176471
+      }
+    },
+    "image_rms_ratio_range": {
+      "min": 0.21277126810542435,
+      "max": 0.6949493435349632
+    },
+    "image_coverage_range": {
+      "min": 0.8676470588235294,
+      "max": 1.0
+    },
+    "compare_ray_aligned_image_rms_ratio_range": {
+      "min": 0.3961001371216335,
+      "max": 0.8930947229687105
+    }
+  },
+  "test_evidence": {
+    "interpreter": "/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python (3.14.6)",
+    "collection_prerequisite": "4 gitignored best_stack-referenced artifacts symlinked from the main checkout; without them 29 test modules fail at import, at base as well. No tracked file touched.",
+    "focused_new_behaviour": {
+      "command": "pytest tests/racketsport/test_ball_arc_solver.py -p no:randomly -k 'uncertainty or ray_scaled or ray_whitening or calibration_residual or radius_agnostic or isotropic or bounce_uncertainty'",
+      "result": "9 passed, 57 deselected",
+      "exit_code": 0
+    },
+    "blast_radius": {
+      "command": "pytest tests/racketsport tests/tt3d -q -p no:randomly -k 'ball or arc or solver or label or anchor or sigma or uncertain or tt3d or world or trust'",
+      "head": {
+        "commit": "203cc79",
+        "failed": 39,
+        "passed": 1612,
+        "skipped": 4,
+        "deselected": 3442,
+        "seconds": 495.0,
+        "exit_code": 1
+      },
+      "base": {
+        "commit": "f29145a",
+        "failed": 38,
+        "passed": 1605,
+        "skipped": 4,
+        "deselected": 3442,
+        "seconds": 276.25,
+        "exit_code": 1
+      },
+      "only_failing_at_base": [],
+      "only_failing_at_head": [
+        "tests/racketsport/test_ball_arc_solver.py::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds"
+      ],
+      "head_only_failure_attribution": {
+        "verdict": "pre-existing flake, not caused by this change",
+        "cause": "SEGMENT_WALL_CLOCK_BUDGET_S = 5.0 s; this fixture sits on the boundary",
+        "run_alone_base": "2 of 3 runs failed",
+        "run_alone_head": "4 of 4 runs failed",
+        "budget_lifted_to_600s_head": {
+          "status": "ran",
+          "segment0": "fit_bvp_fallback",
+          "times_s": [
+            5.55,
+            5.05,
+            5.06
+          ],
+          "median_s": 5.06
+        },
+        "budget_lifted_to_600s_base": {
+          "status": "ran",
+          "segment0": "fit_bvp_fallback",
+          "times_s": [
+            5.71,
+            5.36,
+            6.47
+          ],
+          "median_s": 5.71
+        },
+        "conclusion": "identical asserted statuses on both sides and HEAD is FASTER than base",
+        "corroboration": "an earlier 3-file focused batch under a different interpreter gave 2 failed / 118 passed / 1 skipped exit 1 with byte-identical failure names at base and HEAD, this test failing at base too"
+      },
+      "count_reconciliation": "8 tests added; wolverine_seg6 moved passed->failed: 1605-1+8=1612, 38+1=39"
+    },
+    "structure_checks": {
+      "list_scaffold_tools": {
+        "head_exit": 0,
+        "base_exit": 0
+      },
+      "audit_dead_code": {
+        "head_exit": 1,
+        "base_exit": 1,
+        "python_sources": 646,
+        "unknown_python_sources": 2,
+        "unknowns": [
+          "scripts/tt3d/run_tt3d_validation.py",
+          "scripts/tt3d/tt3d_adapter.py"
+        ],
+        "verdict": "identical at base; pre-existing"
+      },
+      "audit_storage_policy": {
+        "head_exit": 1,
+        "base_exit": 1,
+        "verdict": "pre-existing and UNCHANGED: every violation list is identical at base and HEAD; the only payload difference is directory_usage_bytes.runs 310451152 -> 310503368, this lane's own report.json"
+      }
+    }
+  }
+}

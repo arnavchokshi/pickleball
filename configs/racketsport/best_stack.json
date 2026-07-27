@@ -1384,6 +1384,51 @@
     "accuracy_promotion_passed": false
    },
    "notes": "PENDING, default OFF, preview, do_not_promote=true. Wiring this stage is INTEGRATION progress, not capability progress: the product does not have fusion. The refiner correctly ABSTAINS on the only full-artifact clip available (that clip's ball 3D has ~51% of world points off-court, so contacts are refused) -- refusal is correct behavior, not a defect. No downstream stage reads one_world_v1.json and it is never product authority. Raw observations stay immutable; the refinement is a separate artifact with its own provenance and covariance. VERIFIED=0."
+  },
+  "ball.bounce_anchor_uncertainty": {
+   "stage": "ball_arc",
+   "selection": "ray-aligned anisotropic bounce-anchor uncertainty with an explicit, unapplied bias",
+   "value": {
+    "model": "ray_aligned_anisotropic_biased",
+    "uncertainty_schema_version": 1,
+    "sigma_form": "sigma_along_ray_m + sigma_perp_m + ray_direction_unit",
+    "residual_weighting": "ray_frame_diagonal_whitening",
+    "bias_reported": true,
+    "apply_bias_correction_default": false,
+    "calibration_residual_floor": "measured from the calibration's own reviewed correspondences",
+    "pixel_sigma_px": 1.5,
+    "bounce_vertical_speed_mps": 4.0,
+    "bounce_horizontal_speed_mps": 8.0,
+    "bounce_speed_cv": 0.3,
+    "trust_band": "preview",
+    "do_not_promote": true
+   },
+   "status": "PENDING",
+   "trust_band": "preview",
+   "do_not_promote": true,
+   "gate": {
+    "name": "ball_bounce_anchor_sigma_pickleball_calibration",
+    "metric_key": "depth_rms_ratio_and_coverage_vs_pickleball_ground_truth",
+    "bar": "on PICKLEBALL clips with independent 3D ground truth: depth RMS ratio in [0.8, 1.25], image-plane RMS ratio in [0.8, 1.25], and residual along-ray bias |mean| <= 0.02 m",
+    "evidence_path": "runs/lanes/sigma_anisotropic_fix_20260726/REPORT.md"
+   },
+   "provenance": {
+    "lane": "sigma_anisotropic_fix_20260726",
+    "commit": "worktree",
+    "date": "2026-07-26",
+    "evidence_paths": [
+     "runs/lanes/sigma_anisotropic_fix_20260726/REPORT.md",
+     "runs/lanes/sigma_anisotropic_fix_20260726/report.json",
+     "runs/lanes/tt3d_external_validation_20260726/sigma_calibration.json"
+    ]
+   },
+   "proven_against": {
+    "card": "TT3D external validation: 136 scored bounces x 3 views x 2 noise conditions",
+    "sport": "table tennis, NOT pickleball",
+    "pickleball_gate_passed": false,
+    "verified_status_for_pickleball": 0
+   },
+   "notes": "The anisotropic sigma and the ray-frame residual weighting are wired and default-on. They are a CORRECTNESS fix to a mis-stated uncertainty, not an accuracy improvement: the ball is no more accurate than before, we have stopped overstating how accurate it is, and the reported sigma is now LARGER. What is PENDING is apply_bias_correction, which would MOVE the anchor and is therefore off by default; the systematic away-from-camera overshoot is reported for consumers to act on, never silently applied. The bias magnitude depends on a per-sport bounce vertical-speed prior, and the defaults here are pickleball priors that have NOT been measured against pickleball ground truth. External validation is table tennis only. VERIFIED=0 for pickleball."
   }
  },
  "selection_constant_coverage": {

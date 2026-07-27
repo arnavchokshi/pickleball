@@ -32,10 +32,13 @@ from typing import Any, Mapping, Sequence
 
 from .ball_arc_solver import (
     BALL_RADIUS_M,
+    DEFAULT_BOUNCE_SPEED_CV,
     _project_world_point,
-    anchor_sigma_for_bounce,
+    anchor_uncertainty_for_bounce,
+    calibration_plane_residuals,
     intersect_ray_z,
     pixel_ray_world,
+    sigma_xyz_from_ray,
 )
 
 Vec3 = tuple[float, float, float]
@@ -243,53 +246,49 @@ def bounce_depth_sigma_m(
     *,
     click_sigma_px: float = DEFAULT_CLICK_SIGMA_PX,
     plane_residual_m: float | None = None,
+    fps: float | None = None,
+    vertical_speed_mps: float | None = None,
+    horizontal_speed_mps: float | None = None,
 ) -> tuple[float, str]:
     """Along-ray sigma for a bounce, and a plain-English basis string.
 
-    Two terms, both real:
-
-    1. **Click sensitivity.** Move the click one sigma vertically and see how
-       far the ray-plane intersection slides. Near the horizon a grazing ray
-       makes this enormous, which is the honest answer -- a bounce clicked at
-       the far baseline of an oblique view really is badly conditioned.
-    2. **Calibration floor.** The perfect click still lands wherever this
-       clip's calibration says it lands. ``plane_residual_m`` is measured
-       from the calibration's own reviewed correspondences
-       (:func:`calibration_plane_residuals`) and is usually the larger term.
+    This now delegates to the production solver's
+    :func:`~.ball_arc_solver.anchor_uncertainty_for_bounce`, which owns the one
+    ray-aligned uncertainty model shared by the labeller and the solver.  The
+    terms it accounts for are click sensitivity (a grazing ray near the horizon
+    really is badly conditioned), the sub-frame timing overshoot, and this
+    clip's measured calibration plane residual -- previously this function
+    combined a *separately* computed click term with a solver sigma that
+    double-counted part of it and omitted the calibration floor.
     """
 
     ray = ray_for_pixel(calibration, pixel_xy)
-    base_depth = ray.depth_at_height(BALL_RADIUS_M)
-    base_point = ray.at_depth(base_depth)
+    ray.depth_at_height(BALL_RADIUS_M)  # raises GeometryError past the horizon
 
-    slides: list[float] = []
-    for delta in (-float(click_sigma_px), float(click_sigma_px)):
-        for axis in (0, 1):
-            nudged = list(pixel_xy)
-            nudged[axis] = float(nudged[axis]) + delta
-            try:
-                nudged_ray = ray_for_pixel(calibration, nudged)
-                nudged_point = nudged_ray.at_depth(nudged_ray.depth_at_height(BALL_RADIUS_M))
-            except GeometryError:
-                # The nudged ray no longer meets the court in front of the
-                # camera: the click is at or past the horizon.
-                slides.append(MAX_DEPTH_M)
-                continue
-            slides.append(math.dist(base_point, nudged_point))
-    click_term = max(slides) if slides else 0.0
-
-    solver_term = float(
-        anchor_sigma_for_bounce(calibration, pixel_xy, base_sigma_m=0.05)
+    kwargs: dict[str, Any] = {}
+    if vertical_speed_mps is not None:
+        kwargs["vertical_speed_mps"] = float(vertical_speed_mps)
+    if horizontal_speed_mps is not None:
+        kwargs["horizontal_speed_mps"] = float(horizontal_speed_mps)
+    uncertainty = anchor_uncertainty_for_bounce(
+        calibration,
+        pixel_xy,
+        base_sigma_m=0.05,
+        ball_radius_m=BALL_RADIUS_M,
+        pixel_sigma_px=float(click_sigma_px),
+        fps=fps,
+        calibration_residual_m=plane_residual_m,
+        **kwargs,
     )
+    if uncertainty is None:
+        raise GeometryError(
+            "this pixel has no usable ray-plane geometry; it cannot be a bounce"
+        )
     floor_term = float(plane_residual_m or 0.0)
-
-    sigma = math.sqrt(click_term**2 + solver_term**2 + floor_term**2)
-    sigma = max(sigma, floor_term, 0.01)
+    sigma = max(uncertainty.sigma_along_ray_m, floor_term, 0.01)
     basis = (
-        f"bounce solved by ray-plane intersection at z={BALL_RADIUS_M} m; "
-        f"click sensitivity {click_term:.3f} m at +-{click_sigma_px:g} px, "
-        f"solver anchor sigma {solver_term:.3f} m, "
-        f"calibration plane residual floor {floor_term:.3f} m"
+        f"{uncertainty.basis} Systematic offset {uncertainty.bias_along_ray_m:+.3f} m along "
+        f"the ray is reported separately as a bias, not folded into this sigma."
     )
     return sigma, basis
 
@@ -332,74 +331,10 @@ def free_flight_depth_sigma_m(
     return float(base_sigma_m), basis
 
 
-def sigma_xyz_from_ray(
-    direction: Sequence[float], *, sigma_along_m: float, sigma_perp_m: float
-) -> Vec3:
-    """Project along-ray and across-ray sigmas onto the world axes.
-
-    The error ellipsoid is a cigar: ``sigma_along`` down the line of sight,
-    ``sigma_perp`` isotropic across it. For unit direction ``d``, the variance
-    on axis ``i`` is ``sigma_along^2 * d_i^2 + sigma_perp^2 * (1 - d_i^2)``.
-    A ray straight down +y therefore puts all the depth error on y and leaves
-    x and z at the (small) click error, which is the whole reason monocular
-    ball 3D is hard.
-    """
-
-    along = float(sigma_along_m)
-    perp = float(sigma_perp_m)
-    unit = _normalize(direction)
-    out: list[float] = []
-    for axis in range(3):
-        component = unit[axis] * unit[axis]
-        variance = along * along * component + perp * perp * (1.0 - component)
-        out.append(max(1e-4, math.sqrt(max(0.0, variance))))
-    return (out[0], out[1], out[2])
-
-
-def calibration_plane_residuals(calibration: Mapping[str, Any]) -> dict[str, Any]:
-    """Measure this clip's bounce-accuracy floor from its own calibration.
-
-    The calibration stores the reviewed image/world correspondences it was fit
-    to. Pushing each of those pixels back through the exact bounce path
-    (``pixel_ray_world`` then ``intersect_ray_z`` at z=0) and comparing to the
-    known world point gives the real court-plane error a perfect click still
-    inherits. It is normally the dominant term in a bounce label's uncertainty
-    and it is measured, not assumed.
-    """
-
-    image_pts = calibration.get("image_pts")
-    world_pts = calibration.get("world_pts")
-    if not isinstance(image_pts, Sequence) or not isinstance(world_pts, Sequence):
-        return {
-            "available": False,
-            "reason": "calibration has no image_pts/world_pts correspondences",
-        }
-    errors: list[float] = []
-    for pixel, world in zip(image_pts, world_pts):
-        try:
-            origin, direction = pixel_ray_world(calibration, pixel)
-            solved = intersect_ray_z(origin, direction, 0.0)
-        except (ValueError, GeometryError):
-            continue
-        errors.append(math.dist((solved[0], solved[1]), (float(world[0]), float(world[1]))))
-    if not errors:
-        return {"available": False, "reason": "no correspondence could be back-projected"}
-    errors.sort()
-    return {
-        "available": True,
-        "method": (
-            "pixel_ray_world -> intersect_ray_z(z=0) on the calibration's own reviewed "
-            "correspondences, compared to their known world positions"
-        ),
-        "point_count": len(errors),
-        "median_m": round(_percentile(errors, 50.0), 6),
-        "p95_m": round(_percentile(errors, 95.0), 6),
-        "max_m": round(errors[-1], 6),
-        "note": (
-            "This is the court-plane accuracy floor a perfect bounce click still inherits "
-            "from this clip's calibration. Bounce label sigma is floored at the median."
-        ),
-    }
+# `sigma_xyz_from_ray` and `calibration_plane_residuals` are imported from
+# `ball_arc_solver` and re-exported here. They used to be duplicated in this
+# module; the solver and the labeller must agree on the ray-aligned convention
+# exactly, so there is now one definition and this module is a consumer of it.
 
 
 def interpolation_extra_sigma_m(span_s: float, speed_mps: float, physics: Mapping[str, Any]) -> float:
@@ -501,28 +436,6 @@ def ballistic_speed_mps(
 
 def _dot(a: Sequence[float], b: Sequence[float]) -> float:
     return float(a[0]) * float(b[0]) + float(a[1]) * float(b[1]) + float(a[2]) * float(b[2])
-
-
-def _normalize(vector: Sequence[float]) -> Vec3:
-    norm = math.sqrt(_dot(vector, vector))
-    if norm <= 0.0:
-        raise GeometryError("cannot normalize a zero-length direction")
-    return (float(vector[0]) / norm, float(vector[1]) / norm, float(vector[2]) / norm)
-
-
-def _percentile(sorted_values: Sequence[float], percentile: float) -> float:
-    if not sorted_values:
-        return 0.0
-    if len(sorted_values) == 1:
-        return float(sorted_values[0])
-    rank = (len(sorted_values) - 1) * (percentile / 100.0)
-    lower = math.floor(rank)
-    upper = math.ceil(rank)
-    if lower == upper:
-        return float(sorted_values[int(rank)])
-    return float(
-        sorted_values[lower] + (sorted_values[upper] - sorted_values[lower]) * (rank - lower)
-    )
 
 
 __all__ = [

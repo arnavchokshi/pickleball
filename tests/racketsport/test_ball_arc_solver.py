@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import random
 import subprocess
 import sys
 import time
@@ -3085,3 +3086,250 @@ def _skeleton_payload(samples: list[tuple[float, tuple[float, float, float]]], *
         "world_frame": "court_netcenter_z_up_m",
         "provenance": {},
     }
+
+
+# ---------------------------------------------------------------------------
+# Bounce-anchor uncertainty: anisotropic, calibration-floored, biased
+# ---------------------------------------------------------------------------
+
+
+def _grazing_calibration() -> dict:
+    """A court camera behind the baseline, looking nearly along the court.
+
+    This is the geometry the isotropic sigma got wrong: the ray meets the
+    bounce plane at a shallow angle, so depth along the ray is far worse
+    determined than anything across it.
+    """
+
+    return {
+        "intrinsics": {"fx": 1400.0, "fy": 1400.0, "cx": 960.0, "cy": 540.0},
+        "extrinsics": {
+            # Camera 20 m back and 4.5 m up, pitched down ~10 degrees.
+            "R": [
+                [1.0, 0.0, 0.0],
+                [0.0, math.sin(math.radians(10.0)), -math.cos(math.radians(10.0))],
+                [0.0, math.cos(math.radians(10.0)), math.sin(math.radians(10.0))],
+            ],
+            "t": [0.0, 4.5 * math.sin(math.radians(10.0)), 20.0],
+        },
+        "reprojection_error_px": {"median": 0.0, "p95": 0.0},
+        "image_size": [1920, 1080],
+    }
+
+
+def test_bounce_uncertainty_is_elongated_along_the_camera_ray() -> None:
+    calibration = _grazing_calibration()
+    xy = _project_world_pixel(calibration, (0.0, 4.0, BALL_RADIUS_M))
+
+    uncertainty = ball_arc_solver_module.anchor_uncertainty_for_bounce(
+        calibration, xy, base_sigma_m=0.05
+    )
+
+    assert uncertainty is not None
+    assert uncertainty.sigma_along_ray_m > uncertainty.sigma_perp_m, (
+        "a grazing bounce ray is far less certain in depth than across it; "
+        "a single isotropic scalar cannot say that"
+    )
+    # sigma_xyz must be the projection of the same ellipsoid, not a second convention.
+    expected = ball_arc_solver_module.sigma_xyz_from_ray(
+        uncertainty.ray_direction_unit,
+        sigma_along_m=uncertainty.sigma_along_ray_m,
+        sigma_perp_m=uncertainty.sigma_perp_m,
+    )
+    assert uncertainty.sigma_xyz_m == pytest.approx(expected, abs=1e-9)
+
+
+def test_bounce_uncertainty_reports_bias_away_from_camera_without_folding_it_in() -> None:
+    calibration = _grazing_calibration()
+    xy = _project_world_pixel(calibration, (0.0, 4.0, BALL_RADIUS_M))
+
+    uncertainty = ball_arc_solver_module.anchor_uncertainty_for_bounce(
+        calibration, xy, base_sigma_m=0.05, fps=30.0
+    )
+
+    assert uncertainty is not None
+    assert uncertainty.bias_along_ray_m > 0.0, (
+        "the bounce happens between samples, so the observed pixel shows the ball "
+        "above the plane and the ray-plane intersection overshoots AWAY from the camera"
+    )
+    # The bias vector must point away from the camera along the ray...
+    bias_vector = uncertainty.bias_vector_m()
+    assert ball_arc_solver_module._dot(bias_vector, uncertainty.ray_direction_unit) > 0.0
+    # ...and correcting must move the point back TOWARD the camera by exactly that much.
+    world = (0.0, 4.0, BALL_RADIUS_M)
+    corrected = uncertainty.bias_corrected_xyz(world)
+    assert math.dist(corrected, world) == pytest.approx(
+        abs(uncertainty.bias_along_ray_m), abs=1e-9
+    )
+    # A systematic offset is NOT random noise: zeroing the timing term must
+    # remove the bias entirely rather than leaving it inside sigma.
+    unbiased = ball_arc_solver_module.anchor_uncertainty_for_bounce(
+        calibration, xy, base_sigma_m=0.05, fps=30.0, vertical_speed_mps=0.0
+    )
+    assert unbiased is not None
+    assert unbiased.bias_along_ray_m == pytest.approx(0.0, abs=1e-12)
+    assert unbiased.sigma_along_ray_m < uncertainty.sigma_along_ray_m
+
+
+def test_bounce_uncertainty_includes_the_calibration_residual_floor() -> None:
+    calibration = _grazing_calibration()
+    xy = _project_world_pixel(calibration, (0.0, 4.0, BALL_RADIUS_M))
+
+    without = ball_arc_solver_module.anchor_uncertainty_for_bounce(
+        calibration, xy, base_sigma_m=0.05, calibration_residual_m=0.0
+    )
+    with_floor = ball_arc_solver_module.anchor_uncertainty_for_bounce(
+        calibration, xy, base_sigma_m=0.05, calibration_residual_m=0.127
+    )
+
+    assert without is not None and with_floor is not None
+    assert with_floor.sigma_perp_m > without.sigma_perp_m
+    assert with_floor.sigma_along_ray_m > without.sigma_along_ray_m
+    assert with_floor.terms["calibration_residual_m"] == pytest.approx(0.127)
+    assert with_floor.terms["calibration_residual_provenance"] == "supplied"
+
+
+def test_calibration_residual_floor_is_measured_from_the_calibration_itself() -> None:
+    calibration = _projection_calibration()
+    measured = ball_arc_solver_module.calibration_plane_residuals(calibration)
+    assert measured["available"] is True
+    assert measured["point_count"] == 4
+
+    bare = dict(calibration)
+    bare.pop("image_pts")
+    bare.pop("world_pts")
+    assert ball_arc_solver_module.calibration_plane_residuals(bare)["available"] is False
+
+
+def test_bounce_uncertainty_is_radius_agnostic() -> None:
+    """The old `_ray_plane_pixel_sigma` call ignored the caller's ball radius."""
+
+    calibration = _grazing_calibration()
+    xy = _project_world_pixel(calibration, (0.0, 4.0, 0.02))
+
+    pickleball = ball_arc_solver_module.anchor_uncertainty_for_bounce(
+        calibration, xy, base_sigma_m=0.05, ball_radius_m=BALL_RADIUS_M
+    )
+    table_tennis = ball_arc_solver_module.anchor_uncertainty_for_bounce(
+        calibration, xy, base_sigma_m=0.05, ball_radius_m=0.02
+    )
+
+    assert pickleball is not None and table_tennis is not None
+    assert pickleball.depth_m != pytest.approx(table_tennis.depth_m, abs=1e-6), (
+        "a different bounce plane must produce a different ray-plane intersection"
+    )
+
+
+def test_ray_scaled_vec_whitens_each_axis_by_its_own_sigma() -> None:
+    ray = (0.0, 1.0, 0.0)
+    along = ball_arc_solver_module._ray_scaled_vec((0.0, 0.4, 0.0), ray, 0.4, 0.02)
+    assert math.hypot(*along) == pytest.approx(1.0, abs=1e-9)
+
+    across = ball_arc_solver_module._ray_scaled_vec((0.02, 0.0, 0.0), ray, 0.4, 0.02)
+    assert math.hypot(*across) == pytest.approx(1.0, abs=1e-9)
+
+    # The isotropic form cannot do this: one scalar makes the same across-ray
+    # offset look 20x smaller than it is.
+    isotropic = ball_arc_solver_module._scaled_vec((0.02, 0.0, 0.0), 0.4)
+    assert math.hypot(*isotropic) == pytest.approx(0.05, abs=1e-9)
+
+
+def test_anchor_residual_falls_back_to_isotropic_without_an_attached_uncertainty() -> None:
+    config = BallArcSolverConfig()
+    plain = _anchor("no-uncertainty", "bounce", 0.0, (0.0, 1.0, BALL_RADIUS_M), sigma_m=0.2)
+    delta = (0.1, -0.05, 0.02)
+
+    assert ball_arc_solver_module._anchor_ray_weighting(plain, config) is None
+    assert ball_arc_solver_module._anchor_scaled_vec(
+        delta, plain, config, 0.2
+    ) == pytest.approx(ball_arc_solver_module._scaled_vec(delta, 0.2))
+
+
+def test_build_bounce_anchor_attaches_uncertainty_and_leaves_position_unbiased() -> None:
+    calibration = _grazing_calibration()
+    world = (0.0, 4.0, BALL_RADIUS_M)
+    xy = _project_world_pixel(calibration, world)
+
+    anchor = build_bounce_anchor(
+        {"frame": 30, "t": 1.0, "fps": 30.0, "xy": list(xy)},
+        calibration,
+        ball_radius_m=BALL_RADIUS_M,
+    )
+
+    payload = anchor.details["uncertainty"]
+    assert payload["schema_version"] == ball_arc_solver_module.BOUNCE_UNCERTAINTY_SCHEMA_VERSION
+    assert payload["sigma_along_ray_m"] > payload["sigma_perp_m"]
+    assert payload["bias_along_ray_m"] > 0.0
+    assert anchor.details["bias_correction_applied"] is False
+    assert anchor.world_xyz == pytest.approx(world, abs=1e-6), (
+        "reporting a bias must not silently move the anchor"
+    )
+    assert ball_arc_solver_module._anchor_ray_weighting(anchor, BallArcSolverConfig()) is not None
+
+    corrected = build_bounce_anchor(
+        {"frame": 30, "t": 1.0, "fps": 30.0, "xy": list(xy)},
+        calibration,
+        ball_radius_m=BALL_RADIUS_M,
+        apply_bias_correction=True,
+    )
+    assert corrected.details["bias_correction_applied"] is True
+    assert math.dist(corrected.world_xyz, world) == pytest.approx(
+        payload["bias_along_ray_m"], abs=1e-5
+    )
+
+
+def test_ray_whitening_reduces_exactly_to_the_isotropic_form() -> None:
+    """The anisotropic weighting must be a strict generalisation, not a rewrite.
+
+    When sigma_along == sigma_perp the ray frame carries no information, and the
+    new residual has to equal the old one to floating-point precision. That is
+    what makes the change safe for every anchor with no ray attached.
+    """
+
+    random.seed(20260726)
+    worst_isotropic = 0.0
+    worst_whitening = 0.0
+    for _ in range(500):
+        ray = ball_arc_solver_module._normalize(
+            (random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))
+        )
+        if ball_arc_solver_module._norm(ray) < 0.5:
+            continue
+        delta = (random.uniform(-1, 1), random.uniform(-1, 1), random.uniform(-1, 1))
+        sigma = random.uniform(0.01, 1.0)
+        isotropic = ball_arc_solver_module._scaled_vec(delta, sigma)
+        ray_form = ball_arc_solver_module._ray_scaled_vec(delta, ray, sigma, sigma)
+        worst_isotropic = max(
+            worst_isotropic, abs(math.hypot(*ray_form) - math.hypot(*isotropic))
+        )
+        # ...and for unequal sigmas it must be the exact ray-frame whitening.
+        along_sigma = random.uniform(0.01, 1.0)
+        perp_sigma = random.uniform(0.01, 1.0)
+        got = math.hypot(
+            *ball_arc_solver_module._ray_scaled_vec(delta, ray, along_sigma, perp_sigma)
+        )
+        along = ball_arc_solver_module._dot(delta, ray)
+        perpendicular = ball_arc_solver_module._sub(
+            delta, ball_arc_solver_module._scale(ray, along)
+        )
+        expected = math.sqrt(
+            (along / along_sigma) ** 2
+            + (ball_arc_solver_module._norm(perpendicular) / perp_sigma) ** 2
+        )
+        worst_whitening = max(worst_whitening, abs(got - expected))
+    assert worst_isotropic < 1e-12, worst_isotropic
+    assert worst_whitening < 1e-9, worst_whitening
+
+
+def _project_world_pixel(calibration: dict, world_xyz: tuple[float, float, float]) -> tuple[float, float]:
+    rotation = calibration["extrinsics"]["R"]
+    translation = calibration["extrinsics"]["t"]
+    intrinsics = calibration["intrinsics"]
+    cam = [
+        sum(rotation[i][j] * world_xyz[j] for j in range(3)) + translation[i]
+        for i in range(3)
+    ]
+    return (
+        intrinsics["fx"] * cam[0] / cam[2] + intrinsics["cx"],
+        intrinsics["fy"] * cam[1] / cam[2] + intrinsics["cy"],
+    )
