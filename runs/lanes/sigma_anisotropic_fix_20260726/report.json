@@ -523,5 +523,90 @@
       "min": 0.3961001371216335,
       "max": 0.8930947229687105
     }
+  },
+  "test_evidence": {
+    "interpreter": "/Users/arnavchokshi/Desktop/pickleball/.venv/bin/python (3.14.6)",
+    "collection_prerequisite": "4 gitignored best_stack-referenced artifacts symlinked from the main checkout; without them 29 test modules fail at import, at base as well. No tracked file touched.",
+    "focused_new_behaviour": {
+      "command": "pytest tests/racketsport/test_ball_arc_solver.py -p no:randomly -k 'uncertainty or ray_scaled or ray_whitening or calibration_residual or radius_agnostic or isotropic or bounce_uncertainty'",
+      "result": "9 passed, 57 deselected",
+      "exit_code": 0
+    },
+    "blast_radius": {
+      "command": "pytest tests/racketsport tests/tt3d -q -p no:randomly -k 'ball or arc or solver or label or anchor or sigma or uncertain or tt3d or world or trust'",
+      "head": {
+        "commit": "203cc79",
+        "failed": 39,
+        "passed": 1612,
+        "skipped": 4,
+        "deselected": 3442,
+        "seconds": 495.0,
+        "exit_code": 1
+      },
+      "base": {
+        "commit": "f29145a",
+        "failed": 38,
+        "passed": 1605,
+        "skipped": 4,
+        "deselected": 3442,
+        "seconds": 276.25,
+        "exit_code": 1
+      },
+      "only_failing_at_base": [],
+      "only_failing_at_head": [
+        "tests/racketsport/test_ball_arc_solver.py::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds"
+      ],
+      "head_only_failure_attribution": {
+        "verdict": "pre-existing flake, not caused by this change",
+        "cause": "SEGMENT_WALL_CLOCK_BUDGET_S = 5.0 s; this fixture sits on the boundary",
+        "run_alone_base": "2 of 3 runs failed",
+        "run_alone_head": "4 of 4 runs failed",
+        "budget_lifted_to_600s_head": {
+          "status": "ran",
+          "segment0": "fit_bvp_fallback",
+          "times_s": [
+            5.55,
+            5.05,
+            5.06
+          ],
+          "median_s": 5.06
+        },
+        "budget_lifted_to_600s_base": {
+          "status": "ran",
+          "segment0": "fit_bvp_fallback",
+          "times_s": [
+            5.71,
+            5.36,
+            6.47
+          ],
+          "median_s": 5.71
+        },
+        "conclusion": "identical asserted statuses on both sides and HEAD is FASTER than base",
+        "corroboration": "an earlier 3-file focused batch under a different interpreter gave 2 failed / 118 passed / 1 skipped exit 1 with byte-identical failure names at base and HEAD, this test failing at base too"
+      },
+      "count_reconciliation": "8 tests added; wolverine_seg6 moved passed->failed: 1605-1+8=1612, 38+1=39"
+    },
+    "structure_checks": {
+      "list_scaffold_tools": {
+        "head_exit": 0,
+        "base_exit": 0
+      },
+      "audit_dead_code": {
+        "head_exit": 1,
+        "base_exit": 1,
+        "python_sources": 646,
+        "unknown_python_sources": 2,
+        "unknowns": [
+          "scripts/tt3d/run_tt3d_validation.py",
+          "scripts/tt3d/tt3d_adapter.py"
+        ],
+        "verdict": "identical at base; pre-existing"
+      },
+      "audit_storage_policy": {
+        "head_exit": 1,
+        "base_exit": 1,
+        "verdict": "pre-existing and UNCHANGED: every violation list is identical at base and HEAD; the only payload difference is directory_usage_bytes.runs 310451152 -> 310503368, this lane's own report.json"
+      }
+    }
   }
 }
