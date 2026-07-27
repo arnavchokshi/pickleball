@@ -283,6 +283,10 @@ def test_replay_viewer_manifest_links_optional_review_coaching_and_rally_artifac
         {"artifact_type": "racketsport_reviewed_ball_bounces", "status": "human_reviewed", "bounces": []},
     )
     coaching_facts = _write_json(run_dir / "coaching_card_facts.json", {"artifact_type": "racketsport_coaching_card_facts"})
+    coaching_comparison = _write_json(
+        run_dir / "coaching_comparison.json",
+        {"artifact_type": "racketsport_coaching_comparison"},
+    )
     rally_spans = _write_json(
         run_dir / "rally_spans.json",
         {"artifact_type": "racketsport_rally_spans", "not_ground_truth": True, "spans": []},
@@ -294,13 +298,38 @@ def test_replay_viewer_manifest_links_optional_review_coaching_and_rally_artifac
         virtual_world_path=virtual_world,
         reviewed_bounces_path=reviewed_bounces,
         coaching_card_facts_path=coaching_facts,
+        coaching_comparison_path=coaching_comparison,
         rally_spans_path=rally_spans,
         vite_allow_root=tmp_path,
     )
 
     assert manifest["reviewed_bounces_url"].endswith("/reviewed_ball_bounces.json")
     assert manifest["coaching_card_facts_url"].endswith("/coaching_card_facts.json")
+    assert manifest["coaching_comparison_url"].endswith("/coaching_comparison.json")
     assert manifest["rally_spans_url"].endswith("/rally_spans.json")
+    assert isinstance(ReplayViewerManifest.model_validate(manifest), ReplayViewerManifest)
+
+
+def test_replay_viewer_manifest_preserves_optional_coaching_comparison_url(tmp_path: Path) -> None:
+    out = tmp_path / "replay_viewer_manifest.json"
+    write_replay_viewer_manifest(
+        out,
+        {
+            "schema_version": 1,
+            "artifact_type": "racketsport_replay_viewer_manifest",
+            "clip": "clip_a",
+            "video_url": "source.mp4",
+            "virtual_world_url": "virtual_world.json",
+            "coaching_comparison_url": "derived/coaching_comparison.json",
+            "label_overlays": [],
+            "annotation_sources": [],
+            "notes": [],
+        },
+    )
+
+    payload = json.loads(out.read_text(encoding="utf-8"))
+    assert payload["coaching_comparison_url"] == "derived/coaching_comparison.json"
+    assert isinstance(validate_artifact_file("replay_viewer_manifest", out), ReplayViewerManifest)
 
 
 def test_replay_viewer_manifest_links_ball_arc_render_artifact(tmp_path: Path) -> None:

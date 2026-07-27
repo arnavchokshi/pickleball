@@ -2256,6 +2256,7 @@ class ReplayViewerManifest(StrictArtifact):
     ball_flight_sanity_url: str | None = None
     reviewed_bounces_url: str | None = None
     coaching_card_facts_url: str | None = None
+    coaching_comparison_url: str | None = None
     rally_spans_url: str | None = None
     court_evidence_url: str | None = None
     court_calibration_url: str | None = None

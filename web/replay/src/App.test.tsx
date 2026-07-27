@@ -170,6 +170,24 @@ describe("coachingFactsUrlFromSearch", () => {
   });
 });
 
+describe("coachingComparisonUrlFromSearch", () => {
+  it("prefers an explicit review override and otherwise uses the manifest pointer", () => {
+    const coachingComparisonUrlFromSearch = (AppModule as any).coachingComparisonUrlFromSearch;
+    expect(typeof coachingComparisonUrlFromSearch).toBe("function");
+    expect(
+      coachingComparisonUrlFromSearch("?comparison=/@fs/tmp/override/coaching_comparison.json", {
+        coaching_comparison_url: "/@fs/tmp/manifest/coaching_comparison.json",
+      }),
+    ).toBe("/@fs/tmp/override/coaching_comparison.json");
+    expect(
+      coachingComparisonUrlFromSearch("", {
+        coaching_comparison_url: "/@fs/tmp/manifest/coaching_comparison.json",
+      }),
+    ).toBe("/@fs/tmp/manifest/coaching_comparison.json");
+    expect(coachingComparisonUrlFromSearch("", null)).toBeNull();
+  });
+});
+
 describe("bodyMeshOpacityFromBlendWeight", () => {
   it("keeps solid mesh endpoints visible while still scaling by the body_mesh blend weight", () => {
     expect(bodyMeshOpacityFromBlendWeight({ blend_weight: 0 })).toBeGreaterThan(0.2);

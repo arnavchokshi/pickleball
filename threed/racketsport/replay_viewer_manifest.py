@@ -14,6 +14,7 @@ ARTIFACT_TYPE = "racketsport_replay_viewer_manifest"
 OPTIONAL_URL_FIELDS = {
     "reviewed_bounces_url",
     "coaching_card_facts_url",
+    "coaching_comparison_url",
     "rally_spans_url",
     "auto_bounce_candidates_url",
     "ball_bounce_candidates_url",
@@ -40,6 +41,7 @@ def build_replay_viewer_manifest(
     ball_flight_sanity_path: str | Path | None = None,
     reviewed_bounces_path: str | Path | None = None,
     coaching_card_facts_path: str | Path | None = None,
+    coaching_comparison_path: str | Path | None = None,
     rally_spans_path: str | Path | None = None,
     court_evidence_path: str | Path | None = None,
     court_calibration_path: str | Path | None = None,
@@ -75,6 +77,11 @@ def build_replay_viewer_manifest(
     ball_flight_sanity = _optional_existing_file(ball_flight_sanity_path, "ball_flight_sanity", allow_root=allow_root)
     reviewed_bounces = _optional_existing_file(reviewed_bounces_path, "reviewed_bounces", allow_root=allow_root)
     coaching_card_facts = _optional_existing_file(coaching_card_facts_path, "coaching_card_facts", allow_root=allow_root)
+    coaching_comparison = _optional_existing_file(
+        coaching_comparison_path,
+        "coaching_comparison",
+        allow_root=allow_root,
+    )
     rally_spans = _optional_existing_file(rally_spans_path, "rally_spans", allow_root=allow_root)
     court_evidence = _optional_existing_file(court_evidence_path, "court_evidence", allow_root=allow_root)
     court_calibration = _optional_existing_file(court_calibration_path, "court_calibration", allow_root=allow_root)
@@ -104,6 +111,7 @@ def build_replay_viewer_manifest(
         "ball_flight_sanity_url": _vite_file_url(ball_flight_sanity) if ball_flight_sanity is not None else None,
         "reviewed_bounces_url": _vite_file_url(reviewed_bounces) if reviewed_bounces is not None else None,
         "coaching_card_facts_url": _vite_file_url(coaching_card_facts) if coaching_card_facts is not None else None,
+        "coaching_comparison_url": _vite_file_url(coaching_comparison) if coaching_comparison is not None else None,
         "rally_spans_url": _vite_file_url(rally_spans) if rally_spans is not None else None,
         "court_evidence_url": _vite_file_url(court_evidence) if court_evidence is not None else None,
         "court_calibration_url": _vite_file_url(court_calibration) if court_calibration is not None else None,

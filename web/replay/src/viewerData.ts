@@ -86,6 +86,7 @@ export type ViewerManifest = {
   rally_spans_url?: string;
   rally_metrics_url?: string;
   coaching_card_facts_url?: string;
+  coaching_comparison_url?: string;
   contact_surfaces_url?: string;
   target_zones_url?: string;
   ghost_positions_url?: string;
@@ -843,6 +844,9 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
   if (value.coaching_card_facts_url !== null && value.coaching_card_facts_url !== undefined) {
     manifest.coaching_card_facts_url = readString(value.coaching_card_facts_url, "manifest.coaching_card_facts_url");
   }
+  if (value.coaching_comparison_url !== null && value.coaching_comparison_url !== undefined) {
+    manifest.coaching_comparison_url = readString(value.coaching_comparison_url, "manifest.coaching_comparison_url");
+  }
   if (value.rally_spans_url !== null && value.rally_spans_url !== undefined) {
     manifest.rally_spans_url = readString(value.rally_spans_url, "manifest.rally_spans_url");
   }
@@ -880,6 +884,7 @@ const MANIFEST_OPTIONAL_URL_KEYS = [
   "rally_spans_url",
   "rally_metrics_url",
   "coaching_card_facts_url",
+  "coaching_comparison_url",
   "contact_surfaces_url",
   "target_zones_url",
   "ghost_positions_url",

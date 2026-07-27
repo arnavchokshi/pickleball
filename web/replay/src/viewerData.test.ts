@@ -618,18 +618,35 @@ describe("viewer data contracts", () => {
 
   it("accepts an optional coaching-card facts manifest pointer without requiring old manifests to have it", () => {
     expect(parseViewerManifest(manifest).coaching_card_facts_url).toBeUndefined();
+    expect(parseViewerManifest(manifest).coaching_comparison_url).toBeUndefined();
     expect(
       parseViewerManifest({
         ...manifest,
         coaching_card_facts_url: "/@fs/tmp/clip_a/coaching_card_facts.json",
+        coaching_comparison_url: "derived/coaching_comparison.json",
         rally_metrics_url: "/@fs/tmp/clip_a/rally_metrics.json",
         rally_spans_url: "/@fs/tmp/clip_a/authoritative_rally_spans.json",
       }),
     ).toMatchObject({
       coaching_card_facts_url: "/@fs/tmp/clip_a/coaching_card_facts.json",
+      coaching_comparison_url: "derived/coaching_comparison.json",
       rally_metrics_url: "/@fs/tmp/clip_a/rally_metrics.json",
       rally_spans_url: "/@fs/tmp/clip_a/authoritative_rally_spans.json",
     });
+  });
+
+  it("resolves an optional coaching-comparison URL relative to its manifest", () => {
+    const resolved = resolveViewerManifestUrls(
+      parseViewerManifest({
+        ...manifest,
+        coaching_comparison_url: "derived/coaching_comparison.json",
+      }),
+      "https://cdn.example.com/runs/clip/replay_viewer_manifest.json",
+    );
+
+    expect(resolved.coaching_comparison_url).toBe(
+      "https://cdn.example.com/runs/clip/derived/coaching_comparison.json",
+    );
   });
 
   it("accepts optional shot-trails manifest pointers without requiring old manifests to have them", () => {

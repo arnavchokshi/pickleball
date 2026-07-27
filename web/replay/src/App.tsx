@@ -7,6 +7,13 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 import { activeReplayPointForTime, parseReplayScene, resolveReplaySceneAssetUrl, type ReplayScene } from "./replayScene";
 import { CourtMapPanel } from "./CourtMapPanel";
+import { CoachComparisonWorkspace } from "./coaching/CoachComparisonWorkspace";
+import {
+  bindCoachingComparisonToManifest,
+  parseCoachingComparison,
+  sha256Utf8,
+  type CoachingComparison,
+} from "./coaching/comparisonData";
 import {
   courtEvidenceSegments,
   parseCourtCalibrationEvidence,
@@ -345,6 +352,15 @@ export function coachingFactsUrlFromSearch(
   return manifest?.coaching_card_facts_url?.trim() || null;
 }
 
+export function coachingComparisonUrlFromSearch(
+  search: string,
+  manifest: Pick<ViewerManifest, "coaching_comparison_url"> | null,
+): string | null {
+  const explicit = new URLSearchParams(search).get("comparison");
+  if (explicit && explicit.trim()) return explicit.trim();
+  return manifest?.coaching_comparison_url?.trim() || null;
+}
+
 export function bodyMeshOpacityFromBlendWeight(
   frame: Pick<ActiveBodyMeshFrame["frame"], "blend_weight">,
   presenceOpacity = 1,
@@ -673,6 +689,7 @@ export default function App() {
   const [reviewedBounces, setReviewedBounces] = useState<ReviewedBounces | null>(null);
   const [rallySpans, setRallySpans] = useState<RallySpans | null>(null);
   const [coachingFacts, setCoachingFacts] = useState<CoachingCardFacts | null>(null);
+  const [coachingComparison, setCoachingComparison] = useState<CoachingComparison | null>(null);
   const [shots, setShots] = useState<RacketsportShots | null>(null);
   const [ballArcSolved, setBallArcSolved] = useState<BallArcSolved | null>(null);
   const [ballArcRender, setBallArcRender] = useState<BallArcRender | null>(null);
@@ -735,6 +752,16 @@ export default function App() {
   const fetchReplayJson = async (url: string): Promise<unknown> => {
     return fetchJsonWithManifestRelativeRecovery(url, recoveryManifestUrl, (input) => fetch(input), recordRecoveredAsset);
   };
+  const fetchReplayJsonText = async (url: string): Promise<string> => {
+    const response = await fetchWithManifestRelativeRecovery(
+      url,
+      recoveryManifestUrl,
+      (input) => fetch(input),
+      recordRecoveredAsset,
+      "json",
+    );
+    return response.text();
+  };
 
   useEffect(() => {
     const manifestUrl = manifestUrlFromSearch(window.location.search);
@@ -755,6 +782,7 @@ export default function App() {
       setReviewedBounces(null);
       setRallySpans(null);
       setCoachingFacts(null);
+      setCoachingComparison(null);
       setShots(null);
       setBallArcSolved(null);
       setBallArcRender(null);
@@ -774,10 +802,15 @@ export default function App() {
     let cancelled = false;
     async function load() {
       try {
-        const manifestPayload = resolveViewerManifestUrls(
-          parseViewerManifest(await fetchReplayJson(resolvedManifestUrl)),
-          resolvedManifestUrl,
-        );
+        const manifestText = await fetchReplayJsonText(resolvedManifestUrl);
+        const manifestSha256 = await sha256Utf8(manifestText);
+        let manifestJson: unknown;
+        try {
+          manifestJson = JSON.parse(manifestText) as unknown;
+        } catch {
+          throw new Error(`asset unreadable: ${resolvedManifestUrl} — the response was not valid JSON`);
+        }
+        const manifestPayload = resolveViewerManifestUrls(parseViewerManifest(manifestJson), resolvedManifestUrl);
         const worldPayload = parseVirtualWorld(await fetchReplayJson(manifestPayload.virtual_world_url));
         const optionalErrors: Record<string, string> = {};
         const recordOptionalError = (capability: string, error: unknown) => {
@@ -855,6 +888,19 @@ export default function App() {
         const coachingFactsPayload = coachingFactsUrl
           ? await loadOptionalArtifact("coaching facts", async () => parseCoachingCardFacts(await fetchReplayJson(coachingFactsUrl)), recordOptionalError)
           : null;
+        const coachingComparisonUrl = coachingComparisonUrlFromSearch(window.location.search, manifestPayload);
+        const coachingComparisonPayload = coachingComparisonUrl
+          ? await loadOptionalArtifact(
+              "coach comparison",
+              async () =>
+                bindCoachingComparisonToManifest(
+                  parseCoachingComparison(await fetchReplayJson(coachingComparisonUrl)),
+                  manifestPayload,
+                  manifestSha256,
+                ),
+              recordOptionalError,
+            )
+          : null;
         const shotsPayload = manifestPayload.shots_url
           ? await loadOptionalArtifact("shots", async () => parseShots(await fetchReplayJson(manifestPayload.shots_url!)), recordOptionalError)
           : null;
@@ -895,6 +941,7 @@ export default function App() {
         setReviewedBounces(reviewedBouncesPayload);
         setRallySpans(rallySpansPayload);
         setCoachingFacts(coachingFactsPayload);
+        setCoachingComparison(coachingComparisonPayload);
         setShots(shotsPayload);
         setBallArcSolved(ballArcSolvedPayload);
         setBallArcRender(ballArcRenderPayload);
@@ -1527,6 +1574,10 @@ export default function App() {
           </div>
           )}
         </section>
+      ) : null}
+
+      {replayLoaded && coachingComparison ? (
+        <CoachComparisonWorkspace comparison={coachingComparison} currentTime={currentTime} onSeek={seekTo} />
       ) : null}
 
       {replayLoaded ? (
