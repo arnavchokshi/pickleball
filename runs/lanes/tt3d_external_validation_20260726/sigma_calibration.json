@@ -36,6 +36,26 @@
           "p95_abs_m": 0.05661032494789869
         }
       },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.09467653700811962,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.0014078224794780109,
+          "rms_m": 0.09825313189941264,
+          "sigma_m_median": 0.09467653700811962,
+          "implied_sigma_over_reported": 1.0377769931634306,
+          "frac_within_1sigma": 0.6838235294117647,
+          "p95_abs_m": 0.20858414566383088
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.010739961232139028,
+          "rms_m": 0.02014444683904775,
+          "sigma_m_median": 0.09467653700811962,
+          "implied_sigma_over_reported": 0.21277126810542435,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.046034913051514255
+        }
+      },
       "ray_aligned__measured_physics": {
         "sigma_along_ray_m_median": 0.09467653700811962,
         "sigma_perp_m_median": 0.05085695497465037,
@@ -156,6 +176,26 @@
           "implied_sigma_over_reported": 0.4886938227227271,
           "frac_within_1sigma": 0.9411764705882353,
           "p95_abs_m": 0.05940743133066126
+        }
+      },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.09466477469347576,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.002666791858841088,
+          "rms_m": 0.11020510750508539,
+          "sigma_m_median": 0.09466477469347576,
+          "implied_sigma_over_reported": 1.164161726068954,
+          "frac_within_1sigma": 0.6397058823529411,
+          "p95_abs_m": 0.22715896201069752
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.011310389483246657,
+          "rms_m": 0.02232489042301226,
+          "sigma_m_median": 0.09466477469347576,
+          "implied_sigma_over_reported": 0.23583102051740137,
+          "frac_within_1sigma": 1.0,
+          "p95_abs_m": 0.051166846026411944
         }
       },
       "ray_aligned__measured_physics": {
@@ -280,6 +320,26 @@
           "p95_abs_m": 0.042156392455054634
         }
       },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.06582619322209052,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.002748835379274775,
+          "rms_m": 0.05129323673390977,
+          "sigma_m_median": 0.06582619322209052,
+          "implied_sigma_over_reported": 0.7792222855854947,
+          "frac_within_1sigma": 0.8602941176470589,
+          "p95_abs_m": 0.08406775142163668
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.007580382382660476,
+          "rms_m": 0.04525241537862911,
+          "sigma_m_median": 0.06582619322209052,
+          "implied_sigma_over_reported": 0.6874530208051424,
+          "frac_within_1sigma": 0.8676470588235294,
+          "p95_abs_m": 0.10388119895745566
+        }
+      },
       "ray_aligned__measured_physics": {
         "sigma_along_ray_m_median": 0.06582619322209052,
         "sigma_perp_m_median": 0.05122200316826302,
@@ -400,6 +460,26 @@
           "implied_sigma_over_reported": 0.5093149810569092,
           "frac_within_1sigma": 0.9558823529411765,
           "p95_abs_m": 0.049157418567446876
+        }
+      },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.06582756586934024,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.0002421972577401972,
+          "rms_m": 0.057302434899990894,
+          "sigma_m_median": 0.06582756586934024,
+          "implied_sigma_over_reported": 0.8704929939795936,
+          "frac_within_1sigma": 0.7647058823529411,
+          "p95_abs_m": 0.10538613660781679
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.008376401721185131,
+          "rms_m": 0.04574682368740255,
+          "sigma_m_median": 0.06582756586934024,
+          "implied_sigma_over_reported": 0.6949493435349632,
+          "frac_within_1sigma": 0.8713235294117647,
+          "p95_abs_m": 0.10118880865250379
         }
       },
       "ray_aligned__measured_physics": {
@@ -524,6 +604,26 @@
           "p95_abs_m": 0.056597563629433106
         }
       },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.09673157758519482,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": 0.004219768515400653,
+          "rms_m": 0.09692773799212781,
+          "sigma_m_median": 0.09673157758519482,
+          "implied_sigma_over_reported": 1.0020278838806307,
+          "frac_within_1sigma": 0.7205882352941176,
+          "p95_abs_m": 0.1979100455290716
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.008386208094625943,
+          "rms_m": 0.04083480000211968,
+          "sigma_m_median": 0.09673157758519482,
+          "implied_sigma_over_reported": 0.42214549810432966,
+          "frac_within_1sigma": 0.9632352941176471,
+          "p95_abs_m": 0.08249865128326107
+        }
+      },
       "ray_aligned__measured_physics": {
         "sigma_along_ray_m_median": 0.09673157758519482,
         "sigma_perp_m_median": 0.05052023499958463,
@@ -644,6 +744,26 @@
           "implied_sigma_over_reported": 0.5115999647761128,
           "frac_within_1sigma": 0.9485294117647058,
           "p95_abs_m": 0.05887526043172727
+        }
+      },
+      "corrected_but_still_isotropic": {
+        "reported_sigma_m_median": 0.09643821525169922,
+        "note": "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image plane becomes over-conservative: this is why two numbers are required.",
+        "depth_bias_corrected": {
+          "bias_m": -0.00042364158895743425,
+          "rms_m": 0.10805588573406626,
+          "sigma_m_median": 0.09643821525169922,
+          "implied_sigma_over_reported": 1.120467497786489,
+          "frac_within_1sigma": 0.6544117647058824,
+          "p95_abs_m": 0.20854517500826547
+        },
+        "image_plane_pooled": {
+          "bias_m": -0.007880370859800218,
+          "rms_m": 0.04133494183529159,
+          "sigma_m_median": 0.09643821525169922,
+          "implied_sigma_over_reported": 0.4286157901969601,
+          "frac_within_1sigma": 0.9632352941176471,
+          "p95_abs_m": 0.08504685385175838
         }
       },
       "ray_aligned__measured_physics": {

@@ -180,6 +180,22 @@ def analyse(view: TT3DView, sub: str) -> dict:
             "img2": _axis_stats(img2, legacy_sigma),
         },
     }
+    # Counterfactual: what a single scalar does even when it is sized CORRECTLY.
+    # The honest scalar is the worst axis, so score all three axes against it.
+    m_along = np.asarray(ray["measured_physics"]["along"])
+    m_perp = np.asarray(ray["measured_physics"]["perp"])
+    m_bias = np.asarray(ray["measured_physics"]["bias"])
+    worst = np.maximum(m_along, m_perp)
+    out["corrected_but_still_isotropic"] = {
+        "reported_sigma_m_median": float(np.median(worst)),
+        "note": (
+            "The corrected sigma consumed as ONE scalar. Depth becomes honest and the image "
+            "plane becomes over-conservative: this is why two numbers are required."
+        ),
+        "depth_bias_corrected": _axis_stats(depth - m_bias, worst),
+        "image_plane_pooled": _axis_stats(img, np.concatenate([worst, worst])),
+    }
+
     for key, arrays in ray.items():
         along = np.asarray(arrays["along"])
         perp = np.asarray(arrays["perp"])
@@ -232,6 +248,16 @@ def _print_table(results: dict) -> None:
                   f"{dep['implied_sigma_over_reported']:>9.2f}{dep['frac_within_1sigma']:>8.2f}"
                   f"{img['implied_sigma_over_reported']:>9.2f}{img['frac_within_1sigma']:>8.2f}"
                   f"{dep['bias_m']:>9.4f}")
+
+    print("\nCOUNTERFACTUAL -- the corrected sigma squeezed back into ONE scalar (worst axis)")
+    print(f"{'view/cond':<18}{'sigma':>8}{'d_ratio':>9}{'d_in1s':>8}{'i_ratio':>9}{'i_in1s':>8}")
+    for k, r in results.items():
+        c = r["corrected_but_still_isotropic"]
+        print(f"{k:<18}{c['reported_sigma_m_median']:>8.4f}"
+              f"{c['depth_bias_corrected']['implied_sigma_over_reported']:>9.2f}"
+              f"{c['depth_bias_corrected']['frac_within_1sigma']:>8.2f}"
+              f"{c['image_plane_pooled']['implied_sigma_over_reported']:>9.2f}"
+              f"{c['image_plane_pooled']['frac_within_1sigma']:>8.2f}")
 
     print("\nAFTER (measured physics), bias REPORTED but NOT removed -- the default posture")
     print(f"{'view/cond':<18}{'d_ratio':>9}{'d_in1s':>8}{'d_bias':>9}")
