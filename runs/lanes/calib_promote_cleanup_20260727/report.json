@@ -478,6 +478,15 @@
         "seconds": 434.15,
         "skipped": 6
       },
+      "branch_rerun_after_final_commit": {
+        "exit_code": 1,
+        "failed": 6,
+        "failure_set_identical_to_first_branch_run": true,
+        "log": "runs/lanes/calib_promote_cleanup_20260727/suite_branch_final.txt",
+        "passed": 1185,
+        "seconds": 438.74,
+        "skipped": 6
+      },
       "failure_set_diff": "exactly one line",
       "file_count": {
         "base": 115,

@@ -335,6 +335,13 @@ $ python3 -m pytest $(cat suite_filelist_final.txt) -q -p no:cacheprovider
 6 failed, 1185 passed, 6 skipped, 6 warnings in 434.15s      exit 1
 ```
 
+Re-run once more after the final commit, so every change in the series is covered
+(`suite_branch_final.txt`) -- byte-identical failure set:
+
+```
+6 failed, 1185 passed, 6 skipped, 6 warnings in 438.74s      exit 1
+```
+
 `diff` of the sorted FAILED lists is **exactly one line** -- the pre-existing failure this
 lane repairs:
 
