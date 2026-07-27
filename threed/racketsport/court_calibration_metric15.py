@@ -82,7 +82,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
-from .camera_distortion import is_radially_invertible, max_normalized_radius
+from .camera_distortion import is_radially_invertible, max_normalized_radius, undistort_normalized
 from .capture_quality import score_capture_quality
 from .coordinates import camera_matrix_from_intrinsics, invert_extrinsics
 from .court_calibration import homography_from_planar_points, reprojection_error
@@ -121,6 +121,29 @@ K2_BOUNDS = (-0.50, 0.50)
 # distortion and pose on 14 points and scoring the 1 point it never saw.
 CROSS_VALIDATION = "leave_one_out"
 
+# What the held-out fold is scored ON.
+#
+# `held_out_median_plane_error_m` is the default: the held-out correspondence's
+# pixel is pushed through the exact path the downstream ball solver uses
+# (undistort -> camera ray -> intersect the plane at that point's own world
+# height) and compared to where the point actually is, in METRES. That is the
+# quantity the North Star calls the binding floor on 3D ball accuracy, and it
+# weights each correspondence by its real metric consequence -- a pixel-space
+# residual over-weights points near the camera, where a pixel is worth
+# centimetres, against points near the far baseline, where a pixel is worth
+# decimetres.
+#
+# `held_out_median_px` is the classical reprojection criterion, kept selectable
+# and always recorded. The two agree on 5 of the 6 reviewed clips here; where
+# they disagree, the pixel criterion accepts a k1,k2 pair that improves
+# reprojection while making metric plane accuracy worse.
+SELECTION_METRICS = ("held_out_median_plane_error_m", "held_out_median_px")
+DEFAULT_SELECTION_METRIC = "held_out_median_plane_error_m"
+SELECTION_METRIC_NOISE_FLOOR = {
+    "held_out_median_plane_error_m": 1e-5,
+    "held_out_median_px": 1e-3,
+}
+
 
 @dataclass(frozen=True)
 class ReviewedKeypointFrame:
@@ -154,6 +177,11 @@ class SingleViewCameraFit:
     # Held-out (leave-one-out) median reprojection residual of the accepted
     # model. This -- not `reprojection_error_px.median` -- is what selected it.
     held_out_median_px: float | None = None
+    # Held-out median ray-plane position error, in metres: the same folds scored
+    # in the units the downstream ball solver actually works in.
+    held_out_median_plane_error_m: float | None = None
+    # Which of the two held-out quantities ranked the candidates.
+    selection_metric: str = DEFAULT_SELECTION_METRIC
     # Every candidate scored, so the choice is auditable rather than asserted.
     model_selection: list[dict[str, Any]] | None = None
     # Which object-point variant won, and the points it used.
@@ -360,6 +388,7 @@ def fit_single_view_metric_camera(
     *,
     distortion_improvement_threshold: float = DEFAULT_DISTORTION_IMPROVEMENT_THRESHOLD,
     object_point_variants: Mapping[str, Sequence[Sequence[float]]] | None = None,
+    selection_metric: str = DEFAULT_SELECTION_METRIC,
 ) -> SingleViewCameraFit:
     """Fit fx(=fy), k1, k2, and a solvePnP pose from a single view.
 
@@ -372,7 +401,14 @@ def fit_single_view_metric_camera(
     is not knowable from the pixels alone. Each variant is scored by leave-one-out
     cross-validated residual and the best one wins; omit it and `object_points_m` is the
     only candidate.
+
+    `selection_metric` picks which held-out quantity decides -- see
+    `SELECTION_METRICS`. Both are always computed and recorded; only the chosen one
+    ranks candidates.
     """
+
+    if selection_metric not in SELECTION_METRICS:
+        raise ValueError(f"unknown selection_metric {selection_metric!r}; expected one of {SELECTION_METRICS}")
 
     try:
         import cv2  # type: ignore[import-not-found]
@@ -417,15 +453,17 @@ def fit_single_view_metric_camera(
 
     # --- Step 1: object-point variant, scored with the zero-distortion model. --------
     variant_scores: dict[str, float] = {}
+    variant_records: dict[str, dict[str, float]] = {}
     for name, obj in parsed.items():
-        held_out = _cross_validated_median_px(cv2, np, obj, img, width, height, cx, cy, n_radial=0)
-        variant_scores[name] = held_out
+        scores = _cross_validated_scores(cv2, np, obj, img, width, height, cx, cy, n_radial=0)
+        variant_scores[name] = scores[selection_metric]
+        variant_records[name] = scores
         scoreboard.append(
             {
                 "object_point_variant": name,
                 "distortion_model": "zero_distortion",
-                "held_out_median_px": held_out,
                 "role": "object_point_variant_candidate",
+                **scores,
             }
         )
     best_variant = min(variant_scores, key=lambda name: variant_scores[name])
@@ -434,9 +472,9 @@ def fit_single_view_metric_camera(
     if len(parsed) > 1:
         runners = sorted((score, name) for name, score in variant_scores.items() if name != best_variant)
         variant_notes.append(
-            f"object-point variant '{best_variant}' selected on {CROSS_VALIDATION} held-out median "
-            f"{variant_scores[best_variant]:.3f}px, against "
-            + ", ".join(f"'{name}' {score:.3f}px" for score, name in runners)
+            f"object-point variant '{best_variant}' selected on {CROSS_VALIDATION} held-out "
+            f"{selection_metric} {variant_scores[best_variant]:.4f}, against "
+            + ", ".join(f"'{name}' {score:.4f}" for score, name in runners)
             + ". The pixels cannot say which world height a label source meant; the held-out "
             "residual can."
         )
@@ -449,6 +487,7 @@ def fit_single_view_metric_camera(
     ]
     fitted: dict[int, Any] = {}
     held_out_by_n: dict[int, float] = {}
+    scores_by_n: dict[int, dict[str, float]] = {}
     for model_name, n_radial in candidates:
         params = _fit_camera(cv2, np, obj, img, width, height, cx, cy, n_radial=n_radial)
         if params is None:
@@ -457,17 +496,19 @@ def fit_single_view_metric_camera(
                     "object_point_variant": best_variant,
                     "distortion_model": model_name,
                     "held_out_median_px": None,
+                    "held_out_median_plane_error_m": None,
                     "role": "distortion_candidate",
                     "note": "fit did not converge to a feasible camera",
                 }
             )
             continue
-        if n_radial == 0 and best_variant in variant_scores:
-            held_out = variant_scores[best_variant]
+        if n_radial == 0 and best_variant in variant_records:
+            scores = variant_records[best_variant]
         else:
-            held_out = _cross_validated_median_px(cv2, np, obj, img, width, height, cx, cy, n_radial=n_radial)
+            scores = _cross_validated_scores(cv2, np, obj, img, width, height, cx, cy, n_radial=n_radial)
         fitted[n_radial] = (model_name, params)
-        held_out_by_n[n_radial] = held_out
+        held_out_by_n[n_radial] = scores[selection_metric]
+        scores_by_n[n_radial] = scores
         focal, k1, k2, _rvec, _tvec = params
         scoreboard.append(
             {
@@ -476,8 +517,8 @@ def fit_single_view_metric_camera(
                 "fx": focal,
                 "k1": k1,
                 "k2": k2,
-                "held_out_median_px": held_out,
                 "role": "distortion_candidate",
+                **scores,
             }
         )
 
@@ -492,26 +533,27 @@ def fit_single_view_metric_camera(
         incumbent = held_out_by_n[accepted_n]
         challenger = held_out_by_n[n_radial]
         label = f"k1" if n_radial == 1 else "k1,k2"
-        if incumbent <= _NEGLIGIBLE_ERROR_FLOOR_PX:
+        floor = SELECTION_METRIC_NOISE_FLOOR[selection_metric]
+        if incumbent <= floor:
             decision_notes.append(
-                f"{label} not tested: the incumbent's held-out median ({incumbent:.4f}px) is already "
-                f"below the {_NEGLIGIBLE_ERROR_FLOOR_PX}px noise floor, so any improvement ratio would "
-                "be floating-point noise, not signal."
+                f"{label} not tested: the incumbent's held-out {selection_metric} ({incumbent:.6f}) is "
+                f"already below the {floor:g} noise floor, so any improvement ratio would be "
+                "floating-point noise, not signal."
             )
             continue
         improvement = 1.0 - (challenger / incumbent)
         if improvement >= distortion_improvement_threshold:
             decision_notes.append(
-                f"{label} accepted: {CROSS_VALIDATION} held-out median {challenger:.3f}px vs "
-                f"{incumbent:.3f}px for the incumbent, a {improvement:.1%} reduction, >= the "
+                f"{label} accepted: {CROSS_VALIDATION} held-out {selection_metric} {challenger:.4f} vs "
+                f"{incumbent:.4f} for the incumbent, a {improvement:.1%} reduction, >= the "
                 f"{distortion_improvement_threshold:.0%} gate required to justify the extra "
                 "single-view degree(s) of freedom."
             )
             accepted_n = n_radial
         else:
             decision_notes.append(
-                f"{label} rejected: {CROSS_VALIDATION} held-out median {challenger:.3f}px vs "
-                f"{incumbent:.3f}px for the incumbent, only {improvement:.1%} (< the "
+                f"{label} rejected: {CROSS_VALIDATION} held-out {selection_metric} {challenger:.4f} vs "
+                f"{incumbent:.4f} for the incumbent, only {improvement:.1%} (< the "
                 f"{distortion_improvement_threshold:.0%} gate) -- not enough to justify the extra "
                 "parameter(s) on 15 single-view points."
             )
@@ -557,7 +599,9 @@ def fit_single_view_metric_camera(
     )
     return replace(
         fit,
-        held_out_median_px=held_out_by_n[accepted_n],
+        held_out_median_px=scores_by_n[accepted_n]["held_out_median_px"],
+        held_out_median_plane_error_m=scores_by_n[accepted_n]["held_out_median_plane_error_m"],
+        selection_metric=selection_metric,
         model_selection=scoreboard,
         object_point_variant=best_variant,
         object_points_m=[[float(value) for value in point] for point in obj.tolist()],
@@ -719,30 +763,70 @@ def _coordinate_descent(start: list[float], objective: Any, bounds: list[tuple[f
     return current
 
 
-def _cross_validated_median_px(
+def _cross_validated_scores(
     cv2: Any, np: Any, obj: Any, img: Any, width: float, height: float, cx: float, cy: float, *, n_radial: int
-) -> float:
-    """Leave-one-out held-out median reprojection residual, in pixels.
+) -> dict[str, float]:
+    """Leave-one-out held-out scores: median reprojection px and plane error metres.
 
     Each fold refits focal, distortion and pose on the other n-1 correspondences and
-    scores the one it never saw. This is the number model selection uses; the training
-    residual reported in `reprojection_error_px` is descriptive only.
+    scores the one it never saw. These are the numbers model selection uses; the
+    training residual reported in `reprojection_error_px` is descriptive only.
+
+    NOTE on the metric term: `ball_label_geometry.calibration_plane_residuals`, the
+    "calibration floor" the labelling tool reports, back-projects the calibration's
+    OWN fitted correspondences -- it is an in-sample number and a model with more
+    parameters always looks better on it. The held-out version below is the same
+    measurement on data the fold never saw.
     """
 
     count = int(obj.shape[0])
-    held_out: list[float] = []
+    pixel_errors: list[float] = []
+    plane_errors: list[float] = []
     for index in range(count):
         keep = [row for row in range(count) if row != index]
         params = _fit_camera(cv2, np, obj[keep], img[keep], width, height, cx, cy, n_radial=n_radial)
         if params is None:
-            held_out.append(math.inf)
+            pixel_errors.append(math.inf)
+            plane_errors.append(math.inf)
             continue
         focal, k1, k2, rvec, tvec = params
         k = np.array([[focal, 0.0, cx], [0.0, focal, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
         dist = np.array([k1, k2, 0.0, 0.0], dtype=np.float64)
         projected, _ = cv2.projectPoints(obj[index : index + 1], rvec, tvec, k, dist)
-        held_out.append(float(np.linalg.norm(projected.reshape(2) - img[index])))
-    return _median(held_out)
+        pixel_errors.append(float(np.linalg.norm(projected.reshape(2) - img[index])))
+        plane_errors.append(
+            _held_out_plane_error_m(cv2, np, obj[index], img[index], focal, cx, cy, k1, k2, rvec, tvec)
+        )
+    return {
+        "held_out_median_px": _median(pixel_errors),
+        "held_out_median_plane_error_m": _median(plane_errors),
+    }
+
+
+def _held_out_plane_error_m(
+    cv2: Any, np: Any, world_point: Any, pixel: Any, focal: float, cx: float, cy: float,
+    k1: float, k2: float, rvec: Any, tvec: Any,
+) -> float:
+    """Position error in metres for one held-out correspondence.
+
+    Exactly the downstream bounce path: undistort the pixel, form the world ray,
+    intersect the horizontal plane at the point's own world height, and compare XY.
+    """
+
+    rotation, _ = cv2.Rodrigues(rvec)
+    camera_centre = -rotation.T @ np.asarray(tvec, dtype=np.float64).reshape(3)
+    x, y = undistort_normalized(
+        (float(pixel[0]) - cx) / focal, (float(pixel[1]) - cy) / focal, (k1, k2, 0.0, 0.0)
+    )
+    direction = rotation.T @ np.array([x, y, 1.0], dtype=np.float64)
+    if abs(float(direction[2])) < 1e-12:
+        return math.inf
+    target_z = float(world_point[2])
+    scale = (target_z - float(camera_centre[2])) / float(direction[2])
+    if scale <= 0.0:
+        return math.inf  # the ray meets that height behind the camera
+    solved = camera_centre + scale * direction
+    return float(math.hypot(float(solved[0]) - float(world_point[0]), float(solved[1]) - float(world_point[1])))
 
 
 def _build_fit(
@@ -884,9 +968,12 @@ def metric_calibration_from_reviewed_keypoints_15pt(
         f"net_keypoint_label_height_m={net_height:.4f}",
         f"net_keypoint_label_height_variant={fit.object_point_variant}",
     ]
+    provenance_reasons.append(f"model_selection_metric={CROSS_VALIDATION}:{fit.selection_metric}")
     if fit.held_out_median_px is not None:
+        provenance_reasons.append(f"held_out_median_reprojection_{fit.held_out_median_px:.3f}px")
+    if fit.held_out_median_plane_error_m is not None:
         provenance_reasons.append(
-            f"model_selected_on_{CROSS_VALIDATION}_held_out_median_{fit.held_out_median_px:.3f}px"
+            f"held_out_median_plane_error_{fit.held_out_median_plane_error_m:.4f}m"
         )
     reasons = list(
         dict.fromkeys(

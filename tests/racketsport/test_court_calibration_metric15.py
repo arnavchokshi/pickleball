@@ -240,7 +240,7 @@ def test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed
     legacy_digest = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     ).hexdigest()
-    assert legacy_digest == "00945af38d16553ef7ef24f21114f30c46027def3e105a69a70804aae30e95c1"
+    assert legacy_digest == "d161a98337131962749783b06935181db95342793894d9ecd32d28db37a14bbf"
     assert payload["world_pts"][9:12] == [[-3.048, 0.0, 0.0], [0.0, 0.0, 0.0], [3.048, 0.0, 0.0]]
     assert payload["intrinsics"]["dist"][0] == pytest.approx(-0.1789, abs=1e-3)
     assert contract == {
@@ -461,3 +461,34 @@ def test_selection_is_recorded_for_audit_not_asserted():
     assert len(accepted) == 1
     assert accepted[0]["distortion_model"] == fit.distortion_model
     assert fit.held_out_median_px == pytest.approx(accepted[0]["held_out_median_px"])
+
+
+def test_both_held_out_criteria_are_recorded_and_selectable():
+    """The selection metric is a declared policy knob, not a hidden default."""
+
+    rotation, translation = _look_at_pose(CAM_POS, TARGET)
+    image_points = _project(
+        OBJECT_POINTS, rotation, translation, TRUE_FX, TRUE_CX, TRUE_CY, dist=[-0.15, 0.04, 0.0, 0.0]
+    )
+
+    metric_fit = fit_single_view_metric_camera(
+        OBJECT_POINTS, image_points, NATIVE_SIZE, selection_metric="held_out_median_plane_error_m"
+    )
+    pixel_fit = fit_single_view_metric_camera(
+        OBJECT_POINTS, image_points, NATIVE_SIZE, selection_metric="held_out_median_px"
+    )
+
+    for fit in (metric_fit, pixel_fit):
+        assert fit.held_out_median_px is not None
+        assert fit.held_out_median_plane_error_m is not None
+        for record in fit.model_selection or []:
+            assert "held_out_median_px" in record
+            assert "held_out_median_plane_error_m" in record
+    assert metric_fit.selection_metric == "held_out_median_plane_error_m"
+    assert pixel_fit.selection_metric == "held_out_median_px"
+    # Real distortion is strong enough that both criteria agree here.
+    assert metric_fit.k1 == pytest.approx(-0.15, abs=5e-3)
+    assert pixel_fit.k1 == pytest.approx(-0.15, abs=5e-3)
+
+    with pytest.raises(ValueError, match="unknown selection_metric"):
+        fit_single_view_metric_camera(OBJECT_POINTS, image_points, NATIVE_SIZE, selection_metric="training_median")
