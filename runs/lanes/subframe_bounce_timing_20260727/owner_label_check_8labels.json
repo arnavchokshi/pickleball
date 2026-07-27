@@ -1,0 +1,287 @@
+{
+  "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+  "sport": "pickleball",
+  "fps": 30.0,
+  "label_count": 8,
+  "timing_applied_count": 4,
+  "guard_statuses": {
+    "insufficient_observations": 1,
+    "no_observation_at_frame": 1,
+    "refined": 4,
+    "rejected_search_bound": 2
+  },
+  "median_abs_dt_frames": 0.3108,
+  "median_anchor_shift_m": 0.19436,
+  "anchored_measured_prefills": {
+    "count": 2,
+    "delta_before_m": [
+      0.316015,
+      0.276075
+    ],
+    "delta_after_m": [
+      0.316015,
+      0.276074
+    ]
+  },
+  "not_independent_ground_truth": true,
+  "interpretation_limit": "The human label's 3D position is itself a ray-plane intersection at a marked frame, so it carries the SAME sub-frame overshoot as the solver anchor. These numbers measure the SIZE of the correction on real pickleball, not its accuracy. VERIFIED=0 for pickleball bounce position.",
+  "inputs": {
+    "labels": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_label_tool_20260726/labels/wolverine/ball_human_labels.json",
+    "calibration": "eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/labels/court_calibration_metric15pt.json",
+    "ball_track": "runs/lanes/ballarc_anchorfusion_20260716/wolverine_no_soft_current/ball_track_arc_solved.json"
+  },
+  "rows": [
+    {
+      "frame": 12,
+      "label_id": "f000012",
+      "timing_status": "rejected_search_bound",
+      "timing_applied": false,
+      "human_label_world_xyz_m": [
+        -2.649068,
+        4.654983,
+        0.0371
+      ],
+      "baseline_world_xyz_m": [
+        -2.649068,
+        4.654983,
+        0.0371
+      ],
+      "refined_world_xyz_m": [
+        -2.649068,
+        4.654983,
+        0.0371
+      ],
+      "anchor_shift_m": 0.0,
+      "reported_sigma_baseline_m": 0.266312,
+      "reported_sigma_refined_m": 0.266312,
+      "reported_bias_baseline_m": 0.275326,
+      "reported_bias_refined_m": 0.275326,
+      "solver_prefill_world_xyz_m": [
+        -2.615859,
+        4.969206,
+        0.04226
+      ],
+      "prefill_band": "anchored_measured",
+      "delta_solver_to_human_baseline_m": 0.316015,
+      "delta_solver_to_human_refined_m": 0.316015
+    },
+    {
+      "frame": 25,
+      "label_id": "f000025",
+      "timing_status": "rejected_search_bound",
+      "timing_applied": false,
+      "human_label_world_xyz_m": [
+        -3.312455,
+        8.089804,
+        0.0371
+      ],
+      "baseline_world_xyz_m": [
+        -3.312455,
+        8.089804,
+        0.0371
+      ],
+      "refined_world_xyz_m": [
+        -3.312455,
+        8.089804,
+        0.0371
+      ],
+      "anchor_shift_m": 0.0,
+      "reported_sigma_baseline_m": 0.319241,
+      "reported_sigma_refined_m": 0.319241,
+      "reported_bias_baseline_m": 0.340301,
+      "reported_bias_refined_m": 0.340301,
+      "solver_prefill_world_xyz_m": [
+        -3.309894,
+        7.814242,
+        0.053721
+      ],
+      "prefill_band": "anchored_measured",
+      "delta_solver_to_human_baseline_m": 0.276075,
+      "delta_solver_to_human_refined_m": 0.276074
+    },
+    {
+      "frame": 104,
+      "label_id": "f000104",
+      "timing_status": "no_observation_at_frame",
+      "timing_applied": false,
+      "human_label_world_xyz_m": [
+        -2.381183,
+        -6.387069,
+        0.0371
+      ],
+      "baseline_world_xyz_m": [
+        -2.381183,
+        -6.387069,
+        0.0371
+      ],
+      "refined_world_xyz_m": [
+        -2.381183,
+        -6.387069,
+        0.0371
+      ],
+      "anchor_shift_m": 0.0,
+      "reported_sigma_baseline_m": 0.176143,
+      "reported_sigma_refined_m": 0.176143,
+      "reported_bias_baseline_m": 0.07934,
+      "reported_bias_refined_m": 0.07934
+    },
+    {
+      "frame": 157,
+      "label_id": "f000157",
+      "timing_status": "refined",
+      "timing_applied": true,
+      "human_label_world_xyz_m": [
+        -0.763224,
+        5.564897,
+        0.0371
+      ],
+      "baseline_world_xyz_m": [
+        -0.763224,
+        5.564897,
+        0.0371
+      ],
+      "refined_world_xyz_m": [
+        -0.795094,
+        5.340905,
+        0.0371
+      ],
+      "anchor_shift_m": 0.226248,
+      "reported_sigma_baseline_m": 0.290284,
+      "reported_sigma_refined_m": 0.28511,
+      "reported_bias_baseline_m": 0.300626,
+      "reported_bias_refined_m": 0.236369,
+      "dt_from_frame_s": -0.011877,
+      "dt_from_frame_frames": -0.3563,
+      "pixel_shift_px": 3.7332,
+      "fit_rms_px": 1.4136,
+      "timing_sd_s": 0.008333,
+      "observations_before": 6,
+      "observations_after": 6
+    },
+    {
+      "frame": 217,
+      "label_id": "f000217",
+      "timing_status": "refined",
+      "timing_applied": true,
+      "human_label_world_xyz_m": [
+        -0.947664,
+        4.241859,
+        0.0371
+      ],
+      "baseline_world_xyz_m": [
+        -0.947664,
+        4.241859,
+        0.0371
+      ],
+      "refined_world_xyz_m": [
+        -0.848231,
+        4.408859,
+        0.0371
+      ],
+      "anchor_shift_m": 0.19436,
+      "reported_sigma_baseline_m": 0.268728,
+      "reported_sigma_refined_m": 0.270337,
+      "reported_bias_baseline_m": 0.274818,
+      "reported_bias_refined_m": 0.222202,
+      "dt_from_frame_s": -0.01036,
+      "dt_from_frame_frames": -0.3108,
+      "pixel_shift_px": 4.5388,
+      "fit_rms_px": 1.5704,
+      "timing_sd_s": 0.008333,
+      "observations_before": 6,
+      "observations_after": 6
+    },
+    {
+      "frame": 272,
+      "label_id": "f000272",
+      "timing_status": "refined",
+      "timing_applied": true,
+      "human_label_world_xyz_m": [
+        -1.749232,
+        -0.270068,
+        0.0371
+      ],
+      "baseline_world_xyz_m": [
+        -1.749232,
+        -0.270068,
+        0.0371
+      ],
+      "refined_world_xyz_m": [
+        -1.748817,
+        -0.321305,
+        0.0371
+      ],
+      "anchor_shift_m": 0.051238,
+      "reported_sigma_baseline_m": 0.208395,
+      "reported_sigma_refined_m": 0.205987,
+      "reported_bias_baseline_m": 0.186575,
+      "reported_bias_refined_m": 0.148121,
+      "dt_from_frame_s": -0.00431,
+      "dt_from_frame_frames": -0.1293,
+      "pixel_shift_px": 2.4683,
+      "fit_rms_px": 0.784,
+      "timing_sd_s": 0.008333,
+      "observations_before": 6,
+      "observations_after": 6
+    },
+    {
+      "frame": 289,
+      "label_id": "f000289",
+      "timing_status": "refined",
+      "timing_applied": true,
+      "human_label_world_xyz_m": [
+        -1.822796,
+        -0.732818,
+        0.0371
+      ],
+      "baseline_world_xyz_m": [
+        -1.822796,
+        -0.732818,
+        0.0371
+      ],
+      "refined_world_xyz_m": [
+        -1.756024,
+        -0.568698,
+        0.0371
+      ],
+      "anchor_shift_m": 0.177183,
+      "reported_sigma_baseline_m": 0.203443,
+      "reported_sigma_refined_m": 0.203438,
+      "reported_bias_baseline_m": 0.177683,
+      "reported_bias_refined_m": 0.144497,
+      "dt_from_frame_s": -0.006655,
+      "dt_from_frame_frames": -0.1997,
+      "pixel_shift_px": 1.05,
+      "fit_rms_px": 0.847,
+      "timing_sd_s": 0.008333,
+      "observations_before": 6,
+      "observations_after": 6
+    },
+    {
+      "frame": 299,
+      "label_id": "f000299",
+      "timing_status": "insufficient_observations",
+      "timing_applied": false,
+      "human_label_world_xyz_m": [
+        -1.52473,
+        -0.188478,
+        0.0371
+      ],
+      "baseline_world_xyz_m": [
+        -1.52473,
+        -0.188478,
+        0.0371
+      ],
+      "refined_world_xyz_m": [
+        -1.52473,
+        -0.188478,
+        0.0371
+      ],
+      "anchor_shift_m": 0.0,
+      "reported_sigma_baseline_m": 0.210206,
+      "reported_sigma_refined_m": 0.210206,
+      "reported_bias_baseline_m": 0.189546,
+      "reported_bias_refined_m": 0.189546
+    }
+  ]
+}

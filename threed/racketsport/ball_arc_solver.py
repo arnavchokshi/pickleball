@@ -67,6 +67,55 @@ DEFAULT_BOUNCE_SPEED_CV = 0.3
 # recorded in `terms` when it binds so it is never a silent lie.
 MAX_BOUNCE_ANCHOR_SIGMA_M = 1.0
 MIN_BOUNCE_ANCHOR_SIGMA_M = 1e-3
+
+# --- Sub-frame bounce timing ------------------------------------------------
+#
+# The systematic overshoot above exists because the marked frame is the WRONG
+# INSTANT, not because the pixel is noisy.  Widening the sigma around a wrong
+# instant is not the same as finding the right one, so this block attacks the
+# instant.
+#
+# World position is continuous through a bounce and world velocity is not.
+# Projection is smooth, so the 2D track inherits exactly that: continuous
+# position, discontinuous velocity, i.e. a KINK at the contact instant and
+# nowhere else.  Fit the incoming and outgoing image branches with a SHARED
+# meeting point and the meeting point is the sub-frame contact -- the time and
+# the sub-frame pixel fall out of one fit.  Evaluating the camera ray there
+# lands on a ball that is genuinely at z=ball_radius, so the overshoot term
+# goes to zero up to the error in the estimated instant.
+#
+# Nothing in the estimator reads the calibration, the court, or the physics
+# constants, so it degrades independently of them.
+SUBFRAME_TIMING_SCHEMA_VERSION = 1
+SUBFRAME_TIMING_METHOD = "image_branch_kink_v1"
+# Contact is searched within +-this many frame intervals of the marked frame.
+# A bounce detector that is wrong by more than one frame is a detection defect,
+# not a timing defect, and must not be repaired by sliding the anchor.
+DEFAULT_SUBFRAME_SEARCH_SPAN_FRAMES = 1.0
+DEFAULT_SUBFRAME_GRID_STEPS = 81
+# Samples per branch.  Enough to over-determine a quadratic (>=4 for order 2)
+# without reaching so far from contact that drag breaks the local quadratic.
+DEFAULT_SUBFRAME_BRANCH_SAMPLES = 6
+DEFAULT_SUBFRAME_BRANCH_ORDER = 2
+# The refined pixel may not move further from the marked pixel than this
+# fraction of the local inter-frame pixel step.  Contact is within half a frame
+# of the marked frame, so a larger jump means the fit ran away, not that the
+# ball did.
+DEFAULT_SUBFRAME_MAX_DISPLACEMENT_FACTOR = 0.6
+# No measurable velocity discontinuity means no localisable contact.
+DEFAULT_SUBFRAME_MIN_VELOCITY_JUMP_RATIO = 0.05
+# Floor on the refined instant's 1-sigma, in frame intervals.
+#
+# Propagating pixel noise through the branch crossing alone predicts a 1-sigma
+# of ~0.02 frame intervals, but the MEASURED spread on TT3D is 0.124 frame
+# intervals -- 5.4x wider -- because the dominant error is the local polynomial
+# branch model, not the pixel.  A sigma that optimistic is the same class of
+# defect this lane exists to remove, so the reported instant is floored at a
+# declared fraction of the frame interval instead.  0.25 is a round prior,
+# chosen to sit ABOVE the table-tennis measurement (0.124) and still below the
+# unrefined half-frame uniform sigma (1/(2*sqrt(3)) = 0.289).  It is NOT fitted
+# to pickleball and has not been measured on pickleball.
+DEFAULT_SUBFRAME_TIMING_SD_FLOOR_FRAMES = 0.25
 STEYN_CL_PER_SPIN = 0.195
 SPIN_SCALAR_MAX_ABS = 0.8
 SPIN_SCALAR_REGULARIZATION_LAMBDA = 0.05
@@ -204,6 +253,10 @@ class BallArcSolverConfig:
     court_sport: str = "pickleball"
     court_margin_m: float = 4.0
     court_z_min_m: float = -0.15
+    # Default OFF: it MOVES bounce anchors and shifts their times, so it changes
+    # solver output. best_stack ball.subframe_bounce_timing, PENDING,
+    # do_not_promote -- validated on table tennis only.
+    enable_subframe_bounce_timing: bool = False
 
     def __post_init__(self) -> None:
         if self.robust_pixel_sigma <= 0.0:
@@ -487,6 +540,402 @@ class FlightSegmentFit:
         return payload
 
 
+@dataclass(frozen=True)
+class SubFrameBounceTiming:
+    """Where and when the 2D track says contact actually happened.
+
+    ``t_contact_s`` is the estimated contact instant and ``pixel_xy`` is the
+    ball's image position at that instant -- both are outputs of the same
+    branch fit, so they are consistent by construction.  ``timing_sd_s`` is the
+    estimator's own 1-sigma on the instant, propagated from the fit residual
+    and the size of the velocity discontinuity; it is what replaces the
+    half-frame uniform prior in :func:`anchor_uncertainty_for_bounce`.
+
+    A non-``refined`` ``status`` means a guard fired and the caller must keep
+    the marked frame.  The object is still returned so the rejection is
+    reportable rather than invisible.
+    """
+
+    frame: int
+    t_frame_s: float
+    t_contact_s: float
+    dt_from_frame_s: float
+    pixel_xy: tuple[float, float]
+    frame_pixel_xy: tuple[float, float]
+    displacement_px: float
+    max_local_step_px: float
+    fit_rms_px: float
+    velocity_jump_px_s: float
+    velocity_scale_px_s: float
+    timing_sd_s: float
+    unrefined_timing_sd_s: float
+    frame_interval_s: float
+    observations_before: int
+    observations_after: int
+    branch_order: int
+    status: str
+    method: str = SUBFRAME_TIMING_METHOD
+    schema_version: int = SUBFRAME_TIMING_SCHEMA_VERSION
+
+    @property
+    def refined(self) -> bool:
+        return self.status == "refined"
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "schema_version": int(self.schema_version),
+            "method": self.method,
+            "status": self.status,
+            "applied": bool(self.refined),
+            "frame": int(self.frame),
+            "t_frame_s": _round(self.t_frame_s, 9),
+            "t_contact_s": _round(self.t_contact_s, 9),
+            "dt_from_frame_s": _round(self.dt_from_frame_s, 9),
+            "dt_from_frame_frames": _round(
+                self.dt_from_frame_s / self.frame_interval_s
+                if self.frame_interval_s > 0.0
+                else 0.0,
+                6,
+            ),
+            "pixel_xy": [_round(value, 4) for value in self.pixel_xy],
+            "frame_pixel_xy": [_round(value, 4) for value in self.frame_pixel_xy],
+            "displacement_px": _round(self.displacement_px, 4),
+            "max_local_step_px": _round(self.max_local_step_px, 4),
+            # NaN when the fit never ran; emit null rather than a non-JSON NaN.
+            "fit_rms_px": (
+                _round(self.fit_rms_px, 4) if math.isfinite(self.fit_rms_px) else None
+            ),
+            "velocity_jump_px_s": _round(self.velocity_jump_px_s, 4),
+            "timing_sd_s": _round(self.timing_sd_s, 9),
+            "unrefined_timing_sd_s": _round(self.unrefined_timing_sd_s, 9),
+            "observations_before": int(self.observations_before),
+            "observations_after": int(self.observations_after),
+            "branch_order": int(self.branch_order),
+        }
+
+
+def refine_bounce_contact_time(
+    observations: Sequence[BallObservation],
+    frame: int,
+    *,
+    fps: float | None = None,
+    pixel_sigma_px: float = DEFAULT_ANCHOR_PIXEL_SIGMA_PX,
+    search_span_frames: float = DEFAULT_SUBFRAME_SEARCH_SPAN_FRAMES,
+    grid_steps: int = DEFAULT_SUBFRAME_GRID_STEPS,
+    branch_samples: int = DEFAULT_SUBFRAME_BRANCH_SAMPLES,
+    branch_order: int = DEFAULT_SUBFRAME_BRANCH_ORDER,
+    max_displacement_factor: float = DEFAULT_SUBFRAME_MAX_DISPLACEMENT_FACTOR,
+    min_velocity_jump_ratio: float = DEFAULT_SUBFRAME_MIN_VELOCITY_JUMP_RATIO,
+    timing_sd_floor_frames: float = DEFAULT_SUBFRAME_TIMING_SD_FLOOR_FRAMES,
+) -> SubFrameBounceTiming | None:
+    """Locate the sub-frame contact instant from the 2D track's kink.
+
+    For a candidate instant ``t_c`` the model is two polynomial branches that
+    share the point ``(t_c, u_c, v_c)``::
+
+        p(t) = p_c + b_pre  * (t - t_c) + c_pre  * (t - t_c)^2   for t <= t_c
+        p(t) = p_c + b_post * (t - t_c) + c_post * (t - t_c)^2   for t >= t_c
+
+    Only ``t_c`` enters non-linearly, so the branch coefficients come from a
+    linear solve at each grid point and the search is a 1-D scan plus a
+    parabolic step.  Shared ``p_c`` encodes position continuity; independent
+    ``b`` encodes the velocity discontinuity that IS the bounce.
+
+    Returns ``None`` when the marked frame has no usable observation.  Returns
+    a rejected :class:`SubFrameBounceTiming` when a guard fires.
+    """
+
+    usable = sorted(
+        (
+            obs
+            for obs in observations
+            if obs.visible and _xy_tuple(obs.xy) is not None and math.isfinite(obs.t)
+        ),
+        key=lambda item: (item.t, item.frame),
+    )
+    marked_index = next(
+        (index for index, obs in enumerate(usable) if obs.frame == int(frame)), None
+    )
+    if marked_index is None:
+        return None
+
+    times = [float(obs.t) for obs in usable]
+    pixels = [(float(obs.xy[0]), float(obs.xy[1])) for obs in usable]
+    t_frame = times[marked_index]
+    frame_pixel = pixels[marked_index]
+    interval = _median_frame_interval(times, fps)
+    order = max(1, int(branch_order))
+    per_branch = max(order + 1, int(branch_samples))
+
+    def rejected(status: str) -> SubFrameBounceTiming:
+        """A refusal that ran no fit: the marked frame, unmoved, with a reason."""
+
+        unrefined = interval / (2.0 * math.sqrt(3.0)) if interval > 0.0 else 0.0
+        return SubFrameBounceTiming(
+            frame=int(frame),
+            t_frame_s=t_frame,
+            t_contact_s=t_frame,
+            dt_from_frame_s=0.0,
+            pixel_xy=frame_pixel,
+            frame_pixel_xy=frame_pixel,
+            displacement_px=0.0,
+            max_local_step_px=0.0,
+            fit_rms_px=float("nan"),
+            velocity_jump_px_s=0.0,
+            velocity_scale_px_s=0.0,
+            timing_sd_s=unrefined,
+            unrefined_timing_sd_s=unrefined,
+            frame_interval_s=interval,
+            observations_before=0,
+            observations_after=0,
+            branch_order=order,
+            status=status,
+        )
+
+    if interval <= 0.0:
+        return rejected("no_frame_interval")
+    span = abs(float(search_span_frames)) * interval
+    if span <= 0.0:
+        return rejected("no_search_span")
+    steps = max(3, int(grid_steps))
+
+    best: dict[str, Any] | None = None
+    grid: list[tuple[float, float]] = []
+    for step in range(steps):
+        candidate = t_frame - span + (2.0 * span) * step / (steps - 1)
+        fit = _subframe_branch_fit(times, pixels, candidate, order, per_branch, interval)
+        grid.append((candidate, float("inf") if fit is None else fit["residual"]))
+        if fit is None:
+            continue
+        if best is None or fit["residual"] < best["residual"]:
+            best = {**fit, "t_c": candidate, "grid_index": step}
+    if best is None:
+        return rejected("insufficient_observations")
+
+    index = int(best["grid_index"])
+    if 0 < index < steps - 1:
+        refined_t = _parabolic_vertex(
+            grid[index - 1], grid[index], grid[index + 1], grid[index][0] - grid[index - 1][0]
+        )
+        if refined_t is not None:
+            fit = _subframe_branch_fit(times, pixels, refined_t, order, per_branch, interval)
+            if fit is not None and fit["residual"] <= best["residual"]:
+                best = {**fit, "t_c": refined_t, "grid_index": index}
+
+    t_contact = float(best["t_c"])
+    dt = t_contact - t_frame
+
+    low = max(0, marked_index - 2)
+    high = min(len(pixels), marked_index + 3)
+    steps_px = [
+        math.dist(pixels[k + 1], pixels[k]) for k in range(low, high - 1)
+    ]
+    max_step_px = max(steps_px) if steps_px else 0.0
+    contact_pixel = (float(best["pixel"][0]), float(best["pixel"][1]))
+    displacement = math.dist(contact_pixel, frame_pixel)
+
+    jump = float(best["velocity_jump_px_s"])
+    scale = float(best["velocity_scale_px_s"])
+    rms_px = float(best["rms_px"])
+    # A pixel perturbation sigma shifts the branch crossing by sigma / |dv|;
+    # averaging over each branch's samples supplies the sqrt term.  sigma is
+    # the WORSE of the assumed click precision and the fit's own residual, so a
+    # badly modelled branch reports a wider instant rather than a confident one.
+    sigma_px = max(abs(float(pixel_sigma_px)), rms_px)
+    unrefined_sd = interval / (2.0 * math.sqrt(3.0))
+    if jump > 1e-9 and best["n_pre"] > 0 and best["n_post"] > 0:
+        timing_sd = (
+            sigma_px
+            * math.sqrt(1.0 / best["n_pre"] + 1.0 / best["n_post"])
+            / jump
+        )
+    else:
+        timing_sd = unrefined_sd
+    # The pixel term alone is measurably optimistic (see the floor constant), so
+    # the reported instant never claims to be tighter than the declared floor.
+    timing_sd = max(timing_sd, abs(float(timing_sd_floor_frames)) * interval)
+    # Refinement is optional, so it may never claim to be worse than declining
+    # to refine at all.
+    timing_sd = max(1e-6, min(timing_sd, unrefined_sd))
+
+    timing = SubFrameBounceTiming(
+        frame=int(frame),
+        t_frame_s=t_frame,
+        t_contact_s=t_contact,
+        dt_from_frame_s=dt,
+        pixel_xy=contact_pixel,
+        frame_pixel_xy=frame_pixel,
+        displacement_px=displacement,
+        max_local_step_px=max_step_px,
+        fit_rms_px=rms_px,
+        velocity_jump_px_s=jump,
+        velocity_scale_px_s=scale,
+        timing_sd_s=timing_sd,
+        unrefined_timing_sd_s=unrefined_sd,
+        frame_interval_s=interval,
+        observations_before=int(best["n_pre"]),
+        observations_after=int(best["n_post"]),
+        branch_order=order,
+        status="refined",
+    )
+    # Guards run on a fully populated object so a refusal is still evidence:
+    # the caller can read WHY the fit was refused, not just that it was.
+    #
+    # The search span is a bound, not an answer. An optimum pinned against it
+    # means the kink is outside the window this lane is entitled to move
+    # within, i.e. the marked frame is wrong by more than a frame. That is a
+    # detection defect and sliding the anchor would paper over it.
+    if abs(dt) >= 0.98 * span:
+        return replace(timing, status="rejected_search_bound")
+    if max_step_px > 0.0 and displacement > abs(float(max_displacement_factor)) * max_step_px:
+        return replace(timing, status="rejected_displacement")
+    if scale > 0.0 and jump / scale < abs(float(min_velocity_jump_ratio)):
+        return replace(timing, status="rejected_weak_kink")
+    return timing
+
+
+def _subframe_timing_for_bounce(
+    frame: int,
+    *,
+    observations_by_frame: Mapping[int, BallObservation],
+    config: BallArcSolverConfig,
+) -> SubFrameBounceTiming | None:
+    """Refined contact instant for one bounce frame, or ``None`` when disabled."""
+
+    if not config.enable_subframe_bounce_timing:
+        return None
+    return refine_bounce_contact_time(tuple(observations_by_frame.values()), int(frame))
+
+
+def _median_frame_interval(times: Sequence[float], fps: float | None) -> float:
+    gaps = sorted(
+        b - a for a, b in zip(times, times[1:]) if math.isfinite(b - a) and b - a > 0.0
+    )
+    if gaps:
+        return float(median(gaps))
+    rate = _float_or_none(fps)
+    if rate is not None and rate > 0.0:
+        return 1.0 / float(rate)
+    return 0.0
+
+
+def _parabolic_vertex(
+    left: tuple[float, float],
+    middle: tuple[float, float],
+    right: tuple[float, float],
+    cell: float,
+) -> float | None:
+    """Vertex of the parabola through three residual samples, clamped to a cell."""
+
+    y0, y1, y2 = left[1], middle[1], right[1]
+    if not all(math.isfinite(value) for value in (y0, y1, y2)):
+        return None
+    denominator = y0 - 2.0 * y1 + y2
+    if denominator <= 1e-18:
+        return None
+    offset = 0.5 * (y0 - y2) / denominator
+    if not math.isfinite(offset):
+        return None
+    offset = max(-1.0, min(1.0, offset))
+    return middle[0] + offset * cell
+
+
+def _subframe_branch_fit(
+    times: Sequence[float],
+    pixels: Sequence[tuple[float, float]],
+    t_c: float,
+    order: int,
+    per_branch: int,
+    interval: float,
+) -> dict[str, Any] | None:
+    """Least squares for the two shared-endpoint image branches at a fixed ``t_c``.
+
+    The two image axes share only ``t_c``, so each is an independent
+    ``(1 + 2 * order)`` system.  Time is expressed in frame intervals to keep
+    the normal equations well conditioned.
+    """
+
+    count = len(times)
+    pre = [k for k in range(count) if times[k] <= t_c + 1e-12][-per_branch:]
+    post = [k for k in range(count) if times[k] >= t_c - 1e-12][:per_branch]
+    if len(pre) < order + 1 or len(post) < order + 1:
+        return None
+    columns = 1 + 2 * order
+    rows: list[list[float]] = []
+    for k in pre:
+        d = (times[k] - t_c) / interval
+        row = [1.0] + [d ** (p + 1) for p in range(order)] + [0.0] * order
+        rows.append(row)
+    for k in post:
+        d = (times[k] - t_c) / interval
+        row = [1.0] + [0.0] * order + [d ** (p + 1) for p in range(order)]
+        rows.append(row)
+    if len(rows) < columns:
+        return None
+
+    residual = 0.0
+    solutions: list[list[float]] = []
+    for axis in (0, 1):
+        targets = [pixels[k][axis] for k in pre] + [pixels[k][axis] for k in post]
+        solution = _normal_equation_solve(rows, targets, columns)
+        if solution is None:
+            return None
+        solutions.append(solution)
+        for row, target in zip(rows, targets):
+            residual += (sum(a * b for a, b in zip(row, solution)) - target) ** 2
+
+    dof = max(1, 2 * (len(rows) - columns))
+    velocity_pre = (solutions[0][1] / interval, solutions[1][1] / interval)
+    velocity_post = (solutions[0][1 + order] / interval, solutions[1][1 + order] / interval)
+    return {
+        "residual": residual,
+        "rms_px": math.sqrt(residual / dof),
+        "pixel": (solutions[0][0], solutions[1][0]),
+        "velocity_jump_px_s": math.dist(velocity_post, velocity_pre),
+        "velocity_scale_px_s": math.hypot(*velocity_pre) + math.hypot(*velocity_post),
+        "n_pre": len(pre),
+        "n_post": len(post),
+    }
+
+
+def _normal_equation_solve(
+    rows: Sequence[Sequence[float]], targets: Sequence[float], columns: int
+) -> list[float] | None:
+    """Solve a small over-determined system via normal equations.
+
+    The design is at most 5x5 with entries of order 1 (time is in frame
+    intervals), so the squared condition number of the normal equations is not
+    a problem and the module stays free of a numeric dependency.
+    """
+
+    matrix = [[0.0] * (columns + 1) for _ in range(columns)]
+    for row, target in zip(rows, targets):
+        for i in range(columns):
+            if row[i] == 0.0:
+                continue
+            for j in range(columns):
+                matrix[i][j] += row[i] * row[j]
+            matrix[i][columns] += row[i] * target
+    for column in range(columns):
+        pivot = max(range(column, columns), key=lambda r: abs(matrix[r][column]))
+        if abs(matrix[pivot][column]) < 1e-12:
+            return None
+        matrix[column], matrix[pivot] = matrix[pivot], matrix[column]
+        inverse = 1.0 / matrix[column][column]
+        for j in range(column, columns + 1):
+            matrix[column][j] *= inverse
+        for r in range(columns):
+            if r == column:
+                continue
+            factor = matrix[r][column]
+            if factor == 0.0:
+                continue
+            for j in range(column, columns + 1):
+                matrix[r][j] -= factor * matrix[column][j]
+    solution = [matrix[i][columns] for i in range(columns)]
+    return solution if all(math.isfinite(value) for value in solution) else None
+
+
 def build_bounce_anchor(
     bounce: Mapping[str, Any],
     calibration: Mapping[str, Any],
@@ -499,6 +948,7 @@ def build_bounce_anchor(
     details: Mapping[str, Any] | None = None,
     uncertainty_kwargs: Mapping[str, Any] | None = None,
     apply_bias_correction: bool = False,
+    subframe_timing: SubFrameBounceTiming | None = None,
 ) -> AnchorEvent:
     """Build an exact court-plane anchor from a reviewed or proposed bounce.
 
@@ -510,6 +960,12 @@ def build_bounce_anchor(
     ``apply_bias_correction`` is OFF by default: the modelled systematic
     overshoot away from the camera is REPORTED, not silently applied, because
     moving the anchor changes solver output. Turn it on deliberately.
+
+    ``subframe_timing`` from :func:`refine_bounce_contact_time` moves the
+    anchor to the estimated contact INSTANT: the ray is taken through the
+    interpolated contact pixel instead of the marked frame's pixel, and the
+    anchor's time becomes the estimated instant. Passing ``None`` -- the
+    default -- leaves every byte of the anchor exactly as before.
     """
 
     frame = _frame_from_mapping(bounce)
@@ -522,10 +978,21 @@ def build_bounce_anchor(
     xy = _xy_tuple(ball_xy if ball_xy is not None else bounce.get("xy"))
     if xy is None:
         raise ValueError("bounce anchor requires a visible ball xy at the bounce frame")
+
+    extra = dict(uncertainty_kwargs or {})
+    applied_timing = (
+        subframe_timing
+        if subframe_timing is not None and subframe_timing.refined
+        else None
+    )
+    if applied_timing is not None:
+        xy = applied_timing.pixel_xy
+        t = applied_timing.t_contact_s
+        extra.setdefault("subframe_timing_sd_s", applied_timing.timing_sd_s)
+
     origin, direction = pixel_ray_world(calibration, xy)
     world_xyz = intersect_ray_z(origin, direction, ball_radius_m)
 
-    extra = dict(uncertainty_kwargs or {})
     extra.setdefault("fps", fps)
     uncertainty = anchor_uncertainty_for_bounce(
         calibration,
@@ -552,6 +1019,10 @@ def build_bounce_anchor(
     if uncertainty is not None:
         anchor_details["uncertainty"] = uncertainty.to_json()
         anchor_details["bias_correction_applied"] = bool(apply_bias_correction)
+    if subframe_timing is not None:
+        # Recorded whether or not it was applied: a guard that fired is
+        # evidence, and silently dropping it would hide the abstention.
+        anchor_details["subframe_timing"] = subframe_timing.to_json()
     if details:
         anchor_details.update(dict(details))
     return AnchorEvent(
@@ -3191,6 +3662,7 @@ def anchor_uncertainty_for_bounce(
     horizontal_speed_mps: float = DEFAULT_BOUNCE_HORIZONTAL_SPEED_MPS,
     speed_cv: float = DEFAULT_BOUNCE_SPEED_CV,
     calibration_residual_m: float | None = None,
+    subframe_timing_sd_s: float | None = None,
 ) -> BounceAnchorUncertainty | None:
     """Anisotropic, calibration-floored, bias-aware uncertainty for a bounce.
 
@@ -3208,6 +3680,12 @@ def anchor_uncertainty_for_bounce(
        ``bias_along_ray_m``, and only its spread enters the sigma.  The same
        interval lets the ball travel ``v_horizontal * sd(dt)`` sideways, which
        is genuinely zero-mean and is split over an unknown heading.
+       ``subframe_timing_sd_s`` replaces that half-frame prior when the anchor
+       was placed at an ESTIMATED contact instant
+       (:func:`refine_bounce_contact_time`): ``dt`` becomes zero-mean with the
+       supplied 1-sigma, so the term shrinks by exactly the timing error the
+       estimator removed and by no more.  It does not become zero -- ``|dt|``
+       is still one-sided -- and the estimator's own error is not assumed away.
     3. **Calibration residual floor** -- the in-plane error a perfect pixel
        still inherits, measured from the calibration's own correspondences
        (:func:`calibration_plane_residuals`) or supplied directly.  The old
@@ -3246,18 +3724,45 @@ def anchor_uncertainty_for_bounce(
         terms["fps_provenance"] = "supplied"
     terms["fps"] = float(effective_fps)
     half_frame_s = 0.5 / float(effective_fps)
-    sd_dt_s = half_frame_s / math.sqrt(3.0)  # dt ~ U(-half_frame, +half_frame)
 
     v_vertical = max(0.0, float(vertical_speed_mps))
     v_horizontal = max(0.0, float(horizontal_speed_mps))
     cv = max(0.0, float(speed_cv))
-    # h = v * |dt|, with v itself uncertain (coefficient of variation `cv`):
-    #   E[h]   = mean_v * half_frame / 2
-    #   Var[h] = half_frame^2 * (mean_v^2 / 12 + sd_v^2 / 3)
-    mean_height_m = v_vertical * half_frame_s / 2.0
-    sd_height_m = half_frame_s * math.sqrt(
-        (v_vertical * v_vertical) / 12.0 + ((cv * v_vertical) ** 2) / 3.0
-    )
+    refined_sd_s = _float_or_none(subframe_timing_sd_s)
+    if refined_sd_s is not None and refined_sd_s > 0.0:
+        # The anchor was placed at an ESTIMATED contact instant instead of at
+        # the marked frame, so `dt` is now the estimator's own error: zero-mean
+        # with the reported 1-sigma, rather than U(-half_frame, +half_frame).
+        # The height h = v_vertical * |dt| is still one-sided -- |dt| >= 0 -- so
+        # the term keeps its shape and sign and only shrinks by the timing error
+        # actually removed.  Nothing here claims the bias cancels.
+        #   E[|dt|] = s * sqrt(2/pi),  E[dt^2] = s^2
+        sd_dt_s = refined_sd_s
+        mean_abs_dt_s = refined_sd_s * math.sqrt(2.0 / math.pi)
+        mean_height_m = v_vertical * mean_abs_dt_s
+        sd_height_m = math.sqrt(
+            max(
+                0.0,
+                (v_vertical * v_vertical)
+                * (1.0 + cv * cv)
+                * (refined_sd_s * refined_sd_s)
+                - (v_vertical * mean_abs_dt_s) ** 2,
+            )
+        )
+        terms["timing_model"] = "subframe_refined_zero_mean_gaussian"
+        terms["subframe_timing_sd_s"] = float(refined_sd_s)
+        terms["unrefined_timing_sd_s"] = float(half_frame_s / math.sqrt(3.0))
+    else:
+        sd_dt_s = half_frame_s / math.sqrt(3.0)  # dt ~ U(-half_frame, +half_frame)
+        # h = v * |dt|, with v itself uncertain (coefficient of variation `cv`):
+        #   E[h]   = mean_v * half_frame / 2
+        #   Var[h] = half_frame^2 * (mean_v^2 / 12 + sd_v^2 / 3)
+        mean_height_m = v_vertical * half_frame_s / 2.0
+        sd_height_m = half_frame_s * math.sqrt(
+            (v_vertical * v_vertical) / 12.0 + ((cv * v_vertical) ** 2) / 3.0
+        )
+        # No `timing_model` key on this path: the unrefined payload must stay
+        # byte-identical to the pre-lane artifact.
     bias_along_ray_m = mean_height_m / ray_z
     timing_along_ray_m = sd_height_m / ray_z
     # Sideways travel over the same interval, direction unknown: the expected
@@ -5645,6 +6150,11 @@ def _discover_bounce_anchors(
                     ball_xy=obs.xy,
                     status="solver_proposed",
                     sigma_m=config.proposed_bounce_sigma_m,
+                    subframe_timing=_subframe_timing_for_bounce(
+                        frame,
+                        observations_by_frame=observations_by_frame,
+                        config=config,
+                    ),
                 )
             except ValueError:
                 continue
@@ -5851,6 +6361,11 @@ def _auto_bounce_candidate_anchors(
                     "method": item.get("method", "unknown"),
                     "candidate_index": index,
                 },
+                subframe_timing=_subframe_timing_for_bounce(
+                    obs.frame if obs is not None else frame,
+                    observations_by_frame=observations_by_frame,
+                    config=config,
+                ),
             )
         except ValueError:
             continue
@@ -5903,6 +6418,11 @@ def _reviewed_bounce_anchors(
                         "not_ground_truth": False,
                         "review_source": item.get("source"),
                     },
+                    subframe_timing=_subframe_timing_for_bounce(
+                        obs.frame,
+                        observations_by_frame=observations_by_frame,
+                        config=config,
+                    ),
                 )
             )
         except ValueError:
@@ -7740,6 +8260,7 @@ __all__ = [
     "FlightSegmentFit",
     "PhysicsParameters",
     "SoftSegmentBoundary",
+    "SubFrameBounceTiming",
     "anchor_sigma_for_bounce",
     "build_bounce_anchor",
     "fit_flight_segment",
@@ -7747,5 +8268,6 @@ __all__ = [
     "intersect_ray_z",
     "order_event_anchors",
     "pixel_ray_world",
+    "refine_bounce_contact_time",
     "solve_ball_arc_track",
 ]
