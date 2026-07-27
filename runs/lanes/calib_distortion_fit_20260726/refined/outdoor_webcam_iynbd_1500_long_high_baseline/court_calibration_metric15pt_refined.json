@@ -1,0 +1,443 @@
+{
+  "T_world_court": [
+    [
+      1.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      1.0,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      1.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0,
+      1.0
+    ]
+  ],
+  "authority_state": null,
+  "capture_quality": {
+    "grade": "good",
+    "reasons": [
+      "single_view_planar_full_calibration",
+      "distortion_model=zero_distortion_grid_search_focal",
+      "net_keypoint_label_height_m=0.0000",
+      "net_keypoint_label_height_variant=ground_net_line",
+      "model_selection_metric=leave_one_out:held_out_median_plane_error_m",
+      "held_out_median_reprojection_7.026px",
+      "held_out_median_plane_error_0.1273m",
+      "advisory_held_out_metric_confidence=low",
+      "reviewed_15pt_correspondences"
+    ]
+  },
+  "coordinate_contract": {
+    "camera_matrix_K": [
+      [
+        2537.1648,
+        0.0,
+        960.0
+      ],
+      [
+        0.0,
+        2537.1648,
+        540.0
+      ],
+      [
+        0.0,
+        0.0,
+        1.0
+      ]
+    ],
+    "camera_matrix_input_space": "camera_m",
+    "camera_matrix_output_space": "pixels_undistorted_native",
+    "extrinsics_convention": "world_to_camera_opencv_column",
+    "extrinsics_input_space": "world_court_netcenter_z_up_m",
+    "extrinsics_output_space": "camera_m",
+    "homography_convention": "world_xy_to_image_column",
+    "homography_input_space": "world_xy_homography_m",
+    "homography_output_space": "pixels_raw_native",
+    "homography_pixel_convention": "raw_pixels"
+  },
+  "coordinate_frame": "court_netcenter_z_up_m",
+  "extrinsics": {
+    "R": [
+      [
+        0.9999897781291203,
+        -0.004512681914708865,
+        -0.000281672166522699
+      ],
+      [
+        -0.0014156868818364168,
+        -0.2533279713667991,
+        -0.9673794161309381
+      ],
+      [
+        0.004294120157300019,
+        0.967369926463046,
+        -0.25333177042557414
+      ]
+    ],
+    "camera_height_m": 4.679373454321657,
+    "t": [
+      -0.02913314799913923,
+      -0.728242811793319,
+      21.25224466456907
+    ]
+  },
+  "gsd_model": {
+    "calibration_sigma_m": 0.0,
+    "plane_sigma_m": 0.0,
+    "samples": [
+      {
+        "court_xy": [
+          -3.048,
+          -6.7056000000000004
+        ],
+        "gsd_m_per_px": 0.012224739021614427,
+        "sigma_p_m": 0.05860262917100174
+      },
+      {
+        "court_xy": [
+          0.0,
+          -6.7056000000000004
+        ],
+        "gsd_m_per_px": 0.011985024556020475,
+        "sigma_p_m": 0.05745349233386441
+      },
+      {
+        "court_xy": [
+          3.048,
+          -6.7056000000000004
+        ],
+        "gsd_m_per_px": 0.012335663140102468,
+        "sigma_p_m": 0.05913437426350486
+      },
+      {
+        "court_xy": [
+          3.048,
+          6.7056000000000004
+        ],
+        "gsd_m_per_px": 0.037820037804834075,
+        "sigma_p_m": 0.18130069253758688
+      },
+      {
+        "court_xy": [
+          0.0,
+          6.7056000000000004
+        ],
+        "gsd_m_per_px": 0.037657040911211324,
+        "sigma_p_m": 0.1805193223589589
+      },
+      {
+        "court_xy": [
+          -3.048,
+          6.7056000000000004
+        ],
+        "gsd_m_per_px": 0.03716359957720348,
+        "sigma_p_m": 0.1781538764002862
+      },
+      {
+        "court_xy": [
+          -3.048,
+          -2.1336
+        ],
+        "gsd_m_per_px": 0.019177098125987866,
+        "sigma_p_m": 0.09193066355577412
+      },
+      {
+        "court_xy": [
+          0.0,
+          -2.1336
+        ],
+        "gsd_m_per_px": 0.019106881369606553,
+        "sigma_p_m": 0.09159406033434508
+      },
+      {
+        "court_xy": [
+          3.048,
+          -2.1336
+        ],
+        "gsd_m_per_px": 0.019277993814329816,
+        "sigma_p_m": 0.09241433462624868
+      },
+      {
+        "court_xy": [
+          -3.048,
+          0.0
+        ],
+        "gsd_m_per_px": 0.024198867463549538,
+        "sigma_p_m": 0.11600388800261956
+      },
+      {
+        "court_xy": [
+          0.0,
+          0.0
+        ],
+        "gsd_m_per_px": 0.024007234375994245,
+        "sigma_p_m": 0.1150852423982397
+      },
+      {
+        "court_xy": [
+          3.048,
+          0.0
+        ],
+        "gsd_m_per_px": 0.023663884580901226,
+        "sigma_p_m": 0.11343930127162755
+      },
+      {
+        "court_xy": [
+          -3.048,
+          2.1336
+        ],
+        "gsd_m_per_px": 0.027461201603011947,
+        "sigma_p_m": 0.1316427787363022
+      },
+      {
+        "court_xy": [
+          0.0,
+          2.1336
+        ],
+        "gsd_m_per_px": 0.027256137539750577,
+        "sigma_p_m": 0.13065974807737712
+      },
+      {
+        "court_xy": [
+          3.048,
+          2.1336
+        ],
+        "gsd_m_per_px": 0.02742636872726903,
+        "sigma_p_m": 0.1314757978219029
+      }
+    ],
+    "type": "analytic_ray_plane"
+  },
+  "homography": [
+    [
+      119.46360316378858,
+      42.982640218600245,
+      956.2645559657713
+    ],
+    [
+      -0.17901350399704263,
+      -5.582084152982457,
+      453.2047510698827
+    ],
+    [
+      -8.199560784287983e-05,
+      0.04538113031601009,
+      1.0
+    ]
+  ],
+  "image_pts": [
+    [
+      438.6013986013986,
+      708.2867132867133
+    ],
+    [
+      953.2867132867133,
+      710.5244755244755
+    ],
+    [
+      1485.8741258741259,
+      703.8111888111888
+    ],
+    [
+      1235.2447552447552,
+      318.9160839160839
+    ],
+    [
+      953.2867132867133,
+      318.9160839160839
+    ],
+    [
+      673.5664335664335,
+      323.39160839160843
+    ],
+    [
+      552.7272727272727,
+      520.3146853146853
+    ],
+    [
+      962.2377622377621,
+      518.0769230769231
+    ],
+    [
+      1360.5594405594406,
+      518.0769230769231
+    ],
+    [
+      601.958041958042,
+      441.99300699300704
+    ],
+    [
+      955.5244755244755,
+      441.99300699300704
+    ],
+    [
+      1313.5664335664335,
+      448.70629370629376
+    ],
+    [
+      615.3846153846155,
+      403.95104895104896
+    ],
+    [
+      957.7622377622379,
+      403.95104895104896
+    ],
+    [
+      1291.188811188811,
+      403.95104895104896
+    ]
+  ],
+  "image_size": [
+    1920,
+    1080
+  ],
+  "intrinsics": {
+    "cx": 960.0,
+    "cy": 540.0,
+    "dist": [
+      0.0,
+      0.0,
+      0.0,
+      0.0
+    ],
+    "fx": 2537.1648,
+    "fy": 2537.1648,
+    "source": "metric_15pt_reviewed"
+  },
+  "measurement_valid": null,
+  "metric_confidence": "med",
+  "per_keypoint_residual_px": [
+    2.685514454306907,
+    7.867372207639546,
+    3.167809168867229,
+    2.345747664455387,
+    1.564881231005762,
+    5.494644644966822,
+    4.793773434949169,
+    5.622981869997881,
+    3.4767806562977297,
+    14.963634923314844,
+    11.111768866960421,
+    7.671341364444038,
+    8.69469051413956,
+    2.821411118084698,
+    4.600952280875601
+  ],
+  "provenance": {
+    "authority_unchanged": "source stays metric_15pt_reviewed -- a better fit of the same owner-reviewed correspondences is not a new authority class",
+    "not_gate_verified": true,
+    "refinement_of": "eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_calibration_metric15pt.json",
+    "refit_lane": "runs/lanes/calib_distortion_fit_20260726",
+    "refit_reason": "raw solve was fit with the 3 net keypoints declared at net-top height and a distortion gate scored on training residual; both corrected",
+    "reviewed_keypoints": "eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_keypoints.json"
+  },
+  "reprojection_error_px": {
+    "median": 4.793773434949169,
+    "p95": 12.26732868386675
+  },
+  "schema_version": 1,
+  "solved_over_frames": [
+    0,
+    30,
+    60,
+    90,
+    120,
+    150,
+    180,
+    210
+  ],
+  "source": "metric_15pt_reviewed",
+  "sport": "pickleball",
+  "trust_band": null,
+  "usage": null,
+  "world_pts": [
+    [
+      -3.048,
+      -6.7056000000000004,
+      0.0
+    ],
+    [
+      0.0,
+      -6.7056000000000004,
+      0.0
+    ],
+    [
+      3.048,
+      -6.7056000000000004,
+      0.0
+    ],
+    [
+      3.048,
+      6.7056000000000004,
+      0.0
+    ],
+    [
+      0.0,
+      6.7056000000000004,
+      0.0
+    ],
+    [
+      -3.048,
+      6.7056000000000004,
+      0.0
+    ],
+    [
+      -3.048,
+      -2.1336,
+      0.0
+    ],
+    [
+      0.0,
+      -2.1336,
+      0.0
+    ],
+    [
+      3.048,
+      -2.1336,
+      0.0
+    ],
+    [
+      -3.048,
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      0.0,
+      0.0
+    ],
+    [
+      3.048,
+      0.0,
+      0.0
+    ],
+    [
+      -3.048,
+      2.1336,
+      0.0
+    ],
+    [
+      0.0,
+      2.1336,
+      0.0
+    ],
+    [
+      3.048,
+      2.1336,
+      0.0
+    ]
+  ]
+}

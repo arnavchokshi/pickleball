@@ -84,12 +84,18 @@ def test_synthetic_round_trip_recovers_radial_distortion_when_present():
 
     fit = fit_single_view_metric_camera(OBJECT_POINTS, image_points, NATIVE_SIZE)
 
-    assert fit.distortion_model == "k1_k2_calibrate_camera_seeded"
+    assert fit.distortion_model == "k1_k2_radial_bounded_cv_selected"
     assert fit.fx == pytest.approx(TRUE_FX, rel=1e-3)
     assert fit.k1 == pytest.approx(true_dist[0], abs=5e-3)
     assert fit.k2 == pytest.approx(true_dist[1], abs=5e-3)
     assert fit.reprojection_error_px.median < 0.05
     assert any("accepted" in note for note in fit.identifiability_notes)
+    # Accepted on held-out evidence, not on the residual of the fitted points.
+    assert fit.held_out_median_px is not None
+    assert fit.held_out_median_px < 0.5
+    assert any("leave_one_out" in note for note in fit.identifiability_notes)
+    scored = {record["distortion_model"] for record in fit.model_selection or []}
+    assert {"zero_distortion_grid_search_focal", "k1_radial_bounded_cv_selected", "k1_k2_radial_bounded_cv_selected"} <= scored
 
 
 def test_zero_distortion_input_does_not_spuriously_accept_distortion():
@@ -223,10 +229,20 @@ def test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed
     payload = calibration.model_dump(mode="json")
     contract = payload.pop("coordinate_contract")
 
+    # Digest refreshed 2026-07-26 (CAL lane). The previous pin,
+    # 08f6c8ce1151bb0c654d3895910898cb51c694b61bddbaa59c574bf3754ee3a9, was
+    # already failing at f29145a: it was frozen when the 3 net keypoints were
+    # declared at z=0, and a later court-taxonomy change raised them to the net
+    # top (post_net_height_m) without re-freezing, silently degrading this fit
+    # from 6.39px to 26.4px median. The metric fit now selects the net label
+    # height on held-out residual and this clip's reviewed labels select the
+    # ground net line, so the fixture is meaningful again.
     legacy_digest = hashlib.sha256(
         json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
     ).hexdigest()
-    assert legacy_digest == "08f6c8ce1151bb0c654d3895910898cb51c694b61bddbaa59c574bf3754ee3a9"
+    assert legacy_digest == "d7ddc0d6aee45b19b4b0b22f3851b54ee839d1cdc34407710d00b8a62b874526"
+    assert payload["world_pts"][9:12] == [[-3.048, 0.0, 0.0], [0.0, 0.0, 0.0], [3.048, 0.0, 0.0]]
+    assert payload["intrinsics"]["dist"][0] == pytest.approx(-0.1789, abs=1e-3)
     assert contract == {
         "camera_matrix_K": [
             [payload["intrinsics"]["fx"], 0.0, payload["intrinsics"]["cx"]],
@@ -336,3 +352,143 @@ def test_calibrate_cli_rejects_reviewed_keypoints_combined_with_sidecar(tmp_path
 
     assert result.returncode != 0
     assert "standalone" in result.stderr
+
+
+# --- Held-out model selection (CAL lane, 2026-07-26) -------------------------------
+
+NET_INDEXES = [
+    index
+    for index, name in enumerate(PICKLEBALL_COURT_KEYPOINT_NAMES)
+    if name in ("net_left_sideline", "net_center", "net_right_sideline")
+]
+
+
+def _object_points_with_net_at(height_m: float) -> list[list[float]]:
+    points = [list(point) for point in OBJECT_POINTS]
+    for index in NET_INDEXES:
+        points[index][2] = height_m
+    return points
+
+
+def _net_variants() -> dict[str, list[list[float]]]:
+    return {
+        "net_top_as_declared": _object_points_with_net_at(0.9144),
+        "ground_net_line": _object_points_with_net_at(0.0),
+    }
+
+
+@pytest.mark.parametrize(
+    ("truth_height_m", "expected_variant"),
+    [(0.0, "ground_net_line"), (0.9144, "net_top_as_declared")],
+)
+def test_net_label_height_is_selected_from_held_out_residual(truth_height_m, expected_variant):
+    """The pixels decide which world height the label source meant -- both ways.
+
+    This is the defect that made the reviewed 15-pt solve worse than a line solve
+    on the same video: the taxonomy declares the 3 net keypoints at the net top,
+    every reviewed label set in this repo marks the ground net line, and a 0.9m
+    world-model error on 3 of 15 points is a 40-120px systematic residual that no
+    distortion coefficient can absorb.
+    """
+
+    rotation, translation = _look_at_pose(CAM_POS, TARGET)
+    truth = _object_points_with_net_at(truth_height_m)
+    image_points = _project(truth, rotation, translation, TRUE_FX, TRUE_CX, TRUE_CY)
+
+    fit = fit_single_view_metric_camera(
+        _object_points_with_net_at(0.9144),
+        image_points,
+        NATIVE_SIZE,
+        object_point_variants=_net_variants(),
+    )
+
+    assert fit.object_point_variant == expected_variant
+    assert fit.object_points_m is not None
+    assert fit.object_points_m[NET_INDEXES[0]][2] == pytest.approx(truth_height_m)
+    assert fit.fx == pytest.approx(TRUE_FX, rel=1e-3)
+    assert fit.reprojection_error_px.median < 0.05
+    variant_scores = {
+        record["object_point_variant"]: record["held_out_median_px"]
+        for record in fit.model_selection or []
+        if record.get("role") == "object_point_variant_candidate"
+    }
+    assert set(variant_scores) == {"net_top_as_declared", "ground_net_line"}
+    losers = [score for name, score in variant_scores.items() if name != expected_variant]
+    assert min(losers) > 10.0 * max(1e-6, variant_scores[expected_variant])
+
+
+def test_wrong_net_height_makes_the_fit_much_worse():
+    """Quantifies the defect: same pixels, only the declared net height differs."""
+
+    rotation, translation = _look_at_pose(CAM_POS, TARGET)
+    truth = _object_points_with_net_at(0.0)
+    image_points = _project(truth, rotation, translation, TRUE_FX, TRUE_CX, TRUE_CY)
+
+    right = fit_single_view_metric_camera(truth, image_points, NATIVE_SIZE)
+    wrong = fit_single_view_metric_camera(
+        _object_points_with_net_at(0.9144), image_points, NATIVE_SIZE
+    )
+
+    assert right.reprojection_error_px.median < 0.05
+    assert wrong.reprojection_error_px.median > 5.0
+    # And the wrong world model cannot be rescued by distortion.
+    assert wrong.k1 == 0.0 or abs(wrong.reprojection_error_px.median) > 5.0
+
+
+def test_accepted_radial_model_is_always_invertible_over_the_frame():
+    """Unconstrained cv2.calibrateCamera returns folded radial maps from 15 points."""
+
+    from threed.racketsport.camera_distortion import is_radially_invertible, max_normalized_radius
+
+    rotation, translation = _look_at_pose(CAM_POS, TARGET)
+    for true_dist in ([-0.15, 0.04, 0.0, 0.0], [-0.32, 0.11, 0.0, 0.0], None):
+        image_points = _project(
+            OBJECT_POINTS, rotation, translation, TRUE_FX, TRUE_CX, TRUE_CY, dist=true_dist
+        )
+        fit = fit_single_view_metric_camera(OBJECT_POINTS, image_points, NATIVE_SIZE)
+        max_radius = max_normalized_radius(NATIVE_SIZE, fit.fx, fit.fy, fit.cx, fit.cy)
+        assert is_radially_invertible(fit.k1, fit.k2, max_radius)
+
+
+def test_selection_is_recorded_for_audit_not_asserted():
+    rotation, translation = _look_at_pose(CAM_POS, TARGET)
+    image_points = _project(OBJECT_POINTS, rotation, translation, TRUE_FX, TRUE_CX, TRUE_CY)
+
+    fit = fit_single_view_metric_camera(OBJECT_POINTS, image_points, NATIVE_SIZE)
+
+    assert fit.model_selection
+    accepted = [record for record in fit.model_selection if record.get("accepted")]
+    assert len(accepted) == 1
+    assert accepted[0]["distortion_model"] == fit.distortion_model
+    assert fit.held_out_median_px == pytest.approx(accepted[0]["held_out_median_px"])
+
+
+def test_both_held_out_criteria_are_recorded_and_selectable():
+    """The selection metric is a declared policy knob, not a hidden default."""
+
+    rotation, translation = _look_at_pose(CAM_POS, TARGET)
+    image_points = _project(
+        OBJECT_POINTS, rotation, translation, TRUE_FX, TRUE_CX, TRUE_CY, dist=[-0.15, 0.04, 0.0, 0.0]
+    )
+
+    metric_fit = fit_single_view_metric_camera(
+        OBJECT_POINTS, image_points, NATIVE_SIZE, selection_metric="held_out_median_plane_error_m"
+    )
+    pixel_fit = fit_single_view_metric_camera(
+        OBJECT_POINTS, image_points, NATIVE_SIZE, selection_metric="held_out_median_px"
+    )
+
+    for fit in (metric_fit, pixel_fit):
+        assert fit.held_out_median_px is not None
+        assert fit.held_out_median_plane_error_m is not None
+        for record in fit.model_selection or []:
+            assert "held_out_median_px" in record
+            assert "held_out_median_plane_error_m" in record
+    assert metric_fit.selection_metric == "held_out_median_plane_error_m"
+    assert pixel_fit.selection_metric == "held_out_median_px"
+    # Real distortion is strong enough that both criteria agree here.
+    assert metric_fit.k1 == pytest.approx(-0.15, abs=5e-3)
+    assert pixel_fit.k1 == pytest.approx(-0.15, abs=5e-3)
+
+    with pytest.raises(ValueError, match="unknown selection_metric"):
+        fit_single_view_metric_camera(OBJECT_POINTS, image_points, NATIVE_SIZE, selection_metric="training_median")

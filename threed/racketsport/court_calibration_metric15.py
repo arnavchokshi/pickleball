@@ -35,12 +35,40 @@ silently let a nonlinear optimizer converge to an unstable basin:
   solvePnP reprojection RMSE) rather than seeding straight into `cv2.calibrateCamera`,
   because the joint fx/k1/k2/pose optimization from a single view is prone to bad
   local minima without a good starting point.
-- **k1, k2 are only accepted if they clear an honesty gate**: a `cv2.calibrateCamera`
-  refinement (still fx=fy, cx/cy fixed, zero tangential distortion, k3=0) is attempted
-  seeded from the grid-search focal; it is only adopted over the zero-distortion
-  baseline if it reduces median reprojection error by
-  `DEFAULT_DISTORTION_IMPROVEMENT_THRESHOLD` (15%) or more. This avoids overfitting two
-  extra parameters to 15 single-view points when the data does not support it.
+- **k1 (then k2) are only accepted if they clear an honesty gate on HELD-OUT residual**:
+  see the model-selection section below. This avoids overfitting extra parameters to 15
+  single-view points when the data does not support it.
+
+Model selection is leave-one-out cross-validated (2026-07-26, CAL lane)
+----------------------------------------------------------------------
+The original gate compared the distorted and zero-distortion fits on the *training*
+median -- the same 15 points both models were fit to. A lower residual on the points you
+fit is not evidence: it is what more parameters do. Selection now runs on leave-one-out
+cross-validated residual (15 folds; each fold refits focal, distortion and pose on 14
+points and scores the 15th, which the fold never saw), and complexity is only added when
+the held-out median improves by `distortion_improvement_threshold`.
+
+Two things are selected this way, in this order:
+
+1. **Net-keypoint label height.** `court_keypoint_net.PICKLEBALL_KEYPOINTS` declares the
+   3 net keypoints at the net *top* (`post_net_height_m`, 0.9144 m). Every reviewed label
+   set in this repo actually marks the net line where it meets the court, ~0 m: measured
+   by back-projecting each net label through a floor-only-fit camera onto the vertical
+   net plane, the implied label height is 0.008-0.130 m on all six reviewed clips, and
+   ground-net-line beats net-top on leave-one-out residual by 2-10x everywhere. A 0.9 m
+   world-model error on 3 of 15 correspondences is a 40-120 px systematic residual, which
+   is exactly why no distortion coefficient could ever clear the old gate: distortion
+   cannot explain a mis-specified object point. The height is therefore *selected* per
+   clip rather than assumed, so a future clip genuinely labelled at net top still fits.
+   `court_keypoint_net` is not modified -- it is the court/training lane's taxonomy, and
+   the fix belongs to whoever consumes it for a metric fit.
+2. **Radial distortion**, in increasing complexity: zero -> k1 -> k1+k2. Each candidate is
+   compared against the currently accepted model, not against the previous candidate, so a
+   k1+k2 pair that works when k1 alone does not is still reachable (real: radial terms
+   trade off against focal length). Coefficients are bounded and, harder, required to be
+   *radially invertible over this frame* -- a radial map that folds back before covering
+   the image corner is not a camera, and unconstrained `cv2.calibrateCamera` returns such
+   models from 15 single-view points (it produced k1=+6.96 on one clip here).
 
 Every choice above is recorded in the returned fit's `identifiability_notes` and
 surfaces into the `capture_quality.reasons` of the emitted `CourtCalibration`.
@@ -54,6 +82,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from .camera_distortion import is_radially_invertible, max_normalized_radius, undistort_normalized
 from .capture_quality import score_capture_quality
 from .coordinates import camera_matrix_from_intrinsics, invert_extrinsics
 from .court_calibration import homography_from_planar_points, reprojection_error
@@ -76,6 +105,44 @@ from .schemas import (
 DEFAULT_DISTORTION_IMPROVEMENT_THRESHOLD = 0.15
 MIN_REVIEWED_CORRESPONDENCES = 6
 METRIC15_SOURCE_TAG = "metric_15pt_reviewed"
+
+# The 3 keypoints whose declared world height is ambiguous between label sources:
+# the court's ground net line (z=0) and the top of the physical net.
+NET_KEYPOINT_NAMES: tuple[str, ...] = ("net_left_sideline", "net_center", "net_right_sideline")
+
+# Radial coefficient box. Wide enough for the strong barrel of an action cam
+# (k1 ~ -0.3 measured on Burlington) without letting a 15-point single-view fit
+# wander into the unphysical values `cv2.calibrateCamera` returns unconstrained.
+# The binding constraint is `is_radially_invertible`, not this box.
+K1_BOUNDS = (-0.60, 0.35)
+K2_BOUNDS = (-0.50, 0.50)
+
+# Leave-one-out is the held-out protocol: 15 folds, each refitting focal,
+# distortion and pose on 14 points and scoring the 1 point it never saw.
+CROSS_VALIDATION = "leave_one_out"
+
+# What the held-out fold is scored ON.
+#
+# `held_out_median_plane_error_m` is the default: the held-out correspondence's
+# pixel is pushed through the exact path the downstream ball solver uses
+# (undistort -> camera ray -> intersect the plane at that point's own world
+# height) and compared to where the point actually is, in METRES. That is the
+# quantity the North Star calls the binding floor on 3D ball accuracy, and it
+# weights each correspondence by its real metric consequence -- a pixel-space
+# residual over-weights points near the camera, where a pixel is worth
+# centimetres, against points near the far baseline, where a pixel is worth
+# decimetres.
+#
+# `held_out_median_px` is the classical reprojection criterion, kept selectable
+# and always recorded. The two agree on 5 of the 6 reviewed clips here; where
+# they disagree, the pixel criterion accepts a k1,k2 pair that improves
+# reprojection while making metric plane accuracy worse.
+SELECTION_METRICS = ("held_out_median_plane_error_m", "held_out_median_px")
+DEFAULT_SELECTION_METRIC = "held_out_median_plane_error_m"
+SELECTION_METRIC_NOISE_FLOOR = {
+    "held_out_median_plane_error_m": 1e-5,
+    "held_out_median_px": 1e-3,
+}
 
 
 @dataclass(frozen=True)
@@ -107,6 +174,19 @@ class SingleViewCameraFit:
     reprojection_error_px: ReprojectionError
     per_point_residual_px: list[float]
     identifiability_notes: list[str]
+    # Held-out (leave-one-out) median reprojection residual of the accepted
+    # model. This -- not `reprojection_error_px.median` -- is what selected it.
+    held_out_median_px: float | None = None
+    # Held-out median ray-plane position error, in metres: the same folds scored
+    # in the units the downstream ball solver actually works in.
+    held_out_median_plane_error_m: float | None = None
+    # Which of the two held-out quantities ranked the candidates.
+    selection_metric: str = DEFAULT_SELECTION_METRIC
+    # Every candidate scored, so the choice is auditable rather than asserted.
+    model_selection: list[dict[str, Any]] | None = None
+    # Which object-point variant won, and the points it used.
+    object_point_variant: str = "as_given"
+    object_points_m: list[list[float]] | None = None
 
 
 def load_reviewed_court_keypoints_15pt(path: str | Path) -> ReviewedCourtKeypoints:
@@ -307,13 +387,28 @@ def fit_single_view_metric_camera(
     image_size: tuple[float, float],
     *,
     distortion_improvement_threshold: float = DEFAULT_DISTORTION_IMPROVEMENT_THRESHOLD,
+    object_point_variants: Mapping[str, Sequence[Sequence[float]]] | None = None,
+    selection_metric: str = DEFAULT_SELECTION_METRIC,
 ) -> SingleViewCameraFit:
-    """Fit fx(=fy), k1, k2, and solvePnP pose from a single planar-target view.
+    """Fit fx(=fy), k1, k2, and a solvePnP pose from a single view.
 
-    See the module docstring for the full identifiability discussion. `object_points_m`
-    must be coplanar (z=0) in the calibration target's own frame; `image_points_px` are
-    the matching pixel observations in the same (native) pixel space as `image_size`.
+    See the module docstring for the identifiability discussion and the selection
+    protocol. `image_points_px` are pixel observations in the same (native) pixel space
+    as `image_size`.
+
+    `object_point_variants` offers competing world-coordinate hypotheses for the same
+    pixels -- used for the net-keypoint label height, which differs by label source and
+    is not knowable from the pixels alone. Each variant is scored by leave-one-out
+    cross-validated residual and the best one wins; omit it and `object_points_m` is the
+    only candidate.
+
+    `selection_metric` picks which held-out quantity decides -- see
+    `SELECTION_METRICS`. Both are always computed and recorded; only the chosen one
+    ranks candidates.
     """
+
+    if selection_metric not in SELECTION_METRICS:
+        raise ValueError(f"unknown selection_metric {selection_metric!r}; expected one of {SELECTION_METRICS}")
 
     try:
         import cv2  # type: ignore[import-not-found]
@@ -321,12 +416,18 @@ def fit_single_view_metric_camera(
     except ImportError as exc:  # pragma: no cover - environment guard
         raise RuntimeError("fit_single_view_metric_camera requires opencv-python and numpy") from exc
 
-    obj = np.asarray([[float(v) for v in point] for point in object_points_m], dtype=np.float64)
+    variants = dict(object_point_variants) if object_point_variants else {"as_given": object_points_m}
     img = np.asarray([[float(v) for v in point] for point in image_points_px], dtype=np.float64)
-    if obj.shape[0] != img.shape[0]:
-        raise ValueError("object and image point counts must match")
-    if obj.shape[0] < MIN_REVIEWED_CORRESPONDENCES:
-        raise ValueError(f"single-view metric calibration requires at least {MIN_REVIEWED_CORRESPONDENCES} correspondences")
+    parsed: dict[str, Any] = {}
+    for name, points in variants.items():
+        obj = np.asarray([[float(v) for v in point] for point in points], dtype=np.float64)
+        if obj.shape[0] != img.shape[0]:
+            raise ValueError("object and image point counts must match")
+        if obj.shape[0] < MIN_REVIEWED_CORRESPONDENCES:
+            raise ValueError(
+                f"single-view metric calibration requires at least {MIN_REVIEWED_CORRESPONDENCES} correspondences"
+            )
+        parsed[name] = obj
 
     width, height = float(image_size[0]), float(image_size[1])
     if width <= 0.0 or height <= 0.0:
@@ -339,150 +440,393 @@ def fit_single_view_metric_camera(
         "change (classic single-image calibration degeneracy).",
         "fx constrained equal to fy (square-pixel / unit aspect-ratio assumption): a "
         "single view cannot independently resolve fx vs fy without this assumption.",
+        "focal length seeded by a coarse-to-fine 1D grid search minimizing solvePnP "
+        "reprojection RMSE rather than seeding cv2.calibrateCamera cold, since the joint "
+        "optimization is prone to bad local minima from a single view.",
+        f"model selection scored on {CROSS_VALIDATION} cross-validated residual "
+        "(each fold refits focal, distortion and pose on n-1 points and scores the held-out "
+        "one). Training residual is NOT used to select: a lower residual on the points you "
+        "fit is what extra parameters do, not evidence that they are real.",
     ]
 
-    def _residual_for_focal(focal: float) -> tuple[float, Any, Any]:
-        k = np.array([[focal, 0.0, cx], [0.0, focal, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
-        ok, rvec, tvec = cv2.solvePnP(obj, img, k, None, flags=cv2.SOLVEPNP_ITERATIVE)
-        if not ok:
-            return math.inf, None, None
-        projected, _ = cv2.projectPoints(obj, rvec, tvec, k, None)
-        projected = projected.reshape(-1, 2)
-        err = float(np.sqrt(np.mean(np.sum((projected - img) ** 2, axis=1))))
-        return err, rvec, tvec
+    scoreboard: list[dict[str, Any]] = []
 
-    lo, hi = 0.3 * max(width, height), 6.0 * max(width, height)
-    best_err, best_focal, best_rvec, best_tvec = math.inf, None, None, None
-    for _ in range(5):
-        candidates = np.linspace(lo, hi, 51)
-        round_err, round_focal, round_rvec, round_tvec = math.inf, None, None, None
-        for focal in candidates:
-            err, rvec, tvec = _residual_for_focal(float(focal))
-            if err < round_err:
-                round_err, round_focal, round_rvec, round_tvec = err, float(focal), rvec, tvec
-        if round_err < best_err:
-            best_err, best_focal, best_rvec, best_tvec = round_err, round_focal, round_rvec, round_tvec
-        span = (hi - lo) / 50.0
-        lo = max(1.0, round_focal - 4.0 * span)
-        hi = round_focal + 4.0 * span
+    # --- Step 1: object-point variant, scored with the zero-distortion model. --------
+    variant_scores: dict[str, float] = {}
+    variant_records: dict[str, dict[str, float]] = {}
+    for name, obj in parsed.items():
+        scores = _cross_validated_scores(cv2, np, obj, img, width, height, cx, cy, n_radial=0)
+        variant_scores[name] = scores[selection_metric]
+        variant_records[name] = scores
+        scoreboard.append(
+            {
+                "object_point_variant": name,
+                "distortion_model": "zero_distortion",
+                "role": "object_point_variant_candidate",
+                **scores,
+            }
+        )
+    best_variant = min(variant_scores, key=lambda name: variant_scores[name])
+    obj = parsed[best_variant]
+    variant_notes: list[str] = []
+    if len(parsed) > 1:
+        runners = sorted((score, name) for name, score in variant_scores.items() if name != best_variant)
+        variant_notes.append(
+            f"object-point variant '{best_variant}' selected on {CROSS_VALIDATION} "
+            f"{selection_metric} {variant_scores[best_variant]:.4f}, against "
+            + ", ".join(f"'{name}' {score:.4f}" for score, name in runners)
+            + ". The pixels cannot say which world height a label source meant; the held-out "
+            "residual can."
+        )
 
-    if best_focal is None:
+    # --- Step 2: radial distortion, in increasing complexity. ------------------------
+    candidates: list[tuple[str, int]] = [
+        ("zero_distortion_grid_search_focal", 0),
+        ("k1_radial_bounded_cv_selected", 1),
+        ("k1_k2_radial_bounded_cv_selected", 2),
+    ]
+    fitted: dict[int, Any] = {}
+    held_out_by_n: dict[int, float] = {}
+    scores_by_n: dict[int, dict[str, float]] = {}
+    for model_name, n_radial in candidates:
+        params = _fit_camera(cv2, np, obj, img, width, height, cx, cy, n_radial=n_radial)
+        if params is None:
+            scoreboard.append(
+                {
+                    "object_point_variant": best_variant,
+                    "distortion_model": model_name,
+                    "held_out_median_px": None,
+                    "held_out_median_plane_error_m": None,
+                    "role": "distortion_candidate",
+                    "note": "fit did not converge to a feasible camera",
+                }
+            )
+            continue
+        if n_radial == 0 and best_variant in variant_records:
+            scores = variant_records[best_variant]
+        else:
+            scores = _cross_validated_scores(cv2, np, obj, img, width, height, cx, cy, n_radial=n_radial)
+        fitted[n_radial] = (model_name, params)
+        held_out_by_n[n_radial] = scores[selection_metric]
+        scores_by_n[n_radial] = scores
+        focal, k1, k2, _rvec, _tvec = params
+        scoreboard.append(
+            {
+                "object_point_variant": best_variant,
+                "distortion_model": model_name,
+                "fx": focal,
+                "k1": k1,
+                "k2": k2,
+                "role": "distortion_candidate",
+                **scores,
+            }
+        )
+
+    if 0 not in fitted:
         raise ValueError("focal-length grid search failed to solve a camera pose for any candidate")
 
-    zero_dist_fit = _build_fit(
-        cv2,
-        np,
-        obj,
-        img,
-        fx=best_focal,
-        fy=best_focal,
-        cx=cx,
-        cy=cy,
-        dist=[0.0, 0.0, 0.0, 0.0],
-        rvec=best_rvec,
-        tvec=best_tvec,
-        distortion_model="zero_distortion_grid_search_focal",
-        notes=[
-            *base_notes,
-            "focal length found by coarse-to-fine 1D grid search minimizing solvePnP "
-            "reprojection RMSE (zero distortion) rather than seeding cv2.calibrateCamera "
-            "cold, since the joint optimization is prone to bad local minima from a single "
-            "view.",
-            "radial distortion fixed at zero (k1=k2=0): this is the identifiability "
-            "baseline before testing whether allowing k1,k2 meaningfully improves the fit.",
-        ],
-    )
-
-    distorted_fit = _try_refine_with_distortion(
-        cv2, np, obj, img, seed_focal=best_focal, cx=cx, cy=cy, width=width, height=height, base_notes=base_notes
-    )
-
-    # Below this floor the zero-distortion fit is already sub-hundredth-pixel and any
-    # "improvement" ratio is floating-point noise, not signal -- keep zero distortion.
-    negligible_error_floor_px = 1e-3
-    if distorted_fit is not None and zero_dist_fit.reprojection_error_px.median > negligible_error_floor_px:
-        improvement = 1.0 - (distorted_fit.reprojection_error_px.median / zero_dist_fit.reprojection_error_px.median)
-        if improvement >= distortion_improvement_threshold:
-            note = (
-                f"k1,k2 accepted: reduced median reprojection error by {improvement:.1%}, "
-                f">= the {distortion_improvement_threshold:.0%} gate required to justify 2 extra "
-                "single-view degrees of freedom."
+    accepted_n = 0
+    decision_notes: list[str] = []
+    for _model_name, n_radial in candidates:
+        if n_radial == 0 or n_radial not in fitted:
+            continue
+        incumbent = held_out_by_n[accepted_n]
+        challenger = held_out_by_n[n_radial]
+        label = f"k1" if n_radial == 1 else "k1,k2"
+        floor = SELECTION_METRIC_NOISE_FLOOR[selection_metric]
+        if incumbent <= floor:
+            decision_notes.append(
+                f"{label} not tested: the incumbent's held-out {selection_metric} ({incumbent:.6f}) is "
+                f"already below the {floor:g} noise floor, so any improvement ratio would be "
+                "floating-point noise, not signal."
             )
-            return replace(distorted_fit, identifiability_notes=[*distorted_fit.identifiability_notes, note])
-        note = (
-            f"k1,k2 rejected: only {improvement:.1%} median-reprojection improvement over "
-            f"zero-distortion (< the {distortion_improvement_threshold:.0%} gate) -- falling back to "
-            "zero distortion to avoid overfitting 2 extra parameters to 15 single-view points."
-        )
-        return replace(zero_dist_fit, identifiability_notes=[*zero_dist_fit.identifiability_notes, note])
+            continue
+        improvement = 1.0 - (challenger / incumbent)
+        if improvement >= distortion_improvement_threshold:
+            decision_notes.append(
+                f"{label} accepted: {CROSS_VALIDATION} held-out {selection_metric} {challenger:.4f} vs "
+                f"{incumbent:.4f} for the incumbent, a {improvement:.1%} reduction, >= the "
+                f"{distortion_improvement_threshold:.0%} gate required to justify the extra "
+                "single-view degree(s) of freedom."
+            )
+            accepted_n = n_radial
+        else:
+            decision_notes.append(
+                f"{label} rejected: {CROSS_VALIDATION} held-out {selection_metric} {challenger:.4f} vs "
+                f"{incumbent:.4f} for the incumbent, only {improvement:.1%} (< the "
+                f"{distortion_improvement_threshold:.0%} gate) -- not enough to justify the extra "
+                "parameter(s) on 15 single-view points."
+            )
 
-    if distorted_fit is None:
-        note = "k1,k2 refinement did not converge; zero distortion retained."
+    model_name, (focal, k1, k2, rvec, tvec) = fitted[accepted_n]
+    max_radius = max_normalized_radius((width, height), focal, focal, cx, cy)
+    if accepted_n == 0:
+        model_notes = [
+            "radial distortion fixed at zero (k1=k2=0): the identifiability baseline every "
+            "distorted candidate has to beat on held-out residual.",
+        ]
     else:
-        note = (
-            f"zero-distortion median reprojection error ({zero_dist_fit.reprojection_error_px.median:.4f}px) is "
-            f"already below the {negligible_error_floor_px}px noise floor -- any k1,k2 'improvement' ratio would "
-            "be floating-point noise, not signal; zero distortion retained."
+        model_notes = [
+            f"radial distortion fit over bounded k1{'' if accepted_n == 1 else ',k2'} "
+            f"(k1 in [{K1_BOUNDS[0]:g},{K1_BOUNDS[1]:g}]"
+            + (f", k2 in [{K2_BOUNDS[0]:g},{K2_BOUNDS[1]:g}]" if accepted_n == 2 else "")
+            + "), tangential and k3 fixed at zero, pose refit by solvePnP at every step.",
+            f"the accepted radial model is invertible over this frame (max normalized radius "
+            f"{max_radius:.3f}): it reaches every observed radius before folding back, which "
+            "unconstrained cv2.calibrateCamera solutions from 15 single-view points do not.",
+        ]
+
+    for record in scoreboard:
+        record["accepted"] = (
+            record.get("role") == "distortion_candidate"
+            and record.get("distortion_model") == model_name
         )
-    return replace(zero_dist_fit, identifiability_notes=[*zero_dist_fit.identifiability_notes, note])
 
-
-def _try_refine_with_distortion(
-    cv2: Any,
-    np: Any,
-    obj: Any,
-    img: Any,
-    *,
-    seed_focal: float,
-    cx: float,
-    cy: float,
-    width: float,
-    height: float,
-    base_notes: list[str],
-) -> SingleViewCameraFit | None:
-    k_guess = np.array([[seed_focal, 0.0, cx], [0.0, seed_focal, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
-    flags = (
-        cv2.CALIB_USE_INTRINSIC_GUESS
-        | cv2.CALIB_FIX_PRINCIPAL_POINT
-        | cv2.CALIB_FIX_ASPECT_RATIO
-        | cv2.CALIB_ZERO_TANGENT_DIST
-        | cv2.CALIB_FIX_K3
-    )
-    try:
-        _rms, k_fit, dist_fit, rvecs, tvecs = cv2.calibrateCamera(
-            [obj.astype(np.float32)],
-            [img.astype(np.float32)],
-            (int(round(width)), int(round(height))),
-            k_guess.copy(),
-            None,
-            flags=flags,
-        )
-    except cv2.error:
-        return None
-
-    f_fit = float(k_fit[0, 0])
-    dist_flat = dist_fit.reshape(-1)
-    k1 = float(dist_flat[0]) if dist_flat.size > 0 else 0.0
-    k2 = float(dist_flat[1]) if dist_flat.size > 1 else 0.0
-    return _build_fit(
+    fit = _build_fit(
         cv2,
         np,
         obj,
         img,
-        fx=f_fit,
-        fy=f_fit,
+        fx=focal,
+        fy=focal,
         cx=cx,
         cy=cy,
         dist=[k1, k2, 0.0, 0.0],
-        rvec=rvecs[0],
-        tvec=tvecs[0],
-        distortion_model="k1_k2_calibrate_camera_seeded",
-        notes=[
-            *base_notes,
-            "k1,k2 allowed to vary (tangential distortion fixed at zero, k3 fixed at zero) "
-            "via cv2.calibrateCamera, seeded from the zero-distortion grid-search focal/pose.",
-        ],
+        rvec=rvec,
+        tvec=tvec,
+        distortion_model=model_name,
+        notes=[*base_notes, *variant_notes, *model_notes, *decision_notes],
     )
+    return replace(
+        fit,
+        held_out_median_px=scores_by_n[accepted_n]["held_out_median_px"],
+        held_out_median_plane_error_m=scores_by_n[accepted_n]["held_out_median_plane_error_m"],
+        selection_metric=selection_metric,
+        model_selection=scoreboard,
+        object_point_variant=best_variant,
+        object_points_m=[[float(value) for value in point] for point in obj.tolist()],
+    )
+
+
+# Below this the fit is already sub-hundredth-pixel and any "improvement" ratio is
+# floating-point noise, not signal.
+_NEGLIGIBLE_ERROR_FLOOR_PX = 1e-3
+
+
+def _pose_for(cv2: Any, np: Any, obj: Any, img: Any, focal: float, cx: float, cy: float, k1: float, k2: float):
+    if not (focal > 0.0) or not math.isfinite(focal):
+        return None
+    k = np.array([[focal, 0.0, cx], [0.0, focal, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
+    dist = np.array([k1, k2, 0.0, 0.0], dtype=np.float64)
+    try:
+        ok, rvec, tvec = cv2.solvePnP(obj, img, k, dist, flags=cv2.SOLVEPNP_ITERATIVE)
+    except cv2.error:
+        return None
+    if not ok:
+        return None
+    return k, dist, rvec, tvec
+
+
+def _rms_px(cv2: Any, np: Any, obj: Any, img: Any, focal: float, cx: float, cy: float, k1: float, k2: float) -> float:
+    solved = _pose_for(cv2, np, obj, img, focal, cx, cy, k1, k2)
+    if solved is None:
+        return math.inf
+    k, dist, rvec, tvec = solved
+    projected, _ = cv2.projectPoints(obj, rvec, tvec, k, dist)
+    residual = projected.reshape(-1, 2) - img
+    value = float(np.sqrt(np.mean(np.sum(residual**2, axis=1))))
+    return value if math.isfinite(value) else math.inf
+
+
+def _grid_search_focal(
+    cv2: Any, np: Any, obj: Any, img: Any, width: float, height: float, cx: float, cy: float,
+    *, k1: float = 0.0, k2: float = 0.0, rounds: int = 4, samples: int = 41,
+) -> float | None:
+    lo, hi = 0.3 * max(width, height), 6.0 * max(width, height)
+    best_err, best_focal = math.inf, None
+    for _ in range(rounds):
+        round_err, round_focal = math.inf, None
+        for focal in np.linspace(lo, hi, samples):
+            err = _rms_px(cv2, np, obj, img, float(focal), cx, cy, k1, k2)
+            if err < round_err:
+                round_err, round_focal = err, float(focal)
+        if round_focal is None:
+            return best_focal
+        if round_err < best_err:
+            best_err, best_focal = round_err, round_focal
+        span = (hi - lo) / (samples - 1)
+        lo = max(1.0, round_focal - 4.0 * span)
+        hi = round_focal + 4.0 * span
+    return best_focal
+
+
+def _feasible(k1: float, k2: float, focal: float, width: float, height: float, cx: float, cy: float) -> bool:
+    if not math.isfinite(focal) or focal <= 0.0:
+        return False
+    if not (K1_BOUNDS[0] <= k1 <= K1_BOUNDS[1] and K2_BOUNDS[0] <= k2 <= K2_BOUNDS[1]):
+        return False
+    return is_radially_invertible(k1, k2, max_normalized_radius((width, height), focal, focal, cx, cy))
+
+
+def _fit_camera(
+    cv2: Any, np: Any, obj: Any, img: Any, width: float, height: float, cx: float, cy: float, *, n_radial: int
+):
+    """Return `(focal, k1, k2, rvec, tvec)` for a model with `n_radial` radial terms."""
+
+    seed_focal = _grid_search_focal(cv2, np, obj, img, width, height, cx, cy)
+    if seed_focal is None:
+        return None
+    if n_radial == 0:
+        solved = _pose_for(cv2, np, obj, img, seed_focal, cx, cy, 0.0, 0.0)
+        if solved is None:
+            return None
+        return (seed_focal, 0.0, 0.0, solved[2], solved[3])
+
+    def cost(focal: float, k1: float, k2: float) -> float:
+        if not _feasible(k1, k2, focal, width, height, cx, cy):
+            return _INFEASIBLE_COST
+        return _rms_px(cv2, np, obj, img, focal, cx, cy, k1, k2)
+
+    # Coarse joint seed over (focal scale, k1): the (focal, k1) surface has a long
+    # curved valley -- they trade off almost exactly -- so a 1D-then-1D search lands
+    # in the wrong place and a cold nonlinear solve wanders out of it.
+    best = (math.inf, seed_focal, 0.0)
+    for scale in np.linspace(0.6, 1.8, 19):
+        for k1 in np.linspace(K1_BOUNDS[0], K1_BOUNDS[1], 19):
+            value = cost(float(seed_focal * scale), float(k1), 0.0)
+            if value < best[0]:
+                best = (value, float(seed_focal * scale), float(k1))
+    if not math.isfinite(best[0]) or best[0] >= _INFEASIBLE_COST:
+        return None
+
+    start = [best[1], best[2]] + ([0.0] if n_radial == 2 else [])
+    refined = _refine_parameters(start, cost, n_radial, width, height)
+    focal, k1 = float(refined[0]), float(refined[1])
+    k2 = float(refined[2]) if n_radial == 2 else 0.0
+    if not _feasible(k1, k2, focal, width, height, cx, cy):
+        focal, k1, k2 = best[1], best[2], 0.0
+    solved = _pose_for(cv2, np, obj, img, focal, cx, cy, k1, k2)
+    if solved is None:
+        return None
+    return (focal, k1, k2, solved[2], solved[3])
+
+
+_INFEASIBLE_COST = 1e12
+
+
+def _refine_parameters(start: list[float], cost: Any, n_radial: int, width: float, height: float) -> list[float]:
+    """Bounded local refinement of (focal, k1[, k2]) around a coarse seed."""
+
+    bounds = [(0.2 * max(width, height), 8.0 * max(width, height)), K1_BOUNDS]
+    if n_radial == 2:
+        bounds.append(K2_BOUNDS)
+
+    def objective(vector: Sequence[float]) -> float:
+        k2 = float(vector[2]) if n_radial == 2 else 0.0
+        return cost(float(vector[0]), float(vector[1]), k2)
+
+    try:
+        from scipy.optimize import minimize  # type: ignore[import-not-found]
+    except ImportError:  # pragma: no cover - scipy is a declared dependency
+        return _coordinate_descent(start, objective, bounds)
+    result = minimize(
+        objective,
+        start,
+        method="Nelder-Mead",
+        bounds=bounds,
+        options={"xatol": 1e-4, "fatol": 1e-8, "maxiter": 4000, "maxfev": 4000},
+    )
+    if not math.isfinite(float(result.fun)) or float(result.fun) >= _INFEASIBLE_COST:
+        return list(start)
+    return [float(value) for value in result.x]
+
+
+def _coordinate_descent(start: list[float], objective: Any, bounds: list[tuple[float, float]]) -> list[float]:
+    """scipy-free fallback: shrinking coordinate-wise line search."""
+
+    current = list(start)
+    best = objective(current)
+    steps = [max(1e-3, 0.05 * abs(value) if index == 0 else 0.05) for index, value in enumerate(current)]
+    for _ in range(60):
+        improved = False
+        for index in range(len(current)):
+            for direction in (1.0, -1.0):
+                trial = list(current)
+                trial[index] = min(bounds[index][1], max(bounds[index][0], trial[index] + direction * steps[index]))
+                value = objective(trial)
+                if value < best:
+                    best, current, improved = value, trial, True
+        if not improved:
+            steps = [step * 0.5 for step in steps]
+            if max(steps) < 1e-6:
+                break
+    return current
+
+
+def _cross_validated_scores(
+    cv2: Any, np: Any, obj: Any, img: Any, width: float, height: float, cx: float, cy: float, *, n_radial: int
+) -> dict[str, float]:
+    """Leave-one-out held-out scores: median reprojection px and plane error metres.
+
+    Each fold refits focal, distortion and pose on the other n-1 correspondences and
+    scores the one it never saw. These are the numbers model selection uses; the
+    training residual reported in `reprojection_error_px` is descriptive only.
+
+    NOTE on the metric term: `ball_label_geometry.calibration_plane_residuals`, the
+    "calibration floor" the labelling tool reports, back-projects the calibration's
+    OWN fitted correspondences -- it is an in-sample number and a model with more
+    parameters always looks better on it. The held-out version below is the same
+    measurement on data the fold never saw.
+    """
+
+    count = int(obj.shape[0])
+    pixel_errors: list[float] = []
+    plane_errors: list[float] = []
+    for index in range(count):
+        keep = [row for row in range(count) if row != index]
+        params = _fit_camera(cv2, np, obj[keep], img[keep], width, height, cx, cy, n_radial=n_radial)
+        if params is None:
+            pixel_errors.append(math.inf)
+            plane_errors.append(math.inf)
+            continue
+        focal, k1, k2, rvec, tvec = params
+        k = np.array([[focal, 0.0, cx], [0.0, focal, cy], [0.0, 0.0, 1.0]], dtype=np.float64)
+        dist = np.array([k1, k2, 0.0, 0.0], dtype=np.float64)
+        projected, _ = cv2.projectPoints(obj[index : index + 1], rvec, tvec, k, dist)
+        pixel_errors.append(float(np.linalg.norm(projected.reshape(2) - img[index])))
+        plane_errors.append(
+            _held_out_plane_error_m(cv2, np, obj[index], img[index], focal, cx, cy, k1, k2, rvec, tvec)
+        )
+    return {
+        "held_out_median_px": _median(pixel_errors),
+        "held_out_median_plane_error_m": _median(plane_errors),
+    }
+
+
+def _held_out_plane_error_m(
+    cv2: Any, np: Any, world_point: Any, pixel: Any, focal: float, cx: float, cy: float,
+    k1: float, k2: float, rvec: Any, tvec: Any,
+) -> float:
+    """Position error in metres for one held-out correspondence.
+
+    Exactly the downstream bounce path: undistort the pixel, form the world ray,
+    intersect the horizontal plane at the point's own world height, and compare XY.
+    """
+
+    rotation, _ = cv2.Rodrigues(rvec)
+    camera_centre = -rotation.T @ np.asarray(tvec, dtype=np.float64).reshape(3)
+    x, y = undistort_normalized(
+        (float(pixel[0]) - cx) / focal, (float(pixel[1]) - cy) / focal, (k1, k2, 0.0, 0.0)
+    )
+    direction = rotation.T @ np.array([x, y, 1.0], dtype=np.float64)
+    if abs(float(direction[2])) < 1e-12:
+        return math.inf
+    target_z = float(world_point[2])
+    scale = (target_z - float(camera_centre[2])) / float(direction[2])
+    if scale <= 0.0:
+        return math.inf  # the ray meets that height behind the camera
+    solved = camera_centre + scale * direction
+    return float(math.hypot(float(solved[0]) - float(world_point[0]), float(solved[1]) - float(world_point[1])))
 
 
 def _build_fit(
@@ -551,15 +895,17 @@ def metric_calibration_from_reviewed_keypoints_15pt(
         reviewed, native_image_size=native_image_size
     )
 
-    object_points = [list(PICKLEBALL_KEYPOINT_BY_NAME[name].world_xyz_m) for name in PICKLEBALL_COURT_KEYPOINT_NAMES]
+    declared_points = [list(PICKLEBALL_KEYPOINT_BY_NAME[name].world_xyz_m) for name in PICKLEBALL_COURT_KEYPOINT_NAMES]
     image_points = [list(native_points[name]) for name in PICKLEBALL_COURT_KEYPOINT_NAMES]
 
     fit = fit_single_view_metric_camera(
-        object_points,
+        declared_points,
         image_points,
         native_size,
         distortion_improvement_threshold=distortion_improvement_threshold,
+        object_point_variants=_net_label_height_variants(declared_points),
     )
+    object_points = fit.object_points_m or declared_points
 
     homography = homography_from_planar_points(object_points, image_points)
 
@@ -614,12 +960,28 @@ def metric_calibration_from_reviewed_keypoints_15pt(
         corners_visible=len(PICKLEBALL_COURT_KEYPOINT_NAMES),
         reprojection_rmse_px=fit.reprojection_error_px.median,
     )
+    net_height = _net_label_height_of(object_points)
+    provenance_reasons = [
+        f"distortion_model={fit.distortion_model}",
+        f"net_keypoint_label_height_m={net_height:.4f}",
+        f"net_keypoint_label_height_variant={fit.object_point_variant}",
+    ]
+    provenance_reasons.append(f"model_selection_metric={CROSS_VALIDATION}:{fit.selection_metric}")
+    if fit.held_out_median_px is not None:
+        provenance_reasons.append(f"held_out_median_reprojection_{fit.held_out_median_px:.3f}px")
+    if fit.held_out_median_plane_error_m is not None:
+        provenance_reasons.append(
+            f"held_out_median_plane_error_{fit.held_out_median_plane_error_m:.4f}m"
+        )
+    advisory = held_out_confidence_would_be(fit.held_out_median_px)
+    if advisory is not None:
+        provenance_reasons.append(f"advisory_held_out_metric_confidence={advisory}")
     reasons = list(
         dict.fromkeys(
             [
                 *base_quality.reasons,
                 "single_view_planar_full_calibration",
-                f"distortion_model={fit.distortion_model}",
+                *provenance_reasons,
                 "reviewed_15pt_correspondences",
             ]
         )
@@ -668,11 +1030,72 @@ def metric_calibration_from_reviewed_keypoints_15pt(
 
 
 def _confidence_from_reprojection(error: ReprojectionError) -> str:
+    """Unchanged: training-residual thresholds, so before/after stays comparable.
+
+    Deliberately NOT tightened to use the held-out median, even though the
+    held-out number is the more honest basis. `metric_confidence` is what the
+    in/out gate abstains on, and moving that threshold is trust-band policy owned
+    elsewhere. The held-out numbers are published in `capture_quality.reasons`
+    and in the fit's `model_selection` so that owner can adopt them; applying
+    them here would silently demote clips (indoor and outdoor both go med -> low
+    under a held-out rule) as a side effect of a fit change.
+    """
+
     if error.median <= 2.0 and error.p95 <= 5.0:
         return "high"
     if error.median <= 6.0 and error.p95 <= 15.0:
         return "med"
     return "low"
+
+
+def held_out_confidence_would_be(held_out_median_px: float | None) -> str | None:
+    """What `metric_confidence` would read under a held-out rule, for the gate owner.
+
+    Advisory only -- nothing in this module consumes it. Published so the trust-band
+    owner can see the cost of adopting held-out thresholds before adopting them.
+    """
+
+    if held_out_median_px is None or not math.isfinite(held_out_median_px):
+        return None
+    if held_out_median_px <= 2.0:
+        return "high"
+    if held_out_median_px <= 6.0:
+        return "med"
+    return "low"
+
+
+def _net_label_height_variants(
+    declared_points: Sequence[Sequence[float]],
+) -> dict[str, list[list[float]]]:
+    """The competing world-height hypotheses for the 3 net keypoints.
+
+    `court_keypoint_net` declares them at the net top; every reviewed label set in this
+    repo marks the ground net line instead. Which one a given label source meant is not
+    recoverable from the pixels, so both are offered and the held-out residual decides.
+    """
+
+    indexes = [
+        index
+        for index, name in enumerate(PICKLEBALL_COURT_KEYPOINT_NAMES)
+        if name in NET_KEYPOINT_NAMES
+    ]
+    declared = [[float(value) for value in point] for point in declared_points]
+    if not indexes:
+        return {"as_declared": declared}
+    declared_height = declared[indexes[0]][2]
+    ground = [list(point) for point in declared]
+    for index in indexes:
+        ground[index][2] = 0.0
+    if declared_height == 0.0:
+        return {"ground_net_line": ground}
+    return {"net_top_as_declared": declared, "ground_net_line": ground}
+
+
+def _net_label_height_of(object_points: Sequence[Sequence[float]]) -> float:
+    for index, name in enumerate(PICKLEBALL_COURT_KEYPOINT_NAMES):
+        if name in NET_KEYPOINT_NAMES and index < len(object_points):
+            return float(object_points[index][2])
+    return 0.0
 
 
 def _camera_center_from_pose(rotation: list[list[float]], translation: list[float]) -> list[float]:

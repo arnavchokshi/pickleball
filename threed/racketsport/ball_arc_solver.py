@@ -19,6 +19,7 @@ from typing import Any, Callable, Mapping, Sequence
 
 from .ball_physics3d import _project_world_array, reconstruct_bounce_arcs_from_image_track
 from .ball_position_plausibility import BallPlausibilityBounds, evaluate_position
+from .camera_distortion import distort_normalized, distortion_coefficients, undistort_normalized
 from .court_templates import get_court_template
 from .io_decode import frame_time_lookup, nearest_frame_for_time, time_for_frame
 from .skeleton3d import semanticize_skeleton_payload
@@ -2933,15 +2934,28 @@ def pixel_ray_world(
     calibration: Mapping[str, Any],
     xy: Sequence[float],
 ) -> tuple[tuple[float, float, float], tuple[float, float, float]]:
-    """Return camera origin and unit ray direction in world coordinates."""
+    """Return camera origin and unit ray direction in world coordinates.
+
+    The observed pixel is a *distorted* measurement. When the calibration
+    declares lens distortion it is undone here before the pinhole inversion,
+    because the focal length was fit under that distortion model and inverting
+    with the bare pinhole would contradict it. Zero/absent `dist` short-circuits
+    to the previous arithmetic exactly.
+    """
 
     u, v = _xy_required(xy)
     camera = _camera_arrays(calibration)
-    fx = float(_intrinsics(calibration)["fx"])
-    fy = float(_intrinsics(calibration)["fy"])
-    cx = float(_intrinsics(calibration)["cx"])
-    cy = float(_intrinsics(calibration)["cy"])
-    camera_ray = (float((u - cx) / fx), float((v - cy) / fy), 1.0)
+    intrinsics = _intrinsics(calibration)
+    fx = float(intrinsics["fx"])
+    fy = float(intrinsics["fy"])
+    cx = float(intrinsics["cx"])
+    cy = float(intrinsics["cy"])
+    coefficients = distortion_coefficients(intrinsics)
+    if any(coefficients):
+        normalized = undistort_normalized((u - cx) / fx, (v - cy) / fy, coefficients)
+        camera_ray = (float(normalized[0]), float(normalized[1]), 1.0)
+    else:
+        camera_ray = (float((u - cx) / fx), float((v - cy) / fy), 1.0)
     rotation_t = _transpose3(camera["rotation"])
     origin = _mat_vec(rotation_t, _scale(tuple(camera["translation"]), -1.0))
     direction = _normalize(_mat_vec(rotation_t, camera_ray))
@@ -6684,9 +6698,20 @@ def _project_world_point(
     camera = _camera_arrays(calibration)
     camera_point = _add(_mat_vec(camera["rotation"], world_xyz), camera["translation"])
     depth = camera_point[2] if abs(camera_point[2]) > 1e-9 else 1e-9
+    # Forward lens distortion, so this stays the exact inverse of
+    # `pixel_ray_world`. Zero/absent `dist` keeps the original expression
+    # verbatim -- `fx * a / d` and `fx * (a / d)` can differ in the last ULP,
+    # and the zero-distortion path is claimed bit-for-bit unchanged.
+    coefficients = distortion_coefficients(intrinsics)
+    if not any(coefficients):
+        return (
+            float(intrinsics["fx"]) * camera_point[0] / depth + float(intrinsics["cx"]),
+            float(intrinsics["fy"]) * camera_point[1] / depth + float(intrinsics["cy"]),
+        )
+    x, y = distort_normalized(camera_point[0] / depth, camera_point[1] / depth, coefficients)
     return (
-        float(intrinsics["fx"]) * camera_point[0] / depth + float(intrinsics["cx"]),
-        float(intrinsics["fy"]) * camera_point[1] / depth + float(intrinsics["cy"]),
+        float(intrinsics["fx"]) * x + float(intrinsics["cx"]),
+        float(intrinsics["fy"]) * y + float(intrinsics["cy"]),
     )
 
 

@@ -1,0 +1,274 @@
+.........................sF........................................s.... [  9%]
+.F...................................................................... [ 18%]
+........................................................................ [ 28%]
+........................................................................ [ 37%]
+........................................................................ [ 46%]
+......................................s................................. [ 56%]
+........................................................................ [ 65%]
+...............F................................................F....... [ 75%]
+...........................................s.....s...s..F............... [ 84%]
+...............s.......................FF............................... [ 93%]
+..............................................                           [100%]
+==================================== ERRORS ====================================
+__ ERROR collecting tests/racketsport/test_calpolicy_line_evidence_preview.py __
+tests/racketsport/test_calpolicy_line_evidence_preview.py:9: in <module>
+    from threed.racketsport.orchestrator import (
+threed/racketsport/orchestrator.py:22: in <module>
+    from .body_compute import (
+threed/racketsport/body_compute.py:21: in <module>
+    DEFAULT_BODY_SKELETON_STRIDE = int(load_best_stack_manifest().value("body.skeleton_stride"))
+                                       ^^^^^^^^^^^^^^^^^^^^^^^^^^
+threed/racketsport/best_stack.py:164: in load_best_stack_manifest
+    manifest = _build_manifest(manifest_path, raw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+threed/racketsport/best_stack.py:236: in _build_manifest
+    _validate_path_value(manifest, key)
+threed/racketsport/best_stack.py:250: in _validate_path_value
+    manifest.path_value(key)
+threed/racketsport/best_stack.py:119: in path_value
+    raise BestStackManifestError(f"best_stack entry {key!r} points at missing path {path}")
+E   threed.racketsport.best_stack.BestStackManifestError: best_stack entry 'ball.wasb_checkpoint' points at missing path /private/tmp/pb-fix-calib-20260726/models/checkpoints/wasb/wasb_tennis_best.pth.tar
+=================================== FAILURES ===================================
+___________ test_default_chain_config_matches_frozen_row22_manifest ____________
+
+    def test_default_chain_config_matches_frozen_row22_manifest() -> None:
+>       frozen_configs = json.loads(FROZEN_ROW22_MANIFEST.read_text(encoding="utf-8"))["configs"]
+                                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_ball_arc_chain.py:25: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.11/pathlib.py:1058: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('/private/tmp/pb-fix-calib-20260726/runs/lanes/ball_heldout_chain_run_20260704/chain_runs/outdoor_webcam_iynbd_1500_long_high_baseline/ball_chain_manifest.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: '/private/tmp/pb-fix-calib-20260726/runs/lanes/ball_heldout_chain_run_20260704/chain_runs/outdoor_webcam_iynbd_1500_long_high_baseline/ball_chain_manifest.json'
+
+/opt/anaconda3/lib/python3.11/pathlib.py:1044: FileNotFoundError
+_ test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds _
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1235/test_wolverine_seg6_fixture_fa0')
+
+    def test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds(tmp_path: Path) -> None:
+        fixture_path = Path(__file__).resolve().parent / "fixtures" / "wolverine_seg6_bvp_regression.json"
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    
+        artifact = solve_ball_arc_track(
+            ball_track=fixture["ball_track"],
+            calibration=fixture["court_calibration"],
+            auto_bounce_candidates=fixture["auto_bounce_candidates"],
+            physics=PhysicsParameters.for_ball_type("outdoor"),
+            config=BallArcSolverConfig(
+                enable_event_subset_selection=False,
+                enable_event_discovery=True,
+                enable_weak_segments=False,
+                max_reprojection_inlier_px=18.0,
+            ),
+            clip_id=fixture["clip_id"],
+        )
+    
+>       assert artifact["status"] == "ran"
+E       AssertionError: assert 'degraded' == 'ran'
+E         
+E         - ran
+E         + degraded
+
+tests/racketsport/test_ball_arc_solver.py:1008: AssertionError
+_ test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed_contract _
+
+    def test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed_contract() -> None:
+        repo = Path(__file__).resolve().parents[2]
+        fixture = (
+            repo
+            / "eval_clips/ball/burlington_gold_0300_low_steep_corner/labels/court_keypoints.json"
+        )
+        assert hashlib.sha256(fixture.read_bytes()).hexdigest() == (
+            "537dbe0299a7069f258d373ada99758ff9238e6718d6bc6481365b614daa030f"
+        )
+    
+        calibration = metric_calibration_from_reviewed_keypoints_15pt(fixture)
+        payload = calibration.model_dump(mode="json")
+        contract = payload.pop("coordinate_contract")
+    
+        legacy_digest = hashlib.sha256(
+            json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False).encode()
+        ).hexdigest()
+>       assert legacy_digest == "08f6c8ce1151bb0c654d3895910898cb51c694b61bddbaa59c574bf3754ee3a9"
+E       AssertionError: assert 'f2c2ec8a6609...4c516acf98f70' == '08f6c8ce1151...74bf3754ee3a9'
+E         
+E         - 08f6c8ce1151bb0c654d3895910898cb51c694b61bddbaa59c574bf3754ee3a9
+E         + f2c2ec8a66093e69f14e9a3cac5ac97a72dca3e7edacc7071184c516acf98f70
+
+tests/racketsport/test_court_calibration_metric15.py:229: AssertionError
+________ test_default_checkpoint_resolution_precedence_and_sha_logging _________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x30a9575d0>
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1235/test_default_checkpoint_resolu0')
+caplog = <_pytest.logging.LogCaptureFixture object at 0x30a957c50>
+
+    def test_default_checkpoint_resolution_precedence_and_sha_logging(
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        explicit = tmp_path / "explicit.pt"
+        env = tmp_path / "env.pt"
+        explicit.write_bytes(b"explicit")
+        env.write_bytes(b"env")
+    
+        monkeypatch.setenv("PICKLEBALL_COURT_UNET_CKPT", str(env))
+        caplog.set_level(logging.INFO, logger="threed.racketsport.court_model_infer")
+    
+        resolved_explicit = resolve_court_model_checkpoint_path(explicit)
+        assert resolved_explicit is not None
+        assert resolved_explicit.path == explicit
+        assert resolved_explicit.source == "explicit_arg"
+    
+        resolved_env = resolve_court_model_checkpoint_path()
+        assert resolved_env is not None
+        assert resolved_env.path == env
+        assert resolved_env.source == "PICKLEBALL_COURT_UNET_CKPT"
+    
+        monkeypatch.delenv("PICKLEBALL_COURT_UNET_CKPT", raising=False)
+        resolved_default = resolve_court_model_checkpoint_path()
+>       assert resolved_default is not None
+E       assert None is not None
+
+tests/racketsport/test_court_fusion_default.py:50: AssertionError
+------------------------------ Captured log call -------------------------------
+INFO     threed.racketsport.court_model_infer:court_model_infer.py:146 court_unet_v2 checkpoint discovered source=explicit_arg path=/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1235/test_default_checkpoint_resolu0/explicit.pt sha256=unknown
+INFO     threed.racketsport.court_model_infer:court_model_infer.py:146 court_unet_v2 checkpoint discovered source=PICKLEBALL_COURT_UNET_CKPT path=/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1235/test_default_checkpoint_resolu0/env.pt sha256=unknown
+WARNING  threed.racketsport.court_model_infer:court_model_infer.py:139 court_unet_v2 checkpoint unavailable source=promoted_default path=models/checkpoints/court_unet_v2/court_model_v2.pt; using geometric-only
+__________ test_img1605_progress_builds_partial_visible_label_payload __________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1235/test_img1605_progress_builds_p0')
+
+    def test_img1605_progress_builds_partial_visible_label_payload(tmp_path: Path) -> None:
+>       progress = json.loads(IMG1605_PROGRESS.read_text(encoding="utf-8"))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_keypoint_partial_labels.py:20: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/opt/anaconda3/lib/python3.11/pathlib.py:1058: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json'
+
+/opt/anaconda3/lib/python3.11/pathlib.py:1044: FileNotFoundError
+_________ test_visible_floor_homography_infers_img1605_occluded_corner _________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1235/test_visible_floor_homography_0')
+
+    def test_visible_floor_homography_infers_img1605_occluded_corner(tmp_path):
+>       partial = _img1605_partial_labels(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_partial_geometry.py:43: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_partial_geometry.py:20: in _img1605_partial_labels
+    progress = json.loads(IMG1605_PROGRESS.read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.11/pathlib.py:1058: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json'
+
+/opt/anaconda3/lib/python3.11/pathlib.py:1044: FileNotFoundError
+___________ test_visible_floor_homography_requires_four_floor_points ___________
+
+tmp_path = PosixPath('/private/var/folders/ff/58yxsmdn07n6dpm5nd020x1c0000gn/T/pytest-of-arnavchokshi/pytest-1235/test_visible_floor_homography_1')
+
+    def test_visible_floor_homography_requires_four_floor_points(tmp_path):
+>       partial = _img1605_partial_labels(tmp_path)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/racketsport/test_court_partial_geometry.py:69: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/racketsport/test_court_partial_geometry.py:20: in _img1605_partial_labels
+    progress = json.loads(IMG1605_PROGRESS.read_text(encoding="utf-8"))
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/opt/anaconda3/lib/python3.11/pathlib.py:1058: in read_text
+    with self.open(mode='r', encoding=encoding, errors=errors) as f:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = PosixPath('runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json')
+mode = 'r', buffering = -1, encoding = 'utf-8', errors = None, newline = None
+
+    def open(self, mode='r', buffering=-1, encoding=None,
+             errors=None, newline=None):
+        """
+        Open the file pointed by this path and return a file object, as
+        the built-in open() function does.
+        """
+        if "b" not in mode:
+            encoding = io.text_encoding(encoding)
+>       return io.open(self, mode, buffering, encoding, errors, newline)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       FileNotFoundError: [Errno 2] No such file or directory: 'runs/court_keypoint_review_20260701/local_court_keypoint_review_progress.json'
+
+/opt/anaconda3/lib/python3.11/pathlib.py:1044: FileNotFoundError
+=============================== warnings summary ===============================
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+../../../opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076
+  /opt/anaconda3/lib/python3.11/site-packages/pydantic/fields.py:1076: PydanticDeprecatedSince20: Using extra keyword arguments on `Field` is deprecated and will be removed. Use `json_schema_extra` instead. (Extra keys: 'exclude_if'). Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
+    warn(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/racketsport/test_ball_arc_chain.py::test_default_chain_config_matches_frozen_row22_manifest
+FAILED tests/racketsport/test_ball_arc_solver.py::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds
+FAILED tests/racketsport/test_court_calibration_metric15.py::test_real_burlington_fixture_preserves_legacy_numeric_payload_and_adds_typed_contract
+FAILED tests/racketsport/test_court_fusion_default.py::test_default_checkpoint_resolution_precedence_and_sha_logging
+FAILED tests/racketsport/test_court_keypoint_partial_labels.py::test_img1605_progress_builds_partial_visible_label_payload
+FAILED tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_infers_img1605_occluded_corner
+FAILED tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_requires_four_floor_points
+ERROR tests/racketsport/test_calpolicy_line_evidence_preview.py - threed.rack...
+7 failed, 752 passed, 7 skipped, 6 warnings, 1 error in 167.65s (0:02:47)
