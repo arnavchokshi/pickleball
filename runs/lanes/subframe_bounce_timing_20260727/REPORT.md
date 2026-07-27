@@ -253,10 +253,11 @@ exit 0
 
 Clip `wolverine_mixed_0200_mid_steep_corner`, 30 fps, real pickleball.
 
-**First, a correction to the brief.** The committed label file
-`runs/lanes/ball_label_tool_20260726/labels/wolverine/ball_human_labels.json` contains **19
-labels, of which 7 are `kind == "bounce"`** (the rest are 7 `free_flight` and 5 `near_player`).
-The brief said 8 bounce labels; the file has 7. Two of the 7 carry `anchored_measured`
+**On the label count.** At base commit `e209112` the label file
+`runs/lanes/ball_label_tool_20260726/labels/wolverine/ball_human_labels.json` holds 19 labels of
+which **7** are `kind == "bounce"`. The brief said 8. The owner has since added an 8th (frame
+299) in the main worktree, uncommitted at the time of writing; it is scored below as an
+addendum, read-only, without importing anything from main. Two bounces carry `anchored_measured`
 prefills, matching the quoted 0.316 / 0.276 m deltas.
 
 **Second, what these labels can and cannot show.** Each label's 3D position is itself a
@@ -292,6 +293,21 @@ they cannot prove the position got more accurate.
    several frames, which is a bounce-*detection* fix, not a timing fix -- and TT3D says this
    method cannot repair a mis-marked frame anyway (section 7).
 4. The estimator fired on 4 of 7 and abstained cleanly on 3, on real gappy detector tracks.
+
+**Addendum: the owner's 8th bounce label.** Re-run against the newer 8-bounce set in the main
+worktree (`--labels`, read-only; nothing copied into this branch), output at
+`owner_label_check_8labels.json`:
+
+```
+PYTHONPATH=. python3 scripts/tt3d/owner_bounce_label_check.py \
+  --labels /Users/arnavchokshi/Desktop/pickleball/runs/lanes/ball_label_tool_20260726/labels/wolverine/ball_human_labels.json
+exit 0
+```
+
+The new label is frame **299** on a 300-frame clip, so there are not three post-contact
+sightings to fit an outgoing branch: status `insufficient_observations`, anchor unmoved. **The
+full-set result is 4 refined of 8, 4 abstained**, and the four that move are the same four. No
+conclusion changes.
 
 **Honest bottom line on pickleball: the owner labels do not confirm an accuracy improvement,
 because they cannot. They confirm the correction is large, consistently signed, and that the

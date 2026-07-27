@@ -79,9 +79,16 @@ def main() -> int:
         "--out",
         default="runs/lanes/subframe_bounce_timing_20260727/owner_label_check.json",
     )
+    ap.add_argument(
+        "--labels",
+        default=str(LABELS),
+        help="Label set to score. Defaults to the committed wolverine set; point it at a "
+             "newer one when the owner has labelled more bounces.",
+    )
     args = ap.parse_args()
 
-    labels = json.loads(LABELS.read_text())
+    label_path = Path(args.labels)
+    labels = json.loads(label_path.read_text())
     calibration = json.loads(CALIBRATION.read_text())
     arc = json.loads(ARC_SOLVED.read_text())
     fps = float(labels.get("fps") or 30.0)
@@ -194,7 +201,7 @@ def main() -> int:
             "VERIFIED=0 for pickleball bounce position."
         ),
         "inputs": {
-            "labels": str(LABELS.relative_to(REPO_ROOT)),
+            "labels": str(label_path),
             "calibration": str(CALIBRATION.relative_to(REPO_ROOT)),
             "ball_track": str(ARC_SOLVED.relative_to(REPO_ROOT)),
         },

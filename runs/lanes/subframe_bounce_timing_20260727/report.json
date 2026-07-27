@@ -209,7 +209,7 @@
   "owner_pickleball_labels": {
     "clip_id": "wolverine_mixed_0200_mid_steep_corner",
     "fps": 30.0,
-    "brief_said_8_bounce_labels": true,
+    "brief_said_8_bounce_labels": "7 at base commit e209112; the owner added an 8th (frame 299) afterwards, scored as an addendum",
     "file_actually_contains": "19 labels, of which 7 are kind=bounce (plus 7 free_flight and 5 near_player)",
     "bounce_label_count": 7,
     "timing_applied_count": 4,
@@ -241,7 +241,16 @@
       0.1772,
       0.1944,
       0.2262
-    ]
+    ],
+    "addendum_8th_label": {
+      "source": "main worktree, uncommitted at time of writing; read-only, nothing imported into this branch",
+      "output": "runs/lanes/subframe_bounce_timing_20260727/owner_label_check_8labels.json",
+      "new_label_frame": 299,
+      "new_label_status": "insufficient_observations",
+      "reason": "frame 299 of a 300-frame clip: no three post-contact sightings to fit an outgoing branch",
+      "full_set_result": "4 refined of 8, 4 abstained; the four that move are the same four",
+      "conclusion_change": "none"
+    }
   },
   "limits": [
     "TT3D is TABLE TENNIS: 25 fps, 40 mm ball, ~3.3x the drag of a pickleball, synthetic 2D observations. The timing GEOMETRY transfers exactly; the MAGNITUDES do not.",
