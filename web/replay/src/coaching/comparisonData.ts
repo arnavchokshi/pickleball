@@ -309,6 +309,18 @@ export function comparisonHasReferenceMotion(
   );
 }
 
+/**
+ * The legacy/public replay surface may only render motion with cleared display
+ * rights. The standalone mesh studio has a separate loopback-only gate for
+ * explicitly local-review material.
+ */
+export function assertPublicCoachingComparisonDisplay(comparison: CoachingComparison): CoachingComparison {
+  if (comparisonHasReferenceMotion(comparison) && comparison.reference.display_rights !== "cleared") {
+    throw new Error("local-review-only reference motion cannot be rendered on the public replay surface");
+  }
+  return comparison;
+}
+
 function readUserClip(input: unknown): ComparisonUserClip {
   const path = "coaching_comparison.user";
   assertRecord(input, path);
@@ -637,7 +649,7 @@ function validateComparison(comparison: CoachingComparison): void {
     }
   } else {
     if (!hasMotionReference) {
-      throw new Error(`${comparison.comparison_basis} coaching comparison requires a cleared reference motion asset`);
+      throw new Error(`${comparison.comparison_basis} coaching comparison requires a reference motion asset`);
     }
     requireEvidenceRoles(comparison.source_artifacts, ["user_motion", "reference_motion"], "coaching_comparison.source_artifacts");
     if (comparison.status !== "abstained" && comparison.alignment === null) {
@@ -648,7 +660,7 @@ function validateComparison(comparison: CoachingComparison): void {
     throw new Error(`${comparison.reference.display_rights} reference can only support a published_rubric comparison`);
   }
   if (comparison.alignment !== null) {
-    if (motionReference === null) throw new Error("motion alignment requires a cleared reference motion asset");
+    if (motionReference === null) throw new Error("motion alignment requires a reference motion asset");
     validatePhaseAnchors(comparison.alignment.phase_anchors, comparison.user.interval, motionReference.interval);
     validateAlignmentUserAnchors(comparison.alignment.phase_anchors, comparison.user_phase_anchors);
     validateSpatialAlignment(comparison.alignment.spatial);
@@ -666,8 +678,20 @@ function validateComparison(comparison: CoachingComparison): void {
     return;
   }
 
-  if (!comparison.reference.expert_reviewed) {
+  const localUnreviewedPreview =
+    motionReference?.display_rights === "local_review_only" &&
+    !comparison.reference.expert_reviewed &&
+    comparison.status === "kinematics_only";
+  if (!comparison.reference.expert_reviewed && !localUnreviewedPreview) {
     throw new Error("non-abstained coaching comparison requires an expert-reviewed reference exemplar");
+  }
+  if (
+    localUnreviewedPreview &&
+    comparison.cues.some(
+      (cue) => cue.measurement.authority === "verified" || cue.claim_boundary.contact === "supported",
+    )
+  ) {
+    throw new Error("unreviewed local reference cues must remain preview-only kinematics");
   }
   if (!comparison.cues.length) throw new Error(`${comparison.status} coaching comparison must emit at least one cue`);
   if (
@@ -938,5 +962,5 @@ function cleanNumber(value: number): number {
 }
 
 function isMotionReference(reference: ComparisonReferenceClip): reference is ComparisonMotionReferenceClip {
-  return reference.display_rights === "cleared";
+  return "replay_manifest_url" in reference;
 }

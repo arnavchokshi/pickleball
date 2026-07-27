@@ -9,6 +9,7 @@ import { activeReplayPointForTime, parseReplayScene, resolveReplaySceneAssetUrl,
 import { CourtMapPanel } from "./CourtMapPanel";
 import { CoachComparisonWorkspace } from "./coaching/CoachComparisonWorkspace";
 import {
+  assertPublicCoachingComparisonDisplay,
   bindCoachingComparisonToManifest,
   parseCoachingComparison,
   sha256Utf8,
@@ -893,10 +894,12 @@ export default function App() {
           ? await loadOptionalArtifact(
               "coach comparison",
               async () =>
-                bindCoachingComparisonToManifest(
-                  parseCoachingComparison(await fetchReplayJson(coachingComparisonUrl)),
-                  manifestPayload,
-                  manifestSha256,
+                assertPublicCoachingComparisonDisplay(
+                  bindCoachingComparisonToManifest(
+                    parseCoachingComparison(await fetchReplayJson(coachingComparisonUrl)),
+                    manifestPayload,
+                    manifestSha256,
+                  ),
                 ),
               recordOptionalError,
             )

@@ -4,9 +4,11 @@ import App, { manifestUrlFromSearch } from "./App";
 import { getAccessToken, logout as apiLogout, setAccessToken, type AuthApiOptions } from "./authApi";
 import { manifestDevHintFromRuntime, replayVerifyDevBypassFromRuntime } from "./devAuthBypass";
 import { LibraryScreen } from "./LibraryScreen";
+import { MeshComparePage } from "./coaching/MeshComparePage";
+import { meshCompareRouteFromSearch } from "./coaching/meshCompareData";
 import { SignInScreen } from "./SignInScreen";
 
-export type Screen = "signin" | "library" | "viewer";
+export type Screen = "signin" | "library" | "viewer" | "mesh_compare";
 
 function explicitManifestUrlFromSearch(search: string): string | null {
   const url = new URLSearchParams(search).get("manifest");
@@ -25,10 +27,14 @@ function explicitManifestUrlFromSearch(search: string): string | null {
  * its exported pure helpers).
  */
 export function resolveScreen(hasAccessToken: boolean, search: string, replayVerifyDevBypass = false): Screen {
+  const meshCompareRoute = meshCompareRouteFromSearch(search);
   if (!hasAccessToken) {
-    if (replayVerifyDevBypass && explicitManifestUrlFromSearch(search)) return "viewer";
+    if (replayVerifyDevBypass && explicitManifestUrlFromSearch(search)) {
+      return meshCompareRoute ? "mesh_compare" : "viewer";
+    }
     return "signin";
   }
+  if (meshCompareRoute) return "mesh_compare";
   if (manifestUrlFromSearch(search)) return "viewer";
   if (new URLSearchParams(search).get("clip") !== null) return "viewer";
   return "library";
@@ -74,6 +80,9 @@ export function AppShell({ fetchImpl, baseUrl }: AppShellProps) {
   if (screen === "viewer") {
     // The 3D replay viewer -- untouched, additive-only per the lane fence.
     return <App />;
+  }
+  if (screen === "mesh_compare") {
+    return <MeshComparePage search={search} />;
   }
   return <LibraryScreen onOpenViewer={handleOpenViewer} onLogout={handleLogout} fetchImpl={fetchImpl} baseUrl={baseUrl} />;
 }

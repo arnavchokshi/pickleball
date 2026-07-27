@@ -24,6 +24,19 @@ describe("resolveScreen", () => {
     expect(resolveScreen(false, "", true)).toBe("signin");
   });
 
+  it("routes a complete comparison link to the standalone mesh comparison", () => {
+    const search = "?view=mesh_compare&manifest=/@fs/tmp/user/replay.json&comparison=/@fs/tmp/compare.json";
+
+    expect(resolveScreen(true, search)).toBe("mesh_compare");
+    expect(resolveScreen(false, search, true)).toBe("mesh_compare");
+  });
+
+  it("does not enter mesh comparison without both manifest-addressed inputs", () => {
+    expect(resolveScreen(true, "?manifest=/@fs/tmp/user/replay.json&comparison=/@fs/tmp/compare.json")).toBe("viewer");
+    expect(resolveScreen(true, "?manifest=/@fs/tmp/user/replay.json")).toBe("viewer");
+    expect(resolveScreen(true, "?comparison=/@fs/tmp/compare.json")).toBe("library");
+  });
+
   it("routes to library when authed with no manifest/clip param", () => {
     expect(resolveScreen(true, "")).toBe("library");
     expect(resolveScreen(true, "?coaching=1")).toBe("library");

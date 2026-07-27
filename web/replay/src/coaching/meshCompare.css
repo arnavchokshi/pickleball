@@ -1,0 +1,483 @@
+@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&family=DM+Mono:wght@400;500&family=Manrope:wght@400;600;700&display=swap");
+
+:root {
+  --mesh-paper: #eeeee9;
+  --mesh-ink: #13251e;
+  --mesh-muted: #6f7872;
+  --mesh-line: rgba(19, 37, 30, 0.16);
+  --mesh-user: #cbed35;
+  --mesh-reference: #42d4f4;
+  --mesh-correction: #ff684a;
+}
+
+.mesh-compare-page,
+.mesh-compare-state {
+  box-sizing: border-box;
+  min-height: 100vh;
+  background:
+    linear-gradient(90deg, transparent 49.92%, rgba(19, 37, 30, 0.035) 50%, transparent 50.08%),
+    var(--mesh-paper);
+  color: var(--mesh-ink);
+  font-family: "Manrope", sans-serif;
+}
+
+.mesh-compare-page *,
+.mesh-compare-state * {
+  box-sizing: border-box;
+}
+
+.mesh-compare-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 22vw);
+  grid-template-rows: auto minmax(520px, 1fr) auto;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.mesh-compare-header {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 180px 1fr auto;
+  align-items: end;
+  min-height: 112px;
+  padding: 24px 30px 22px;
+  border-bottom: 1px solid var(--mesh-line);
+}
+
+.mesh-compare-wordmark {
+  display: flex;
+  flex-direction: column;
+  font-family: "Archivo Black", sans-serif;
+  font-size: 20px;
+  letter-spacing: -0.055em;
+  line-height: 0.83;
+}
+
+.mesh-compare-wordmark strong {
+  color: var(--mesh-correction);
+}
+
+.mesh-compare-title p,
+.mesh-compare-reference-id span,
+.mesh-compare-step,
+.mesh-compare-delta span {
+  margin: 0;
+  font-family: "DM Mono", monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.mesh-compare-title h1 {
+  margin: 5px 0 0;
+  font-family: "Archivo Black", sans-serif;
+  font-size: clamp(24px, 2.4vw, 40px);
+  font-weight: 400;
+  letter-spacing: -0.055em;
+  line-height: 0.95;
+}
+
+.mesh-compare-reference-id {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+.mesh-compare-reference-id span {
+  padding: 5px 8px;
+  border: 1px solid currentColor;
+  color: #187f96;
+}
+
+.mesh-compare-reference-id strong {
+  font-size: 15px;
+}
+
+.mesh-compare-reference-id small {
+  max-width: 320px;
+  color: var(--mesh-muted);
+  font-family: "DM Mono", monospace;
+  font-size: 8px;
+  line-height: 1.35;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.mesh-compare-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--mesh-line);
+}
+
+.mesh-compare-stage canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.mesh-compare-legend,
+.mesh-compare-mode {
+  position: absolute;
+  z-index: 4;
+  top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 10px;
+  border: 1px solid rgba(19, 37, 30, 0.12);
+  background: rgba(247, 247, 242, 0.78);
+  backdrop-filter: blur(12px);
+}
+
+.mesh-compare-legend {
+  left: 24px;
+  font-family: "DM Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.mesh-compare-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mesh-compare-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.mesh-legend-user { background: var(--mesh-user); }
+.mesh-legend-reference { background: var(--mesh-reference); }
+
+.mesh-compare-mode {
+  right: 24px;
+  gap: 3px;
+  padding: 4px;
+}
+
+.mesh-compare-mode button,
+.mesh-view-buttons button,
+.mesh-compare-cue-tabs button,
+.mesh-play,
+.mesh-phase-track button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.mesh-compare-mode button {
+  padding: 7px 10px;
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.mesh-compare-mode button.active {
+  background: var(--mesh-ink);
+  color: #f5f6ed;
+}
+
+.mesh-compare-coach {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: clamp(26px, 3.4vw, 58px) clamp(22px, 2.2vw, 36px) 26px;
+  background: #f7f7f2;
+}
+
+.mesh-compare-step {
+  color: var(--mesh-correction);
+}
+
+.mesh-compare-coach h2 {
+  margin: 18px 0 20px;
+  font-family: "Archivo Black", sans-serif;
+  font-size: clamp(30px, 3.2vw, 52px);
+  font-weight: 400;
+  letter-spacing: -0.06em;
+  line-height: 0.94;
+}
+
+.mesh-compare-instruction {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.mesh-compare-delta {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin-top: 30px;
+  padding: 18px 0;
+  border-top: 1px solid var(--mesh-line);
+  border-bottom: 1px solid var(--mesh-line);
+}
+
+.mesh-compare-delta strong {
+  font-size: 17px;
+}
+
+.mesh-compare-cue-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 18px;
+}
+
+.mesh-compare-cue-tabs button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--mesh-line);
+  border-radius: 50%;
+  font-family: "DM Mono", monospace;
+  font-size: 10px;
+}
+
+.mesh-compare-cue-tabs button.active {
+  border-color: var(--mesh-correction);
+  background: var(--mesh-correction);
+  color: white;
+}
+
+.mesh-compare-boundary {
+  margin: auto 0 0;
+  color: var(--mesh-muted);
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  line-height: 1.5;
+  text-transform: uppercase;
+}
+
+.mesh-compare-controls {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 80px minmax(360px, 1fr) minmax(140px, 1fr) auto;
+  align-items: center;
+  gap: 22px;
+  min-height: 90px;
+  padding: 14px 30px;
+  border-top: 1px solid var(--mesh-line);
+  background: rgba(247, 247, 242, 0.94);
+}
+
+.mesh-play {
+  width: 58px;
+  height: 58px;
+  border: 1px solid var(--mesh-ink);
+  border-radius: 50%;
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.mesh-play:hover {
+  background: var(--mesh-ink);
+  color: white;
+}
+
+.mesh-phase-track {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.mesh-phase-track::before {
+  position: absolute;
+  top: 8px;
+  right: 10%;
+  left: 10%;
+  height: 1px;
+  background: var(--mesh-line);
+  content: "";
+}
+
+.mesh-phase-track button {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  color: var(--mesh-muted);
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.mesh-phase-track i {
+  width: 17px;
+  height: 17px;
+  border: 5px solid #f7f7f2;
+  border-radius: 50%;
+  background: #aeb6b0;
+}
+
+.mesh-phase-track button.active {
+  color: var(--mesh-ink);
+}
+
+.mesh-phase-track button.active i {
+  background: var(--mesh-correction);
+  box-shadow: 0 0 0 1px var(--mesh-correction);
+}
+
+.mesh-time-slider {
+  width: 100%;
+  accent-color: var(--mesh-correction);
+}
+
+.mesh-view-buttons {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--mesh-line);
+}
+
+.mesh-view-buttons button {
+  padding: 7px 9px;
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.mesh-view-buttons button.active {
+  background: var(--mesh-reference);
+}
+
+.mesh-stage-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 8px;
+  color: var(--mesh-muted);
+}
+
+.mesh-stage-message span,
+.mesh-state-mark {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 12px;
+  border: 1px solid var(--mesh-line);
+  border-radius: 50%;
+}
+
+.mesh-stage-message span::after,
+.mesh-state-mark span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--mesh-user);
+  content: "";
+  transform: translate(-50%, -50%);
+}
+
+.mesh-stage-message small {
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+}
+
+.mesh-compare-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  text-align: center;
+}
+
+.mesh-compare-state p {
+  margin: 0 0 10px;
+  color: var(--mesh-correction);
+  font-family: "DM Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+}
+
+.mesh-compare-state h1 {
+  max-width: 720px;
+  margin: 0;
+  font-family: "Archivo Black", sans-serif;
+  font-size: clamp(38px, 7vw, 90px);
+  font-weight: 400;
+  letter-spacing: -0.07em;
+  line-height: 0.9;
+}
+
+.mesh-compare-state small {
+  max-width: 660px;
+  margin-top: 24px;
+  color: var(--mesh-muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.mesh-compare-state.blocked .mesh-state-mark span {
+  background: var(--mesh-correction);
+}
+
+@media (max-width: 900px) {
+  .mesh-compare-page {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(430px, 58vh) auto auto;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
+  }
+
+  .mesh-compare-header {
+    grid-template-columns: 74px 1fr;
+    padding: 18px;
+  }
+
+  .mesh-compare-reference-id {
+    grid-column: 2;
+    align-items: flex-start;
+    margin-top: 14px;
+  }
+
+  .mesh-compare-stage {
+    border-right: 0;
+    border-bottom: 1px solid var(--mesh-line);
+  }
+
+  .mesh-compare-coach {
+    min-height: 380px;
+  }
+
+  .mesh-compare-controls {
+    grid-template-columns: 64px 1fr;
+    gap: 14px;
+    padding: 14px 18px 22px;
+  }
+
+  .mesh-time-slider,
+  .mesh-view-buttons {
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mesh-compare-page *,
+  .mesh-compare-state * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+  }
+}

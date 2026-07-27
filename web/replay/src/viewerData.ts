@@ -72,6 +72,7 @@ export type ViewerManifest = {
   replay_scene_url: string | null;
   body_mesh_url: string | null;
   body_mesh_index_url: string | null;
+  mesh_status?: "windowed_index" | "monolithic_unverified" | "skeleton_only" | null;
   physics_refinement_url: string | null;
   contact_windows_url: string | null;
   reviewed_bounces_url: string | null;
@@ -838,6 +839,13 @@ export function parseViewerManifest(input: unknown): ViewerManifest {
     annotation_sources: readArray(value.annotation_sources, "manifest.annotation_sources").map(readAnnotationSource),
     notes: readArray(value.notes, "manifest.notes").map((entry, index) => readString(entry, `manifest.notes[${index}]`)),
   };
+  if (value.mesh_status !== null && value.mesh_status !== undefined) {
+    manifest.mesh_status = readEnum(
+      value.mesh_status,
+      "manifest.mesh_status",
+      ["windowed_index", "monolithic_unverified", "skeleton_only"] as const,
+    );
+  }
   if (value.rally_metrics_url !== null && value.rally_metrics_url !== undefined) {
     manifest.rally_metrics_url = readString(value.rally_metrics_url, "manifest.rally_metrics_url");
   }

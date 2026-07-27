@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import {
+  assertPublicCoachingComparisonDisplay,
   bindCoachingComparisonToManifest,
   comparisonHasReferenceMotion,
   mapUserTimeToReferenceTime,
@@ -258,11 +259,25 @@ describe("coaching comparison contract", () => {
     expect(await sha256Utf8("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   });
 
-  it("rejects local-review-only motion from the user-facing comparison path", () => {
+  it("parses local-review-only motion but rejects it from the public replay surface", () => {
     const payload = clone(motionComparison());
     if ("replay_manifest_url" in payload.reference) payload.reference.display_rights = "local_review_only";
 
-    expect(() => parseCoachingComparison(payload)).toThrow("requires a cleared reference motion asset");
+    const parsed = parseCoachingComparison(payload);
+    expect(comparisonHasReferenceMotion(parsed)).toBe(true);
+    expect(() => assertPublicCoachingComparisonDisplay(parsed)).toThrow("local-review-only reference motion");
+  });
+
+  it("allows an unreviewed local kinematics preview but never a verified cue", () => {
+    const payload = clone(motionComparison());
+    if ("replay_manifest_url" in payload.reference) {
+      payload.reference.display_rights = "local_review_only";
+      payload.reference.expert_reviewed = false;
+    }
+    expect(parseCoachingComparison(payload).status).toBe("kinematics_only");
+
+    payload.cues[0].measurement.authority = "verified";
+    expect(() => parseCoachingComparison(payload)).toThrow("preview-only kinematics");
   });
 
   it("accepts an honest official-embed-only rubric comparison without a ghost, alignment, or derived pro number", () => {
@@ -364,7 +379,7 @@ describe("coaching comparison contract", () => {
     const payload = clone(embedOnlyComparison());
     payload.comparison_basis = "reference_motion";
 
-    expect(() => parseCoachingComparison(payload)).toThrow("requires a cleared reference motion asset");
+    expect(() => parseCoachingComparison(payload)).toThrow("requires a reference motion asset");
   });
 
   it("requires numeric reference values and deltas for a real reference-motion comparison", () => {

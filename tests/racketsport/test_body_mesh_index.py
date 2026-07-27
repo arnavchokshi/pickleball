@@ -358,6 +358,92 @@ def test_build_body_mesh_index_cli_accepts_clip_dir_and_writes_index(tmp_path: P
     assert (out_dir / "body_mesh_index.json").is_file()
 
 
+def test_subset_body_mesh_index_cli_preserves_dense_frames_without_skeleton_fallback(tmp_path: Path) -> None:
+    source_dir = tmp_path / "source_index"
+    build_body_mesh_index_from_payload(
+        _body_mesh_payload(),
+        out_dir=source_dir,
+        quantization_scale=100,
+        compresslevel=6,
+    )
+    out_dir = tmp_path / "subset"
+    source_world = tmp_path / "source_world.json"
+    source_manifest = tmp_path / "source_manifest.json"
+    _write_json(
+        source_world,
+        {
+            "players": [
+                {
+                    "id": 7,
+                    "frames": [
+                        {"t": 5 / 30.0, "floor_world_xyz": [1.0, 2.0, 0.0], "foot_contact": None},
+                        {"t": 6 / 30.0, "floor_world_xyz": [1.1, 2.1, 0.0], "foot_contact": "left"},
+                    ],
+                }
+            ],
+            "ball": {"source": "old", "frames": [{"t": 0.0}]},
+            "paddles": [{"player_id": 7}],
+            "summary": {"floor_placed_player_frame_count": 99, "floor_contact_player_frame_count": 99},
+        },
+    )
+    _write_json(
+        source_manifest,
+        {
+            "mesh_status": "skeleton_only",
+            "body_mesh_index_url": None,
+            "body_mesh_url": None,
+            "annotation_sources": [{"id": "old"}],
+            "label_overlays": [{"id": "old"}],
+            "notes": ["old"],
+        },
+    )
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "scripts/racketsport/subset_body_mesh_index.py",
+            str(source_dir / "body_mesh_index.json"),
+            "--player-id",
+            "7",
+            "--t0",
+            str(5 / 30.0),
+            "--t1",
+            "0.18",
+            "--out-dir",
+            str(out_dir),
+            "--source-world",
+            str(source_world),
+            "--source-manifest",
+            str(source_manifest),
+        ],
+        cwd=Path(__file__).resolve().parents[2],
+        check=True,
+        text=True,
+        capture_output=True,
+    )
+
+    summary = json.loads(completed.stdout)
+    index = json.loads((out_dir / "body_mesh_index.json").read_text(encoding="utf-8"))
+    provenance = json.loads((out_dir / "subset_provenance.json").read_text(encoding="utf-8"))
+    compact_world = json.loads((out_dir / "virtual_world.json").read_text(encoding="utf-8"))
+    compact_manifest = json.loads((out_dir / "replay_viewer_manifest.json").read_text(encoding="utf-8"))
+    frame = index["windows"][0]["players"][0]["frames"][0]
+
+    assert summary["summary"]["mesh_frame_count"] == 1
+    assert index["summary"] == {"window_count": 1, "mesh_frame_count": 1, "player_count": 1, "faces_count": 1}
+    assert index["windows"][0]["player_ids"] == [7]
+    assert frame["vertex_count"] == 3
+    assert frame["joint_count"] == 1
+    assert provenance["mesh_frame_count"] == 1
+    assert provenance["vertex_count"] == 3
+    assert provenance["skeleton_fallback"] is False
+    assert len(provenance["output_assets"]) == 5
+    assert compact_manifest["mesh_status"] == "windowed_index"
+    assert compact_manifest["body_mesh_index_url"] == "body_mesh_index.json"
+    assert compact_world["summary"]["floor_placed_player_frame_count"] == 1
+    assert compact_world["summary"]["floor_contact_player_frame_count"] == 0
+
+
 def _write_synthetic_body_mesh(path: Path, *, target_mb: float) -> None:
     vertex_count = 1200
     joint_count = 70
