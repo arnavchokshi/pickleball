@@ -1,0 +1,106 @@
+{
+  "artifact_type": "racketsport_calibration_promotion_record",
+  "authority_note": "Promotion does not change the authority class. source and intrinsics.source stay metric_15pt_reviewed on every promoted artifact, and orchestrator.TRUSTED_INTRINSICS_SOURCES gains no entries.",
+  "base_commit": "e209112",
+  "lane": "runs/lanes/calib_promote_cleanup_20260727",
+  "promoted": {
+    "owner_IMG_1605_8a193402780b": {
+      "held_out_median_px": {
+        "after": 3.448398,
+        "before": 26.846912
+      },
+      "held_out_plane_error_m": {
+        "after": 0.106518,
+        "before": 2.41981
+      },
+      "promoted_artifact": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_calibration_metric15pt_promoted.json",
+      "promoted_sha256": "fcef9d2ff2d95536f891866b108fd23eae526cc9122e66e7d1546e5d62fee4ea",
+      "rationale": "The raw artifact was internally inconsistent: it declared net points at 0.9144 m and then excluded them from its own fit. Held-out median plane error 2.4198 -> 0.1065 m (-95.6%) and held-out median reprojection 26.847 -> 3.448 px (-87.2%): both held-out criteria agree. The in-sample floor barely moves (0.0933 -> 0.0899 m) because the shipped camera was already fit floor-only -- the repair is to the declared correspondence set, which is exactly what held-out sees and in-sample cannot.",
+      "raw_sha256": "e2ab042c1ab6a188773d063fa36500792a2ada5ea3b370ccfd0f981536be4cc0",
+      "raw_untouched": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_calibration_metric15pt.json",
+      "selection_pointer": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_calibration_selected.json"
+    },
+    "pbvision_11min_20260713_demo_seed": {
+      "held_out_median_px": {
+        "after": 8.771759,
+        "before": 23.317486
+      },
+      "held_out_plane_error_m": {
+        "after": 0.176952,
+        "before": 2.745214
+      },
+      "promoted_artifact": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_metric15pt_promoted.json",
+      "promoted_sha256": "36de1888f992e49649f3a90b1b179bc6a7385092b2277ae2197c24caf9ecc1ac",
+      "rationale": "The defect the North Star names. The raw solve declared its 3 net keypoints at 0.9144 m while the labels are at ~0 m, so its own correspondence set was wrong. Held-out median plane error 2.7452 -> 0.1770 m (-93.6%) and held-out median reprojection 23.317 -> 8.772 px (-62.4%): both held-out criteria agree by a wide margin.",
+      "raw_sha256": "3e478a930dd23d31995aa720f93027f57280c47aab5029b780b9e72b30b7dae2",
+      "raw_untouched": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_metric15pt.json",
+      "selection_pointer": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_selected.json"
+    }
+  },
+  "refused": {
+    "burlington_gold_0300_low_steep_corner": {
+      "held_out_median_px": {
+        "change_pct": 2.87,
+        "refined": 11.05,
+        "selected": 10.742
+      },
+      "held_out_plane_error_m": {
+        "change_pct": 0.35,
+        "refined": 0.269263,
+        "selected": 0.268336
+      },
+      "in_sample_p95_px": {
+        "change_pct": 30.29,
+        "refined": 25.775,
+        "selected": 19.783
+      },
+      "reason": "Nothing improves. Both held-out criteria are marginally WORSE, and the in-sample p95 regresses 19.78 -> 25.78 px. That last number is not cosmetic: ball_inout_uncertainty builds the in/out abstention radius from the in-sample p95, so promoting here would widen the radius while buying no held-out accuracy."
+    },
+    "indoor_doubles_fwuks_0500_long_mid_baseline": {
+      "held_out_median_px": {
+        "change_pct": 18.72,
+        "refined": 6.603,
+        "selected": 5.562
+      },
+      "held_out_plane_error_m": {
+        "change_pct": -18.38,
+        "refined": 0.190812,
+        "selected": 0.23378
+      },
+      "in_sample_median_px": {
+        "change_pct": 46.44,
+        "refined": 5.446,
+        "selected": 3.719
+      },
+      "reason": "The only clip where the two held-out criteria DISAGREE, and they disagree by almost exactly equal magnitude: plane error -18.4%, reprojection +18.7%. Promoting would therefore not be acting on a measurement, it would be betting on which held-out metric to rank by. The refit lane made the defensible choice of metres for model selection; that is not the same as evidence strong enough to replace a shipped artifact. Refused pending a tie-break the data does not currently supply. This is the one refusal a reasonable owner might overturn -- the numbers are here to overturn it with."
+    },
+    "outdoor_webcam_iynbd_1500_long_high_baseline": {
+      "held_out_median_px": {
+        "change_pct": 0.0,
+        "refined": 7.026,
+        "selected": 7.026
+      },
+      "held_out_plane_error_m": {
+        "change_pct": 0.0,
+        "refined": 0.127254,
+        "selected": 0.127254
+      },
+      "reason": "MEASURED NEGATIVE, PRESERVED. The refit refused distortion on held-out evidence for this camera and recovered the shipped solve exactly. Both held-out criteria are identical to 6 significant figures. There is nothing to promote, and the refusal of distortion here is a result about this camera, not a gap."
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "held_out_median_px": {
+        "change_pct": 0.0,
+        "refined": 11.005,
+        "selected": 11.005
+      },
+      "held_out_plane_error_m": {
+        "change_pct": 0.0,
+        "refined": 0.158241,
+        "selected": 0.158241
+      },
+      "reason": "MEASURED NEGATIVE, PRESERVED. Same as outdoor: distortion refused on held-out evidence, shipped solve recovered, both held-out criteria unchanged. The owner's reviewed bounce labels on this clip do not materially improve either (sigma along ray 0.2253 -> 0.2249 m), which is an honest negative for the clip."
+    }
+  },
+  "schema_version": 1,
+  "verified": 0
+}

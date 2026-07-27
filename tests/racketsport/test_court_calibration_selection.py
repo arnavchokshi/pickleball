@@ -207,3 +207,91 @@ def test_pointer_must_supersede_the_artifact_it_sits_beside(tmp_path: Path) -> N
 
     with pytest.raises(CourtCalibrationSelectionError, match="may only supersede"):
         resolve_selected_calibration_path(raw)
+
+
+# ---------------------------------------------------------------- real repo
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+PROMOTED_CLIPS = {
+    "owner_IMG_1605_8a193402780b": (
+        "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_calibration_metric15pt.json"
+    ),
+    "pbvision_11min_20260713_demo_seed": (
+        "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/"
+        "court_calibration_metric15pt.json"
+    ),
+}
+
+REFUSED_CLIPS = {
+    "burlington_gold_0300_low_steep_corner",
+    "indoor_doubles_fwuks_0500_long_mid_baseline",
+    "outdoor_webcam_iynbd_1500_long_high_baseline",
+    "wolverine_mixed_0200_mid_steep_corner",
+}
+
+
+@pytest.mark.parametrize("clip,raw_rel", sorted(PROMOTED_CLIPS.items()))
+def test_promoted_clip_resolves_to_its_promoted_artifact(clip: str, raw_rel: str) -> None:
+    """The two promotions are live, checksummed, and still consistent on disk.
+
+    This fails loudly if anyone edits a raw solve (they are immutable) or
+    regenerates a promoted artifact without refreshing its pointer.
+    """
+
+    raw = REPO_ROOT / raw_rel
+    if not raw.is_file():  # pragma: no cover - artifact not present in this checkout
+        pytest.skip(f"{raw_rel} not present")
+
+    resolved = resolve_selected_calibration_path(raw)
+
+    assert resolved != raw
+    assert resolved.name == PROMOTED_NAME
+    assert resolved.parent == raw.parent
+
+
+@pytest.mark.parametrize("clip,raw_rel", sorted(PROMOTED_CLIPS.items()))
+def test_promotion_never_escalates_the_authority_class(clip: str, raw_rel: str) -> None:
+    """A better fit of the same reviewed correspondences is not a new authority."""
+
+    raw = REPO_ROOT / raw_rel
+    if not raw.is_file():  # pragma: no cover
+        pytest.skip(f"{raw_rel} not present")
+    promoted = resolve_selected_calibration_path(raw)
+
+    raw_payload = json.loads(raw.read_text(encoding="utf-8"))
+    promoted_payload = json.loads(promoted.read_text(encoding="utf-8"))
+
+    assert promoted_payload["source"] == raw_payload["source"] == "metric_15pt_reviewed"
+    assert (
+        promoted_payload["intrinsics"]["source"]
+        == raw_payload["intrinsics"]["source"]
+        == "metric_15pt_reviewed"
+    )
+    assert "reviewed_15pt_correspondences" in promoted_payload["capture_quality"]["reasons"]
+
+
+@pytest.mark.parametrize("clip,raw_rel", sorted(PROMOTED_CLIPS.items()))
+def test_promoted_artifact_validates_against_the_court_calibration_schema(
+    clip: str, raw_rel: str
+) -> None:
+    """The refit lane's refined artifacts do NOT validate; the promoted ones must."""
+
+    from threed.racketsport.schemas import validate_artifact_file
+
+    raw = REPO_ROOT / raw_rel
+    if not raw.is_file():  # pragma: no cover
+        pytest.skip(f"{raw_rel} not present")
+
+    validate_artifact_file("court_calibration", resolve_selected_calibration_path(raw))
+
+
+@pytest.mark.parametrize("clip", sorted(REFUSED_CLIPS))
+def test_refused_clips_still_resolve_to_their_raw_solve(clip: str) -> None:
+    """Refusals are results. burlington/indoor/outdoor/wolverine were not promoted."""
+
+    raw = REPO_ROOT / "eval_clips" / "ball" / clip / "labels" / RAW_NAME
+    if not raw.is_file():  # pragma: no cover
+        pytest.skip(f"{clip} not present")
+
+    assert resolve_selected_calibration_path(raw) == raw
+    assert not (raw.parent / SELECTION_POINTER_FILENAME).exists()

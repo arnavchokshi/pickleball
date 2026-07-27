@@ -1,0 +1,38 @@
+{
+  "artifact_type": "racketsport_court_calibration_selection",
+  "authority": {
+    "class_unchanged": true,
+    "note": "A better fit of the same owner-reviewed correspondences is not a new authority class. TRUSTED_INTRINSICS_SOURCES is unchanged.",
+    "source": "metric_15pt_reviewed"
+  },
+  "clip": "owner_IMG_1605_8a193402780b",
+  "evidence": {
+    "held_out_median_plane_error_m": {
+      "selected": 0.106518,
+      "superseded": 2.41981
+    },
+    "held_out_median_reprojection_px": {
+      "selected": 3.448398,
+      "superseded": 26.846912
+    },
+    "in_sample_caveat": "reprojection_error_px in both artifacts is IN-SAMPLE and optimistic; the held_out_* figures above are the honest ones",
+    "protocol": "leave-one-out over 15 correspondences; each fold refits focal length, distortion and pose on 14 and scores the 1 withheld",
+    "rationale": "The raw artifact was internally inconsistent: it declared net points at 0.9144 m and then excluded them from its own fit. Held-out median plane error 2.4198 -> 0.1065 m (-95.6%) and held-out median reprojection 26.847 -> 3.448 px (-87.2%): both held-out criteria agree. The in-sample floor barely moves (0.0933 -> 0.0899 m) because the shipped camera was already fit floor-only -- the repair is to the declared correspondence set, which is exactly what held-out sees and in-sample cannot."
+  },
+  "promoted_by": {
+    "base_commit": "e209112",
+    "lane": "runs/lanes/calib_promote_cleanup_20260727",
+    "refined_artifact": "runs/lanes/calib_distortion_fit_20260726/refined/owner_IMG_1605_8a193402780b/court_calibration_metric15pt_refined.json",
+    "refit_lane": "runs/lanes/calib_distortion_fit_20260726"
+  },
+  "schema_version": 1,
+  "selected": {
+    "path": "court_calibration_metric15pt_promoted.json",
+    "sha256": "fcef9d2ff2d95536f891866b108fd23eae526cc9122e66e7d1546e5d62fee4ea"
+  },
+  "supersedes": {
+    "path": "court_calibration_metric15pt.json",
+    "sha256": "e2ab042c1ab6a188773d063fa36500792a2ada5ea3b370ccfd0f981536be4cc0"
+  },
+  "verified": 0
+}
