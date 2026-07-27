@@ -8,6 +8,63 @@ Standing fence: `brand-exploration/` is the OWNER'S untracked brand work — no 
 `cvat_upload/court_diversity_20260712/` + `w7_audit_stratum_20260709/` are staged local-only owner
 labeling packages (storage-allowlisted, intentionally untracked).
 
+## HANDOFF TO THE COURT/SKELETON LANE — 2026-07-27 (ball/fusion integration session)
+
+**Read this before the next court-keypoint training run. It affects your training data, not ours.**
+
+### DEFECT: the net keypoints are declared at the wrong height
+
+`threed/racketsport/court_keypoint_net.py` declares the 3 net keypoints at
+`_PICKLEBALL_TEMPLATE.post_net_height_m` = 0.9144 m (net-post height). **Every reviewed label set in
+this repo marks the GROUND NET LINE instead.** Measured by fitting floor-only and back-projecting
+each net label onto the vertical net plane, the implied label height is **0.008-0.130 m on all six
+clips**, with X landing within a few cm of the expected +/-3.048 / 0.
+
+Consequence: a ~0.9 m object-point error on 3 of 15 points, i.e. a **40-120 px systematic
+residual**. Distortion cannot absorb a wrong object point, which is why no k1 ever cleared any
+improvement gate — the fit was compensating for a mis-specified target.
+
+Smoking gun: forcing net z back to 0 reproduces the shipped burlington artifact bit-for-bit
+(fx 1252.7783900978502, dist [-0.30035182958629364, 0.09861181595540636], median 6.3901815068357175).
+The frozen digest test `test_real_burlington_fixture_...` was ALREADY FAILING at f29145a from the
+resulting silent 6.39 -> 26.4 px regression — that failure predates this session and is this bug.
+
+### WHY THIS IS YOURS, NOT OURS
+
+We did NOT touch `court_keypoint_net.py`. The calibration lane was fenced out of it and worked
+around the problem per-clip by SELECTING the net label height (net-top vs ground-line) rather than
+hardcoding it. The declaration itself is unchanged and still wrong.
+
+It matters most on your side: the court-keypoint model is being trained against object points that
+are 0.9 m wrong on 3 of 15 keypoints. Any PCK/residual number computed against that template
+inherits the error.
+
+### SUGGESTED FIX (your call, your lane)
+
+Either correct the declared height to the ground net line, or split the semantic into two distinct
+keypoint classes (net-post-top vs net-ground-line) so labels and object points cannot silently
+disagree again. Prefer the split — it makes the failure impossible rather than merely fixed.
+
+Evidence and the per-clip measurements: `runs/lanes/calib_distortion_fit_20260726/`.
+
+### ALSO LANDED THIS SESSION (may affect your runs)
+
+- `intrinsics.dist` was **inert**: neither `pixel_ray_world` nor `_project_world_point` read it, so
+  every fitted distortion coefficient was discarded downstream while the focal fitted alongside it
+  was kept. Now wired. Improves the calibration floor burlington 0.3684 -> 0.1907 m and indoor
+  0.2319 -> 0.1990 m **with no artifact change at all**.
+- Reprojection error is retired as a 3D quality gate (proven blind to depth: a 1.00 m shift along
+  the camera ray moves reprojection by 1.6e-13 px). Replaced by
+  `threed/racketsport/ball_position_plausibility.py`. This suppressed 12,866 ball positions, 100%
+  of them `arc_weak`, 0 from any confident band. Reprojection remains valid for calibration
+  residuals and 2D consistency — those uses were kept.
+- `anchor_sigma_for_bounce` -> `BounceAnchorUncertainty`: anisotropic, with an explicit bias term.
+  Bias correction of anchor positions is default-OFF (PENDING, do_not_promote).
+- `one_world_v1` wired as a default-OFF stage at order 185; the `world` stage capability renamed
+  `fusion` -> `composited_world` because it composites and performs no joint refinement.
+
+`VERIFIED=0` throughout. None of the above is a capability promotion.
+
 ## Current live state — 2026-07-23 resume (integration manager session)
 
 Resume executed per runs/handoff_20260722/LIMIT_RECOVERY.md. Baseline re-verified at resume:
