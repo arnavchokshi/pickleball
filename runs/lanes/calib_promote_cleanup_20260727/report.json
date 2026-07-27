@@ -1,0 +1,511 @@
+{
+  "artifact_type": "racketsport_lane_report",
+  "base_commit": "e209112",
+  "branch": "calibpromo-20260727",
+  "date": "2026-07-27",
+  "job_1_promotion": {
+    "baseline_note": "Baseline is what the repo consumes at e209112, i.e. the shipped artifact read by a distortion-aware consumer (the refit lane's state B), because the intrinsics.dist seam fix is already merged. Not the refit lane's state A.",
+    "clips": {
+      "burlington_gold_0300_low_steep_corner": {
+        "authority_class": {
+          "after": "metric_15pt_reviewed",
+          "before": "metric_15pt_reviewed",
+          "unchanged": true
+        },
+        "held_out_median_plane_error_m": {
+          "after_promotion": 0.268336,
+          "baseline_e209112": 0.268336,
+          "change_pct_if_promoted": 0.35,
+          "refined_candidate": 0.269263
+        },
+        "held_out_median_reprojection_px": {
+          "after_promotion": 10.742038,
+          "baseline_e209112": 10.742038,
+          "change_pct_if_promoted": 2.87,
+          "refined_candidate": 11.049939
+        },
+        "in_sample_OPTIMISTIC": {
+          "caveat": "back-projects the calibration's own fitted correspondences; a training residual",
+          "plane_residual_median_m": {
+            "after_promotion": 0.190686,
+            "baseline_e209112": 0.190686,
+            "refined_candidate": 0.219627
+          },
+          "reprojection_px": {
+            "baseline_e209112": {
+              "median": 6.3901815068357175,
+              "p95": 19.782933882839167
+            },
+            "refined_candidate": {
+              "median": 8.910392205574576,
+              "p95": 25.77484450807873
+            }
+          }
+        },
+        "metric_confidence": {
+          "after_promotion": "low",
+          "baseline_e209112": "low"
+        },
+        "promoted": false,
+        "refusal_reason": "Nothing improves. Both held-out criteria are marginally WORSE, and the in-sample p95 regresses 19.78 -> 25.78 px. That last number is not cosmetic: ball_inout_uncertainty builds the in/out abstention radius from the in-sample p95, so promoting here would widen the radius while buying no held-out accuracy.",
+        "selected_path_after": "eval_clips/ball/burlington_gold_0300_low_steep_corner/labels/court_calibration_metric15pt.json",
+        "selection_pointer": null
+      },
+      "indoor_doubles_fwuks_0500_long_mid_baseline": {
+        "authority_class": {
+          "after": "metric_15pt_reviewed",
+          "before": "metric_15pt_reviewed",
+          "unchanged": true
+        },
+        "held_out_median_plane_error_m": {
+          "after_promotion": 0.23378,
+          "baseline_e209112": 0.23378,
+          "change_pct_if_promoted": -18.38,
+          "refined_candidate": 0.190812
+        },
+        "held_out_median_reprojection_px": {
+          "after_promotion": 5.561803,
+          "baseline_e209112": 5.561803,
+          "change_pct_if_promoted": 18.72,
+          "refined_candidate": 6.602973
+        },
+        "in_sample_OPTIMISTIC": {
+          "caveat": "back-projects the calibration's own fitted correspondences; a training residual",
+          "plane_residual_median_m": {
+            "after_promotion": 0.199033,
+            "baseline_e209112": 0.199033,
+            "refined_candidate": 0.183546
+          },
+          "reprojection_px": {
+            "baseline_e209112": {
+              "median": 3.719086939495673,
+              "p95": 8.813794890651005
+            },
+            "refined_candidate": {
+              "median": 5.446086455345454,
+              "p95": 8.26069948576681
+            }
+          }
+        },
+        "metric_confidence": {
+          "after_promotion": "med",
+          "baseline_e209112": "med"
+        },
+        "promoted": false,
+        "refusal_reason": "The only clip where the two held-out criteria DISAGREE, and they disagree by almost exactly equal magnitude: plane error -18.4%, reprojection +18.7%. Promoting would therefore not be acting on a measurement, it would be betting on which held-out metric to rank by. The refit lane made the defensible choice of metres for model selection; that is not the same as evidence strong enough to replace a shipped artifact. Refused pending a tie-break the data does not currently supply. This is the one refusal a reasonable owner might overturn -- the numbers are here to overturn it with.",
+        "selected_path_after": "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/labels/court_calibration_metric15pt.json",
+        "selection_pointer": null
+      },
+      "outdoor_webcam_iynbd_1500_long_high_baseline": {
+        "authority_class": {
+          "after": "metric_15pt_reviewed",
+          "before": "metric_15pt_reviewed",
+          "unchanged": true
+        },
+        "held_out_median_plane_error_m": {
+          "after_promotion": 0.127254,
+          "baseline_e209112": 0.127254,
+          "change_pct_if_promoted": 0.0,
+          "refined_candidate": 0.127254
+        },
+        "held_out_median_reprojection_px": {
+          "after_promotion": 7.025714,
+          "baseline_e209112": 7.025714,
+          "change_pct_if_promoted": 0.0,
+          "refined_candidate": 7.025714
+        },
+        "in_sample_OPTIMISTIC": {
+          "caveat": "back-projects the calibration's own fitted correspondences; a training residual",
+          "plane_residual_median_m": {
+            "after_promotion": 0.100551,
+            "baseline_e209112": 0.100551,
+            "refined_candidate": 0.10078
+          },
+          "reprojection_px": {
+            "baseline_e209112": {
+              "median": 4.7834997281882865,
+              "p95": 12.276624313829716
+            },
+            "refined_candidate": {
+              "median": 4.793773434949169,
+              "p95": 12.26732868386675
+            }
+          }
+        },
+        "metric_confidence": {
+          "after_promotion": "med",
+          "baseline_e209112": "med"
+        },
+        "promoted": false,
+        "refusal_reason": "MEASURED NEGATIVE, PRESERVED. The refit refused distortion on held-out evidence for this camera and recovered the shipped solve exactly. Both held-out criteria are identical to 6 significant figures. There is nothing to promote, and the refusal of distortion here is a result about this camera, not a gap.",
+        "selected_path_after": "eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_calibration_metric15pt.json",
+        "selection_pointer": null
+      },
+      "owner_IMG_1605_8a193402780b": {
+        "authority_class": {
+          "after": "metric_15pt_reviewed",
+          "before": "metric_15pt_reviewed",
+          "unchanged": true
+        },
+        "held_out_median_plane_error_m": {
+          "after_promotion": 0.106518,
+          "baseline_e209112": 2.41981,
+          "change_pct_if_promoted": -95.6,
+          "refined_candidate": 0.106518
+        },
+        "held_out_median_reprojection_px": {
+          "after_promotion": 3.448398,
+          "baseline_e209112": 26.846912,
+          "change_pct_if_promoted": -87.16,
+          "refined_candidate": 3.448398
+        },
+        "in_sample_OPTIMISTIC": {
+          "caveat": "back-projects the calibration's own fitted correspondences; a training residual",
+          "plane_residual_median_m": {
+            "after_promotion": 0.089907,
+            "baseline_e209112": 0.093304,
+            "refined_candidate": 0.089907
+          },
+          "reprojection_px": {
+            "baseline_e209112": {
+              "median": 2.8848279134500148,
+              "p95": 6.233070699523442
+            },
+            "refined_candidate": {
+              "median": 2.588079695423893,
+              "p95": 6.083629957310203
+            }
+          }
+        },
+        "metric_confidence": {
+          "after_promotion": "med",
+          "baseline_e209112": "med"
+        },
+        "promoted": true,
+        "rationale": "The raw artifact was internally inconsistent: it declared net points at 0.9144 m and then excluded them from its own fit. Held-out median plane error 2.4198 -> 0.1065 m (-95.6%) and held-out median reprojection 26.847 -> 3.448 px (-87.2%): both held-out criteria agree. The in-sample floor barely moves (0.0933 -> 0.0899 m) because the shipped camera was already fit floor-only -- the repair is to the declared correspondence set, which is exactly what held-out sees and in-sample cannot.",
+        "selected_path_after": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_calibration_metric15pt_promoted.json",
+        "selection_pointer": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_calibration_selected.json"
+      },
+      "pbvision_11min_20260713_demo_seed": {
+        "authority_class": {
+          "after": "metric_15pt_reviewed",
+          "before": "metric_15pt_reviewed",
+          "unchanged": true
+        },
+        "held_out_median_plane_error_m": {
+          "after_promotion": 0.176952,
+          "baseline_e209112": 2.745214,
+          "change_pct_if_promoted": -93.55,
+          "refined_candidate": 0.176952
+        },
+        "held_out_median_reprojection_px": {
+          "after_promotion": 8.771759,
+          "baseline_e209112": 23.317486,
+          "change_pct_if_promoted": -62.38,
+          "refined_candidate": 8.771759
+        },
+        "in_sample_OPTIMISTIC": {
+          "caveat": "back-projects the calibration's own fitted correspondences; a training residual",
+          "plane_residual_median_m": {
+            "after_promotion": 0.144385,
+            "baseline_e209112": 1.906196,
+            "refined_candidate": 0.144385
+          },
+          "reprojection_px": {
+            "baseline_e209112": {
+              "median": 19.164802773724485,
+              "p95": 51.705978976514146
+            },
+            "refined_candidate": {
+              "median": 3.6760021842422645,
+              "p95": 11.423185135807742
+            }
+          }
+        },
+        "metric_confidence": {
+          "after_promotion": "med",
+          "baseline_e209112": "low"
+        },
+        "promoted": true,
+        "rationale": "The defect the North Star names. The raw solve declared its 3 net keypoints at 0.9144 m while the labels are at ~0 m, so its own correspondence set was wrong. Held-out median plane error 2.7452 -> 0.1770 m (-93.6%) and held-out median reprojection 23.317 -> 8.772 px (-62.4%): both held-out criteria agree by a wide margin.",
+        "selected_path_after": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_metric15pt_promoted.json",
+        "selection_pointer": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_selected.json"
+      },
+      "wolverine_mixed_0200_mid_steep_corner": {
+        "authority_class": {
+          "after": "metric_15pt_reviewed",
+          "before": "metric_15pt_reviewed",
+          "unchanged": true
+        },
+        "held_out_median_plane_error_m": {
+          "after_promotion": 0.158241,
+          "baseline_e209112": 0.158241,
+          "change_pct_if_promoted": 0.0,
+          "refined_candidate": 0.158241
+        },
+        "held_out_median_reprojection_px": {
+          "after_promotion": 11.004519,
+          "baseline_e209112": 11.004519,
+          "change_pct_if_promoted": 0.0,
+          "refined_candidate": 11.004519
+        },
+        "in_sample_OPTIMISTIC": {
+          "caveat": "back-projects the calibration's own fitted correspondences; a training residual",
+          "plane_residual_median_m": {
+            "after_promotion": 0.126773,
+            "baseline_e209112": 0.126773,
+            "refined_candidate": 0.126132
+          },
+          "reprojection_px": {
+            "baseline_e209112": {
+              "median": 5.004391918498315,
+              "p95": 19.920538155647392
+            },
+            "refined_candidate": {
+              "median": 5.018710799287933,
+              "p95": 19.868662139217818
+            }
+          }
+        },
+        "metric_confidence": {
+          "after_promotion": "low",
+          "baseline_e209112": "low"
+        },
+        "promoted": false,
+        "refusal_reason": "MEASURED NEGATIVE, PRESERVED. Same as outdoor: distortion refused on held-out evidence, shipped solve recovered, both held-out criteria unchanged. The owner's reviewed bounce labels on this clip do not materially improve either (sigma along ray 0.2253 -> 0.2249 m), which is an honest negative for the clip.",
+        "selected_path_after": "eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/labels/court_calibration_metric15pt.json",
+        "selection_pointer": null
+      }
+    },
+    "held_out_protocol": "leave-one-out over the 15 reviewed correspondences; each fold refits focal length, distortion and pose on 14 and scores the 1 withheld",
+    "mechanism": {
+      "authority_class_unchanged": "metric_15pt_reviewed",
+      "fail_loud_on": [
+        "missing selected artifact",
+        "selected artifact digest mismatch",
+        "superseded raw solve digest mismatch (raw was edited)",
+        "pointer superseding a file outside its own directory",
+        "authority.class_unchanged not true"
+      ],
+      "module": "threed/racketsport/court_calibration_selection.py",
+      "pointer_filename": "court_calibration_selected.json",
+      "raw_digest_recorded_in_pointer": true,
+      "raw_solves_immutable": true,
+      "trusted_intrinsics_sources_modified": false,
+      "wired_into": [
+        "scripts/racketsport/process_video.py::_auto_discover_court_calibration",
+        "threed/racketsport/virtual_world.py::resolve_best_court_calibration_path"
+      ]
+    },
+    "promoted_clips": [
+      "owner_IMG_1605_8a193402780b",
+      "pbvision_11min_20260713_demo_seed"
+    ],
+    "refined_artifacts_failed_schema_validation": {
+      "cause": "CourtCalibrationProvenance is extra='forbid' and requires exactly method/inputs/code_identity; the refit lane used refinement_of/refit_reason/authority_unchanged/refit_lane/reviewed_keypoints/not_gate_verified",
+      "finding": "runs/lanes/calib_distortion_fit_20260726/refined/*/court_calibration_metric15pt_refined.json fail validate_artifact_file('court_calibration', ...) with 9 errors each",
+      "resolution": "promoted artifacts carry a schema-conformant provenance; the narrative moved into the selection pointer"
+    },
+    "refused_clips": [
+      "burlington_gold_0300_low_steep_corner",
+      "indoor_doubles_fwuks_0500_long_mid_baseline",
+      "outdoor_webcam_iynbd_1500_long_high_baseline",
+      "wolverine_mixed_0200_mid_steep_corner"
+    ],
+    "selection_bar": "both held-out criteria -- median plane error in metres and median reprojection in pixels -- must agree the refined artifact is better"
+  },
+  "job_2_cleanup": {
+    "best_stack": {
+      "entry": "court.calibration_selection_pointer",
+      "gate": null,
+      "revision": {
+        "after": 16,
+        "before": 15
+      },
+      "stage": "calibration",
+      "status": "WIRED_DEFAULT",
+      "value_kind": "policy dict, deliberately not local_path, so it adds no filesystem precondition to manifest load",
+      "verified": 0,
+      "write_lock_caveat": "The SHARED-MANIFEST WRITE LOCK grants one in-flight writer fleet-wide and this lane was not dispatched holding it. Confined to this worktree; a concurrent manifest writer will collide on revision and on the pinned assertion."
+    },
+    "brief_precondition_correction": "The brief stated premerge-* tags exist for every merged branch. They do not: only 4 of the 7 have one. fix-calib-20260726, fix-reproj-20260726 and fix-sigma-20260726 have no premerge tag. Removed anyway after verifying each branch is an ancestor of main and its ref is preserved, so no commit is unreachable. The fence forbade creating the missing tags.",
+    "dead_code": {
+      "audit_command": "python3 scripts/racketsport/audit_dead_code.py --root .",
+      "candidates": [
+        {
+          "evidence": "tests/tt3d/test_tt3d_adapter.py imports it via a sys.path insert; the auditor's _matching_test_files scans tests/racketsport/ only (audit_dead_code.py:239)",
+          "path": "scripts/tt3d/tt3d_adapter.py",
+          "provably_unreachable": false,
+          "verdict": "not_removed_registered"
+        },
+        {
+          "evidence": "CLI driver for TT3D external-validation E0-E3; produced runs/lanes/tt3d_external_validation_20260726/, cited by best_stack ball.bounce_anchor_uncertainty. Deleting it would also orphan scripts/tt3d/sigma_calibration.py, whose only inbound reference is a comment at run_tt3d_validation.py:454",
+          "path": "scripts/tt3d/run_tt3d_validation.py",
+          "provably_unreachable": false,
+          "verdict": "not_removed_registered"
+        }
+      ],
+      "exit_after": 0,
+      "exit_before": 1,
+      "flagged_not_fixed": "audit_dead_code.py:239 _matching_test_files restricts test discovery to tests/racketsport/, so modules tested from tests/tt3d, tests/server, tests/ios or tests/render_service read as unreferenced. Not changed: it is a shared structure check and sibling lanes are in flight.",
+      "registration": "scripts/tt3d/README.md",
+      "removed": [],
+      "unknown_after": 0,
+      "unknown_before": 2
+    },
+    "post_removal_verification": {
+      "branch_heads_identical": true,
+      "branch_names_identical": true,
+      "branches_after": 24,
+      "branches_before": 24,
+      "git_worktree_prune_run": true,
+      "tag_names_identical": true,
+      "tags_after": 6,
+      "tags_before": 6
+    },
+    "side_effect_flagged": "runs/lanes/calib_distortion_fit_20260726/refit_and_measure.py hardcodes BOUNCE_LABEL_SOURCES as absolute paths into the removed balllabel worktree. It degrades gracefully (returns None) but will silently skip its bounce-label section. The labels are committed to main at runs/lanes/ball_label_tool_20260726/labels/ in a newer form; repoint the constant.",
+    "worktrees_kept_with_reason": [
+      {
+        "branch": "tt3d-validate-20260726",
+        "path": "/private/tmp/pickleball-tt3d-20260726",
+        "reason": "holds the ONLY local copy of data/external/tt3d_repo (6.7 MB), absent from main; backs tests/tt3d/test_tt3d_adapter.py and the evidence behind best_stack ball.bounce_anchor_uncertainty",
+        "remediation": "move data/external/ into the main checkout, then this worktree is free"
+      },
+      {
+        "branch": "ball-lane-20260723",
+        "path": "/Users/arnavchokshi/Desktop/pickleball/.claude/worktrees/ball-lane-20260723",
+        "reason": "79 files under runs/ball_lane_20260723/dormant_flags/solves/ exist nowhere else -- dormant-flag solve outputs, i.e. measured-but-unadopted work",
+        "remediation": "copy runs/ball_lane_20260723/dormant_flags/ into main, then this worktree is free"
+      }
+    ],
+    "worktrees_not_touched": [
+      "/private/tmp/pb-subframe-20260727",
+      "/private/tmp/pb-farfield-20260727",
+      "/private/tmp/pickleball-main-7581e52",
+      "/private/tmp/pickleball_court_train_12b555824",
+      "/private/tmp/pb-calibpromo-20260727"
+    ],
+    "worktrees_removed": [
+      {
+        "branch": "fix-calib-20260726",
+        "path": "/private/tmp/pb-fix-calib-20260726",
+        "premerge_tag": null,
+        "unique_content": null
+      },
+      {
+        "branch": "fix-reproj-20260726",
+        "path": "/private/tmp/pb-fix-reproj-20260726",
+        "premerge_tag": null,
+        "unique_content": null
+      },
+      {
+        "branch": "fix-sigma-20260726",
+        "path": "/private/tmp/pb-fix-sigma-20260726",
+        "premerge_tag": null,
+        "unique_content": "data/external/tt3d_repo, byte-identical to the tt3d worktree copy outside .git metadata"
+      },
+      {
+        "branch": "fusion-wire-20260724",
+        "force_justification": "untracked cvat_upload dirs are strict subsets of main's; .venv symlink unlinked by hand first",
+        "path": "/private/tmp/pickleball-fusion-20260724",
+        "premerge_tag": "premerge-fusion-wire-20260724-20260726",
+        "required_force": true,
+        "unique_content": null
+      },
+      {
+        "branch": "ball-label-tool-20260726",
+        "path": "/private/tmp/pickleball-balllabel-20260726",
+        "premerge_tag": "premerge-ball-label-tool-20260726-20260726",
+        "unique_content": "2 label files differ but main's are strictly newer (21 labels / 8 bounces vs 19 / 7)"
+      }
+    ]
+  },
+  "lane": "calib_promote_cleanup_20260727",
+  "schema_version": 1,
+  "test_evidence": {
+    "agents_md_structure_checks": [
+      {
+        "command": "python3 scripts/racketsport/list_scaffold_tools.py --root .",
+        "exit_after": 0,
+        "exit_before": 0,
+        "output_byte_identical": true
+      },
+      {
+        "command": "python3 scripts/racketsport/audit_dead_code.py --root .",
+        "exit_after": 0,
+        "exit_before": 1,
+        "output_byte_identical": false
+      },
+      {
+        "command": "python3 scripts/racketsport/audit_storage_policy.py --root . --json",
+        "exit_after": 1,
+        "exit_before": 1,
+        "note": "pre-existing NotADirectoryError: the checker assumes .git is a directory, a worktree makes it a file",
+        "output_byte_identical": true
+      }
+    ],
+    "environment_note": "load_best_stack_manifest() hard-fails in a bare worktree, so 5 test files could not be collected and the first attempt aborted with exit 2. Resolved by symlinking models/checkpoints/*, runs/waveb_confidence_gate_20260702T183158Z, runs/lanes/w7_ballretrain_20260709/vm_pull and runs/lanes/beststack_verify_20260709/evidence from the main checkout. Gitignored, in no commit, present for both suite runs.",
+    "focused": [
+      {
+        "command": "python3 -m pytest tests/racketsport/test_court_calibration_selection.py -q -p no:cacheprovider",
+        "exit_code": 0,
+        "result": "24 passed"
+      },
+      {
+        "command": "python3 -m pytest tests/racketsport/test_dead_code_audit.py -q -p no:cacheprovider",
+        "exit_code": 0,
+        "result": "2 passed"
+      },
+      {
+        "command": "python3 -m pytest tests/racketsport/test_best_stack_manifest.py tests/racketsport/test_best_stack_resolution.py tests/server/test_best_stack_parity.py -q",
+        "exit_code": 0,
+        "result": "13 passed"
+      }
+    ],
+    "wide_suite": {
+      "base": {
+        "commit": "e209112",
+        "exit_code": 1,
+        "failed": 7,
+        "passed": 1160,
+        "seconds": 448.19,
+        "skipped": 6
+      },
+      "branch": {
+        "exit_code": 1,
+        "failed": 6,
+        "passed": 1185,
+        "seconds": 434.15,
+        "skipped": 6
+      },
+      "branch_rerun_after_final_commit": {
+        "exit_code": 1,
+        "failed": 6,
+        "failure_set_identical_to_first_branch_run": true,
+        "log": "runs/lanes/calib_promote_cleanup_20260727/suite_branch_final.txt",
+        "passed": 1185,
+        "seconds": 438.74,
+        "skipped": 6
+      },
+      "failure_set_diff": "exactly one line",
+      "file_count": {
+        "base": 115,
+        "branch": 116
+      },
+      "new_failures_caused_by_this_lane": 0,
+      "pre_existing_failures_common_to_both": [
+        "tests/racketsport/test_ball_arc_chain.py::test_default_chain_config_matches_frozen_row22_manifest",
+        "tests/racketsport/test_ball_arc_solver.py::test_wolverine_seg6_fixture_falls_back_to_anchor_bvp_and_render_samples_stay_in_bounds",
+        "tests/racketsport/test_court_keypoint_partial_labels.py::test_img1605_progress_builds_partial_visible_label_payload",
+        "tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_infers_img1605_occluded_corner",
+        "tests/racketsport/test_court_partial_geometry.py::test_visible_floor_homography_requires_four_floor_points",
+        "tests/racketsport/test_scaffold_tool_index.py::test_real_scaffold_tool_index_matches_checked_in_schema"
+      ],
+      "pre_existing_failures_fixed": [
+        "tests/racketsport/test_dead_code_audit.py::test_dead_code_audit_has_no_unknown_python_source_surfaces"
+      ]
+    }
+  },
+  "verified": 0,
+  "verified_note": "Promoting a better-fitting calibration is an ENGINEERING improvement to a fit. It promotes no capability, passes no gate, and the ball is not verified."
+}

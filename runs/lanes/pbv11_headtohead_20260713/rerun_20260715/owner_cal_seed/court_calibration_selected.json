@@ -1,0 +1,38 @@
+{
+  "artifact_type": "racketsport_court_calibration_selection",
+  "authority": {
+    "class_unchanged": true,
+    "note": "A better fit of the same owner-reviewed correspondences is not a new authority class. TRUSTED_INTRINSICS_SOURCES is unchanged.",
+    "source": "metric_15pt_reviewed"
+  },
+  "clip": "pbvision_11min_20260713_demo_seed",
+  "evidence": {
+    "held_out_median_plane_error_m": {
+      "selected": 0.176952,
+      "superseded": 2.745214
+    },
+    "held_out_median_reprojection_px": {
+      "selected": 8.771759,
+      "superseded": 23.317486
+    },
+    "in_sample_caveat": "reprojection_error_px in both artifacts is IN-SAMPLE and optimistic; the held_out_* figures above are the honest ones",
+    "protocol": "leave-one-out over 15 correspondences; each fold refits focal length, distortion and pose on 14 and scores the 1 withheld",
+    "rationale": "The defect the North Star names. The raw solve declared its 3 net keypoints at 0.9144 m while the labels are at ~0 m, so its own correspondence set was wrong. Held-out median plane error 2.7452 -> 0.1770 m (-93.6%) and held-out median reprojection 23.317 -> 8.772 px (-62.4%): both held-out criteria agree by a wide margin."
+  },
+  "promoted_by": {
+    "base_commit": "e209112",
+    "lane": "runs/lanes/calib_promote_cleanup_20260727",
+    "refined_artifact": "runs/lanes/calib_distortion_fit_20260726/refined/pbvision_11min_20260713_demo_seed/court_calibration_metric15pt_refined.json",
+    "refit_lane": "runs/lanes/calib_distortion_fit_20260726"
+  },
+  "schema_version": 1,
+  "selected": {
+    "path": "court_calibration_metric15pt_promoted.json",
+    "sha256": "36de1888f992e49649f3a90b1b179bc6a7385092b2277ae2197c24caf9ecc1ac"
+  },
+  "supersedes": {
+    "path": "court_calibration_metric15pt.json",
+    "sha256": "3e478a930dd23d31995aa720f93027f57280c47aab5029b780b9e72b30b7dae2"
+  },
+  "verified": 0
+}

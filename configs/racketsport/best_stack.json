@@ -1,7 +1,7 @@
 {
  "schema_version": 1,
- "revision": 15,
- "updated": "2026-07-24",
+ "revision": 16,
+ "updated": "2026-07-27",
  "invariants": [
   "A manifest entry is a DEFAULT selection, NEVER a VERIFIED claim",
   "Explicit CLI flag overrides manifest defaults; absent manifest entry is a hard error on decision paths.",
@@ -1429,6 +1429,60 @@
     "verified_status_for_pickleball": 0
    },
    "notes": "The anisotropic sigma and the ray-frame residual weighting are wired and default-on. They are a CORRECTNESS fix to a mis-stated uncertainty, not an accuracy improvement: the ball is no more accurate than before, we have stopped overstating how accurate it is, and the reported sigma is now LARGER. What is PENDING is apply_bias_correction, which would MOVE the anchor and is therefore off by default; the systematic away-from-camera overshoot is reported for consumers to act on, never silently applied. The bias magnitude depends on a per-sport bounce vertical-speed prior, and the defaults here are pickleball priors that have NOT been measured against pickleball ground truth. External validation is table tennis only. VERIFIED=0 for pickleball."
+  },
+  "court.calibration_selection_pointer": {
+   "stage": "calibration",
+   "selection": "per-clip court calibration selected by a checksummed pointer beside the immutable raw solve",
+   "value": {
+    "mechanism": "court_calibration_selected.json",
+    "resolver": "threed.racketsport.court_calibration_selection.resolve_selected_calibration_path",
+    "wired_into": [
+     "scripts/racketsport/process_video.py::_auto_discover_court_calibration",
+     "threed/racketsport/virtual_world.py::resolve_best_court_calibration_path"
+    ],
+    "promotion_bar": "both held-out criteria -- median plane error in metres and median reprojection in pixels -- must improve",
+    "authority_class_unchanged": true,
+    "promoted_clips": [
+     "owner_IMG_1605_8a193402780b",
+     "pbvision_11min_20260713_demo_seed"
+    ],
+    "refused_clips": [
+     "burlington_gold_0300_low_steep_corner",
+     "indoor_doubles_fwuks_0500_long_mid_baseline",
+     "outdoor_webcam_iynbd_1500_long_high_baseline",
+     "wolverine_mixed_0200_mid_steep_corner"
+    ]
+   },
+   "status": "WIRED_DEFAULT",
+   "gate": null,
+   "provenance": {
+    "lane": "calib_promote_cleanup_20260727",
+    "commit": "worktree",
+    "date": "2026-07-27",
+    "evidence_paths": [
+     "runs/lanes/calib_promote_cleanup_20260727/REPORT.md",
+     "runs/lanes/calib_promote_cleanup_20260727/report.json",
+     "runs/lanes/calib_promote_cleanup_20260727/promotion_record.json",
+     "runs/lanes/calib_promote_cleanup_20260727/floor_before_promotion.json",
+     "runs/lanes/calib_promote_cleanup_20260727/floor_after_promotion.json",
+     "runs/lanes/calib_distortion_fit_20260726/REPORT.md"
+    ]
+   },
+   "proven_against": {
+    "protocol": "leave-one-out over the 15 reviewed correspondences; each fold refits focal length, distortion and pose on 14 and scores the 1 withheld, in metres",
+    "held_out_median_plane_error_m": {
+     "pbvision_11min_20260713_demo_seed": {"before": 2.745214, "after": 0.176952},
+     "owner_IMG_1605_8a193402780b": {"before": 2.41981, "after": 0.106518}
+    },
+    "held_out_median_reprojection_px": {
+     "pbvision_11min_20260713_demo_seed": {"before": 23.317, "after": 8.772},
+     "owner_IMG_1605_8a193402780b": {"before": 26.847, "after": 3.448}
+    },
+    "sport": "pickleball",
+    "gate_passed": false,
+    "verified": 0
+   },
+   "notes": "Wired and default-on: the resolver is unconditionally in both discovery paths, and a clip with no pointer resolves exactly as before. This is an ENGINEERING improvement to a fit, not a capability promotion -- VERIFIED=0 and no gate is claimed. Promotion never escalates authority: source and intrinsics.source stay metric_15pt_reviewed on every promoted artifact and orchestrator.TRUSTED_INTRINSICS_SOURCES gains no entries. Raw solves stay immutable; a promotion is two NEW files and the pointer records both digests, so an edited raw solve fails loud. Four clips were REFUSED on held-out evidence and that refusal is data, not absence: burlington regresses in-sample p95 19.78 -> 25.78 px while both held-out criteria are flat-to-worse, indoor is the one clip where the two held-out criteria disagree at near-equal magnitude (plane -18.4%, pixels +18.7%), and outdoor/wolverine had distortion refused by the refit itself and are unchanged to 6 significant figures. The in/out abstention radius still consumes the IN-SAMPLE reprojection p95, which an overfit model narrows; held_out_median_reprojection_*px is published in capture_quality.reasons for whoever owns that."
   }
  },
  "selection_constant_coverage": {

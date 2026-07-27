@@ -1,0 +1,237 @@
+{
+  "artifact_type": "racketsport_calibration_floor_measurement",
+  "clips": {
+    "burlington_gold_0300_low_steep_corner": {
+      "conventional_path": "eval_clips/ball/burlington_gold_0300_low_steep_corner/labels/court_calibration_metric15pt.json",
+      "measurement": {
+        "dist": [
+          -0.17885552705801672,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1210.2337776772038,
+        "held_out": {
+          "held_out_median_plane_error_m": 0.269263,
+          "held_out_median_px": 11.049939,
+          "n_radial": 1
+        },
+        "in_sample_caveat": "in_sample_* back-project the calibration's own fitted correspondences and are optimistic; held_out is the honest figure",
+        "in_sample_floor_m_all15": {
+          "median_m": 0.219627,
+          "p95_m": 0.424025
+        },
+        "in_sample_floor_m_floor12": {
+          "median_m": 0.197479,
+          "p95_m": 0.286656
+        },
+        "intrinsics_source": "metric_15pt_reviewed",
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px_in_sample": {
+          "median": 8.910392205574576,
+          "p95": 25.77484450807873
+        },
+        "source": "metric_15pt_reviewed"
+      },
+      "promoted": true,
+      "selected_path": "runs/lanes/calib_distortion_fit_20260726/refined/burlington_gold_0300_low_steep_corner/court_calibration_metric15pt_refined.json",
+      "selected_sha256": "34b4976179b289770df762aaf959782d6d9c2e0a0f7613c44e72d095981a7128",
+      "selection_pointer": null
+    },
+    "indoor_doubles_fwuks_0500_long_mid_baseline": {
+      "conventional_path": "eval_clips/ball/indoor_doubles_fwuks_0500_long_mid_baseline/labels/court_calibration_metric15pt.json",
+      "measurement": {
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1053.1584,
+        "held_out": {
+          "held_out_median_plane_error_m": 0.190812,
+          "held_out_median_px": 6.602973,
+          "n_radial": 0
+        },
+        "in_sample_caveat": "in_sample_* back-project the calibration's own fitted correspondences and are optimistic; held_out is the honest figure",
+        "in_sample_floor_m_all15": {
+          "median_m": 0.183546,
+          "p95_m": 0.638865
+        },
+        "in_sample_floor_m_floor12": {
+          "median_m": 0.118234,
+          "p95_m": 0.691087
+        },
+        "intrinsics_source": "metric_15pt_reviewed",
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px_in_sample": {
+          "median": 5.446086455345454,
+          "p95": 8.26069948576681
+        },
+        "source": "metric_15pt_reviewed"
+      },
+      "promoted": true,
+      "selected_path": "runs/lanes/calib_distortion_fit_20260726/refined/indoor_doubles_fwuks_0500_long_mid_baseline/court_calibration_metric15pt_refined.json",
+      "selected_sha256": "25581d72bd5a63b9577e87425e66dbc01acb27412feb86e5ec6298d2e51695fc",
+      "selection_pointer": null
+    },
+    "outdoor_webcam_iynbd_1500_long_high_baseline": {
+      "conventional_path": "eval_clips/ball/outdoor_webcam_iynbd_1500_long_high_baseline/labels/court_calibration_metric15pt.json",
+      "measurement": {
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 2537.1648,
+        "held_out": {
+          "held_out_median_plane_error_m": 0.127254,
+          "held_out_median_px": 7.025714,
+          "n_radial": 0
+        },
+        "in_sample_caveat": "in_sample_* back-project the calibration's own fitted correspondences and are optimistic; held_out is the honest figure",
+        "in_sample_floor_m_all15": {
+          "median_m": 0.10078,
+          "p95_m": 0.434721
+        },
+        "in_sample_floor_m_floor12": {
+          "median_m": 0.095105,
+          "p95_m": 0.224345
+        },
+        "intrinsics_source": "metric_15pt_reviewed",
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px_in_sample": {
+          "median": 4.793773434949169,
+          "p95": 12.26732868386675
+        },
+        "source": "metric_15pt_reviewed"
+      },
+      "promoted": true,
+      "selected_path": "runs/lanes/calib_distortion_fit_20260726/refined/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration_metric15pt_refined.json",
+      "selected_sha256": "455f0c43c71177a0eb1d032e244bbb77798ebe6d9e5a02482ca92d6954960854",
+      "selection_pointer": null
+    },
+    "owner_IMG_1605_8a193402780b": {
+      "conventional_path": "eval_clips/ball/owner_IMG_1605_8a193402780b/labels/court_calibration_metric15pt.json",
+      "measurement": {
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 865.635,
+        "held_out": {
+          "held_out_median_plane_error_m": 0.106518,
+          "held_out_median_px": 3.448398,
+          "n_radial": 0
+        },
+        "in_sample_caveat": "in_sample_* back-project the calibration's own fitted correspondences and are optimistic; held_out is the honest figure",
+        "in_sample_floor_m_all15": {
+          "median_m": 0.089907,
+          "p95_m": 0.40691
+        },
+        "in_sample_floor_m_floor12": {
+          "median_m": 0.079932,
+          "p95_m": 0.454048
+        },
+        "intrinsics_source": "metric_15pt_reviewed",
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px_in_sample": {
+          "median": 2.588079695423893,
+          "p95": 6.083629957310203
+        },
+        "source": "metric_15pt_reviewed"
+      },
+      "promoted": true,
+      "selected_path": "runs/lanes/calib_distortion_fit_20260726/refined/owner_IMG_1605_8a193402780b/court_calibration_metric15pt_refined.json",
+      "selected_sha256": "a70a9b659fe7f9da7b2529810666ce83639ba13f14944a51d624729269ce1006",
+      "selection_pointer": null
+    },
+    "pbvision_11min_20260713_demo_seed": {
+      "conventional_path": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_metric15pt.json",
+      "measurement": {
+        "dist": [
+          -0.1311701032596218,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 753.4459345029547,
+        "held_out": {
+          "held_out_median_plane_error_m": 0.176952,
+          "held_out_median_px": 8.771759,
+          "n_radial": 1
+        },
+        "in_sample_caveat": "in_sample_* back-project the calibration's own fitted correspondences and are optimistic; held_out is the honest figure",
+        "in_sample_floor_m_all15": {
+          "median_m": 0.144385,
+          "p95_m": 0.376616
+        },
+        "in_sample_floor_m_floor12": {
+          "median_m": 0.138259,
+          "p95_m": 0.378637
+        },
+        "intrinsics_source": "metric_15pt_reviewed",
+        "metric_confidence": "med",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px_in_sample": {
+          "median": 3.6760021842422645,
+          "p95": 11.423185135807742
+        },
+        "source": "metric_15pt_reviewed"
+      },
+      "promoted": true,
+      "selected_path": "runs/lanes/calib_distortion_fit_20260726/refined/pbvision_11min_20260713_demo_seed/court_calibration_metric15pt_refined.json",
+      "selected_sha256": "2b3cecb6d6e55fde06fbc36b7c232e965540ceed16cd4477c257a419c116908e",
+      "selection_pointer": null
+    },
+    "wolverine_mixed_0200_mid_steep_corner": {
+      "conventional_path": "eval_clips/ball/wolverine_mixed_0200_mid_steep_corner/labels/court_calibration_metric15pt.json",
+      "measurement": {
+        "dist": [
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        ],
+        "fx": 1390.2336000000003,
+        "held_out": {
+          "held_out_median_plane_error_m": 0.158241,
+          "held_out_median_px": 11.004519,
+          "n_radial": 0
+        },
+        "in_sample_caveat": "in_sample_* back-project the calibration's own fitted correspondences and are optimistic; held_out is the honest figure",
+        "in_sample_floor_m_all15": {
+          "median_m": 0.126132,
+          "p95_m": 0.377056
+        },
+        "in_sample_floor_m_floor12": {
+          "median_m": 0.11376,
+          "p95_m": 0.364682
+        },
+        "intrinsics_source": "metric_15pt_reviewed",
+        "metric_confidence": "low",
+        "net_world_z_m": 0.0,
+        "reprojection_error_px_in_sample": {
+          "median": 5.018710799287933,
+          "p95": 19.868662139217818
+        },
+        "source": "metric_15pt_reviewed"
+      },
+      "promoted": true,
+      "selected_path": "runs/lanes/calib_distortion_fit_20260726/refined/wolverine_mixed_0200_mid_steep_corner/court_calibration_metric15pt_refined.json",
+      "selected_sha256": "83b244ee114a54d71469e9d2aac3c18a7fde6e3926368b1a6612c9889d025a54",
+      "selection_pointer": null
+    }
+  },
+  "label": "refit lane refined artifacts, measured for every clip including the ones not promoted",
+  "note": "Calibration floor measured through the live selection resolver. VERIFIED=0: a better-fitting calibration is an engineering improvement, not a capability.",
+  "schema_version": 1,
+  "verified": 0
+}

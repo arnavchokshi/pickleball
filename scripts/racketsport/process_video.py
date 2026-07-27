@@ -126,6 +126,10 @@ from threed.racketsport.ball_arc_chain import run_default_ball_arc_chain  # noqa
 from threed.racketsport.best_stack import load_best_stack_manifest  # noqa: E402
 from threed.racketsport.ball_inflections import build_ball_inflections_from_ball_track  # noqa: E402
 from threed.racketsport.court_calibration import calibration_image_size  # noqa: E402
+from threed.racketsport.court_calibration_selection import (  # noqa: E402
+    SELECTION_POINTER_FILENAME,
+    resolve_selected_calibration_path,
+)
 from threed.racketsport.court_auto_evidence import build_auto_court_line_evidence_from_video  # noqa: E402
 from threed.racketsport.court_corner_review import SIDECAR_CORNER_ORDER  # noqa: E402
 from threed.racketsport.confidence_gate import (  # noqa: E402
@@ -2146,6 +2150,10 @@ class ProcessVideoPipeline:
 
         opts = self.options
         if opts.court_calibration is not None:
+            # An explicit path stays explicit: a sibling promotion pointer never
+            # silently redirects it. Naming the pointer itself does resolve.
+            if opts.court_calibration.name == SELECTION_POINTER_FILENAME:
+                return resolve_selected_calibration_path(opts.court_calibration)
             return opts.court_calibration
         if opts.capture_sidecar is not None or opts.court_corners is not None:
             return None
@@ -7742,10 +7750,17 @@ def _auto_discover_court_calibration(video: Path) -> Path | None:
     convention next to the video's own directory, e.g. for
     ``eval_clips/ball/<clip>/source.mp4`` this checks
     ``eval_clips/ball/<clip>/labels/court_calibration_metric15pt.json``. Only used when
-    --court-calibration/--capture-sidecar/--court-corners were all omitted."""
+    --court-calibration/--capture-sidecar/--court-corners were all omitted.
+
+    If the label directory also carries a ``court_calibration_selected.json``
+    promotion pointer, the artifact that pointer selects is returned instead --
+    the raw solve stays immutable on disk and the pointer records both digests.
+    See ``threed.racketsport.court_calibration_selection``."""
 
     candidate = video.parent / "labels" / "court_calibration_metric15pt.json"
-    return candidate if candidate.is_file() else None
+    if not candidate.is_file():
+        return None
+    return resolve_selected_calibration_path(candidate)
 
 
 def _auto_discover_ball_track(clip: str, *, run_root: Path | None = None) -> Path | None:
