@@ -1,0 +1,690 @@
+{
+ "artifact_type": "racketsport_background_ball_investigation",
+ "ball_3d_coverage": {
+  "burlington": {
+   "available": true,
+   "coverage_of_all_frames": 0.846667,
+   "coverage_of_emitted": 1.060543,
+   "degraded_reasons": null,
+   "emitted_2d_count": 479,
+   "flight_sanity_failed_segment_count": 1,
+   "fp_sightings_pruned_count": 146,
+   "input_frame_count": 600,
+   "missing_segment_count": null,
+   "missing_segment_reasons": null,
+   "position_plausibility_absurd_count": 57,
+   "position_plausibility_violations": {
+    "below_ground_plane": 11,
+    "outside_court_footprint": 97
+   },
+   "status": "ran",
+   "world_xyz_frame_count": 508
+  },
+  "indoor": {
+   "available": true,
+   "coverage_of_all_frames": 0.0,
+   "coverage_of_emitted": 0.0,
+   "degraded_reasons": [
+    {
+     "evidence_provenance": "missing",
+     "reason": "segment_budget_exceeded",
+     "segment_ids": [
+      0,
+      1
+     ]
+    }
+   ],
+   "emitted_2d_count": 241,
+   "flight_sanity_failed_segment_count": 0,
+   "fp_sightings_pruned_count": 0,
+   "input_frame_count": 600,
+   "missing_segment_count": 2,
+   "missing_segment_reasons": {
+    "segment_budget_exceeded": 2
+   },
+   "position_plausibility_absurd_count": 0,
+   "position_plausibility_violations": {},
+   "status": "degraded",
+   "world_xyz_frame_count": 0
+  },
+  "outdoor_webcam_20s": {
+   "available": true,
+   "coverage_of_all_frames": 0.315,
+   "coverage_of_emitted": 0.617647,
+   "degraded_reasons": [
+    {
+     "evidence_provenance": "missing",
+     "reason": "segment_budget_exceeded",
+     "segment_ids": [
+      7,
+      9
+     ]
+    }
+   ],
+   "emitted_2d_count": 306,
+   "flight_sanity_failed_segment_count": 3,
+   "fp_sightings_pruned_count": 65,
+   "input_frame_count": 600,
+   "missing_segment_count": 2,
+   "missing_segment_reasons": {
+    "segment_budget_exceeded": 2
+   },
+   "position_plausibility_absurd_count": 0,
+   "position_plausibility_violations": {
+    "below_ground_plane": 3
+   },
+   "status": "degraded",
+   "world_xyz_frame_count": 189
+  },
+  "wolverine": {
+   "available": true,
+   "coverage_of_all_frames": 1.0,
+   "coverage_of_emitted": 1.234568,
+   "degraded_reasons": null,
+   "emitted_2d_count": 243,
+   "flight_sanity_failed_segment_count": 2,
+   "fp_sightings_pruned_count": 152,
+   "input_frame_count": 300,
+   "missing_segment_count": null,
+   "missing_segment_reasons": null,
+   "position_plausibility_absurd_count": 79,
+   "position_plausibility_violations": {
+    "above_plausible_apex": 107,
+    "below_ground_plane": 3,
+    "outside_court_footprint": 2
+   },
+   "status": "ran",
+   "world_xyz_frame_count": 300
+  }
+ },
+ "findings": {
+  "background_ball_acquisition": {
+   "basis": "Visual adjudication of every hidden false positive in the frozen judge, from the judge's own image zip. Indoor: 11 of 11 are real pickleballs that are not the ball in play (stray balls on our own court and just outside the sideline, balls in the walkway beyond the far baseline). Outdoor night: roughly 14 of 25 are real balls elsewhere in the venue; the rest are lights, night-sky specks and fence clutter. On burlington frames 30 and 369 the detector is locked on a game being played on the adjacent court.",
+   "verdict": "CONFIRMED"
+  },
+  "ball_3d_coverage_knock_on": {
+   "basis": "Of the outdoor clip's 411 missing 3D frames, 294 (72 percent) were never emitted in 2D at all, 65 emitted sightings were pruned as false positives by the solver (the genuine wrong-ball contribution, ~21 percent of emitted), and 2 segments were dropped for segment_budget_exceeded -- a wall-clock timeout, not a physics failure. The indoor clip's 0 percent coverage is entirely segment_budget_exceeded: both segments timed out, so no wrong-ball explanation is needed or supported there.",
+   "verdict": "CONTRIBUTING BUT NOT DOMINANT -- partly refuted"
+  },
+  "correct_ball_among_top_k": {
+   "basis": "WASB picks argmax(blob score) among blobs within 300 px of the previous accepted position. For a selection fix to work the right ball must be present but unselected. It is not: 11 of 11 indoor hidden-FP frames had exactly one blob, and 6 of 9 outdoor gross mislocalisations had exactly one blob, with the nearest blob to the true ball 280, 294 and 497 px away in the other three. The ball in play produced no heatmap response at all. Any suppression-based fix is therefore precision-only; recall is capped by the detector.",
+   "verdict": "REFUTED -- this is not a cheap selection fix"
+  },
+  "other_discriminators_measured": {
+   "detector_confidence": "no separation; sweeping 0.5 to 0.85 moves indoor precision 0.800 to 0.750 while recall collapses 0.688 to 0.328",
+   "heatmap_blob_radius": "no separation; quantised identically for true and false positives (it measures the heatmap Gaussian, not the ball)",
+   "image_apparent_radius": "weak and abstains where it matters; indoor median 4.4 px FP vs 6.6 px GT with heavy overlap, abstains on 24 of 25 outdoor FPs",
+   "image_position_2d": "no separation; hidden FPs are spatially interleaved with true positives",
+   "stationarity": "no separation; indoor FP local displacement median 134.7 px vs TP 157.0 px",
+   "teleport_continuity_structure": "no separation and inverted; indoor FPs sit in longer, smoother runs than TPs (median run 31 frames vs 17.5, 16.9 px/frame vs 20.4)"
+  },
+  "ray_court_volume_discriminator": {
+   "basis": "Flags 0.0-1.3 percent of detections at margin 2 m / apex 8 m across 1269 emitted detections on four owner clips with reviewed metric_15pt calibrations. The only settings that flag anything also suppress owner-clicked real-ball pixels. Mechanism: a camera behind the baseline sees an adjacent court through its own airspace. On burlington frame 30 a ball 19 m outside our sideline has a ray that hits the ground at x=-21.9 m but crosses our near-baseline plane at x=-2.95 m, z=0.95 m -- inside the volume, and an ordinary place for a real ball. At the 2 m margin the burlington camera centre itself lies inside the volume, making the test vacuous on that clip. Chord length separates burlington frame 30 (0.61 m wrong vs 11.37 m real) but inverts on frame 369.",
+   "verdict": "SOUND BUT USELESS -- refuted"
+  },
+  "recommendation": [
+   "Do not pursue single-frame geometric filtering; measured dead.",
+   "The largest measured headroom is detector recall, not precision: 20 of 64 indoor and 10 of 30 outdoor present-ball frames get no detection.",
+   "Fix segment_budget_exceeded; it alone explains 100 percent of indoor's zero 3D coverage.",
+   "Give the frozen judge a calibration; both its sources have none, which blocks every geometric hypothesis from ever being scored on the repo's own gate.",
+   "If wrong-ball suppression is still wanted, pursue rally-level 3D association."
+  ],
+  "what_does_partially_work": "Sequence-level 3D reasoning, which already exists. Gravity fixes the depth scale, so an adjacent-court ball fitted as a ballistic arc lands at its true off-court position: on burlington frame 369 the solver placed the wrong ball at x=-14.9 m, flagged outside_court_footprint and absurd by ball_position_plausibility. Across burlington, 97 of 508 solved frames violate the footprint bound and 57 are absurd. It is noisy -- frame 30 was placed on the sideline and not flagged, and on wolverine the check fires 107 times for an unrelated above_plausible_apex solver defect -- but it is the only signal measured in this lane that separates the classes at all.",
+  "why_hidden_fp_exceeds_the_owner_click_error_rate": "The two measure different frame populations and do not contradict each other. Hidden-FP is computed only over frames where the reviewer recorded no ball; the owner labelled only frames where the ball was visible. Where a real ball is present the detector is usually right -- indoor 44 of 44 within 20 px, median error 4.3 px. The wrong-ball problem lives in the frames where the ball in play is absent or invisible."
+ },
+ "judge": {
+  "baseline": {
+   "indoor_court_level": {
+    "f1_at_20": 0.739496,
+    "false_negatives": 20,
+    "false_positives": 11,
+    "hidden_false_positives": 11,
+    "hidden_fp_rate": 0.305556,
+    "hidden_label_count": 36,
+    "precision_at_20": 0.8,
+    "recall_at_20": 0.6875,
+    "true_positives": 44
+   },
+   "outdoor_night_fenced": {
+    "f1_at_20": 0.293333,
+    "false_negatives": 19,
+    "false_positives": 34,
+    "hidden_false_positives": 25,
+    "hidden_fp_rate": 0.675676,
+    "hidden_label_count": 37,
+    "precision_at_20": 0.244444,
+    "recall_at_20": 0.366667,
+    "true_positives": 11
+   },
+   "pooled": {
+    "f1_at_20": 0.56701,
+    "false_negatives": 39,
+    "false_positives": 45,
+    "hidden_false_positives": 36,
+    "hidden_fp_rate": 0.493151,
+    "hidden_label_count": 73,
+    "precision_at_20": 0.55,
+    "recall_at_20": 0.585106,
+    "true_positives": 55
+   }
+  },
+  "calibration_status": {
+   "Ezz6HDNHlnk": {
+    "calibration_grade": "failed",
+    "failure_reason": "owner_declared_skip_stray_drop",
+    "frozen_calibration_is_null": true,
+    "present": true
+   },
+   "HyUqT7zFiwk": {
+    "calibration_grade": "failed",
+    "failure_reason": "reprojection_above_auto_bar",
+    "frozen_calibration_is_null": true,
+    "present": true
+   }
+  },
+  "confidence_threshold_sweep": {
+   "0.50": {
+    "indoor_court_level": {
+     "f1_at_20": 0.739496,
+     "false_negatives": 20,
+     "false_positives": 11,
+     "hidden_false_positives": 11,
+     "hidden_fp_rate": 0.305556,
+     "hidden_label_count": 36,
+     "precision_at_20": 0.8,
+     "recall_at_20": 0.6875,
+     "true_positives": 44
+    },
+    "outdoor_night_fenced": {
+     "f1_at_20": 0.293333,
+     "false_negatives": 19,
+     "false_positives": 34,
+     "hidden_false_positives": 25,
+     "hidden_fp_rate": 0.675676,
+     "hidden_label_count": 37,
+     "precision_at_20": 0.244444,
+     "recall_at_20": 0.366667,
+     "true_positives": 11
+    },
+    "pooled": {
+     "f1_at_20": 0.56701,
+     "false_negatives": 39,
+     "false_positives": 45,
+     "hidden_false_positives": 36,
+     "hidden_fp_rate": 0.493151,
+     "hidden_label_count": 73,
+     "precision_at_20": 0.55,
+     "recall_at_20": 0.585106,
+     "true_positives": 55
+    }
+   },
+   "0.60": {
+    "indoor_court_level": {
+     "f1_at_20": 0.706897,
+     "false_negatives": 23,
+     "false_positives": 11,
+     "hidden_false_positives": 11,
+     "hidden_fp_rate": 0.305556,
+     "hidden_label_count": 36,
+     "precision_at_20": 0.788462,
+     "recall_at_20": 0.640625,
+     "true_positives": 41
+    },
+    "outdoor_night_fenced": {
+     "f1_at_20": 0.293333,
+     "false_negatives": 19,
+     "false_positives": 34,
+     "hidden_false_positives": 25,
+     "hidden_fp_rate": 0.675676,
+     "hidden_label_count": 37,
+     "precision_at_20": 0.244444,
+     "recall_at_20": 0.366667,
+     "true_positives": 11
+    },
+    "pooled": {
+     "f1_at_20": 0.544503,
+     "false_negatives": 42,
+     "false_positives": 45,
+     "hidden_false_positives": 36,
+     "hidden_fp_rate": 0.493151,
+     "hidden_label_count": 73,
+     "precision_at_20": 0.536082,
+     "recall_at_20": 0.553191,
+     "true_positives": 52
+    }
+   },
+   "0.70": {
+    "indoor_court_level": {
+     "f1_at_20": 0.660714,
+     "false_negatives": 27,
+     "false_positives": 11,
+     "hidden_false_positives": 11,
+     "hidden_fp_rate": 0.305556,
+     "hidden_label_count": 36,
+     "precision_at_20": 0.770833,
+     "recall_at_20": 0.578125,
+     "true_positives": 37
+    },
+    "outdoor_night_fenced": {
+     "f1_at_20": 0.28169,
+     "false_negatives": 20,
+     "false_positives": 31,
+     "hidden_false_positives": 23,
+     "hidden_fp_rate": 0.621622,
+     "hidden_label_count": 37,
+     "precision_at_20": 0.243902,
+     "recall_at_20": 0.333333,
+     "true_positives": 10
+    },
+    "pooled": {
+     "f1_at_20": 0.513661,
+     "false_negatives": 47,
+     "false_positives": 42,
+     "hidden_false_positives": 34,
+     "hidden_fp_rate": 0.465753,
+     "hidden_label_count": 73,
+     "precision_at_20": 0.52809,
+     "recall_at_20": 0.5,
+     "true_positives": 47
+    }
+   },
+   "0.75": {
+    "indoor_court_level": {
+     "f1_at_20": 0.642202,
+     "false_negatives": 29,
+     "false_positives": 10,
+     "hidden_false_positives": 10,
+     "hidden_fp_rate": 0.277778,
+     "hidden_label_count": 36,
+     "precision_at_20": 0.777778,
+     "recall_at_20": 0.546875,
+     "true_positives": 35
+    },
+    "outdoor_night_fenced": {
+     "f1_at_20": 0.294118,
+     "false_negatives": 20,
+     "false_positives": 28,
+     "hidden_false_positives": 21,
+     "hidden_fp_rate": 0.567568,
+     "hidden_label_count": 37,
+     "precision_at_20": 0.263158,
+     "recall_at_20": 0.333333,
+     "true_positives": 10
+    },
+    "pooled": {
+     "f1_at_20": 0.508475,
+     "false_negatives": 49,
+     "false_positives": 38,
+     "hidden_false_positives": 31,
+     "hidden_fp_rate": 0.424658,
+     "hidden_label_count": 73,
+     "precision_at_20": 0.542169,
+     "recall_at_20": 0.478723,
+     "true_positives": 45
+    }
+   },
+   "0.80": {
+    "indoor_court_level": {
+     "f1_at_20": 0.582524,
+     "false_negatives": 34,
+     "false_positives": 9,
+     "hidden_false_positives": 9,
+     "hidden_fp_rate": 0.25,
+     "hidden_label_count": 36,
+     "precision_at_20": 0.769231,
+     "recall_at_20": 0.46875,
+     "true_positives": 30
+    },
+    "outdoor_night_fenced": {
+     "f1_at_20": 0.253968,
+     "false_negatives": 22,
+     "false_positives": 25,
+     "hidden_false_positives": 19,
+     "hidden_fp_rate": 0.513514,
+     "hidden_label_count": 37,
+     "precision_at_20": 0.242424,
+     "recall_at_20": 0.266667,
+     "true_positives": 8
+    },
+    "pooled": {
+     "f1_at_20": 0.457831,
+     "false_negatives": 56,
+     "false_positives": 34,
+     "hidden_false_positives": 28,
+     "hidden_fp_rate": 0.383562,
+     "hidden_label_count": 73,
+     "precision_at_20": 0.527778,
+     "recall_at_20": 0.404255,
+     "true_positives": 38
+    }
+   },
+   "0.85": {
+    "indoor_court_level": {
+     "f1_at_20": 0.456522,
+     "false_negatives": 43,
+     "false_positives": 7,
+     "hidden_false_positives": 7,
+     "hidden_fp_rate": 0.194444,
+     "hidden_label_count": 36,
+     "precision_at_20": 0.75,
+     "recall_at_20": 0.328125,
+     "true_positives": 21
+    },
+    "outdoor_night_fenced": {
+     "f1_at_20": 0.25,
+     "false_negatives": 23,
+     "false_positives": 19,
+     "hidden_false_positives": 14,
+     "hidden_fp_rate": 0.378378,
+     "hidden_label_count": 37,
+     "precision_at_20": 0.269231,
+     "recall_at_20": 0.233333,
+     "true_positives": 7
+    },
+    "pooled": {
+     "f1_at_20": 0.378378,
+     "false_negatives": 66,
+     "false_positives": 26,
+     "hidden_false_positives": 21,
+     "hidden_fp_rate": 0.287671,
+     "hidden_label_count": 73,
+     "precision_at_20": 0.518519,
+     "recall_at_20": 0.297872,
+     "true_positives": 28
+    }
+   },
+   "0.90": {
+    "indoor_court_level": {
+     "f1_at_20": 0.186667,
+     "false_negatives": 57,
+     "false_positives": 4,
+     "hidden_false_positives": 4,
+     "hidden_fp_rate": 0.111111,
+     "hidden_label_count": 36,
+     "precision_at_20": 0.636364,
+     "recall_at_20": 0.109375,
+     "true_positives": 7
+    },
+    "outdoor_night_fenced": {
+     "f1_at_20": 0.204082,
+     "false_negatives": 25,
+     "false_positives": 14,
+     "hidden_false_positives": 11,
+     "hidden_fp_rate": 0.297297,
+     "hidden_label_count": 37,
+     "precision_at_20": 0.263158,
+     "recall_at_20": 0.166667,
+     "true_positives": 5
+    },
+    "pooled": {
+     "f1_at_20": 0.193548,
+     "false_negatives": 82,
+     "false_positives": 18,
+     "hidden_false_positives": 15,
+     "hidden_fp_rate": 0.205479,
+     "hidden_label_count": 73,
+     "precision_at_20": 0.4,
+     "recall_at_20": 0.12766,
+     "true_positives": 12
+    }
+   }
+  },
+  "perfect_suppression_ceiling": {
+   "indoor_court_level": {
+    "f1_at_20": 0.814815,
+    "false_negatives": 20,
+    "false_positives": 0,
+    "hidden_false_positives": 0,
+    "hidden_fp_rate": 0.0,
+    "hidden_label_count": 36,
+    "precision_at_20": 1.0,
+    "recall_at_20": 0.6875,
+    "true_positives": 44
+   },
+   "outdoor_night_fenced": {
+    "f1_at_20": 0.536585,
+    "false_negatives": 19,
+    "false_positives": 0,
+    "hidden_false_positives": 0,
+    "hidden_fp_rate": 0.0,
+    "hidden_label_count": 37,
+    "precision_at_20": 1.0,
+    "recall_at_20": 0.366667,
+    "true_positives": 11
+   },
+   "pooled": {
+    "f1_at_20": 0.738255,
+    "false_negatives": 39,
+    "false_positives": 0,
+    "hidden_false_positives": 0,
+    "hidden_fp_rate": 0.0,
+    "hidden_label_count": 73,
+    "precision_at_20": 1.0,
+    "recall_at_20": 0.585106,
+    "true_positives": 55
+   }
+  },
+  "ray_court_volume_not_scoreable_reason": "Both frozen-judge sources carry calibration_grade=failed with a null frozen_calibration, so no camera pose exists to build a ray from. Any calibration-dependent filter is unscoreable on this judge by construction.",
+  "ray_court_volume_scoreable": false,
+  "reproduces_published_scores": true,
+  "rows": 167
+ },
+ "lane": "background_ball_20260727",
+ "language": "measurement-only; VERIFIED=0 remains binding; no promotion claims",
+ "not_ground_truth": true,
+ "owner_clips": {
+  "burlington": {
+   "calibration_reprojection_px": {
+    "median": 6.3901815068357175,
+    "p95": 19.782933882839167
+   },
+   "calibration_source": "metric_15pt_reviewed",
+   "camera_centre_m": [
+    4.5488,
+    -8.4973,
+    1.3259
+   ],
+   "clip_id": "burlington",
+   "emitted_coverage_rate": 0.798333,
+   "emitted_detection_count": 479,
+   "frame_count": 600,
+   "owner_cross_check": {
+    "detector_agrees_within_100px": 7,
+    "detector_gross_error_over_100px": 2,
+    "gross_error_frames": [
+     {
+      "error_px": 1491.5,
+      "frame": 30
+     },
+     {
+      "error_px": 1344.2,
+      "frame": 369
+     }
+    ],
+    "gross_error_rate_where_detected": 0.222222,
+    "label_count": 14,
+    "labels_with_a_detection": 9,
+    "labels_without_a_detection": 5
+   },
+   "ray_court_volume": {
+    "margin_0p5m_apex_5m": {
+     "disjoint_count": 4,
+     "disjoint_rate": 0.008351,
+     "median_chord_m": 12.6857,
+     "owner_click_count": 14,
+     "owner_click_false_suppressions": 0
+    },
+    "margin_1m_apex_6m": {
+     "disjoint_count": 0,
+     "disjoint_rate": 0.0,
+     "median_chord_m": 14.3642,
+     "owner_click_count": 14,
+     "owner_click_false_suppressions": 0
+    },
+    "margin_2m_apex_8m": {
+     "disjoint_count": 0,
+     "disjoint_rate": 0.0,
+     "median_chord_m": 16.9241,
+     "owner_click_count": 14,
+     "owner_click_false_suppressions": 0
+    }
+   }
+  },
+  "indoor": {
+   "calibration_reprojection_px": {
+    "median": 3.719086939495673,
+    "p95": 8.813794890651005
+   },
+   "calibration_source": "metric_15pt_reviewed",
+   "camera_centre_m": [
+    -0.0775,
+    -9.976,
+    1.604
+   ],
+   "clip_id": "indoor",
+   "emitted_coverage_rate": 0.401667,
+   "emitted_detection_count": 241,
+   "frame_count": 600,
+   "owner_cross_check": {
+    "detector_agrees_within_100px": 1,
+    "detector_gross_error_over_100px": 1,
+    "gross_error_frames": [
+     {
+      "error_px": 180.5,
+      "frame": 286
+     }
+    ],
+    "gross_error_rate_where_detected": 0.5,
+    "label_count": 10,
+    "labels_with_a_detection": 2,
+    "labels_without_a_detection": 8
+   },
+   "ray_court_volume": {
+    "margin_0p5m_apex_5m": {
+     "disjoint_count": 0,
+     "disjoint_rate": 0.0,
+     "median_chord_m": 14.4168,
+     "owner_click_count": 10,
+     "owner_click_false_suppressions": 0
+    },
+    "margin_1m_apex_6m": {
+     "disjoint_count": 0,
+     "disjoint_rate": 0.0,
+     "median_chord_m": 15.418,
+     "owner_click_count": 10,
+     "owner_click_false_suppressions": 0
+    },
+    "margin_2m_apex_8m": {
+     "disjoint_count": 0,
+     "disjoint_rate": 0.0,
+     "median_chord_m": 17.426,
+     "owner_click_count": 10,
+     "owner_click_false_suppressions": 0
+    }
+   }
+  },
+  "outdoor_webcam_20s": {
+   "calibration_reprojection_px": {
+    "median": 4.7834997281882865,
+    "p95": 12.276624313829716
+   },
+   "calibration_source": "metric_15pt_reviewed",
+   "camera_centre_m": [
+    -0.0632,
+    -20.7485,
+    4.6805
+   ],
+   "clip_id": "outdoor_webcam_20s",
+   "emitted_coverage_rate": 0.51,
+   "emitted_detection_count": 306,
+   "frame_count": 600,
+   "owner_cross_check": {
+    "detector_agrees_within_100px": 12,
+    "detector_gross_error_over_100px": 0,
+    "gross_error_frames": [],
+    "gross_error_rate_where_detected": 0.0,
+    "label_count": 17,
+    "labels_with_a_detection": 12,
+    "labels_without_a_detection": 5
+   },
+   "ray_court_volume": {
+    "margin_0p5m_apex_5m": {
+     "disjoint_count": 36,
+     "disjoint_rate": 0.117647,
+     "median_chord_m": 13.308,
+     "owner_click_count": 17,
+     "owner_click_false_suppressions": 2
+    },
+    "margin_1m_apex_6m": {
+     "disjoint_count": 22,
+     "disjoint_rate": 0.071895,
+     "median_chord_m": 13.6473,
+     "owner_click_count": 17,
+     "owner_click_false_suppressions": 1
+    },
+    "margin_2m_apex_8m": {
+     "disjoint_count": 4,
+     "disjoint_rate": 0.013072,
+     "median_chord_m": 14.4517,
+     "owner_click_count": 17,
+     "owner_click_false_suppressions": 0
+    }
+   }
+  },
+  "wolverine": {
+   "calibration_reprojection_px": {
+    "median": 5.004391918498315,
+    "p95": 19.920538155647392
+   },
+   "calibration_source": "metric_15pt_reviewed",
+   "camera_centre_m": [
+    -4.8698,
+    -9.077,
+    1.7337
+   ],
+   "clip_id": "wolverine",
+   "emitted_coverage_rate": 0.81,
+   "emitted_detection_count": 243,
+   "frame_count": 300,
+   "owner_cross_check": {
+    "detector_agrees_within_100px": 15,
+    "detector_gross_error_over_100px": 1,
+    "gross_error_frames": [
+     {
+      "error_px": 249.1,
+      "frame": 250
+     }
+    ],
+    "gross_error_rate_where_detected": 0.0625,
+    "label_count": 21,
+    "labels_with_a_detection": 16,
+    "labels_without_a_detection": 5
+   },
+   "ray_court_volume": {
+    "margin_0p5m_apex_5m": {
+     "disjoint_count": 4,
+     "disjoint_rate": 0.016461,
+     "median_chord_m": 11.7945,
+     "owner_click_count": 21,
+     "owner_click_false_suppressions": 0
+    },
+    "margin_1m_apex_6m": {
+     "disjoint_count": 3,
+     "disjoint_rate": 0.012346,
+     "median_chord_m": 14.1472,
+     "owner_click_count": 21,
+     "owner_click_false_suppressions": 0
+    },
+    "margin_2m_apex_8m": {
+     "disjoint_count": 0,
+     "disjoint_rate": 0.0,
+     "median_chord_m": 17.9458,
+     "owner_click_count": 21,
+     "owner_click_false_suppressions": 0
+    }
+   }
+  }
+ },
+ "schema_version": 1,
+ "verified": 0
+}

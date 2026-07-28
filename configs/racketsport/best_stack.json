@@ -149,6 +149,43 @@
    "status": "DORMANT",
    "value": "disabled"
   },
+  "ball.ray_court_volume_gate": {
+   "do_not_promote": true,
+   "gate": {
+    "bar": "on clips with a reviewed metric calibration: hidden-false-positive rate falls by >=0.10 absolute with recall_at_20 dropping by <=0.02 absolute in EVERY venue, and zero owner-clicked real-ball pixels suppressed",
+    "evidence_path": "runs/lanes/background_ball_20260727/report.json",
+    "metric_key": "hidden_fp_rate_and_per_venue_recall_at_20",
+    "name": "background_ball_suppression_gate"
+   },
+   "notes": "REFUTED, and kept only so the refutation stays executable. Background-ball acquisition itself is CONFIRMED: on the frozen 167-row judge all 11 indoor hidden false positives are real pickleballs that are not the ball in play, and on burlington the detector tracks the adjacent court for tens of consecutive frames. This gate does not catch it. Measured across 1269 emitted detections on the four owner clips with reviewed metric_15pt calibrations, the ray-misses-the-volume rate is 0.0/1.3/0.0/0.0 percent at margin 2 m and apex 8 m, and the only settings that flag anything also suppress owner-clicked real-ball pixels (2 of 17 on outdoor_webcam_20s at margin 0.5 m). The cause is geometry: a camera behind the baseline sees an adjacent court through its own airspace, so on burlington frame 30 a ball 19 m outside our sideline has a ray that crosses our near-baseline corner about a metre up, and at the 2 m margin the burlington camera centre itself lies inside the volume, making the test vacuous on that clip. It is also unscoreable on the frozen judge, whose two sources both carry calibration_grade=failed with a null frozen_calibration. Never promote on the strength of this entry; it is a necessary condition only and buys no precision. VERIFIED=0.",
+   "proven_against": {
+    "background_ball_suppression_gate": "FAILED-as-measured",
+    "card": "measurement-only; four owner clips (1269 emitted detections) plus a full reproduction of the frozen 167-row judge",
+    "focused_tests": "18/18 tests/racketsport/test_ball_ray_court_volume.py",
+    "frozen_judge_scoreable": false,
+    "measured_outcome": "no separation; disjoint rate 0.0-1.3 percent at a safe margin"
+   },
+   "provenance": {
+    "commit": "worktree",
+    "date": "2026-07-27",
+    "evidence_paths": [
+     "runs/lanes/background_ball_20260727/report.json"
+    ],
+    "lane": "background_ball_20260727"
+   },
+   "selection": "camera-ray / court-volume containment marking for emitted 2D ball detections",
+   "stage": "ball",
+   "status": "PENDING",
+   "trust_band": "preview",
+   "value": {
+    "apex_m": 8.0,
+    "enabled": false,
+    "margin_m": 2.0,
+    "min_chord_m": 1.0,
+    "module": "threed/racketsport/ball_ray_court_volume.py",
+    "suppresses_detections": false
+   }
+  },
   "ball.recovery_policy_v2_one_sided": {
    "gate": {
     "bar": "coverage gain w/ 100% physics-plausible emitted intervals + 0 hard-gate violations on a fresh source-disjoint card (NS-03.BALL)",
@@ -1667,7 +1704,7 @@
    "entry": "tracking.dead_botsort_tracker_presets"
   }
  },
- "revision": 17,
+ "revision": 18,
  "schema_version": 1,
  "selection_constant_allowlist": {
   "DEFAULT_BODY_MODEL_MANIFEST": "BODY registry file location, not a default model/checkpoint/profile selection",
