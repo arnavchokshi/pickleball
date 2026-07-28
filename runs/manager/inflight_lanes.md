@@ -780,3 +780,33 @@ lane's VM, left for its owning session. No court source file touched.
   precomputed calibration/tracks/BODY flags. Pull and validate every result before
   stopping the VM. `VERIFIED=0`, `measurement_valid=false`, and `review_only`
   remain binding; these are demo artifacts, not metric-accuracy promotion proof.
+
+## 2026-07-28 — `next_steps_events_ball3d_20260728` CLAIMED AND CLOSED (docs-only lane)
+
+Docs-only: produced `runs/lanes/next_steps_events_ball3d_20260728/PLAN.md`, the ordered
+events + ball-2D→3D execution plan the owner asked for after tonight's kitchen-gating /
+foot-grounding / court-skeleton speed work. No code, config, or fleet state touched.
+`NORTH_STAR_ROADMAP.md` not touched (out of fence).
+
+Headline finding: the roadmap's active queue (§5, last updated 2026-07-26) is stale by a
+full day of already-merged work on `main` (HEAD `6219514`) — rows 1 (sigma anisotropic
+fix), 2 (retire reprojection gate), 3 (calibration distortion fit + promotion), and 4
+(sub-frame bounce timing) are all engineering-complete and correctly `PENDING`/
+`do_not_promote` for pickleball; row 5 (owner bounce labels) is at 25 bounces / ~62 total
+labels across 4 source-disjoint clips, up from the roadmap's last-cited 19. Two unqueued
+lanes also landed 2026-07-27: `farfield_extrapolation_20260727` (refuted distortion as the
+far-field-error cause; built an envelope-honesty tag) and `background_ball_20260727`
+(confirmed hidden ball FPs are real off-play pickleballs; refuted every cheap geometric
+discriminator, reconfirming the trained-event-detection wall). Full row-by-row trace with
+evidence citations is in the plan's §1.
+
+E-v2 Step-0 gate verdict (queue row 6, the plan's #1 tomorrow-morning action): **verified
+live tonight, PASS.** Ran `scripts/racketsport/verify_training_inputs.py` against the
+current committed `data_ledger.json` (sha256 `f09e62e1...`) with the 4-input E-v2 training
+manifest — exit 0, `status: PASS`, 4/4 inputs PASS, zero reasons. Both blocking defects
+(the ledger queue-authorization gap and the Section-2 gate-proof assert bug) are confirmed
+landed on `main` (`c28951b` 2026-07-23, `f29145a` 2026-07-26). A dispatch tonight would
+need only a fresh `RUN_COMMIT` + re-run Step-0 at that commit (proofs expire in 900s by
+design) and `gcloud auth login` (expired per queue row 7) — no data-safety blocker remains.
+
+VERIFIED=0 throughout. No promotion, no code change, no fleet spend. Lane closed.
