@@ -1,0 +1,39 @@
+{
+  "content_differing": [
+    "body_compute_execution.json",
+    "body_full_clip_gate.json",
+    "body_grounding_quality.json",
+    "body_joint_quality.json",
+    "body_mesh_readiness.json",
+    "remote_sam3d_tier2_dispatch_config.json",
+    "sam3d_body_input_prep.json",
+    "sam3d_keypoints_2d.json",
+    "skeleton3d.json"
+  ],
+  "content_identical": [
+    "capture_sidecar.json",
+    "contact_splice.json",
+    "court_calibration.json",
+    "court_line_evidence.json",
+    "court_zones.json",
+    "foot_contact_phases.json",
+    "frame_compute_plan.json",
+    "net_plane.json",
+    "placement.json",
+    "sam3d_tier2_config.json",
+    "tracks.json"
+  ],
+  "dir_a": "runs/lanes/warm_body_worker_20260728/cold_1",
+  "dir_b": "runs/lanes/warm_body_worker_20260728/cold_2",
+  "only_in_a": [],
+  "only_in_b": [],
+  "timing_or_provenance_only_skipped": [
+    "body_serialization_timing.json",
+    "body_stage_phase_timing.json",
+    "pipeline_run.json",
+    "remote_body_dispatch_timing.json",
+    "remote_version_verification.json",
+    "version_stamp.json"
+  ],
+  "verdict": "CONTENT_DIFFERS"
+}

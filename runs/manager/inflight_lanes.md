@@ -973,3 +973,129 @@ touching either VM, and will not touch `pickleball-gpu-night2` at all (another
 lane trains there). Will update this entry to CLOSED with the measured cold
 vs. warm numbers and a byte-compare verdict when
 `runs/lanes/warm_body_worker_20260728/REPORT.md` lands.
+
+## 2026-07-28 — `ev2_train_20260728` CLAIMED AND CLOSED (E-v2 event-head GPU lane, night2)
+
+Queue row 6. Fence: `runs/lanes/ev2_train_20260728/` + VM-side work on
+`pickleball-gpu-night2` (35.188.46.15) ONLY. Did not touch `process_video.py`,
+`best_stack.json`, `NORTH_STAR_ROADMAP.md`, fleet scripts, or the other lanes'
+VMs (court23/night1). Did not create, stop, or delete night2 — it remains the
+parent orchestrator's to tear down.
+
+**Verdict: PARTIAL.** Step-0 gate PASS (4/4 inputs, fresh). Resumed T8's
+step-9000 pretrain checkpoint 2,977 more steps (45-min time-box, target 12000)
+with class-weighted CE `[1,5,5]` over an 8-video/5,646-window corpus (multi-window
+extraction + dataloader workers were already landed on `main`, contrary to
+`SCALE_UP_SPEC.md`'s pre-fix description); fine-tuned 100/400 owner-102 steps
+(15-min time-box, which triggered a hard `STAGE_F_OPTIMIZER_WALL_EXPIRED`
+exception rather than a graceful stop — the periodic checkpoint at step 100
+survived on disk and was used anyway).
+
+**Real, above-chance HIT-class signal recovered for the first time in this
+program's history** — public 50-clip matched-window sweep: precision 0.5 /
+recall 0.047 / F1 0.086 at threshold 0.1 (4 TP, 41.7ms mean timing error), rising
+to F1 0.323 at threshold 0.05 (32 TP, noisier). Every prior checkpoint scored
+either exactly 0 TP everywhere or fired near-uniformly with zero discrimination.
+**BOUNCE class stayed fully unlearned at every threshold, on every eval surface.**
+Owner-41 macro-F1@2f = 0.0 and protected-50 one-touch score (28 typed rows) = 0 TP,
+both at threshold 0.5; the protected-seed eval had to run locally on Mac (its
+`video_path` fields are absolute Mac paths from authoring time, unresolvable on
+the VM — not modified to work around this). **Firing-rate plausibility gate
+(0.3-1.0 events/s) not cleared at any of 3 tested thresholds** on the 697s
+pb.vision demo (0.0014 / 0.188 / 2.21 events/s at 0.5/0.1/0.05 respectively) — the
+true crossing point is likely between 0.05 and 0.1 but this lane did not
+threshold-shop for it. **No anchor from this checkpoint may be ingested.**
+
+**Data-governance finding, corrected mid-lane:** `build_public_manifest`
+unconditionally reads `extended_openttgames/` (HIT-label overlay) when present on
+disk; its ledger entry (`event_public_extended_opentt_20260713`) is
+`state: BLOCKED`. This lane's first staging pass included it, and training briefly
+ran on the resulting manifest before the mismatch was caught; quarantined the
+asset off the VM path, rebuilt the manifest, and killed+restarted training rather
+than use the tainted run. `coachai_shuttleset` (also `BLOCKED`) was never staged
+with media and contributes zero training windows structurally. `jhong93_spot` and
+base `openttgames` carry no ledger row at all but were already used unchallenged
+across two prior GPU dispatches for this exact purpose, and
+`policy_directives.license_is_state_gate: false` in `data_ledger.json` confirms
+license alone never gates. Worth a future ledger-hygiene pass: either register
+jhong93_spot/openttgames explicitly, or make `build_public_manifest` fail closed
+on any `BLOCKED`/`REJECTED` sub-asset it finds on disk rather than relying on the
+operator to notice.
+
+Checkpoints (not committed, per dispatch instruction — sha256 + paths recorded
+in `runs/lanes/ev2_train_20260728/REPORT.md` and `report.json`): pretrain-resume
+`train_resume/last_event_head.pt` (30b25a8e..., step 2977/12000) and fine-tuned
+`finetune/best_event_head_finetuned.pt` (a3fdf12d..., step 100/400, also
+uploaded to `s3://sway-videos/pickleball-models/20260728/event_head_ev2_best.pt`).
+Both pulled to Mac with two-sided sha256 verification. Cost: ~2.13h attributable
+lane usage x $1.93/hr ~ $4.1 (not the VM's full billing lifetime — night2 remains
+running under its own rail, not this lane's to stop).
+
+Pushed to origin main at `ddf68ab` (fast-forwarded through the concurrent
+`alwayson_fresh_wave_20260728`/BODY warm-worker commits already sitting on local
+main ahead of origin at push time — a normal FF, not a conflict).
+
+**What's next before any promotion:** a longer, non-wall-capped resume past the
+extraction review's own +7,918-step pre-escape ceiling (watching specifically for
+BOUNCE to leave collapse, which it has not done at all yet), a fine-tune run to
+its full step target, and a repeat of this exact eval battery searching for a
+threshold that independently clears the firing-rate band — not another
+interactive-session-time-boxed attempt. `VERIFIED=0` throughout. Lane closed.
+
+## 2026-07-28 — `warm_body_worker_20260728` CLOSED (speed lane)
+
+Implemented + measured a default-OFF persistent warm GPU BODY worker for the
+remote BODY dispatch path (speed lever #1 in
+`runs/court_skeleton_runtime_20260725/REPORT.md`). New
+`scripts/racketsport/body_warm_worker.py` (start/status/stop lifecycle CLI,
+layered on `body_overhead_20260712`'s already-committed
+`sam3dbody_persistent_worker.py`) plus a new default-OFF `--warm-worker` flag
+on `scripts/racketsport/remote_body_dispatch.py`: health-probes an
+already-running worker before dispatch, routes the job to it when healthy
+(skipping the per-job `gpu-eval-run.sh` wrap because the worker itself holds
+that shared lock for its serving lifetime), and falls back loudly — never
+silently — to the unchanged cold path when absent/unhealthy/stale. 122 new
+CPU-fakeable tests, all passing;
+`scripts/racketsport/process_video.py`/`configs/racketsport/best_stack.json`
+untouched (COORDINATE-BY-FENCE, plumbing into the pipeline entrypoint is an
+explicit follow-up).
+
+GPU verification ran on `pickleball-gpu-night1` (`35.253.12.232`), confirmed
+free (the co-located `alwayson_fresh_wave_20260728` wave had finished at
+09:17Z) before touching it; `pickleball-gpu-court23` and `pickleball-gpu-night2`
+were never touched by this lane. Found and fixed four real bugs that only
+surfaced running on real GPU hardware (none caught by unit tests): an
+AF_UNIX socket-path-length crash (117 bytes vs. Linux's 108-byte cap), a
+health-probe design that tripped the worker's own consecutive-job-crash
+kill switch (bare connect-and-close looked like a dying client; fixed to
+speak the real wire protocol and get a clean `bad_request` reply instead),
+a client-side SSH timeout on the nohup+setsid launch command being treated
+as fatal when the remote launch had actually succeeded, and a manifest
+`git_head_sha` captured after (rather than before) the multi-minute cold
+bootstrap — which a concurrent lane's commit landing in this shared working
+tree during that exact window turned into a real, reproduced version-stamp
+failure. All four have regression tests now.
+
+Measured, wolverine clip, night1 A100: cold dispatch 174.7-221.6s
+`remote_command_s` (model_load 24.8-25.2s + compile_warmup 33.3-74.5s,
+the high end being a fresh-VM-boot torch-inductor-cache-cold outlier) vs.
+**110.1s for a job routed to the warm worker (model_load=0, compile_warmup=0)**
+— a 64.1s / 33.9% total-dispatch-wall saving vs. the steady-state cold
+baseline, 114.2s / 47.8% vs. the fresh-VM-boot cold baseline, matching the
+report's independent ~58s bring-up-cost prediction closely. Byte-compare:
+content-bearing BODY artifacts are not literally byte-identical
+cold-vs-warm, but neither are two independent **cold** dispatches of the
+same clip/inputs/code (identical set of differing files; max joint-coordinate
+difference 7.96e-7 m warm-vs-cold vs. 9.34e-7 m cold-vs-cold) — sub-micron
+GPU floating-point noise pre-existing in the model, not something this
+lane's routing introduces. Only one clean end-to-end warm dispatch was
+completed (not the ×2-3 targeted) before the manager's explicit timebox
+closed the on-VM debugging; full detail, all four bug writeups, and the
+honest caveats (sample size, no SPOT-preemption test, still-clip-scoped
+fingerprinting) are in `runs/lanes/warm_body_worker_20260728/REPORT.md`.
+
+Worker torn down clean (`stop`, confirmed via SSH: no process, 0 MiB GPU
+memory, no lock heartbeat) before closing. `VERIFIED=0` throughout — this is
+an engineering speed measurement, not an accuracy promotion. Commits
+`f7849c3`, `5feab19`, `d683d0e2`, `b60df1f`, plus this closing evidence
+commit. Lane closed.

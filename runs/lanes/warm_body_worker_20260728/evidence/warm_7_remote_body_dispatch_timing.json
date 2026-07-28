@@ -1,0 +1,58 @@
+{
+  "artifact_type": "racketsport_remote_body_dispatch_timing",
+  "download_bytes": 13790096,
+  "fetched_default_artifacts": [
+    "version_stamp.json",
+    "remote_version_verification.json",
+    "skeleton3d.json",
+    "body_compute_execution.json",
+    "body_mesh_readiness.json",
+    "body_joint_quality.json",
+    "body_full_clip_gate.json",
+    "body_grounding_quality.json",
+    "body_serialization_timing.json",
+    "body_stage_phase_timing.json",
+    "sam3d_keypoints_2d.json",
+    "sam3d_tier2_config.json",
+    "sam3d_body_input_prep.json",
+    "remote_sam3d_tier2_dispatch_config.json",
+    "contact_splice.json",
+    "body_raw_grounded_joints.json",
+    "frame_compute_plan.json",
+    "wrist_velocity_peaks.json",
+    "ball_inflections.json",
+    "contact_windows.json",
+    "pipeline_run.json"
+  ],
+  "fetched_directories": [
+    "body_mesh_index/"
+  ],
+  "fetched_heavy_artifacts": [],
+  "lock_wait_estimate_s": 1.8205199241638184,
+  "phases": {
+    "download_s": 5.868957,
+    "mkdir_s": 0.811773,
+    "preflight_s": 1.599134,
+    "remote_command_s": 110.133465,
+    "tar_create_upload_archive_s": 1.490015,
+    "tar_download_scp_s": 1.732982,
+    "tar_extract_outputs_s": 0.051967,
+    "tar_remote_pack_s": 1.255384,
+    "tar_remote_untar_s": 1.101542,
+    "tar_upload_scp_s": 3.804879,
+    "upload_s": 6.40114
+  },
+  "remote_host": "arnavchokshi@35.253.12.232",
+  "remote_run_dir": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_ab_final_20260728T110338Z",
+  "schema_version": 1,
+  "skipped_heavy_artifacts": [
+    "smpl_motion.json",
+    "body_mesh.json"
+  ],
+  "status": "ran",
+  "transport": "tar_batch",
+  "transport_fallback": {
+    "upload": "none"
+  },
+  "upload_bytes": 36780283
+}

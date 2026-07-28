@@ -1,0 +1,56 @@
+{
+  "artifact_type": "racketsport_body_warm_worker_manifest",
+  "bootstrap_cold_dispatch_wall_s": 193.484,
+  "bootstrap_remote_run_dir": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_ab_final_20260728T105819Z",
+  "bootstrap_requests_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/wolverine_ab_final_20260728T105819Z/fast_sam_subprocess/batch_requests-fc9ab00b2ef14e949526e19b9eeeb4ae.json",
+  "bootstrap_timing_summary": {
+    "artifact_type": "racketsport_sam3dbody_batch_timing",
+    "attributed_s": 56.481125,
+    "compile_warmup_s": 31.874535,
+    "crop_bucket_tensor_prep_s": 0.0,
+    "model_setup_load_s": 24.60659,
+    "ms_per_person_steady": 0.0,
+    "other_s": 0.000273,
+    "per_bucket": [
+      {
+        "bucket_size": 8,
+        "frames": 0,
+        "steady_s": 0.0,
+        "warmup_s": 30.520191
+      },
+      {
+        "bucket_size": 16,
+        "frames": 0,
+        "steady_s": 0.0,
+        "warmup_s": 1.354344
+      }
+    ],
+    "person_frame_count": 585,
+    "postprocessing_s": 0.0,
+    "preprocessing_s": 0.0,
+    "request_parse_s": 0.0,
+    "result_serialization_handoff_s": 0.0,
+    "schema_version": 1,
+    "steady_inference_s": 0.0,
+    "total_s": 56.481398
+  },
+  "checkpoint_dir": "/home/arnavchokshi/body_runtime/Fast-SAM-3D-Body/checkpoints/sam-3d-body-dinov3",
+  "clip": "wolverine_ab_final",
+  "detector_name": "",
+  "fingerprint": "5c533053d8df0ab4aa6ff856f2e2977347360100baebbea6419c91ee1aeb7301",
+  "fov_name": "",
+  "git_head_sha": "b60df1f37ad53fc7f562e9f74ec411302ad4cd89",
+  "gpu_lock_script": "scripts/gpu-eval-run.sh",
+  "host": "arnavchokshi@35.253.12.232",
+  "idle_timeout_s": 900.0,
+  "log_path": "/tmp/racketsport_warm_worker/wolverine_ab_final.sock.log",
+  "manifest_path": "/tmp/racketsport_warm_worker/wolverine_ab_final.sock.manifest.json",
+  "max_consecutive_job_crashes": 2,
+  "pid": 16366,
+  "ready_path": "/tmp/racketsport_warm_worker/wolverine_ab_final.sock.ready.json",
+  "schema_version": 1,
+  "shell_wrapper_pid": "",
+  "socket_path": "/tmp/racketsport_warm_worker/wolverine_ab_final.sock",
+  "started_at_utc": "2026-07-28T11:03:06Z",
+  "started_under_gpu_lock": true
+}

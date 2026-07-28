@@ -1447,3 +1447,14 @@ patch itself. Next session: do not re-dispatch this registration until that ledg
   worst-case cap ~$70 if nothing is stopped early. Teardown: stop night1/night2 when the
   run wave completes (disks auto-delete on instance delete; keep until artifacts pulled),
   stop court23 preserving its disk.
+
+## 2026-07-28 — `ev2_train_20260728` lane usage of `pickleball-gpu-night2`
+
+Lane used the already-provisioned `pickleball-gpu-night2` (A100-40GB SPOT,
+35.188.46.15, us-central1-f, rail armed to 2026-07-28T20:21:47Z) for E-v2 resumed
+pretrain + owner fine-tune. Did not create, stop, or delete the VM — it remains
+RUNNING under the parent orchestrator's rail after this lane finished. Attributable
+usage window ~2.13h (staging/transcode + pretrain resume 45min + fine-tune ~17min
++ eval sweeps ~26min) at ~$1.93/hr ~ $4.1, not the VM's full billing lifetime.
+Full detail: `runs/lanes/ev2_train_20260728/REPORT.md`. Verdict: PARTIAL, no anchor
+ingested.
