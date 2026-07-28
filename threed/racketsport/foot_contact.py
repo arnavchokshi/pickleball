@@ -7,6 +7,29 @@ world joints in this repo have visible foot jitter: enter at 6 cm, stay until
 10 cm, enter speed below 0.75 m/s, exit speed below 1.25 m/s. Those values are
 loose enough to measure existing slide honestly rather than hide it by calling
 noisy stance feet airborne.
+
+Plausibility cross-check (``plant_phase_plausibility_20260728``): the
+height/speed hysteresis state machine above classifies contact frame by frame
+and has no memory of *how* a candidate phase got there. That makes it exact
+about height and instantaneous horizontal speed but blind to a specific
+failure mode diagnosed in ``wolverine_slide_diag_20260728``: sub-cm run-to-run
+BODY joint variability can nudge a foot's estimated speed to just under
+``enter_speed_mps`` for a handful of frames while the foot is, in the raw
+joint trajectory, still in continuous fast motion -- producing a short
+candidate phase that is not a real plant at all. ``phase_speed_duration_plausible``
+below adds an independent, physically-motivated check on top of the state
+machine: a phase is trusted only if it is either long enough to demonstrate
+sustained low horizontal speed (``plant_plausibility_min_frames``) or its own
+peak in-phase speed is comfortably below the enter threshold
+(``plant_plausibility_speed_fraction`` of ``enter_speed_mps``). Critically,
+this check never looks at how far the foot moved during the phase -- only at
+how fast it was moving and for how long. A genuinely planted foot that then
+slides across the court (low entry speed, real nonzero displacement) passes
+this check exactly like a genuinely planted foot that does not slide; only a
+phase whose own speed trace never supports "the foot was basically stationary"
+is flagged, independent of the slide number it happens to produce. See
+``runs/lanes/plant_phase_plausibility_20260728/REPORT.md`` for the derivation
+of the specific thresholds from the diagnosed spurious phase.
 """
 
 from __future__ import annotations
@@ -30,6 +53,7 @@ BODY_CONTACT_CONFIDENCE_FORMULA = (
     "no simultaneous confident opposite-foot single overlaps the same frame, "
     "and no independent rejection reason"
 )
+IMPLAUSIBLE_SHORT_HIGH_SPEED_PLANT_REASON = "implausible_short_high_speed_plant"
 INDEPENDENT_BODY_PHASE_REJECTION_REASONS = {
     "unknown_or_invalid_foot",
     "source_phase_foot_mismatch",
@@ -41,6 +65,7 @@ INDEPENDENT_BODY_PHASE_REJECTION_REASONS = {
     "weak_bilateral_unknown_foot",
     "weak_phase",
     "demoted_phase",
+    IMPLAUSIBLE_SHORT_HIGH_SPEED_PLANT_REASON,
 }
 
 
@@ -54,6 +79,16 @@ class ContactThresholds:
     min_phase_frames: int = 2
     low_foot_band_m: float = 0.025
     split_speed_mps: float | None = None
+    # Plausibility cross-check (wolverine_slide_diag_20260728 fix): a candidate
+    # phase shorter than plant_plausibility_min_frames is only trusted as a
+    # genuine plant if its own peak speed sits comfortably below the enter
+    # band. See phase_speed_duration_plausible() below. Both defaults are
+    # derived from the diagnosed spurious phase (4 frames, 0.6996 m/s peak,
+    # 93% of enter_speed_mps) versus the shortest reproducible real slide
+    # phases found in the same artifact corpus (2 frames, <=0.64 m/s peak,
+    # ~85% of enter_speed_mps) -- see REPORT.md for the full derivation.
+    plant_plausibility_min_frames: int = 5
+    plant_plausibility_speed_fraction: float = 0.88
 
     def to_dict(self) -> dict[str, float | int | None]:
         return asdict(self)
@@ -470,6 +505,73 @@ def body_skeleton_direct_contact_thresholds() -> ContactThresholds:
     )
 
 
+def plausibility_speed_ceiling_mps(thresholds: ContactThresholds) -> float:
+    """Peak in-phase speed above which a short candidate phase is untrusted.
+
+    Expressed as a fraction of ``enter_speed_mps`` rather than a bare
+    constant so it tracks the hysteresis band if that band is ever
+    re-tuned, rather than silently drifting out of sync with it.
+    """
+
+    return thresholds.enter_speed_mps * thresholds.plant_plausibility_speed_fraction
+
+
+def phase_speed_duration_plausible(
+    *,
+    frame_count: int,
+    max_speed_mps: float,
+    min_frames: int,
+    speed_ceiling_mps: float,
+) -> bool:
+    """Physical plausibility cross-check for a candidate plant phase.
+
+    The height/speed hysteresis state machine (``_classify_observation``)
+    decides contact frame by frame and has no memory of *how* a candidate
+    phase got there, so it cannot tell a genuine plant apart from a few
+    frames of continuous fast motion whose *estimated* speed dipped under
+    the enter threshold because of run-to-run joint-position noise
+    (diagnosed in ``wolverine_slide_diag_20260728``: a real 4-frame/0.13s
+    spurious phase at ~0.70 m/s, a hair under the 0.75 m/s enter threshold).
+
+    A candidate phase is plausible as a genuine plant if EITHER:
+
+    * it is long enough (``frame_count >= min_frames``) to demonstrate
+      sustained low horizontal speed rather than a single noisy dip, OR
+    * its own peak in-phase speed (``max_speed_mps``) is comfortably below
+      the enter band (``<= speed_ceiling_mps``), i.e. the speed evidence
+      itself already looks like a real plant regardless of duration.
+
+    This intentionally never inspects displacement/slide. A genuinely
+    planted foot that then slides across the court has low entry speed and
+    real nonzero displacement, and must clear this check exactly like a
+    planted foot that does not slide -- rejecting a phase because it slid
+    would let the check hide real slide, which defeats the point of
+    measuring slide at all. Only phases whose own speed trace never
+    supports "the foot was basically stationary" are flagged, independent
+    of whatever slide value they happen to produce.
+    """
+
+    if frame_count >= min_frames:
+        return True
+    return max_speed_mps <= speed_ceiling_mps
+
+
+def phase_plausible_for_thresholds(
+    *,
+    frame_count: int,
+    max_speed_mps: float,
+    thresholds: ContactThresholds,
+) -> bool:
+    """Convenience wrapper deriving the speed ceiling from ``thresholds``."""
+
+    return phase_speed_duration_plausible(
+        frame_count=frame_count,
+        max_speed_mps=max_speed_mps,
+        min_frames=thresholds.plant_plausibility_min_frames,
+        speed_ceiling_mps=plausibility_speed_ceiling_mps(thresholds),
+    )
+
+
 def contact_frames_from_skeleton3d(skeleton_payload: Mapping[str, Any]) -> tuple[list[SkeletonFrame], list[str]]:
     """Extract BODY contact frames from a ``skeleton3d.json`` payload."""
 
@@ -689,7 +791,39 @@ def _body_phase_rejection_reason(
     )
     if penetration_m > 0.0:
         return "phase_penetrates_ground"
+    if not _phase_speed_duration_plausible(phase):
+        return IMPLAUSIBLE_SHORT_HIGH_SPEED_PLANT_REASON
     return None
+
+
+def _phase_speed_duration_plausible(phase: Mapping[str, Any]) -> bool:
+    """Apply phase_speed_duration_plausible() to a serialized phase dict.
+
+    Reads min_frames/speed_fraction from the phase's own recorded
+    source_thresholds so the check always reflects the thresholds the phase
+    was actually detected under, falling back to ContactThresholds()
+    defaults when a field is absent (e.g. older/synthetic fixtures).
+    """
+
+    defaults = ContactThresholds()
+    source = phase.get("source_thresholds") if isinstance(phase.get("source_thresholds"), Mapping) else {}
+    min_frames = _optional_float(source.get("plant_plausibility_min_frames"))
+    speed_fraction = _optional_float(source.get("plant_plausibility_speed_fraction"))
+    enter_speed_mps = _optional_float(source.get("enter_speed_mps"))
+    frame_count = phase.get("frame_count")
+    if frame_count is None:
+        frame_indices = phase.get("frame_indices")
+        frame_count = len(frame_indices) if isinstance(frame_indices, Sequence) and not isinstance(frame_indices, (str, bytes)) else 0
+    max_speed_mps = _optional_float(phase.get("max_speed_mps"))
+    speed_ceiling_mps = (enter_speed_mps if enter_speed_mps is not None else defaults.enter_speed_mps) * (
+        speed_fraction if speed_fraction is not None else defaults.plant_plausibility_speed_fraction
+    )
+    return phase_speed_duration_plausible(
+        frame_count=int(frame_count or 0),
+        max_speed_mps=max_speed_mps if max_speed_mps is not None else 0.0,
+        min_frames=int(min_frames) if min_frames is not None else defaults.plant_plausibility_min_frames,
+        speed_ceiling_mps=speed_ceiling_mps,
+    )
 
 
 def _gate_stream_phase_rejection_reason(
@@ -1117,6 +1251,10 @@ def _validate_thresholds(thresholds: ContactThresholds) -> None:
         raise ValueError("low_foot_band_m must be non-negative")
     if thresholds.split_speed_mps is not None and thresholds.split_speed_mps <= 0:
         raise ValueError("split_speed_mps must be positive when provided")
+    if thresholds.plant_plausibility_min_frames < 1:
+        raise ValueError("plant_plausibility_min_frames must be >= 1")
+    if not (0.0 < thresholds.plant_plausibility_speed_fraction <= 1.0):
+        raise ValueError("plant_plausibility_speed_fraction must be in (0, 1]")
 
 
 __all__ = [

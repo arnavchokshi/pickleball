@@ -297,3 +297,103 @@ def test_real_pipeline_gate_metric_keeps_overthreshold_lock_rows_in_metric() -> 
     assert gate_stream["phase_rows"][0]["lock_metric_included"] is True
     assert gate_stream["phase_rows"][0]["demoted"] is False
     assert gate_stream["phase_rows"][0]["rejection_reason"] is None
+
+
+def _lock_eligible_skeleton3d(frames: list) -> dict:
+    return {
+        "artifact_type": "racketsport_skeleton3d",
+        "fps": 30.0,
+        "joint_names": list(JOINT_NAMES_65),
+        "provenance": {"refined_stance_phase_lock": {"source": "unit_test"}},
+        "players": [
+            {
+                "id": "p1",
+                "frames": [
+                    {
+                        "frame_idx": frame.frame_index,
+                        "t": frame.t,
+                        "joints_world": frame.joints_world,
+                        "joint_conf": frame.joint_conf,
+                        "transl_world": [0.0, 0.0, 0.0],
+                        "track_world_xy": [0.0, 0.0],
+                        "output_source": "unit_test",
+                    }
+                    for frame in frames
+                ],
+            }
+        ],
+    }
+
+
+def test_gate_metric_rejects_implausible_short_high_speed_plant_phase() -> None:
+    # Mirrors the wolverine_slide_diag_20260728 diagnosed defect: player 2's
+    # left foot, frames 142-145 (4 frames), monotonic drift with peak
+    # in-phase speed 0.6996 m/s (just under the 0.75 m/s enter threshold) and
+    # 37.7mm of "slide" that is really just the foot never having stopped.
+    # This fixture reproduces the same shape (4 frames, ~0.69 m/s peak,
+    # monotonic drift) synthetically.
+    contact_frames = [
+        _foot_frame(0, left_x=0.000, left_z=0.020),
+        _foot_frame(1, left_x=0.023, left_z=0.020),
+        _foot_frame(2, left_x=0.029, left_z=0.020),
+        _foot_frame(3, left_x=0.035, left_z=0.020),
+    ]
+    skeleton3d = _lock_eligible_skeleton3d(contact_frames)
+
+    metrics, gate_stream = worldhmr._contact_gate_stream_for_skeleton3d(
+        skeleton3d,
+        clip="spurious_short_high_speed",
+        threshold_m=0.03,
+    )
+
+    left_rows = [row for row in gate_stream["phase_rows"] if row["foot"] == "left"]
+    assert len(left_rows) == 1
+    row = left_rows[0]
+    assert row["frame_count"] == 4
+    assert row["max_speed_mps"] == pytest.approx(0.69, abs=0.01)
+    assert row["slide_m"] > 0.03  # the raw candidate really did "slide" 35mm
+    assert row["rejection_reason"] == "implausible_short_high_speed_plant"
+    assert row["lock_metric_included"] is False
+    # Excluded from the metric that feeds max_foot_lock_slide_m...
+    assert metrics["phase_metrics"] == []
+    assert metrics["candidate_phase_rejection_reason_counts"] == {
+        "implausible_short_high_speed_plant": 1
+    }
+    # ...but never hidden: the raw candidate slide is still fully audited.
+    assert metrics["max_candidate_phase_slide_m"] == pytest.approx(0.035, abs=0.001)
+    assert gate_stream["summary"]["candidate_phase_rejection_reason_counts"] == {
+        "implausible_short_high_speed_plant": 1
+    }
+
+
+def test_gate_metric_does_not_reject_genuine_short_slide_plant_phase() -> None:
+    # A genuinely planted-then-sliding foot: low entry speed (well under the
+    # plausibility speed ceiling) with real, nonzero, reproducible slide over
+    # only 2 frames -- mirrors the real (not spurious) short slide phases
+    # found in both wolverine_slide_diag_20260728 runs (e.g. indoor_diagonal
+    # player 3 left foot frames 39-40: 2 frames, ~0.46 m/s, ~15mm slide,
+    # present and consistent in both the baseline and the fresh run). The
+    # plausibility check must key on speed/duration, not on the fact that it
+    # slid -- so this phase must stay in the metric.
+    contact_frames = [
+        _foot_frame(0, left_x=0.000, left_z=0.020),
+        _foot_frame(1, left_x=0.016, left_z=0.020),
+    ]
+    skeleton3d = _lock_eligible_skeleton3d(contact_frames)
+
+    metrics, gate_stream = worldhmr._contact_gate_stream_for_skeleton3d(
+        skeleton3d,
+        clip="genuine_short_slide",
+        threshold_m=0.03,
+    )
+
+    left_rows = [row for row in gate_stream["phase_rows"] if row["foot"] == "left"]
+    assert len(left_rows) == 1
+    row = left_rows[0]
+    assert row["frame_count"] == 2
+    assert row["max_speed_mps"] == pytest.approx(0.48, abs=0.01)
+    assert row["rejection_reason"] is None
+    assert row["lock_metric_included"] is True
+    assert len(metrics["phase_metrics"]) == 1
+    assert metrics["phase_metrics"][0]["slide_mm"] == pytest.approx(16.0, abs=0.5)
+    assert metrics["candidate_phase_rejection_reason_counts"] == {}

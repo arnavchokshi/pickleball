@@ -81,3 +81,8 @@ runs/lanes/bodylocal_colocated_fix_20260728/*
 !runs/lanes/wolverine_slide_diag_20260728/
 runs/lanes/wolverine_slide_diag_20260728/*
 !runs/lanes/wolverine_slide_diag_20260728/REPORT.md
+!runs/lanes/plant_phase_plausibility_20260728/
+runs/lanes/plant_phase_plausibility_20260728/*
+!runs/lanes/plant_phase_plausibility_20260728/REPORT.md
+!runs/lanes/plant_phase_plausibility_20260728/recompute_slide_metric.py
+!runs/lanes/plant_phase_plausibility_20260728/recompute_results.json

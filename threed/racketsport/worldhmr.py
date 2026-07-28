@@ -26,10 +26,12 @@ from .footlock import (
 from .foot_contact import (
     ContactPhase,
     ContactThresholds,
+    IMPLAUSIBLE_SHORT_HIGH_SPEED_PLANT_REASON,
     SkeletonFrame as ContactSkeletonFrame,
     detect_contact_phases,
     foot_contact_point,
     measure_contact_metrics,
+    phase_plausible_for_thresholds,
     resolve_foot_joint_indices,
 )
 from .foot_pin import FootPinSettings, apply_foot_pin_to_payload
@@ -1180,10 +1182,11 @@ def _contact_gate_stream_for_skeleton3d(
             "candidate_phase_rejection_reason_counts": {},
         }
         return metrics, _empty_gate_stream(clip=clip)
-    phases = detect_contact_phases(frames, joint_names=joint_names, thresholds=_gate_contact_thresholds())
+    gate_thresholds = _gate_contact_thresholds()
+    phases = detect_contact_phases(frames, joint_names=joint_names, thresholds=gate_thresholds)
     raw_metrics = measure_contact_metrics(frames, phases, joint_names=joint_names).to_dict()
     phase_rejection_reasons = (
-        _gate_phase_rejection_reasons(phases, raw_metrics=raw_metrics)
+        _gate_phase_rejection_reasons(phases, raw_metrics=raw_metrics, thresholds=gate_thresholds)
         if _use_lock_eligible_gate_metric(skeleton3d)
         else {}
     )
@@ -1233,6 +1236,7 @@ def _gate_phase_rejection_reasons(
     phases: Sequence[ContactPhase],
     *,
     raw_metrics: Mapping[str, Any],
+    thresholds: ContactThresholds,
 ) -> dict[tuple[str, str, int, int], str]:
     metric_by_key = {
         _metric_phase_key(row): row
@@ -1254,6 +1258,19 @@ def _gate_phase_rejection_reasons(
             penetration_m = float(metric.get("max_penetration_mm", 0.0)) / 1000.0 if isinstance(metric, Mapping) else 0.0
             if penetration_m > 0.0:
                 reason = "phase_penetrates_ground"
+            elif not phase_plausible_for_thresholds(
+                frame_count=phase.frame_count,
+                max_speed_mps=phase.max_speed_mps,
+                thresholds=thresholds,
+            ):
+                # Plausibility cross-check (wolverine_slide_diag_20260728 fix):
+                # too short to demonstrate sustained low speed, and its own
+                # peak in-phase speed is too close to "still moving" to trust
+                # the hysteresis classification alone. Keyed only on the
+                # phase's own speed/duration evidence -- never on how far it
+                # slid, so a genuinely planted-then-sliding foot (low entry
+                # speed, real displacement) is never excluded by this branch.
+                reason = IMPLAUSIBLE_SHORT_HIGH_SPEED_PLANT_REASON
         if reason is not None:
             reasons[key] = reason
     return reasons

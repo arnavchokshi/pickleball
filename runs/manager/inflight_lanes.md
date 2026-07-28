@@ -1244,3 +1244,103 @@ written to disk (same constraint hit by `alwayson_fresh_wave_20260728` above).
 No pipeline code/config touched; other lanes' run dirs read-only; only this ledger
 entry committed. `VERIFIED=0`, `measurement_valid=false` throughout — this is
 diagnosis evidence, not an accuracy promotion. Lane closed.
+
+## 2026-07-28 — `plant_phase_plausibility_20260728` CLAIMED AND CLOSED (fix lane)
+
+Scope: implement the plausibility cross-check recommended by
+`wolverine_slide_diag_20260728` (evidence commit `3f6782b`,
+`runs/lanes/wolverine_slide_diag_20260728/REPORT.md`) in the BODY-direct
+contact-phase detector path. CPU/local only, no VMs, no billed actions,
+read-only input artifacts. Fence: `threed/racketsport/foot_contact.py`, the
+`worldhmr.py` contact-gate function cluster
+(`_contact_gate_stream_for_skeleton3d`, `_gate_phase_rejection_reasons`,
+`_gate_contact_thresholds` call site), tests, and this lane's dir only;
+`process_video.py`, `best_stack.json`, `orchestrator.py`, other lanes' dirs,
+and `body_grounding_quality.py` were not touched.
+
+**Fix**: a candidate plant phase is now trusted for the slide metric only if
+it is long enough to show sustained low speed
+(`ContactThresholds.plant_plausibility_min_frames`, default 5 — one frame
+more than the diagnosed 4-frame spurious phase) or its own peak in-phase
+speed is comfortably below the enter band
+(`plant_plausibility_speed_fraction`, default 0.88 of `enter_speed_mps` ->
+0.66 m/s ceiling). New pure function
+`foot_contact.phase_speed_duration_plausible()`, wired into both
+`foot_contact._body_phase_rejection_reason()` (BODY-direct producer,
+`build_body_skeleton_foot_contact_phases*`) and `worldhmr._gate_phase_rejection_reasons()`
+(the actual slide-gate metric feeding `max_foot_lock_slide_m`), typed reason
+`implausible_short_high_speed_plant` (added to
+`foot_contact.INDEPENDENT_BODY_PHASE_REJECTION_REASONS`). The check is keyed
+only on the phase's own `frame_count`/`max_speed_mps` and never on `slide_m`
+or displacement, by design and by test — a genuinely planted-then-sliding
+foot (low entry speed, real nonzero displacement) is not excluded; only
+phases whose own speed trace never supports "the foot was basically
+stationary" are flagged, independent of whatever slide value they happen to
+produce.
+
+**Recomputed before -> after** (from existing artifacts, via
+`runs/lanes/plant_phase_plausibility_20260728/recompute_slide_metric.py`,
+which imports the real fixed function and applies it to each clip's already-
+produced `foot_lock_gate_stream.phase_rows`; full output in
+`recompute_results.json`): wolverine indoor_diagonal 0-10 tonight
+(`alwayson_fresh_wave_20260728`) `max_foot_lock_slide_m` 0.037769 m FAIL ->
+0.008654 m PASS (the diagnosed spurious 4-frame/0.6996 m/s phase excluded;
+matches the diagnosis exactly); wolverine baseline
+(`court_people_3d_completion_fresh_20260724`) unchanged at ~0 m, still PASS.
+indoor_diagonal 100-110 tonight 0.054561 m FAIL -> **unchanged** 0.054561 m
+FAIL, and baseline 0.054476 m FAIL -> **unchanged** 0.054476 m FAIL: the
+failing phase (`3:right:438-443`, 6 frames) is reproduced almost identically
+in both runs (slide within 0.09 mm, speed 0.59-0.62 m/s) — a real,
+repeatable slide event, not the spurious single-run-only class, correctly
+left untouched (6 frames clears the duration floor on its own). Per
+instruction, indoor_diagonal's failure is **not** made to pass — it is a
+real, unresolved foot-slide fault outside this lane's scope. outdoor_pbvision
+50-60 tonight 0.002604 m PASS -> ~0 m PASS and baseline 0.016871 m PASS ->
+~1.8e-15 m PASS: no PASS/FAIL change; several small marginal candidates
+(2-3 frames, 0.66-0.74 m/s) newly excluded, including one
+(outdoor_pbvision baseline `1:right:263-264`, present in that run only) with
+the same single-run-only signature as the diagnosed defect, and one
+(`2:right:184-185`, ~2.6-2.7 mm, reproduced in both runs) that is plausibly a
+tiny real slide — documented as an accepted trade-off since the check cannot
+see displacement and both are far below the 30 mm gate either way; the raw
+candidate values are never hidden (`max_candidate_phase_slide_m` and the
+rejected-phase list still record them).
+
+**Known out-of-fence limitation** (verified, not just reasoned): calling the
+real `body_grounding_quality.build_body_grounding_quality()` on the fixed
+wolverine-tonight gate stream still returns `status="fail"`,
+`blockers=["foot_lock_gate_stream_over_threshold_phase"]`, because that
+file's own `INDEPENDENT_PHASE_REJECTION_REASONS` allowlist (which decides
+which rejection reasons excuse an over-threshold `phases_over_threshold` row
+from causing a fail) does not yet include the new reason — even though
+`foot_slide_gate.value_m` in that same call correctly reports the fixed
+0.008654 m. The underlying metric is fixed and the typed reason is correctly
+recorded in `body_grounding_quality.json`'s embedded gate stream; a full
+end-to-end regeneration's top-level `status` needs a one-line follow-up
+outside this lane's fence (add the new reason string to that frozenset in
+`threed/racketsport/body_grounding_quality.py`), not performed here.
+
+**Tests**: new tests in `tests/racketsport/test_foot_contact.py` (defaults,
+typed-reason set membership, parametrized plausibility-function cases
+including the diagnosed spurious shape, `_validate_thresholds` coverage for
+the two new fields, BODY-direct producer rejects-the-spurious-shape and
+accepts-a-genuine-short-slide-shape) and
+`tests/racketsport/test_worldhmr_stance_grounding.py` (same two cases
+exercised through the real `worldhmr._contact_gate_stream_for_skeleton3d()`).
+`MPLBACKEND=Agg .venv/bin/python -m pytest tests/racketsport/ -k "foot or
+ground or contact or slide" -q`: 312 selected, 311 passed, 1 pre-existing
+failure unrelated to this change
+(`test_attribute_body_decode_residual.py::test_banked_fixture_grounding_and_disabled_replay_pass_frozen_limits`,
+reproduced identically on a clean pre-lane checkout).
+`tests/racketsport/test_process_video.py`: 186 passed.
+
+Full findings (threshold-derivation table, per-clip evidence, and the
+plausibility-check rationale) were delivered as this agent's text response to
+its caller rather than a committed `REPORT.md` — the harness that ran this
+lane is a subagent whose own operating rules say report-style `.md` files
+should be returned as text, not written to disk (same constraint hit by
+`wolverine_slide_diag_20260728` and `alwayson_fresh_wave_20260728` above).
+`VERIFIED=0` throughout — this changes the slide metric's definition
+(measurement robustness), it is not an accuracy promotion; prior
+`max_foot_lock_slide_m` numbers are not directly comparable to post-fix
+numbers without the recomputation table above. Lane closed.

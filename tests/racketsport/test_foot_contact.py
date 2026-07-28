@@ -23,9 +23,14 @@ from threed.racketsport.foot_contact import (
     build_body_skeleton_foot_contact_phases,
     build_body_skeleton_foot_contact_phases_from_gate_stream,
     ContactThresholds,
+    IMPLAUSIBLE_SHORT_HIGH_SPEED_PLANT_REASON,
+    INDEPENDENT_BODY_PHASE_REJECTION_REASONS,
     SkeletonFrame,
     detect_contact_phases,
     measure_contact_metrics,
+    phase_plausible_for_thresholds,
+    phase_speed_duration_plausible,
+    plausibility_speed_ceiling_mps,
     resolve_foot_joint_indices,
 )
 
@@ -374,3 +379,131 @@ def test_body_skeleton_phase_producer_does_not_reject_using_gate_threshold_reaso
     assert payload["rejected_phase_count"] == 0
     assert payload["summary"]["rejected_reasons"] == {}
     assert payload["summary"]["max_candidate_phase_slide_m"] == pytest.approx(0.040)
+
+
+# --- plant_phase_plausibility_20260728: speed/duration plausibility cross-check ---
+
+
+def test_contact_thresholds_defaults_include_plausibility_fields() -> None:
+    thresholds = ContactThresholds()
+
+    assert thresholds.plant_plausibility_min_frames == 5
+    assert thresholds.plant_plausibility_speed_fraction == pytest.approx(0.88)
+    assert plausibility_speed_ceiling_mps(thresholds) == pytest.approx(0.66)
+
+
+def test_implausible_reason_is_independent_of_slide_based_reasons() -> None:
+    # IMPLAUSIBLE_SHORT_HIGH_SPEED_PLANT_REASON is keyed on speed/duration
+    # evidence the phase carries about itself, not on lock-gate slide
+    # thresholds, so it belongs alongside the other independent (non-slide)
+    # rejection reasons this producer already recognizes.
+    assert IMPLAUSIBLE_SHORT_HIGH_SPEED_PLANT_REASON in INDEPENDENT_BODY_PHASE_REJECTION_REASONS
+
+
+@pytest.mark.parametrize(
+    "frame_count,max_speed_mps,expected_plausible",
+    [
+        # The diagnosed spurious phase: 4 frames, 0.6996 m/s peak -- implausible.
+        (4, 0.6996, False),
+        # A phase long enough to demonstrate sustained low speed is trusted
+        # regardless of its peak in-phase speed (matches the existing
+        # test_real_pipeline_gate_metric_keeps_overthreshold_lock_rows_in_metric
+        # 5-frame/0.3 m/s continuous-slide regression fixture).
+        (5, 0.70, True),
+        # A short phase whose own peak speed already looks like a genuine
+        # plant (comfortably below the enter band) is trusted regardless of
+        # duration -- this is the "genuine plant that then slides" case.
+        (2, 0.48, True),
+        # Right at the diagnosed boundary: short and fast is implausible.
+        (2, 0.70, False),
+    ],
+)
+def test_phase_speed_duration_plausible_matches_diagnosis_derived_cases(
+    frame_count: int, max_speed_mps: float, expected_plausible: bool
+) -> None:
+    thresholds = ContactThresholds()
+
+    assert (
+        phase_speed_duration_plausible(
+            frame_count=frame_count,
+            max_speed_mps=max_speed_mps,
+            min_frames=thresholds.plant_plausibility_min_frames,
+            speed_ceiling_mps=plausibility_speed_ceiling_mps(thresholds),
+        )
+        is expected_plausible
+    )
+    assert (
+        phase_plausible_for_thresholds(
+            frame_count=frame_count,
+            max_speed_mps=max_speed_mps,
+            thresholds=thresholds,
+        )
+        is expected_plausible
+    )
+
+
+def test_validate_thresholds_rejects_invalid_plausibility_fields() -> None:
+    with pytest.raises(ValueError, match="plant_plausibility_min_frames"):
+        detect_contact_phases(
+            [_frame(0, left_x=0.0, left_z=0.0)],
+            joint_names=JOINT_NAMES_65,
+            thresholds=ContactThresholds(plant_plausibility_min_frames=0),
+        )
+    with pytest.raises(ValueError, match="plant_plausibility_speed_fraction"):
+        detect_contact_phases(
+            [_frame(0, left_x=0.0, left_z=0.0)],
+            joint_names=JOINT_NAMES_65,
+            thresholds=ContactThresholds(plant_plausibility_speed_fraction=0.0),
+        )
+    with pytest.raises(ValueError, match="plant_plausibility_speed_fraction"):
+        detect_contact_phases(
+            [_frame(0, left_x=0.0, left_z=0.0)],
+            joint_names=JOINT_NAMES_65,
+            thresholds=ContactThresholds(plant_plausibility_speed_fraction=1.5),
+        )
+
+
+def test_body_skeleton_phase_producer_rejects_implausible_short_high_speed_plant() -> None:
+    # Reproduces the wolverine_slide_diag_20260728 diagnosed defect shape at
+    # the BODY-direct producer level (build_body_skeleton_foot_contact_phases
+    # rather than the worldhmr slide gate): 4 frames, monotonic drift, peak
+    # in-phase speed ~0.69 m/s (just under the 0.75 m/s enter threshold).
+    frames = [
+        _frame(0, left_x=0.000, left_z=0.020),
+        _frame(1, left_x=0.023, left_z=0.020),
+        _frame(2, left_x=0.029, left_z=0.020),
+        _frame(3, left_x=0.035, left_z=0.020),
+    ]
+
+    payload = build_body_skeleton_foot_contact_phases(_skeleton_payload(frames), clip="spurious_plant")
+
+    assert payload["phase_count"] == 0
+    assert payload["rejected_phase_count"] == 1
+    assert payload["summary"]["rejected_reasons"] == {IMPLAUSIBLE_SHORT_HIGH_SPEED_PLANT_REASON: 1}
+    rejected = payload["rejected_phases"][0]
+    assert rejected["frame_count"] == 4
+    assert rejected["max_speed_mps"] == pytest.approx(0.69, abs=0.01)
+    # Not hidden: the raw candidate slide is still fully audited even though
+    # the phase is excluded from the accepted/metric-contributing set.
+    assert payload["summary"]["max_candidate_phase_slide_m"] == pytest.approx(0.035, abs=0.001)
+
+
+def test_body_skeleton_phase_producer_does_not_reject_genuine_short_slide_plant() -> None:
+    # A genuinely planted-then-sliding foot: low entry speed, real nonzero
+    # slide, only 2 frames. The plausibility check must key on speed/
+    # duration, never on the fact that the foot slid, so this must be
+    # accepted and must contribute its real slide to the metric.
+    frames = [
+        _frame(0, left_x=0.000, left_z=0.020),
+        _frame(1, left_x=0.016, left_z=0.020),
+    ]
+
+    payload = build_body_skeleton_foot_contact_phases(_skeleton_payload(frames), clip="genuine_short_slide")
+
+    assert payload["phase_count"] == 1
+    assert payload["rejected_phase_count"] == 0
+    phase = payload["phases"][0]
+    assert phase["frame_count"] == 2
+    assert phase["max_speed_mps"] == pytest.approx(0.48, abs=0.01)
+    assert phase["rejection_reason"] is None
+    assert payload["summary"]["max_candidate_phase_slide_m"] == pytest.approx(0.016, abs=0.001)

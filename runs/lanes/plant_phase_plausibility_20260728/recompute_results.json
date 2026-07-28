@@ -1,0 +1,226 @@
+{
+  "indoor_diagonal_baseline (FAIL, court_people_3d_completion_fresh_20260724_60631f1)": {
+    "gate_after_pass": false,
+    "gate_before_pass": false,
+    "newly_rejected_phases": [
+      {
+        "foot": "left",
+        "frame_count": 3,
+        "frames": "114-116",
+        "max_speed_mps": 0.6935414193421262,
+        "player_id": "2",
+        "slide_m": 1.1102230246251565e-16
+      },
+      {
+        "foot": "left",
+        "frame_count": 3,
+        "frames": "292-294",
+        "max_speed_mps": 0.7241074730706974,
+        "player_id": "2",
+        "slide_m": 0.0
+      },
+      {
+        "foot": "left",
+        "frame_count": 4,
+        "frames": "355-358",
+        "max_speed_mps": 0.7135594719750799,
+        "player_id": "2",
+        "slide_m": 0.0
+      },
+      {
+        "foot": "right",
+        "frame_count": 3,
+        "frames": "212-214",
+        "max_speed_mps": 0.7454587971046186,
+        "player_id": "2",
+        "slide_m": 0.0
+      }
+    ],
+    "originally_accepted": 63,
+    "originally_committed_max_slide_m": 0.05447578818610995,
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/court_people_3d_completion_fresh_20260724_60631f1/indoor_diagonal/07_replacement_indoor_diagonal_100_110/body_grounding_quality.json",
+    "recomputed_after_max_slide_m": 0.05447578818610995,
+    "recomputed_before_max_slide_m": 0.05447578818610995,
+    "total_phases": 82
+  },
+  "indoor_diagonal_tonight (FAIL 0.0546, alwayson_fresh_wave_20260728)": {
+    "gate_after_pass": false,
+    "gate_before_pass": false,
+    "newly_rejected_phases": [
+      {
+        "foot": "left",
+        "frame_count": 3,
+        "frames": "114-116",
+        "max_speed_mps": 0.6894509975250268,
+        "player_id": "2",
+        "slide_m": 8.95090418262362e-16
+      }
+    ],
+    "originally_accepted": 64,
+    "originally_committed_max_slide_m": 0.054561133514238684,
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/alwayson_fresh_wave_20260728/split/07_replacement_indoor_diagonal_100_110/07_replacement_indoor_diagonal_100_110/body_grounding_quality.json",
+    "recomputed_after_max_slide_m": 0.054561133514238684,
+    "recomputed_before_max_slide_m": 0.054561133514238684,
+    "total_phases": 82
+  },
+  "outdoor_pbvision_baseline (PASS, court_people_3d_completion_fresh_20260724_60631f1)": {
+    "gate_after_pass": true,
+    "gate_before_pass": true,
+    "newly_rejected_phases": [
+      {
+        "foot": "right",
+        "frame_count": 2,
+        "frames": "263-264",
+        "max_speed_mps": 0.671401336583171,
+        "player_id": "1",
+        "slide_m": 0.016870975400036976
+      },
+      {
+        "foot": "right",
+        "frame_count": 3,
+        "frames": "145-147",
+        "max_speed_mps": 0.7304202194435464,
+        "player_id": "2",
+        "slide_m": 2.220446049250313e-16
+      },
+      {
+        "foot": "right",
+        "frame_count": 2,
+        "frames": "184-185",
+        "max_speed_mps": 0.7447496519740421,
+        "player_id": "2",
+        "slide_m": 0.002713215844170503
+      },
+      {
+        "foot": "right",
+        "frame_count": 3,
+        "frames": "207-209",
+        "max_speed_mps": 0.7002039784186213,
+        "player_id": "3",
+        "slide_m": 0.0
+      },
+      {
+        "foot": "left",
+        "frame_count": 3,
+        "frames": "186-188",
+        "max_speed_mps": 0.6622857227653816,
+        "player_id": "4",
+        "slide_m": 4.440892098500626e-16
+      }
+    ],
+    "originally_accepted": 23,
+    "originally_committed_max_slide_m": 0.016870975400036976,
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/court_people_3d_completion_fresh_20260724_60631f1/outdoor_pbvision/10_replacement_outdoor_pbvision_50_60/body_grounding_quality.json",
+    "recomputed_after_max_slide_m": 1.7763568394002505e-15,
+    "recomputed_before_max_slide_m": 0.016870975400036976,
+    "total_phases": 42
+  },
+  "outdoor_pbvision_tonight (PASS 0.0026, alwayson_fresh_wave_20260728)": {
+    "gate_after_pass": true,
+    "gate_before_pass": true,
+    "newly_rejected_phases": [
+      {
+        "foot": "right",
+        "frame_count": 3,
+        "frames": "51-53",
+        "max_speed_mps": 0.6822207293019612,
+        "player_id": "2",
+        "slide_m": 0.0
+      },
+      {
+        "foot": "right",
+        "frame_count": 3,
+        "frames": "145-147",
+        "max_speed_mps": 0.7366097286254775,
+        "player_id": "2",
+        "slide_m": 8.881784197001252e-16
+      },
+      {
+        "foot": "right",
+        "frame_count": 2,
+        "frames": "184-185",
+        "max_speed_mps": 0.7396510887387028,
+        "player_id": "2",
+        "slide_m": 0.002603771215838058
+      },
+      {
+        "foot": "right",
+        "frame_count": 3,
+        "frames": "207-209",
+        "max_speed_mps": 0.7093952795431888,
+        "player_id": "3",
+        "slide_m": 0.0
+      },
+      {
+        "foot": "left",
+        "frame_count": 3,
+        "frames": "186-188",
+        "max_speed_mps": 0.6936141213454875,
+        "player_id": "4",
+        "slide_m": 4.965068306494546e-16
+      },
+      {
+        "foot": "left",
+        "frame_count": 4,
+        "frames": "201-204",
+        "max_speed_mps": 0.6894851167015371,
+        "player_id": "4",
+        "slide_m": 2.220446049250313e-16
+      }
+    ],
+    "originally_accepted": 21,
+    "originally_committed_max_slide_m": 0.002603771215838058,
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/alwayson_fresh_wave_20260728/split/10_replacement_outdoor_pbvision_50_60/10_replacement_outdoor_pbvision_50_60/body_grounding_quality.json",
+    "recomputed_after_max_slide_m": 1.7763568394002505e-15,
+    "recomputed_before_max_slide_m": 0.002603771215838058,
+    "total_phases": 40
+  },
+  "wolverine_baseline (PASS, court_people_3d_completion_fresh_20260724_60631f1)": {
+    "gate_after_pass": true,
+    "gate_before_pass": true,
+    "newly_rejected_phases": [
+      {
+        "foot": "right",
+        "frame_count": 2,
+        "frames": "212-213",
+        "max_speed_mps": 0.6953795349834496,
+        "player_id": "2",
+        "slide_m": 4.440892098500626e-16
+      }
+    ],
+    "originally_accepted": 38,
+    "originally_committed_max_slide_m": 1.790180836524724e-15,
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/court_people_3d_completion_fresh_20260724_60631f1/wolverine/01_wolverine_indoor_diagonal_0_10/body_grounding_quality.json",
+    "recomputed_after_max_slide_m": 1.790180836524724e-15,
+    "recomputed_before_max_slide_m": 1.790180836524724e-15,
+    "total_phases": 43
+  },
+  "wolverine_tonight (FAIL, alwayson_fresh_wave_20260728)": {
+    "gate_after_pass": true,
+    "gate_before_pass": false,
+    "newly_rejected_phases": [
+      {
+        "foot": "left",
+        "frame_count": 4,
+        "frames": "142-145",
+        "max_speed_mps": 0.6995513258426737,
+        "player_id": "2",
+        "slide_m": 0.037769329308986
+      },
+      {
+        "foot": "right",
+        "frame_count": 2,
+        "frames": "212-213",
+        "max_speed_mps": 0.6661331307460243,
+        "player_id": "2",
+        "slide_m": 0.0
+      }
+    ],
+    "originally_accepted": 38,
+    "originally_committed_max_slide_m": 0.037769329308986,
+    "path": "/Users/arnavchokshi/Desktop/pickleball/runs/alwayson_fresh_wave_20260728/split/01_wolverine_indoor_diagonal_0_10/01_wolverine_indoor_diagonal_0_10/body_grounding_quality.json",
+    "recomputed_after_max_slide_m": 0.008654120470359352,
+    "recomputed_before_max_slide_m": 0.037769329308986,
+    "total_phases": 43
+  }
+}
