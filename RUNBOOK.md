@@ -184,18 +184,32 @@ before fresh BALL/audio and does not yet trim all downstream decoding.
    default, run local BODY only with `--body-local`, or skip with `--no-gpu`.
    RTMW/RTMW3D/RTMPose are retired; the pipeline is SAM-3D-Body only for
    offline body joints/mesh.
-14. **placement_refine** - currently always skipped by the R3 same-pass safety
-    rule; BODY foot pixels require a true second pass before a fresh BODY run.
+14. **placement_refine** - default-on (owner directive 2026-07-28, lane
+    `alwayson_defaults_20260728`) immutable post-BODY placement artifact for
+    BOTH presets whenever `sam3d_keypoints_2d.json` + `skeleton3d.json` exist;
+    typed-skipped (`missing_sam3d_foot_evidence`) otherwise. It never mutates
+    `tracks.json` in place -- output only ever lands in the separate
+    `placement_refined.json` / `tracks_placement_refined.json` pair, so the R3
+    same-pass safety rule (BODY must never be made stale by a same-pass
+    rewrite of the tracks it was computed from) still holds; the legacy
+    in-place same-pass rewrite that rule killed stays permanently disabled.
 15. **grounding_refine** - render-honest BODY grounding
-    refinement when inputs exist.
-16. **placement_trajectory_refine** - default-OFF preview stage after grounding.
-    Enable it with `--placement-trajectory-refine` (or a future enabled
-    `body.placement_trajectory_refine` best-stack value) to write the separate
-    `placement_trajectory_refined.json` artifact from current TRK footpoints,
-    BODY placement, and planted-foot windows. Missing BODY/plant evidence is a
-    typed skip/degrade; malformed inputs fail loudly. Raw tracks, placement,
-    skeleton, phase, and grounding artifacts remain immutable. The output stays
-    preview-band, `do_not_promote`, and `VERIFIED=0`.
+    refinement when inputs exist. Auto-detects R3 placement-refine provenance
+    (`_has_r3_grounding_provenance`) and switches to z-only mode with XY
+    translation disabled when present, on either preset.
+16. **placement_trajectory_refine** - default-on for both presets (owner
+    directive 2026-07-28, lane `alwayson_defaults_20260728`; best_stack
+    `body.placement_trajectory_refine` is `WIRED_DEFAULT`/`enabled: true`).
+    Opt out with `--no-placement-trajectory-refine`; `--placement-trajectory-refine`
+    force-enables even if a future best_stack flip goes back to false. Writes the
+    separate `placement_trajectory_refined.json` artifact from current TRK
+    footpoints, BODY placement, and planted-foot windows. Missing BODY/plant
+    evidence is a typed skip/degrade; malformed inputs fail loudly. Raw tracks,
+    placement, skeleton, phase, and grounding artifacts remain immutable. The
+    output stays preview-band, `do_not_promote`, and `VERIFIED=0`: this is an
+    owner-directed engineering default flip, not an accuracy promotion (the
+    underlying 4/4-clip evidence is still the same internal eval-only cards
+    used to tune it, not independent NS-02 GT).
 17. **paddle_pose** - write a fail-closed, render-only estimated paddle artifact
     when BODY wrist/palm evidence exists.
 18. **events_refined** - build the separately versioned post-BODY
@@ -277,7 +291,8 @@ not simulate that target by leaving stale artifacts in the clip directory.
 | `--body-local` | Run BODY in-process on a GPU host instead of remote dispatch. |
 | `--fetch-body-monoliths` | Opt into fetching/writing the large `smpl_motion.json` and `body_mesh.json` monoliths. Default runs fetch `body_mesh_index/` for replay review instead. |
 | `--no-grounding-refine` | Skip BODY grounding refinement. |
-| `--placement-trajectory-refine` | Opt into the preview-band placement trajectory artifact after grounding; the existing rev-13 best-stack value is default OFF. |
+| `--placement-trajectory-refine` | Force-enable the preview-band placement trajectory artifact after grounding, even if a future best-stack flip goes back to false. Default is already ON (both presets) via `body.placement_trajectory_refine` (`WIRED_DEFAULT`, owner directive 2026-07-28). |
+| `--no-placement-trajectory-refine` | Opt out of the default-on placement trajectory artifact. Wins over `--placement-trajectory-refine`. |
 | `--no-confidence-gate` | Point viewer at raw `virtual_world.json`. |
 | `--no-scene-points` | Skip point GLB scene generation. |
 | `--confidence-calibration-curves` | Confidence-curve artifact for trust-band calibration; omitted runs use the default only when present. |

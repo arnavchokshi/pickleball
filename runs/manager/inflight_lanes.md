@@ -810,3 +810,50 @@ need only a fresh `RUN_COMMIT` + re-run Step-0 at that commit (proofs expire in 
 design) and `gcloud auth login` (expired per queue row 7) — no data-safety blocker remains.
 
 VERIFIED=0 throughout. No promotion, no code change, no fleet spend. Lane closed.
+
+## 2026-07-28 — `alwayson_defaults_20260728` CLAIMED AND CLOSED (integration-owner lane)
+
+Owner directive tonight: "the kitchen gating and foot sliding grounding logic worked
+super well — refine all of that and make it what ALWAYS happens." Made two BODY-side
+preview stages unconditional defaults of `scripts/racketsport/process_video.py`, the
+sole pipeline entrypoint. Engineering default flip, `VERIFIED=0` binding throughout —
+no gate passed, no independent evidence produced tonight.
+
+- `body.placement_trajectory_refine`: best_stack `PENDING`/`enabled:false` ->
+  `WIRED_DEFAULT`/`enabled:true`, both `full` and `court_skeletons` presets. Added
+  `--no-placement-trajectory-refine` opt-out (previously impossible for
+  `court_skeletons`, which had it hardcoded on with no escape hatch).
+- Post-BODY immutable foot-anchoring (`placement_refine` stage): removed the
+  `pipeline_preset != "court_skeletons"` gate in `_stage_placement_refine`. Verified no
+  architectural blocker for `full` — the R3 same-pass safety rule was already satisfied
+  structurally (separate `placement_refined.json`/`tracks_placement_refined.json`
+  artifacts only, raw `tracks.json` never mutated in place; `grounding_refine` already
+  auto-detects this provenance and switches to z-only mode on either preset). New
+  best_stack entry `body.post_body_placement_refine` (`WIRED_DEFAULT`) records this.
+- NVZ/kitchen occupancy (item 3): already unconditional and conservative
+  (`_conservative_kitchen_decision` defaults `unknown`, only flips decisive on a
+  wholly-one-sided 99% CI) for both presets whenever calibration + placement exist —
+  no code change needed, verified via `threed/racketsport/placement.py` and existing
+  `tests/racketsport/test_placement.py` coverage.
+- Tests: `test_process_video.py` (181 passed), `test_pipeline_contracts.py` (15
+  passed), plus a focused 238-test run across placement/grounding/world/foot-pin
+  suites, all green. `--help` shows the new flag, exit 0. A real (unmocked) CPU smoke
+  run on the wolverine eval clip (`eval_clips/ball/wolverine_mixed_0200_mid_steep_corner`,
+  committed calibration, no GPU/remote host in this environment) proved `placement_refine`
+  now runs on `full` preset with real fused SAM-3D foot evidence
+  (`source_counts: {bbox: 1167, sam3d: 705}`) and that `grounding_refine` auto-detected
+  the new provenance and ran z-only. `placement_trajectory_refine`'s default-on wiring
+  was proven live (it attempted real computation rather than the old disabled-skip
+  path) but hit a loud, correct `MissingPlacementInputError` from mixing BODY evidence
+  across two historical runs (disclosed in full in the report, not a pipeline defect);
+  a follow-up direct call to the same production stage method with id-remapped evidence
+  confirmed a clean `status: ran` completion. Full detail:
+  `runs/lanes/alwayson_defaults_20260728/REPORT.md`.
+- Did not touch `NORTH_STAR_ROADMAP.md`, `runs/manager/gpu_fleet.md`, or fleet scripts
+  (out of fence). Two other lanes committed to `main` concurrently during this session
+  (`f3e3160` fleet snapshot boot path, `ebc34d7` events/ball docs plan) — confirmed
+  neither touches this lane's fenced files.
+
+VERIFIED=0 remains binding. This is an owner-directed engineering default flip, not an
+accuracy promotion; the `ns02_body_world_placement_independent_gt` gate is unmet. Lane
+closed.

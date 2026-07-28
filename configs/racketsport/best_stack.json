@@ -559,7 +559,7 @@
     "metric_key": "court_frame_world_mpjpe_mm",
     "name": "ns02_body_world_placement_independent_gt"
    },
-   "notes": "preview_band; do_not_promote; disabled until Track C wiring and independent court-frame GT. VERIFIED=0.",
+   "notes": "preview_band; do_not_promote; VERIFIED=0. Owner directive 2026-07-28 (lane alwayson_defaults_20260728): flipped to WIRED_DEFAULT/enabled=true for BOTH pipeline presets because the plant-aware trajectory refiner has worked well operationally (cuts skeleton-direct foot slide 34.55/33.61/20.81/48.38mm -> 6.72/5.60/6.26/6.75mm, 4/4 clips under the 30mm bar). This is an owner-directed engineering default flip, not an accuracy promotion: the underlying evidence is still the same four internal eval-only cards used to tune the hyperparameters, so it remains scoped, not independent. The ns02_body_world_placement_independent_gt gate below is still the binding promotion bar and has not been run. --no-placement-trajectory-refine is the explicit opt-out; missing BODY/plant evidence stays a typed skip/degrade; malformed inputs still fail loudly; raw BODY/TRK/placement/grounding artifacts stay immutable (separate placement_trajectory_refined.json artifact only).",
    "proven_against": {
     "arm_a_pass": "4/4",
     "arm_b_max_and_median_improved": "4/4",
@@ -567,22 +567,55 @@
     "scope": "same four internal eval-only cards"
    },
    "provenance": {
-    "commit": "0ec239325",
-    "date": "2026-07-16",
+    "commit": "worktree",
+    "date": "2026-07-28",
     "evidence_paths": [
      "runs/lanes/trackI_placefuse_20260716/report.json",
      "runs/lanes/trackI_placefuse_20260716/fused_metrics.json",
-     "runs/lanes/trackI_placefuse_20260716/sensitivity_metrics.json"
+     "runs/lanes/trackI_placefuse_20260716/sensitivity_metrics.json",
+     "runs/lanes/alwayson_defaults_20260728/REPORT.md"
     ],
-    "lane": "trackI_placefuse_20260716"
+    "lane": "alwayson_defaults_20260728",
+    "note": "owner directive: always-on"
    },
-   "selection": "plant-aware robust per-player court-frame rigid trajectory candidate",
+   "selection": "plant-aware robust per-player court-frame rigid trajectory candidate, always-on both presets",
    "stage": "placement_trajectory_refine",
-   "status": "PENDING",
+   "status": "WIRED_DEFAULT",
    "value": {
     "artifact": "placement_trajectory_refined.json",
     "config": "PlacementTrajectoryConfig schema_v1",
-    "enabled": false
+    "enabled": true
+   }
+  },
+  "body.post_body_placement_refine": {
+   "gate": null,
+   "notes": "preview_band; do_not_promote; VERIFIED=0. Owner directive 2026-07-28 (lane alwayson_defaults_20260728): the immutable post-BODY placement-refinement artifact (re-place joints from real SAM-3D foot pixel evidence) now runs by default for BOTH the full and court_skeletons presets whenever sam3d_keypoints_2d.json + skeleton3d.json exist; previously it was code-gated to court_skeletons only (scripts/racketsport/process_video.py _stage_placement_refine). This is an engineering default-parity flip, not an accuracy promotion. It preserves the R3 same-pass safety rule (runs/lanes/r3_unified_grounding/design.md): it never rewrites tracks.json in place -- it only ever writes the separate placement_refined.json / tracks_placement_refined.json pair, so BODY can never be made stale by a same-pass rewrite of the tracks it was computed from. The legacy in-place same-pass tracks.json rewrite that the R3 rule killed stays permanently disabled on both presets; only this immutable branch was extended. Downstream grounding_refine already auto-detects this provenance (_has_r3_grounding_provenance) and switches to z-only XY-disabled mode on both presets, so no double-shift risk was introduced. Missing SAM-3D foot evidence stays a typed skip (reason_code missing_sam3d_foot_evidence); malformed inputs still fail loudly.",
+   "proven_against": null,
+   "provenance": {
+    "commit": "worktree",
+    "date": "2026-07-28",
+    "evidence_paths": [
+     "runs/lanes/r3_unified_grounding/design.md",
+     "runs/lanes/i1_grounding_unification/spec.md",
+     "runs/lanes/alwayson_defaults_20260728/REPORT.md"
+    ],
+    "lane": "alwayson_defaults_20260728",
+    "note": "owner directive: always-on"
+   },
+   "selection": "immutable post-BODY SAM-3D foot-pixel placement refinement, both presets",
+   "stage": "placement_refine",
+   "status": "WIRED_DEFAULT",
+   "value": {
+    "applies_to_presets": [
+     "full",
+     "court_skeletons"
+    ],
+    "artifacts": [
+     "placement_refined.json",
+     "tracks_placement_refined.json"
+    ],
+    "enabled": true,
+    "mutates_raw_tracks_json": false
    }
   },
   "body.postchain_raw_knob": {

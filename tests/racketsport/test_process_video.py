@@ -3114,12 +3114,13 @@ def test_placement_stage_auto_discovers_camera_motion_and_surfaces_guard_notes(
     assert "sam3d_dropped=9" in joined_notes
 
 
-def test_full_preset_keeps_post_body_placement_refine_disabled(
+def test_full_preset_skips_post_body_placement_without_sam3d_evidence(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     video = tmp_path / "clip.mp4"
     _make_video(video)
     options = _base_options(tmp_path, video=video, court_corners=None)
+    assert options.pipeline_preset == "full"
     options.clip_dir.mkdir(parents=True, exist_ok=True)
     _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
     _write_json(options.clip_dir / "tracks.json", _tracks_payload())
@@ -3129,21 +3130,62 @@ def test_full_preset_keeps_post_body_placement_refine_disabled(
     pipeline = process_video.ProcessVideoPipeline(options)
 
     skipped = pipeline._stage_placement_refine()
-    assert skipped.status == "skipped"
 
+    assert skipped.status == "skipped"
+    assert skipped.metrics["reason"] == "missing_sam3d_foot_evidence"
+    assert "sam3d_keypoints_2d.json" in skipped.metrics["missing_inputs"]
+    assert "skeleton3d.json" in skipped.metrics["missing_inputs"]
+
+
+def test_full_preset_emits_immutable_post_body_placement_artifacts(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Owner directive 2026-07-28 (lane alwayson_defaults_20260728): the
+    immutable post-BODY placement-refinement path that court_skeletons has
+    used since Track I now also runs for the full preset -- same
+    separate-artifact mechanism (placement_refined.json /
+    tracks_placement_refined.json), raw tracks.json is read but never
+    rewritten in place, so the R3 same-pass safety rule still holds."""
+
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    assert options.pipeline_preset == "full"
+    options.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(options.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(options.clip_dir / "tracks.json", _tracks_payload())
     _write_json(
         options.clip_dir / "sam3d_keypoints_2d.json",
         {"schema_version": 1, "artifact_type": "racketsport_sam3d_keypoints_2d", "source": "test", "players": []},
     )
-    def _fail_rewrite(**_kwargs):  # noqa: ANN001
-        raise AssertionError("full preset must not run skeleton-only placement_refine")
+    _write_json(options.clip_dir / "skeleton3d.json", {"players": []})
+    calls: list[dict[str, object]] = []
 
-    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fail_rewrite)
+    def _fake_rewrite(**kwargs):  # noqa: ANN001
+        calls.append(kwargs)
+        return type(
+            "Result",
+            (),
+            {
+                "coverage_unchanged": True,
+                "source_counts": {"sam3d": 1},
+                "court_bounds_violations": 0,
+                "summary": {},
+            },
+        )()
+
+    monkeypatch.setattr(process_video, "rewrite_tracks_with_placement", _fake_rewrite)
+    pipeline = process_video.ProcessVideoPipeline(options)
 
     ran = pipeline._stage_placement_refine()
 
-    assert ran.status == "skipped"
-    assert ran.metrics["court_skeletons_only"] is True
+    assert ran.status == "ran"
+    assert calls[0]["tracks_path"] == options.clip_dir / "tracks.json"
+    assert calls[0]["rewritten_tracks_path"] == options.clip_dir / "tracks_placement_refined.json"
+    assert calls[0]["placement_path"] == options.clip_dir / "placement_refined.json"
+    assert calls[0]["refine_from_sam3d"] is True
+    assert calls[0]["tracks_path"] != calls[0]["rewritten_tracks_path"]
+    assert ran.artifacts == ["placement_refined.json", "tracks_placement_refined.json"]
 
 
 def test_skeleton_preset_skips_post_body_placement_without_sam3d_evidence(
@@ -5346,14 +5388,22 @@ def test_cli_parses_grounding_refine_opt_out_into_options(tmp_path: Path) -> Non
     assert disabled_options.grounding_refine is False
 
 
-def test_cli_parses_placement_trajectory_refine_opt_in_over_default_off(tmp_path: Path) -> None:
+def test_cli_placement_trajectory_refine_defaults_on_with_explicit_opt_out(tmp_path: Path) -> None:
+    """Owner directive 2026-07-28 (lane alwayson_defaults_20260728): the
+    plant-aware trajectory refiner is WIRED_DEFAULT/enabled=true in best_stack
+    for both presets. --no-placement-trajectory-refine is the explicit
+    opt-out and wins even when --placement-trajectory-refine is also given;
+    --placement-trajectory-refine alone is now a no-op force-enable that
+    matches the default."""
+
     video = tmp_path / "clip.mp4"
+    _make_video(video)
     parser = process_video.build_arg_parser()
 
     default_options = process_video.build_options_from_args(
         parser.parse_args(["--video", str(video), "--out", str(tmp_path / "run")])
     )
-    enabled_options = process_video.build_options_from_args(
+    force_enabled_options = process_video.build_options_from_args(
         parser.parse_args(
             [
                 "--video",
@@ -5364,10 +5414,62 @@ def test_cli_parses_placement_trajectory_refine_opt_in_over_default_off(tmp_path
             ]
         )
     )
+    disabled_options = process_video.build_options_from_args(
+        parser.parse_args(
+            [
+                "--video",
+                str(video),
+                "--no-placement-trajectory-refine",
+                "--out",
+                str(tmp_path / "run3"),
+            ]
+        )
+    )
+    both_flags_options = process_video.build_options_from_args(
+        parser.parse_args(
+            [
+                "--video",
+                str(video),
+                "--placement-trajectory-refine",
+                "--no-placement-trajectory-refine",
+                "--out",
+                str(tmp_path / "run4"),
+            ]
+        )
+    )
 
-    assert process_video.PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE["enabled"] is False
-    assert default_options.placement_trajectory_refine is False
-    assert enabled_options.placement_trajectory_refine is True
+    assert process_video.PLACEMENT_TRAJECTORY_REFINE_STACK_VALUE["enabled"] is True
+    assert default_options.placement_trajectory_refine is True
+    assert default_options.placement_trajectory_refine_explicit is False
+    assert force_enabled_options.placement_trajectory_refine is True
+    assert force_enabled_options.placement_trajectory_refine_explicit is True
+    assert disabled_options.placement_trajectory_refine is False
+    assert disabled_options.placement_trajectory_refine_explicit is True
+    assert both_flags_options.placement_trajectory_refine is False, "explicit opt-out must win"
+
+    # Both presets share the same default -- the owner directive made this
+    # unconditional rather than court_skeletons-only.
+    for preset in ("full", "court_skeletons"):
+        preset_options = process_video.build_options_from_args(
+            parser.parse_args(
+                ["--video", str(video), "--pipeline-preset", preset, "--out", str(tmp_path / f"run_{preset}")]
+            )
+        )
+        assert preset_options.placement_trajectory_refine is True, preset
+        preset_disabled_options = process_video.build_options_from_args(
+            parser.parse_args(
+                [
+                    "--video",
+                    str(video),
+                    "--pipeline-preset",
+                    preset,
+                    "--no-placement-trajectory-refine",
+                    "--out",
+                    str(tmp_path / f"run_{preset}_disabled"),
+                ]
+            )
+        )
+        assert preset_disabled_options.placement_trajectory_refine is False, preset
 
 
 def test_cli_defaults_to_no_auto_ball_track_unless_explicitly_allowed(tmp_path: Path) -> None:

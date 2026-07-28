@@ -55,15 +55,20 @@ entrypoint (NORTH_STAR_ROADMAP.md's product goal). It chains, in order:
                       remote_body_dispatch.py) since most hosts running this
                       script have no local GPU; --no-gpu (or a failed/busy
                       dispatch) degrades to skeleton-only, never a crash.
-  9. placement_refine -- optional post-BODY placement rewrite from compact SAM-3D
-                      foot keypoint sidecar and/or 3D contact phase anchors.
+  9. placement_refine -- default-on (both presets) immutable post-BODY placement
+                      artifact from compact SAM-3D foot keypoint sidecar and/or 3D
+                      contact phase anchors, typed-skipped when that evidence is
+                      absent. It never mutates raw tracks.json in place (R3
+                      same-pass safety rule): output lands only in the separate
+                      placement_refined.json / tracks_placement_refined.json pair.
  10. grounding     -- render-honest rigid root-level BODY grounding refinement
                       when foot_contact_phases.json + calibration + tracks exist;
                       not accuracy/gate evidence, skipped untouched on zero
                       contact phases.
- 11. placement_trajectory_refine -- opt-in, preview-band rigid court-frame
-                      placement trajectory refinement. Raw BODY/TRK/placement
-                      artifacts remain immutable.
+ 11. placement_trajectory_refine -- default-on (owner directive 2026-07-28),
+                      preview-band rigid court-frame placement trajectory
+                      refinement; opt out with --no-placement-trajectory-refine.
+                      Raw BODY/TRK/placement artifacts remain immutable.
  12. paddle_pose   -- render-only fused wrist+palm+grip paddle estimate
                       (`racket_pose_estimate.json`) when SAM-3D wrist/palm
                       evidence exists; fail-closed with a loud summary block
@@ -3559,16 +3564,17 @@ class ProcessVideoPipeline:
         return self._run_placement_stage(refine_from_sam3d=False)
 
     def _stage_placement_refine(self) -> StageOutcome:
-        if self.options.pipeline_preset != "court_skeletons":
-            return StageOutcome(
-                stage="placement_refine",
-                status="skipped",
-                wall_seconds=0.0,
-                notes=[
-                    "immutable post-BODY placement refinement is currently enabled only for the court_skeletons preset"
-                ],
-                metrics={"court_skeletons_only": True},
-            )
+        # Owner directive 2026-07-28 (lane alwayson_defaults_20260728): the
+        # immutable post-BODY placement-refinement artifact runs for BOTH
+        # presets whenever real SAM-3D foot evidence exists. This is the same
+        # separate-artifact mechanism court_skeletons has used since Track I:
+        # it reads tracks.json/skeleton3d.json/sam3d_keypoints_2d.json but only
+        # ever writes placement_refined.json + tracks_placement_refined.json,
+        # so raw tracks.json is never mutated in place and the R3 same-pass
+        # safety rule (BODY must never be made stale by a same-pass rewrite of
+        # the tracks it was computed from) stays satisfied for both presets.
+        # The legacy in-place tracks.json rewrite that rule killed stays dead;
+        # only this immutable branch is enabled here.
         sam3d_path = self.clip_dir / "sam3d_keypoints_2d.json"
         skeleton_path = self.clip_dir / "skeleton3d.json"
         missing = [path.name for path in (sam3d_path, skeleton_path) if not path.is_file()]
@@ -5814,7 +5820,8 @@ class ProcessVideoPipeline:
         )
 
     # ------------------------------------------------------------------
-    # stage 8c: opt-in placement trajectory refinement
+    # stage 8c: default-on (owner directive 2026-07-28) placement trajectory
+    # refinement; opt out with --no-placement-trajectory-refine
     # ------------------------------------------------------------------
 
     def _stage_placement_trajectory_refine(self) -> StageOutcome:
@@ -5826,9 +5833,9 @@ class ProcessVideoPipeline:
                 status="skipped",
                 wall_seconds=0.0,
                 notes=[
-                    "placement_trajectory_refine typed skip: disabled by the existing best_stack "
-                    f"{PLACEMENT_TRAJECTORY_REFINE_STACK_KEY} entry and no explicit "
-                    "--placement-trajectory-refine flag was supplied"
+                    "placement_trajectory_refine typed skip: disabled via --no-placement-trajectory-refine, "
+                    f"or best_stack {PLACEMENT_TRAJECTORY_REFINE_STACK_KEY}.value.enabled=false with no "
+                    "--placement-trajectory-refine override"
                 ],
                 metrics={
                     "expected_optional_absence": {
@@ -9689,12 +9696,19 @@ def build_options_from_args(args: argparse.Namespace) -> PipelineOptions:
         body_schedule=("serial" if pipeline_preset == "court_skeletons" else args.body_schedule),
         remote_config=remote_config,
         grounding_refine=(pipeline_preset == "court_skeletons" or not args.no_grounding_refine),
+        # Owner directive 2026-07-28 (lane alwayson_defaults_20260728): default
+        # on for both presets via best_stack body.placement_trajectory_refine
+        # (WIRED_DEFAULT). --no-placement-trajectory-refine is the explicit
+        # opt-out and wins over everything else; --placement-trajectory-refine
+        # force-enables even if a future best_stack flip goes back to false.
         placement_trajectory_refine=(
-            pipeline_preset == "court_skeletons"
-            or bool(args.placement_trajectory_refine)
-            or DEFAULT_PLACEMENT_TRAJECTORY_REFINE
+            False
+            if args.no_placement_trajectory_refine
+            else bool(args.placement_trajectory_refine) or DEFAULT_PLACEMENT_TRAJECTORY_REFINE
         ),
-        placement_trajectory_refine_explicit=bool(args.placement_trajectory_refine),
+        placement_trajectory_refine_explicit=bool(
+            args.placement_trajectory_refine or args.no_placement_trajectory_refine
+        ),
         # DEFAULT OFF everywhere. `court_skeletons` has no ball stages at all, so the
         # preset never enables it even if best_stack later flips the default.
         one_world=(
@@ -10092,9 +10106,20 @@ def build_arg_parser() -> argparse.ArgumentParser:
         action="store_true",
         default=False,
         help=(
-            "Opt into the preview-band plant-aware placement trajectory stage after grounding_refine. "
-            f"The no-flag default comes from best_stack {PLACEMENT_TRAJECTORY_REFINE_STACK_KEY}.value.enabled "
-            "(currently false); this explicit flag wins."
+            "Force-enable the preview-band plant-aware placement trajectory stage after grounding_refine, even "
+            f"if a future best_stack {PLACEMENT_TRAJECTORY_REFINE_STACK_KEY}.value.enabled flips back to false. "
+            "The no-flag default already comes from that best_stack entry (currently true: owner-directed "
+            "always-on default, 2026-07-28, lane alwayson_defaults_20260728). Typed skip/degrade on missing "
+            "BODY/plant evidence either way; preview-band, do_not_promote, VERIFIED=0 regardless of this flag."
+        ),
+    )
+    parser.add_argument(
+        "--no-placement-trajectory-refine",
+        action="store_true",
+        default=False,
+        help=(
+            "Opt out of the default-on preview-band placement trajectory stage after grounding_refine. Wins "
+            "over --placement-trajectory-refine and over the best_stack default if both are given."
         ),
     )
     parser.add_argument(
