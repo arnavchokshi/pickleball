@@ -77,6 +77,7 @@ from __future__ import annotations
 import argparse
 import json
 import shlex
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -458,14 +459,35 @@ def start_worker(
         f"setsid {shlex.quote(config.gpu_lock_script)} {serve_cmd} "
         f"> {shlex.quote(log_path)} 2>&1 < /dev/null & echo $!"
     )
-    start_result = run([*config.ssh_base(), start_cmd], config.connect_timeout_s + 20)
-    if start_result.returncode != 0:
-        raise WarmWorkerLifecycleError(
-            f"failed to launch the warm worker on {config.host} (exit {start_result.returncode}): "
-            f"{(start_result.stderr or '').strip()[-1000:]}"
+    # GPU-verified quirk (measured live on night1, twice, during this lane's
+    # own verification): this particular SSH round trip -- nohup + setsid +
+    # env + the shared gpu-eval-run.sh wrapper + backgrounding + `echo $!` --
+    # is supposed to return almost instantly (everything after the `&` is
+    # backgrounded), and sometimes does, but was observed taking 60s+ to
+    # return control to the local ssh client even though the remote worker
+    # went on to bootstrap and become ready successfully regardless (its
+    # nohup+setsid detachment is real; only the client's read of the SSH
+    # channel was slow). Since _poll_for_ready below is the actual signal of
+    # success -- not this command's return -- a client-side timeout here is
+    # tolerated rather than treated as fatal.
+    shell_pid = ""
+    try:
+        start_result = run([*config.ssh_base(), start_cmd], config.connect_timeout_s + 60)
+    except subprocess.TimeoutExpired:
+        print(
+            f"[body_warm_worker] the launch SSH command on {config.host} did not return within "
+            f"{config.connect_timeout_s + 60}s; nohup+setsid detachment means the worker may still be "
+            "starting successfully despite this -- polling for its ready marker before deciding.",
+            file=sys.stderr,
         )
-    stdout = (start_result.stdout or "").strip()
-    shell_pid = stdout.splitlines()[-1].strip() if stdout else ""
+    else:
+        if start_result.returncode != 0:
+            raise WarmWorkerLifecycleError(
+                f"failed to launch the warm worker on {config.host} (exit {start_result.returncode}): "
+                f"{(start_result.stderr or '').strip()[-1000:]}"
+            )
+        stdout = (start_result.stdout or "").strip()
+        shell_pid = stdout.splitlines()[-1].strip() if stdout else ""
 
     ready_payload = _poll_for_ready(
         config,

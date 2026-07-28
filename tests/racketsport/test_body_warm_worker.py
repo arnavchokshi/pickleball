@@ -288,6 +288,71 @@ def test_start_worker_refuses_when_already_healthy_without_replace(tmp_path: Pat
         bw.start_worker(args, run=fake_run)
 
 
+def test_start_worker_tolerates_a_client_side_timeout_on_the_launch_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """GPU-verified regression: the nohup+setsid launch SSH command is supposed
+    to return almost instantly (everything after `&` backgrounds), but was
+    observed live on night1 taking 60s+ to return even though the worker went
+    on to bootstrap and become ready successfully regardless -- only the
+    client's read of the SSH channel was slow, not the actual detachment. A
+    subprocess.TimeoutExpired on that one command must not be treated as
+    fatal: _poll_for_ready (which genuinely proves success/failure) still
+    has to run.
+    """
+
+    clip_dir = tmp_path / "clip"
+    clip_dir.mkdir()
+    (clip_dir / "tracks.json").write_text("{}", encoding="utf-8")
+    video_path = clip_dir / "source.mp4"
+    video_path.write_bytes(b"x")
+
+    fake_cold_result = rbd.RemoteBodyDispatchResult(
+        status="ran",
+        remote_run_dir="/remote/repo/runs/process_video_body_dispatch/wolverine_20260728T000000Z",
+    )
+    monkeypatch.setattr(bw.rbd, "dispatch_body_stage", lambda **kwargs: fake_cold_result)
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] != "ssh":
+            raise AssertionError(f"unexpected non-ssh command: {cmd}")
+        text = cmd[-1]
+        if "verify_fast_sam_manifest_assets" in text:
+            return _completed(0, stdout=json.dumps({"checkpoint_dir": "/ckpt/fast_sam_3d_body_dinov3"}))
+        if "manifest_path = " in text:
+            return _completed(0, stdout=json.dumps({"manifest_found": False}))
+        if text.startswith("find "):
+            return _completed(0, stdout=f"{fake_cold_result.remote_run_dir}/fast_sam_subprocess/batch_requests-xyz.json\n")
+        if text.startswith("mkdir -p"):
+            return _completed(0)
+        if "nohup env" in text:
+            raise subprocess.TimeoutExpired(cmd=cmd, timeout=timeout_s or 1)
+        if text.startswith("cat >"):
+            return _completed(0)
+        if text.startswith("cat "):
+            return _completed(0, stdout=json.dumps({"pid": 77777, "fingerprint": "fp456"}))
+        raise AssertionError(f"unexpected ssh command: {text}")
+
+    parser = bw._build_arg_parser()
+    args = parser.parse_args(
+        [
+            "start",
+            "--host",
+            "fixture@remote",
+            "--clip",
+            "wolverine",
+            "--clip-dir",
+            str(clip_dir),
+            "--video",
+            str(video_path),
+        ]
+    )
+    manifest = bw.start_worker(args, run=fake_run, sleep=lambda s: None)
+
+    assert manifest["pid"] == 77777
+    assert manifest["shell_wrapper_pid"] == ""
+
+
 def test_start_worker_happy_path_launches_under_gpu_lock_and_writes_manifest(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
