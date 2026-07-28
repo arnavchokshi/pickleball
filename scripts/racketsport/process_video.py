@@ -1343,10 +1343,22 @@ class ProcessVideoPipeline:
         # stages. Fingerprint the immutable same-stage evidence instead, or a
         # normal placement pass makes tracking/player selection look stale on
         # every resume and repeats expensive model work.
+        #
+        # court_lock.json belongs in this set too: placement's NVZ/kitchen line
+        # posterior persistence (threed.racketsport.placement._persist_nvz_line_posteriors,
+        # owner directive 2026-07-28) legitimately rewrites court_lock.json in place
+        # later in the same run to add `semantic_line_uncertainty`. Fingerprinting it
+        # as part of calibration's frozen identity made a same-run consumer that
+        # opts into content-identity reuse (bodylocal_colocated_fix_20260728:
+        # co-located `--body-local`, via `_run_body_local`) see calibration as
+        # falsely stale the moment placement ran, and silently fall through to
+        # `orchestrator.ManualCalibrationRunner`'s capture_sidecar-only re-derivation
+        # path -- which bare .mp4 eval clips never have.
         mutable_later = {
             "body": {"smpl_motion.json", "skeleton3d.json"},
             "tracking": {"tracks.json"},
             "player_selection": {"tracks.json"},
+            "calibration": {"court_lock.json"},
         }.get(name, set())
         artifacts: list[Path] = []
         seen: set[Path] = set()
@@ -5396,7 +5408,40 @@ class ProcessVideoPipeline:
         if opts.body_remote:
             return self._dispatch_body_remote()
 
+        if not self._local_body_calibration_available():
+            return StageOutcome(
+                stage="body",
+                status="blocked",
+                wall_seconds=0.0,
+                notes=[
+                    "--body-local requires this run's own completed calibration stage "
+                    "(automatic court-lock, manual taps, or an explicit --court-calibration "
+                    "seed) to be currently reusable; no such content-addressed calibration "
+                    "generation was found for this run. Refusing to fall through to "
+                    "orchestrator.ManualCalibrationRunner's capture_sidecar.json-only "
+                    "re-derivation (bare eval .mp4 clips never carry one) -- no synthetic "
+                    "sidecar is ever fabricated. Re-run calibration for this clip first."
+                ],
+                metrics={"reason_code": "local_body_missing_calibration"},
+            )
+
         return self._run_body_local()
+
+    def _local_body_calibration_available(self) -> bool:
+        """Task bodylocal_colocated_fix_20260728: does *this run's own* clip_dir
+        already carry a currently-valid, content-addressed calibration stage
+        generation that co-located BODY may safely consume?
+
+        Uses the same ``RunIdentityStore`` this pipeline just published calibration's
+        identity transaction to (Task #45 S2 / NS-01.3), so this always references the
+        exact current upstream stage generation on disk -- never a lexical "does
+        court_calibration.json happen to exist" check -- and covers every way this
+        run's own calibration could have completed (automatic court-lock, manual taps,
+        ARKit sidecar, or an explicit ``--court-calibration`` seed all publish through
+        the same ``_run_stage_safely("calibration", ...)`` wrapper).
+        """
+
+        return self._run_identity_store.current_stage_reusable("calibration")
 
     def _run_body_local(self) -> StageOutcome:
         opts = self.options

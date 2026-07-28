@@ -5490,6 +5490,59 @@ def test_cli_defaults_to_no_auto_ball_track_unless_explicitly_allowed(tmp_path: 
 # ---------------------------------------------------------------------------
 
 
+def _minimal_court_line_evidence_payload() -> dict[str, Any]:
+    return {
+        "schema_version": 1,
+        "sport": "pickleball",
+        "source": "test_same_run_calibration",
+        "line_observations": [],
+        "keypoint_observations": [],
+        "net_observations": [],
+        "aggregate": {
+            "accepted_line_ids": [],
+            "rejected_line_ids": [],
+            "missing_required_line_ids": [],
+            "missing_required_net_ids": [],
+            "mean_residual_px": 0.0,
+            "p95_residual_px": 0.0,
+            "temporal_stability_px": 0.0,
+            "auto_calibration_ready": False,
+            "reasons": ["test_fixture"],
+        },
+    }
+
+
+def _publish_same_run_calibration(pipeline: process_video.ProcessVideoPipeline) -> None:
+    """bodylocal_colocated_fix_20260728: establish a currently-valid,
+    content-addressed "calibration" stage identity generation for this
+    pipeline's own clip_dir, the same way a real run's _stage_calibration()
+    would -- through the real _run_stage_safely wrapper, so RunIdentityStore
+    actually publishes the `.run_identity/current/calibration.json` pointer
+    that `_local_body_calibration_available()` (and orchestrator.run_pipeline's
+    own `reuse_existing_stage_artifacts` dependency walk) key off of. Callers
+    are expected to have already created clip_dir (e.g. via
+    _clip_dir_with_tracks_only)."""
+
+    pipeline.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(pipeline.clip_dir / "court_calibration.json", _court_calibration_payload())
+    _write_json(pipeline.clip_dir / "court_zones.json", {"schema_version": 1, "zones": {}})
+    _write_json(pipeline.clip_dir / "net_plane.json", {"schema_version": 1, "plane": {}})
+    _write_json(pipeline.clip_dir / "court_line_evidence.json", _minimal_court_line_evidence_payload())
+
+    def _fake_calibration_stage() -> process_video.StageOutcome:
+        return process_video.StageOutcome(
+            stage="calibration",
+            status="ran",
+            wall_seconds=0.0,
+            notes=["test-published same-run calibration"],
+            artifacts=["court_calibration.json", "court_zones.json", "net_plane.json", "court_line_evidence.json"],
+        )
+
+    outcome = pipeline._run_stage_safely("calibration", _fake_calibration_stage)
+    assert outcome.status == "ran", outcome.notes
+    assert pipeline._run_identity_store.current_stage_reusable("calibration")
+
+
 def _clip_dir_with_tracks_and_sam3d_skeleton(options: process_video.PipelineOptions) -> None:
     options.clip_dir.mkdir(parents=True, exist_ok=True)
     _write_json(options.clip_dir / "tracks.json", _tracks_payload())
@@ -5697,6 +5750,8 @@ def test_body_stage_local_dispatch_no_longer_requires_prebody_sam3d_skeleton(
     options.no_gpu = False
     options.body_remote = False
     _clip_dir_with_tracks_only(options)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    _publish_same_run_calibration(pipeline)
 
     def _fake_run_pipeline(**kwargs):  # noqa: ANN001
         assert kwargs["stage"] == "body"
@@ -5704,7 +5759,6 @@ def test_body_stage_local_dispatch_no_longer_requires_prebody_sam3d_skeleton(
         return {"stages": [{"stage": "body", "status": "ran", "notes": []}]}
 
     monkeypatch.setattr(process_video.orchestrator, "run_pipeline", _fake_run_pipeline)
-    pipeline = process_video.ProcessVideoPipeline(options)
 
     outcome = pipeline._stage_body()
 
@@ -5713,8 +5767,214 @@ def test_body_stage_local_dispatch_no_longer_requires_prebody_sam3d_skeleton(
 
 
 # ---------------------------------------------------------------------------
+# body stage: co-located --body-local must consume this run's own completed
+# calibration stage artifacts instead of falling through to
+# orchestrator.ManualCalibrationRunner's capture_sidecar.json requirement
+# (bodylocal_colocated_fix_20260728)
+# ---------------------------------------------------------------------------
+
+
+def test_local_body_stage_reuses_this_runs_own_calibration_without_manual_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """(a) Co-located BODY must reuse this run's own already-completed calibration
+    stage artifacts cleanly through the real orchestrator dependency walk -- never
+    falling through to ManualCalibrationRunner (which hard-requires
+    capture_sidecar.json, absent on bare eval .mp4 clips) even though the default
+    stage registry still names ManualCalibrationRunner for "calibration"."""
+
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.body_remote = False
+    _clip_dir_with_tracks_only(options)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    _publish_same_run_calibration(pipeline)
+
+    class _MarkerError(RuntimeError):
+        pass
+
+    class _RaisingBodyRunner:
+        stage = "body"
+        real_model = False
+        source_mode = "test_marker"
+
+        def __init__(self, **_kwargs: Any) -> None:  # swallow BodyStageRunner's real kwargs
+            pass
+
+        def run(self, context: Any) -> Any:  # noqa: ANN401 - orchestrator.StageContext
+            raise _MarkerError("intentionally not a real BODY model in this test")
+
+    monkeypatch.setattr(process_video.orchestrator, "BodyStageRunner", _RaisingBodyRunner)
+
+    real_run_pipeline = process_video.orchestrator.run_pipeline
+    captured: list[dict[str, Any]] = []
+
+    def _capturing_run_pipeline(**kwargs: Any) -> dict[str, Any]:
+        result = real_run_pipeline(**kwargs)
+        captured.append(result)
+        return result
+
+    monkeypatch.setattr(process_video.orchestrator, "run_pipeline", _capturing_run_pipeline)
+
+    outcome = pipeline._run_body_local()
+
+    # No synthetic sidecar was ever fabricated, and the ManualCalibrationRunner
+    # failure mode never fired -- the only failure surfaced is the test's own
+    # marker from the (fake) real BODY runner actually being reached.
+    assert not (options.clip_dir / "capture_sidecar.json").exists()
+    joined_notes = " ".join(outcome.notes)
+    assert "missing calibration sidecar" not in joined_notes
+    assert "intentionally not a real BODY model" in joined_notes
+
+    [result] = captured
+    stages_by_name = {s["stage"]: s for s in result["stages"]}
+    assert stages_by_name["calibration"]["source_mode"] == "reused_existing_run_artifacts"
+    assert "tracking" in stages_by_name
+    assert stages_by_name["tracking"]["status"] != "fail"
+    # calibration's own identity is still intact -- reuse never mutated or
+    # invalidated it.
+    assert pipeline._run_identity_store.current_stage_reusable("calibration")
+
+
+def test_local_body_stage_blocks_typed_when_no_calibration_exists_for_this_run(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """(b) With neither a completed same-run calibration stage nor an explicit seed,
+    --body-local must fail closed with a typed reason_code and never even attempt
+    orchestrator.run_pipeline (so ManualCalibrationRunner's no-tap re-derivation --
+    and its capture_sidecar.json requirement -- is never reached, and no synthetic
+    sidecar is ever fabricated)."""
+
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.body_remote = False
+    _clip_dir_with_tracks_only(options)  # tracks.json only -- no calibration ever ran
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    def _fail_run_pipeline(**_kwargs: Any) -> None:
+        raise AssertionError(
+            "must never invoke orchestrator.run_pipeline for --body-local without a "
+            "reusable same-run calibration generation"
+        )
+
+    monkeypatch.setattr(process_video.orchestrator, "run_pipeline", _fail_run_pipeline)
+
+    outcome = pipeline._stage_body()
+
+    assert outcome.status == "blocked"
+    assert outcome.metrics.get("reason_code") == "local_body_missing_calibration"
+    assert not (options.clip_dir / "capture_sidecar.json").exists()
+    # ManualCalibrationRunner's own opaque failure phrasing must never surface here --
+    # the typed pre-check short-circuits before that runner is ever reached.
+    assert "missing calibration sidecar" not in " ".join(outcome.notes)
+
+
+def test_local_body_stage_blocks_typed_when_prior_calibration_generation_is_stale(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """(b, variant) A calibration identity generation that no longer matches the
+    files on disk (e.g. a foreign/corrupted court_calibration.json dropped in after
+    publication) is exactly as "genuinely missing" as never having run calibration
+    at all -- still typed-blocked, still no synthetic sidecar."""
+
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.body_remote = False
+    _clip_dir_with_tracks_only(options)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    _publish_same_run_calibration(pipeline)
+
+    # Mutate a file calibration's identity generation still fingerprints, after
+    # publication -- simulates any out-of-band corruption of the frozen set.
+    _write_json(pipeline.clip_dir / "court_zones.json", {"schema_version": 1, "zones": {"tampered": True}})
+    assert not pipeline._run_identity_store.current_stage_reusable("calibration")
+
+    def _fail_run_pipeline(**_kwargs: Any) -> None:
+        raise AssertionError("must never invoke orchestrator.run_pipeline once calibration identity is stale")
+
+    monkeypatch.setattr(process_video.orchestrator, "run_pipeline", _fail_run_pipeline)
+
+    outcome = pipeline._stage_body()
+
+    assert outcome.status == "blocked"
+    assert outcome.metrics.get("reason_code") == "local_body_missing_calibration"
+    assert not (options.clip_dir / "capture_sidecar.json").exists()
+
+
+def test_local_body_calibration_reuse_survives_placements_nvz_court_lock_rewrite(
+    tmp_path: Path,
+) -> None:
+    """Root cause regression guard: threed.racketsport.placement's NVZ/kitchen line
+    posterior persistence (owner directive 2026-07-28) legitimately rewrites
+    court_lock.json in place, in the same run, after calibration publishes its
+    identity. That rewrite alone must never make calibration's same-run identity
+    look stale -- court_lock.json has to stay excluded from calibration's frozen
+    identity set (mirroring tracks.json's existing tracking/player_selection
+    exclusion) or co-located BODY silently regresses to ManualCalibrationRunner
+    again the moment placement runs before it."""
+
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    pipeline = process_video.ProcessVideoPipeline(options)
+    pipeline.clip_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(pipeline.clip_dir / "court_lock.json", {"lock_eligible": True, "source": "multi_frame_point_and_line"})
+    _publish_same_run_calibration(pipeline)
+
+    assert pipeline._run_identity_store.current_stage_reusable("calibration")
+
+    # placement's _persist_nvz_line_posteriors-equivalent: rewrite court_lock.json
+    # in place with new content (a real NVZ posterior payload would be larger/
+    # different-shaped, but any byte change exercises the same fingerprint path).
+    _write_json(pipeline.clip_dir / "court_lock.json", {"lock_eligible": True, "source": "multi_frame_point_and_line", "semantic_line_uncertainty": {"near_nvz": 0.7}})
+
+    assert pipeline._run_identity_store.current_stage_reusable("calibration")
+
+
+# ---------------------------------------------------------------------------
 # body stage: remote calibration seed (Task #46)
 # ---------------------------------------------------------------------------
+
+
+def test_remote_body_dispatch_unaffected_by_the_local_calibration_reuse_guard(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """(c) The local-only calibration-reuse guard (bodylocal_colocated_fix_20260728)
+    must never engage on the remote dispatch path. Remote BODY has its own
+    independent capture_sidecar seeding (_ensure_remote_calibration_seed) and must
+    behave exactly as before this fix, even with zero same-run calibration identity
+    ever published in this clip_dir."""
+
+    video = tmp_path / "clip.mp4"
+    _make_video(video)
+    options = _base_options(tmp_path, video=video, court_corners=None)
+    options.no_gpu = False
+    options.body_remote = True
+    _clip_dir_with_tracks_and_sam3d_skeleton(options)
+    # Deliberately: no calibration stage ever ran in this clip_dir, proving
+    # _local_body_calibration_available() is never even consulted on this path.
+
+    def _fake_dispatch(**kwargs: Any) -> RemoteBodyDispatchResult:
+        clip_dir = Path(kwargs["clip_dir"])
+        _write_json(
+            clip_dir / "smpl_motion.json",
+            {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []},
+        )
+        return RemoteBodyDispatchResult(status="ran", remote_run_dir="remote:/tmp/fake", synced_outputs=["smpl_motion.json"], wall_seconds=12.3, notes=["dispatched to fake host"])
+
+    monkeypatch.setattr(process_video, "dispatch_body_stage", _fake_dispatch)
+    pipeline = process_video.ProcessVideoPipeline(options)
+
+    outcome = pipeline._stage_body()
+
+    assert outcome.status == "ran"
+    assert (options.clip_dir / "smpl_motion.json").is_file()
 
 
 def _external_metric_calibration_with_points() -> dict[str, Any]:
