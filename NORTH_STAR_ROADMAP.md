@@ -1,6 +1,6 @@
 # DinkVision North Star
 
-Last updated: 2026-07-26.
+Last updated: 2026-07-28.
 Status: `VERIFIED=0`.
 
 ## Authority and reading rule
@@ -405,6 +405,25 @@ accuracy campaign, and calibration — not the solver — is the binding floor o
 bounce accuracy. `VERIFIED=0`, `authority_state=review_only`, and
 `measurement_valid=false` remain binding on every row below.
 
+**2026-07-28 overnight amendment (owner full-access directive, evidence under
+`runs/alwayson_fresh_wave_20260728/` and `runs/lanes/*_20260728/`):** rows 1–4
+below are ENGINEERING-COMPLETE on main (sigma anisotropic fix, reprojection
+retirement, calibration k1 fit, sub-frame bounce timing) — their remaining work
+is scoring against independent labels, not building. Row 6 (E-v2) EXECUTED:
+Step-0 gate passed live, machinery proven end-to-end, first above-chance
+HIT-contact signal in program history (PARTIAL, firing-rate gate not cleared,
+no anchors ingested; full-scale run dispatched). Row 7's always-on directive is
+DONE by owner order: post-BODY foot anchoring + planted-foot trajectory
+refinement are default-ON in both presets (`1e4ab2a`), proven on a fresh
+six-clip GPU wave (foot-slide 4/6 pass; wolverine 0.0378 NEW FLAG,
+indoor-diagonal 0.0546 known). NS-06 speed levers measured/landed: warm BODY
+worker (cold 174–222 s → 110 s warm remote command, default-OFF) and the
+`--body-local` co-located silent-degrade bug FIXED (`757da51`) after the
+co-located pipeline measured median 94.6 s (no BODY) vs ~350–500 s split.
+Models are durable: warm snapshot `pickleball-court23-warm-20260728` + S3 store
+`s3://sway-videos/pickleball-models/20260728/`. H100: zero a3 quota in every
+region — owner quota request queued.
+
 | Order | Exact action | Pass gate | Failure/stop rule |
 |---:|---|---|---|
 | 1 | **Fix the uncertainty model (in flight).** Replace the single isotropic `anchor_sigma_for_bounce` scalar with an along-ray sigma that is anisotropic and bias-corrected, and floor every bounce sigma at that clip's own measured calibration plane residual. | Re-scored on the same TT3D protocol: depth-axis coverage inside 0.55-0.80 against the 68.3% a 1σ implies (today 0.29-0.47), residual depth bias \|μ\| ≤0.02 m (today +0.068..0.124 m), image-plane coverage not degraded. | A larger sigma is not a fix; buying depth coverage by over-covering the image plane fails. Do not fit on the 19 owner labels — they are the independent cross-check. |
@@ -445,6 +464,7 @@ evidence is unchanged in its lane directory.
 |---:|---|---|---|
 | 1 | **RECORD A REAL GAME.** One full pickleball game on the product phone, owner-shot | **We own 9.9 seconds of owner-shot pickleball — one static pre-serve clip (`IMG_1605.MOV`), quarantined eval-only (`trainer_forbidden: true`), zero rallies — and nothing else.** Usable owner-shot training footage is zero. Every capability rides on harvested/competitor video; the "39 owned clips" are non-pickleball (content-verified). Owner-shot footage is commercial-clean and provably source-disjoint from both frozen eval clips (which are YouTube-derived) — it unblocks the detector fine-tune, real person labels, and the first honest end-to-end product trace. Nothing else the owner can do is worth more | Every lane keeps scoring on 2 historical-internal clips and calling it scoped; no fresh evidence exists. |
 | 2 | **60-second phone test** — record, stop, confirm the file (signed build STAGED at `runs/lanes/ios_recordpath_20260715/device_build/` + `MORNING_SCRIPT.md`) | The dead record button is fixed but UNPROVEN on device: landscape-tap→recording-starts has never run on real hardware. Also carries the NS-01.2b upload trace and P0-H physical timing proof | Simulator/golden fixtures proceed; physical proof stays blocked and the fix stays unverified. |
+| 2b | **File the GCP a3/H100 quota increase request** (or approve RunPod H100s) | The project has ZERO H100 quota in every region (swept 2026-07-28); the owner's "prioritize H100" speed directive is structurally impossible on GCP until quota exists. A100 spot fleet works but caps throughput | Fleet continues on A100 spot (16 + 64 preemptible quota) with the warm snapshot + S3 model store for zero-setup boots. |
 | 3 | **Bounce labelling round** — ~150 bounce clicks across ≥4 clips in the existing local tool, ~1-2 hours | Bounce is the only ball label kind whose depth is solved rather than estimated, so it is the only route to a falsifiable 3D ball number that does not wait on the gold capture. The 19 pilot labels already caught `arc_weak` output 2.5-24.8 m wrong | Rows 1-4 proceed on TT3D external validation and 19 pilot labels; pickleball 3D accuracy stays unmeasured. |
 | 4 | **Event labeling — DONE for now, do NOT continue.** 102 rows banked 2026-07-19 (60 typed + 42 neg; 61 train / 41 val), `data/event_labels_owner_20260719/` | Advisory 2026-07-20 D4: ask for one 50-row uncertainty round ONLY IF the first fine-tune shows median G_val ≥ +0.10 but stays < 0.80 macro-F1; otherwise stop. Fresh owner-shot footage outranks another old-pack round | Fine-tune proceeds on 102; no more owner label time unless the measured gate fires. |
 | 5 | **Gold capture half-day** — product phone + 2 high-speed phones, surveyed court/net, ChArUco, paddle markers, **≤1ms audio/LED sync** | Independent truth for CAL/BODY/BALL-3D/RKT/contact, and the only thing that unparks paddle. 2026-07-16 research TIGHTENED the spec: the old ≤0.5-frame bar is insufficient for contact GT (8.33ms @60fps = 8-17cm of ball travel); the rig must prove its own held-out error | All affected lanes remain unverified; engineering prepares tooling. |

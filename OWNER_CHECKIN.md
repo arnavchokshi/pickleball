@@ -1,7 +1,43 @@
 # Owner check-in
 
-Updated: 2026-07-23 (late evening). `VERIFIED=0` binding; nothing promoted past the bar yet.
+Updated: 2026-07-28 (morning, after the overnight full-access run). `VERIFIED=0` binding; nothing promoted past the bar yet.
 Single source of owner-facing truth. Full data map: `DATA_INVENTORY.md`. Program: `NORTH_STAR_ROADMAP.md`.
+
+## What happened overnight (2026-07-28) — 11+ commits on main, ~$35-45 GPU
+
+1. **Kitchen gating + foot grounding are now ALWAYS-ON defaults** (both presets,
+   opt-out flags exist) and were **proven on a fresh six-clip GPU wave** at that
+   revision: always-on stages ran on 6/6 clips (one honest typed revert), 4/4
+   players everywhere, conservative kitchen calls everywhere, foot-slide 4/6
+   under the 0.03 m bar. Evidence: `runs/alwayson_fresh_wave_20260728/REPORT.md`.
+   Flags for eyes: wolverine slide 0.0378 (new), indoor-diagonal 0.0546 (known).
+2. **Speed, measured**: default-OFF persistent warm BODY worker landed — BODY
+   remote command 174–222 s cold → **110 s warm** (load+compile → 0). The
+   `--body-local` co-located path's silent-degrade bug (capture-sidecar reuse)
+   is **fixed**; co-located non-BODY pipeline measured at **median 94.6 s**
+   vs ~350–500 s split. Full co-located + integration-demo measurement lane was
+   still closing at writing. `runs/lanes/warm_body_worker_20260728/REPORT.md`,
+   `runs/lanes/bodylocal_colocated_fix_20260728/`.
+3. **EVENT: first above-chance HIT-contact signal in program history.** E-v2's
+   Step-0 data gate passed live; a time-boxed resume+fine-tune produced real
+   signal (precision 0.5 @ thr 0.1 public sweep); firing-rate gate not yet
+   cleared; PARTIAL, no anchors ingested. A **full-scale run is executing now**
+   on night2. Bonus catch: corpus builder silently included a ledger-BLOCKED
+   asset — quarantined + restarted clean. `runs/lanes/ev2_train_20260728/`.
+4. **Models are now durable**: warm-runtime GCP snapshot
+   (`pickleball-court23-warm-20260728`, zero-setup VM boots, proven twice) +
+   sha-verified S3 store `s3://sway-videos/pickleball-models/20260728/`
+   (restore: `scripts/fleet/bootstrap_models_from_s3.sh`).
+5. **The exact events + ball-2D→3D plan** you asked for:
+   `runs/lanes/next_steps_events_ball3d_20260728/PLAN.md`. It also found queue
+   rows 1–4 (sigma, reprojection retirement, k1 fit, sub-frame timing) already
+   landed on main — engineering-complete, awaiting scoring vs labels.
+6. **A watchable evidence pack is being rendered to
+   `~/Desktop/visual_evidence_20260728/`** (per-clip overlay videos + gallery +
+   plain-language scorecard).
+7. **H100s: this GCP project has ZERO H100 quota in every region.** Owner ask:
+   file the a3/H100 quota increase (or approve RunPod H100s). Everything ran on
+   3× spot A100s with auto-poweroff rails.
 
 ## 👉 Your one high-value to-do: capture real pickleball footage (ground truth)
 Nothing can be promoted past `VERIFIED=0` until we have **owner-shot footage with ground truth** — the
