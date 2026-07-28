@@ -31,12 +31,20 @@ Single source of owner-facing truth. Full data map: `DATA_INVENTORY.md`. Program
    fix lane is in flight. A rendered **visual evidence pack is on your Desktop:
    `~/Desktop/visual_evidence_20260728/`** (six overlay videos + gallery +
    scorecard).
-3. **EVENT: first above-chance HIT-contact signal in program history.** E-v2's
-   Step-0 data gate passed live; a time-boxed resume+fine-tune produced real
-   signal (precision 0.5 @ thr 0.1 public sweep); firing-rate gate not yet
-   cleared; PARTIAL, no anchors ingested. A **full-scale run is executing now**
-   on night2. Bonus catch: corpus builder silently included a ledger-BLOCKED
-   asset — quarantined + restarted clean. `runs/lanes/ev2_train_20260728/`.
+3. **EVENT: the trained-event wall is BROKEN on the public domain.** After the
+   overnight time-boxed run produced the first-ever real signal, the day-session
+   continuation (full 12k-step pretrain design, 9,100 more steps) reached
+   **HIT F1@±2 = 0.541 on the 50-clip public sweep (precision 0.923 at high
+   threshold, ~30 ms mean timing error) + the first nonzero BOUNCE TPs ever** —
+   prior program best was 0.363 val. The spec'd 400-step owner fine-tune was
+   properly run and **REJECTED with evidence** (destroys the signal; 61 labels
+   can't carry it). Zero-shot pickleball firing is still zero → **the binding
+   gap is now DOMAIN, not architecture**: next lever is pb.vision in-domain
+   training pixels (usage-cleared). No anchors ingested; checkpoint sha
+   `e11529bc16…` archived to S3. `runs/lanes/ev2_cont_20260728/REPORT.md`.
+   Bonus catch from the overnight leg: corpus builder silently included a
+   ledger-BLOCKED asset — quarantined + restarted clean
+   (`runs/lanes/ev2_train_20260728/`).
 4. **Models are now durable**: warm-runtime GCP snapshot
    (`pickleball-court23-warm-20260728`, zero-setup VM boots, proven twice) +
    sha-verified S3 store `s3://sway-videos/pickleball-models/20260728/`

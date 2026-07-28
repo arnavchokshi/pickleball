@@ -409,10 +409,17 @@ bounce accuracy. `VERIFIED=0`, `authority_state=review_only`, and
 `runs/alwayson_fresh_wave_20260728/` and `runs/lanes/*_20260728/`):** rows 1–4
 below are ENGINEERING-COMPLETE on main (sigma anisotropic fix, reprojection
 retirement, calibration k1 fit, sub-frame bounce timing) — their remaining work
-is scoring against independent labels, not building. Row 6 (E-v2) EXECUTED:
-Step-0 gate passed live, machinery proven end-to-end, first above-chance
-HIT-contact signal in program history (PARTIAL, firing-rate gate not cleared,
-no anchors ingested; full-scale run dispatched). Row 7's always-on directive is
+is scoring against independent labels, not building. Row 6 (E-v2) EXECUTED,
+then completed to the full 12k-step design the same day
+(`runs/lanes/ev2_cont_20260728/`): **HIT F1@±2 0.541 / precision 0.923@0.5 /
+~30 ms mean timing on the 50-clip public sweep + first nonzero BOUNCE TPs —
+the strongest event-head evidence this program has produced; the trained-event
+wall is broken on the PUBLIC domain.** The spec'd 400-step owner fine-tune was
+run and REJECTED with evidence (destroys the signal). Zero-shot pickleball
+firing is zero → the binding gap is now DOMAIN transfer; the named lever is
+pb.vision in-domain training pixels (§2.2 DATA). RD_ONLY license posture on
+the public corpus — research diagnostic, not a product-stack candidate before
+license review. No anchors ingested; firing-rate/typed-anchor gates unchanged. Row 7's always-on directive is
 DONE by owner order: post-BODY foot anchoring + planted-foot trajectory
 refinement are default-ON in both presets (`1e4ab2a`), proven on a fresh
 six-clip GPU wave (foot-slide 4/6 pass; wolverine 0.0378 NEW FLAG,
