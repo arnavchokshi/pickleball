@@ -2293,11 +2293,26 @@ def test_remote_body_command_quotes_hostile_persistent_worker_socket() -> None:
     assert "rm" not in tokens
 
 
-def test_default_warm_worker_socket_path_is_per_clip_and_run_root() -> None:
-    config = _remote_config(repo="/remote/repo", run_root="runs/process_video_body_dispatch")
-    assert rbd.default_warm_worker_socket_path(config, "wolverine") == (
-        "/remote/repo/runs/process_video_body_dispatch/.warm_worker/wolverine.sock"
-    )
+def test_default_warm_worker_socket_path_is_per_clip_and_short() -> None:
+    # Deliberately NOT derived from config.repo/run_root: AF_UNIX socket
+    # paths are capped at 108 bytes on Linux, and a repo-rooted path (e.g.
+    # under /home/arnavchokshi/coldstart_20260706/repo/...) blew that budget
+    # live on GPU during this lane's own verification (measured 117 bytes,
+    # crashed server.bind() with "AF_UNIX path too long").
+    config = _remote_config(repo="/home/arnavchokshi/coldstart_20260706/repo", run_root="runs/process_video_body_dispatch")
+    path = rbd.default_warm_worker_socket_path(config, "wolverine")
+    assert path == "/tmp/racketsport_warm_worker/wolverine.sock"
+    assert len(path.encode("utf-8")) <= 100
+
+
+def test_default_warm_worker_socket_path_stays_under_af_unix_limit_for_long_clip_ids() -> None:
+    config = _remote_config()
+    long_clip = "a" * 200  # still a valid clip id (CLIP_ID_PATTERN allows letters/digits/_/./-)
+    path = rbd.default_warm_worker_socket_path(config, long_clip)
+    assert len(path.encode("utf-8")) <= rbd.WARM_WORKER_SOCKET_MAX_BYTES + len(".sock")
+    assert long_clip not in path  # truncation would silently collide; must hash instead
+    # deterministic: same clip always maps to the same short path
+    assert rbd.default_warm_worker_socket_path(config, long_clip) == path
 
 
 def test_probe_warm_worker_health_reports_absent_when_manifest_missing() -> None:
@@ -2414,6 +2429,114 @@ def test_probe_warm_worker_health_reports_probe_failed_on_nonzero_ssh_exit() -> 
     assert health.healthy is False
 
 
+def test_warm_worker_probe_script_does_not_trip_the_workers_crash_counter(tmp_path: Path) -> None:
+    """Regression test for a real bug found live on GPU during this lane's own verification.
+
+    Sam3DBodyPersistentWorker.serve_forever() reads a client message with an
+    8-byte length-prefix protocol; if a client connects and disconnects
+    without sending a complete message, `_recv_message` raises
+    `ConnectionError`, which the accept loop counts as a crash toward
+    `--max-consecutive-job-crashes` (default 2). An earlier version of
+    `_warm_worker_probe_script` did exactly that (bare connect-then-close),
+    so two health probes (e.g. one `status` call plus --warm-worker's own
+    pre-dispatch probe) were enough to kill a freshly-bootstrapped worker
+    before it ever served a real job. This test reproduces that exact
+    server-side crash-counting mechanism with a minimal same-protocol Unix
+    socket double (not the real GPU-loading Sam3DBodyPersistentWorker, which
+    needs a real checkpoint) and proves the CURRENT probe script survives
+    several consecutive probes without incrementing it, while confirming the
+    double faithfully reproduces the bug for a bare connect-and-close probe.
+    """
+
+    import socket as socket_module
+    import sys as sys_module
+    import threading
+    import uuid
+
+    # pytest's own tmp_path is routinely too long for AF_UNIX (108-byte cap
+    # on Linux, shorter still on macOS) -- exactly the bug this test exists
+    # to guard against, so the double's own socket must live somewhere short.
+    socket_path = f"/tmp/rbd_test_{uuid.uuid4().hex[:12]}.sock"
+    manifest_path = tmp_path / "worker.sock.manifest.json"
+    manifest_path.write_text(json.dumps({"socket_path": socket_path}), encoding="utf-8")
+
+    crash_count = {"n": 0}
+    stop = threading.Event()
+
+    def serve_like_the_real_worker() -> None:
+        server = socket_module.socket(socket_module.AF_UNIX, socket_module.SOCK_STREAM)
+        server.bind(socket_path)
+        server.listen(1)
+        server.settimeout(0.2)
+        while not stop.is_set():
+            try:
+                conn, _addr = server.accept()
+            except socket_module.timeout:
+                continue
+            with conn:
+                try:
+                    header = b""
+                    while len(header) < 8:
+                        chunk = conn.recv(8 - len(header))
+                        if not chunk:
+                            raise ConnectionError("socket closed before the expected message was fully received")
+                        header += chunk
+                    size = int.from_bytes(header, "big")
+                    body = b""
+                    while len(body) < size:
+                        chunk = conn.recv(size - len(body))
+                        if not chunk:
+                            raise ConnectionError("socket closed before the expected message was fully received")
+                        body += chunk
+                    job = json.loads(body.decode("utf-8"))
+                    try:
+                        _ = job["requests_path"]  # mirrors handle_job()'s real KeyError path
+                        response = {"status": "ok"}
+                    except KeyError as exc:
+                        response = {"status": "bad_request", "exit_code": 2, "detail": f"KeyError: {exc}"}
+                except Exception:  # noqa: BLE001 - mirrors serve_forever()'s protocol_error except-block
+                    crash_count["n"] += 1
+                    continue
+                payload = json.dumps(response).encode("utf-8")
+                conn.sendall(len(payload).to_bytes(8, "big") + payload)
+        server.close()
+
+    thread = threading.Thread(target=serve_like_the_real_worker, daemon=True)
+    thread.start()
+    try:
+        import time as time_module
+
+        time_module.sleep(0.1)  # let the server start listening
+
+        # First: confirm the double genuinely reproduces the bug for a bare
+        # connect-and-close probe (sanity-checks the test double itself).
+        bare_sock = socket_module.socket(socket_module.AF_UNIX, socket_module.SOCK_STREAM)
+        bare_sock.settimeout(2.0)
+        bare_sock.connect(socket_path)
+        bare_sock.close()
+        time_module.sleep(0.2)
+        assert crash_count["n"] == 1, "test double did not reproduce the bare-connect crash-count bug"
+
+        crash_count["n"] = 0  # reset before exercising the real fix
+
+        script = rbd._warm_worker_probe_script(manifest_path=str(manifest_path), connect_timeout_s=5.0)
+        for _ in range(3):
+            result = subprocess.run(
+                [sys_module.executable, "-c", script], capture_output=True, text=True, timeout=10
+            )
+            assert result.returncode == 0, result.stderr
+            payload = json.loads(result.stdout.strip().splitlines()[-1])
+            assert payload["manifest_found"] is True
+            assert payload["socket_reachable"] is True, payload.get("socket_error")
+
+        assert crash_count["n"] == 0, "the fixed probe script still trips the worker's crash counter"
+    finally:
+        stop.set()
+        thread.join(timeout=2.0)
+        if os.path.exists(socket_path):
+            os.unlink(socket_path)
+
+
 def test_probe_warm_worker_health_command_embeds_derived_manifest_path() -> None:
     captured: list[list[str]] = []
 
@@ -2426,7 +2549,7 @@ def test_probe_warm_worker_health_command_embeds_derived_manifest_path() -> None
     )
     assert len(captured) == 1
     command = captured[0][-1]
-    assert "/r/runs/x/.warm_worker/wolverine.sock.manifest.json" in command
+    assert "/tmp/racketsport_warm_worker/wolverine.sock.manifest.json" in command
     assert " -c " in command
 
 

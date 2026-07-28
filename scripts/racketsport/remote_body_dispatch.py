@@ -142,6 +142,11 @@ REMOTE_CODE_SYNC_DIR = ".body_code_sync"
 # --warm-worker routing flag with a loud, typed, non-silent fallback to the
 # normal cold path.
 WARM_WORKER_SOCKET_DIRNAME = ".warm_worker"
+# Short and fixed, not derived from config.repo -- see
+# default_warm_worker_socket_path's docstring: AF_UNIX socket paths are
+# capped at 108 bytes on Linux, and repo-rooted paths blow that budget.
+WARM_WORKER_SOCKET_BASE_DIR = f"/tmp/racketsport_{WARM_WORKER_SOCKET_DIRNAME.lstrip('.')}"
+WARM_WORKER_SOCKET_MAX_BYTES = 100
 WARM_WORKER_MANIFEST_SUFFIX = ".manifest.json"
 WARM_WORKER_DISPATCH_ARTIFACT = "warm_worker_dispatch.json"
 WARM_WORKER_STATUS_HEALTHY = "healthy"
@@ -1141,15 +1146,30 @@ def check_remote_layout(config: RemoteConfig, *, run: RunFn = _run) -> None:
 def default_warm_worker_socket_path(config: RemoteConfig, clip: str) -> str:
     """Convention shared by body_warm_worker.py start/status/stop and dispatch_body_stage.
 
-    One socket per clip under the dispatch run_root: the persistent worker's
-    fingerprint check only ever claims correctness for repeat jobs against the
-    exact clip/config it was bootstrapped with (body_overhead_20260712), so a
-    per-clip path keeps "which worker serves which clip" unambiguous instead
-    of relying on operators to track it out of band.
+    One socket per clip: the persistent worker's fingerprint check only ever
+    claims correctness for repeat jobs against the exact clip/config it was
+    bootstrapped with (body_overhead_20260712), so a per-clip path keeps
+    "which worker serves which clip" unambiguous instead of relying on
+    operators to track it out of band.
+
+    Deliberately rooted at a short, fixed ``/tmp`` path -- NOT under
+    ``config.repo``/``config.run_root`` -- because ``AF_UNIX`` socket paths
+    are capped at 108 bytes on Linux (``sizeof(sockaddr_un.sun_path)``); a
+    path built from the real coldstart repo root plus run_root plus clip
+    routinely exceeds that (measured live: 117 bytes on
+    ``coldstart_20260706``, which crashed ``server.bind()`` with ``OSError:
+    AF_UNIX path too long`` during this lane's own GPU verification). If a
+    clip id is itself long enough that even the short base would overflow,
+    fall back to a fixed-length hash of the clip id rather than truncating
+    it silently into a colliding prefix.
     """
 
     clip = _validate_clip_id(clip)
-    return f"{config.repo}/{config.run_root}/{WARM_WORKER_SOCKET_DIRNAME}/{clip}.sock"
+    candidate = f"{WARM_WORKER_SOCKET_BASE_DIR}/{clip}.sock"
+    if len(candidate.encode("utf-8")) > WARM_WORKER_SOCKET_MAX_BYTES:
+        short_clip = hashlib.sha256(clip.encode("utf-8")).hexdigest()[:16]
+        candidate = f"{WARM_WORKER_SOCKET_BASE_DIR}/{short_clip}.sock"
+    return candidate
 
 
 def _warm_worker_manifest_path(socket_path: str) -> str:
@@ -1186,6 +1206,27 @@ def _warm_worker_probe_script(*, manifest_path: str, connect_timeout_s: float) -
     -- failures are reported *in* the JSON (manifest_error/socket_error), not
     via process exit code, so a genuinely-unreachable host is the only thing
     that surfaces as an SSH-level failure to the caller.
+
+    GPU-verified bug fix (measured live on night1 during this lane's own
+    verification): an earlier version of this probe did a bare
+    connect-then-immediately-disconnect. From
+    Sam3DBodyPersistentWorker.serve_forever()'s side, that is
+    indistinguishable from a client dying mid-protocol: `_recv_message`
+    raises `ConnectionError("socket closed before the expected message was
+    fully received")`, which the accept loop's except-block counts as a
+    crash toward `--max-consecutive-job-crashes` (default 2). Two health
+    probes -- e.g. one `body_warm_worker.py status` call plus --warm-worker's
+    own pre-dispatch probe -- were enough to hit that limit and kill the
+    worker before it ever served a single real job. This version instead
+    speaks the worker's real wire protocol (an 8-byte big-endian length
+    prefix followed by a UTF-8 JSON body, matching
+    sam3dbody_persistent_worker.py's `_send_message`/`_recv_message`) and
+    sends a message that is well-formed at the *transport* level but
+    deliberately missing `run_batch`'s required keys. `handle_job()` catches
+    that as a `KeyError` inside its own try/except and replies
+    `{"status": "bad_request", ...}` -- a clean response, never an exception
+    -- so the crash counter is never touched and a real reply proves the
+    worker's accept/recv/send loop is genuinely alive.
     """
 
     return (
@@ -1209,6 +1250,22 @@ def _warm_worker_probe_script(*, manifest_path: str, connect_timeout_s: float) -
         "    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)\n"
         "    sock.settimeout(connect_timeout_s)\n"
         "    sock.connect(socket_path)\n"
+        "    body = json.dumps({'op': 'health_check'}).encode('utf-8')\n"
+        "    sock.sendall(len(body).to_bytes(8, 'big') + body)\n"
+        "    resp_header = b''\n"
+        "    while len(resp_header) < 8:\n"
+        "        chunk = sock.recv(8 - len(resp_header))\n"
+        "        if not chunk:\n"
+        "            raise ConnectionError('worker closed the connection before a health-check response header')\n"
+        "        resp_header += chunk\n"
+        "    resp_size = int.from_bytes(resp_header, 'big')\n"
+        "    resp_body = b''\n"
+        "    while len(resp_body) < resp_size:\n"
+        "        chunk = sock.recv(resp_size - len(resp_body))\n"
+        "        if not chunk:\n"
+        "            raise ConnectionError('worker closed the connection before a full health-check response body')\n"
+        "        resp_body += chunk\n"
+        "    json.loads(resp_body.decode('utf-8'))\n"
         "    sock.close()\n"
         "    reachable = True\n"
         "except Exception as exc:\n"

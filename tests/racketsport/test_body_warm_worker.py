@@ -327,8 +327,8 @@ def test_start_worker_happy_path_launches_under_gpu_lock_and_writes_manifest(
             return _completed(0, stdout=json.dumps({"checkpoint_dir": "/ckpt/fast_sam_3d_body_dinov3"}))
         if "manifest_path = " in text:
             return _completed(0, stdout=json.dumps({"manifest_found": False}))
-        if text.startswith("ls -1 "):
-            return _completed(0, stdout=f"{fake_cold_result.remote_run_dir}/batch_requests-xyz.json\n")
+        if text.startswith("find "):
+            return _completed(0, stdout=f"{fake_cold_result.remote_run_dir}/fast_sam_subprocess/batch_requests-xyz.json\n")
         if text.startswith("mkdir -p"):
             return _completed(0)
         if "nohup env" in text:
@@ -369,7 +369,7 @@ def test_start_worker_happy_path_launches_under_gpu_lock_and_writes_manifest(
     assert manifest["clip"] == "wolverine"
     assert manifest["pid"] == 44444
     assert manifest["checkpoint_dir"] == "/ckpt/fast_sam_3d_body_dinov3"
-    assert manifest["bootstrap_requests_path"] == f"{fake_cold_result.remote_run_dir}/batch_requests-xyz.json"
+    assert manifest["bootstrap_requests_path"] == f"{fake_cold_result.remote_run_dir}/fast_sam_subprocess/batch_requests-xyz.json"
     assert manifest["bootstrap_remote_run_dir"] == fake_cold_result.remote_run_dir
     assert manifest["started_under_gpu_lock"] is True
     assert manifest["fingerprint"] == "fp123"

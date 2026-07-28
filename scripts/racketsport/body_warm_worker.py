@@ -254,14 +254,16 @@ def _resolve_checkpoint_dir(
 def _find_bootstrap_requests(config: rbd.RemoteConfig, remote_run_dir: str, *, run: RunFn) -> str:
     """Locate the batch_requests-*.json a just-completed cold dispatch produced.
 
-    threed.racketsport.orchestrator writes exactly one
-    ``batch_requests-<uuid>.json`` per BODY subprocess invocation directly
-    under the run's work_dir (== remote_run_dir here); this is that file's
-    real, on-disk request payload -- not a synthetic stand-in -- so the
-    persistent worker's fingerprint will genuinely match later same-clip jobs.
+    ``FastSam3DBodySubprocessRuntime`` writes exactly one
+    ``batch_requests-<uuid>.json`` per BODY subprocess invocation under its
+    own ``work_dir`` -- ``<remote_run_dir>/fast_sam_subprocess/``, not
+    ``remote_run_dir`` itself -- so this searches recursively rather than
+    assuming a fixed depth. This is that file's real, on-disk request
+    payload -- not a synthetic stand-in -- so the persistent worker's
+    fingerprint will genuinely match later same-clip jobs.
     """
 
-    command = f"ls -1 {shlex.quote(remote_run_dir)}/batch_requests-*.json 2>/dev/null | sort | tail -n 1"
+    command = f"find {shlex.quote(remote_run_dir)} -name 'batch_requests-*.json' 2>/dev/null | sort | tail -n 1"
     result = run([*config.ssh_base(), command], config.connect_timeout_s + 20)
     stdout = (result.stdout or "").strip()
     path = stdout.splitlines()[-1].strip() if stdout else ""
