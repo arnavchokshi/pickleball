@@ -339,6 +339,25 @@ def _poll_for_ready(
 def start_worker(
     args: argparse.Namespace, *, run: RunFn = rbd._run, sleep: SleepFn = time.sleep
 ) -> dict[str, Any]:
+    # GPU-verified bug fix (measured live on night1 during this lane's own
+    # verification, in a repo shared with other concurrent lanes/commits):
+    # this must be captured ONCE here, before the (multi-minute) cold
+    # bootstrap dispatch below, not re-read fresh right before writing the
+    # manifest at the end of this function. dispatch_body_stage's own
+    # version-stamp check uses local HEAD as of when *it* runs (shortly after
+    # this point) to build the version_stamp.json actually uploaded and
+    # verified against the remote's on-disk files -- that is the HEAD this
+    # worker's bootstrap genuinely reflects. Re-reading HEAD again at the end
+    # of this function, after the cold dispatch, checkpoint resolution, serve
+    # launch, and ready-poll have all completed, can pick up commits from a
+    # concurrent lane sharing this working tree that landed *during* that
+    # multi-minute window -- producing a manifest whose git_head_sha matches
+    # "current local HEAD" but not what was actually verified/deployed to the
+    # remote, which then makes every later --warm-worker dispatch fail its
+    # own fresh version-stamp check even though probe_warm_worker_health
+    # reports "healthy" (it only compares the manifest's sha to current local
+    # HEAD, not to what is physically on the remote disk).
+    local_git_head_sha = rbd._git_head_sha(rbd.ROOT)
     clip = rbd._validate_clip_id(args.clip)
     config = _remote_config_from_common_args(
         args,
@@ -499,7 +518,6 @@ def start_worker(
         sleep=sleep,
     )
 
-    local_git_head_sha = rbd._git_head_sha(rbd.ROOT)
     manifest = {
         "schema_version": 1,
         "artifact_type": WARM_WORKER_MANIFEST_ARTIFACT_TYPE,
