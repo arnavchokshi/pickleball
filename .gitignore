@@ -75,3 +75,9 @@ eval_clips/ball/pbvision_11min_20260713/
 
 # External validation data (TT3D) - NO LICENSE upstream, internal validation only, never commit
 data/external/
+!runs/lanes/bodylocal_colocated_fix_20260728/
+runs/lanes/bodylocal_colocated_fix_20260728/*
+!runs/lanes/bodylocal_colocated_fix_20260728/REPORT.md
+!runs/lanes/wolverine_slide_diag_20260728/
+runs/lanes/wolverine_slide_diag_20260728/*
+!runs/lanes/wolverine_slide_diag_20260728/REPORT.md

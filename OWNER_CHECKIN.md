@@ -13,11 +13,24 @@ Single source of owner-facing truth. Full data map: `DATA_INVENTORY.md`. Program
    Flags for eyes: wolverine slide 0.0378 (new), indoor-diagonal 0.0546 (known).
 2. **Speed, measured**: default-OFF persistent warm BODY worker landed — BODY
    remote command 174–222 s cold → **110 s warm** (load+compile → 0). The
-   `--body-local` co-located path's silent-degrade bug (capture-sidecar reuse)
-   is **fixed**; co-located non-BODY pipeline measured at **median 94.6 s**
-   vs ~350–500 s split. Full co-located + integration-demo measurement lane was
-   still closing at writing. `runs/lanes/warm_body_worker_20260728/REPORT.md`,
-   `runs/lanes/bodylocal_colocated_fix_20260728/`.
+   `--body-local` co-located silent-degrade bug is **fixed** (`757da51`; root
+   cause was tonight's NVZ persistence rewriting `court_lock.json` after
+   identity fingerprinting) and the **complete co-located pipeline with real
+   BODY measured 266.5 s** on wolverine (−24% vs the 352.5 s baseline median;
+   all always-on stages ran; foot-slide 0.0158 m PASS). The "everything
+   together" integration demo (full preset + ball + ball-aware meshes +
+   one_world) ran end-to-end in 987.3 s with five honest typed degrades, all
+   pre-existing product behaviors. `runs/lanes/warm_body_worker_20260728/REPORT.md`,
+   `runs/lanes/bodylocal_colocated_fix_20260728/REPORT.md`. Known follow-up:
+   court23's Exclusive_Process GPU mode blocks co-located BODY (CUDA busy) —
+   use Default mode (`nvidia-smi -c 0`) for co-located runs.
+   Post-wave: the wolverine foot-slide 0.0378 flag was **diagnosed as NOT a
+   regression** (one spurious 4-frame plant phase from sub-cm BODY run-to-run
+   noise at an unchanged hysteresis threshold; 42/43 phases at ~1e-15 m in both
+   runs — `runs/lanes/wolverine_slide_diag_20260728/REPORT.md`); a plausibility
+   fix lane is in flight. A rendered **visual evidence pack is on your Desktop:
+   `~/Desktop/visual_evidence_20260728/`** (six overlay videos + gallery +
+   scorecard).
 3. **EVENT: first above-chance HIT-contact signal in program history.** E-v2's
    Step-0 data gate passed live; a time-boxed resume+fine-tune produced real
    signal (precision 0.5 @ thr 0.1 public sweep); firing-rate gate not yet
