@@ -1099,3 +1099,82 @@ memory, no lock heartbeat) before closing. `VERIFIED=0` throughout — this is
 an engineering speed measurement, not an accuracy promotion. Commits
 `f7849c3`, `5feab19`, `d683d0e2`, `b60df1f`, plus this closing evidence
 commit. Lane closed.
+
+## 2026-07-28 — `visual_evidence_20260728` CLAIMED AND CLOSED (owner evidence-pack lane)
+
+Scope: build a Desktop evidence pack the owner can open cold and watch, proving the
+pipeline works, from last night's `alwayson_fresh_wave_20260728` six-clip wave. Fence:
+`~/Desktop/visual_evidence_20260728/` (Desktop pack, not committed) +
+`runs/lanes/visual_evidence_20260728/` (this lane's repo dir). Read-only on all run
+artifacts under `runs/`; no pipeline code, configs, or other lanes' dirs touched.
+
+**Built:** six rendered overlay MP4s (one per fresh-wave clip: wolverine_indoor_diagonal,
+indoor_doubles_baseline, outdoor_high_baseline, indoor_straight_replacement,
+indoor_diagonal_replacement, outdoor_pbvision_replacement), each showing on the real
+source frames: solved court lines + NVZ/kitchen zone shading (projected through each
+clip's own `court_calibration.json` homography), a 70-joint per-player skeleton with
+bone connectors, track box + player ID, a footpoint marker, a per-frame kitchen
+decision tag (`placement_refined.json` `kitchen_decision.court_contact_state`), and a
+top-down court minimap inset built from `tracks.json` `world_xy`. Plus `index.html`
+(double-click gallery, relative paths, headline numbers + honest caveats per clip),
+`RESULTS.md` (owner-facing scorecard), and `provenance.json` (run dirs + commit SHAs
++ verification evidence).
+
+**Reused existing tooling** for the skeleton layer
+(`threed.racketsport.skeleton_video_overlay.render_skeleton_overlay`) rather than
+reimplementing joint projection. Found it silently drew 0 bone connectors on this
+wave's `skeleton3d.json` files because their `joint_names` are generic
+`sam3dbody_joint_###` (MHR70 raw indices), not the semantic names
+(`left_shoulder`, etc.) `bone_pairs_for_joint_names` matches on. Fixed by rendering
+against a lane-local symlinked copy of each `run_dir` with `joint_names` remapped via
+the already-defined `MHR70_JOINT_NAMES` constant
+(`threed/racketsport/external_gt_body_prediction_schema.py`) — the real run artifacts
+were never modified, only read. 14/18 bone pairs now draw per player per clip. Court
+lines, NVZ shading, track boxes, kitchen tags, and the minimap were hand-rolled (no
+existing helper combined all of those layers); renderer is
+`runs/lanes/visual_evidence_20260728/render_overlay.py`, committed.
+
+**Verified:** ffprobe frame count/resolution/duration for all six rendered MP4s
+matched their `source.mp4` video streams exactly (e.g. 444/444, 600/600, 300/300
+frames). Extracted and visually inspected 3 frames across 3 different clips
+(wolverine f120, indoor_doubles f150, outdoor_high f300); confirmed all overlay
+layers visibly drawn and geometrically correct against each clip's distinct camera
+framing. `index.html` uses only relative `src` paths.
+
+**Stretch/co-located fix lane status:** `bodylocal_colocated_fix_20260728` had not
+written a `REPORT.md` or produced full-preset integration-demo artifacts by the time
+this pack was assembled — only BODY-local debugging attempts on the wolverine clip
+(`attempt1_cuda_busy`, then `night1_success`). Featured what exists (the
+`night1_success` timing: 266.5s total wall with real co-located BODY inference, 1,136
+crops scored) in `RESULTS.md` §3 and marked the rest **in flight**, per dispatch
+instruction, rather than waiting on it or fabricating it.
+
+**Shared-path note:** `fullgame_demo_20260728` (row below) also fences a subdirectory
+of this same Desktop pack (`~/Desktop/visual_evidence_20260728/fullgame/`). No
+conflict observed — that subdirectory did not exist at close time, and this lane
+never wrote there.
+
+Nothing promoted; `VERIFIED=0` throughout, this is demo/review evidence only.
+Committed renderer script + `RESULTS.md` copy to
+`runs/lanes/visual_evidence_20260728/`. Lane closed.
+
+## 2026-07-28T16:41Z — `fullgame_demo_20260728` CLAIMED (in progress)
+
+Full-game first-ever attempt: pb.vision 11-min demo video (`data/pbvision_11min_20260713/source_video.mp4`,
+697.4s, 21 frames left aside — 30fps), co-located entirely on `pickleball-gpu-court23`
+(104.198.129.228). Verified GPU idle (0 MiB, 0%) before dispatch. Synced VM repo to
+local main HEAD `c4c892ea841b8153a0b79b4acfb26e1be7389797` via `--sync-remote-code`
+(remote was at `757da515a3`, the body-local co-located fix commit; version stamp
+verified true). Dispatched `process_video.py --pipeline-preset court_skeletons
+--body-local --force --max-players 4 --clip pbvision_11min_20260713_demo_seed`
+under `nohup setsid` wrapped in `scripts/gpu-eval-run.sh` (GPU_LOCK_TIMEOUT_S=3600)
+at 16:40:52Z, using the promoted owner-reviewed calibration seed
+(`runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_metric15pt_promoted.json`,
+metric_confidence=med, superseding the raw metric15pt seed per
+`court_calibration_selected.json`). VM-side run dir:
+`/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/`. Fence: this lane
+dir + that VM path + `~/Desktop/visual_evidence_20260728/fullgame/` (or a README
+pointer there) only. **Do not dispatch other jobs to court23 until this lane closes
+or this row is removed/updated** — expected multi-hour wall time, polling every
+~15min. No code/config changes made; `configs/ssh/a100_known_hosts` dirty-tracked
+diff pre-existing from another lane, left untouched.
