@@ -1421,3 +1421,29 @@ patch itself. Next session: do not re-dispatch this registration until that ledg
   If work must continue after a stop, rearm with
   `gcloud compute instances start pickleball-gpu-court23 --zone=us-central1-f --quiet`,
   refresh the recycled IP/host key, and re-run the remote code-sync/version gate.
+
+## 2026-07-28T01:2x PDT — overnight fleet warm-up: 3×A100 up, warm snapshot + S3 model store
+
+- Owner directive (overnight session): full-authority night run — refine/always-on the
+  court+skeleton path, speed work, fresh timed runs, E-v2 dispatch if its Step-0 gate passes.
+  H100 was requested as priority but the project has ZERO H100 (a3) quota in every checked
+  region (us-central1/east1/east4/east5/west1/west4, europe-west4, asia-southeast1);
+  A100 fleet is the executable path. Owner ask queued: request a3/H100 quota.
+- `pickleball-gpu-court23` STARTED (us-central1-f, A100-40GB SPOT), external IP
+  `104.198.129.228`, host key re-pinned, poweroff rail armed for 2026-07-28T20:10:26Z.
+  Remote repo at `d9dbac92` pre-sync; code-sync to current main happens before dispatch.
+- Warm boot disk snapshotted ONLINE as **`pickleball-court23-warm-20260728`** (300 GB) —
+  the new fast-boot source of truth for the prepared BODY runtime.
+- **`pickleball-gpu-night1`** (`35.253.12.232`) and **`pickleball-gpu-night2`**
+  (`35.188.46.15`) CREATED from that snapshot: a2-highgpu-1g A100-40GB SPOT,
+  us-central1-f, host keys pinned, rails armed for 2026-07-28T20:21Z. Both verified:
+  `nvidia-smi` A100-40GB, coldstart runtime present — zero-setup boots, proving the
+  snapshot path works.
+- **S3 durable model store created**: `s3://sway-videos/pickleball-models/20260728/`
+  (9 artifacts incl. the 2.0 GiB SAM-3D-Body ckpt + 664 MiB MHR asset uploaded from the
+  VM via presigned PUT — no AWS creds on VMs). Inventory + shas:
+  `scripts/fleet/MODEL_STORE.md`; restore: `scripts/fleet/bootstrap_models_from_s3.sh`.
+- Spend: 3 × ~$1.93/hr A100 SPOT while running (~$5.8/hr fleet), every VM railed ≤12h;
+  worst-case cap ~$70 if nothing is stopped early. Teardown: stop night1/night2 when the
+  run wave completes (disks auto-delete on instance delete; keep until artifacts pulled),
+  stop court23 preserving its disk.
