@@ -86,3 +86,9 @@ runs/lanes/plant_phase_plausibility_20260728/*
 !runs/lanes/plant_phase_plausibility_20260728/REPORT.md
 !runs/lanes/plant_phase_plausibility_20260728/recompute_slide_metric.py
 !runs/lanes/plant_phase_plausibility_20260728/recompute_results.json
+!runs/lanes/ev2_cont_20260728/
+runs/lanes/ev2_cont_20260728/*
+!runs/lanes/ev2_cont_20260728/REPORT.md
+!runs/lanes/ev2_cont_20260728/eval_pretrain_public_thresh_0.1.json
+!runs/lanes/ev2_cont_20260728/eval_pretrain_public_thresh_0.5.json
+!runs/lanes/ev2_cont_20260728/finetune_result.json

@@ -1,0 +1,989 @@
+{
+  "artifact_type": "event_head_eval_metrics",
+  "checkpoint": "runs/lanes/ev2_train_20260728/train_resume2/best_event_head.pt",
+  "checkpoint_train_window_frames": 64,
+  "clip_count": 50,
+  "clip_summaries": [
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.3488486707210541,
+      "max_probability_by_class": {
+        "BOUNCE": 0.27363166213035583,
+        "HIT": 0.3488486707210541,
+        "background": 0.9306050539016724
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.4422741234302521,
+      "max_probability_by_class": {
+        "BOUNCE": 0.24170148372650146,
+        "HIT": 0.4422741234302521,
+        "background": 0.9317131042480469
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.19727890193462372,
+      "max_probability_by_class": {
+        "BOUNCE": 0.1967865377664566,
+        "HIT": 0.19727890193462372,
+        "background": 0.9909753203392029
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.8362991213798523,
+      "max_probability_by_class": {
+        "BOUNCE": 0.4099799394607544,
+        "HIT": 0.8362991213798523,
+        "background": 0.9862235188484192
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.7473746538162231,
+      "max_probability_by_class": {
+        "BOUNCE": 0.3728501796722412,
+        "HIT": 0.7473746538162231,
+        "background": 0.97845858335495
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.5555106997489929,
+      "max_probability_by_class": {
+        "BOUNCE": 0.3102267384529114,
+        "HIT": 0.5555106997489929,
+        "background": 0.9626765847206116
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.5354540348052979,
+      "max_probability_by_class": {
+        "BOUNCE": 0.365813285112381,
+        "HIT": 0.5354540348052979,
+        "background": 0.9650782942771912
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.7043145895004272,
+      "max_probability_by_class": {
+        "BOUNCE": 0.7043145895004272,
+        "HIT": 0.5538603067398071,
+        "background": 0.9999665021896362
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 2,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.42170730233192444,
+      "max_probability_by_class": {
+        "BOUNCE": 0.33353012800216675,
+        "HIT": 0.42170730233192444,
+        "background": 0.9322322607040405
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.4147639870643616,
+      "max_probability_by_class": {
+        "BOUNCE": 0.4147639870643616,
+        "HIT": 0.3533386290073395,
+        "background": 0.9698382019996643
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.7077084183692932,
+      "max_probability_by_class": {
+        "BOUNCE": 0.7077084183692932,
+        "HIT": 0.4897630512714386,
+        "background": 0.9999878406524658
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.49380597472190857,
+      "max_probability_by_class": {
+        "BOUNCE": 0.3591387867927551,
+        "HIT": 0.49380597472190857,
+        "background": 0.9591160416603088
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.4732379615306854,
+      "max_probability_by_class": {
+        "BOUNCE": 0.37078484892845154,
+        "HIT": 0.4732379615306854,
+        "background": 0.9526442289352417
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.260911226272583,
+      "max_probability_by_class": {
+        "BOUNCE": 0.2480507493019104,
+        "HIT": 0.260911226272583,
+        "background": 0.9661917090415955
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.25248077511787415,
+      "max_probability_by_class": {
+        "BOUNCE": 0.21662160754203796,
+        "HIT": 0.25248077511787415,
+        "background": 0.9268487691879272
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.6051054000854492,
+      "max_probability_by_class": {
+        "BOUNCE": 0.6051054000854492,
+        "HIT": 0.3820262551307678,
+        "background": 0.9999921321868896
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.3092561364173889,
+      "max_probability_by_class": {
+        "BOUNCE": 0.194101482629776,
+        "HIT": 0.3092561364173889,
+        "background": 0.9345613718032837
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.49218684434890747,
+      "max_probability_by_class": {
+        "BOUNCE": 0.30936509370803833,
+        "HIT": 0.49218684434890747,
+        "background": 0.9102870225906372
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.837339460849762,
+      "max_probability_by_class": {
+        "BOUNCE": 0.3844859302043915,
+        "HIT": 0.837339460849762,
+        "background": 0.9866674542427063
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.2655179500579834,
+      "max_probability_by_class": {
+        "BOUNCE": 0.19187496602535248,
+        "HIT": 0.2655179500579834,
+        "background": 0.9369513392448425
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.05587571859359741,
+      "max_probability_by_class": {
+        "BOUNCE": 0.012093800120055676,
+        "HIT": 0.05587571859359741,
+        "background": 0.9999887943267822
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.38044461607933044,
+      "max_probability_by_class": {
+        "BOUNCE": 0.35630184412002563,
+        "HIT": 0.38044461607933044,
+        "background": 0.9490863680839539
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.5781352519989014,
+      "max_probability_by_class": {
+        "BOUNCE": 0.45936787128448486,
+        "HIT": 0.5781352519989014,
+        "background": 0.945451021194458
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.32455891370773315,
+      "max_probability_by_class": {
+        "BOUNCE": 0.24064524471759796,
+        "HIT": 0.32455891370773315,
+        "background": 0.9480673670768738
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.7182132005691528,
+      "max_probability_by_class": {
+        "BOUNCE": 0.2852458357810974,
+        "HIT": 0.7182132005691528,
+        "background": 0.9687226414680481
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.22361940145492554,
+      "max_probability_by_class": {
+        "BOUNCE": 0.08008020371198654,
+        "HIT": 0.22361940145492554,
+        "background": 0.9866389036178589
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.2728959619998932,
+      "max_probability_by_class": {
+        "BOUNCE": 0.2057851254940033,
+        "HIT": 0.2728959619998932,
+        "background": 0.9165436625480652
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.4818916916847229,
+      "max_probability_by_class": {
+        "BOUNCE": 0.4818916916847229,
+        "HIT": 0.2124253660440445,
+        "background": 0.9999898672103882
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.06525200605392456,
+      "max_probability_by_class": {
+        "BOUNCE": 0.016221582889556885,
+        "HIT": 0.06525200605392456,
+        "background": 0.9999948740005493
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.29860398173332214,
+      "max_probability_by_class": {
+        "BOUNCE": 0.266691654920578,
+        "HIT": 0.29860398173332214,
+        "background": 0.9307480454444885
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.42570778727531433,
+      "max_probability_by_class": {
+        "BOUNCE": 0.3874915838241577,
+        "HIT": 0.42570778727531433,
+        "background": 0.97060227394104
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.1714743971824646,
+      "max_probability_by_class": {
+        "BOUNCE": 0.16557727754116058,
+        "HIT": 0.1714743971824646,
+        "background": 0.9367704391479492
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.22471436858177185,
+      "max_probability_by_class": {
+        "BOUNCE": 0.211136132478714,
+        "HIT": 0.22471436858177185,
+        "background": 0.9206112623214722
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.38230136036872864,
+      "max_probability_by_class": {
+        "BOUNCE": 0.26580601930618286,
+        "HIT": 0.38230136036872864,
+        "background": 0.9199844598770142
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.4234340190887451,
+      "max_probability_by_class": {
+        "BOUNCE": 0.4234340190887451,
+        "HIT": 0.3759422302246094,
+        "background": 0.9999796152114868
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.32921528816223145,
+      "max_probability_by_class": {
+        "BOUNCE": 0.20537987351417542,
+        "HIT": 0.32921528816223145,
+        "background": 0.935355544090271
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.5163642764091492,
+      "max_probability_by_class": {
+        "BOUNCE": 0.458652138710022,
+        "HIT": 0.5163642764091492,
+        "background": 0.9650839567184448
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.3142455220222473,
+      "max_probability_by_class": {
+        "BOUNCE": 0.23699356615543365,
+        "HIT": 0.3142455220222473,
+        "background": 0.9540404677391052
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.14038853347301483,
+      "max_probability_by_class": {
+        "BOUNCE": 0.11328291893005371,
+        "HIT": 0.14038853347301483,
+        "background": 0.9544990062713623
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.6363959908485413,
+      "max_probability_by_class": {
+        "BOUNCE": 0.6363959908485413,
+        "HIT": 0.4435783326625824,
+        "background": 0.9999960660934448
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.2475796341896057,
+      "max_probability_by_class": {
+        "BOUNCE": 0.17002403736114502,
+        "HIT": 0.2475796341896057,
+        "background": 0.938926100730896
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.21619777381420135,
+      "max_probability_by_class": {
+        "BOUNCE": 0.20329150557518005,
+        "HIT": 0.21619777381420135,
+        "background": 0.9339118003845215
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.2696484923362732,
+      "max_probability_by_class": {
+        "BOUNCE": 0.23783208429813385,
+        "HIT": 0.2696484923362732,
+        "background": 0.9072623252868652
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.8374074697494507,
+      "max_probability_by_class": {
+        "BOUNCE": 0.28222906589508057,
+        "HIT": 0.8374074697494507,
+        "background": 0.9809855818748474
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.2983778119087219,
+      "max_probability_by_class": {
+        "BOUNCE": 0.17805345356464386,
+        "HIT": 0.2983778119087219,
+        "background": 0.9429328441619873
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 1,
+      "max_positive_class_probability": 0.5036621689796448,
+      "max_probability_by_class": {
+        "BOUNCE": 0.2897612452507019,
+        "HIT": 0.5036621689796448,
+        "background": 0.9624366164207458
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.7056940197944641,
+      "max_probability_by_class": {
+        "BOUNCE": 0.7056940197944641,
+        "HIT": 0.4886127710342407,
+        "background": 0.999988317489624
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 2,
+      "max_positive_class_probability": 0.25142306089401245,
+      "max_probability_by_class": {
+        "BOUNCE": 0.23956990242004395,
+        "HIT": 0.25142306089401245,
+        "background": 0.9306796193122864
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.6847369074821472,
+      "max_probability_by_class": {
+        "BOUNCE": 0.38890719413757324,
+        "HIT": 0.6847369074821472,
+        "background": 0.9777370095252991
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 2,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    },
+    {
+      "fps": 29.97002997002997,
+      "gt_count": 3,
+      "max_positive_class_probability": 0.37035343050956726,
+      "max_probability_by_class": {
+        "BOUNCE": 0.26583433151245117,
+        "HIT": 0.37035343050956726,
+        "background": 0.9287142753601074
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0,
+      "source": "jhong93_spot",
+      "tolerance_ms": {
+        "1": 33.36666666666667,
+        "2": 66.73333333333333
+      },
+      "video": "/home/arnavchokshi/coldstart_20260706/repo/data/event_public_20260713/jhong93_spot/videos_pilot/usopen_2020_womens_quarterfinal_osaka_rogers.mp4"
+    }
+  ],
+  "mode": "public_heldout_slice",
+  "protocol_reference": "third_party/spot@edec4201 util/eval.py; type-aware extension",
+  "schema_version": 1,
+  "sources": [
+    "jhong93_spot"
+  ],
+  "threshold": 0.5,
+  "tolerance_sweep": [
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.07407407407407406,
+          "fn": 47,
+          "fp": 3,
+          "mean_absolute_timing_error_ms": 33.36666666666667,
+          "precision": 0.4,
+          "recall": 0.04081632653061224,
+          "tp": 2
+        },
+        "HIT": {
+          "f1": 0.22448979591836737,
+          "fn": 74,
+          "fp": 2,
+          "mean_absolute_timing_error_ms": 24.266666666666666,
+          "precision": 0.8461538461538461,
+          "recall": 0.12941176470588237,
+          "tp": 11
+        }
+      },
+      "tolerance_frames": 1
+    },
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.1111111111111111,
+          "fn": 46,
+          "fp": 2,
+          "mean_absolute_timing_error_ms": 44.48888888888889,
+          "precision": 0.6,
+          "recall": 0.061224489795918366,
+          "tp": 3
+        },
+        "HIT": {
+          "f1": 0.2448979591836735,
+          "fn": 73,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": 27.805555555555557,
+          "precision": 0.9230769230769231,
+          "recall": 0.1411764705882353,
+          "tp": 12
+        }
+      },
+      "tolerance_frames": 2
+    },
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.1481481481481481,
+          "fn": 45,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": 66.73333333333333,
+          "precision": 0.8,
+          "recall": 0.08163265306122448,
+          "tp": 4
+        },
+        "HIT": {
+          "f1": 0.2448979591836735,
+          "fn": 73,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": 27.805555555555557,
+          "precision": 0.9230769230769231,
+          "recall": 0.1411764705882353,
+          "tp": 12
+        }
+      },
+      "tolerance_frames": 5
+    }
+  ],
+  "verified": false,
+  "window_frames": 64,
+  "window_policy": "first_event_centered_frozen_eval_protocol"
+}
