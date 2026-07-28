@@ -1178,3 +1178,69 @@ pointer there) only. **Do not dispatch other jobs to court23 until this lane clo
 or this row is removed/updated** — expected multi-hour wall time, polling every
 ~15min. No code/config changes made; `configs/ssh/a100_known_hosts` dirty-tracked
 diff pre-existing from another lane, left untouched.
+
+## 2026-07-28 — `wolverine_slide_diag_20260728` CLAIMED AND CLOSED (diagnosis lane, read-mostly)
+
+Scope: root-cause wolverine's foot-slide regression between
+`runs/alwayson_fresh_wave_20260728/split/01_wolverine_indoor_diagonal_0_10/`
+(`max_foot_lock_slide_m=0.0378` FAIL) and
+`runs/court_people_3d_completion_fresh_20260724_60631f1/wolverine/01_wolverine_indoor_diagonal_0_10/`
+(effectively 0, PASS). CPU/local only, read-mostly, no VMs, no billed actions, no
+pipeline code/config edited.
+
+**Verdict: localized, single-phase regression driven by run-to-run BODY-output
+variability landing on the wrong side of a static, pre-existing hysteresis
+threshold — not a code/config regression from the July-25 foot/toe repairs, and
+not from tonight's always-on default flip.** `body_grounding_quality.json`'s 43
+candidate foot-lock phases (both runs) are all at machine-epsilon slide (~1e-15 m)
+except one: tonight has a phase `2:left:142-145:19` (player 2, left foot, 4 frames)
+with `slide_m=0.037769329308986`, matching the reported FAIL almost exactly;
+baseline has **no candidate phase at all** in that frame range for that player/foot
+(sequence jumps `129-130` -> `165-168` directly). Raw `skeleton3d.json` joint
+positions for player 2's left foot at frames 120-170 are nearly identical between
+runs (sub-cm differences) and show the foot in **continuous fast motion** in both
+(not actually planted) — but per-frame speed in that exact window sits right at the
+BODY-direct contact detector's fixed hysteresis band (`threed/racketsport/foot_contact.py`,
+enter/exit speed 0.75/1.25 m/s, unmodified since the file's original commit
+`b437b41`, verified via `git log -S`), and baseline's slightly higher per-frame
+speeds there (0.42-0.68 m/s vs tonight's 0.34-0.41 m/s) keep it classified as
+"still moving" while tonight's marginally slower estimate briefly registers as
+contact. Player 2 has byte-identical tracking coverage in both runs (282 frames,
+confirmed via `sam3d_core_body_speed_clamp_engagement_by_player`), ruling out a
+tracking/selection-identity explanation for that player. Two real changes between
+the runs were traced by code and ruled out as the mechanism: (1) the July-25
+`placement_v2_temporal_support_state` plant-phase detector (commit `11cadc1`,
+confirmed ancestor of tonight's `1e4ab2a`) feeds `foot_contact_phases.json`
+(consumed by `placement_trajectory_refine`/`grounding_refine`), a different
+artifact from the one driving the slide gate
+(`worldhmr.py:_contact_gate_stream_for_skeleton3d()` reads only `skeleton3d.json`
+via its own independent detector); (2) `placement_trajectory_refine`'s
+best_stack flip to `WIRED_DEFAULT` tonight (`alwayson_defaults_20260728`) is real,
+but the slide gate never reads its output artifact at all, and both runs already
+produced/consumed real trajectory-refined placement regardless of the promotion
+flag. `grounding_refine`'s typed-revert ("worsened residuals... restored") is
+**identical in both runs** (same structural residual pattern, same
+`kill_recommended: true`) — the task's premise that wolverine's July-24 baseline
+did not revert does not match the artifacts (`case5` in that baseline's
+`EVIDENCE_INDEX.md` is a different clip, `06_replacement_indoor_straight_100_110`,
+not wolverine); wolverine's own baseline `PIPELINE_SUMMARY.json` carries the same
+revert line. A partial CPU-local reproduction (calling
+`worldhmr._contact_gate_stream_for_skeleton3d()` directly on both pulled
+`skeleton3d.json` with current code, `.venv/bin/python`, no GPU) did not exactly
+match the committed candidate/rejection counts (orchestrator applies additional
+pre-processing before this stage not replicated standalone), so it is directional
+corroboration only, not proof; the load-bearing evidence is the direct artifact
+diff above. Recommended fix (not applied, out of fence): add a plausibility
+cross-check in the BODY-direct contact-phase detector that rejects/flags a
+candidate phase from the slide metric when its own `max_speed_mps` is inconsistent
+with a genuine plant, instead of trusting the height/speed hysteresis state
+machine alone; the failing phase here is only 4 frames (0.13 s).
+
+Full findings (all evidence lines, table breakdowns, and the recommended-fix
+rationale) were delivered as this agent's text response to its caller rather than
+a committed `REPORT.md` — the harness that ran this lane is a subagent whose own
+operating rules say report-style `.md` files should be returned as text, not
+written to disk (same constraint hit by `alwayson_fresh_wave_20260728` above).
+No pipeline code/config touched; other lanes' run dirs read-only; only this ledger
+entry committed. `VERIFIED=0`, `measurement_valid=false` throughout — this is
+diagnosis evidence, not an accuracy promotion. Lane closed.
