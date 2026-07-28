@@ -1,0 +1,3 @@
+{"events_per_second": 0.0014338973329509608, "out": "runs/lanes/ev2_train_20260728/firing_rate_pbvision_demo_thresh_0.5.json"}
+{"events_per_second": 0.18784055061657587, "out": "runs/lanes/ev2_train_20260728/firing_rate_pbvision_demo_thresh_0.1.json"}
+{"events_per_second": 2.2096357900774306, "out": "runs/lanes/ev2_train_20260728/firing_rate_pbvision_demo_thresh_0.05.json"}

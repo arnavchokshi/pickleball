@@ -1,0 +1,112 @@
+{
+  "artifact_type": "event_ev2_gpu_lane_report",
+  "lane": "ev2_train_20260728",
+  "verified": false,
+  "verdict": "PARTIAL",
+  "date": "2026-07-28",
+  "vm": {
+    "name": "pickleball-gpu-night2",
+    "external_ip": "35.188.46.15",
+    "zone": "us-central1-f",
+    "gpu": "A100-SXM4-40GB",
+    "machine_type": "a2-highgpu-1g",
+    "provisioned_by": "parent_orchestrator",
+    "torn_down_by_this_lane": false,
+    "boot_time_utc": "2026-07-28T08:20:55Z",
+    "poweroff_rail_utc": "2026-07-28T20:21:47Z"
+  },
+  "step0_gate": {
+    "result": "PASS",
+    "inputs_checked": 4,
+    "inputs_passed": 4,
+    "repo_head_sha": "f3e31606e72ac3ab601a53827361933218152700",
+    "ledger_sha256": "f09e62e1951fc81585445ab6b1d7efaedd19464a20b24749e7b54d161e831313",
+    "gate_proof_path": "runs/lanes/ev2_train_20260728/gate_proof_STEP0_20260728.json"
+  },
+  "data_governance": {
+    "media_staged": "6 jhong93_spot (h264 after AV1 transcode) + 2 openttgames videos, ~5.2GB",
+    "excluded_blocked_assets": [
+      "event_public_extended_opentt_20260713 (ledger state BLOCKED; quarantined mid-lane after being briefly included; training process using tainted manifest was killed and restarted)",
+      "coachai_shuttleset media (ledger state BLOCKED; no media ever staged or present; label rows only, contribute zero training windows)"
+    ],
+    "unregistered_but_precedented_assets": ["jhong93_spot", "openttgames_base"],
+    "finetune_media_ledger_ruling": "online_harvest_20260706: EVENT ALLOW, trainer_forbidden=false"
+  },
+  "pretrain_resume": {
+    "init_checkpoint_sha256": "f7b61b25d7e147e3d6353c8ec2bdf6a86e41721455398c23b9c617e065316082",
+    "init_checkpoint_step": 9000,
+    "target_steps": 12000,
+    "completed_steps": 2977,
+    "status": "partial_wall_stop",
+    "max_wall_minutes": 45,
+    "steps_per_s": 1.10,
+    "train_windows": 5646,
+    "val_windows": 1390,
+    "class_weights": [1, 5, 5],
+    "validations": [
+      {"step": 750, "macro_f1_at_2": 0.0, "max_positive_class_probability": 0.09599149972200394},
+      {"step": 1500, "macro_f1_at_2": 0.0, "max_positive_class_probability": 0.09314139187335968},
+      {"step": 2250, "macro_f1_at_2": 0.0, "max_positive_class_probability": 0.43542253971099854}
+    ],
+    "checkpoint_sha256": "30b25a8ec00d4ebad93ff416993baafff971b567b2d22b8be05b95ed48729d5b",
+    "checkpoint_role": "last_event_head.pt"
+  },
+  "finetune": {
+    "target_steps": 400,
+    "completed_steps": 100,
+    "status": "wall_expired_exception_not_graceful",
+    "max_wall_minutes": 15,
+    "best_val_macro_f1_at_2": 0.0,
+    "best_val_max_positive_class_probability": 0.0367574580013752,
+    "checkpoint_sha256": "a3fdf12d92d3bac4b6dfa586a41d96a223428925fbcf4005f32aede3b226a69c",
+    "s3_upload": "s3://sway-videos/pickleball-models/20260728/event_head_ev2_best.pt"
+  },
+  "eval": {
+    "public_threshold_sweep_50_clips": {
+      "0.5": {"hit_tp": 0, "hit_fp": 0, "hit_f1": 0.0, "bounce_tp": 0, "bounce_f1": 0.0},
+      "0.3": {"hit_tp": 0, "hit_fp": 1, "hit_f1": 0.0, "bounce_tp": 0, "bounce_f1": 0.0},
+      "0.2": {"hit_tp": 0, "hit_fp": 1, "hit_f1": 0.0, "bounce_tp": 0, "bounce_f1": 0.0},
+      "0.1": {"hit_tp": 4, "hit_fp": 4, "hit_precision": 0.5, "hit_recall": 0.047058823529411764, "hit_f1": 0.08602150537634408, "bounce_tp": 0, "bounce_f1": 0.0},
+      "0.05": {"hit_tp": 32, "hit_fp": 81, "hit_precision": 0.2831858407079646, "hit_recall": 0.3764705882352941, "hit_f1": 0.32323232323232326, "bounce_tp": 0, "bounce_fp": 12, "bounce_f1": 0.0}
+    },
+    "owner_val_41": {
+      "threshold": 0.5,
+      "macro_f1_at_2": 0.0,
+      "negative_rows": 22,
+      "negative_false_positives": 0,
+      "full_video_events_per_second": 0.0,
+      "full_video_duration_s": 1577.0333333333333
+    },
+    "protected_seed_50_one_touch": {
+      "threshold": 0.5,
+      "seed_rows": 50,
+      "typed_rows": 28,
+      "negative_rows": 21,
+      "negative_false_positives": 0,
+      "negative_false_positive_rate": 0.0,
+      "tp_at_tolerance_2": 0,
+      "note": "run locally on Mac (protected file has absolute Mac paths baked in); one-touch consumed, will not be re-run against this checkpoint lineage"
+    },
+    "firing_rate_pbvision_demo_697s": {
+      "0.5": {"total_events": 1, "events_per_second": 0.0014338973329509608},
+      "0.1": {"total_events": 131, "events_per_second": 0.18784055061657587},
+      "0.05": {"total_events": 1541, "events_per_second": 2.2096357900774306},
+      "plausible_band": [0.3, 1.0],
+      "gate_result": "NOT_PASSED_AT_ANY_TESTED_THRESHOLD",
+      "north_star_zero_shot_reference_hit_per_s": 7.16
+    }
+  },
+  "cost": {
+    "attributable_wall_hours": 2.13,
+    "rate_usd_per_hr": 1.93,
+    "estimate_usd": 4.1,
+    "note": "attributable lane usage window, not the VM's full billing lifetime (parent-orchestrator-owned, this lane did not provision or tear it down)"
+  },
+  "no_anchor_ingestion": true,
+  "next_steps": [
+    "Longer non-wall-capped pretrain resume to reach or exceed +7,918 steps from the frozen T20 checkpoint, watching for BOUNCE escape specifically",
+    "Fine-tune to full 400+ step target without a 15-min cap",
+    "Repeat the exact eval battery on the better-trained checkpoint",
+    "Search for a threshold clearing the 0.3-1.0/s plausible band on independent evidence, not by shopping against the number alone"
+  ]
+}

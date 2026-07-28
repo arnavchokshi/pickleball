@@ -1,0 +1,24 @@
+{
+  "artifact_type": "ev2_train_20260728_firing_rate_measurement",
+  "bounce_count": 169,
+  "bounce_per_second": 0.24232864926871236,
+  "checkpoint": "runs/lanes/ev2_train_20260728/finetune/best_event_head_finetuned.pt",
+  "duration_s": 697.4,
+  "events_per_second": 2.2096357900774306,
+  "fps": 30.0,
+  "hit_count": 1372,
+  "hit_per_second": 1.9673071408087182,
+  "image_size": 224,
+  "north_star_zero_shot_reference_hit_per_s": 7.16,
+  "plausible_band_events_per_s": [
+    0.3,
+    1.0
+  ],
+  "processed_frames": 20922,
+  "threshold": 0.05,
+  "total_event_count": 1541,
+  "verified": false,
+  "video": "runs/lanes/ev2_train_20260728/eval_media/pbvision_11min_demo.mp4",
+  "window_frames": 64,
+  "window_policy": "non_overlapping_windows_covering_every_frame_once"
+}

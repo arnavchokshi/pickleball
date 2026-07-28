@@ -1,0 +1,689 @@
+{
+  "artifact_type": "event_head_eval_metrics",
+  "checkpoint": "runs/lanes/ev2_train_20260728/finetune/best_event_head_finetuned.pt",
+  "checkpoint_train_window_frames": 64,
+  "eval_only": true,
+  "mode": "protected_owner_seed",
+  "negative_false_positive_rate": 0.0,
+  "negative_false_positives": 0,
+  "negative_rows": 21,
+  "never_training": true,
+  "other_rows_reported_separately": 1,
+  "review_only": true,
+  "row_summaries": [
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "73VurrTKCZ8_rally_0002__a__000020",
+      "max_positive_class_probability": 0.07216634601354599,
+      "max_probability_by_class": {
+        "BOUNCE": 0.07216634601354599,
+        "HIT": 0.07016711682081223,
+        "background": 0.9615136981010437
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "73VurrTKCZ8_rally_0002__a__000021",
+      "max_positive_class_probability": 0.0992717519402504,
+      "max_probability_by_class": {
+        "BOUNCE": 0.04551937058568001,
+        "HIT": 0.0992717519402504,
+        "background": 0.9611205458641052
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0002__a__000029",
+      "max_positive_class_probability": 0.2832409143447876,
+      "max_probability_by_class": {
+        "BOUNCE": 0.04935455322265625,
+        "HIT": 0.2832409143447876,
+        "background": 0.9696594476699829
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0002__a__000036",
+      "max_positive_class_probability": 0.29843607544898987,
+      "max_probability_by_class": {
+        "BOUNCE": 0.08644247055053711,
+        "HIT": 0.29843607544898987,
+        "background": 0.9738251566886902
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "73VurrTKCZ8_rally_0005__a__000003",
+      "max_positive_class_probability": 0.13244524598121643,
+      "max_probability_by_class": {
+        "BOUNCE": 0.07807251811027527,
+        "HIT": 0.13244524598121643,
+        "background": 0.9630355834960938
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0008__a__000002",
+      "max_positive_class_probability": 0.5093593597412109,
+      "max_probability_by_class": {
+        "BOUNCE": 0.051661416888237,
+        "HIT": 0.5093593597412109,
+        "background": 0.9760977029800415
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 1
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0008__a__000007",
+      "max_positive_class_probability": 0.09141066670417786,
+      "max_probability_by_class": {
+        "BOUNCE": 0.08782374858856201,
+        "HIT": 0.09141066670417786,
+        "background": 0.9672154188156128
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "73VurrTKCZ8_rally_0008__a__000009",
+      "max_positive_class_probability": 0.06466338783502579,
+      "max_probability_by_class": {
+        "BOUNCE": 0.036816056817770004,
+        "HIT": 0.06466338783502579,
+        "background": 0.9638223052024841
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "73VurrTKCZ8_rally_0008__a__000018",
+      "max_positive_class_probability": 0.11375775188207626,
+      "max_probability_by_class": {
+        "BOUNCE": 0.07958707958459854,
+        "HIT": 0.11375775188207626,
+        "background": 0.9589509963989258
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "73VurrTKCZ8_rally_0008__a__000019",
+      "max_positive_class_probability": 0.17253851890563965,
+      "max_probability_by_class": {
+        "BOUNCE": 0.05810702592134476,
+        "HIT": 0.17253851890563965,
+        "background": 0.9621020555496216
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "73VurrTKCZ8_rally_0008__a__000038",
+      "max_positive_class_probability": 0.2047676146030426,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0717245563864708,
+        "HIT": 0.2047676146030426,
+        "background": 0.9603109359741211
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "Ezz6HDNHlnk_rally_0002__a__000010",
+      "max_positive_class_probability": 0.019134465605020523,
+      "max_probability_by_class": {
+        "BOUNCE": 0.00877987127751112,
+        "HIT": 0.019134465605020523,
+        "background": 0.9962823987007141
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "Ezz6HDNHlnk_rally_0002__a__000013",
+      "max_positive_class_probability": 0.022769426926970482,
+      "max_probability_by_class": {
+        "BOUNCE": 0.009400864131748676,
+        "HIT": 0.022769426926970482,
+        "background": 0.9964973330497742
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "Ezz6HDNHlnk_rally_0002__a__000040",
+      "max_positive_class_probability": 0.005130380857735872,
+      "max_probability_by_class": {
+        "BOUNCE": 0.005130380857735872,
+        "HIT": 0.0027669519186019897,
+        "background": 0.9973516464233398
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "Ezz6HDNHlnk_rally_0004__a__000067",
+      "max_positive_class_probability": 0.004464389756321907,
+      "max_probability_by_class": {
+        "BOUNCE": 0.004147918429225683,
+        "HIT": 0.004464389756321907,
+        "background": 0.9970876574516296
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "Ezz6HDNHlnk_rally_0006__a__000051",
+      "max_positive_class_probability": 0.1342059224843979,
+      "max_probability_by_class": {
+        "BOUNCE": 0.029872922226786613,
+        "HIT": 0.1342059224843979,
+        "background": 0.9876000881195068
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "Ezz6HDNHlnk_rally_0006__a__000057",
+      "max_positive_class_probability": 0.03409752622246742,
+      "max_probability_by_class": {
+        "BOUNCE": 0.011429239064455032,
+        "HIT": 0.03409752622246742,
+        "background": 0.9916016459465027
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "Ezz6HDNHlnk_rally_0007__a__000031",
+      "max_positive_class_probability": 0.013753942213952541,
+      "max_probability_by_class": {
+        "BOUNCE": 0.008942712098360062,
+        "HIT": 0.013753942213952541,
+        "background": 0.9935757517814636
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000007",
+      "max_positive_class_probability": 0.0005428753793239594,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0005428753793239594,
+        "HIT": 0.00035822094650939107,
+        "background": 0.9996377229690552
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000014",
+      "max_positive_class_probability": 0.0006873317761346698,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0006848070188425481,
+        "HIT": 0.0006873317761346698,
+        "background": 0.999589741230011
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000016",
+      "max_positive_class_probability": 0.0009007526095956564,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0009007526095956564,
+        "HIT": 0.0004828812088817358,
+        "background": 0.9997108578681946
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000039",
+      "max_positive_class_probability": 0.0006606238312087953,
+      "max_probability_by_class": {
+        "BOUNCE": 0.0006606238312087953,
+        "HIT": 0.0004675523960031569,
+        "background": 0.9996247291564941
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000094",
+      "max_positive_class_probability": 0.011514179408550262,
+      "max_probability_by_class": {
+        "BOUNCE": 0.011514179408550262,
+        "HIT": 0.0030896503012627363,
+        "background": 0.9968542456626892
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000272",
+      "max_positive_class_probability": 0.005320096388459206,
+      "max_probability_by_class": {
+        "BOUNCE": 0.005320096388459206,
+        "HIT": 0.0027768099680542946,
+        "background": 0.9978000521659851
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000277",
+      "max_positive_class_probability": 0.005362693686038256,
+      "max_probability_by_class": {
+        "BOUNCE": 0.005362693686038256,
+        "HIT": 0.000891066447366029,
+        "background": 0.9978998899459839
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000316",
+      "max_positive_class_probability": 0.011464682407677174,
+      "max_probability_by_class": {
+        "BOUNCE": 0.011464682407677174,
+        "HIT": 0.002392540220171213,
+        "background": 0.9945578575134277
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000325",
+      "max_positive_class_probability": 0.006430096458643675,
+      "max_probability_by_class": {
+        "BOUNCE": 0.006430096458643675,
+        "HIT": 0.0021875372622162104,
+        "background": 0.9983009696006775
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "HyUqT7zFiwk_rally_0001__a__000359",
+      "max_positive_class_probability": 0.010758276097476482,
+      "max_probability_by_class": {
+        "BOUNCE": 0.010758276097476482,
+        "HIT": 0.002252959180623293,
+        "background": 0.9969285130500793
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "_L0HVmAlCQI_rally_0001__a__000014",
+      "max_positive_class_probability": 0.017111511901021004,
+      "max_probability_by_class": {
+        "BOUNCE": 0.017111511901021004,
+        "HIT": 0.006436577066779137,
+        "background": 0.9955808520317078
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "_L0HVmAlCQI_rally_0003__a__000002",
+      "max_positive_class_probability": 0.02765366993844509,
+      "max_probability_by_class": {
+        "BOUNCE": 0.018034085631370544,
+        "HIT": 0.02765366993844509,
+        "background": 0.9897012710571289
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "_L0HVmAlCQI_rally_0007__a__000015",
+      "max_positive_class_probability": 0.01786676235496998,
+      "max_probability_by_class": {
+        "BOUNCE": 0.01786676235496998,
+        "HIT": 0.010924392379820347,
+        "background": 0.9868914484977722
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "_L0HVmAlCQI_rally_0007__a__000021",
+      "max_positive_class_probability": 0.16156546771526337,
+      "max_probability_by_class": {
+        "BOUNCE": 0.06050160154700279,
+        "HIT": 0.16156546771526337,
+        "background": 0.9694206118583679
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "_L0HVmAlCQI_rally_0011__a__000021",
+      "max_positive_class_probability": 0.01184345968067646,
+      "max_probability_by_class": {
+        "BOUNCE": 0.01184345968067646,
+        "HIT": 0.006772142834961414,
+        "background": 0.9930287003517151
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "_L0HVmAlCQI_rally_0011__a__000039",
+      "max_positive_class_probability": 0.04685623571276665,
+      "max_probability_by_class": {
+        "BOUNCE": 0.04685623571276665,
+        "HIT": 0.011234928853809834,
+        "background": 0.991581380367279
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "_L0HVmAlCQI_rally_0019__a__000005",
+      "max_positive_class_probability": 0.013104324229061604,
+      "max_probability_by_class": {
+        "BOUNCE": 0.013104324229061604,
+        "HIT": 0.011943116784095764,
+        "background": 0.9907824397087097
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "wBu8bC4OfUY_rally_0002__a__000017",
+      "max_positive_class_probability": 0.08285783231258392,
+      "max_probability_by_class": {
+        "BOUNCE": 0.024278191849589348,
+        "HIT": 0.08285783231258392,
+        "background": 0.9909613728523254
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000010",
+      "max_positive_class_probability": 0.034526579082012177,
+      "max_probability_by_class": {
+        "BOUNCE": 0.034526579082012177,
+        "HIT": 0.013083106838166714,
+        "background": 0.982207715511322
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000011",
+      "max_positive_class_probability": 0.026697957888245583,
+      "max_probability_by_class": {
+        "BOUNCE": 0.026697957888245583,
+        "HIT": 0.008789788000285625,
+        "background": 0.9825390577316284
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000045",
+      "max_positive_class_probability": 0.034211307764053345,
+      "max_probability_by_class": {
+        "BOUNCE": 0.034211307764053345,
+        "HIT": 0.009988794103264809,
+        "background": 0.9826860427856445
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "other",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000057",
+      "max_positive_class_probability": 0.025564540177583694,
+      "max_probability_by_class": {
+        "BOUNCE": 0.025564540177583694,
+        "HIT": 0.008709329180419445,
+        "background": 0.984045147895813
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000070",
+      "max_positive_class_probability": 0.024461353197693825,
+      "max_probability_by_class": {
+        "BOUNCE": 0.024461353197693825,
+        "HIT": 0.009730681777000427,
+        "background": 0.9835839867591858
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000118",
+      "max_positive_class_probability": 0.029199911281466484,
+      "max_probability_by_class": {
+        "BOUNCE": 0.029199911281466484,
+        "HIT": 0.009380808100104332,
+        "background": 0.9845286011695862
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000151",
+      "max_positive_class_probability": 0.03488375246524811,
+      "max_probability_by_class": {
+        "BOUNCE": 0.03488375246524811,
+        "HIT": 0.010496455244719982,
+        "background": 0.9821604490280151
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000168",
+      "max_positive_class_probability": 0.03485585376620293,
+      "max_probability_by_class": {
+        "BOUNCE": 0.03485585376620293,
+        "HIT": 0.01128958910703659,
+        "background": 0.9809302091598511
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000219",
+      "max_positive_class_probability": 0.023469669744372368,
+      "max_probability_by_class": {
+        "BOUNCE": 0.023469669744372368,
+        "HIT": 0.011139384470880032,
+        "background": 0.9863515496253967
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000224",
+      "max_positive_class_probability": 0.02589394897222519,
+      "max_probability_by_class": {
+        "BOUNCE": 0.02589394897222519,
+        "HIT": 0.009320252574980259,
+        "background": 0.98537677526474
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000269",
+      "max_positive_class_probability": 0.02615980990231037,
+      "max_probability_by_class": {
+        "BOUNCE": 0.02615980990231037,
+        "HIT": 0.007636188063770533,
+        "background": 0.9826517105102539
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "ground",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000272",
+      "max_positive_class_probability": 0.024462271481752396,
+      "max_probability_by_class": {
+        "BOUNCE": 0.024462271481752396,
+        "HIT": 0.009380403906106949,
+        "background": 0.9845385551452637
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "paddle",
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000292",
+      "max_positive_class_probability": 0.022824760526418686,
+      "max_probability_by_class": {
+        "BOUNCE": 0.022824760526418686,
+        "HIT": 0.004218048416078091,
+        "background": 0.9844626188278198
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    },
+    {
+      "decision": "none",
+      "false_positive_within_0_3s": false,
+      "label_id": "zwCtH_i1_S4_rally_0001__a__000293",
+      "max_positive_class_probability": 0.02699900045990944,
+      "max_probability_by_class": {
+        "BOUNCE": 0.02699900045990944,
+        "HIT": 0.00876022968441248,
+        "background": 0.9831311702728271
+      },
+      "nonfinite_probability_count": 0,
+      "prediction_count": 0
+    }
+  ],
+  "schema_version": 1,
+  "seed_rows": 50,
+  "threshold": 0.5,
+  "tolerance_sweep": [
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.0,
+          "fn": 11,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        },
+        "HIT": {
+          "f1": 0.0,
+          "fn": 17,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        }
+      },
+      "tolerance_frames": 1
+    },
+    {
+      "per_class": {
+        "BOUNCE": {
+          "f1": 0.0,
+          "fn": 11,
+          "fp": 0,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        },
+        "HIT": {
+          "f1": 0.0,
+          "fn": 17,
+          "fp": 1,
+          "mean_absolute_timing_error_ms": null,
+          "precision": 0.0,
+          "recall": 0.0,
+          "tp": 0
+        }
+      },
+      "tolerance_frames": 2
+    }
+  ],
+  "typed_rows": 28,
+  "verified": false
+}

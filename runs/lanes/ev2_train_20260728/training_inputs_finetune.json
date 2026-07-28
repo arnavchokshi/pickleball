@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "artifact_type": "training_input_manifest",
+  "inputs": [
+    {
+      "path": "runs/lanes/ball_event_abc_20260720/inputs/owner_102_manifest.json",
+      "asset_id": "event_abc_inputs_20260720"
+    },
+    {
+      "path": "data/online_harvest_20260706/rallies",
+      "asset_id": "online_harvest_20260706"
+    }
+  ]
+}
