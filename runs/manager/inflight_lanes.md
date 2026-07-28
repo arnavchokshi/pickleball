@@ -8,6 +8,87 @@ Standing fence: `brand-exploration/` is the OWNER'S untracked brand work — no 
 `cvat_upload/court_diversity_20260712/` + `w7_audit_stratum_20260709/` are staged local-only owner
 labeling packages (storage-allowlisted, intentionally untracked).
 
+## 2026-07-28 — `alwayson_fresh_wave_20260728` CLAIMED AND CLOSED (fresh-run-wave lane)
+
+Scope: fresh source-video-only, timed six-clip reproduction at current main HEAD
+(started at `1e4ab2a0aa413021e66bbd350d6fc0a6f569338f`, includes both the July-25 foot/toe
+repairs and the `alwayson_defaults_20260728` always-on flip), plus a co-located (`--body-local`)
+speed experiment. Fence: `runs/alwayson_fresh_wave_20260728/` + VM-side work on
+`pickleball-gpu-court23` (104.198.129.228) and `pickleball-gpu-night1` (35.253.12.232). Did NOT
+touch `pickleball-gpu-night2` (another lane's VM). No code/config changes made.
+
+**Split-mode wave (remote BODY on court23): 6/6 clips completed with real BODY compute.**
+Wall seconds (source-video-only, `--force`, `--pipeline-preset court_skeletons`): wolverine
+436.6 (cold job), indoor_doubles 526.2, outdoor_high 577.9, indoor_straight 494.7 (retry, see
+below), indoor_diagonal 505.2, outdoor_pbvision 377.9. Range 377.9-577.9s, median ~500s — all
+slower than the 2026-07-25 baseline (290.2-447.0s, median 352.5s); GPU-side BODY stage timings
+matched the baseline range closely (178-237s) in every case, so the slowdown is Mac-side
+(tracking stage 165-343s vs baseline's 78-196s max), most plausibly explained by this session
+running concurrently with other lanes on the same shared Mac (see anomaly below) plus a
+macOS `mediaanalysisd` indexing process observed competing for CPU mid-run. `placement_refine`,
+`grounding_refine`, and `placement_trajectory_refine` (the always-on defaults under test) ran
+(or correctly typed-degraded/reverted for grounding_refine on 2 of 6 clips, never crashed) on
+every one of the six clips. Foot-slide (`max_foot_lock_slide_m`) vs the 0.03 m bar: wolverine
+0.0378 fail, indoor_doubles ~0 pass, outdoor_high 0.0212 pass, indoor_straight 0.0169 pass,
+indoor_diagonal 0.0546 fail (matches the baseline's known indoor-diagonal fail almost exactly),
+outdoor_pbvision 0.0026 pass — 4/6 pass, consistent with baseline's known limitation profile,
+not a new regression. All six retained 4 players; NVZ/kitchen decisions stayed conservatively
+`unknown`-heavy with a real minority `confirmed_outside` count on every clip (never a
+false-confident `confirmed_inside`).
+
+**Anomaly (real, not simulated): a second, concurrent Claude Code lane
+(`warm_body_worker_20260728`, adding a default-OFF `--warm-worker` dispatch feature to
+`scripts/racketsport/remote_body_dispatch.py`) is actively working in this SAME shared working
+tree.** It committed `f7849c3` on top of `1e4ab2a` mid-wave. That moved local git HEAD out from
+under this lane's remote-VM pin and correctly tripped the pipeline's own version-stamp
+fail-closed safety check on the `06_replacement_indoor_straight_100_110` split-mode dispatch
+(BODY degraded, `local_sha=f7849c3... remote_sha=1e4ab2a...` mismatch reported honestly in that
+run's `PIPELINE_SUMMARY.json`, kept as `.../split/06_replacement_indoor_straight_100_110/`
+evidence). Fix: re-ran `--sync-remote-code` against the new HEAD on both VMs (verified `f7849c3`
+on both — an in-fence use of this lane's own sync tool, not a code change) and retried the clip
+successfully as `.../split/06_replacement_indoor_straight_100_110_retry/` (BODY ran, 1635/1635
+samples, foot-slide 0.0169 m pass). `f7849c3` is a strict-superset commit of `1e4ab2a` (verified
+`git merge-base --is-ancestor`) whose only change is the additive, never-invoked warm-worker
+flag, so this does not compromise reproduction validity, but it does mean clips 1-3 in this
+wave's split-mode ran against `1e4ab2a` and clips 4(retry)-6 ran against `f7849c3` — noted
+per-clip in the evidence, not silently normalized. No code was touched by this lane; the other
+lane's file was left alone throughout (it is dirty again as of lane close, mid-edit).
+
+**Co-located experiment (`--body-local` entirely on night1): 6/6 clips ran but NONE got real
+BODY compute — a pre-existing code-path gap, not a VM/env issue.** night1's venv already had
+`ultralytics`/`torchreid`/`torch`/`opencv` (diffed against the Mac venv; nothing tracking-related
+was missing) and `scripts.racketsport.process_video` imports cleanly — zero pip installs were
+needed or performed. Every clip's `body` stage instead degraded to skeleton-only:
+`_run_body_local()` (`process_video.py:5401`) calls
+`orchestrator.run_pipeline(stage="body", reuse_existing_stage_artifacts=True)`, whose calibration
+dependency re-derivation falls back to `ManualCalibrationRunner` (`orchestrator.py:243`), which
+requires a `capture_sidecar.json` (iOS capture metadata) and fails closed without one — even
+though the same run's own automatic-court-lock `calibration` stage had already produced a good
+`court_calibration.json` seconds earlier. None of the six eval clips carry a `capture_sidecar.json`
+(bare `.mp4`s, not device captures), so this hit every clip identically, on both attempted VMs.
+Matches a documented prior finding: `runs/lanes/pipeline_speed_20260705/lane_S2_remote_interior/codex.log:5277`.
+Fixing it needs a code change to `orchestrator.run_pipeline`'s dependency-walk reuse logic or
+`_run_body_local()`'s call into it — out of this lane's fence. No synthetic sidecar was
+fabricated to route around the fail-closed gate. What WAS measured and is real: calibration +
+tracking + placement + world/manifest running entirely on the A100 VM instead of split
+Mac-CPU-tracking + remote-dispatch-BODY — wall 74.9-136.6s (median ~95s) for that reduced
+non-BODY stage set, vs the ~19-46s (calibration) + 34-343s (tracking) split-mode paid on the Mac
+for the same two stages alone — a real, large speedup for calibration+tracking specifically,
+just not a full-pipeline comparison because BODY never ran co-located tonight.
+
+Integration demo (full-preset, ball+one_world on wolverine, task 4) was not attempted — out of
+time after the split-mode retry and the concurrent-lane investigation; 2 and 3 were prioritized
+per the lane's own instructions ("stretch, do after 2+3 are safely underway/done").
+
+Evidence: `runs/alwayson_fresh_wave_20260728/{split,colocated,summaries,logs}/` (PIPELINE_SUMMARY.json
+per run, small `summaries/*.json` extracts, sync/dispatch logs). Large per-clip artifacts
+(body_frames, body_mesh_index, ~1.4 GB total) were kept local only, not committed. **This
+lane's full findings were delivered as this agent's text response to its caller rather than a
+committed `REPORT.md`** — the harness that ran this lane is a subagent whose own operating rules
+say report-style `.md` files should be returned as text, not written to disk; only the small
+generated JSON evidence and this ledger entry were committed. VERIFIED=0, measurement_valid=false
+throughout; this is engineering/timing evidence, not an accuracy promotion. Lane closed.
+
 ## HANDOFF TO THE COURT/SKELETON LANE — 2026-07-27 (ball/fusion integration session)
 
 **Read this before the next court-keypoint training run. It affects your training data, not ours.**
@@ -857,3 +938,38 @@ no gate passed, no independent evidence produced tonight.
 VERIFIED=0 remains binding. This is an owner-directed engineering default flip, not an
 accuracy promotion; the `ns02_body_world_placement_independent_gt` gate is unmet. Lane
 closed.
+
+## 2026-07-28 — `warm_body_worker_20260728` CLAIMED (speed lane, RUNNING)
+
+Scope: implement + measure a default-OFF persistent warm GPU BODY worker for the
+remote BODY dispatch path (speed lever #1 in
+`runs/court_skeleton_runtime_20260725/REPORT.md`: ~24.9s model-load + ~33.5s
+torch.compile warmup, ~58s of cold-start waste per remote BODY job). FILE
+OWNERSHIP: `scripts/racketsport/remote_body_dispatch.py`, new
+`scripts/racketsport/body_warm_worker.py`, their tests, and
+`runs/lanes/warm_body_worker_20260728/`. Read-only everywhere else, in
+particular `scripts/racketsport/process_video.py` and
+`configs/racketsport/best_stack.json` stay untouched tonight
+(COORDINATE-BY-FENCE) — the flag lives on `remote_body_dispatch.py` only;
+pipeline-entrypoint plumbing is an explicit follow-up once GPU-measured.
+
+Code + 34 new focused CPU-fakeable tests landed at `f7849c3` (local, not yet
+pushed): `--warm-worker` health-probes an already-running persistent worker
+(manifest + socket reachability + code-stamp match) before dispatch, routes
+the job to it when healthy (skipping the per-job `gpu-eval-run.sh` wrap
+because the worker itself holds that shared lock for its whole serving
+lifetime), and falls back loudly — never silently — to the unchanged cold
+path otherwise. `scripts/racketsport/body_warm_worker.py start` runs one real
+cold BODY dispatch to produce a real request payload, then launches
+`sam3dbody_persistent_worker.py serve` (already committed by
+`body_overhead_20260712`, previously opt-in-only with no SSH lifecycle tool)
+under that same shared lock.
+
+Per the manager's instruction: does NOT touch `pickleball-gpu-court23`
+(104.198.129.228) or `pickleball-gpu-night1` (35.253.12.232) while
+`alwayson_fresh_wave_20260728`'s timed waves are in flight there. GPU A/B
+measurement will check the shared lock + `nvidia-smi` for an idle GPU before
+touching either VM, and will not touch `pickleball-gpu-night2` at all (another
+lane trains there). Will update this entry to CLOSED with the measured cold
+vs. warm numbers and a byte-compare verdict when
+`runs/lanes/warm_body_worker_20260728/REPORT.md` lands.

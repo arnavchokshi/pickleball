@@ -1,0 +1,168 @@
+{
+ "clip_dir": "runs/alwayson_fresh_wave_20260728/split/01_wolverine_indoor_diagonal_0_10/01_wolverine_indoor_diagonal_0_10",
+ "status": "partial",
+ "wall_seconds": 436.65,
+ "stages": {
+  "ingest": {
+   "status": "ran",
+   "wall_seconds": 0.801
+  },
+  "calibration": {
+   "status": "ran",
+   "wall_seconds": 19.809
+  },
+  "input_quality": {
+   "status": "ran",
+   "wall_seconds": 0.231
+  },
+  "tracking": {
+   "status": "ran",
+   "wall_seconds": 165.618
+  },
+  "player_selection": {
+   "status": "ran",
+   "wall_seconds": 1.029
+  },
+  "camera_motion": {
+   "status": "skipped",
+   "wall_seconds": 0.003
+  },
+  "placement": {
+   "status": "ran",
+   "wall_seconds": 1.277
+  },
+  "frames": {
+   "status": "ran",
+   "wall_seconds": 2.018
+  },
+  "body": {
+   "status": "ran",
+   "wall_seconds": 237.2
+  },
+  "placement_refine": {
+   "status": "ran",
+   "wall_seconds": 3.326
+  },
+  "grounding_refine": {
+   "status": "degraded",
+   "wall_seconds": 1.044
+  },
+  "placement_trajectory_refine": {
+   "status": "ran",
+   "wall_seconds": 1.297
+  },
+  "world": {
+   "status": "ran",
+   "wall_seconds": 1.259
+  },
+  "confidence_gate": {
+   "status": "ran",
+   "wall_seconds": 0.857
+  },
+  "manifest": {
+   "status": "ran",
+   "wall_seconds": 0.629
+  }
+ },
+ "degraded_reasons": [
+  {
+   "reasons": [
+    "grounding_refine sanity gate failed: refiner reported worsened residuals, so original BODY/skeleton artifacts were restored",
+    "render-honest estimated grounding, not gate evidence"
+   ],
+   "stage": "grounding_refine",
+   "status": "degraded"
+  }
+ ],
+ "missing_capabilities": [
+  {
+   "capability": "assets",
+   "reason": "stage manifest ran: built replay_viewer_manifest.json with confidence_gated_world.json as world URL; mesh_status=skeleton_only; representation_status=skeleton_only; no replay_scene.json written: --no-scene-points set"
+  }
+ ],
+ "body_phase_timing": {
+  "model_load_s": 25.686884,
+  "compile_warmup_s": 73.900854,
+  "inference_s": 18.243568,
+  "attributed_s": 186.51518158900038,
+  "ms_per_person_steady": 16.031255,
+  "person_frame_count": 1138
+ },
+ "max_foot_lock_slide_m": 0.037769329308986,
+ "body_samples": 1138,
+ "remote_body_dispatch_timing": {
+  "remote_host": "arnavchokshi@104.198.129.228",
+  "phases": {
+   "download_s": 6.069627,
+   "mkdir_s": 0.832098,
+   "preflight_s": 2.132033,
+   "remote_command_s": 217.111474,
+   "tar_create_upload_archive_s": 1.439526,
+   "tar_download_scp_s": 1.845206,
+   "tar_extract_outputs_s": 0.066932,
+   "tar_remote_pack_s": 1.323239,
+   "tar_remote_untar_s": 1.123058,
+   "tar_upload_scp_s": 3.479182,
+   "upload_s": 6.047782
+  },
+  "status": "ran"
+ },
+ "body_full_clip_gate_status": {
+  "artifact_type": "racketsport_body_full_clip_gate",
+  "blockers": [],
+  "clip": "01_wolverine_indoor_diagonal_0_10",
+  "contact_mesh_coverage": null,
+  "coverage": 1.0,
+  "coverage_denominator_player_frame_count": 1138,
+  "coverage_denominator_policy": "eligible_scheduled_measured_samples",
+  "evaluated_frame_count": 1138,
+  "evaluated_player_frame_count": 1138,
+  "execution": {
+   "claims_accuracy_verified": false,
+   "cpu_only": true,
+   "runs_body_model": false,
+   "uses_gpu": false
+  },
+  "latency_seconds_per_video_minute": 1215.165359,
+  "min_coverage": 0.98,
+  "passed": true,
+  "paths": {
+   "body_compute_execution": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/01_wolverine_indoor_diagonal_0_10_20260728T090609Z/body_compute_execution.json",
+   "body_joint_quality": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/01_wolverine_indoor_diagonal_0_10_20260728T090609Z/body_joint_quality.json",
+   "contact_splice": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/01_wolverine_indoor_diagonal_0_10_20260728T090609Z/contact_splice.json",
+   "runtime_timing": "body_stage_wall_clock",
+   "tracks": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/01_wolverine_indoor_diagonal_0_10_20260728T090609Z/tracks.json"
+  },
+  "schema_version": 1,
+  "summary": {
+   "body_runtime_seconds": 195.77664114100025,
+   "clip_duration_s": 9.666667,
+   "contact_mesh_accounted_count": 0,
+   "contact_mesh_frame_count": 0,
+   "coverage_denominator_player_frame_count": 1138,
+   "coverage_denominator_policy": "eligible_scheduled_measured_samples",
+   "fallback_spliced_contact_count": 0,
+   "joint_player_frame_count": 1138,
+   "latency_seconds_per_video_minute": 1215.165359,
+   "mesh_joint_player_frame_count": 1138,
+   "mesh_unavailable_contact_count": 0,
+   "quality_blockers": [],
+   "quality_status": "quality_checked_needs_accuracy_gate",
+   "quality_usable_for_review": true,
+   "scheduled_contact_count": 0,
+   "scheduled_player_frame_count": 1138,
+   "skeleton_joint_player_frame_count": 1138,
+   "tracked_player_frame_count": 1138
+  },
+  "tracked_player_frame_count": 1138,
+  "warnings": []
+ },
+ "placement_refined_artifact_present": true,
+ "placement_trajectory_refined_artifact_present": true,
+ "players_retained": 4,
+ "selection_status": "preview_selection_measured_association_fallback",
+ "nvz_kitchen_decision_hist_placement_refined.json": {
+  "unknown": 1099,
+  "confirmed_outside": 39
+ }
+}

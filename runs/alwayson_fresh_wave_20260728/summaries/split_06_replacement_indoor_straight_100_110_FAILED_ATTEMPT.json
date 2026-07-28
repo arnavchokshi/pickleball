@@ -1,0 +1,116 @@
+{
+ "clip_dir": "runs/alwayson_fresh_wave_20260728/split/06_replacement_indoor_straight_100_110/06_replacement_indoor_straight_100_110",
+ "status": "partial",
+ "wall_seconds": 278.056,
+ "stages": {
+  "ingest": {
+   "status": "ran",
+   "wall_seconds": 1.51
+  },
+  "calibration": {
+   "status": "ran",
+   "wall_seconds": 20.218
+  },
+  "input_quality": {
+   "status": "ran",
+   "wall_seconds": 0.43
+  },
+  "tracking": {
+   "status": "ran",
+   "wall_seconds": 234.599
+  },
+  "player_selection": {
+   "status": "ran",
+   "wall_seconds": 1.631
+  },
+  "camera_motion": {
+   "status": "skipped",
+   "wall_seconds": 0.003
+  },
+  "placement": {
+   "status": "ran",
+   "wall_seconds": 1.756
+  },
+  "frames": {
+   "status": "ran",
+   "wall_seconds": 2.58
+  },
+  "body": {
+   "status": "degraded",
+   "wall_seconds": 14.462
+  },
+  "placement_refine": {
+   "status": "skipped",
+   "wall_seconds": 0.003
+  },
+  "grounding_refine": {
+   "status": "skipped",
+   "wall_seconds": 0.004
+  },
+  "placement_trajectory_refine": {
+   "status": "skipped",
+   "wall_seconds": 0.011
+  },
+  "world": {
+   "status": "ran",
+   "wall_seconds": 0.315
+  },
+  "confidence_gate": {
+   "status": "ran",
+   "wall_seconds": 0.271
+  },
+  "manifest": {
+   "status": "degraded",
+   "wall_seconds": 0.073
+  }
+ },
+ "degraded_reasons": [
+  {
+   "reasons": [
+    "remote calibration seed: derived capture_sidecar.json corner taps from the external court_calibration.json's own image_pts/world_pts (remote's committed orchestrator re-derives calibration from manual taps; the local world keeps the trusted external calibration); remote BODY dispatch to arnavchokshi@104.198.129.228 did not complete: remote BODY stage failed (exit 1): remote BODY version verification failed: local_sha=f7849c367d29599c78973bb474a263f773214cb8 remote_sha=1e4ab2a0aa413021e66bbd350d6fc0a6f569338f drifted_files=scripts/racketsport/remote_body_dispatch.py; remote SAM-3D BODY did not complete; no fallback pose skeleton was generated"
+   ],
+   "stage": "body",
+   "status": "degraded"
+  },
+  {
+   "reasons": [
+    "built replay_viewer_manifest.json with confidence_gated_world.json as world URL",
+    "mesh_status=None",
+    "representation_status=body_missing",
+    "no replay_scene.json written: --no-scene-points set"
+   ],
+   "stage": "manifest",
+   "status": "degraded"
+  }
+ ],
+ "missing_capabilities": [
+  {
+   "capability": "body",
+   "reason": "stage body degraded: remote calibration seed: derived capture_sidecar.json corner taps from the external court_calibration.json's own image_pts/world_pts (remote's committed orchestrator re-derives calibration from manual taps; the local world keeps the trusted external calibration); remote BODY dispatch to arnavchokshi@104.198.129.228 did not complete: remote BODY stage failed (exit 1): remote BODY version verification failed: local_sha=f7849c367d29599c78973bb474a263f773214cb8 remote_sha=1e4ab2a0aa413021e66bbd350d6fc0a6f569338f drifted_files=scripts/racketsport/remote_body_dispatch.py; remote SAM-3D BODY did not complete; no fallback pose skeleton was generated"
+  },
+  {
+   "capability": "assets",
+   "reason": "stage manifest degraded: built replay_viewer_manifest.json with confidence_gated_world.json as world URL; mesh_status=None; representation_status=body_missing; no replay_scene.json written: --no-scene-points set"
+  }
+ ],
+ "remote_body_dispatch_timing": {
+  "remote_host": "arnavchokshi@104.198.129.228",
+  "phases": {
+   "mkdir_s": 0.824759,
+   "preflight_s": 1.623445,
+   "remote_command_s": 1.770306,
+   "tar_create_upload_archive_s": 1.350821,
+   "tar_remote_untar_s": 1.055405,
+   "tar_upload_scp_s": 3.003679,
+   "upload_s": 5.414338
+  },
+  "status": "failed"
+ },
+ "placement_refined_artifact_present": false,
+ "placement_trajectory_refined_artifact_present": false,
+ "players_retained": 4,
+ "selection_status": "preview_selection_partial_with_abstentions",
+ "nvz_kitchen_decision_hist_placement.json": {
+  "unknown": 1648
+ }
+}

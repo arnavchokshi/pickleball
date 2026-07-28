@@ -1,0 +1,14 @@
+DRIVER_START 2026-07-28T09:05:44Z
+CLIP_START 01_wolverine_indoor_diagonal_0_10 2026-07-28T09:05:44Z
+CLIP_END 01_wolverine_indoor_diagonal_0_10 2026-07-28T09:07:22Z exit=0 wall_s=98
+CLIP_START 02_indoor_doubles_baseline_10_20 2026-07-28T09:07:22Z
+CLIP_END 02_indoor_doubles_baseline_10_20 2026-07-28T09:09:48Z exit=0 wall_s=146
+CLIP_START 03_outdoor_high_baseline_0_10 2026-07-28T09:09:48Z
+CLIP_END 03_outdoor_high_baseline_0_10 2026-07-28T09:12:16Z exit=0 wall_s=148
+CLIP_START 06_replacement_indoor_straight_100_110 2026-07-28T09:12:16Z
+CLIP_END 06_replacement_indoor_straight_100_110 2026-07-28T09:14:09Z exit=0 wall_s=113
+CLIP_START 07_replacement_indoor_diagonal_100_110 2026-07-28T09:14:09Z
+CLIP_END 07_replacement_indoor_diagonal_100_110 2026-07-28T09:15:48Z exit=0 wall_s=99
+CLIP_START 10_replacement_outdoor_pbvision_50_60 2026-07-28T09:15:48Z
+CLIP_END 10_replacement_outdoor_pbvision_50_60 2026-07-28T09:17:15Z exit=0 wall_s=87
+DRIVER_DONE 2026-07-28T09:17:15Z

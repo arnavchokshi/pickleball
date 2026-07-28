@@ -1,0 +1,15 @@
+{
+  "dirty_tracked_files": [
+    "runs/manager/inflight_lanes.md"
+  ],
+  "local_git_head_sha": "f7849c367d29599c78973bb474a263f773214cb8",
+  "notes": [
+    "synced repo files via git bundle and checkout --detach -f; did not run git clean",
+    "remote version stamp verified for f7849c367d29599c78973bb474a263f773214cb8",
+    "non-gating local dirty tracked file(s) present while syncing committed HEAD: runs/manager/inflight_lanes.md"
+  ],
+  "remote_git_head_sha_after": "f7849c367d29599c78973bb474a263f773214cb8",
+  "remote_git_head_sha_before": "1e4ab2a0aa413021e66bbd350d6fc0a6f569338f",
+  "status": "synced",
+  "verified": true
+}

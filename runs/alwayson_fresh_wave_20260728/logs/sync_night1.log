@@ -1,0 +1,12 @@
+{
+  "dirty_tracked_files": [],
+  "local_git_head_sha": "1e4ab2a0aa413021e66bbd350d6fc0a6f569338f",
+  "notes": [
+    "synced repo files via git bundle and checkout --detach -f; did not run git clean",
+    "remote version stamp verified for 1e4ab2a0aa413021e66bbd350d6fc0a6f569338f"
+  ],
+  "remote_git_head_sha_after": "1e4ab2a0aa413021e66bbd350d6fc0a6f569338f",
+  "remote_git_head_sha_before": "d9dbac9286a0fac039786bcd0f4923226bbe24f6",
+  "status": "synced",
+  "verified": true
+}

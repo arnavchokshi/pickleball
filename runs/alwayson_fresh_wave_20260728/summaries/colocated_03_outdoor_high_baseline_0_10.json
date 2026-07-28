@@ -1,0 +1,98 @@
+{
+ "clip_dir": "runs/alwayson_fresh_wave_20260728/colocated/03_outdoor_high_baseline_0_10",
+ "status": "partial",
+ "wall_seconds": 136.589,
+ "stages": {
+  "ingest": {
+   "status": "ran",
+   "wall_seconds": 1.261
+  },
+  "calibration": {
+   "status": "ran",
+   "wall_seconds": 46.199
+  },
+  "input_quality": {
+   "status": "ran",
+   "wall_seconds": 0.382
+  },
+  "tracking": {
+   "status": "ran",
+   "wall_seconds": 63.646
+  },
+  "player_selection": {
+   "status": "ran",
+   "wall_seconds": 8.669
+  },
+  "camera_motion": {
+   "status": "skipped",
+   "wall_seconds": 0.006
+  },
+  "placement": {
+   "status": "ran",
+   "wall_seconds": 6.772
+  },
+  "frames": {
+   "status": "ran",
+   "wall_seconds": 4.538
+  },
+  "body": {
+   "status": "degraded",
+   "wall_seconds": 0.729
+  },
+  "placement_refine": {
+   "status": "skipped",
+   "wall_seconds": 0.002
+  },
+  "grounding_refine": {
+   "status": "skipped",
+   "wall_seconds": 0.005
+  },
+  "placement_trajectory_refine": {
+   "status": "skipped",
+   "wall_seconds": 0.059
+  },
+  "world": {
+   "status": "ran",
+   "wall_seconds": 1.486
+  },
+  "confidence_gate": {
+   "status": "ran",
+   "wall_seconds": 1.892
+  },
+  "manifest": {
+   "status": "degraded",
+   "wall_seconds": 0.157
+  }
+ },
+ "degraded_reasons": [
+  {
+   "reasons": [
+    "local BODY stage failed: calibration failed: missing calibration sidecar: /home/arnavchokshi/coldstart_20260706/repo/runs/alwayson_fresh_wave_20260728_colocated/03_outdoor_high_baseline_0_10/03_outdoor_high_baseline_0_10/capture_sidecar.json; video court evidence attempt recorded from /home/arnavchokshi/coldstart_20260706/repo/runs/alwayson_fresh_wave_20260728_colocated/03_outdoor_high_baseline_0_10/03_outdoor_high_baseline_0_10/source.mp4, but calibration is fail-closed without a trusted sidecar or no-tap solve; no trusted no-tap calibration seed; degraded to skeleton-only"
+   ],
+   "stage": "body",
+   "status": "degraded"
+  },
+  {
+   "reasons": [
+    "built replay_viewer_manifest.json with confidence_gated_world.json as world URL",
+    "mesh_status=None",
+    "representation_status=body_missing",
+    "no replay_scene.json written: --no-scene-points set"
+   ],
+   "stage": "manifest",
+   "status": "degraded"
+  }
+ ],
+ "missing_capabilities": [
+  {
+   "capability": "body",
+   "reason": "stage body degraded: local BODY stage failed: calibration failed: missing calibration sidecar: /home/arnavchokshi/coldstart_20260706/repo/runs/alwayson_fresh_wave_20260728_colocated/03_outdoor_high_baseline_0_10/03_outdoor_high_baseline_0_10/capture_sidecar.json; video court evidence attempt recorded from /home/arnavchokshi/coldstart_20260706/repo/runs/alwayson_fresh_wave_20260728_colocated/03_outdoor_high_baseline_0_10/03_outdoor_high_baseline_0_10/source.mp4, but calibration is fail-closed without a trusted sidecar or no-tap solve; no trusted no-tap calibration seed; degraded to skeleton-only"
+  },
+  {
+   "capability": "assets",
+   "reason": "stage manifest degraded: built replay_viewer_manifest.json with confidence_gated_world.json as world URL; mesh_status=None; representation_status=body_missing; no replay_scene.json written: --no-scene-points set"
+  }
+ ],
+ "placement_refined_artifact_present": false,
+ "placement_trajectory_refined_artifact_present": false
+}

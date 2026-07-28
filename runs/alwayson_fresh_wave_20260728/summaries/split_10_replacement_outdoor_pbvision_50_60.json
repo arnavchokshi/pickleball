@@ -1,0 +1,159 @@
+{
+ "clip_dir": "runs/alwayson_fresh_wave_20260728/split/10_replacement_outdoor_pbvision_50_60/10_replacement_outdoor_pbvision_50_60",
+ "status": "partial",
+ "wall_seconds": 377.904,
+ "stages": {
+  "ingest": {
+   "status": "ran",
+   "wall_seconds": 0.642
+  },
+  "calibration": {
+   "status": "ran",
+   "wall_seconds": 17.901
+  },
+  "input_quality": {
+   "status": "ran",
+   "wall_seconds": 0.203
+  },
+  "tracking": {
+   "status": "ran",
+   "wall_seconds": 168.653
+  },
+  "player_selection": {
+   "status": "ran",
+   "wall_seconds": 1.292
+  },
+  "camera_motion": {
+   "status": "skipped",
+   "wall_seconds": 0.003
+  },
+  "placement": {
+   "status": "ran",
+   "wall_seconds": 1.219
+  },
+  "frames": {
+   "status": "ran",
+   "wall_seconds": 1.133
+  },
+  "body": {
+   "status": "ran",
+   "wall_seconds": 178.296
+  },
+  "placement_refine": {
+   "status": "ran",
+   "wall_seconds": 3.32
+  },
+  "grounding_refine": {
+   "status": "ran",
+   "wall_seconds": 1.034
+  },
+  "placement_trajectory_refine": {
+   "status": "ran",
+   "wall_seconds": 1.313
+  },
+  "world": {
+   "status": "ran",
+   "wall_seconds": 1.143
+  },
+  "confidence_gate": {
+   "status": "ran",
+   "wall_seconds": 0.882
+  },
+  "manifest": {
+   "status": "ran",
+   "wall_seconds": 0.617
+  }
+ },
+ "degraded_reasons": [],
+ "missing_capabilities": [
+  {
+   "capability": "assets",
+   "reason": "stage manifest ran: built replay_viewer_manifest.json with confidence_gated_world.json as world URL; mesh_status=skeleton_only; representation_status=skeleton_only; no replay_scene.json written: --no-scene-points set"
+  }
+ ],
+ "body_phase_timing": {
+  "model_load_s": 24.809647,
+  "compile_warmup_s": 32.898519,
+  "inference_s": 17.330741,
+  "attributed_s": 137.16615645799993,
+  "ms_per_person_steady": 15.92899,
+  "person_frame_count": 1088
+ },
+ "max_foot_lock_slide_m": 0.002603771215838058,
+ "body_samples": 1088,
+ "remote_body_dispatch_timing": {
+  "remote_host": "arnavchokshi@104.198.129.228",
+  "phases": {
+   "download_s": 5.658122,
+   "mkdir_s": 0.868031,
+   "preflight_s": 1.621442,
+   "remote_command_s": 161.335359,
+   "tar_create_upload_archive_s": 0.732543,
+   "tar_download_scp_s": 1.890488,
+   "tar_extract_outputs_s": 0.068935,
+   "tar_remote_pack_s": 1.269399,
+   "tar_remote_untar_s": 0.978073,
+   "tar_upload_scp_s": 2.196727,
+   "upload_s": 3.911771
+  },
+  "status": "ran"
+ },
+ "body_full_clip_gate_status": {
+  "artifact_type": "racketsport_body_full_clip_gate",
+  "blockers": [],
+  "clip": "10_replacement_outdoor_pbvision_50_60",
+  "contact_mesh_coverage": null,
+  "coverage": 1.0,
+  "coverage_denominator_player_frame_count": 1088,
+  "coverage_denominator_policy": "eligible_scheduled_measured_samples",
+  "evaluated_frame_count": 1088,
+  "evaluated_player_frame_count": 1088,
+  "execution": {
+   "claims_accuracy_verified": false,
+   "cpu_only": true,
+   "runs_body_model": false,
+   "uses_gpu": false
+  },
+  "latency_seconds_per_video_minute": 870.835403,
+  "min_coverage": 0.98,
+  "passed": true,
+  "paths": {
+   "body_compute_execution": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/10_replacement_outdoor_pbvision_50_60_20260728T094737Z/body_compute_execution.json",
+   "body_joint_quality": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/10_replacement_outdoor_pbvision_50_60_20260728T094737Z/body_joint_quality.json",
+   "contact_splice": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/10_replacement_outdoor_pbvision_50_60_20260728T094737Z/contact_splice.json",
+   "runtime_timing": "body_stage_wall_clock",
+   "tracks": "/home/arnavchokshi/coldstart_20260706/repo/runs/process_video_body_dispatch/10_replacement_outdoor_pbvision_50_60_20260728T094737Z/tracks.json"
+  },
+  "schema_version": 1,
+  "summary": {
+   "body_runtime_seconds": 146.1068286489999,
+   "clip_duration_s": 10.066667,
+   "contact_mesh_accounted_count": 0,
+   "contact_mesh_frame_count": 0,
+   "coverage_denominator_player_frame_count": 1088,
+   "coverage_denominator_policy": "eligible_scheduled_measured_samples",
+   "fallback_spliced_contact_count": 0,
+   "joint_player_frame_count": 1088,
+   "latency_seconds_per_video_minute": 870.835403,
+   "mesh_joint_player_frame_count": 1088,
+   "mesh_unavailable_contact_count": 0,
+   "quality_blockers": [],
+   "quality_status": "quality_checked_needs_accuracy_gate",
+   "quality_usable_for_review": true,
+   "scheduled_contact_count": 0,
+   "scheduled_player_frame_count": 1088,
+   "skeleton_joint_player_frame_count": 1088,
+   "tracked_player_frame_count": 1090
+  },
+  "tracked_player_frame_count": 1090,
+  "warnings": []
+ },
+ "placement_refined_artifact_present": true,
+ "placement_trajectory_refined_artifact_present": true,
+ "players_retained": 4,
+ "selection_status": "preview_selection_partial_with_abstentions",
+ "nvz_kitchen_decision_hist_placement_refined.json": {
+  "confirmed_outside": 144,
+  "unknown": 946
+ }
+}
