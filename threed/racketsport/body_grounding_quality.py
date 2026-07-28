@@ -14,6 +14,7 @@ INDEPENDENT_PHASE_REJECTION_REASONS = {
     "weak_bilateral_unknown_foot",
     "low_body_contact_confidence",
     "phase_penetrates_ground",
+    "implausible_short_high_speed_plant",
 }
 
 
