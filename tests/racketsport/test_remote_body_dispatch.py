@@ -2293,6 +2293,340 @@ def test_remote_body_command_quotes_hostile_persistent_worker_socket() -> None:
     assert "rm" not in tokens
 
 
+def test_default_warm_worker_socket_path_is_per_clip_and_run_root() -> None:
+    config = _remote_config(repo="/remote/repo", run_root="runs/process_video_body_dispatch")
+    assert rbd.default_warm_worker_socket_path(config, "wolverine") == (
+        "/remote/repo/runs/process_video_body_dispatch/.warm_worker/wolverine.sock"
+    )
+
+
+def test_probe_warm_worker_health_reports_absent_when_manifest_missing() -> None:
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        assert cmd[0] == "ssh"
+        return _completed(0, stdout=json.dumps({"manifest_found": False}) + "\n")
+
+    health = rbd.probe_warm_worker_health(_remote_config(), clip="wolverine", run=fake_run)
+    assert health.status == rbd.WARM_WORKER_STATUS_ABSENT
+    assert health.healthy is False
+
+
+def test_probe_warm_worker_health_reports_socket_unreachable() -> None:
+    manifest = {"clip": "wolverine", "git_head_sha": "abc123", "socket_path": "/x.sock"}
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        return _completed(
+            0,
+            stdout=json.dumps(
+                {
+                    "manifest_found": True,
+                    "manifest": manifest,
+                    "socket_reachable": False,
+                    "socket_error": "ConnectionRefusedError: [Errno 111]",
+                }
+            ),
+        )
+
+    health = rbd.probe_warm_worker_health(
+        _remote_config(), clip="wolverine", local_git_head_sha="abc123", run=fake_run
+    )
+    assert health.status == rbd.WARM_WORKER_STATUS_SOCKET_UNREACHABLE
+    assert health.healthy is False
+
+
+def test_probe_warm_worker_health_reports_stale_code_on_git_sha_mismatch() -> None:
+    manifest = {"clip": "wolverine", "git_head_sha": "old_sha", "socket_path": "/x.sock"}
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        return _completed(
+            0, stdout=json.dumps({"manifest_found": True, "manifest": manifest, "socket_reachable": True})
+        )
+
+    health = rbd.probe_warm_worker_health(
+        _remote_config(), clip="wolverine", local_git_head_sha="new_sha", run=fake_run
+    )
+    assert health.status == rbd.WARM_WORKER_STATUS_STALE_CODE
+    assert health.healthy is False
+    assert "old_sha" in health.detail and "new_sha" in health.detail
+
+
+def test_probe_warm_worker_health_reports_clip_mismatch() -> None:
+    manifest = {"clip": "other_clip", "git_head_sha": "sha", "socket_path": "/x.sock"}
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        return _completed(
+            0, stdout=json.dumps({"manifest_found": True, "manifest": manifest, "socket_reachable": True})
+        )
+
+    health = rbd.probe_warm_worker_health(
+        _remote_config(), clip="wolverine", local_git_head_sha="sha", run=fake_run
+    )
+    assert health.status == rbd.WARM_WORKER_STATUS_CLIP_MISMATCH
+    assert health.healthy is False
+
+
+def test_probe_warm_worker_health_reports_healthy_when_everything_matches() -> None:
+    config = _remote_config()
+    expected_socket_path = rbd.default_warm_worker_socket_path(config, "wolverine")
+    manifest = {
+        "clip": "wolverine",
+        "git_head_sha": "sha",
+        "socket_path": expected_socket_path,
+    }
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        return _completed(
+            0, stdout=json.dumps({"manifest_found": True, "manifest": manifest, "socket_reachable": True})
+        )
+
+    health = rbd.probe_warm_worker_health(config, clip="wolverine", local_git_head_sha="sha", run=fake_run)
+    assert health.status == rbd.WARM_WORKER_STATUS_HEALTHY
+    assert health.healthy is True
+    # health.socket_path is the path the caller *probed and should route to*
+    # (derived from config/clip), independent of whatever the remote manifest
+    # happens to echo back.
+    assert health.socket_path == expected_socket_path
+
+
+def test_probe_warm_worker_health_reports_probe_failed_on_ssh_timeout() -> None:
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        raise subprocess.TimeoutExpired(cmd=cmd, timeout=timeout_s or 1)
+
+    health = rbd.probe_warm_worker_health(_remote_config(), clip="wolverine", run=fake_run)
+    assert health.status == rbd.WARM_WORKER_STATUS_PROBE_FAILED
+    assert health.healthy is False
+
+
+def test_probe_warm_worker_health_reports_probe_failed_on_non_json_stdout() -> None:
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        return _completed(0, stdout="not json at all")
+
+    health = rbd.probe_warm_worker_health(_remote_config(), clip="wolverine", run=fake_run)
+    assert health.status == rbd.WARM_WORKER_STATUS_PROBE_FAILED
+    assert health.healthy is False
+
+
+def test_probe_warm_worker_health_reports_probe_failed_on_nonzero_ssh_exit() -> None:
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        return _completed(255, stderr="Connection refused")
+
+    health = rbd.probe_warm_worker_health(_remote_config(), clip="wolverine", run=fake_run)
+    assert health.status == rbd.WARM_WORKER_STATUS_PROBE_FAILED
+    assert health.healthy is False
+
+
+def test_probe_warm_worker_health_command_embeds_derived_manifest_path() -> None:
+    captured: list[list[str]] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        captured.append(list(cmd))
+        return _completed(0, stdout=json.dumps({"manifest_found": False}))
+
+    rbd.probe_warm_worker_health(
+        _remote_config(repo="/r", run_root="runs/x"), clip="wolverine", run=fake_run
+    )
+    assert len(captured) == 1
+    command = captured[0][-1]
+    assert "/r/runs/x/.warm_worker/wolverine.sock.manifest.json" in command
+    assert " -c " in command
+
+
+def test_remote_body_command_skip_gpu_lock_wrap_omits_lock_script_and_env() -> None:
+    # warm_body_worker_20260728: a job routed to an already-healthy worker
+    # must not also wrap with gpu-eval-run.sh, because the worker holds that
+    # shared lock continuously for its own serving lifetime (started via
+    # body_warm_worker.py under the same lock script) -- re-wrapping the
+    # per-job dispatch would self-block against the worker's own held lock.
+    config = _remote_config(sam3dbody_persistent_worker_socket="/tmp/w.sock")
+
+    command = rbd._remote_body_command(remote_run_dir="/remote/run", config=config, skip_gpu_lock_wrap=True)
+
+    assert "GPU_LOCK_TIMEOUT_S" not in command
+    assert config.gpu_lock_script not in command
+    tokens = shlex.split(command)
+    assert "SAM3DBODY_PERSISTENT_WORKER_SOCKET=/tmp/w.sock" in tokens
+
+
+def test_remote_body_command_skip_gpu_lock_wrap_defaults_to_false() -> None:
+    config = _remote_config()
+    command = rbd._remote_body_command(remote_run_dir="/remote/run", config=config)
+    assert config.gpu_lock_script in command
+    assert "GPU_LOCK_TIMEOUT_S" in command
+
+
+def test_dispatch_body_stage_warm_worker_healthy_routes_and_skips_gpu_lock(tmp_path: Path) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    current_head_sha = rbd._git_head_sha(rbd.ROOT)
+    manifest = {
+        "clip": "wolverine",
+        "git_head_sha": current_head_sha,
+        "socket_path": "/remote/repo/runs/process_video_body_dispatch/.warm_worker/wolverine.sock",
+    }
+    remote_commands: list[str] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] == "ssh" and cmd[-1] == "true":
+            return _completed(0)
+        if cmd[0] == "ssh" and cmd[-1].startswith("test -e"):
+            return _completed(0)
+        if cmd[0] == "ssh" and cmd[-1].startswith("mkdir"):
+            return _completed(0)
+        if cmd[0] == "ssh" and " -c " in cmd[-1]:
+            return _completed(
+                0,
+                stdout=json.dumps(
+                    {"manifest_found": True, "manifest": manifest, "socket_reachable": True}
+                ),
+            )
+        if _is_remote_output_listing(list(cmd)):
+            return _completed(0, stdout="smpl_motion.json\n")
+        if cmd[0] == "rsync":
+            src, dst = cmd[-2], cmd[-1]
+            if ":" in dst:
+                return _completed(0)
+            if _is_rsync_download_batch(list(cmd)) and "smpl_motion.json" in _rsync_files_from_names(list(cmd)):
+                _write_json(
+                    Path(dst) / "smpl_motion.json",
+                    {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []},
+                )
+                return _completed(0)
+            return _completed(1, stderr="not found")
+        if cmd[0] == "ssh":
+            remote_commands.append(cmd[-1])
+            stdout = "\n".join(
+                [
+                    json.dumps({"event": "script_start", "epoch_s": 100.0}),
+                    "body stage ok",
+                    json.dumps({"event": "run_pipeline_done", "epoch_s": 101.5}),
+                ]
+            )
+            return _completed(0, stdout=stdout)
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    result = rbd.dispatch_body_stage(
+        clip="wolverine",
+        clip_dir=clip_dir,
+        video_path=clip_dir / "source.mp4",
+        config=_remote_config(transport="rsync", warm_worker=True, fetch_body_monoliths=True),
+        allow_dirty=True,
+        run=fake_run,
+    )
+
+    assert result.status == "ran"
+    assert any("warm-worker dispatch: routed" in note for note in result.notes)
+    assert len(remote_commands) == 1
+    assert "SAM3DBODY_PERSISTENT_WORKER_SOCKET=" in remote_commands[0]
+    assert "GPU_LOCK_TIMEOUT_S" not in remote_commands[0]
+
+    artifact = json.loads((clip_dir / "warm_worker_dispatch.json").read_text(encoding="utf-8"))
+    assert artifact["requested"] is True
+    assert artifact["used"] is True
+    assert artifact["status"] == "healthy"
+    assert artifact["gpu_lock_wrap_skipped"] is True
+    assert artifact["runner_internal_wall_s"] == pytest.approx(1.5)
+
+
+def test_dispatch_body_stage_warm_worker_unhealthy_falls_back_loudly(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    remote_commands: list[str] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] == "ssh" and cmd[-1] == "true":
+            return _completed(0)
+        if cmd[0] == "ssh" and cmd[-1].startswith("test -e"):
+            return _completed(0)
+        if cmd[0] == "ssh" and cmd[-1].startswith("mkdir"):
+            return _completed(0)
+        if cmd[0] == "ssh" and " -c " in cmd[-1]:
+            return _completed(0, stdout=json.dumps({"manifest_found": False}))
+        if _is_remote_output_listing(list(cmd)):
+            return _completed(0, stdout="smpl_motion.json\n")
+        if cmd[0] == "rsync":
+            src, dst = cmd[-2], cmd[-1]
+            if ":" in dst:
+                return _completed(0)
+            if _is_rsync_download_batch(list(cmd)) and "smpl_motion.json" in _rsync_files_from_names(list(cmd)):
+                _write_json(
+                    Path(dst) / "smpl_motion.json",
+                    {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []},
+                )
+                return _completed(0)
+            return _completed(1, stderr="not found")
+        if cmd[0] == "ssh":
+            remote_commands.append(cmd[-1])
+            return _completed(0, stdout="body stage ok")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    result = rbd.dispatch_body_stage(
+        clip="wolverine",
+        clip_dir=clip_dir,
+        video_path=clip_dir / "source.mp4",
+        config=_remote_config(transport="rsync", warm_worker=True, fetch_body_monoliths=True),
+        allow_dirty=True,
+        run=fake_run,
+    )
+
+    assert result.status == "ran"
+    assert any("warm-worker requested but unavailable" in note for note in result.notes)
+    assert len(remote_commands) == 1
+    assert "GPU_LOCK_TIMEOUT_S" in remote_commands[0]
+    assert "SAM3DBODY_PERSISTENT_WORKER_SOCKET" not in remote_commands[0]
+
+    artifact = json.loads((clip_dir / "warm_worker_dispatch.json").read_text(encoding="utf-8"))
+    assert artifact["requested"] is True
+    assert artifact["used"] is False
+    assert artifact["status"] == "absent"
+
+    stderr = capsys.readouterr().err
+    assert "WARM-WORKER FALLBACK" in stderr
+    assert "falling back to the normal cold BODY dispatch path" in stderr
+
+
+def test_dispatch_body_stage_default_skips_warm_worker_probe_and_artifact(tmp_path: Path) -> None:
+    clip_dir = _clip_dir_with_tracks(tmp_path)
+    probe_calls: list[list[str]] = []
+
+    def fake_run(cmd, timeout_s):  # noqa: ANN001
+        if cmd[0] == "ssh" and " -c " in cmd[-1]:
+            probe_calls.append(list(cmd))
+        if cmd[0] == "ssh" and cmd[-1] == "true":
+            return _completed(0)
+        if cmd[0] == "ssh" and cmd[-1].startswith("test -e"):
+            return _completed(0)
+        if cmd[0] == "ssh" and cmd[-1].startswith("mkdir"):
+            return _completed(0)
+        if _is_remote_output_listing(list(cmd)):
+            return _completed(0, stdout="smpl_motion.json\n")
+        if cmd[0] == "rsync":
+            src, dst = cmd[-2], cmd[-1]
+            if ":" in dst:
+                return _completed(0)
+            if _is_rsync_download_batch(list(cmd)) and "smpl_motion.json" in _rsync_files_from_names(list(cmd)):
+                _write_json(
+                    Path(dst) / "smpl_motion.json",
+                    {"schema_version": 1, "model": "sam3dbody_world_joints", "fps": 30.0, "world_frame": "court_Z0", "players": []},
+                )
+                return _completed(0)
+            return _completed(1, stderr="not found")
+        if cmd[0] == "ssh":
+            return _completed(0, stdout="body stage ok")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    result = rbd.dispatch_body_stage(
+        clip="wolverine",
+        clip_dir=clip_dir,
+        video_path=clip_dir / "source.mp4",
+        config=_remote_config(transport="rsync", fetch_body_monoliths=True),
+        allow_dirty=True,
+        run=fake_run,
+    )
+
+    assert result.status == "ran"
+    assert probe_calls == []
+    assert not (clip_dir / "warm_worker_dispatch.json").exists()
+
+
 def test_remote_body_runner_script_embeds_hostile_clip_as_inert_string_literal() -> None:
     # dispatch_body_stage always validates clip ids first, but the generator
     # can be called directly: repr() embedding must keep a hostile clip id an

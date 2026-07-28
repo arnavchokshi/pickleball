@@ -38,7 +38,7 @@ import sys
 import tarfile
 import tempfile
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable, Mapping, Sequence
 
@@ -129,6 +129,27 @@ DEFAULT_TRANSPORT_CHUNKED_FALLBACK_BWLIMIT_KBPS = 8192
 VERSION_STAMP_ARTIFACT = "version_stamp.json"
 REMOTE_VERSION_VERIFICATION_ARTIFACT = "remote_version_verification.json"
 REMOTE_CODE_SYNC_DIR = ".body_code_sync"
+# warm_body_worker_20260728: default-OFF client-side warm-worker dispatch. This
+# is layered on top of body_overhead_20260712's already-committed persistent
+# worker (RemoteConfig.sam3dbody_persistent_worker_socket /
+# scripts/racketsport/sam3dbody_persistent_worker.py) -- that lever proved the
+# model-load+compile-skip mechanism correct but was scored default-off/opt-in
+# only, with no SSH-orchestrated way to start/health-check/stop a worker from a
+# laptop client and no lock-cooperation story for a worker that outlives any
+# single dispatch. scripts/racketsport/body_warm_worker.py (this lane) is that
+# operator-facing lifecycle tool; the fields/constants/functions below are the
+# remote_body_dispatch.py side of the same feature: a health-checked
+# --warm-worker routing flag with a loud, typed, non-silent fallback to the
+# normal cold path.
+WARM_WORKER_SOCKET_DIRNAME = ".warm_worker"
+WARM_WORKER_MANIFEST_SUFFIX = ".manifest.json"
+WARM_WORKER_DISPATCH_ARTIFACT = "warm_worker_dispatch.json"
+WARM_WORKER_STATUS_HEALTHY = "healthy"
+WARM_WORKER_STATUS_ABSENT = "absent"
+WARM_WORKER_STATUS_SOCKET_UNREACHABLE = "socket_unreachable"
+WARM_WORKER_STATUS_STALE_CODE = "stale_code"
+WARM_WORKER_STATUS_CLIP_MISMATCH = "clip_mismatch"
+WARM_WORKER_STATUS_PROBE_FAILED = "probe_failed"
 RAW_GROUNDED_JOINTS_ARTIFACT = "body_raw_grounded_joints.json"
 BODY_POSTCHAIN_STAGE_ORDER: tuple[str, ...] = (
     "temporal_smoothing",
@@ -325,6 +346,21 @@ class RemoteConfig:
     sam3dbody_persistent_worker_socket: str = field(
         default_factory=lambda: os.environ.get("SAM3DBODY_PERSISTENT_WORKER_SOCKET_CONFIG", "")
     )
+    # warm_body_worker_20260728, default-OFF. When True, dispatch_body_stage()
+    # health-probes an already-running scripts/racketsport/body_warm_worker.py
+    # worker (manifest + Unix-socket reachability + code-stamp match) before
+    # building the remote command. Healthy -> route through it (sets
+    # sam3dbody_persistent_worker_socket for this dispatch only and skips the
+    # gpu-eval-run.sh wrap, because the worker itself holds that shared lock
+    # for its whole serving lifetime -- see body_warm_worker.py's docstring).
+    # Absent/unhealthy -> LOUD typed fallback to the unchanged cold path;
+    # never silent, never a different artifact contract.
+    warm_worker: bool = False
+    # Empty string means "derive the default path from --repo/run_root/clip"
+    # (default_warm_worker_socket_path); set explicitly only to match a worker
+    # started with a non-default --socket-path.
+    warm_worker_socket_path: str = ""
+    warm_worker_health_timeout_s: float = 15.0
 
     def ssh_option_args(self) -> list[str]:
         """`-o ...` host-key-verification options, shared by ssh and rsync -e."""
@@ -1102,6 +1138,202 @@ def check_remote_layout(config: RemoteConfig, *, run: RunFn = _run) -> None:
     )
 
 
+def default_warm_worker_socket_path(config: RemoteConfig, clip: str) -> str:
+    """Convention shared by body_warm_worker.py start/status/stop and dispatch_body_stage.
+
+    One socket per clip under the dispatch run_root: the persistent worker's
+    fingerprint check only ever claims correctness for repeat jobs against the
+    exact clip/config it was bootstrapped with (body_overhead_20260712), so a
+    per-clip path keeps "which worker serves which clip" unambiguous instead
+    of relying on operators to track it out of band.
+    """
+
+    clip = _validate_clip_id(clip)
+    return f"{config.repo}/{config.run_root}/{WARM_WORKER_SOCKET_DIRNAME}/{clip}.sock"
+
+
+def _warm_worker_manifest_path(socket_path: str) -> str:
+    return f"{socket_path}{WARM_WORKER_MANIFEST_SUFFIX}"
+
+
+@dataclass
+class WarmWorkerHealth:
+    """Typed result of a --warm-worker pre-dispatch health probe. Never silent."""
+
+    status: str
+    healthy: bool
+    socket_path: str
+    manifest_path: str
+    detail: str
+    manifest: dict[str, Any] | None = None
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "status": self.status,
+            "healthy": self.healthy,
+            "socket_path": self.socket_path,
+            "manifest_path": self.manifest_path,
+            "detail": self.detail,
+            "manifest": self.manifest,
+        }
+
+
+def _warm_worker_probe_script(*, manifest_path: str, connect_timeout_s: float) -> str:
+    """One remote python -c script: read the manifest, then probe socket reachability.
+
+    Runs entirely server-side in a single SSH round trip (cheap: no torch/CUDA
+    import, just stdlib json/socket) and always exits 0, printing one JSON line
+    -- failures are reported *in* the JSON (manifest_error/socket_error), not
+    via process exit code, so a genuinely-unreachable host is the only thing
+    that surfaces as an SSH-level failure to the caller.
+    """
+
+    return (
+        "import json, socket, sys\n"
+        f"manifest_path = {manifest_path!r}\n"
+        f"connect_timeout_s = {float(connect_timeout_s)!r}\n"
+        "result = {'manifest_found': False}\n"
+        "try:\n"
+        "    with open(manifest_path, 'r', encoding='utf-8') as handle:\n"
+        "        manifest = json.load(handle)\n"
+        "except FileNotFoundError:\n"
+        "    print(json.dumps(result)); sys.exit(0)\n"
+        "except Exception as exc:\n"
+        "    result['manifest_error'] = f'{type(exc).__name__}: {exc}'\n"
+        "    print(json.dumps(result)); sys.exit(0)\n"
+        "result['manifest_found'] = True\n"
+        "result['manifest'] = manifest\n"
+        "socket_path = str(manifest.get('socket_path', ''))\n"
+        "reachable = False\n"
+        "try:\n"
+        "    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)\n"
+        "    sock.settimeout(connect_timeout_s)\n"
+        "    sock.connect(socket_path)\n"
+        "    sock.close()\n"
+        "    reachable = True\n"
+        "except Exception as exc:\n"
+        "    result['socket_error'] = f'{type(exc).__name__}: {exc}'\n"
+        "result['socket_reachable'] = reachable\n"
+        "print(json.dumps(result))\n"
+    )
+
+
+def probe_warm_worker_health(
+    config: RemoteConfig,
+    *,
+    clip: str,
+    socket_path: str | None = None,
+    local_git_head_sha: str | None = None,
+    run: RunFn = _run,
+) -> WarmWorkerHealth:
+    """Health-check an already-started body_warm_worker.py worker before routing a job to it.
+
+    Never raises: every failure mode (host unreachable, worker never started,
+    worker crashed/exited, code drifted since the worker booted, wrong clip)
+    comes back as a typed, non-healthy :class:`WarmWorkerHealth` with a human
+    ``detail`` string, so ``dispatch_body_stage`` can fall back loudly instead
+    of guessing or dying.
+    """
+
+    clip = _validate_clip_id(clip)
+    resolved_socket_path = socket_path or default_warm_worker_socket_path(config, clip)
+    manifest_path = _warm_worker_manifest_path(resolved_socket_path)
+    script = _warm_worker_probe_script(
+        manifest_path=manifest_path, connect_timeout_s=config.warm_worker_health_timeout_s
+    )
+    command = f"{shlex.quote(config.python)} -c {shlex.quote(script)}"
+    probe_timeout_s = config.connect_timeout_s + config.warm_worker_health_timeout_s + 10
+    try:
+        result = run([*config.ssh_base(), command], probe_timeout_s)
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        return WarmWorkerHealth(
+            status=WARM_WORKER_STATUS_PROBE_FAILED,
+            healthy=False,
+            socket_path=resolved_socket_path,
+            manifest_path=manifest_path,
+            detail=f"warm-worker health probe SSH failed: {type(exc).__name__}: {exc}",
+        )
+    if result.returncode != 0:
+        return WarmWorkerHealth(
+            status=WARM_WORKER_STATUS_PROBE_FAILED,
+            healthy=False,
+            socket_path=resolved_socket_path,
+            manifest_path=manifest_path,
+            detail=f"warm-worker health probe SSH exited {result.returncode}: {(result.stderr or '').strip()[-500:]}",
+        )
+    stdout_lines = [line for line in (result.stdout or "").splitlines() if line.strip()]
+    try:
+        payload = json.loads(stdout_lines[-1]) if stdout_lines else {}
+    except ValueError as exc:
+        return WarmWorkerHealth(
+            status=WARM_WORKER_STATUS_PROBE_FAILED,
+            healthy=False,
+            socket_path=resolved_socket_path,
+            manifest_path=manifest_path,
+            detail=(
+                f"warm-worker health probe returned non-JSON output: {type(exc).__name__}: {exc}; "
+                f"stdout_tail={(result.stdout or '')[-300:]!r}"
+            ),
+        )
+    if not isinstance(payload, dict) or not payload.get("manifest_found"):
+        detail = (
+            (isinstance(payload, dict) and payload.get("manifest_error"))
+            or "no warm-worker manifest found on remote host (worker never started, or was already stopped)"
+        )
+        return WarmWorkerHealth(
+            status=WARM_WORKER_STATUS_ABSENT,
+            healthy=False,
+            socket_path=resolved_socket_path,
+            manifest_path=manifest_path,
+            detail=str(detail),
+        )
+    manifest = payload.get("manifest") or {}
+    if not isinstance(manifest, dict):
+        manifest = {}
+    if not payload.get("socket_reachable"):
+        return WarmWorkerHealth(
+            status=WARM_WORKER_STATUS_SOCKET_UNREACHABLE,
+            healthy=False,
+            socket_path=resolved_socket_path,
+            manifest_path=manifest_path,
+            detail=f"warm-worker manifest present but its socket is not reachable: {payload.get('socket_error', 'connect failed')}",
+            manifest=manifest,
+        )
+    manifest_clip = str(manifest.get("clip", ""))
+    if manifest_clip and manifest_clip != clip:
+        return WarmWorkerHealth(
+            status=WARM_WORKER_STATUS_CLIP_MISMATCH,
+            healthy=False,
+            socket_path=resolved_socket_path,
+            manifest_path=manifest_path,
+            detail=f"warm worker was bootstrapped for clip {manifest_clip!r}, not {clip!r}",
+            manifest=manifest,
+        )
+    resolved_local_sha = local_git_head_sha if local_git_head_sha is not None else _git_head_sha(ROOT)
+    manifest_git_head_sha = str(manifest.get("git_head_sha", ""))
+    if manifest_git_head_sha and manifest_git_head_sha != resolved_local_sha:
+        return WarmWorkerHealth(
+            status=WARM_WORKER_STATUS_STALE_CODE,
+            healthy=False,
+            socket_path=resolved_socket_path,
+            manifest_path=manifest_path,
+            detail=(
+                f"warm worker code stamp {manifest_git_head_sha} does not match local HEAD "
+                f"{resolved_local_sha}; restart it (scripts/racketsport/body_warm_worker.py start) "
+                "after syncing/committing code"
+            ),
+            manifest=manifest,
+        )
+    return WarmWorkerHealth(
+        status=WARM_WORKER_STATUS_HEALTHY,
+        healthy=True,
+        socket_path=resolved_socket_path,
+        manifest_path=manifest_path,
+        detail="warm worker healthy: manifest present, socket reachable, code stamp matches local HEAD",
+        manifest=manifest,
+    )
+
+
 def dispatch_body_stage(
     *,
     clip: str,
@@ -1207,9 +1439,44 @@ def dispatch_body_stage(
         camera_motion_path=camera_motion_path,
     )
 
+    warm_worker_artifact: dict[str, Any] = {}
+    warm_worker_used = False
+    effective_config = config
+    if config.warm_worker:
+        warm_worker_probe = probe_warm_worker_health(
+            config,
+            clip=clip,
+            socket_path=config.warm_worker_socket_path or None,
+            run=run,
+        )
+        warm_worker_used = warm_worker_probe.healthy
+        if warm_worker_used:
+            effective_config = replace(config, sam3dbody_persistent_worker_socket=warm_worker_probe.socket_path)
+        else:
+            # LOUD, typed, never silent: this always prints even though
+            # RemoteBodyDispatchResult.notes (below) also carries it, because
+            # process_video.py's caller only surfaces notes on success/degrade
+            # paths it explicitly formats, not guaranteed on every branch.
+            print(
+                "[remote_body_dispatch] WARM-WORKER FALLBACK: --warm-worker was requested but the "
+                f"worker is not usable (status={warm_worker_probe.status}): {warm_worker_probe.detail} "
+                "-- falling back to the normal cold BODY dispatch path (unchanged artifacts).",
+                file=sys.stderr,
+            )
+        warm_worker_artifact = {
+            "schema_version": 1,
+            "artifact_type": "racketsport_warm_worker_dispatch",
+            "requested": True,
+            "used": warm_worker_used,
+            "probed_at_utc": _utc_now_iso(),
+            **warm_worker_probe.as_dict(),
+        }
+        _write_json_file(clip_dir / WARM_WORKER_DISPATCH_ARTIFACT, warm_worker_artifact)
+
     remote_cmd = _remote_body_command(
         remote_run_dir=remote_run_dir,
-        config=config,
+        config=effective_config,
+        skip_gpu_lock_wrap=warm_worker_used,
     )
     remote_command_started = time.monotonic()
     remote_command_started_epoch = time.time()
@@ -1314,6 +1581,48 @@ def dispatch_body_stage(
             f"{(command_result.stderr or '').strip()[-2000:] or stdout_tail}"
         )
 
+    if warm_worker_used:
+        # requirement: "worker records per-job timing split (queue wait,
+        # inference, serialization)". The inference/serialization split
+        # itself already flows unchanged through the existing subprocess
+        # stdout marker -> body_stage_phase_timing.json /
+        # body_compute_execution.json path (run_sam3dbody_batch.py's
+        # delegation shim mirrors the exact same SAM3D_BATCH_TIMING_STDOUT_MARKER
+        # line a cold job prints). What's new here is the dispatch-level
+        # overhead a warm job pays instead of model-load/compile: SSH command
+        # startup, python interpreter startup, and runner bookkeeping outside
+        # the runner's own script_start->run_pipeline_done window.
+        runner_start_epoch = _runner_marker_epoch(command_result.stdout or "", "script_start")
+        run_pipeline_done_epoch = _runner_marker_epoch(command_result.stdout or "", "run_pipeline_done")
+        runner_internal_wall_s = (
+            round(run_pipeline_done_epoch - runner_start_epoch, 6)
+            if runner_start_epoch is not None and run_pipeline_done_epoch is not None
+            else None
+        )
+        remote_command_wall_s = round(phase_seconds.get("remote_command_s", 0.0), 6)
+        ssh_and_process_overhead_s = (
+            round(max(0.0, remote_command_wall_s - runner_internal_wall_s), 6)
+            if runner_internal_wall_s is not None
+            else None
+        )
+        warm_worker_artifact.update(
+            {
+                "remote_command_wall_s": remote_command_wall_s,
+                "runner_internal_wall_s": runner_internal_wall_s,
+                "ssh_and_process_overhead_s": ssh_and_process_overhead_s,
+                "gpu_lock_wrap_skipped": True,
+                "note": (
+                    "ssh_and_process_overhead_s = remote_command_wall_s minus the runner script's own "
+                    "script_start->run_pipeline_done window; it is SSH/interpreter/bookkeeping overhead, "
+                    "not a literal multi-client GPU queue-wait measurement -- this lane dispatches one "
+                    "job at a time from a single client. Real per-job inference/serialization timing is "
+                    "unchanged and flows through body_stage_phase_timing.json / body_compute_execution.json "
+                    "as before (the delegation shim mirrors the same stdout timing marker a cold job prints)."
+                ),
+            }
+        )
+        _write_json_file(clip_dir / WARM_WORKER_DISPATCH_ARTIFACT, warm_worker_artifact)
+
     download_started = time.monotonic()
     transport_phases = {}
     synced_outputs = _sync_body_outputs(remote_run_dir, clip_dir, config, run=run, phases=transport_phases)
@@ -1361,6 +1670,24 @@ def dispatch_body_stage(
     else:
         fetch_notes.append("body_mesh_index/ was not fetched because the remote run did not produce it or rsync reported it absent")
 
+    warm_worker_notes: list[str] = []
+    if warm_worker_used:
+        warm_worker_notes.append(
+            f"warm-worker dispatch: routed to already-warm persistent worker at "
+            f"{effective_config.sam3dbody_persistent_worker_socket} (gpu-eval-run.sh lock wrap skipped for "
+            "this job because the worker itself holds the shared lock for its serving lifetime)"
+        )
+    elif config.warm_worker:
+        warm_worker_notes.append(
+            "warm-worker requested but unavailable "
+            f"(status={warm_worker_artifact.get('status')}): {warm_worker_artifact.get('detail')} -- "
+            "used the normal cold BODY dispatch path instead (unchanged artifacts)"
+        )
+    lock_note = (
+        "no per-job gpu-eval-run.sh wrap (warm worker holds the shared slot lease)"
+        if warm_worker_used
+        else f"under {config.gpu_lock_script} (shared slot lease)"
+    )
     return RemoteBodyDispatchResult(
         status="ran",
         remote_run_dir=remote_run_dir,
@@ -1368,7 +1695,8 @@ def dispatch_body_stage(
         synced_outputs=synced_outputs,
         wall_seconds=time.monotonic() - started,
         notes=[
-            f"dispatched BODY stage to {config.host}:{remote_run_dir} under {config.gpu_lock_script} (shared slot lease)",
+            f"dispatched BODY stage to {config.host}:{remote_run_dir} {lock_note}",
+            *warm_worker_notes,
             *fetch_notes,
         ],
         stdout_tail=stdout_tail,
@@ -1722,6 +2050,7 @@ def _remote_body_command(
     *,
     remote_run_dir: str,
     config: RemoteConfig,
+    skip_gpu_lock_wrap: bool = False,
 ) -> str:
     # Every interpolated token is shlex-quoted (finding 8) so a hostile or
     # buggy path value cannot break out of its argument position (the clip id,
@@ -1744,6 +2073,27 @@ def _remote_body_command(
         if config.sam3dbody_persistent_worker_socket
         else ""
     )
+    if skip_gpu_lock_wrap:
+        # warm_body_worker_20260728: only ever set by dispatch_body_stage after
+        # a live WarmWorkerHealth.healthy probe. The persistent worker
+        # (scripts/racketsport/body_warm_worker.py start) was itself launched
+        # *under* config.gpu_lock_script and holds that shared slot lease for
+        # its entire serving lifetime (see that module's docstring), so a
+        # per-job dispatch that also wraps with the same lock script would
+        # self-block against the worker's own long-held lock instead of
+        # skipping the redundant model-load/compile it no longer needs to do.
+        # Any cold dispatch that does NOT go through the warm worker still
+        # wraps with config.gpu_lock_script exactly as before, so it correctly
+        # queues behind the worker's held lock instead of racing its open CUDA
+        # context under EXCLUSIVE_PROCESS.
+        return (
+            f"cd {q(config.repo)} && "
+            f"{verifier} && "
+            f"FAST_SAM_PYTHON={q(config.fast_sam_python)} FAST_SAM_ROOT={q(config.fast_sam_root)} "
+            f"{persistent_worker_env}"
+            f"timeout {int(config.command_timeout_s)}s "
+            f"{q(config.python)} {q(remote_run_dir + '/' + REMOTE_BODY_RUNNER_FILENAME)}"
+        )
     return (
         f"cd {q(config.repo)} && "
         f"{verifier} && "
@@ -2575,6 +2925,32 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Audit passthrough for the synced frame_compute_plan.json opt-in mesh byte budget in MiB.",
     )
+    parser.add_argument(
+        "--warm-worker",
+        action="store_true",
+        help=(
+            "Default-off (warm_body_worker_20260728). Health-probe an already-running persistent "
+            "worker (scripts/racketsport/body_warm_worker.py start) and, if healthy, route this BODY "
+            "job to it -- skipping the ~24.9s model-load and ~33.5s torch.compile warmup a cold "
+            "dispatch pays every time. Falls back loudly (never silently) to the normal cold BODY "
+            "dispatch path, with byte-identical artifacts, when the worker is absent, unreachable, "
+            "stale (code drifted since it started), or bootstrapped for a different clip."
+        ),
+    )
+    parser.add_argument(
+        "--warm-worker-socket-path",
+        default="",
+        help=(
+            "Remote Unix socket path for the warm worker. Default: derived from --repo/clip via "
+            "default_warm_worker_socket_path(), matching body_warm_worker.py's own default."
+        ),
+    )
+    parser.add_argument(
+        "--warm-worker-health-timeout-s",
+        type=float,
+        default=RemoteConfig().warm_worker_health_timeout_s,
+        help="SSH round-trip budget in seconds for the pre-dispatch warm-worker health probe.",
+    )
     parser.add_argument("--max-frames", type=int, default=None)
     parser.add_argument("--max-players", type=int, default=4)
     parser.add_argument(
@@ -2653,6 +3029,9 @@ def main(argv: list[str] | None = None) -> int:
         lock_wait_timeout_s=args.lock_wait_timeout_s,
         command_timeout_s=args.command_timeout_s,
         known_hosts_file=args.known_hosts_file,
+        warm_worker=bool(args.warm_worker),
+        warm_worker_socket_path=args.warm_worker_socket_path,
+        warm_worker_health_timeout_s=args.warm_worker_health_timeout_s,
     )
 
     if args.sync_remote_code:
