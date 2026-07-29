@@ -1,0 +1,15 @@
+{
+  "dirty_tracked_files": [
+    "configs/ssh/a100_known_hosts"
+  ],
+  "local_git_head_sha": "c4c892ea841b8153a0b79b4acfb26e1be7389797",
+  "notes": [
+    "synced repo files via git bundle and checkout --detach -f; did not run git clean",
+    "remote version stamp verified for c4c892ea841b8153a0b79b4acfb26e1be7389797",
+    "non-gating local dirty tracked file(s) present while syncing committed HEAD: configs/ssh/a100_known_hosts"
+  ],
+  "remote_git_head_sha_after": "c4c892ea841b8153a0b79b4acfb26e1be7389797",
+  "remote_git_head_sha_before": "757da515a375ad58fb4283faee3a3000464e173b",
+  "status": "synced",
+  "verified": true
+}

@@ -1,0 +1,35 @@
+{
+  "note": "Reconstructed from live SSH poll output captured in-conversation. The source PIPELINE_SUMMARY.json files (top-level and clip-local, both under /home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/ on pickleball-gpu-court23) were never copied off the VM before it became unreachable (poweroff rail fired 2026-07-28T20:10:26Z; gcloud auth is dead locally so the instance could not be restarted to retrieve them). This file preserves the stage-level fields that were visible in the poll output; per-stage 'notes' and top-level 'degraded_reasons'/'missing_capabilities' were NOT captured by the poll script and are therefore unknown.",
+  "first_observed_utc": "2026-07-28T17:28:09Z",
+  "last_confirmed_unchanged_utc": "2026-07-28T19:58:43Z",
+  "vm_became_unreachable_utc": "2026-07-28T20:13:47Z",
+  "poweroff_rail_utc": "2026-07-28T20:10:26.03Z",
+  "overall_status": "failed",
+  "top_level_wall_seconds": 2376.656,
+  "video": {
+    "path": "data/pbvision_11min_20260713/source_video.mp4",
+    "duration_s": 697.4,
+    "frame_count": 20922,
+    "fps": 30.0,
+    "width": 1280,
+    "height": 720
+  },
+  "stages": [
+    {"stage": "ingest", "status": "ran", "wall_seconds": 46.599},
+    {"stage": "calibration", "status": "ran", "wall_seconds": 36.899},
+    {"stage": "input_quality", "status": "ran", "wall_seconds": 0.283},
+    {"stage": "tracking", "status": "ran", "wall_seconds": 1839.011},
+    {"stage": "player_selection", "status": "failed", "wall_seconds": 448.698}
+  ],
+  "stages_never_reached": [
+    "camera_motion", "placement", "frames", "body", "placement_refine",
+    "grounding_refine", "placement_trajectory_refine", "world",
+    "confidence_gate", "manifest", "verify"
+  ],
+  "derived": {
+    "tracking_fps_throughput": 11.379,
+    "sum_of_listed_stage_wall_seconds": 2371.49,
+    "gap_vs_top_level_wall_seconds": 5.166
+  },
+  "process_behavior_after_failure": "pgrep continued to report the process tree (pids 28117/28124/28131 and children) as RUNNING from 17:28:09Z through the last successful poll at 19:58:43Z (~2.5h) with the top-level wall_seconds value unchanged across all of those polls -- a real, unexplained post-failure hang, not further progress. GPU utilization stayed at a flat 26% / 0 MiB during this window (no active CUDA workload), consistent with a hung CPU-side process rather than ongoing GPU compute."
+}

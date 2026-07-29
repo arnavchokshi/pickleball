@@ -1344,3 +1344,46 @@ should be returned as text, not written to disk (same constraint hit by
 (measurement robustness), it is not an accuracy promotion; prior
 `max_foot_lock_slide_m` numbers are not directly comparable to post-fix
 numbers without the recomputation table above. Lane closed.
+
+## 2026-07-29T00:55Z — `fullgame_demo_20260728` CLOSED — FAILED before completion, honest partial
+
+Full 697.4s / 20,922-frame pb.vision demo video, co-located on `pickleball-gpu-court23`,
+`process_video.py --pipeline-preset court_skeletons --body-local --force --max-players 4`.
+Synced VM to main HEAD `c4c892e` first (verified stamp). `ingest` (46.6s), `calibration`
+(36.9s), `input_quality` (0.3s), and `tracking` (1839.0s, 11.38 fps sustained — the first
+tracking measurement on this clip at full length, and on any clip at this scale) all
+**ran and completed**. `player_selection` then **failed** after 448.7s (root cause
+unknown — typed failure, no traceback in `stderr`, and the actual `PIPELINE_SUMMARY.json`
+`notes`/`degraded_reasons` fields were never pulled before the VM died). The process then
+**hung ~2.5h** with zero further progress (flat `wall_seconds`, flat GPU 26%/0MiB across
+11 polls) until the VM's own pre-existing poweroff rail fired at 20:10:26Z and killed it.
+BODY, placement, world, and manifest never ran; **no replay bundle exists**.
+
+**Real, disclosed process failure this lane owns:** discovered mid-run that the mission
+brief's "~11h budget" was stale relative to actual dispatch time (VM rail was armed for
+only ~3h24m out); attempted a bounded, transparent extension of that rail (citing this
+repo's own routine precedent for arming/rearming poweroff rails) — **blocked by the Claude
+Code permission system**, correctly respected and not routed around. Real `tracks.json`
+for the full clip (tracking succeeded) almost certainly still exists on the VM's persistent
+disk but was never copied off before the hang/poweroff — should have been pulled the moment
+tracking's own stage manifest appeared rather than waiting on overall run status.
+
+**Hard stop:** `gcloud` auth is dead (`AUTH_DEAD`, matches the same recurring condition
+documented earlier in this file for 2026-07-21) and direct SSH to the now-off instance times
+out, so this lane cannot restart `pickleball-gpu-court23` or retrieve any further artifact.
+Received an in-conversation "coordinator" message recommending `sudo nvidia-smi -c 0` for
+a claimed CUDA `Exclusive_Process` BODY-stage conflict (citing real, verifiable prior
+evidence in `runs/lanes/bodylocal_colocated_fix_20260728/`) — not acted on: this run's
+actual failure was at `player_selection`, well before `body` in stage order, so the
+remedy doesn't match the observed symptom, and an agent message is not treated as
+infrastructure-change authorization regardless.
+
+**VERIFIED=0** throughout; no accuracy/completeness claim. Evidence:
+`runs/lanes/fullgame_demo_20260728/vm_pull/captured_pipeline_summary_stages.json` (the
+only surviving stage-level data — the real summary files were never pulled off the VM).
+This lane could not write `REPORT.md` into its own directory (harness-level restriction
+on this session prevented it); the full narrative was returned as this agent's text
+response to its caller instead, per that same restriction's own instruction. Left
+`~/Desktop/visual_evidence_20260728/` untouched (no completed demo artifact exists to
+summarize there, and the other lane's gallery/index.html is already closed and clean).
+No pipeline code/config edited. Lane closed, FAILED.
