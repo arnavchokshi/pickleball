@@ -122,3 +122,4 @@ runs/lanes/bounce_labels_score_20260729/*
 !runs/lanes/bounce_labels_score_20260729/score_round2_labels.py
 !runs/lanes/bounce_labels_score_20260729/bounce_labels_score_report.json
 !runs/lanes/bounce_labels_score_20260729/bounce_labels_score_summary.json
+!runs/lanes/bounce_labels_score_20260729/REPORT.md
