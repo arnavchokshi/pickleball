@@ -117,6 +117,12 @@ runs/lanes/fullgame_selection_fix_20260728/recovered/*
 !runs/lanes/fullgame_selection_fix_20260728/recovered/raw_pool_authority_summary.json
 !runs/lanes/fullgame_selection_fix_20260728/recovered/run_stdout.log
 !runs/lanes/fullgame_selection_fix_20260728/recovered/run_stderr.log
+!runs/lanes/fullgame_selection_fix_20260728/rerun/
+runs/lanes/fullgame_selection_fix_20260728/rerun/*
+!runs/lanes/fullgame_selection_fix_20260728/rerun/PIPELINE_SUMMARY_clean.json
+!runs/lanes/fullgame_selection_fix_20260728/rerun/PIPELINE_SUMMARY_final.json
+!runs/lanes/fullgame_selection_fix_20260728/rerun/replay_viewer_manifest.json
+!runs/lanes/fullgame_selection_fix_20260728/rerun/rerun4_stderr.log
 !runs/lanes/bounce_labels_score_20260729/
 runs/lanes/bounce_labels_score_20260729/*
 !runs/lanes/bounce_labels_score_20260729/score_round2_labels.py

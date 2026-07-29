@@ -133,32 +133,73 @@ this is a rendered product demo, not an accuracy promotion. Full findings
 delivered as this agent's text response to its caller (same harness
 restriction on committed `REPORT.md` files hit by prior lanes). Lane closed.
 
-## 2026-07-29T06:41Z — `fullgame_selection_fix_20260728` CLAIMED (in progress)
+## 2026-07-29T06:41Z — `fullgame_selection_fix_20260728` CLAIMED AND CLOSED (fix + rerun lane)
 
-GPU diagnosis + fix lane, continuing `fullgame_demo_20260728` (FAILED at
-player_selection, hung 2.5h, see that lane's REPORT.md). Recovered
-`tracks.json` + `PIPELINE_SUMMARY.json` + the typed `player_selection.json`
-stage error from the preserved `pickleball-gpu-court23` boot disk. Root
-cause reproduced CPU-locally at full scale (267 raw detection UIDs counted
-in both the unbound and dropped sets -- a Layer-C-recovered-then-hard-
-excluded detection was never removed from the stale pre-recovery unbound
-snapshot). Fixed in `threed/racketsport/player_selection.py`
-(`_select_slot_players`, commit `dadfcd4`); added a synthetic full-scale-
-mechanism regression test, TDD-verified against the pre-fix code. Also
-mitigated the separate post-failure-hang defect
-(`scripts/racketsport/process_video.py`'s `__main__` guard now hard-exits
-right after `main()` returns instead of trusting normal interpreter
-shutdown to be prompt). Synced court23 to this fix (stamp-verified
-`dadfcd4`) and dispatched the full 697.4s/20,922-frame rerun co-located
-(`court_skeletons`, `--body-local`, `--force`, `--max-players 4`, same
-input video + calibration file already staged from yesterday) at 06:55Z.
-Fence: this lane dir + VM-side work on court23 (did not touch night2). No
-`best_stack.json` changes. In progress; full findings + final rerun status
-will be delivered as this agent's text response to its caller (same
-harness restriction on committed `REPORT.md` files hit by
-`fullgame_demo_20260728`/`wolverine_slide_diag_20260728`/
-`plant_phase_plausibility_20260728` above) plus this ledger entry updated
-at close.
+Continues `fullgame_demo_20260728` (FAILED at player_selection, hung 2.5h). Recovered
+`tracks.json`/`tracked_detections.json`/`reid_embeddings.json`/`PIPELINE_SUMMARY.json`/the typed
+`player_selection.json` stage error from the preserved court23 boot disk.
+
+**Root cause (reproduced CPU-locally at full scale against the real recovered data,
+`repro_full_scale_selection.py`):** `ValueError: bound, unbound, and dropped raw UID sets must be
+disjoint` at `player_selection.py:3605`. 267 raw detection UIDs were counted in both the unbound
+and dropped sets. Mechanism: Layer C (`recover_identity_conditioned_pool`) can pull a raw
+detection out of an originally-unbound fragment into `used_uids` to fill a slot's gap; if that
+detection's `source_track_id` is only later found lifetime hard-excluded (median off-court beyond
+`COURT_REGION_HARD_BOUND_M`), the hard-drop pass removes its UID from `used_uids` again
+(correctly recording it in `dropped_uids`) but the residual/unbound recomputation at that point
+still excludes only `used_uids`, resurrecting the same UID from the stale pre-recovery
+`unbound_fragments` snapshot. Rare on short clips (needs a gap-recovery candidate whose source is
+later hard-excluded); reachable at full-game scale (far more gaps and hard-excluded tracks over
+20k frames). **Fixed** in `threed/racketsport/player_selection.py` (`_select_slot_players`,
+commit `dadfcd4`): compute `dropped_uids` first and exclude `used_uids | dropped_uids` from the
+residual recomputation. Verified TDD-style: a new synthetic regression test
+(`test_layer_c_recovered_detection_from_later_hard_excluded_source_stays_dropped`) reproduces the
+identical error pre-fix (confirmed via `git stash` of just the implementation file) and passes
+post-fix. `tests/racketsport/test_player_selection*.py`: 108 passed, 1 pre-existing failure
+unrelated to this change (hardcoded `best_stack_revision==15` vs live revision 18, reproduced
+identically on unmodified code). Full `tests/racketsport/` suite: 5209 passed, 29 failed, 29
+skipped (63m26s) -- all 29 failures are outside this change's scope (frozen-fixture/manifest-
+revision drift across unrelated subsystems; this diff touches only `_select_slot_players`'s UID
+bookkeeping, exercised solely by the player_selection test files, and `process_video.py`'s
+`__main__` guard, never executed under pytest).
+
+**Separate defect, also fixed:** the prior run hung ~2.5h post-failure before an unrelated
+poweroff rail killed the VM. Evidence (`PIPELINE_SUMMARY.json` wall_seconds vs summed stage
+wall_seconds) shows `main()` itself returned promptly with the summary/stage-error artifact
+already written; the gap is normal interpreter shutdown after `main()` returns, newly slow/hangy
+at this data scale, not bounded by anything in this module's control flow. `process_video.py`'s
+`__main__` guard now flushes and calls `os._exit(code)` right after `main()` returns instead of
+`raise SystemExit(main())`; `main()` itself is unchanged, so in-process callers (tests) are
+unaffected. Evidence-based defense-in-depth (declined to re-trigger a live multi-hour hang to
+prove the exact internal cause once the actual trigger -- the disjointness bug -- was fixed).
+
+**Full-game reruns on court23** (synced to `dadfcd4`, stamp-verified), `court_skeletons`,
+`--body-local`, `--max-players 4`, same 697.4s/20,922-frame pb.vision clip:
+
+| attempt | video/out location | result |
+|---|---|---|
+| 1 (`--force`, `out/`) | video outside repo (yesterday's staged path) | **player_selection SUCCEEDED** (476.0s) -- first real confirmation of the fix. All 15 stages ran through `confidence_gate`; `manifest` FAILED (`video file is outside Vite allow root`, a video-path staging artifact from this lane's own setup, not a pipeline defect). `body` degraded to skeleton-only from frame 1200 onward. |
+| 2 (no `--force`, same `out/`) | same | Reused ingest/calibration/input_quality/tracking (~30min saved); player_selection SUCCEEDED again (485.8s); `grounding_refine` FAILED (stale-artifact rejection from mixing `--force`/no-`--force` runs in the same out dir -- self-inflicted, not a pipeline defect). |
+| 3 (`--force`, fresh `out_clean/`) | video staged inside repo, `--out` still outside | player_selection SUCCEEDED again (475.8s); full 15-stage run; `manifest` FAILED again (`virtual_world file is outside Vite allow root` -- `--out` itself also needs to be inside the repo root, not just `--video`). |
+| 4 (`--force`, fresh `out_final/`, **final**) | both video and `--out` staged inside repo | **player_selection SUCCEEDED a 4th time** (476.9s). All 15/15 stages completed (ran/skipped/degraded), **zero hard failures**. `body` degraded (same frame-1200 cap, unfixed, out of fence). `manifest` degraded but **produced a real `replay_viewer_manifest.json`** (2.1KB, committed). **Overall `status: "partial"`.** Total wall 2749.9s (~45.8min; tracking 1825.2s/11.46fps matches the 2026-07-28 baseline). |
+
+**New, separate, out-of-fence defect found and precisely diagnosed (not fixed):** `body` degrades
+to skeleton-only past frame 1200/20,922 in every attempt --
+`threed/racketsport/process_video_body_frames.py:76`: `DEFAULT_MAX_SCHEDULED_FRAMES = 1200`, a
+hardcoded cap sized for short clips (40s at 30fps) that silently truncates BODY frame scheduling
+at full-game scale. This, not player_selection or the hang, is what stands between this repo and
+a genuinely complete full-game skeleton bundle. Handoff for whichever lane owns
+`process_video_body_frames.py`/BODY frame scheduling next.
+
+Evidence: `runs/lanes/fullgame_selection_fix_20260728/recovered/` (original failure, small files
+only -- large tracks/detections/embeddings pulled but not committed),
+`repro_full_scale_selection.py` (CPU repro script), `runs/lanes/fullgame_selection_fix_20260728/rerun/`
+(final + one intermediate `PIPELINE_SUMMARY.json`, the produced `replay_viewer_manifest.json`).
+Fence respected throughout: `threed/racketsport/player_selection.py` + its tests +
+`process_video.py`'s `__main__` guard only; `best_stack.json`, night2, and other lanes' files
+untouched. `VERIFIED=0` throughout -- this is engineering/correctness evidence, not an accuracy
+promotion. Full findings delivered as this agent's text response to its caller (same harness
+restriction on committed `REPORT.md` files hit by prior lanes above). Lane closed.
 
 
 ## 2026-07-28 — `ball_labels_round2_20260728` CLAIMED AND CLOSED (prep half: 4th clip online)
