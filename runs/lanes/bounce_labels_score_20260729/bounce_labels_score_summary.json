@@ -1,0 +1,186 @@
+{
+  "totals": {
+    "n_clips": 4,
+    "n_labels_total": 53,
+    "n_bounce_labels_total": 33
+  },
+  "pooled_bounce_vs_live_solver": {
+    "note": "Pooled across wolverine, burlington, outdoor_webcam only (pbv11 has no ball_track_arc_solved.json -- confirmed absent on disk, per the round-2 README's disclosed 'About clip 4' limitation).",
+    "n_with_live_solver_position": 14,
+    "error_3d_m_median": 0.26775084966909957,
+    "error_3d_m_p90": 1.478577600127434,
+    "error_2d_px_median": 2.885409836588293,
+    "error_2d_px_p90": 4.695832396052544,
+    "by_band": {
+      "anchored_measured": {
+        "n": 5,
+        "error_3d_m_median": 0.1491969711725511,
+        "error_3d_m_p90": 0.22713381264846508,
+        "error_3d_m_max": 0.23491088349273348,
+        "error_2d_px_median": 2.9769044775163143,
+        "error_2d_px_p90": 5.086996449771552
+      },
+      "arc_interpolated": {
+        "n": 1,
+        "error_3d_m_median": 0.47421472034277673,
+        "error_3d_m_p90": 0.47421472034277673,
+        "error_3d_m_max": 0.47421472034277673,
+        "error_2d_px_median": 3.8910152916687637,
+        "error_2d_px_p90": 3.8910152916687637
+      },
+      "arc_weak": {
+        "n": 8,
+        "error_3d_m_median": 0.6323497066399004,
+        "error_3d_m_p90": 1.8347386298989345,
+        "error_3d_m_max": 2.0560245819507603,
+        "error_2d_px_median": 2.400368273358204,
+        "error_2d_px_p90": 3.3493395910697554
+      }
+    }
+  },
+  "arc_weak_vs_anchored_measured_separation_check": {
+    "arc_weak_n": 8,
+    "arc_weak_error_3d_m_median": 0.6323497066399004,
+    "arc_weak_error_3d_m_max": 2.0560245819507603,
+    "arc_weak_error_3d_m_min": 0.05322583658729265,
+    "anchored_measured_n": 5,
+    "anchored_measured_error_3d_m_median": 0.1491969711725511,
+    "anchored_measured_error_3d_m_max": 0.23491088349273348,
+    "separation_holds_on_fresh_labels": true,
+    "pilot_reference_2026_07_26": {
+      "arc_weak_range_m": [
+        2.5,
+        24.8
+      ],
+      "anchored_measured_approx_m": 0.3,
+      "note": "wolverine-only, 19 pilot labels, per NORTH_STAR_ROADMAP.md"
+    }
+  },
+  "per_clip_headline": {
+    "wolverine": {
+      "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+      "label_counts": {
+        "total": 10,
+        "by_kind": {
+          "bounce": 6,
+          "near_player": 0,
+          "free_flight": 4
+        },
+        "by_origin": {
+          "fresh": 1,
+          "prefill_confirmed": 0,
+          "prefill_corrected": 9
+        },
+        "prefill_corrected_fraction_of_total": 0.9,
+        "prefill_touched_fraction_of_total": 0.9
+      },
+      "calibration_floor_median_m": 0.126773,
+      "live_solver_artifact_available": true,
+      "bounce_pooled_error_3d_m_median": 0.3448414633624196,
+      "bounce_pooled_error_3d_m_p90": 1.304361471342192,
+      "bounce_by_band": {
+        "anchored_measured": {
+          "n": 3,
+          "error_3d_m_median": 0.09084594982033506,
+          "error_3d_m_p90": 0.190543755069717
+        },
+        "arc_interpolated": {
+          "n": 1,
+          "error_3d_m_median": 0.47421472034277673,
+          "error_3d_m_p90": 0.47421472034277673
+        },
+        "arc_weak": {
+          "n": 2,
+          "error_3d_m_median": 1.304361471342192,
+          "error_3d_m_p90": 1.6527937289126744
+        }
+      }
+    },
+    "burlington": {
+      "clip_id": "burlington_gold_0300_low_steep_corner",
+      "label_counts": {
+        "total": 12,
+        "by_kind": {
+          "bounce": 6,
+          "near_player": 0,
+          "free_flight": 6
+        },
+        "by_origin": {
+          "fresh": 4,
+          "prefill_confirmed": 0,
+          "prefill_corrected": 8
+        },
+        "prefill_corrected_fraction_of_total": 0.6666666666666666,
+        "prefill_touched_fraction_of_total": 0.6666666666666666
+      },
+      "calibration_floor_median_m": 0.190686,
+      "live_solver_artifact_available": true,
+      "bounce_pooled_error_3d_m_median": 0.23491088349273348,
+      "bounce_pooled_error_3d_m_p90": 1.5701530432104285,
+      "bounce_by_band": {
+        "anchored_measured": {
+          "n": 2,
+          "error_3d_m_median": 0.1920539273326423,
+          "error_3d_m_p90": 0.22633949226071526
+        },
+        "arc_weak": {
+          "n": 3,
+          "error_3d_m_median": 0.8413457350999304,
+          "error_3d_m_p90": 1.8130888125805944
+        }
+      }
+    },
+    "outdoor_webcam": {
+      "clip_id": "outdoor_webcam_20s_fullmesh_final",
+      "label_counts": {
+        "total": 13,
+        "by_kind": {
+          "bounce": 4,
+          "near_player": 9,
+          "free_flight": 0
+        },
+        "by_origin": {
+          "fresh": 5,
+          "prefill_confirmed": 0,
+          "prefill_corrected": 8
+        },
+        "prefill_corrected_fraction_of_total": 0.6153846153846154,
+        "prefill_touched_fraction_of_total": 0.6153846153846154
+      },
+      "calibration_floor_median_m": 0.100551,
+      "live_solver_artifact_available": true,
+      "bounce_pooled_error_3d_m_median": 0.3005908158454657,
+      "bounce_pooled_error_3d_m_p90": 0.39880110571298955,
+      "bounce_by_band": {
+        "arc_weak": {
+          "n": 3,
+          "error_3d_m_median": 0.3005908158454657,
+          "error_3d_m_p90": 0.39880110571298955
+        }
+      }
+    },
+    "pbv11": {
+      "clip_id": "pbvision_11min_20260713",
+      "label_counts": {
+        "total": 18,
+        "by_kind": {
+          "bounce": 17,
+          "near_player": 0,
+          "free_flight": 1
+        },
+        "by_origin": {
+          "fresh": 18,
+          "prefill_confirmed": 0,
+          "prefill_corrected": 0
+        },
+        "prefill_corrected_fraction_of_total": 0.0,
+        "prefill_touched_fraction_of_total": 0.0
+      },
+      "calibration_floor_median_m": 0.144385,
+      "live_solver_artifact_available": false,
+      "bounce_pooled_error_3d_m_median": null,
+      "bounce_pooled_error_3d_m_p90": null,
+      "bounce_by_band": {}
+    }
+  }
+}

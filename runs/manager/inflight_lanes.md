@@ -8,6 +8,74 @@ Standing fence: `brand-exploration/` is the OWNER'S untracked brand work — no 
 `cvat_upload/court_diversity_20260712/` + `w7_audit_stratum_20260709/` are staged local-only owner
 labeling packages (storage-allowlisted, intentionally untracked).
 
+## 2026-07-29T08:01Z — `bounce_labels_score_20260729` CLAIMED AND CLOSED (local CPU scoring lane)
+
+Scope: local CPU only, no cloud, no VMs, no training, $0. Fence:
+`runs/lanes/bounce_labels_score_20260729/` only; read-only everywhere else; did not touch the four
+still-running label servers (ports 8801-8804, PIDs 19761/19763/19765/56689 — confirmed alive
+throughout via `ps aux`) or their `--run-dir` sources; no pipeline code/config changes.
+
+Scored the owner's round-2 fresh bounce/free-flight/near-player labels
+(`runs/lanes/ball_labels_round2_20260728/{wolverine,burlington,outdoor_webcam,pbv11}/ball_human_labels.json`)
+against the live solver, following the 2026-07-26 pilot's methodology
+(`runs/lanes/ball_label_tool_20260726/REPORT.md`) — 3D-to-3D ray-plane comparison, never
+reprojection (`NORTH_STAR_ROADMAP.md` §2.3). 53 labels total across 4 source-disjoint clips (33
+bounce / 9 near_player / 11 free_flight; label counts re-verified unchanged between read-time and
+write-time). Per-clip calibration floors matched the round-2 README to spec: wolverine 0.1268 m /
+burlington 0.1907 m / outdoor_webcam 0.1006 m / pbv11 0.1444 m median.
+
+Bounce vs. live solver (`ball_track_arc_solved.json`, present for wolverine/burlington/
+outdoor_webcam, absent for pbv11 as disclosed in the round-2 README): 14/33 bounce labels landed
+on a frame with a non-null solver position (rest were `hidden`-band frames or on the
+prefill-less pbv11 clip). Pooled median 3D error 0.268 m / p90 1.479 m. By band:
+`anchored_measured` n=5 median 0.149 m (max 0.235 m); `arc_weak` n=8 median 0.632 m
+(max 2.056 m); `arc_interpolated` n=1 at 0.474 m. **Separation direction replicates the pilot's
+headline (arc_weak worse than anchored_measured, median ratio ~4.2x) but NOT its magnitude** —
+the 2026-07-26 pilot's wolverine-only 19-label round found arc_weak errors of 2.5-24.8 m vs
+~0.3 m for anchored_measured; this fresh, larger, 3-clip sample found arc_weak capped at 2.06 m
+worst case, with none of these particular labels landing on the catastrophic (z=+21-23 m /
+negative-z) frames the pilot caught. Independently cross-checked every computed error against
+each label's own recorded `prefill.delta_m` where a prefill was used — matches to 6 decimal
+places, confirming this is a real recomputation, not a re-derivation that diverges from the
+pilot's math.
+
+Full per-clip tables, prefill-corrected fractions, click sigmas, and the near_player/free_flight
+review-only (non-accuracy) comparisons are in
+`runs/lanes/bounce_labels_score_20260729/bounce_labels_score_report.json` (full) and
+`bounce_labels_score_summary.json` (headline). `VERIFIED=0` throughout — human labels are
+review-only, not verified ground truth, and this scoring makes no promotion or accuracy claim.
+Full findings delivered as this agent's text response to its caller (harness restriction on
+committed `REPORT.md`, same constraint noted by prior lanes above). Lane closed.
+
+## 2026-07-29T00:59Z — `integrated_demo_20260729` CLAIMED (in progress)
+
+Owner ask (typed live before sleeping): a final end-to-end product demo showing
+EVERYTHING TOGETHER — court, human meshes, events, skeletons/meshes, AND the
+ball. Extends `bodylocal_colocated_fix_20260728`'s co-located pipeline +
+wolverine full-preset/ball/one_world stretch demo with two more full-preset
+co-located runs on night1 (`burlington_gold_0300_low_steep_corner`,
+`outdoor_webcam_iynbd_1500_long_high_baseline`) plus a combined
+court+skeleton+BODY-mesh-marker+ball+events+minimap overlay render (extends
+`visual_evidence_20260728/render_overlay.py`, lane-local copy) for all three
+clips (the two new runs + the existing wolverine stretch bundle, reused not
+rerun). Fence: this lane dir, VM-side run dirs on night1
+(`runs/lanes/integrated_demo_20260729/` under the remote repo checkout), and
+`~/Desktop/visual_evidence_20260728/integrated/` on the Mac. Did not touch
+court23 or night2. No pipeline code/config edits.
+
+Pre-flight (read-only + one in-fence sync action): confirmed night1
+(`136.114.26.171`, A100-40GB, GPU compute mode Default — co-located BODY
+works) reachable over the pinned host key; synced night1's
+`/home/arnavchokshi/coldstart_20260706/repo` checkout from stale
+`5c7cde0e6` to current `origin/main` HEAD `85ba22a` via
+`scripts/racketsport/remote_body_dispatch.py --sync-remote-code`
+(remote version stamp verified). Both target clips' source videos +
+`labels/court_calibration_metric15pt.json` seeds confirmed present on the
+synced remote checkout. In progress; full findings + final status will be
+delivered as this agent's text response to its caller (same harness
+restriction on committed `REPORT.md` files hit by prior lanes) plus this
+ledger entry updated at close.
+
 ## 2026-07-29T06:41Z — `fullgame_selection_fix_20260728` CLAIMED (in progress)
 
 GPU diagnosis + fix lane, continuing `fullgame_demo_20260728` (FAILED at

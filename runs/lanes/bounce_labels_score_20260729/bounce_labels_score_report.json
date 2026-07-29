@@ -1,0 +1,1393 @@
+{
+  "artifact_type": "bounce_labels_score_report",
+  "lane": "bounce_labels_score_20260729",
+  "verified_ground_truth": false,
+  "review_only": true,
+  "not_ground_truth": true,
+  "methodology": "Follows runs/lanes/ball_label_tool_20260726/REPORT.md (2026-07-26 pilot). Bounce depth is solved by ray-plane intersection at z=BALL_RADIUS_M=0.0371m (never a human depth judgement); error is compared 3D-to-3D and 2D-to-2D against the live ball_track_arc_solved.json frame at the labeled frame index, independent of whether the label's origin used the P-key prefill. near_player/free_flight are human depth estimates and are reported separately as review-only, never aggregated with bounce. No 3D quantity is gated, banded, or promoted on reprojection error (NORTH_STAR_ROADMAP.md section 2.3); reprojection is not used anywhere in this scoring. Calibration floor is carried per clip, not folded away.",
+  "totals": {
+    "n_clips": 4,
+    "n_labels_total": 53,
+    "n_bounce_labels_total": 33
+  },
+  "pooled_bounce_vs_live_solver": {
+    "note": "Pooled across wolverine, burlington, outdoor_webcam only (pbv11 has no ball_track_arc_solved.json -- confirmed absent on disk, per the round-2 README's disclosed 'About clip 4' limitation).",
+    "n_with_live_solver_position": 14,
+    "error_3d_m_median": 0.26775084966909957,
+    "error_3d_m_p90": 1.478577600127434,
+    "error_2d_px_median": 2.885409836588293,
+    "error_2d_px_p90": 4.695832396052544,
+    "by_band": {
+      "anchored_measured": {
+        "n": 5,
+        "error_3d_m_median": 0.1491969711725511,
+        "error_3d_m_p90": 0.22713381264846508,
+        "error_3d_m_max": 0.23491088349273348,
+        "error_2d_px_median": 2.9769044775163143,
+        "error_2d_px_p90": 5.086996449771552
+      },
+      "arc_interpolated": {
+        "n": 1,
+        "error_3d_m_median": 0.47421472034277673,
+        "error_3d_m_p90": 0.47421472034277673,
+        "error_3d_m_max": 0.47421472034277673,
+        "error_2d_px_median": 3.8910152916687637,
+        "error_2d_px_p90": 3.8910152916687637
+      },
+      "arc_weak": {
+        "n": 8,
+        "error_3d_m_median": 0.6323497066399004,
+        "error_3d_m_p90": 1.8347386298989345,
+        "error_3d_m_max": 2.0560245819507603,
+        "error_2d_px_median": 2.400368273358204,
+        "error_2d_px_p90": 3.3493395910697554
+      }
+    }
+  },
+  "arc_weak_vs_anchored_measured_separation_check": {
+    "arc_weak_n": 8,
+    "arc_weak_error_3d_m_median": 0.6323497066399004,
+    "arc_weak_error_3d_m_max": 2.0560245819507603,
+    "arc_weak_error_3d_m_min": 0.05322583658729265,
+    "anchored_measured_n": 5,
+    "anchored_measured_error_3d_m_median": 0.1491969711725511,
+    "anchored_measured_error_3d_m_max": 0.23491088349273348,
+    "separation_holds_on_fresh_labels": true,
+    "pilot_reference_2026_07_26": {
+      "arc_weak_range_m": [
+        2.5,
+        24.8
+      ],
+      "anchored_measured_approx_m": 0.3,
+      "note": "wolverine-only, 19 pilot labels, per NORTH_STAR_ROADMAP.md"
+    }
+  },
+  "per_clip": {
+    "wolverine": {
+      "clip_key": "wolverine",
+      "clip_id": "wolverine_mixed_0200_mid_steep_corner",
+      "verified_ground_truth": false,
+      "review_only": true,
+      "calibration_floor_median_m_measured": 0.126773,
+      "calibration_floor_median_m_task_rounded": 0.127,
+      "calibration_floor_p95_m": 0.373934,
+      "calibration_floor_max_m": 0.611554,
+      "live_solver_artifact_available": true,
+      "label_counts": {
+        "total": 10,
+        "by_kind": {
+          "bounce": 6,
+          "near_player": 0,
+          "free_flight": 4
+        },
+        "by_origin": {
+          "fresh": 1,
+          "prefill_confirmed": 0,
+          "prefill_corrected": 9
+        },
+        "prefill_corrected_fraction_of_total": 0.9,
+        "prefill_touched_fraction_of_total": 0.9
+      },
+      "click_sigma_along_ray_m_median_by_kind": {
+        "bounce": 0.2534205,
+        "near_player": null,
+        "free_flight": 2.0
+      },
+      "bounce_vs_live_solver": {
+        "n_bounce_labels": 6,
+        "n_with_live_solver_position": 6,
+        "pooled_error_3d_m_median": 0.3448414633624196,
+        "pooled_error_3d_m_p90": 1.304361471342192,
+        "pooled_error_2d_px_median": 2.894679348488311,
+        "pooled_error_2d_px_p90": 4.405009971480262,
+        "by_band": {
+          "anchored_measured": {
+            "n": 3,
+            "error_3d_m_median": 0.09084594982033506,
+            "error_3d_m_p90": 0.190543755069717,
+            "error_3d_m_max": 0.2154682063820625,
+            "error_2d_px_median": 2.6766874443808386,
+            "error_2d_px_p90": 4.470541209909576
+          },
+          "arc_interpolated": {
+            "n": 1,
+            "error_3d_m_median": 0.47421472034277673,
+            "error_3d_m_p90": 0.47421472034277673,
+            "error_3d_m_max": 0.47421472034277673,
+            "error_2d_px_median": 3.8910152916687637,
+            "error_2d_px_p90": 3.8910152916687637
+          },
+          "arc_weak": {
+            "n": 2,
+            "error_3d_m_median": 1.304361471342192,
+            "error_3d_m_p90": 1.6527937289126744,
+            "error_3d_m_max": 1.739901793305295,
+            "error_2d_px_median": 2.894679348488311,
+            "error_2d_px_p90": 2.9752906707507423
+          }
+        },
+        "rows": [
+          {
+            "frame": 13,
+            "label_id": "f000013",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -2.566718,
+              5.826305,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              141.4,
+              381.1
+            ],
+            "human_sigma_along_ray_m": 0.305112,
+            "prefill_used": true,
+            "prefill_band": "anchored_measured",
+            "prefill_delta_m_asrecorded": 0.215468,
+            "prefill_delta_px_asrecorded": 8.601,
+            "live_solver_available_for_clip": true,
+            "live_band": "anchored_measured",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -2.592825499,
+              6.039534774,
+              0.05377363
+            ],
+            "error_3d_m": 0.2154682063820625,
+            "live_xy_px": [
+              137.02712891190632,
+              378.84731156030307
+            ],
+            "error_2d_px": 4.91900465129176
+          },
+          {
+            "frame": 104,
+            "label_id": "f000104",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -2.414214,
+              -6.387389,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1034.5,
+              800.3
+            ],
+            "human_sigma_along_ray_m": 0.155066,
+            "prefill_used": true,
+            "prefill_band": "arc_interpolated",
+            "prefill_delta_m_asrecorded": 0.474214,
+            "prefill_delta_px_asrecorded": 28.167,
+            "live_solver_available_for_clip": true,
+            "live_band": "arc_interpolated",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -2.651456204,
+              -6.750794747,
+              0.228233463
+            ],
+            "error_3d_m": 0.47421472034277673,
+            "live_xy_px": [
+              1031.0,
+              802.0
+            ],
+            "error_2d_px": 3.8910152916687637
+          },
+          {
+            "frame": 157,
+            "label_id": "f000157",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -0.740042,
+              5.519635,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              354.4,
+              366.4
+            ],
+            "human_sigma_along_ray_m": 0.313006,
+            "prefill_used": true,
+            "prefill_band": "arc_weak",
+            "prefill_delta_m_asrecorded": 1.739902,
+            "prefill_delta_px_asrecorded": 66.226,
+            "live_solver_available_for_clip": true,
+            "live_band": "arc_weak",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -0.779094494,
+              7.241931088,
+              0.280881333
+            ],
+            "error_3d_m": 1.739901793305295,
+            "live_xy_px": [
+              352.1817184740792,
+              364.3870646206753
+            ],
+            "error_2d_px": 2.99544350131635
+          },
+          {
+            "frame": 217,
+            "label_id": "f000217",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -0.826071,
+              4.514217,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              377.8,
+              376.9
+            ],
+            "human_sigma_along_ray_m": 0.292749,
+            "prefill_used": true,
+            "prefill_band": "arc_weak",
+            "prefill_delta_m_asrecorded": 0.868821,
+            "prefill_delta_px_asrecorded": 77.601,
+            "live_solver_available_for_clip": true,
+            "live_band": "arc_weak",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -1.33277313,
+              5.21900543,
+              0.0
+            ],
+            "error_3d_m": 0.8688211493790892,
+            "live_xy_px": [
+              375.8479354339545,
+              374.90114881731256
+            ],
+            "error_2d_px": 2.793915195660272
+          },
+          {
+            "frame": 272,
+            "label_id": "f000272",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -1.726692,
+              -0.241193,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              470.5,
+              461.1
+            ],
+            "human_sigma_along_ray_m": 0.214092,
+            "prefill_used": true,
+            "prefill_band": "anchored_measured",
+            "prefill_delta_m_asrecorded": 0.079103,
+            "prefill_delta_px_asrecorded": 0.1,
+            "live_solver_available_for_clip": true,
+            "live_band": "anchored_measured",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -1.700343398,
+              -0.168048528,
+              0.022508325
+            ],
+            "error_3d_m": 0.07910296828070869,
+            "live_xy_px": [
+              469.59288413313897,
+              459.01056072498557
+            ],
+            "error_2d_px": 2.277853305172214
+          },
+          {
+            "frame": 289,
+            "label_id": "f000289",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -1.746279,
+              -0.550823,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              485.7,
+              468.5
+            ],
+            "human_sigma_along_ray_m": 0.21035,
+            "prefill_used": true,
+            "prefill_band": "anchored_measured",
+            "prefill_delta_m_asrecorded": 0.090846,
+            "prefill_delta_px_asrecorded": 2.195,
+            "live_solver_available_for_clip": true,
+            "live_band": "anchored_measured",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -1.721481176,
+              -0.468455485,
+              0.007882762
+            ],
+            "error_3d_m": 0.09084594982033506,
+            "live_xy_px": [
+              484.0567014759703,
+              466.3871285803845
+            ],
+            "error_2d_px": 2.6766874443808386
+          }
+        ]
+      },
+      "near_player_and_free_flight_review_only": {
+        "note": "Depth is a human judgement (near_player) or an unreferenced human estimate (free_flight), never solved. These numbers are estimate-vs-estimate comparisons against the solver's own (also-unvalidated-in-depth) output, banded here as estimates, and must never be aggregated with the bounce table above or read as an accuracy measurement.",
+        "rows": [
+          {
+            "kind": "free_flight",
+            "frame": 73,
+            "label_id": "f000073",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_interpolated",
+            "prefill_delta_m_asrecorded": 3.07952,
+            "live_band": "arc_interpolated",
+            "est_delta_3d_m": 3.07952040397297
+          },
+          {
+            "kind": "free_flight",
+            "frame": 86,
+            "label_id": "f000086",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "anchored_measured",
+            "prefill_delta_m_asrecorded": 5.164703,
+            "live_band": "anchored_measured",
+            "est_delta_3d_m": 5.164703375970841
+          },
+          {
+            "kind": "free_flight",
+            "frame": 202,
+            "label_id": "f000202",
+            "origin": "fresh",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "live_band": "arc_weak",
+            "est_delta_3d_m": 19.757100617183383
+          },
+          {
+            "kind": "free_flight",
+            "frame": 250,
+            "label_id": "f000250",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_interpolated",
+            "prefill_delta_m_asrecorded": 1.712141,
+            "live_band": "arc_interpolated",
+            "est_delta_3d_m": 1.7121408258420756
+          }
+        ]
+      }
+    },
+    "burlington": {
+      "clip_key": "burlington",
+      "clip_id": "burlington_gold_0300_low_steep_corner",
+      "verified_ground_truth": false,
+      "review_only": true,
+      "calibration_floor_median_m_measured": 0.190686,
+      "calibration_floor_median_m_task_rounded": 0.191,
+      "calibration_floor_p95_m": 0.409829,
+      "calibration_floor_max_m": 0.535184,
+      "live_solver_artifact_available": true,
+      "label_counts": {
+        "total": 12,
+        "by_kind": {
+          "bounce": 6,
+          "near_player": 0,
+          "free_flight": 6
+        },
+        "by_origin": {
+          "fresh": 4,
+          "prefill_confirmed": 0,
+          "prefill_corrected": 8
+        },
+        "prefill_corrected_fraction_of_total": 0.6666666666666666,
+        "prefill_touched_fraction_of_total": 0.6666666666666666
+      },
+      "click_sigma_along_ray_m_median_by_kind": {
+        "bounce": 0.33394650000000003,
+        "near_player": null,
+        "free_flight": 2.0
+      },
+      "bounce_vs_live_solver": {
+        "n_bounce_labels": 6,
+        "n_with_live_solver_position": 5,
+        "pooled_error_3d_m_median": 0.23491088349273348,
+        "pooled_error_3d_m_p90": 1.5701530432104285,
+        "pooled_error_2d_px_median": 3.471441016584894,
+        "pooled_error_2d_px_p90": 4.687044057959557,
+        "by_band": {
+          "anchored_measured": {
+            "n": 2,
+            "error_3d_m_median": 0.1920539273326423,
+            "error_3d_m_p90": 0.22633949226071526,
+            "error_3d_m_max": 0.23491088349273348,
+            "error_2d_px_median": 4.087947729803863,
+            "error_2d_px_p90": 4.976782331633903
+          },
+          "arc_weak": {
+            "n": 3,
+            "error_3d_m_median": 0.8413457350999304,
+            "error_3d_m_p90": 1.8130888125805944,
+            "error_3d_m_max": 2.0560245819507603,
+            "error_2d_px_median": 2.006821351056136,
+            "error_2d_px_p90": 3.741441977273389
+          }
+        },
+        "rows": [
+          {
+            "frame": 0,
+            "label_id": "f000000",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              1.453586,
+              5.464133,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1698.8,
+              516.9
+            ],
+            "human_sigma_along_ray_m": 0.408626,
+            "prefill_used": false,
+            "live_solver_available_for_clip": true,
+            "live_band": "hidden",
+            "live_visible": true,
+            "live_world_xyz_m": null,
+            "error_3d_m": null,
+            "live_xy_px": [
+              1694.8523424359153,
+              516.5192405895161
+            ],
+            "error_2d_px": 3.9659775556534735
+          },
+          {
+            "frame": 132,
+            "label_id": "f000132",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -0.772549,
+              3.121218,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1433.3,
+              525.1
+            ],
+            "human_sigma_along_ray_m": 0.368516,
+            "prefill_used": true,
+            "prefill_band": "anchored_measured",
+            "prefill_delta_m_asrecorded": 0.234912,
+            "prefill_delta_px_asrecorded": 23.048,
+            "live_solver_available_for_clip": true,
+            "live_band": "anchored_measured",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -0.976939686,
+              3.006436053,
+              0.021846302
+            ],
+            "error_3d_m": 0.23491088349273348,
+            "live_xy_px": [
+              1428.144665282301,
+              524.4276673588497
+            ],
+            "error_2d_px": 5.198990982091412
+          },
+          {
+            "frame": 266,
+            "label_id": "f000266",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -1.746174,
+              1.231972,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1251.8,
+              537.7
+            ],
+            "human_sigma_along_ray_m": 0.338723,
+            "prefill_used": true,
+            "prefill_band": "anchored_measured",
+            "prefill_delta_m_asrecorded": 0.149197,
+            "prefill_delta_px_asrecorded": 5.863,
+            "live_solver_available_for_clip": true,
+            "live_band": "anchored_measured",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -1.69075575,
+              1.096843176,
+              0.006624523
+            ],
+            "error_3d_m": 0.1491969711725511,
+            "live_xy_px": [
+              1254.161718020565,
+              539.5122495025781
+            ],
+            "error_2d_px": 2.9769044775163143
+          },
+          {
+            "frame": 347,
+            "label_id": "f000347",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              2.343231,
+              -0.551789,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1630.0,
+              600.9
+            ],
+            "human_sigma_along_ray_m": 0.269341,
+            "prefill_used": false,
+            "live_solver_available_for_clip": true,
+            "live_band": "arc_weak",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              1.894674446,
+              4e-08,
+              -0.412553777
+            ],
+            "error_3d_m": 0.8413457350999304,
+            "live_xy_px": [
+              1628.4971495359755,
+              599.8263906649098
+            ],
+            "error_2d_px": 1.8469424792373534
+          },
+          {
+            "frame": 423,
+            "label_id": "f000423",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -1.336034,
+              1.034728,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1278.3,
+              542.4
+            ],
+            "human_sigma_along_ray_m": 0.32917,
+            "prefill_used": true,
+            "prefill_band": "arc_weak",
+            "prefill_delta_m_asrecorded": 0.114662,
+            "prefill_delta_px_asrecorded": 8.539,
+            "live_solver_available_for_clip": true,
+            "live_band": "arc_weak",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -1.439890847,
+              1.066108323,
+              0.0
+            ],
+            "error_3d_m": 0.11466202222342733,
+            "live_xy_px": [
+              1277.8041524536968,
+              540.4554005178752
+            ],
+            "error_2d_px": 2.006821351056136
+          },
+          {
+            "frame": 497,
+            "label_id": "f000497",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -1.477241,
+              -1.897073,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1046.0,
+              581.3
+            ],
+            "human_sigma_along_ray_m": 0.282551,
+            "prefill_used": true,
+            "prefill_band": "arc_weak",
+            "prefill_delta_m_asrecorded": 2.056025,
+            "prefill_delta_px_asrecorded": 277.934,
+            "live_solver_available_for_clip": true,
+            "live_band": "arc_weak",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -3.048456219,
+              -3.22264586,
+              0.0
+            ],
+            "error_3d_m": 2.0560245819507603,
+            "live_xy_px": [
+              1043.3699211059206,
+              578.0574514517413
+            ],
+            "error_2d_px": 4.175097133827702
+          }
+        ]
+      },
+      "near_player_and_free_flight_review_only": {
+        "note": "Depth is a human judgement (near_player) or an unreferenced human estimate (free_flight), never solved. These numbers are estimate-vs-estimate comparisons against the solver's own (also-unvalidated-in-depth) output, banded here as estimates, and must never be aggregated with the bounce table above or read as an accuracy measurement.",
+        "rows": [
+          {
+            "kind": "free_flight",
+            "frame": 28,
+            "label_id": "f000028",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_extrapolated",
+            "prefill_delta_m_asrecorded": 8.409851,
+            "live_band": "arc_extrapolated",
+            "est_delta_3d_m": 8.409850543854303
+          },
+          {
+            "kind": "free_flight",
+            "frame": 68,
+            "label_id": "f000068",
+            "origin": "fresh",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "live_band": "arc_extrapolated",
+            "est_delta_3d_m": 11.440183369317328
+          },
+          {
+            "kind": "free_flight",
+            "frame": 94,
+            "label_id": "f000094",
+            "origin": "fresh",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "live_band": "arc_extrapolated",
+            "est_delta_3d_m": 11.287073928246064
+          },
+          {
+            "kind": "free_flight",
+            "frame": 155,
+            "label_id": "f000155",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_extrapolated",
+            "prefill_delta_m_asrecorded": 2.341675,
+            "live_band": "arc_extrapolated",
+            "est_delta_3d_m": 2.3416746081765956
+          },
+          {
+            "kind": "free_flight",
+            "frame": 194,
+            "label_id": "f000194",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "anchored_measured",
+            "prefill_delta_m_asrecorded": 3.426766,
+            "live_band": "anchored_measured",
+            "est_delta_3d_m": 3.4267658131022296
+          },
+          {
+            "kind": "free_flight",
+            "frame": 220,
+            "label_id": "f000220",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_interpolated",
+            "prefill_delta_m_asrecorded": 3.784219,
+            "live_band": "arc_interpolated",
+            "est_delta_3d_m": 3.7842181025331145
+          }
+        ]
+      }
+    },
+    "outdoor_webcam": {
+      "clip_key": "outdoor_webcam",
+      "clip_id": "outdoor_webcam_20s_fullmesh_final",
+      "verified_ground_truth": false,
+      "review_only": true,
+      "calibration_floor_median_m_measured": 0.100551,
+      "calibration_floor_median_m_task_rounded": 0.101,
+      "calibration_floor_p95_m": 0.434946,
+      "calibration_floor_max_m": 0.447483,
+      "live_solver_artifact_available": true,
+      "label_counts": {
+        "total": 13,
+        "by_kind": {
+          "bounce": 4,
+          "near_player": 9,
+          "free_flight": 0
+        },
+        "by_origin": {
+          "fresh": 5,
+          "prefill_confirmed": 0,
+          "prefill_corrected": 8
+        },
+        "prefill_corrected_fraction_of_total": 0.6153846153846154,
+        "prefill_touched_fraction_of_total": 0.6153846153846154
+      },
+      "click_sigma_along_ray_m_median_by_kind": {
+        "bounce": 0.15706599999999998,
+        "near_player": 0.55074,
+        "free_flight": null
+      },
+      "bounce_vs_live_solver": {
+        "n_bounce_labels": 4,
+        "n_with_live_solver_position": 3,
+        "pooled_error_3d_m_median": 0.3005908158454657,
+        "pooled_error_3d_m_p90": 0.39880110571298955,
+        "pooled_error_2d_px_median": 1.2165528167386825,
+        "pooled_error_2d_px_p90": 2.493625753256603,
+        "by_band": {
+          "arc_weak": {
+            "n": 3,
+            "error_3d_m_median": 0.3005908158454657,
+            "error_3d_m_p90": 0.39880110571298955,
+            "error_3d_m_max": 0.4233536781798705,
+            "error_2d_px_median": 1.3526855343445625,
+            "error_2d_px_p90": 2.65661721310118
+          }
+        },
+        "rows": [
+          {
+            "frame": 124,
+            "label_id": "f000124",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              0.755926,
+              -5.730069,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1081.6,
+              650.9
+            ],
+            "human_sigma_along_ray_m": 0.147588,
+            "prefill_used": false,
+            "live_solver_available_for_clip": true,
+            "live_band": "hidden",
+            "live_visible": true,
+            "live_world_xyz_m": null,
+            "error_3d_m": null,
+            "live_xy_px": [
+              1082.126953,
+              651.843201
+            ],
+            "error_2d_px": 1.0804200991328028
+          },
+          {
+            "frame": 168,
+            "label_id": "f000168",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              1.151883,
+              2.872259,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1077.2,
+              382.3
+            ],
+            "human_sigma_along_ray_m": 0.195144,
+            "prefill_used": false,
+            "live_solver_available_for_clip": true,
+            "live_band": "arc_weak",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              1.252958918,
+              3.231441425,
+              -0.162899953
+            ],
+            "error_3d_m": 0.4233536781798705,
+            "live_xy_px": [
+              1077.011475,
+              379.323364
+            ],
+            "error_2d_px": 2.9826001327903344
+          },
+          {
+            "frame": 369,
+            "label_id": "f000369",
+            "origin": "prefill_corrected",
+            "human_world_xyz_m": [
+              -3.192625,
+              -3.951652,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              493.0,
+              575.2
+            ],
+            "human_sigma_along_ray_m": 0.156681,
+            "prefill_used": true,
+            "prefill_band": "arc_weak",
+            "prefill_delta_m_asrecorded": 0.053226,
+            "prefill_delta_px_asrecorded": 5.569,
+            "live_solver_available_for_clip": true,
+            "live_band": "arc_weak",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -3.224344064,
+              -3.928049976,
+              0.001465254
+            ],
+            "error_3d_m": 0.05322583658729265,
+            "live_xy_px": [
+              491.80304,
+              574.569885
+            ],
+            "error_2d_px": 1.3526855343445625
+          },
+          {
+            "frame": 390,
+            "label_id": "f000390",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              -3.828884,
+              -5.838154,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              336.0,
+              657.3
+            ],
+            "human_sigma_along_ray_m": 0.157451,
+            "prefill_used": false,
+            "live_solver_available_for_clip": true,
+            "live_band": "arc_weak",
+            "live_visible": true,
+            "live_world_xyz_m": [
+              -3.810769259,
+              -5.88817105,
+              -0.258746226
+            ],
+            "error_3d_m": 0.3005908158454657,
+            "live_xy_px": [
+              336.793457,
+              656.83844
+            ],
+            "error_2d_px": 0.9179388021262361
+          }
+        ]
+      },
+      "near_player_and_free_flight_review_only": {
+        "note": "Depth is a human judgement (near_player) or an unreferenced human estimate (free_flight), never solved. These numbers are estimate-vs-estimate comparisons against the solver's own (also-unvalidated-in-depth) output, banded here as estimates, and must never be aggregated with the bounce table above or read as an accuracy measurement.",
+        "rows": [
+          {
+            "kind": "near_player",
+            "frame": 95,
+            "label_id": "f000095",
+            "origin": "fresh",
+            "human_sigma_along_ray_m": 0.5612,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true
+          },
+          {
+            "kind": "near_player",
+            "frame": 183,
+            "label_id": "f000183",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 0.53708,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_weak",
+            "prefill_delta_m_asrecorded": 4.034466,
+            "live_band": "arc_weak",
+            "est_delta_3d_m": 4.034465715360484
+          },
+          {
+            "kind": "near_player",
+            "frame": 203,
+            "label_id": "f000203",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 0.56206,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_interpolated",
+            "prefill_delta_m_asrecorded": 4.476711,
+            "live_band": "arc_interpolated",
+            "est_delta_3d_m": 4.476710170011173
+          },
+          {
+            "kind": "near_player",
+            "frame": 223,
+            "label_id": "f000223",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 0.56,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "anchored_measured",
+            "prefill_delta_m_asrecorded": 1.731985,
+            "live_band": "anchored_measured",
+            "est_delta_3d_m": 1.7319855170843372
+          },
+          {
+            "kind": "near_player",
+            "frame": 254,
+            "label_id": "f000254",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 0.55056,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_weak",
+            "prefill_delta_m_asrecorded": 6.162876,
+            "live_band": "arc_weak",
+            "est_delta_3d_m": 6.162875758642726
+          },
+          {
+            "kind": "near_player",
+            "frame": 269,
+            "label_id": "f000269",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 0.54194,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_interpolated",
+            "prefill_delta_m_asrecorded": 1.105757,
+            "live_band": "arc_interpolated",
+            "est_delta_3d_m": 1.105757443786774
+          },
+          {
+            "kind": "near_player",
+            "frame": 311,
+            "label_id": "f000311",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 0.55618,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_weak",
+            "prefill_delta_m_asrecorded": 3.189383,
+            "live_band": "arc_weak",
+            "est_delta_3d_m": 3.1893828669741477
+          },
+          {
+            "kind": "near_player",
+            "frame": 324,
+            "label_id": "f000324",
+            "origin": "prefill_corrected",
+            "human_sigma_along_ray_m": 0.55074,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true,
+            "prefill_band": "arc_weak",
+            "prefill_delta_m_asrecorded": 5.591389,
+            "live_band": "arc_weak",
+            "est_delta_3d_m": 5.5913898317291055
+          },
+          {
+            "kind": "near_player",
+            "frame": 343,
+            "label_id": "f000343",
+            "origin": "fresh",
+            "human_sigma_along_ray_m": 0.5096,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true
+          }
+        ]
+      }
+    },
+    "pbv11": {
+      "clip_key": "pbv11",
+      "clip_id": "pbvision_11min_20260713",
+      "verified_ground_truth": false,
+      "review_only": true,
+      "calibration_floor_median_m_measured": 0.144385,
+      "calibration_floor_median_m_task_rounded": 0.144,
+      "calibration_floor_p95_m": 0.376616,
+      "calibration_floor_max_m": 0.386046,
+      "live_solver_artifact_available": false,
+      "label_counts": {
+        "total": 18,
+        "by_kind": {
+          "bounce": 17,
+          "near_player": 0,
+          "free_flight": 1
+        },
+        "by_origin": {
+          "fresh": 18,
+          "prefill_confirmed": 0,
+          "prefill_corrected": 0
+        },
+        "prefill_corrected_fraction_of_total": 0.0,
+        "prefill_touched_fraction_of_total": 0.0
+      },
+      "click_sigma_along_ray_m_median_by_kind": {
+        "bounce": 0.248265,
+        "near_player": null,
+        "free_flight": 2.0
+      },
+      "bounce_vs_live_solver": {
+        "n_bounce_labels": 17,
+        "n_with_live_solver_position": 0,
+        "pooled_error_3d_m_median": null,
+        "pooled_error_3d_m_p90": null,
+        "pooled_error_2d_px_median": null,
+        "pooled_error_2d_px_p90": null,
+        "by_band": {},
+        "rows": [
+          {
+            "frame": 60,
+            "label_id": "f000060",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              -0.942551,
+              3.052281,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              920.1,
+              313.0
+            ],
+            "human_sigma_along_ray_m": 0.429559,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 190,
+            "label_id": "f000190",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              -0.593407,
+              -6.68247,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              371.5,
+              405.3
+            ],
+            "human_sigma_along_ray_m": 0.203397,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 519,
+            "label_id": "f000519",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              -0.176143,
+              4.332012,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              993.3,
+              311.5
+            ],
+            "human_sigma_along_ray_m": 0.461524,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 805,
+            "label_id": "f000805",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              1.016149,
+              -3.3702,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              777.0,
+              380.2
+            ],
+            "human_sigma_along_ray_m": 0.217607,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 854,
+            "label_id": "f000854",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              0.141653,
+              3.871469,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1000.0,
+              315.0
+            ],
+            "human_sigma_along_ray_m": 0.434828,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 1166,
+            "label_id": "f001166",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              -0.681612,
+              -4.266663,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              593.0,
+              368.0
+            ],
+            "human_sigma_along_ray_m": 0.230775,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 1215,
+            "label_id": "f001215",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              1.626001,
+              4.768538,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1104.4,
+              319.1
+            ],
+            "human_sigma_along_ray_m": 0.439756,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 1556,
+            "label_id": "f001556",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              -0.836514,
+              4.810021,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              970.2,
+              306.7
+            ],
+            "human_sigma_along_ray_m": 0.499619,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 1596,
+            "label_id": "f001596",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              0.451225,
+              -3.628836,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              715.1,
+              375.4
+            ],
+            "human_sigma_along_ray_m": 0.221579,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 1735,
+            "label_id": "f001735",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              0.384209,
+              -4.481894,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              645.8,
+              386.6
+            ],
+            "human_sigma_along_ray_m": 0.210609,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 1748,
+            "label_id": "f001748",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              1.556531,
+              -7.137423,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              437.9,
+              481.8
+            ],
+            "human_sigma_along_ray_m": 0.172432,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 2541,
+            "label_id": "f002541",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              -1.433273,
+              2.963289,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              892.4,
+              311.0
+            ],
+            "human_sigma_along_ray_m": 0.439446,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 2584,
+            "label_id": "f002584",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              0.109274,
+              -3.099083,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              725.7,
+              364.3
+            ],
+            "human_sigma_along_ray_m": 0.235539,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 2919,
+            "label_id": "f002919",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              1.510362,
+              -4.771115,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              714.1,
+              413.8
+            ],
+            "human_sigma_along_ray_m": 0.19293,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 2970,
+            "label_id": "f002970",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              0.853678,
+              5.510978,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              1073.1,
+              311.9
+            ],
+            "human_sigma_along_ray_m": 0.488284,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 3056,
+            "label_id": "f003056",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              0.842024,
+              -1.810227,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              852.5,
+              358.8
+            ],
+            "human_sigma_along_ray_m": 0.248265,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          },
+          {
+            "frame": 3095,
+            "label_id": "f003095",
+            "origin": "fresh",
+            "human_world_xyz_m": [
+              -0.420907,
+              2.175755,
+              0.0371
+            ],
+            "human_pixel_xy": [
+              923.0,
+              319.8
+            ],
+            "human_sigma_along_ray_m": 0.384116,
+            "prefill_used": false,
+            "live_solver_available_for_clip": false,
+            "live_band": null,
+            "error_3d_m": null,
+            "error_2d_px": null
+          }
+        ]
+      },
+      "near_player_and_free_flight_review_only": {
+        "note": "Depth is a human judgement (near_player) or an unreferenced human estimate (free_flight), never solved. These numbers are estimate-vs-estimate comparisons against the solver's own (also-unvalidated-in-depth) output, banded here as estimates, and must never be aggregated with the bounce table above or read as an accuracy measurement.",
+        "rows": [
+          {
+            "kind": "free_flight",
+            "frame": 36,
+            "label_id": "f000036",
+            "origin": "fresh",
+            "human_sigma_along_ray_m": 2.0,
+            "estimate_vs_estimate_only": true,
+            "not_an_accuracy_claim": true
+          }
+        ]
+      }
+    }
+  }
+}
