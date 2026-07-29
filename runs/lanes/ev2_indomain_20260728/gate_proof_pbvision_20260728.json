@@ -1,0 +1,218 @@
+{
+  "artifact_type": "training_input_gate_proof",
+  "expires_at_utc": "2026-07-29T07:22:56Z",
+  "generated_at_utc": "2026-07-29T06:22:56Z",
+  "global_reasons": [],
+  "inputs": [
+    {
+      "actual_sha256": null,
+      "asset_id": "pbvision_gallery_20260719",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "EVENT",
+      "index": 0,
+      "input_bytes_read_for_integrity": false,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_COMPONENT_NOT_AUTHORIZED",
+          "detail": "asset pbvision_gallery_20260719 has EVENT=CONDITIONAL"
+        },
+        {
+          "code": "LEDGER_PATH_UNBOUND",
+          "detail": "/mnt/cachedata/media/pbvision/143sf3gdwxsa/max.mp4 is outside asset pbvision_gallery_20260719's registered paths"
+        }
+      ],
+      "requested_path": "/mnt/cachedata/media/pbvision/143sf3gdwxsa/max.mp4",
+      "resolved_path": "/mnt/cachedata/media/pbvision/143sf3gdwxsa/max.mp4",
+      "sha256_kind": null,
+      "source_id": "143sf3gdwxsa",
+      "verdict": "FAIL"
+    },
+    {
+      "actual_sha256": null,
+      "asset_id": "pbvision_gallery_20260719",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "EVENT",
+      "index": 1,
+      "input_bytes_read_for_integrity": false,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_COMPONENT_NOT_AUTHORIZED",
+          "detail": "asset pbvision_gallery_20260719 has EVENT=CONDITIONAL"
+        },
+        {
+          "code": "LEDGER_PATH_UNBOUND",
+          "detail": "/mnt/cachedata/media/pbvision/98z43hspqz13/max.mp4 is outside asset pbvision_gallery_20260719's registered paths"
+        }
+      ],
+      "requested_path": "/mnt/cachedata/media/pbvision/98z43hspqz13/max.mp4",
+      "resolved_path": "/mnt/cachedata/media/pbvision/98z43hspqz13/max.mp4",
+      "sha256_kind": null,
+      "source_id": "98z43hspqz13",
+      "verdict": "FAIL"
+    },
+    {
+      "actual_sha256": null,
+      "asset_id": "pbvision_gallery_20260719",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "EVENT",
+      "index": 2,
+      "input_bytes_read_for_integrity": false,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_COMPONENT_NOT_AUTHORIZED",
+          "detail": "asset pbvision_gallery_20260719 has EVENT=CONDITIONAL"
+        },
+        {
+          "code": "LEDGER_PATH_UNBOUND",
+          "detail": "/mnt/cachedata/media/pbvision/bewqc0glhgpq/max.mp4 is outside asset pbvision_gallery_20260719's registered paths"
+        }
+      ],
+      "requested_path": "/mnt/cachedata/media/pbvision/bewqc0glhgpq/max.mp4",
+      "resolved_path": "/mnt/cachedata/media/pbvision/bewqc0glhgpq/max.mp4",
+      "sha256_kind": null,
+      "source_id": "bewqc0glhgpq",
+      "verdict": "FAIL"
+    },
+    {
+      "actual_sha256": null,
+      "asset_id": "pbvision_gallery_20260719",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "EVENT",
+      "index": 3,
+      "input_bytes_read_for_integrity": false,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_COMPONENT_NOT_AUTHORIZED",
+          "detail": "asset pbvision_gallery_20260719 has EVENT=CONDITIONAL"
+        },
+        {
+          "code": "LEDGER_PATH_UNBOUND",
+          "detail": "/mnt/cachedata/media/pbvision/st0epgnab7dr/max.mp4 is outside asset pbvision_gallery_20260719's registered paths"
+        }
+      ],
+      "requested_path": "/mnt/cachedata/media/pbvision/st0epgnab7dr/max.mp4",
+      "resolved_path": "/mnt/cachedata/media/pbvision/st0epgnab7dr/max.mp4",
+      "sha256_kind": null,
+      "source_id": "st0epgnab7dr",
+      "verdict": "FAIL"
+    },
+    {
+      "actual_sha256": null,
+      "asset_id": "pbvision_gallery_20260719",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "EVENT",
+      "index": 4,
+      "input_bytes_read_for_integrity": false,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_COMPONENT_NOT_AUTHORIZED",
+          "detail": "asset pbvision_gallery_20260719 has EVENT=CONDITIONAL"
+        },
+        {
+          "code": "LEDGER_PATH_UNBOUND",
+          "detail": "/mnt/cachedata/media/pbvision/td2szayjwtrj/max.mp4 is outside asset pbvision_gallery_20260719's registered paths"
+        }
+      ],
+      "requested_path": "/mnt/cachedata/media/pbvision/td2szayjwtrj/max.mp4",
+      "resolved_path": "/mnt/cachedata/media/pbvision/td2szayjwtrj/max.mp4",
+      "sha256_kind": null,
+      "source_id": "td2szayjwtrj",
+      "verdict": "FAIL"
+    },
+    {
+      "actual_sha256": null,
+      "asset_id": "pbvision_gallery_20260719",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "EVENT",
+      "index": 5,
+      "input_bytes_read_for_integrity": false,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_COMPONENT_NOT_AUTHORIZED",
+          "detail": "asset pbvision_gallery_20260719 has EVENT=CONDITIONAL"
+        },
+        {
+          "code": "LEDGER_PATH_UNBOUND",
+          "detail": "/mnt/cachedata/media/pbvision/tqjlrcntpjvt/max.mp4 is outside asset pbvision_gallery_20260719's registered paths"
+        }
+      ],
+      "requested_path": "/mnt/cachedata/media/pbvision/tqjlrcntpjvt/max.mp4",
+      "resolved_path": "/mnt/cachedata/media/pbvision/tqjlrcntpjvt/max.mp4",
+      "sha256_kind": null,
+      "source_id": "tqjlrcntpjvt",
+      "verdict": "FAIL"
+    },
+    {
+      "actual_sha256": null,
+      "asset_id": "pbvision_gallery_20260719",
+      "cache_entry_id": null,
+      "cache_entry_sha256s": {},
+      "component": "EVENT",
+      "index": 6,
+      "input_bytes_read_for_integrity": false,
+      "input_manifest_sha256": null,
+      "provenance_marker_path": null,
+      "provenance_marker_sha256": null,
+      "reasons": [
+        {
+          "code": "LEDGER_COMPONENT_NOT_AUTHORIZED",
+          "detail": "asset pbvision_gallery_20260719 has EVENT=CONDITIONAL"
+        },
+        {
+          "code": "LEDGER_PATH_UNBOUND",
+          "detail": "/mnt/cachedata/media/pbvision/xkadsq9bli3h/max.mp4 is outside asset pbvision_gallery_20260719's registered paths"
+        }
+      ],
+      "requested_path": "/mnt/cachedata/media/pbvision/xkadsq9bli3h/max.mp4",
+      "resolved_path": "/mnt/cachedata/media/pbvision/xkadsq9bli3h/max.mp4",
+      "sha256_kind": null,
+      "source_id": "xkadsq9bli3h",
+      "verdict": "FAIL"
+    }
+  ],
+  "manifest_sha256s": {
+    "cache_manifest": null,
+    "data_ledger": "f09e62e1951fc81585445ab6b1d7efaedd19464a20b24749e7b54d161e831313",
+    "training_inputs": "2bfa5f91e33c8a8fa1a093707a94e58355f8252110704944321cf64fc392cd93"
+  },
+  "proof_sha256": "371585297b754e5e7f371ae1dc665ea8cd22e861c07c93a98bf43817e7c5fd30",
+  "repo_head_sha": "4a8c186dbca56f2ee66ac2fa48d5d20250d6502c",
+  "repo_root": "/home/arnavchokshi/coldstart_20260706/repo",
+  "schema_version": 1,
+  "source_manifests": {
+    "cache_manifest": null,
+    "data_ledger": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/manager/data_ledger.json",
+      "sha256": "f09e62e1951fc81585445ab6b1d7efaedd19464a20b24749e7b54d161e831313"
+    },
+    "training_inputs": {
+      "path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/ev2_indomain_20260728/training_inputs_pbvision.json",
+      "sha256": "2bfa5f91e33c8a8fa1a093707a94e58355f8252110704944321cf64fc392cd93"
+    }
+  },
+  "status": "FAIL"
+}

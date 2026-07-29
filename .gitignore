@@ -101,3 +101,8 @@ runs/lanes/ball_labels_round2_20260728/*
 !runs/lanes/ball_labels_round2_20260728/pbv11_runassembly/
 runs/lanes/ball_labels_round2_20260728/pbv11_runassembly/*
 !runs/lanes/ball_labels_round2_20260728/pbv11_runassembly/provenance.json
+!runs/lanes/ev2_indomain_20260728/
+runs/lanes/ev2_indomain_20260728/*
+!runs/lanes/ev2_indomain_20260728/REPORT.md
+!runs/lanes/ev2_indomain_20260728/gate_proof_pbvision_20260728.json
+!runs/lanes/ev2_indomain_20260728/training_inputs_pbvision.json

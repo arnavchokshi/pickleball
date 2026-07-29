@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "artifact_type": "training_input_manifest",
+  "inputs": [
+    {"path": "/mnt/cachedata/media/pbvision/143sf3gdwxsa/max.mp4", "asset_id": "pbvision_gallery_20260719", "source_id": "143sf3gdwxsa", "component": "EVENT"},
+    {"path": "/mnt/cachedata/media/pbvision/98z43hspqz13/max.mp4", "asset_id": "pbvision_gallery_20260719", "source_id": "98z43hspqz13", "component": "EVENT"},
+    {"path": "/mnt/cachedata/media/pbvision/bewqc0glhgpq/max.mp4", "asset_id": "pbvision_gallery_20260719", "source_id": "bewqc0glhgpq", "component": "EVENT"},
+    {"path": "/mnt/cachedata/media/pbvision/st0epgnab7dr/max.mp4", "asset_id": "pbvision_gallery_20260719", "source_id": "st0epgnab7dr", "component": "EVENT"},
+    {"path": "/mnt/cachedata/media/pbvision/td2szayjwtrj/max.mp4", "asset_id": "pbvision_gallery_20260719", "source_id": "td2szayjwtrj", "component": "EVENT"},
+    {"path": "/mnt/cachedata/media/pbvision/tqjlrcntpjvt/max.mp4", "asset_id": "pbvision_gallery_20260719", "source_id": "tqjlrcntpjvt", "component": "EVENT"},
+    {"path": "/mnt/cachedata/media/pbvision/xkadsq9bli3h/max.mp4", "asset_id": "pbvision_gallery_20260719", "source_id": "xkadsq9bli3h", "component": "EVENT"}
+  ]
+}
