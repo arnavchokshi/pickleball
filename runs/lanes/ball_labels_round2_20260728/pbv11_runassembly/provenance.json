@@ -1,0 +1,93 @@
+{
+  "artifact_type": "racketsport_ball_label_run_assembly_provenance",
+  "lane": "ball_labels_round2_20260728",
+  "purpose": "Assemble an eligible ball_label_studio.py run directory for the pb.vision 11-minute demo clip (the 4th source-disjoint clip for the round-2 bounce-labelling target), by pointing at existing artifacts read-only -- nothing in this file was hand-derived without a citation to its source.",
+  "assembled_dir": "runs/lanes/ball_labels_round2_20260728/pbv11_runassembly",
+  "check_verdict": "PASS -- .venv/bin/python scripts/racketsport/ball_label_studio.py --run-dir <this dir> --check exits clean; see check_summary below.",
+  "pieces": {
+    "court_calibration.json": {
+      "how": "Not a copy -- converted through the repo's own schema class, not hand-written.",
+      "immediate_source": "runs/lanes/calib_distortion_fit_20260726/refined/pbvision_11min_20260713_demo_seed/court_calibration_metric15pt_refined.json",
+      "immediate_source_sha256": "2b3cecb6d6e55fde06fbc36b7c232e965540ceed16cd4477c257a419c116908e",
+      "root_source": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_metric15pt.json (the owner's 15-pt reviewed correspondences, wrapped via metric_calibration_from_reviewed_keypoints_15pt; committed 1075cee57 2026-07-16)",
+      "root_source_sha256": "3e478a930dd23d31995aa720f93027f57280c47aab5029b780b9e72b30b7dae2",
+      "refit_lane": "runs/lanes/calib_distortion_fit_20260726 (2026-07-26) -- corrected two bugs in the raw 15-pt solve: (1) net keypoints were declared at net-top height instead of the ground net line, (2) the distortion gate was scored on training residual instead of held-out; refit moves this clip's held-out median plane error from an unmeasured/uncorrected baseline to 0.1770 m per that lane's own leave-one-out report (runs/lanes/calib_distortion_fit_20260726/REPORT.md).",
+      "conversion_method": "threed.racketsport.schemas.CourtCalibration.model_validate(raw_json) then .model_dump(mode='json'), written with json.dumps(indent=2, sort_keys=True) -- this is the EXACT code path threed.racketsport.orchestrator.ExternalCalibrationRunner.run() uses to produce the pipeline's court_calibration.json artifact from a --court-calibration source (orchestrator.py ~L393 CourtCalibration.model_validate, ~L424 artifacts['court_calibration.json'] = calibration, _write_json_artifact -> model_dump(mode='json'); serialization matches _write_json's indent=2/sort_keys=True). No field was hand-written; only the repo's own pydantic schema was used to validate and canonicalize the refined metric15pt content.",
+      "field_dropped_before_validation": {
+        "field": "provenance",
+        "value_in_source": {
+          "authority_unchanged": "source stays metric_15pt_reviewed -- a better fit of the same owner-reviewed correspondences is not a new authority class",
+          "not_gate_verified": true,
+          "refinement_of": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_calibration_metric15pt.json",
+          "refit_lane": "runs/lanes/calib_distortion_fit_20260726",
+          "refit_reason": "raw solve was fit with the 3 net keypoints declared at net-top height and a distortion gate scored on training residual; both corrected",
+          "reviewed_keypoints": "runs/lanes/pbv11_headtohead_20260713/rerun_20260715/owner_cal_seed/court_keypoints_reviewed.json"
+        },
+        "why_dropped": "threed.racketsport.schemas.CourtCalibration.provenance is a strict CourtCalibrationProvenance object (required fields: method, inputs, code_identity) documented as 'Reproducibility identity required by preview external-CAL imports' -- i.e. only mandatory for the line_evidence_solved_preview trust class. This calibration's source/intrinsics.source is metric_15pt_reviewed, a TRUSTED (non-preview) source, so the field is optional and legitimately omitted rather than fabricated in the schema's shape. The free-form block above (informal refit documentation the calib_distortion_fit_20260726 lane wrote for its own report, not built via CourtCalibrationProvenance) is preserved here verbatim instead of being force-fit into a schema it was never meant to satisfy -- inventing method/inputs/code_identity strings to pass validation would have been the kind of hand-written calibration content this lane was told not to produce.",
+        "validation_error_if_kept": "9 pydantic errors: provenance.method/inputs/code_identity missing (required), provenance.authority_unchanged/not_gate_verified/refinement_of/refit_lane/refit_reason/reviewed_keypoints all 'Extra inputs are not permitted' (extra='forbid')."
+      },
+      "resulting_sha256": "bb2040df14fee7acf836e2e7b33f542899f97c59cb5bbafe4e611f2f4535c510",
+      "resulting_authority": "intrinsics.source == source == 'metric_15pt_reviewed' (unchanged by the refit -- a better fit of the same reviewed correspondences is not a new authority class, per calib_distortion_fit_20260726's own note, corroborated independently here by re-deriving through the strict pipeline schema)."
+    },
+    "ball_track.json": {
+      "how": "symlink, not copied",
+      "source": "runs/lanes/ball_hitdetect_20260713/pbv11_wasb/ball_track.json",
+      "source_sha256": "6213f4e04ffc12ad5c0fc30d2ee328c66f8c9430310a0a1a94fb4140c4162b03",
+      "producer": "WASB (tennis checkpoint wasb_tennis_best.pth.tar) ball detector, CPU, source_mode=wasb_predict, status=TESTED-ON-REAL-DATA, not_ground_truth=true (runs/lanes/ball_hitdetect_20260713/pbv11_wasb/summary.json)",
+      "verified_same_source_video": "summary.json records video='/Users/arnavchokshi/Desktop/pickleball/data/pbvision_11min_20260713/source_video.mp4' and source_video_frame_count=20922, source_video_fps=30.0. Independently checked with ffprobe against the actual file used here: nb_frames=20922, r_frame_rate=30/1, duration=697.4s, 1280x720 -- exact match, same video.",
+      "COVERAGE_CAVEAT_IMPORTANT": "This ball_track.json only processed the FIRST 5400 frames (max_frames=5400, processed_frame_count=5400) of the 20922-frame / 697.4s source video -- i.e. detections/candidates exist for roughly the first 180 seconds (26%) of the clip only. visible_frame_count=3409 of those 5400 frames actually cleared the 0.5 visibility threshold. Frames 5400-20921 (the remaining ~517s, 74% of the clip) have ZERO ball detections, ZERO candidates, and ZERO prefill. --check on the assembled dir confirms this: detection_frame_count=3409, candidate_frame_count=3423, frame_count=20922. Running WASB over the full clip would extrapolate to roughly 5.5 hours of CPU time at the measured rate (5188s for 5400 frames); not attempted in this lane (out of fence -- would touch/regenerate ball_hitdetect_20260713's artifacts and this lane is CPU-prep-only). The owner can still click/label bounces anywhere across all 20922 frames; frames beyond 5400 just lose the detector-guess (P key) assist and any 3D prefill (there was never a ball_track_arc_solved.json for this clip either, see below)."
+    },
+    "ball_candidates.json": {
+      "how": "symlink, not copied",
+      "source": "runs/lanes/ball_hitdetect_20260713/pbv11_wasb/ball_candidates.json",
+      "source_sha256": "05202bf0c34af7425753490dde11725efb0695596f5fe515cfef348ee8ece274",
+      "note": "Same producer and same first-5400-frame coverage caveat as ball_track.json above. Included because ball_label_studio.py natively consumes this exact filename (BALL_CANDIDATES_FILE) to draw the faint secondary candidate rings; not required by --check, added because it exists and directly improves the labelling UI at no fabrication cost."
+    },
+    "source.mp4": {
+      "how": "symlink, not copied (120MB; avoided duplicating it)",
+      "source": "data/pbvision_11min_20260713/source_video.mp4",
+      "source_sha256": "272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383",
+      "note_on_task_assumption": "The task description suggested the source video would be under eval_clips/ball/pbvision_11min_20260713/. That directory in fact contains only labels/ (the 15-pt review + court-keypoint CVAT frame crops) and no video file at all. The actual source video was found at data/pbvision_11min_20260713/source_video.mp4 (also the exact path recorded as 'video' in the ball_hitdetect_20260713 WASB run's summary.json, and frame-count/fps/resolution-verified against it with ffprobe). No --video CLI override is needed at launch because this symlink is named source.mp4 inside the run dir, matching ball_label_studio.py's own VIDEO_CANDIDATES auto-resolution."
+    },
+    "skeleton3d.json": {
+      "how": "NOT INCLUDED -- honestly absent, not fabricated.",
+      "finding": "No skeleton3d.json exists anywhere in the repo for the full 697.4s / 20922-frame pb.vision clip (no BODY-stage run has ever been completed against the full clip; multiple prior lane notes confirm this, e.g. runs/manager/inflight_lanes.md's trackI_placefuse_20260716 entry: 'pb.vision demo OUT OF SCOPE (no BODY artifacts; GPU fleet priority F/G)').",
+      "near_match_considered_and_rejected": "runs/demo_court_people_20260726/outdoor_pbvision/skeleton3d.json exists and is genuinely from the pb.vision source video, but only covers a 302-frame (~10.07s) BODY-compute slice extracted independently (its own frame_times.json: fps=30.0, frame_count=302) -- its own local frame indices 0-301 are NOT the same as this ball_track.json's global frame indices (0-5399 detected / 0-20921 total) into the full clip. Splicing it in would silently misplace player skeletons at the wrong frames for the vast majority of the clip, which is worse than omitting it and would read to the owner as real per-frame skeleton coverage it does not have. Not used, per the lane's explicit instruction not to fabricate skeleton coverage.",
+      "hard_requirement_check": "Confirmed via source read (threed/racketsport/ball_label_studio.py load_clip_bundle/_load_skeletons, ~L390-430) and via the --check summary below (missing_artifacts includes skeleton3d.json, player_count=0, skeleton_frame_count=0, --check still exits 0/PASS) that skeleton3d.json is SOFT-missing, not hard-required. Only CALIBRATION_FILE (court_calibration.json) is a hard StudioError if absent. Effect of the absence: near_player labelling is effectively unusable (the tool refuses any near_player judgement with no tracked joint within 2.5 m of the ray, since there are zero tracked players), so this clip's contribution to the round-2 target is bounce + free_flight only -- consistent with the pilot's own guidance that bounce is the only kind that becomes truth anyway."
+    },
+    "other_missing_optional_artifacts": {
+      "frame_times.json": "absent; fps/frame_count recovered by ffprobe-based frame counting inside the tool, confirmed correct (20922 @ 30.0 fps) by --check.",
+      "ball_track_arc_solved.json": "absent; there is no 3D-solved ball arc for this clip at all (WASB-only 2D detection was run, no downstream physics/arc solve), so there is zero 3D prefill (prefill_frame_count=0 in --check). The owner will click depth fresh on every label for this clip; only the detector's raw 2D pixel guess (from ball_track.json/ball_candidates.json, first 180s only) is available via the P key.",
+      "ball_bounce_candidates.json": "absent; the B/Shift+B 'jump to next bounce candidate' shortcut has nothing to jump to on this clip (bounce_candidate_frames=[] in --check). The owner will need to scrub/step manually to find bounces on this clip rather than using B.",
+      "net_plane.json": "absent; soft-optional per source, does not block --check."
+    }
+  },
+  "check_summary": {
+    "command": ".venv/bin/python scripts/racketsport/ball_label_studio.py --run-dir runs/lanes/ball_labels_round2_20260728/pbv11_runassembly --out /tmp/pbv11_check_out --check --summary-json /tmp/pbv11_check_summary.json",
+    "result": "clean exit, JSON summary written",
+    "frame_count": 20922,
+    "fps": 30.0,
+    "image_size": [1280, 720],
+    "detection_frame_count": 3409,
+    "candidate_frame_count": 3423,
+    "prefill_frame_count": 0,
+    "player_count": 0,
+    "skeleton_frame_count": 0,
+    "bounce_candidate_frames": [],
+    "missing_artifacts": [
+      "frame_times.json",
+      "ball_track_arc_solved.json",
+      "skeleton3d.json",
+      "ball_bounce_candidates.json",
+      "net_plane.json"
+    ],
+    "calibration_plane_residuals": {
+      "method": "pixel_ray_world -> intersect_ray_z(z=0) on the calibration's own reviewed correspondences, compared to their known world positions (same method table used for outdoor/wolverine/indoor in runs/lanes/ball_label_tool_20260726/REPORT.md)",
+      "point_count": 15,
+      "median_m": 0.144385,
+      "p95_m": 0.376616,
+      "max_m": 0.386046,
+      "cross_check_against_refit_lane_own_number": "runs/lanes/calib_distortion_fit_20260726 reported a more conservative leave-one-out held-out median of 0.1770 m for this same refined calibration (capture_quality.reasons: 'held_out_median_plane_error_0.1770m' inside the refined artifact itself). The 0.144385 m figure above is the in-sample residual computed the same way the pilot table computed its three numbers, so it is the one directly comparable to 0.101/0.127/0.232 m; the 0.177 m figure is the same clip's own held-out (more honest, slightly worse) estimate and is reported alongside it, not instead of it."
+    }
+  }
+}

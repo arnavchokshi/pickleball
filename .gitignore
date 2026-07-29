@@ -95,3 +95,9 @@ runs/lanes/ev2_cont_20260728/*
 !runs/lanes/fullgame_demo_20260728/
 runs/lanes/fullgame_demo_20260728/*
 !runs/lanes/fullgame_demo_20260728/REPORT.md
+!runs/lanes/ball_labels_round2_20260728/
+runs/lanes/ball_labels_round2_20260728/*
+!runs/lanes/ball_labels_round2_20260728/README.md
+!runs/lanes/ball_labels_round2_20260728/pbv11_runassembly/
+runs/lanes/ball_labels_round2_20260728/pbv11_runassembly/*
+!runs/lanes/ball_labels_round2_20260728/pbv11_runassembly/provenance.json

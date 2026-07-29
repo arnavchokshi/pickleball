@@ -8,6 +8,63 @@ Standing fence: `brand-exploration/` is the OWNER'S untracked brand work — no 
 `cvat_upload/court_diversity_20260712/` + `w7_audit_stratum_20260709/` are staged local-only owner
 labeling packages (storage-allowlisted, intentionally untracked).
 
+## 2026-07-28 — `ball_labels_round2_20260728` CLAIMED AND CLOSED (prep half: 4th clip online)
+
+Scope: small local CPU lane, no cloud actions. Fence: `runs/lanes/ball_labels_round2_20260728/`
+only; did not touch the three already-running labelling servers (ports 8801/8802/8803, PIDs
+19761/19763/19765 — verified alive and untouched throughout, still HTTP 200 at close), their
+`--run-dir` sources, pipeline code, configs, or any VM. Goal: bring the pb.vision 11-minute demo
+online as the round's 4th source-disjoint clip and verify all four servers for the owner's
+≥150-bounce / ≥4-source-disjoint-clip target (`NORTH_STAR_ROADMAP.md` §5 row 5).
+
+**Assembly, not a copy.** No usable run directory existed for the full pb.vision clip anywhere in
+the repo, so one was built at `runs/lanes/ball_labels_round2_20260728/pbv11_runassembly/` from
+three pieces that already existed, full chain of custody in that dir's `provenance.json`: (1)
+`court_calibration.json` — the owner's reviewed 15-pt seed as refit by the 2026-07-26 calibration
+lane (net-height + distortion fixes), converted by validating it through the repo's own
+`threed.racketsport.schemas.CourtCalibration` pydantic model (the exact class
+`orchestrator.ExternalCalibrationRunner` uses to write that artifact) — nothing hand-written; one
+non-schema `provenance` sub-block from the refit lane's own report had to be dropped before
+validation (documented verbatim, with the exact pydantic error, in `provenance.json`) since it
+isn't required for a `metric_15pt_reviewed`-class (non-preview) source. Resulting in-sample
+calibration floor (0.1444 m median / 0.3766 m p95, via the tool's own `--check`) matches the refit
+lane's own reported number to 4 decimal places — an independent cross-check that the conversion is
+correct, not just schema-valid. (2) `ball_track.json`/`ball_candidates.json` — symlinked from the
+existing `ball_hitdetect_20260713/pbv11_wasb` WASB run; frame-count/fps/resolution cross-checked
+with `ffprobe` against the real source video to confirm same-video provenance. **Only the first
+5,400 of 20,922 frames (~180s of 697.4s) have any detector coverage** — that WASB run never
+processed the full clip; extrapolated cost to finish it is ~5.5h CPU, not attempted here (would
+mean writing into `ball_hitdetect_20260713`, outside this lane's fence). (3) `source.mp4` —
+symlinked from `data/pbvision_11min_20260713/source_video.mp4` (NOT under `eval_clips/ball/
+pbvision_11min_20260713/` as the task brief assumed; that directory holds only the 15-pt review and
+court-keypoint frame crops, no video file). **No `skeleton3d.json` exists for the full clip and
+none was fabricated** — a frame-misaligned 302-frame/~10s BODY slice exists from an unrelated
+2026-07-26 demo lane but splicing it in would silently mis-place skeletons on most of the clip, so
+it was left out; confirmed via source read + `--check` that `skeleton3d.json` is soft-optional
+(only `court_calibration.json` is a hard `StudioError`), so the tool runs fine with `near_player`
+labelling simply unusable on this clip (0 tracked players) — bounce + free-flight only, same
+degradation as the wolverine/burlington clips already running.
+
+**4th server launched and verified**: port 8804, `--run-dir pbv11_runassembly`, `--clip-id
+pbvision_11min_20260713`, `--out runs/lanes/ball_labels_round2_20260728/pbv11`, nohup background,
+HTTP 200, `/api/state` returns `frame_count=20922`, `clip_id=pbvision_11min_20260713`, and the
+honest `missing_artifacts` list. All four servers (8801/8802/8803/8804) reverified HTTP 200 and
+their `--out` dirs writable at lane close. Calibration floors measured fresh for all four via each
+clip's own `--check` (not copied from any report): wolverine 0.127 m / burlington 0.191 m (a clip
+not in the original 3-clip pilot; this is a new number) / outdoor_webcam 0.101 m / pbv11 0.144 m
+in-sample (0.177 m held-out, per the refit lane).
+
+Owner-facing writeup: `runs/lanes/ball_labels_round2_20260728/README.md` (4 URLs, per-clip
+calibration floors, where labels land, round target, pbv11's specific limitations spelled out so
+the owner doesn't waste time expecting bounce candidates or 3D prefill that clip doesn't have).
+Committed: README.md + `pbv11_runassembly/provenance.json` + `.gitignore` whitelist entries
+(per-lane pattern, end of file) — frame caches, server logs, symlinks and the derived
+`court_calibration.json` itself stay local-only/untracked by design (regenerable from
+`provenance.json`'s documented method + cited source sha256). VERIFIED=0 throughout; this is
+infrastructure/prep work, not a labelling-accuracy claim. Lane closed; no further TODO on this
+prep half (actual bounce labelling across the 4 clips is the owner's ongoing work, already under
+way on ports 8801-8803).
+
 ## 2026-07-28 — `alwayson_fresh_wave_20260728` CLAIMED AND CLOSED (fresh-run-wave lane)
 
 Scope: fresh source-video-only, timed six-clip reproduction at current main HEAD
