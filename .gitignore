@@ -127,3 +127,4 @@ runs/lanes/bounce_labels_score_20260729/*
 runs/lanes/integrated_demo_20260729/*
 !runs/lanes/integrated_demo_20260729/render_overlay.py
 !runs/lanes/integrated_demo_20260729/render_manifest.json
+!runs/lanes/integrated_demo_20260729/REPORT.md
