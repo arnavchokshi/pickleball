@@ -47,7 +47,7 @@ review-only, not verified ground truth, and this scoring makes no promotion or a
 Full findings delivered as this agent's text response to its caller (harness restriction on
 committed `REPORT.md`, same constraint noted by prior lanes above). Lane closed.
 
-## 2026-07-29T00:59Z — `integrated_demo_20260729` CLAIMED (in progress)
+## 2026-07-29T00:59Z — `integrated_demo_20260729` CLAIMED AND CLOSED (integration demo lane)
 
 Owner ask (typed live before sleeping): a final end-to-end product demo showing
 EVERYTHING TOGETHER — court, human meshes, events, skeletons/meshes, AND the
@@ -71,10 +71,67 @@ works) reachable over the pinned host key; synced night1's
 `scripts/racketsport/remote_body_dispatch.py --sync-remote-code`
 (remote version stamp verified). Both target clips' source videos +
 `labels/court_calibration_metric15pt.json` seeds confirmed present on the
-synced remote checkout. In progress; full findings + final status will be
+synced remote checkout.
+
+**Both fresh full-preset co-located runs completed (`--pipeline-preset full`
+default, `--body-local --one-world --max-players 4 --force`):** burlington
+600 frames/60fps, wall **1531.6s**, status `partial`, 4 typed degrades
+(`input_quality`, `ball_arc`, `ball_arc_refined`, `coaching_facts`);
+outdoor_webcam 1151 frames/60fps, wall **2370.2s**, status `partial`, same 4
+typed degrades. Both honest, pre-existing product behaviors (segment-budget
+kills, zero-fabrication coaching-language rejection), nothing fabricated.
+Wolverine reused verbatim from `bodylocal_colocated_fix_20260728/stretch_full_ball_oneworld/`
+(wall 987.3s, 5 degrades including a `grounding_refine` revert the other two
+clips didn't hit). Ball 3D coverage (confident/weak/not-rendered, of
+`ball_track_arc_solved.json` frames): wolverine 14.0/37.3/48.7, burlington
+21.3/5.3/73.3, outdoor_webcam 7.9/2.8/89.3. Contact events (`contact_windows_refined_v1.json`):
+23/27/32. BODY tier-1 mesh player-frames scheduled: 1164(7 windows)/2073(4)/3448(33).
+
+**Anomaly (real, same shared-working-tree pattern as `alwayson_fresh_wave_20260728`
+documented above):** a concurrent lane (`bounce_labels_score_20260729`) committed
+directly to `main` mid-session (`096619f`, `e734442`), advancing local HEAD from
+`85ba22a` to `e734442` while this lane's outdoor_webcam dispatch was still pending.
+Its first commit's diff swept in this lane's own in-progress uncommitted edit to
+this file (verified byte-for-byte intact afterward, non-overlapping with its own
+new section). Fix, matching the established ops lesson: re-ran `--sync-remote-code`
+against the new HEAD before dispatching outdoor_webcam (verified `e734442` on
+night1); burlington had already been dispatched against `85ba22a` and was left
+running unaffected (a strict ancestor, no correctness impact). No code was touched
+by this lane.
+
+**Rendered 3 combined overlay MP4s** (court lines/NVZ shading, per-player
+skeletons, a violet ring per player-frame with real tier-1 BODY mesh computed,
+band-honest ball rendering — confident vs weak visually distinct, `hidden` and
+any other non-confident/non-weak band, e.g. `arc_extrapolated`, get **no marker
+at all**, never rendered as a measurement — CONTACT event banners, a top-down
+minimap with player+ball positions, and an on-frame legend) to
+`~/Desktop/visual_evidence_20260728/integrated/`: `wolverine_mixed_0200_mid_steep_corner.mp4`
+(300 frames), `burlington_gold_0300_low_steep_corner.mp4` (600), `outdoor_webcam_iynbd_1500_long_high_baseline.mp4`
+(1151) — all three `ffprobe`-verified frame-count-exact vs source; several
+frames per clip spot-extracted and visually confirmed (correct skeletons, mesh
+rings, CONTACT banners, minimap dots, ball markers where confident/weak bands
+occur). One real bug caught and fixed mid-lane: the initial band-percentage
+math silently mislabeled `outdoor_webcam`'s 15 `arc_extrapolated` frames as
+part of "hidden" (98.7% sum instead of 100%) — the renderer's actual marker
+logic was already conservatively correct (anything not explicitly
+confident/weak draws nothing), only the reported metric was wrong; fixed to an
+honest confident/weak/not-rendered three-way split that always sums to 100,
+re-rendered, re-verified. `index.html` + `INTEGRATED_RESULTS.md` (per-clip
+stage tables, ball/event/mesh coverage, honest caveats) generated directly
+from the render manifest, both delivered alongside the videos.
+
+Persisted: `runs/lanes/integrated_demo_20260729/render_overlay.py` (the
+renderer) + `render_manifest.json` (small, per-clip metrics/summaries, no
+frame-by-frame arrays), whitelisted in `.gitignore` per the existing per-lane
+pattern; large pulled artifacts (skeleton3d.json, placement_refined.json,
+ball_track_arc_solved.json, etc. — needed locally to render, never the giant
+monoliths like `one_world_v1.json`/`virtual_world.json`/`confidence_gated_world.json`/
+`placement_trajectory_refined.json`, which were never pulled) stay local-only,
+untracked, regenerable from the VM run dirs on night1 (still present there as
+of lane close) or by rerunning the two commands above. `VERIFIED=0` throughout;
+this is a rendered product demo, not an accuracy promotion. Full findings
 delivered as this agent's text response to its caller (same harness
-restriction on committed `REPORT.md` files hit by prior lanes) plus this
-ledger entry updated at close.
+restriction on committed `REPORT.md` files hit by prior lanes). Lane closed.
 
 ## 2026-07-29T06:41Z — `fullgame_selection_fix_20260728` CLAIMED (in progress)
 

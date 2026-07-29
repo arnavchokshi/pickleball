@@ -1,0 +1,694 @@
+[
+  {
+    "clip_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/integrated_demo_20260729/wolverine_mixed_0200_mid_steep_corner",
+    "composite_summary": {
+      "fps": 30.0,
+      "frame_count": 300,
+      "height": 1080,
+      "width": 1920
+    },
+    "label": "Wolverine mid steep corner (reused stretch demo, bodylocal_colocated_fix_20260728)",
+    "metrics": {
+      "ball_band_counts": {
+        "anchored_measured": 33,
+        "arc_interpolated": 9,
+        "arc_weak": 112,
+        "hidden": 146
+      },
+      "ball_confident_pct": 14.0,
+      "ball_not_rendered_pct": 48.7,
+      "ball_total_frames": 300,
+      "ball_weak_pct": 37.3,
+      "degraded_stages": [
+        "input_quality",
+        "ball_arc",
+        "grounding_refine",
+        "ball_arc_refined",
+        "coaching_facts"
+      ],
+      "event_count": 23,
+      "mesh_distinct_video_frames_with_mesh": 300,
+      "mesh_scheduled_frame_count": 1164,
+      "mesh_window_count": 7,
+      "pipeline_preset": "full",
+      "stage_table": [
+        {
+          "stage": "ingest",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 1.525
+        },
+        {
+          "stage": "calibration",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 2.269
+        },
+        {
+          "stage": "input_quality",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 0.444
+        },
+        {
+          "stage": "tracking",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 33.937
+        },
+        {
+          "stage": "camera_motion",
+          "status": "skipped",
+          "trust_badge": "preview",
+          "wall_seconds": 1.097
+        },
+        {
+          "stage": "placement",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 2.372
+        },
+        {
+          "stage": "ball",
+          "status": "ran",
+          "trust_badge": "low_confidence",
+          "wall_seconds": 9.711
+        },
+        {
+          "stage": "ball_arc",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 99.614
+        },
+        {
+          "stage": "events",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 0.506
+        },
+        {
+          "stage": "ball_fill",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 1.917
+        },
+        {
+          "stage": "frames",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 4.57
+        },
+        {
+          "stage": "body",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 584.511
+        },
+        {
+          "stage": "placement_refine",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 4.775
+        },
+        {
+          "stage": "grounding_refine",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 3.647
+        },
+        {
+          "stage": "placement_trajectory_refine",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 4.066
+        },
+        {
+          "stage": "paddle_pose",
+          "status": "ran",
+          "trust_badge": "low_confidence",
+          "wall_seconds": 0.865
+        },
+        {
+          "stage": "events_refined",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 1.199
+        },
+        {
+          "stage": "ball_arc_refined",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 206.503
+        },
+        {
+          "stage": "world",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 4.895
+        },
+        {
+          "stage": "one_world",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 5.72
+        },
+        {
+          "stage": "confidence_gate",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 4.462
+        },
+        {
+          "stage": "match_stats",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 0.318
+        },
+        {
+          "stage": "coaching_facts",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 4.231
+        },
+        {
+          "stage": "manifest",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 2.672
+        }
+      ],
+      "status": "partial",
+      "trust_bands": {
+        "ball": {
+          "badge": "low_confidence",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/bodylocal_colocated_fix_20260728/colocated_wolverine_full_stretch/wolverine_mixed_0200_mid_steep_corner/ball_track.json",
+          "gate_id": "ball_m1_f1_at_20_gate",
+          "gate_status": "0/8 milestones pass",
+          "reason": "BALL track source is wasb; the M1 gate (F1@20>=0.90, recall@20>=0.75, hidden-FP<=0.05) has not passed for any milestone (0/8 per NORTH_STAR_ROADMAP.md); treat ball position as a rough cue, not a verified track. Ball depth is unvalidated. Every 3D ball position is fitted against image-plane residuals, which cannot see error along the camera ray: a sub-pixel reprojection has been measured alongside 0.305 m median and 1.381 m p95 3D error, ~98% of it in depth (runs/lanes/tt3d_external_validation_20260726/report.json). Physical plausibility bounds reject absurd positions but confirm nothing about depth accuracy.",
+          "stage": "BALL"
+        },
+        "body": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/bodylocal_colocated_fix_20260728/colocated_wolverine_full_stretch/wolverine_mixed_0200_mid_steep_corner/body_full_clip_gate.json",
+          "gate_id": "full_clip_body_gate",
+          "gate_status": "structural_only",
+          "reason": "Fast SAM-3D-Body ran locally with SAM-3D body-mode joints as the offline skeleton source; world-MPJPE accuracy gate not yet measured for this run",
+          "stage": "BODY"
+        },
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/bodylocal_colocated_fix_20260728/colocated_wolverine_full_stretch/wolverine_mixed_0200_mid_steep_corner/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=warn, metric_confidence=low, reasons=reprojection_high, single_view_planar_full_calibration, distortion_model=zero_distortion_grid_search_focal, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        },
+        "racket_pose_estimate": {
+          "badge": "low_confidence",
+          "gate_id": "wrist_palm_grip_fused_estimated_paddle",
+          "gate_status": "estimated_from_wrist",
+          "reason": "Fused wrist+palm+grip-transform paddle estimator: hand frames from MHR70 finger joints, constant-per-segment grip transform, optional wrist-gated external detector-box evidence and (when available) ball-reflection contacts. Render-only, estimated-class, never canonical racket_pose.json, never RKT promotion. Distinct from (and successor to) the legacy wrist_proxy estimator.",
+          "stage": "RKT",
+          "status": "estimated_from_wrist"
+        },
+        "track": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/bodylocal_colocated_fix_20260728/colocated_wolverine_full_stretch/wolverine_mixed_0200_mid_steep_corner/tracks.json",
+          "gate_id": "trk_idf1_gate",
+          "gate_status": "owner_directed_stack_selection_preview",
+          "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+          "stage": "TRK"
+        }
+      },
+      "wall_seconds": 987.293
+    },
+    "skeleton_layer_summary": {
+      "bone_count": 14,
+      "joint_count": 70,
+      "player_count": 4
+    },
+    "slug": "wolverine_mixed_0200_mid_steep_corner",
+    "video_file": "wolverine_mixed_0200_mid_steep_corner.mp4"
+  },
+  {
+    "clip_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/integrated_demo_20260729/burlington_gold_0300_low_steep_corner",
+    "composite_summary": {
+      "fps": 59.94,
+      "frame_count": 600,
+      "height": 1080,
+      "width": 1920
+    },
+    "label": "Burlington gold low steep corner",
+    "metrics": {
+      "ball_band_counts": {
+        "anchored_measured": 24,
+        "arc_interpolated": 104,
+        "arc_weak": 32,
+        "hidden": 440
+      },
+      "ball_confident_pct": 21.3,
+      "ball_not_rendered_pct": 73.3,
+      "ball_total_frames": 600,
+      "ball_weak_pct": 5.3,
+      "degraded_stages": [
+        "input_quality",
+        "ball_arc",
+        "ball_arc_refined",
+        "coaching_facts"
+      ],
+      "event_count": 27,
+      "mesh_distinct_video_frames_with_mesh": 600,
+      "mesh_scheduled_frame_count": 2073,
+      "mesh_window_count": 4,
+      "pipeline_preset": "full",
+      "stage_table": [
+        {
+          "stage": "ingest",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 3.25
+        },
+        {
+          "stage": "calibration",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 1.973
+        },
+        {
+          "stage": "input_quality",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 0.735
+        },
+        {
+          "stage": "tracking",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 94.137
+        },
+        {
+          "stage": "camera_motion",
+          "status": "skipped",
+          "trust_badge": "preview",
+          "wall_seconds": 1.088
+        },
+        {
+          "stage": "placement",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 3.983
+        },
+        {
+          "stage": "ball",
+          "status": "ran",
+          "trust_badge": "low_confidence",
+          "wall_seconds": 18.388
+        },
+        {
+          "stage": "ball_arc",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 74.436
+        },
+        {
+          "stage": "events",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 0.779
+        },
+        {
+          "stage": "ball_fill",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 3.424
+        },
+        {
+          "stage": "frames",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 9.073
+        },
+        {
+          "stage": "body",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 1041.925
+        },
+        {
+          "stage": "placement_refine",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 8.47
+        },
+        {
+          "stage": "grounding_refine",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 5.287
+        },
+        {
+          "stage": "placement_trajectory_refine",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 5.183
+        },
+        {
+          "stage": "paddle_pose",
+          "status": "ran",
+          "trust_badge": "low_confidence",
+          "wall_seconds": 1.515
+        },
+        {
+          "stage": "events_refined",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 1.271
+        },
+        {
+          "stage": "ball_arc_refined",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 224.769
+        },
+        {
+          "stage": "world",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 6.318
+        },
+        {
+          "stage": "one_world",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 7.857
+        },
+        {
+          "stage": "confidence_gate",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 6.707
+        },
+        {
+          "stage": "match_stats",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 0.575
+        },
+        {
+          "stage": "coaching_facts",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 4.64
+        },
+        {
+          "stage": "manifest",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 2.919
+        }
+      ],
+      "status": "partial",
+      "trust_bands": {
+        "ball": {
+          "badge": "low_confidence",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/integrated_demo_20260729/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/ball_track.json",
+          "gate_id": "ball_m1_f1_at_20_gate",
+          "gate_status": "0/8 milestones pass",
+          "reason": "BALL track source is wasb; the M1 gate (F1@20>=0.90, recall@20>=0.75, hidden-FP<=0.05) has not passed for any milestone (0/8 per NORTH_STAR_ROADMAP.md); treat ball position as a rough cue, not a verified track. Ball depth is unvalidated. Every 3D ball position is fitted against image-plane residuals, which cannot see error along the camera ray: a sub-pixel reprojection has been measured alongside 0.305 m median and 1.381 m p95 3D error, ~98% of it in depth (runs/lanes/tt3d_external_validation_20260726/report.json). Physical plausibility bounds reject absurd positions but confirm nothing about depth accuracy.",
+          "stage": "BALL"
+        },
+        "body": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/integrated_demo_20260729/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/body_full_clip_gate.json",
+          "gate_id": "full_clip_body_gate",
+          "gate_status": "structural_only",
+          "reason": "Fast SAM-3D-Body ran locally with SAM-3D body-mode joints as the offline skeleton source; world-MPJPE accuracy gate not yet measured for this run",
+          "stage": "BODY"
+        },
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/integrated_demo_20260729/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=warn, metric_confidence=low, reasons=reprojection_high, single_view_planar_full_calibration, distortion_model=k1_k2_calibrate_camera_seeded, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        },
+        "racket_pose_estimate": {
+          "badge": "low_confidence",
+          "gate_id": "wrist_palm_grip_fused_estimated_paddle",
+          "gate_status": "estimated_from_wrist",
+          "reason": "Fused wrist+palm+grip-transform paddle estimator: hand frames from MHR70 finger joints, constant-per-segment grip transform, optional wrist-gated external detector-box evidence and (when available) ball-reflection contacts. Render-only, estimated-class, never canonical racket_pose.json, never RKT promotion. Distinct from (and successor to) the legacy wrist_proxy estimator.",
+          "stage": "RKT",
+          "status": "estimated_from_wrist"
+        },
+        "track": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/integrated_demo_20260729/burlington_gold_0300_low_steep_corner/burlington_gold_0300_low_steep_corner/tracks.json",
+          "gate_id": "trk_idf1_gate",
+          "gate_status": "owner_directed_stack_selection_preview",
+          "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+          "stage": "TRK"
+        }
+      },
+      "wall_seconds": 1531.553
+    },
+    "skeleton_layer_summary": {
+      "bone_count": 14,
+      "joint_count": 70,
+      "player_count": 4
+    },
+    "slug": "burlington_gold_0300_low_steep_corner",
+    "video_file": "burlington_gold_0300_low_steep_corner.mp4"
+  },
+  {
+    "clip_dir": "/Users/arnavchokshi/Desktop/pickleball/runs/lanes/integrated_demo_20260729/outdoor_webcam_iynbd_1500_long_high_baseline",
+    "composite_summary": {
+      "fps": 60.0,
+      "frame_count": 1151,
+      "height": 1080,
+      "width": 1920
+    },
+    "label": "Outdoor webcam long high baseline",
+    "metrics": {
+      "ball_band_counts": {
+        "anchored_measured": 89,
+        "arc_extrapolated": 15,
+        "arc_interpolated": 2,
+        "arc_weak": 32,
+        "hidden": 1013
+      },
+      "ball_confident_pct": 7.9,
+      "ball_not_rendered_pct": 89.3,
+      "ball_total_frames": 1151,
+      "ball_weak_pct": 2.8,
+      "degraded_stages": [
+        "input_quality",
+        "ball_arc",
+        "ball_arc_refined",
+        "coaching_facts"
+      ],
+      "event_count": 32,
+      "mesh_distinct_video_frames_with_mesh": 1151,
+      "mesh_scheduled_frame_count": 3448,
+      "mesh_window_count": 33,
+      "pipeline_preset": "full",
+      "stage_table": [
+        {
+          "stage": "ingest",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 3.924
+        },
+        {
+          "stage": "calibration",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 2.049
+        },
+        {
+          "stage": "input_quality",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 0.626
+        },
+        {
+          "stage": "tracking",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 123.668
+        },
+        {
+          "stage": "camera_motion",
+          "status": "skipped",
+          "trust_badge": "preview",
+          "wall_seconds": 0.954
+        },
+        {
+          "stage": "placement",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 6.787
+        },
+        {
+          "stage": "ball",
+          "status": "ran",
+          "trust_badge": "low_confidence",
+          "wall_seconds": 31.231
+        },
+        {
+          "stage": "ball_arc",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 166.464
+        },
+        {
+          "stage": "events",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 1.978
+        },
+        {
+          "stage": "ball_fill",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 8.213
+        },
+        {
+          "stage": "frames",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 16.94
+        },
+        {
+          "stage": "body",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 1609.841
+        },
+        {
+          "stage": "placement_refine",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 14.272
+        },
+        {
+          "stage": "grounding_refine",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 8.829
+        },
+        {
+          "stage": "placement_trajectory_refine",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 8.645
+        },
+        {
+          "stage": "paddle_pose",
+          "status": "ran",
+          "trust_badge": "low_confidence",
+          "wall_seconds": 2.533
+        },
+        {
+          "stage": "events_refined",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 2.102
+        },
+        {
+          "stage": "ball_arc_refined",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 307.665
+        },
+        {
+          "stage": "world",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 10.688
+        },
+        {
+          "stage": "one_world",
+          "status": "ran",
+          "trust_badge": "preview",
+          "wall_seconds": 13.354
+        },
+        {
+          "stage": "confidence_gate",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 11.335
+        },
+        {
+          "stage": "match_stats",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 0.94
+        },
+        {
+          "stage": "coaching_facts",
+          "status": "degraded",
+          "trust_badge": null,
+          "wall_seconds": 7.782
+        },
+        {
+          "stage": "manifest",
+          "status": "ran",
+          "trust_badge": null,
+          "wall_seconds": 4.891
+        }
+      ],
+      "status": "partial",
+      "trust_bands": {
+        "ball": {
+          "badge": "low_confidence",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/integrated_demo_20260729/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/ball_track.json",
+          "gate_id": "ball_m1_f1_at_20_gate",
+          "gate_status": "0/8 milestones pass",
+          "reason": "BALL track source is wasb; the M1 gate (F1@20>=0.90, recall@20>=0.75, hidden-FP<=0.05) has not passed for any milestone (0/8 per NORTH_STAR_ROADMAP.md); treat ball position as a rough cue, not a verified track. Ball depth is unvalidated. Every 3D ball position is fitted against image-plane residuals, which cannot see error along the camera ray: a sub-pixel reprojection has been measured alongside 0.305 m median and 1.381 m p95 3D error, ~98% of it in depth (runs/lanes/tt3d_external_validation_20260726/report.json). Physical plausibility bounds reject absurd positions but confirm nothing about depth accuracy.",
+          "stage": "BALL"
+        },
+        "body": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/integrated_demo_20260729/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/body_full_clip_gate.json",
+          "gate_id": "full_clip_body_gate",
+          "gate_status": "structural_only",
+          "reason": "Fast SAM-3D-Body ran locally with SAM-3D body-mode joints as the offline skeleton source; world-MPJPE accuracy gate not yet measured for this run",
+          "stage": "BODY"
+        },
+        "court": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/integrated_demo_20260729/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/court_calibration.json",
+          "gate_id": "court_calibration_pck5px_gate",
+          "gate_status": "metric15_unverified",
+          "reason": "Placement uses the metric-15pt reviewed calibration (source=metric_15pt_reviewed, intrinsics.source=metric_15pt_reviewed, grade=good, metric_confidence=med, reasons=single_view_planar_full_calibration, distortion_model=zero_distortion_grid_search_focal, reviewed_15pt_correspondences). The held-out PCK@5px>=0.95 CAL gate has not passed, and the single-view planar calibration still carries the documented metric-scale identifiability caveats; treat court_Z0 meter placement as preview, not verified.",
+          "stage": "CAL"
+        },
+        "racket_pose_estimate": {
+          "badge": "low_confidence",
+          "gate_id": "wrist_palm_grip_fused_estimated_paddle",
+          "gate_status": "estimated_from_wrist",
+          "reason": "Fused wrist+palm+grip-transform paddle estimator: hand frames from MHR70 finger joints, constant-per-segment grip transform, optional wrist-gated external detector-box evidence and (when available) ball-reflection contacts. Render-only, estimated-class, never canonical racket_pose.json, never RKT promotion. Distinct from (and successor to) the legacy wrist_proxy estimator.",
+          "stage": "RKT",
+          "status": "estimated_from_wrist"
+        },
+        "track": {
+          "badge": "preview",
+          "evidence_path": "/home/arnavchokshi/coldstart_20260706/repo/runs/lanes/integrated_demo_20260729/outdoor_webcam_iynbd_1500_long_high_baseline/outdoor_webcam_iynbd_1500_long_high_baseline/tracks.json",
+          "gate_id": "trk_idf1_gate",
+          "gate_status": "owner_directed_stack_selection_preview",
+          "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+          "stage": "TRK"
+        }
+      },
+      "wall_seconds": 2370.211
+    },
+    "skeleton_layer_summary": {
+      "bone_count": 14,
+      "joint_count": 70,
+      "player_count": 4
+    },
+    "slug": "outdoor_webcam_iynbd_1500_long_high_baseline",
+    "video_file": "outdoor_webcam_iynbd_1500_long_high_baseline.mp4"
+  }
+]
