@@ -879,28 +879,10 @@
      "role": "recovered gallery pixel source 0tmdeghtfvjx (partition: test); sha256 computed on-VM 2026-07-28"
     },
     {
-     "path": "/mnt/cachedata/media/pbvision/143sf3gdwxsa/max.mp4",
-     "algorithm": "sha256",
-     "digest": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c",
-     "role": "recovered gallery pixel source 143sf3gdwxsa (partition: train); sha256 computed on-VM 2026-07-28"
-    },
-    {
      "path": "/mnt/cachedata/media/pbvision/83gyqyc10y8f/max.mp4",
      "algorithm": "sha256",
      "digest": "5855cb92d4170e939bda322640cfd6a38b3b5aa4f3f7ad4abb897ab3f313ce7a",
      "role": "recovered gallery pixel source 83gyqyc10y8f (partition: compare_only); sha256 computed on-VM 2026-07-28; KNOWN MISMATCH vs the local trusted copy data/pbvision_11min_20260713/source_video.mp4 (local sha256 272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383, 119911668 B vs cache 144970700 B; same 697 s content, different encode) - stays compare-only/never-train"
-    },
-    {
-     "path": "/mnt/cachedata/media/pbvision/98z43hspqz13/max.mp4",
-     "algorithm": "sha256",
-     "digest": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f",
-     "role": "recovered gallery pixel source 98z43hspqz13 (partition: train); sha256 computed on-VM 2026-07-28"
-    },
-    {
-     "path": "/mnt/cachedata/media/pbvision/bewqc0glhgpq/max.mp4",
-     "algorithm": "sha256",
-     "digest": "e6b73a38535aea5d3644c3a94091b3c5d261b6c2b60e5d80a21514ad502b69cf",
-     "role": "recovered gallery pixel source bewqc0glhgpq (partition: train); sha256 computed on-VM 2026-07-28"
     },
     {
      "path": "/mnt/cachedata/media/pbvision/iottnc0h3ekn/max.mp4",
@@ -921,34 +903,10 @@
      "role": "recovered gallery pixel source pldtjpw3h0jw (partition: val); sha256 computed on-VM 2026-07-28"
     },
     {
-     "path": "/mnt/cachedata/media/pbvision/st0epgnab7dr/max.mp4",
-     "algorithm": "sha256",
-     "digest": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04",
-     "role": "recovered gallery pixel source st0epgnab7dr (partition: train); sha256 computed on-VM 2026-07-28"
-    },
-    {
-     "path": "/mnt/cachedata/media/pbvision/td2szayjwtrj/max.mp4",
-     "algorithm": "sha256",
-     "digest": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79",
-     "role": "recovered gallery pixel source td2szayjwtrj (partition: train); sha256 computed on-VM 2026-07-28"
-    },
-    {
-     "path": "/mnt/cachedata/media/pbvision/tqjlrcntpjvt/max.mp4",
-     "algorithm": "sha256",
-     "digest": "176cb66c13e2fa481839815c1dc41c063b2a0cc17758e75dd9c7f39627f31490",
-     "role": "recovered gallery pixel source tqjlrcntpjvt (partition: train); sha256 computed on-VM 2026-07-28"
-    },
-    {
      "path": "/mnt/cachedata/media/pbvision/utasf5hnozwz/max.mp4",
      "algorithm": "sha256",
      "digest": "614580f5b3a2f634a76f5483e10b8c1f7919fd5affbd3ee86532a539f3f58197",
      "role": "recovered gallery pixel source utasf5hnozwz (partition: val); sha256 computed on-VM 2026-07-28"
-    },
-    {
-     "path": "/mnt/cachedata/media/pbvision/xkadsq9bli3h/max.mp4",
-     "algorithm": "sha256",
-     "digest": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181",
-     "role": "recovered gallery pixel source xkadsq9bli3h (partition: train); sha256 computed on-VM 2026-07-28; VERIFIED byte-identical to the locally-trusted copy data/pbv_replay_20260720/xkadsq9bli3h/max.mp4 (same sha256)"
     }
    ],
    "rights": {
@@ -1077,7 +1035,7 @@
    "state": "CONSUMED",
    "state_reason": "All 13 JSON exports inventoried; ten entered the teacher materializer. Local pixel availability was 2/13 until 2026-07-28, when all 13 MP4s were recovered from the surviving pickleball-cache-data-usc1f disk (RO mount on pickleball-gpu-night2) and hash-bound; xkadsq9bli3h verified byte-identical to the locally-trusted copy, 83gyqyc10y8f confirmed as the known different-encode mismatch and stays compare-only.",
    "owner": "DATA steward",
-   "next_check": "Court-keypoint spot-check of ~10 frames against owner taps remains OPEN (stills belong to compare-only 83gyqyc10y8f whose recovered copy is a different encode). Run the corrected non-audio-agreement teacher materialization (pbv_pickleball_teacher_events_20260720) against the recovered media. Keep 83gyqyc10y8f/iottnc0h3ekn/o4dee9dn0ccr unread by trainers."
+   "next_check": "Court-keypoint spot-check of ~10 frames against owner taps remains OPEN. Train-partition pixel bindings live in the dedicated clean asset pbv_gallery_pixels_recovered_20260728 (this asset's compare/val/test bindings are intentional content-refusal pins). Run the corrected non-audio-agreement teacher materialization (pbv_pickleball_teacher_events_20260720)."
   },
   {
    "asset_id": "pbv_pickleball_teacher_events_20260720",
@@ -5618,6 +5576,167 @@
    "state_reason": "ready_for_named_consumer",
    "owner": "EVENT training data owner",
    "next_check": "Regenerate records only through scripts/racketsport/build_multimodal_event_dataset.py with MANIFEST.sha256.json-pinned inputs; keep the wrist modality masked absent until a skeleton3d artifact exists for a labeled source video; the 1140 VM-only teacher rows stay in the unbuildable ledger until media/PTS land locally."
+  },
+  {
+   "asset_id": "pbv_gallery_pixels_recovered_20260728",
+   "acquired_utc": "2026-07-28T07:00:00Z",
+   "paths": [
+    {
+     "path": "/mnt/cachedata/media/pbvision",
+     "role": "seven TRAIN-partition pb.vision source videos, recovered from the surviving pickleball-cache-data-usc1f disk (read-only mount on pickleball-gpu-night2, attached 2026-07-28); val/test/compare siblings on the same mount are bound as refusal pins in pbvision_gallery_20260719, never here",
+     "present": true
+    }
+   ],
+   "counts": {
+    "byte_count": 1205886598,
+    "byte_count_basis": "sum of the seven train-partition max.mp4 file bytes, stat'ed on-VM 2026-07-28",
+    "raw_count": 7,
+    "raw_unit": "source_videos",
+    "dedup_kept_count": 7,
+    "dedup_unit": "source_videos",
+    "decoded_count": 7,
+    "decoded_unit": "ffprobe_verified_videos",
+    "label_count": 0,
+    "label_unit": "human_labels"
+   },
+   "source_lineage": {
+    "original_sources": [
+     "143sf3gdwxsa",
+     "98z43hspqz13",
+     "bewqc0glhgpq",
+     "st0epgnab7dr",
+     "td2szayjwtrj",
+     "tqjlrcntpjvt",
+     "xkadsq9bli3h"
+    ],
+    "games": [
+     "one pb.vision game per video ID"
+    ],
+    "sessions": [
+     "pbvision_gallery_20260719 recovery 2026-07-28"
+    ],
+    "channels": [
+     "pb.vision gallery via recovered cache disk"
+    ],
+    "fork_families": [
+     "143sf3gdwxsa",
+     "98z43hspqz13",
+     "bewqc0glhgpq",
+     "st0epgnab7dr",
+     "td2szayjwtrj",
+     "tqjlrcntpjvt",
+     "xkadsq9bli3h"
+    ]
+   },
+   "immutable_hashes": [
+    {
+     "path": "/mnt/cachedata/media/pbvision/143sf3gdwxsa/max.mp4",
+     "algorithm": "sha256",
+     "digest": "03fbdc2b056c1b1ed665c71994c06bc485f385b44a2fee892338360c666f845c",
+     "role": "recovered train-partition pixel source"
+    },
+    {
+     "path": "/mnt/cachedata/media/pbvision/98z43hspqz13/max.mp4",
+     "algorithm": "sha256",
+     "digest": "006eb7d0e7e7c5c351ea72b88c946a452660adb24eff87e77d12419b7330b11f",
+     "role": "recovered train-partition pixel source"
+    },
+    {
+     "path": "/mnt/cachedata/media/pbvision/bewqc0glhgpq/max.mp4",
+     "algorithm": "sha256",
+     "digest": "e6b73a38535aea5d3644c3a94091b3c5d261b6c2b60e5d80a21514ad502b69cf",
+     "role": "recovered train-partition pixel source"
+    },
+    {
+     "path": "/mnt/cachedata/media/pbvision/st0epgnab7dr/max.mp4",
+     "algorithm": "sha256",
+     "digest": "2803b4a18c97e3d3165cdbacbe7bcbe6c4b0c273820aa6840b7e731aea98ff04",
+     "role": "recovered train-partition pixel source"
+    },
+    {
+     "path": "/mnt/cachedata/media/pbvision/td2szayjwtrj/max.mp4",
+     "algorithm": "sha256",
+     "digest": "9594260561b334937a1dfb62c1450315fdcb1ee3e1ece304961416c7d15a2d79",
+     "role": "recovered train-partition pixel source"
+    },
+    {
+     "path": "/mnt/cachedata/media/pbvision/tqjlrcntpjvt/max.mp4",
+     "algorithm": "sha256",
+     "digest": "176cb66c13e2fa481839815c1dc41c063b2a0cc17758e75dd9c7f39627f31490",
+     "role": "recovered train-partition pixel source"
+    },
+    {
+     "path": "/mnt/cachedata/media/pbvision/xkadsq9bli3h/max.mp4",
+     "algorithm": "sha256",
+     "digest": "5085ae6ed0813b2b05ce1d6fe752423506cdc3fb78ca751d185403889b47b181",
+     "role": "recovered train-partition pixel source; VERIFIED byte-identical to trusted local copy data/pbv_replay_20260720/xkadsq9bli3h/max.mp4"
+    }
+   ],
+   "rights": {
+    "posture": "PBV-FULL-USAGE-20260720 authorizes training/commercial use of these seven non-holdout pixel sources; model predictions remain teacher-only",
+    "component_rulings": {
+     "BALL": {
+      "decision": "CONDITIONAL",
+      "ruling": "Pixels may train; teacher ball labels require independent agreement and low weight."
+     },
+     "COURT": {
+      "decision": "CONDITIONAL",
+      "ruling": "Pixels may support preview experiments; teacher keypoints are not GT."
+     },
+     "EVENT": {
+      "decision": "ALLOW",
+      "ruling": "Seven train-partition pixel sources may train under owner-signed PBV-FULL-USAGE-20260720 (recovered bytes hash-bound 2026-07-28; owner ran the steward amendment directly). Constraints: predictions remain teacher-only; audio alone cannot establish eligibility; val/test/compare-only sources are excluded from this asset and content-pinned as refusals in pbvision_gallery_20260719."
+     },
+     "PERSON": {
+      "decision": "CONDITIONAL",
+      "ruling": "Pixels may train; three compare-only videos are excluded from this asset."
+     },
+     "REID": {
+      "decision": "FORBID",
+      "ruling": "No identity GT is registered."
+     }
+    }
+   },
+   "license_fyi": "Training and commercial use authorized by PBV-FULL-USAGE-20260720; license is not a state gate.",
+   "label_authority": [
+    "none"
+   ],
+   "protection": {
+    "trainer_forbidden": false,
+    "identities": [],
+    "clean_subsets": [],
+    "overlap_check_coverage": {
+     "method": "exact video-ID exclusion: the three permanent compare-only IDs, both val IDs, and the test ID are absent from this asset's sources and hashes by construction; sha256 set verified disjoint from the frozen eval clips",
+     "coverage_count": 7,
+     "scope": "seven B1/train-partition pb.vision sources only",
+     "status": "PASS"
+    }
+   },
+   "consumers": [],
+   "disposition": {
+    "consumer_track": "D",
+    "training_intent": true,
+    "next_queue_action": "E-v2 in-domain continuation (lane ev2_indomain_20260728): pretrain the event head on these seven train-partition pixel sources with agreement-filtered teacher windows; never treat teacher rows as human GT.",
+    "consumer_evidence": "runs/lanes/ev2_indomain_20260728"
+   },
+   "state": "READY",
+   "state_reason": "ready_for_named_consumer",
+   "owner": "EVENT data owner",
+   "next_check": "After the E-v2 in-domain run, record its consumption row here with the gate-proof sha.",
+   "partitions": {
+    "strategy": "train-partition pixel sources only; val/test/compare live exclusively in pbvision_gallery_20260719",
+    "train": [
+     "143sf3gdwxsa",
+     "98z43hspqz13",
+     "bewqc0glhgpq",
+     "st0epgnab7dr",
+     "td2szayjwtrj",
+     "tqjlrcntpjvt",
+     "xkadsq9bli3h"
+    ],
+    "val": [],
+    "test": []
+   }
   }
  ]
 }
