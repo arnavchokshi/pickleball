@@ -106,3 +106,14 @@ runs/lanes/ev2_indomain_20260728/*
 !runs/lanes/ev2_indomain_20260728/REPORT.md
 !runs/lanes/ev2_indomain_20260728/gate_proof_pbvision_20260728.json
 !runs/lanes/ev2_indomain_20260728/training_inputs_pbvision.json
+!runs/lanes/fullgame_selection_fix_20260728/
+runs/lanes/fullgame_selection_fix_20260728/*
+!runs/lanes/fullgame_selection_fix_20260728/REPORT.md
+!runs/lanes/fullgame_selection_fix_20260728/repro_full_scale_selection.py
+!runs/lanes/fullgame_selection_fix_20260728/recovered/
+runs/lanes/fullgame_selection_fix_20260728/recovered/*
+!runs/lanes/fullgame_selection_fix_20260728/recovered/PIPELINE_SUMMARY.json
+!runs/lanes/fullgame_selection_fix_20260728/recovered/player_selection.json
+!runs/lanes/fullgame_selection_fix_20260728/recovered/raw_pool_authority_summary.json
+!runs/lanes/fullgame_selection_fix_20260728/recovered/run_stdout.log
+!runs/lanes/fullgame_selection_fix_20260728/recovered/run_stderr.log

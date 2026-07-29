@@ -1,0 +1,7997 @@
+{
+  "artifact_type": "racketsport_raw_pool_person_authority_run",
+  "calibration_path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed/court_calibration.json",
+  "candidate": "botsort_loose_pool_raw",
+  "clip_id": "pbvision_11min_20260713_demo_seed",
+  "config": {
+    "appearance_weight": 1.0,
+    "backfill_iou_threshold": 0.25,
+    "backfill_max_cost": 2.5,
+    "cardinality_backfill": false,
+    "court_margin_m": 1.0,
+    "crop_padding_px": 8,
+    "drop_outside_court": true,
+    "embedding_split_eps": 0.35,
+    "embedding_split_min_samples": 1,
+    "expected_players": 4,
+    "implausible_motion_speed_threshold_m_s": 10.0,
+    "iou_threshold": 0.5,
+    "local_switch_split_distance_m": Infinity,
+    "local_switch_split_embedding_distance": Infinity,
+    "local_switch_split_max_gap_frames": 0,
+    "max_embedding_bbox_delta_px": 2.5,
+    "max_fragment_speed_m_s": 12.0,
+    "max_fragments_for_global": 400,
+    "max_gap_fill_frames": 48,
+    "max_gap_fill_speed_m_s": 7.0,
+    "max_merge_cost": 2.0,
+    "max_merge_gap_frames": 240,
+    "max_merge_speed_m_s": 9.0,
+    "min_conf": 0.0,
+    "motion_weight": 1.0,
+    "post_association_court_margin_m": null,
+    "reid_backend": "osnet",
+    "reid_batch_size": 64,
+    "reid_device": "cuda:0",
+    "reid_half": null,
+    "reid_model_name": "osnet_x1_0",
+    "sample_stride_frames": 1,
+    "side_prior_weight": 0.25,
+    "split_gap_frames": 24,
+    "sport": "pickleball"
+  },
+  "cov4_proxy": {
+    "artifact_type": "racketsport_source_only_cov4_proxy",
+    "cov4_proxy": 0.007982,
+    "denominator_frame_count": 20922,
+    "denominator_source": "raw_pool_frame_count",
+    "exact_expected_player_frames": 167,
+    "expected_players": 4,
+    "first_frame": 29,
+    "last_frame": 18463,
+    "not_gt": true,
+    "notes": [
+      "Source-only proxy: counts frames where the output tracks contain exactly expected_players IDs.",
+      "This is not GT coverage, IDF1, or a promotion gate; it does not know whether the boxes match real players."
+    ],
+    "observed_frame_count": 16558,
+    "observed_frame_span": 18435,
+    "output_player_count_histogram": {
+      "0": 1877,
+      "1": 8979,
+      "2": 3129,
+      "3": 4283,
+      "4": 167
+    },
+    "schema_version": 1,
+    "source_only": true,
+    "uses_cvat_labels": false,
+    "value": 0.007982
+  },
+  "detection_limited_ceiling": {
+    "artifact_type": "racketsport_raw_pool_four_player_ceiling",
+    "court_margin_m": 1.0,
+    "expected_players": 4,
+    "four_player_detection_ceiling": 0.45856,
+    "frames_with_sufficient_on_court_detections": 9594,
+    "notes": [
+      "Counts frames where the raw pool contains at least `expected_players` on-court, mutually non-overlapping person boxes (greedy NMS by confidence). This is a source-only upper bound on association-stage coverage: no association/selection logic and no ground truth are involved."
+    ],
+    "on_court_count_histogram": {
+      "0": 48,
+      "1": 1195,
+      "2": 4394,
+      "3": 5691,
+      "4": 9308,
+      "5": 286
+    },
+    "overlap_iou_threshold": 0.3,
+    "pool_frame_count": 20922,
+    "schema_version": 1,
+    "source_only": true,
+    "uses_cvat_labels": false
+  },
+  "embedding_bbox_scale": 1.0,
+  "embedding_export": {
+    "detection_count": 110586,
+    "feature_dim": 512,
+    "feature_extractor": "torchreid_osnet_x1_0",
+    "feature_type": "osnet_reid_embedding",
+    "source_only": true,
+    "uses_cvat_labels": false
+  },
+  "embedding_export_path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed/global_association/reid_embeddings.json",
+  "embedding_source_path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed/raw_tracked_detections.json",
+  "four_player_detection_ceiling": {
+    "court_margin_m": 1.0,
+    "denominator_frame_count": 20922,
+    "expected_players": 4,
+    "frames_with_sufficient_on_court_detections": 9594,
+    "not_gt": true,
+    "notes": [
+      "Source-only raw-pool detection ceiling. This does not use GT and does not prove association or identity quality."
+    ],
+    "overlap_iou_threshold": 0.3,
+    "source_only": true,
+    "uses_cvat_labels": false,
+    "value": 0.45856
+  },
+  "geometry_path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed/tracked_detections.json",
+  "global_association": {
+    "cardinality_backfilled_detection_count": 0,
+    "court_filter_skipped_reason": "",
+    "court_rejected_detection_count": 44363,
+    "dropped_fragment_count": 327,
+    "embedding_split_count": 8,
+    "fragment_count": 547,
+    "gap_fill_skipped_overlap_count": 38,
+    "input_detection_count": 110586,
+    "merged_fragment_count": 357,
+    "output_player_count": 4,
+    "post_association_court_rejected_frame_count": 0,
+    "selected_fragment_count": 220,
+    "source_only": true,
+    "status": "ok",
+    "synthetic_frame_count": 1722,
+    "uses_cvat_labels": false
+  },
+  "ground_truth_scored": false,
+  "implausible_motion_diagnostic": {
+    "artifact_type": "racketsport_implausible_motion_diagnostic",
+    "implausible_motion_player_count": 4,
+    "implausible_motion_player_ids": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "implausible_motion_span_count": 149,
+    "implausible_motion_spans": [
+      {
+        "end_frame": 270,
+        "end_t": 9.0,
+        "max_speed_m_s": 41.748499,
+        "max_step": {
+          "distance_m": 9.741316,
+          "dt_s": 0.233333,
+          "from_frame": 261,
+          "from_t": 8.7,
+          "from_world_xy": [
+            1.472567,
+            7.617086
+          ],
+          "speed_m_s": 41.748499,
+          "to_frame": 268,
+          "to_t": 8.933333,
+          "to_world_xy": [
+            -3.974897,
+            -0.458704
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 261,
+        "start_t": 8.7,
+        "step_count": 3
+      },
+      {
+        "end_frame": 844,
+        "end_t": 28.133333,
+        "max_speed_m_s": 10.45529,
+        "max_step": {
+          "distance_m": 0.34851,
+          "dt_s": 0.033333,
+          "from_frame": 843,
+          "from_t": 28.1,
+          "from_world_xy": [
+            1.393096,
+            -6.008598
+          ],
+          "speed_m_s": 10.45529,
+          "to_frame": 844,
+          "to_t": 28.133333,
+          "to_world_xy": [
+            1.174243,
+            -5.737374
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 843,
+        "start_t": 28.1,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1429,
+        "end_t": 47.633333,
+        "max_speed_m_s": 42.047412,
+        "max_step": {
+          "distance_m": 1.40158,
+          "dt_s": 0.033333,
+          "from_frame": 1427,
+          "from_t": 47.566667,
+          "from_world_xy": [
+            0.579909,
+            -7.297851
+          ],
+          "speed_m_s": 42.047412,
+          "to_frame": 1428,
+          "to_t": 47.6,
+          "to_world_xy": [
+            -0.744871,
+            -6.840265
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1427,
+        "start_t": 47.566667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 1432,
+        "end_t": 47.733333,
+        "max_speed_m_s": 11.27232,
+        "max_step": {
+          "distance_m": 0.375744,
+          "dt_s": 0.033333,
+          "from_frame": 1431,
+          "from_t": 47.7,
+          "from_world_xy": [
+            -0.26731,
+            -6.943942
+          ],
+          "speed_m_s": 11.27232,
+          "to_frame": 1432,
+          "to_t": 47.733333,
+          "to_world_xy": [
+            0.09381,
+            -7.047747
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1431,
+        "start_t": 47.7,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1438,
+        "end_t": 47.933333,
+        "max_speed_m_s": 43.538874,
+        "max_step": {
+          "distance_m": 1.451296,
+          "dt_s": 0.033333,
+          "from_frame": 1437,
+          "from_t": 47.9,
+          "from_world_xy": [
+            -0.082634,
+            -6.943731
+          ],
+          "speed_m_s": 43.538874,
+          "to_frame": 1438,
+          "to_t": 47.933333,
+          "to_world_xy": [
+            -1.43288,
+            -6.411665
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1437,
+        "start_t": 47.9,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1490,
+        "end_t": 49.666667,
+        "max_speed_m_s": 10.052298,
+        "max_step": {
+          "distance_m": 0.335077,
+          "dt_s": 0.033333,
+          "from_frame": 1489,
+          "from_t": 49.633333,
+          "from_world_xy": [
+            -4.035953,
+            -5.113771
+          ],
+          "speed_m_s": 10.052298,
+          "to_frame": 1490,
+          "to_t": 49.666667,
+          "to_world_xy": [
+            -3.731288,
+            -5.253254
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1489,
+        "start_t": 49.633333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1539,
+        "end_t": 51.3,
+        "max_speed_m_s": 10.836567,
+        "max_step": {
+          "distance_m": 0.361219,
+          "dt_s": 0.033333,
+          "from_frame": 1538,
+          "from_t": 51.266667,
+          "from_world_xy": [
+            0.025324,
+            -7.035131
+          ],
+          "speed_m_s": 10.836567,
+          "to_frame": 1539,
+          "to_t": 51.3,
+          "to_world_xy": [
+            0.355318,
+            -7.182041
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1538,
+        "start_t": 51.266667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1805,
+        "end_t": 60.166667,
+        "max_speed_m_s": 42.883553,
+        "max_step": {
+          "distance_m": 1.429452,
+          "dt_s": 0.033333,
+          "from_frame": 1804,
+          "from_t": 60.133333,
+          "from_world_xy": [
+            0.170317,
+            -6.62051
+          ],
+          "speed_m_s": 42.883553,
+          "to_frame": 1805,
+          "to_t": 60.166667,
+          "to_world_xy": [
+            -1.140801,
+            -6.051036
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1804,
+        "start_t": 60.133333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1807,
+        "end_t": 60.233333,
+        "max_speed_m_s": 23.796549,
+        "max_step": {
+          "distance_m": 0.793218,
+          "dt_s": 0.033333,
+          "from_frame": 1806,
+          "from_t": 60.2,
+          "from_world_xy": [
+            -1.200694,
+            -6.069142
+          ],
+          "speed_m_s": 23.796549,
+          "to_frame": 1807,
+          "to_t": 60.233333,
+          "to_world_xy": [
+            -1.945296,
+            -5.795714
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1806,
+        "start_t": 60.2,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1856,
+        "end_t": 61.866667,
+        "max_speed_m_s": 33.030843,
+        "max_step": {
+          "distance_m": 1.101028,
+          "dt_s": 0.033333,
+          "from_frame": 1854,
+          "from_t": 61.8,
+          "from_world_xy": [
+            -2.318213,
+            -7.242464
+          ],
+          "speed_m_s": 33.030843,
+          "to_frame": 1855,
+          "to_t": 61.833333,
+          "to_world_xy": [
+            -1.248858,
+            -7.50465
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1854,
+        "start_t": 61.8,
+        "step_count": 2
+      },
+      {
+        "end_frame": 1877,
+        "end_t": 62.566667,
+        "max_speed_m_s": 42.46789,
+        "max_step": {
+          "distance_m": 1.415596,
+          "dt_s": 0.033333,
+          "from_frame": 1874,
+          "from_t": 62.466667,
+          "from_world_xy": [
+            -1.577141,
+            -7.502387
+          ],
+          "speed_m_s": 42.46789,
+          "to_frame": 1875,
+          "to_t": 62.5,
+          "to_world_xy": [
+            -2.958301,
+            -7.192052
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1874,
+        "start_t": 62.466667,
+        "step_count": 3
+      },
+      {
+        "end_frame": 1940,
+        "end_t": 64.666667,
+        "max_speed_m_s": 15.672788,
+        "max_step": {
+          "distance_m": 0.522426,
+          "dt_s": 0.033333,
+          "from_frame": 1939,
+          "from_t": 64.633333,
+          "from_world_xy": [
+            -2.083736,
+            -6.833062
+          ],
+          "speed_m_s": 15.672788,
+          "to_frame": 1940,
+          "to_t": 64.666667,
+          "to_world_xy": [
+            -2.585429,
+            -6.687347
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1938,
+        "start_t": 64.6,
+        "step_count": 2
+      },
+      {
+        "end_frame": 1942,
+        "end_t": 64.733333,
+        "max_speed_m_s": 17.110357,
+        "max_step": {
+          "distance_m": 0.570345,
+          "dt_s": 0.033333,
+          "from_frame": 1941,
+          "from_t": 64.7,
+          "from_world_xy": [
+            -2.536114,
+            -6.709173
+          ],
+          "speed_m_s": 17.110357,
+          "to_frame": 1942,
+          "to_t": 64.733333,
+          "to_world_xy": [
+            -1.991156,
+            -6.877443
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 1941,
+        "start_t": 64.7,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2956,
+        "end_t": 98.533333,
+        "max_speed_m_s": 11.758542,
+        "max_step": {
+          "distance_m": 0.391951,
+          "dt_s": 0.033333,
+          "from_frame": 2955,
+          "from_t": 98.5,
+          "from_world_xy": [
+            2.383906,
+            -6.62898
+          ],
+          "speed_m_s": 11.758542,
+          "to_frame": 2956,
+          "to_t": 98.533333,
+          "to_world_xy": [
+            2.120978,
+            -6.3383
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 2955,
+        "start_t": 98.5,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2966,
+        "end_t": 98.866667,
+        "max_speed_m_s": 10.363057,
+        "max_step": {
+          "distance_m": 0.345435,
+          "dt_s": 0.033333,
+          "from_frame": 2965,
+          "from_t": 98.833333,
+          "from_world_xy": [
+            2.025749,
+            -5.349296
+          ],
+          "speed_m_s": 10.363057,
+          "to_frame": 2966,
+          "to_t": 98.866667,
+          "to_world_xy": [
+            1.827878,
+            -5.066149
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 2965,
+        "start_t": 98.833333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 4312,
+        "end_t": 143.733333,
+        "max_speed_m_s": 47.391283,
+        "max_step": {
+          "distance_m": 1.579709,
+          "dt_s": 0.033333,
+          "from_frame": 4310,
+          "from_t": 143.666667,
+          "from_world_xy": [
+            -1.27996,
+            -3.52057
+          ],
+          "speed_m_s": 47.391283,
+          "to_frame": 4311,
+          "to_t": 143.7,
+          "to_world_xy": [
+            -0.060376,
+            -4.52461
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 4306,
+        "start_t": 143.533333,
+        "step_count": 6
+      },
+      {
+        "end_frame": 5679,
+        "end_t": 189.3,
+        "max_speed_m_s": 16.766875,
+        "max_step": {
+          "distance_m": 0.558896,
+          "dt_s": 0.033333,
+          "from_frame": 5677,
+          "from_t": 189.233333,
+          "from_world_xy": [
+            -1.96672,
+            -6.456084
+          ],
+          "speed_m_s": 16.766875,
+          "to_frame": 5678,
+          "to_t": 189.266667,
+          "to_world_xy": [
+            -2.488214,
+            -6.255065
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 5677,
+        "start_t": 189.233333,
+        "step_count": 2
+      },
+      {
+        "end_frame": 5686,
+        "end_t": 189.533333,
+        "max_speed_m_s": 32.730202,
+        "max_step": {
+          "distance_m": 5.455034,
+          "dt_s": 0.166667,
+          "from_frame": 5681,
+          "from_t": 189.366667,
+          "from_world_xy": [
+            -3.524256,
+            -5.854071
+          ],
+          "speed_m_s": 32.730202,
+          "to_frame": 5686,
+          "to_t": 189.533333,
+          "to_world_xy": [
+            1.616801,
+            -7.678059
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 5680,
+        "start_t": 189.333333,
+        "step_count": 2
+      },
+      {
+        "end_frame": 8214,
+        "end_t": 273.8,
+        "max_speed_m_s": 32.631993,
+        "max_step": {
+          "distance_m": 1.087733,
+          "dt_s": 0.033333,
+          "from_frame": 8213,
+          "from_t": 273.766667,
+          "from_world_xy": [
+            -1.708678,
+            -2.848172
+          ],
+          "speed_m_s": 32.631993,
+          "to_frame": 8214,
+          "to_t": 273.8,
+          "to_world_xy": [
+            -2.529447,
+            -2.134378
+          ]
+        },
+        "player_id": 1,
+        "start_frame": 8213,
+        "start_t": 273.766667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1284,
+        "end_t": 42.8,
+        "max_speed_m_s": 13.240521,
+        "max_step": {
+          "distance_m": 0.441351,
+          "dt_s": 0.033333,
+          "from_frame": 1283,
+          "from_t": 42.766667,
+          "from_world_xy": [
+            -1.563874,
+            -2.75529
+          ],
+          "speed_m_s": 13.240521,
+          "to_frame": 1284,
+          "to_t": 42.8,
+          "to_world_xy": [
+            -1.241536,
+            -3.056768
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 1283,
+        "start_t": 42.766667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2011,
+        "end_t": 67.033333,
+        "max_speed_m_s": 14.949426,
+        "max_step": {
+          "distance_m": 0.498314,
+          "dt_s": 0.033333,
+          "from_frame": 2009,
+          "from_t": 66.966667,
+          "from_world_xy": [
+            -1.40081,
+            -7.590286
+          ],
+          "speed_m_s": 14.949426,
+          "to_frame": 2010,
+          "to_t": 67.0,
+          "to_world_xy": [
+            -1.885278,
+            -7.473635
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 2009,
+        "start_t": 66.966667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 2168,
+        "end_t": 72.266667,
+        "max_speed_m_s": 10.766936,
+        "max_step": {
+          "distance_m": 0.358898,
+          "dt_s": 0.033333,
+          "from_frame": 2167,
+          "from_t": 72.233333,
+          "from_world_xy": [
+            -1.145712,
+            -4.647394
+          ],
+          "speed_m_s": 10.766936,
+          "to_frame": 2168,
+          "to_t": 72.266667,
+          "to_world_xy": [
+            -1.379397,
+            -4.374999
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 2167,
+        "start_t": 72.233333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2484,
+        "end_t": 82.8,
+        "max_speed_m_s": 37.14496,
+        "max_step": {
+          "distance_m": 1.238165,
+          "dt_s": 0.033333,
+          "from_frame": 2483,
+          "from_t": 82.766667,
+          "from_world_xy": [
+            -3.252452,
+            -7.050774
+          ],
+          "speed_m_s": 37.14496,
+          "to_frame": 2484,
+          "to_t": 82.8,
+          "to_world_xy": [
+            -2.034766,
+            -7.275039
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 2480,
+        "start_t": 82.666667,
+        "step_count": 4
+      },
+      {
+        "end_frame": 2978,
+        "end_t": 99.266667,
+        "max_speed_m_s": 12.479687,
+        "max_step": {
+          "distance_m": 0.41599,
+          "dt_s": 0.033333,
+          "from_frame": 2977,
+          "from_t": 99.233333,
+          "from_world_xy": [
+            -0.255303,
+            -2.413484
+          ],
+          "speed_m_s": 12.479687,
+          "to_frame": 2978,
+          "to_t": 99.266667,
+          "to_world_xy": [
+            0.030594,
+            -2.71566
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 2977,
+        "start_t": 99.233333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 3778,
+        "end_t": 125.933333,
+        "max_speed_m_s": 10.707667,
+        "max_step": {
+          "distance_m": 0.356922,
+          "dt_s": 0.033333,
+          "from_frame": 3777,
+          "from_t": 125.9,
+          "from_world_xy": [
+            -1.307674,
+            -3.196345
+          ],
+          "speed_m_s": 10.707667,
+          "to_frame": 3778,
+          "to_t": 125.933333,
+          "to_world_xy": [
+            -1.603759,
+            -2.997028
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 3777,
+        "start_t": 125.9,
+        "step_count": 1
+      },
+      {
+        "end_frame": 3896,
+        "end_t": 129.866667,
+        "max_speed_m_s": 37.139471,
+        "max_step": {
+          "distance_m": 1.237982,
+          "dt_s": 0.033333,
+          "from_frame": 3894,
+          "from_t": 129.8,
+          "from_world_xy": [
+            -2.461346,
+            -1.31686
+          ],
+          "speed_m_s": 37.139471,
+          "to_frame": 3895,
+          "to_t": 129.833333,
+          "to_world_xy": [
+            -1.567977,
+            -2.173885
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 3894,
+        "start_t": 129.8,
+        "step_count": 2
+      },
+      {
+        "end_frame": 4174,
+        "end_t": 139.133333,
+        "max_speed_m_s": 57.844479,
+        "max_step": {
+          "distance_m": 1.928149,
+          "dt_s": 0.033333,
+          "from_frame": 4172,
+          "from_t": 139.066667,
+          "from_world_xy": [
+            -0.638868,
+            -2.67341
+          ],
+          "speed_m_s": 57.844479,
+          "to_frame": 4173,
+          "to_t": 139.1,
+          "to_world_xy": [
+            -2.396638,
+            -1.880943
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 4172,
+        "start_t": 139.066667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 4180,
+        "end_t": 139.333333,
+        "max_speed_m_s": 13.108553,
+        "max_step": {
+          "distance_m": 0.436952,
+          "dt_s": 0.033333,
+          "from_frame": 4179,
+          "from_t": 139.3,
+          "from_world_xy": [
+            -1.105892,
+            -2.521032
+          ],
+          "speed_m_s": 13.108553,
+          "to_frame": 4180,
+          "to_t": 139.333333,
+          "to_world_xy": [
+            -0.755483,
+            -2.782069
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 4179,
+        "start_t": 139.3,
+        "step_count": 1
+      },
+      {
+        "end_frame": 4199,
+        "end_t": 139.966667,
+        "max_speed_m_s": 15.147161,
+        "max_step": {
+          "distance_m": 0.504905,
+          "dt_s": 0.033333,
+          "from_frame": 4198,
+          "from_t": 139.933333,
+          "from_world_xy": [
+            0.510539,
+            -2.70766
+          ],
+          "speed_m_s": 15.147161,
+          "to_frame": 4199,
+          "to_t": 139.966667,
+          "to_world_xy": [
+            0.95302,
+            -2.950846
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 4197,
+        "start_t": 139.9,
+        "step_count": 2
+      },
+      {
+        "end_frame": 4315,
+        "end_t": 143.833333,
+        "max_speed_m_s": 39.503002,
+        "max_step": {
+          "distance_m": 1.316767,
+          "dt_s": 0.033333,
+          "from_frame": 4314,
+          "from_t": 143.8,
+          "from_world_xy": [
+            -1.257048,
+            -6.19738
+          ],
+          "speed_m_s": 39.503002,
+          "to_frame": 4315,
+          "to_t": 143.833333,
+          "to_world_xy": [
+            -2.513795,
+            -5.804367
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 4314,
+        "start_t": 143.8,
+        "step_count": 1
+      },
+      {
+        "end_frame": 4324,
+        "end_t": 144.133333,
+        "max_speed_m_s": 12.2203,
+        "max_step": {
+          "distance_m": 0.407343,
+          "dt_s": 0.033333,
+          "from_frame": 4323,
+          "from_t": 144.1,
+          "from_world_xy": [
+            -1.378736,
+            -6.457694
+          ],
+          "speed_m_s": 12.2203,
+          "to_frame": 4324,
+          "to_t": 144.133333,
+          "to_world_xy": [
+            -1.013079,
+            -6.637204
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 4323,
+        "start_t": 144.1,
+        "step_count": 1
+      },
+      {
+        "end_frame": 4357,
+        "end_t": 145.233333,
+        "max_speed_m_s": 37.008933,
+        "max_step": {
+          "distance_m": 12.336311,
+          "dt_s": 0.333333,
+          "from_frame": 4347,
+          "from_t": 144.9,
+          "from_world_xy": [
+            -1.216941,
+            -7.692983
+          ],
+          "speed_m_s": 37.008933,
+          "to_frame": 4357,
+          "to_t": 145.233333,
+          "to_world_xy": [
+            -0.219052,
+            4.602902
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 4347,
+        "start_t": 144.9,
+        "step_count": 1
+      },
+      {
+        "end_frame": 4659,
+        "end_t": 155.3,
+        "max_speed_m_s": 11.02789,
+        "max_step": {
+          "distance_m": 0.367596,
+          "dt_s": 0.033333,
+          "from_frame": 4658,
+          "from_t": 155.266667,
+          "from_world_xy": [
+            -1.352449,
+            -5.160505
+          ],
+          "speed_m_s": 11.02789,
+          "to_frame": 4659,
+          "to_t": 155.3,
+          "to_world_xy": [
+            -1.547884,
+            -4.849165
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 4658,
+        "start_t": 155.266667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 4927,
+        "end_t": 164.233333,
+        "max_speed_m_s": 25.09053,
+        "max_step": {
+          "distance_m": 0.836351,
+          "dt_s": 0.033333,
+          "from_frame": 4925,
+          "from_t": 164.166667,
+          "from_world_xy": [
+            -0.941035,
+            -7.542798
+          ],
+          "speed_m_s": 25.09053,
+          "to_frame": 4926,
+          "to_t": 164.2,
+          "to_world_xy": [
+            -1.756748,
+            -7.358149
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 4925,
+        "start_t": 164.166667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 4929,
+        "end_t": 164.3,
+        "max_speed_m_s": 11.814757,
+        "max_step": {
+          "distance_m": 0.393825,
+          "dt_s": 0.033333,
+          "from_frame": 4928,
+          "from_t": 164.266667,
+          "from_world_xy": [
+            -2.555575,
+            -7.202022
+          ],
+          "speed_m_s": 11.814757,
+          "to_frame": 4929,
+          "to_t": 164.3,
+          "to_world_xy": [
+            -2.944106,
+            -7.137663
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 4928,
+        "start_t": 164.266667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 5011,
+        "end_t": 167.033333,
+        "max_speed_m_s": 19.482319,
+        "max_step": {
+          "distance_m": 0.649411,
+          "dt_s": 0.033333,
+          "from_frame": 5009,
+          "from_t": 166.966667,
+          "from_world_xy": [
+            -2.175539,
+            -7.447912
+          ],
+          "speed_m_s": 19.482319,
+          "to_frame": 5010,
+          "to_t": 167.0,
+          "to_world_xy": [
+            -2.806444,
+            -7.293987
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 5009,
+        "start_t": 166.966667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 5018,
+        "end_t": 167.266667,
+        "max_speed_m_s": 25.931449,
+        "max_step": {
+          "distance_m": 0.864382,
+          "dt_s": 0.033333,
+          "from_frame": 5017,
+          "from_t": 167.233333,
+          "from_world_xy": [
+            -1.579074,
+            -7.371315
+          ],
+          "speed_m_s": 25.931449,
+          "to_frame": 5018,
+          "to_t": 167.266667,
+          "to_world_xy": [
+            -2.40892,
+            -7.129424
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 5017,
+        "start_t": 167.233333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 5068,
+        "end_t": 168.933333,
+        "max_speed_m_s": 47.778073,
+        "max_step": {
+          "distance_m": 1.592602,
+          "dt_s": 0.033333,
+          "from_frame": 5066,
+          "from_t": 168.866667,
+          "from_world_xy": [
+            -3.139271,
+            -6.654608
+          ],
+          "speed_m_s": 47.778073,
+          "to_frame": 5067,
+          "to_t": 168.9,
+          "to_world_xy": [
+            -1.615701,
+            -7.118417
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 5066,
+        "start_t": 168.866667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 5154,
+        "end_t": 171.8,
+        "max_speed_m_s": 10.378937,
+        "max_step": {
+          "distance_m": 0.345965,
+          "dt_s": 0.033333,
+          "from_frame": 5153,
+          "from_t": 171.766667,
+          "from_world_xy": [
+            -1.878966,
+            -5.527024
+          ],
+          "speed_m_s": 10.378937,
+          "to_frame": 5154,
+          "to_t": 171.8,
+          "to_world_xy": [
+            -1.552382,
+            -5.641194
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 5153,
+        "start_t": 171.766667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 5263,
+        "end_t": 175.433333,
+        "max_speed_m_s": 98.90414,
+        "max_step": {
+          "distance_m": 3.296805,
+          "dt_s": 0.033333,
+          "from_frame": 5261,
+          "from_t": 175.366667,
+          "from_world_xy": [
+            -2.887273,
+            0.832941
+          ],
+          "speed_m_s": 98.90414,
+          "to_frame": 5262,
+          "to_t": 175.4,
+          "to_world_xy": [
+            -0.757276,
+            -1.683412
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 5256,
+        "start_t": 175.2,
+        "step_count": 7
+      },
+      {
+        "end_frame": 5772,
+        "end_t": 192.4,
+        "max_speed_m_s": 10.013614,
+        "max_step": {
+          "distance_m": 0.333787,
+          "dt_s": 0.033333,
+          "from_frame": 5771,
+          "from_t": 192.366667,
+          "from_world_xy": [
+            -1.684094,
+            -4.312183
+          ],
+          "speed_m_s": 10.013614,
+          "to_frame": 5772,
+          "to_t": 192.4,
+          "to_world_xy": [
+            -1.378122,
+            -4.445578
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 5771,
+        "start_t": 192.366667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 5875,
+        "end_t": 195.833333,
+        "max_speed_m_s": 13.807335,
+        "max_step": {
+          "distance_m": 0.920489,
+          "dt_s": 0.066667,
+          "from_frame": 5873,
+          "from_t": 195.766667,
+          "from_world_xy": [
+            -0.223228,
+            -2.944508
+          ],
+          "speed_m_s": 13.807335,
+          "to_frame": 5875,
+          "to_t": 195.833333,
+          "to_world_xy": [
+            0.498402,
+            -3.515954
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 5873,
+        "start_t": 195.766667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 6795,
+        "end_t": 226.5,
+        "max_speed_m_s": 20.140314,
+        "max_step": {
+          "distance_m": 0.671344,
+          "dt_s": 0.033333,
+          "from_frame": 6794,
+          "from_t": 226.466667,
+          "from_world_xy": [
+            -2.651583,
+            -1.930354
+          ],
+          "speed_m_s": 20.140314,
+          "to_frame": 6795,
+          "to_t": 226.5,
+          "to_world_xy": [
+            -3.143827,
+            -1.473847
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 6794,
+        "start_t": 226.466667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 6797,
+        "end_t": 226.566667,
+        "max_speed_m_s": 12.882862,
+        "max_step": {
+          "distance_m": 0.429429,
+          "dt_s": 0.033333,
+          "from_frame": 6796,
+          "from_t": 226.533333,
+          "from_world_xy": [
+            -2.948899,
+            -1.656672
+          ],
+          "speed_m_s": 12.882862,
+          "to_frame": 6797,
+          "to_t": 226.566667,
+          "to_world_xy": [
+            -3.264249,
+            -1.365187
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 6796,
+        "start_t": 226.533333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 6863,
+        "end_t": 228.766667,
+        "max_speed_m_s": 43.310469,
+        "max_step": {
+          "distance_m": 1.443682,
+          "dt_s": 0.033333,
+          "from_frame": 6861,
+          "from_t": 228.7,
+          "from_world_xy": [
+            -3.812717,
+            -1.750604
+          ],
+          "speed_m_s": 43.310469,
+          "to_frame": 6862,
+          "to_t": 228.733333,
+          "to_world_xy": [
+            -2.678719,
+            -2.644062
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 6861,
+        "start_t": 228.7,
+        "step_count": 2
+      },
+      {
+        "end_frame": 7260,
+        "end_t": 242.0,
+        "max_speed_m_s": 14.715228,
+        "max_step": {
+          "distance_m": 0.490508,
+          "dt_s": 0.033333,
+          "from_frame": 7259,
+          "from_t": 241.966667,
+          "from_world_xy": [
+            -2.087229,
+            -3.177819
+          ],
+          "speed_m_s": 14.715228,
+          "to_frame": 7260,
+          "to_t": 242.0,
+          "to_world_xy": [
+            -2.484777,
+            -2.890498
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 7259,
+        "start_t": 241.966667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7288,
+        "end_t": 242.933333,
+        "max_speed_m_s": 15.10797,
+        "max_step": {
+          "distance_m": 0.503599,
+          "dt_s": 0.033333,
+          "from_frame": 7287,
+          "from_t": 242.9,
+          "from_world_xy": [
+            -1.874275,
+            -3.615719
+          ],
+          "speed_m_s": 15.10797,
+          "to_frame": 7288,
+          "to_t": 242.933333,
+          "to_world_xy": [
+            -1.450374,
+            -3.8876
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 7287,
+        "start_t": 242.9,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7960,
+        "end_t": 265.333333,
+        "max_speed_m_s": 10.830624,
+        "max_step": {
+          "distance_m": 0.361021,
+          "dt_s": 0.033333,
+          "from_frame": 7959,
+          "from_t": 265.3,
+          "from_world_xy": [
+            -2.869881,
+            -7.664378
+          ],
+          "speed_m_s": 10.830624,
+          "to_frame": 7960,
+          "to_t": 265.333333,
+          "to_world_xy": [
+            -3.204744,
+            -7.52946
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 7959,
+        "start_t": 265.3,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7982,
+        "end_t": 266.066667,
+        "max_speed_m_s": 11.208371,
+        "max_step": {
+          "distance_m": 0.373612,
+          "dt_s": 0.033333,
+          "from_frame": 7981,
+          "from_t": 266.033333,
+          "from_world_xy": [
+            -1.497908,
+            -6.371257
+          ],
+          "speed_m_s": 11.208371,
+          "to_frame": 7982,
+          "to_t": 266.066667,
+          "to_world_xy": [
+            -1.124302,
+            -6.369146
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 7981,
+        "start_t": 266.033333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 8223,
+        "end_t": 274.1,
+        "max_speed_m_s": 16.601233,
+        "max_step": {
+          "distance_m": 0.553374,
+          "dt_s": 0.033333,
+          "from_frame": 8222,
+          "from_t": 274.066667,
+          "from_world_xy": [
+            -1.530927,
+            -2.400328
+          ],
+          "speed_m_s": 16.601233,
+          "to_frame": 8223,
+          "to_t": 274.1,
+          "to_world_xy": [
+            -1.152277,
+            -2.803873
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 8222,
+        "start_t": 274.066667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 8229,
+        "end_t": 274.3,
+        "max_speed_m_s": 20.082937,
+        "max_step": {
+          "distance_m": 0.669431,
+          "dt_s": 0.033333,
+          "from_frame": 8227,
+          "from_t": 274.233333,
+          "from_world_xy": [
+            -1.198879,
+            -2.876576
+          ],
+          "speed_m_s": 20.082937,
+          "to_frame": 8228,
+          "to_t": 274.266667,
+          "to_world_xy": [
+            -1.703172,
+            -2.436319
+          ]
+        },
+        "player_id": 2,
+        "start_frame": 8227,
+        "start_t": 274.233333,
+        "step_count": 2
+      },
+      {
+        "end_frame": 7964,
+        "end_t": 265.466667,
+        "max_speed_m_s": 11.986478,
+        "max_step": {
+          "distance_m": 0.399549,
+          "dt_s": 0.033333,
+          "from_frame": 7963,
+          "from_t": 265.433333,
+          "from_world_xy": [
+            1.610335,
+            7.132812
+          ],
+          "speed_m_s": 11.986478,
+          "to_frame": 7964,
+          "to_t": 265.466667,
+          "to_world_xy": [
+            1.72556,
+            6.750238
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 7963,
+        "start_t": 265.433333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7982,
+        "end_t": 266.066667,
+        "max_speed_m_s": 10.900057,
+        "max_step": {
+          "distance_m": 0.363335,
+          "dt_s": 0.033333,
+          "from_frame": 7981,
+          "from_t": 266.033333,
+          "from_world_xy": [
+            1.982381,
+            6.681906
+          ],
+          "speed_m_s": 10.900057,
+          "to_frame": 7982,
+          "to_t": 266.066667,
+          "to_world_xy": [
+            1.902242,
+            7.036293
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 7981,
+        "start_t": 266.033333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 8492,
+        "end_t": 283.066667,
+        "max_speed_m_s": 10.320293,
+        "max_step": {
+          "distance_m": 0.34401,
+          "dt_s": 0.033333,
+          "from_frame": 8491,
+          "from_t": 283.033333,
+          "from_world_xy": [
+            -0.465737,
+            6.80579
+          ],
+          "speed_m_s": 10.320293,
+          "to_frame": 8492,
+          "to_t": 283.066667,
+          "to_world_xy": [
+            -0.591948,
+            7.125811
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 8491,
+        "start_t": 283.033333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 8501,
+        "end_t": 283.366667,
+        "max_speed_m_s": 12.460457,
+        "max_step": {
+          "distance_m": 2.90744,
+          "dt_s": 0.233333,
+          "from_frame": 8494,
+          "from_t": 283.133333,
+          "from_world_xy": [
+            -0.807331,
+            7.631011
+          ],
+          "speed_m_s": 12.460457,
+          "to_frame": 8501,
+          "to_t": 283.366667,
+          "to_world_xy": [
+            0.328446,
+            4.954592
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 8494,
+        "start_t": 283.133333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 9025,
+        "end_t": 300.833333,
+        "max_speed_m_s": 29.018682,
+        "max_step": {
+          "distance_m": 0.967289,
+          "dt_s": 0.033333,
+          "from_frame": 9023,
+          "from_t": 300.766667,
+          "from_world_xy": [
+            -1.80212,
+            7.602584
+          ],
+          "speed_m_s": 29.018682,
+          "to_frame": 9024,
+          "to_t": 300.8,
+          "to_world_xy": [
+            -1.39092,
+            6.727048
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 9023,
+        "start_t": 300.766667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 9062,
+        "end_t": 302.066667,
+        "max_speed_m_s": 21.451374,
+        "max_step": {
+          "distance_m": 0.715046,
+          "dt_s": 0.033333,
+          "from_frame": 9060,
+          "from_t": 302.0,
+          "from_world_xy": [
+            -0.984692,
+            6.426909
+          ],
+          "speed_m_s": 21.451374,
+          "to_frame": 9061,
+          "to_t": 302.033333,
+          "to_world_xy": [
+            -0.687203,
+            5.776686
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 9060,
+        "start_t": 302.0,
+        "step_count": 2
+      },
+      {
+        "end_frame": 9162,
+        "end_t": 305.4,
+        "max_speed_m_s": 17.501684,
+        "max_step": {
+          "distance_m": 0.583389,
+          "dt_s": 0.033333,
+          "from_frame": 9161,
+          "from_t": 305.366667,
+          "from_world_xy": [
+            -2.912544,
+            7.283222
+          ],
+          "speed_m_s": 17.501684,
+          "to_frame": 9162,
+          "to_t": 305.4,
+          "to_world_xy": [
+            -2.694813,
+            6.741986
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 9159,
+        "start_t": 305.3,
+        "step_count": 3
+      },
+      {
+        "end_frame": 9237,
+        "end_t": 307.9,
+        "max_speed_m_s": 47.142194,
+        "max_step": {
+          "distance_m": 1.571406,
+          "dt_s": 0.033333,
+          "from_frame": 9235,
+          "from_t": 307.833333,
+          "from_world_xy": [
+            -2.490144,
+            7.362825
+          ],
+          "speed_m_s": 47.142194,
+          "to_frame": 9236,
+          "to_t": 307.866667,
+          "to_world_xy": [
+            -1.800096,
+            5.951035
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 9235,
+        "start_t": 307.833333,
+        "step_count": 2
+      },
+      {
+        "end_frame": 9387,
+        "end_t": 312.9,
+        "max_speed_m_s": 14.572866,
+        "max_step": {
+          "distance_m": 0.485762,
+          "dt_s": 0.033333,
+          "from_frame": 9386,
+          "from_t": 312.866667,
+          "from_world_xy": [
+            -1.534828,
+            7.510216
+          ],
+          "speed_m_s": 14.572866,
+          "to_frame": 9387,
+          "to_t": 312.9,
+          "to_world_xy": [
+            -1.347132,
+            7.062181
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 9386,
+        "start_t": 312.866667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 9914,
+        "end_t": 330.466667,
+        "max_speed_m_s": 11.386695,
+        "max_step": {
+          "distance_m": 0.379556,
+          "dt_s": 0.033333,
+          "from_frame": 9913,
+          "from_t": 330.433333,
+          "from_world_xy": [
+            -2.005304,
+            2.301577
+          ],
+          "speed_m_s": 11.386695,
+          "to_frame": 9914,
+          "to_t": 330.466667,
+          "to_world_xy": [
+            -2.213061,
+            2.619225
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 9913,
+        "start_t": 330.433333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 9947,
+        "end_t": 331.566667,
+        "max_speed_m_s": 32.427536,
+        "max_step": {
+          "distance_m": 1.080918,
+          "dt_s": 0.033333,
+          "from_frame": 9946,
+          "from_t": 331.533333,
+          "from_world_xy": [
+            -2.06143,
+            3.556911
+          ],
+          "speed_m_s": 32.427536,
+          "to_frame": 9947,
+          "to_t": 331.566667,
+          "to_world_xy": [
+            -1.470109,
+            2.652079
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 9945,
+        "start_t": 331.5,
+        "step_count": 2
+      },
+      {
+        "end_frame": 10387,
+        "end_t": 346.233333,
+        "max_speed_m_s": 13.673721,
+        "max_step": {
+          "distance_m": 0.455791,
+          "dt_s": 0.033333,
+          "from_frame": 10386,
+          "from_t": 346.2,
+          "from_world_xy": [
+            -1.426927,
+            6.915543
+          ],
+          "speed_m_s": 13.673721,
+          "to_frame": 10387,
+          "to_t": 346.233333,
+          "to_world_xy": [
+            -1.240126,
+            6.49979
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 10386,
+        "start_t": 346.2,
+        "step_count": 1
+      },
+      {
+        "end_frame": 10448,
+        "end_t": 348.266667,
+        "max_speed_m_s": 52.053287,
+        "max_step": {
+          "distance_m": 1.73511,
+          "dt_s": 0.033333,
+          "from_frame": 10445,
+          "from_t": 348.166667,
+          "from_world_xy": [
+            -0.885118,
+            5.906042
+          ],
+          "speed_m_s": 52.053287,
+          "to_frame": 10446,
+          "to_t": 348.2,
+          "to_world_xy": [
+            -1.584146,
+            7.494111
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 10445,
+        "start_t": 348.166667,
+        "step_count": 3
+      },
+      {
+        "end_frame": 10465,
+        "end_t": 348.833333,
+        "max_speed_m_s": 31.871564,
+        "max_step": {
+          "distance_m": 1.062385,
+          "dt_s": 0.033333,
+          "from_frame": 10463,
+          "from_t": 348.766667,
+          "from_world_xy": [
+            -1.580963,
+            6.656569
+          ],
+          "speed_m_s": 31.871564,
+          "to_frame": 10464,
+          "to_t": 348.8,
+          "to_world_xy": [
+            -1.132974,
+            5.693257
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 10461,
+        "start_t": 348.7,
+        "step_count": 4
+      },
+      {
+        "end_frame": 11565,
+        "end_t": 385.5,
+        "max_speed_m_s": 18.737928,
+        "max_step": {
+          "distance_m": 0.624598,
+          "dt_s": 0.033333,
+          "from_frame": 11564,
+          "from_t": 385.466667,
+          "from_world_xy": [
+            -0.053375,
+            5.782399
+          ],
+          "speed_m_s": 18.737928,
+          "to_frame": 11565,
+          "to_t": 385.5,
+          "to_world_xy": [
+            0.047281,
+            5.165965
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 11564,
+        "start_t": 385.466667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 11570,
+        "end_t": 385.666667,
+        "max_speed_m_s": 10.952111,
+        "max_step": {
+          "distance_m": 0.36507,
+          "dt_s": 0.033333,
+          "from_frame": 11569,
+          "from_t": 385.633333,
+          "from_world_xy": [
+            -0.135236,
+            3.984207
+          ],
+          "speed_m_s": 10.952111,
+          "to_frame": 11570,
+          "to_t": 385.666667,
+          "to_world_xy": [
+            -0.114321,
+            3.619736
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 11569,
+        "start_t": 385.633333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 11785,
+        "end_t": 392.833333,
+        "max_speed_m_s": 29.786137,
+        "max_step": {
+          "distance_m": 0.992871,
+          "dt_s": 0.033333,
+          "from_frame": 11783,
+          "from_t": 392.766667,
+          "from_world_xy": [
+            0.319967,
+            4.847421
+          ],
+          "speed_m_s": 29.786137,
+          "to_frame": 11784,
+          "to_t": 392.8,
+          "to_world_xy": [
+            0.68624,
+            3.924579
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 11781,
+        "start_t": 392.7,
+        "step_count": 4
+      },
+      {
+        "end_frame": 11801,
+        "end_t": 393.366667,
+        "max_speed_m_s": 22.282987,
+        "max_step": {
+          "distance_m": 0.742766,
+          "dt_s": 0.033333,
+          "from_frame": 11800,
+          "from_t": 393.333333,
+          "from_world_xy": [
+            1.378957,
+            4.002982
+          ],
+          "speed_m_s": 22.282987,
+          "to_frame": 11801,
+          "to_t": 393.366667,
+          "to_world_xy": [
+            1.197787,
+            4.723314
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 11800,
+        "start_t": 393.333333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 12291,
+        "end_t": 409.7,
+        "max_speed_m_s": 11.056384,
+        "max_step": {
+          "distance_m": 0.368546,
+          "dt_s": 0.033333,
+          "from_frame": 12290,
+          "from_t": 409.666667,
+          "from_world_xy": [
+            -1.148789,
+            5.838092
+          ],
+          "speed_m_s": 11.056384,
+          "to_frame": 12291,
+          "to_t": 409.7,
+          "to_world_xy": [
+            -1.011217,
+            5.496185
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 12290,
+        "start_t": 409.666667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 12587,
+        "end_t": 419.566667,
+        "max_speed_m_s": 18.067284,
+        "max_step": {
+          "distance_m": 0.602243,
+          "dt_s": 0.033333,
+          "from_frame": 12586,
+          "from_t": 419.533333,
+          "from_world_xy": [
+            1.707725,
+            7.591142
+          ],
+          "speed_m_s": 18.067284,
+          "to_frame": 12587,
+          "to_t": 419.566667,
+          "to_world_xy": [
+            1.84523,
+            7.004807
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 12586,
+        "start_t": 419.533333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 12693,
+        "end_t": 423.1,
+        "max_speed_m_s": 10.808012,
+        "max_step": {
+          "distance_m": 0.360267,
+          "dt_s": 0.033333,
+          "from_frame": 12692,
+          "from_t": 423.066667,
+          "from_world_xy": [
+            -0.407192,
+            4.565198
+          ],
+          "speed_m_s": 10.808012,
+          "to_frame": 12693,
+          "to_t": 423.1,
+          "to_world_xy": [
+            -0.296667,
+            4.222303
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 12692,
+        "start_t": 423.066667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 13603,
+        "end_t": 453.433333,
+        "max_speed_m_s": 16.298409,
+        "max_step": {
+          "distance_m": 0.54328,
+          "dt_s": 0.033333,
+          "from_frame": 13601,
+          "from_t": 453.366667,
+          "from_world_xy": [
+            -1.877042,
+            7.350534
+          ],
+          "speed_m_s": 16.298409,
+          "to_frame": 13602,
+          "to_t": 453.4,
+          "to_world_xy": [
+            -1.654453,
+            6.854945
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 13601,
+        "start_t": 453.366667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 13695,
+        "end_t": 456.5,
+        "max_speed_m_s": 11.576443,
+        "max_step": {
+          "distance_m": 0.385881,
+          "dt_s": 0.033333,
+          "from_frame": 13694,
+          "from_t": 456.466667,
+          "from_world_xy": [
+            -0.016427,
+            4.598365
+          ],
+          "speed_m_s": 11.576443,
+          "to_frame": 13695,
+          "to_t": 456.5,
+          "to_world_xy": [
+            -0.159371,
+            4.956795
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 13694,
+        "start_t": 456.466667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 13900,
+        "end_t": 463.333333,
+        "max_speed_m_s": 13.238511,
+        "max_step": {
+          "distance_m": 0.441284,
+          "dt_s": 0.033333,
+          "from_frame": 13899,
+          "from_t": 463.3,
+          "from_world_xy": [
+            -0.956379,
+            6.903067
+          ],
+          "speed_m_s": 13.238511,
+          "to_frame": 13900,
+          "to_t": 463.333333,
+          "to_world_xy": [
+            -1.076408,
+            7.327714
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 13899,
+        "start_t": 463.3,
+        "step_count": 1
+      },
+      {
+        "end_frame": 13920,
+        "end_t": 464.0,
+        "max_speed_m_s": 10.835845,
+        "max_step": {
+          "distance_m": 0.361195,
+          "dt_s": 0.033333,
+          "from_frame": 13919,
+          "from_t": 463.966667,
+          "from_world_xy": [
+            -1.419719,
+            7.035749
+          ],
+          "speed_m_s": 10.835845,
+          "to_frame": 13920,
+          "to_t": 464.0,
+          "to_world_xy": [
+            -1.585911,
+            7.356439
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 13919,
+        "start_t": 463.966667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 14122,
+        "end_t": 470.733333,
+        "max_speed_m_s": 15.437431,
+        "max_step": {
+          "distance_m": 0.514581,
+          "dt_s": 0.033333,
+          "from_frame": 14121,
+          "from_t": 470.7,
+          "from_world_xy": [
+            -1.196141,
+            6.610522
+          ],
+          "speed_m_s": 15.437431,
+          "to_frame": 14122,
+          "to_t": 470.733333,
+          "to_world_xy": [
+            -1.017611,
+            6.127904
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 14121,
+        "start_t": 470.7,
+        "step_count": 1
+      },
+      {
+        "end_frame": 14189,
+        "end_t": 472.966667,
+        "max_speed_m_s": 14.077946,
+        "max_step": {
+          "distance_m": 0.469265,
+          "dt_s": 0.033333,
+          "from_frame": 14188,
+          "from_t": 472.933333,
+          "from_world_xy": [
+            -0.757774,
+            3.41937
+          ],
+          "speed_m_s": 14.077946,
+          "to_frame": 14189,
+          "to_t": 472.966667,
+          "to_world_xy": [
+            -0.983128,
+            3.830983
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 14188,
+        "start_t": 472.933333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 14193,
+        "end_t": 473.1,
+        "max_speed_m_s": 12.211761,
+        "max_step": {
+          "distance_m": 0.407059,
+          "dt_s": 0.033333,
+          "from_frame": 14192,
+          "from_t": 473.066667,
+          "from_world_xy": [
+            -0.924347,
+            3.646957
+          ],
+          "speed_m_s": 12.211761,
+          "to_frame": 14193,
+          "to_t": 473.1,
+          "to_world_xy": [
+            -0.732136,
+            3.288137
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 14192,
+        "start_t": 473.066667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 14590,
+        "end_t": 486.333333,
+        "max_speed_m_s": 42.784139,
+        "max_step": {
+          "distance_m": 1.426138,
+          "dt_s": 0.033333,
+          "from_frame": 14588,
+          "from_t": 486.266667,
+          "from_world_xy": [
+            -2.547951,
+            3.834363
+          ],
+          "speed_m_s": 42.784139,
+          "to_frame": 14589,
+          "to_t": 486.3,
+          "to_world_xy": [
+            -1.755189,
+            2.648868
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 14584,
+        "start_t": 486.133333,
+        "step_count": 6
+      },
+      {
+        "end_frame": 14784,
+        "end_t": 492.8,
+        "max_speed_m_s": 13.20295,
+        "max_step": {
+          "distance_m": 0.440098,
+          "dt_s": 0.033333,
+          "from_frame": 14783,
+          "from_t": 492.766667,
+          "from_world_xy": [
+            -1.328562,
+            2.71041
+          ],
+          "speed_m_s": 13.20295,
+          "to_frame": 14784,
+          "to_t": 492.8,
+          "to_world_xy": [
+            -1.538847,
+            3.097019
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 14783,
+        "start_t": 492.766667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 15115,
+        "end_t": 503.833333,
+        "max_speed_m_s": 16.921073,
+        "max_step": {
+          "distance_m": 0.564036,
+          "dt_s": 0.033333,
+          "from_frame": 15113,
+          "from_t": 503.766667,
+          "from_world_xy": [
+            -1.922666,
+            6.704629
+          ],
+          "speed_m_s": 16.921073,
+          "to_frame": 15114,
+          "to_t": 503.8,
+          "to_world_xy": [
+            -1.68897,
+            6.191285
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 15113,
+        "start_t": 503.766667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 15140,
+        "end_t": 504.666667,
+        "max_speed_m_s": 10.723238,
+        "max_step": {
+          "distance_m": 0.357441,
+          "dt_s": 0.033333,
+          "from_frame": 15139,
+          "from_t": 504.633333,
+          "from_world_xy": [
+            -1.290118,
+            3.791419
+          ],
+          "speed_m_s": 10.723238,
+          "to_frame": 15140,
+          "to_t": 504.666667,
+          "to_world_xy": [
+            -1.137682,
+            3.468113
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 15139,
+        "start_t": 504.633333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 15996,
+        "end_t": 533.2,
+        "max_speed_m_s": 13.943342,
+        "max_step": {
+          "distance_m": 0.464778,
+          "dt_s": 0.033333,
+          "from_frame": 15995,
+          "from_t": 533.166667,
+          "from_world_xy": [
+            -1.62784,
+            6.610449
+          ],
+          "speed_m_s": 13.943342,
+          "to_frame": 15996,
+          "to_t": 533.2,
+          "to_world_xy": [
+            -1.823598,
+            7.031991
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 15995,
+        "start_t": 533.166667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 16213,
+        "end_t": 540.433333,
+        "max_speed_m_s": 19.55179,
+        "max_step": {
+          "distance_m": 0.651726,
+          "dt_s": 0.033333,
+          "from_frame": 16211,
+          "from_t": 540.366667,
+          "from_world_xy": [
+            -2.22235,
+            3.225763
+          ],
+          "speed_m_s": 19.55179,
+          "to_frame": 16212,
+          "to_t": 540.4,
+          "to_world_xy": [
+            -1.848822,
+            2.6917
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 16211,
+        "start_t": 540.366667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 16398,
+        "end_t": 546.6,
+        "max_speed_m_s": 14.378488,
+        "max_step": {
+          "distance_m": 0.479283,
+          "dt_s": 0.033333,
+          "from_frame": 16397,
+          "from_t": 546.566667,
+          "from_world_xy": [
+            -2.137986,
+            3.32114
+          ],
+          "speed_m_s": 14.378488,
+          "to_frame": 16398,
+          "to_t": 546.6,
+          "to_world_xy": [
+            -1.826611,
+            2.95678
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 16397,
+        "start_t": 546.566667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 16466,
+        "end_t": 548.866667,
+        "max_speed_m_s": 10.239745,
+        "max_step": {
+          "distance_m": 0.341325,
+          "dt_s": 0.033333,
+          "from_frame": 16465,
+          "from_t": 548.833333,
+          "from_world_xy": [
+            0.376836,
+            2.977515
+          ],
+          "speed_m_s": 10.239745,
+          "to_frame": 16466,
+          "to_t": 548.866667,
+          "to_world_xy": [
+            0.265492,
+            3.300168
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 16465,
+        "start_t": 548.833333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 17188,
+        "end_t": 572.933333,
+        "max_speed_m_s": 10.151458,
+        "max_step": {
+          "distance_m": 0.338382,
+          "dt_s": 0.033333,
+          "from_frame": 17187,
+          "from_t": 572.9,
+          "from_world_xy": [
+            -1.56192,
+            7.110937
+          ],
+          "speed_m_s": 10.151458,
+          "to_frame": 17188,
+          "to_t": 572.933333,
+          "to_world_xy": [
+            -1.705948,
+            7.417137
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17187,
+        "start_t": 572.9,
+        "step_count": 1
+      },
+      {
+        "end_frame": 17305,
+        "end_t": 576.833333,
+        "max_speed_m_s": 12.481856,
+        "max_step": {
+          "distance_m": 0.416062,
+          "dt_s": 0.033333,
+          "from_frame": 17304,
+          "from_t": 576.8,
+          "from_world_xy": [
+            -1.913212,
+            7.53922
+          ],
+          "speed_m_s": 12.481856,
+          "to_frame": 17305,
+          "to_t": 576.833333,
+          "to_world_xy": [
+            -1.588284,
+            7.279357
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17304,
+        "start_t": 576.8,
+        "step_count": 1
+      },
+      {
+        "end_frame": 17315,
+        "end_t": 577.166667,
+        "max_speed_m_s": 10.653285,
+        "max_step": {
+          "distance_m": 0.355109,
+          "dt_s": 0.033333,
+          "from_frame": 17314,
+          "from_t": 577.133333,
+          "from_world_xy": [
+            -1.841924,
+            7.266445
+          ],
+          "speed_m_s": 10.653285,
+          "to_frame": 17315,
+          "to_t": 577.166667,
+          "to_world_xy": [
+            -1.724599,
+            6.931277
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17314,
+        "start_t": 577.133333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 17320,
+        "end_t": 577.333333,
+        "max_speed_m_s": 21.01834,
+        "max_step": {
+          "distance_m": 0.700611,
+          "dt_s": 0.033333,
+          "from_frame": 17319,
+          "from_t": 577.3,
+          "from_world_xy": [
+            -1.693027,
+            6.528679
+          ],
+          "speed_m_s": 21.01834,
+          "to_frame": 17320,
+          "to_t": 577.333333,
+          "to_world_xy": [
+            -2.007033,
+            7.154983
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17319,
+        "start_t": 577.3,
+        "step_count": 1
+      },
+      {
+        "end_frame": 17323,
+        "end_t": 577.433333,
+        "max_speed_m_s": 21.792636,
+        "max_step": {
+          "distance_m": 0.726421,
+          "dt_s": 0.033333,
+          "from_frame": 17322,
+          "from_t": 577.4,
+          "from_world_xy": [
+            -1.831733,
+            6.613331
+          ],
+          "speed_m_s": 21.792636,
+          "to_frame": 17323,
+          "to_t": 577.433333,
+          "to_world_xy": [
+            -1.538436,
+            5.948752
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17322,
+        "start_t": 577.4,
+        "step_count": 1
+      },
+      {
+        "end_frame": 17329,
+        "end_t": 577.633333,
+        "max_speed_m_s": 19.19417,
+        "max_step": {
+          "distance_m": 0.639806,
+          "dt_s": 0.033333,
+          "from_frame": 17327,
+          "from_t": 577.566667,
+          "from_world_xy": [
+            -1.500986,
+            5.567246
+          ],
+          "speed_m_s": 19.19417,
+          "to_frame": 17328,
+          "to_t": 577.6,
+          "to_world_xy": [
+            -1.255614,
+            4.976363
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17327,
+        "start_t": 577.566667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 17337,
+        "end_t": 577.9,
+        "max_speed_m_s": 10.485357,
+        "max_step": {
+          "distance_m": 0.349512,
+          "dt_s": 0.033333,
+          "from_frame": 17336,
+          "from_t": 577.866667,
+          "from_world_xy": [
+            -1.380352,
+            4.512651
+          ],
+          "speed_m_s": 10.485357,
+          "to_frame": 17337,
+          "to_t": 577.9,
+          "to_world_xy": [
+            -1.298086,
+            4.172959
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17336,
+        "start_t": 577.866667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 17921,
+        "end_t": 597.366667,
+        "max_speed_m_s": 13.793438,
+        "max_step": {
+          "distance_m": 0.459781,
+          "dt_s": 0.033333,
+          "from_frame": 17916,
+          "from_t": 597.2,
+          "from_world_xy": [
+            -0.442891,
+            5.985962
+          ],
+          "speed_m_s": 13.793438,
+          "to_frame": 17917,
+          "to_t": 597.233333,
+          "to_world_xy": [
+            -0.759907,
+            6.318978
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17916,
+        "start_t": 597.2,
+        "step_count": 5
+      },
+      {
+        "end_frame": 17923,
+        "end_t": 597.433333,
+        "max_speed_m_s": 11.089811,
+        "max_step": {
+          "distance_m": 0.36966,
+          "dt_s": 0.033333,
+          "from_frame": 17922,
+          "from_t": 597.4,
+          "from_world_xy": [
+            -2.021713,
+            7.628888
+          ],
+          "speed_m_s": 11.089811,
+          "to_frame": 17923,
+          "to_t": 597.433333,
+          "to_world_xy": [
+            -1.867165,
+            7.293085
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17922,
+        "start_t": 597.4,
+        "step_count": 1
+      },
+      {
+        "end_frame": 17981,
+        "end_t": 599.366667,
+        "max_speed_m_s": 18.151274,
+        "max_step": {
+          "distance_m": 0.605042,
+          "dt_s": 0.033333,
+          "from_frame": 17980,
+          "from_t": 599.333333,
+          "from_world_xy": [
+            -1.983457,
+            7.558396
+          ],
+          "speed_m_s": 18.151274,
+          "to_frame": 17981,
+          "to_t": 599.366667,
+          "to_world_xy": [
+            -1.732889,
+            7.007676
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 17980,
+        "start_t": 599.333333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 18113,
+        "end_t": 603.766667,
+        "max_speed_m_s": 40.01085,
+        "max_step": {
+          "distance_m": 1.333695,
+          "dt_s": 0.033333,
+          "from_frame": 18112,
+          "from_t": 603.733333,
+          "from_world_xy": [
+            -1.26255,
+            6.674295
+          ],
+          "speed_m_s": 40.01085,
+          "to_frame": 18113,
+          "to_t": 603.766667,
+          "to_world_xy": [
+            -0.771367,
+            5.434343
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 18112,
+        "start_t": 603.733333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 18118,
+        "end_t": 603.933333,
+        "max_speed_m_s": 10.513851,
+        "max_step": {
+          "distance_m": 0.350462,
+          "dt_s": 0.033333,
+          "from_frame": 18117,
+          "from_t": 603.9,
+          "from_world_xy": [
+            -0.857982,
+            5.102611
+          ],
+          "speed_m_s": 10.513851,
+          "to_frame": 18118,
+          "to_t": 603.933333,
+          "to_world_xy": [
+            -0.795505,
+            4.757763
+          ]
+        },
+        "player_id": 3,
+        "start_frame": 18117,
+        "start_t": 603.9,
+        "step_count": 1
+      },
+      {
+        "end_frame": 853,
+        "end_t": 28.433333,
+        "max_speed_m_s": 14.152419,
+        "max_step": {
+          "distance_m": 0.471747,
+          "dt_s": 0.033333,
+          "from_frame": 852,
+          "from_t": 28.4,
+          "from_world_xy": [
+            -0.918004,
+            6.049736
+          ],
+          "speed_m_s": 14.152419,
+          "to_frame": 853,
+          "to_t": 28.433333,
+          "to_world_xy": [
+            -0.748427,
+            5.609521
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 852,
+        "start_t": 28.4,
+        "step_count": 1
+      },
+      {
+        "end_frame": 871,
+        "end_t": 29.033333,
+        "max_speed_m_s": 12.999403,
+        "max_step": {
+          "distance_m": 0.433313,
+          "dt_s": 0.033333,
+          "from_frame": 870,
+          "from_t": 29.0,
+          "from_world_xy": [
+            -0.971399,
+            5.055726
+          ],
+          "speed_m_s": 12.999403,
+          "to_frame": 871,
+          "to_t": 29.033333,
+          "to_world_xy": [
+            -1.150829,
+            5.450144
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 870,
+        "start_t": 29.0,
+        "step_count": 1
+      },
+      {
+        "end_frame": 965,
+        "end_t": 32.166667,
+        "max_speed_m_s": 13.381907,
+        "max_step": {
+          "distance_m": 0.446064,
+          "dt_s": 0.033333,
+          "from_frame": 964,
+          "from_t": 32.133333,
+          "from_world_xy": [
+            -1.569392,
+            2.769516
+          ],
+          "speed_m_s": 13.381907,
+          "to_frame": 965,
+          "to_t": 32.166667,
+          "to_world_xy": [
+            -1.737799,
+            3.182568
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 964,
+        "start_t": 32.133333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1261,
+        "end_t": 42.033333,
+        "max_speed_m_s": 10.617719,
+        "max_step": {
+          "distance_m": 0.353924,
+          "dt_s": 0.033333,
+          "from_frame": 1260,
+          "from_t": 42.0,
+          "from_world_xy": [
+            -0.834708,
+            3.694912
+          ],
+          "speed_m_s": 10.617719,
+          "to_frame": 1261,
+          "to_t": 42.033333,
+          "to_world_xy": [
+            -0.765201,
+            3.34788
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 1260,
+        "start_t": 42.0,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1368,
+        "end_t": 45.6,
+        "max_speed_m_s": 29.076643,
+        "max_step": {
+          "distance_m": 0.969221,
+          "dt_s": 0.033333,
+          "from_frame": 1367,
+          "from_t": 45.566667,
+          "from_world_xy": [
+            -0.001896,
+            4.191658
+          ],
+          "speed_m_s": 29.076643,
+          "to_frame": 1368,
+          "to_t": 45.6,
+          "to_world_xy": [
+            0.366277,
+            3.295088
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 1367,
+        "start_t": 45.566667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1399,
+        "end_t": 46.633333,
+        "max_speed_m_s": 11.359998,
+        "max_step": {
+          "distance_m": 0.378667,
+          "dt_s": 0.033333,
+          "from_frame": 1398,
+          "from_t": 46.6,
+          "from_world_xy": [
+            -0.338953,
+            5.857951
+          ],
+          "speed_m_s": 11.359998,
+          "to_frame": 1399,
+          "to_t": 46.633333,
+          "to_world_xy": [
+            -0.504196,
+            6.198661
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 1398,
+        "start_t": 46.6,
+        "step_count": 1
+      },
+      {
+        "end_frame": 1607,
+        "end_t": 53.566667,
+        "max_speed_m_s": 42.914804,
+        "max_step": {
+          "distance_m": 1.430493,
+          "dt_s": 0.033333,
+          "from_frame": 1605,
+          "from_t": 53.5,
+          "from_world_xy": [
+            -0.158201,
+            3.564266
+          ],
+          "speed_m_s": 42.914804,
+          "to_frame": 1606,
+          "to_t": 53.533333,
+          "to_world_xy": [
+            0.412344,
+            2.252477
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 1605,
+        "start_t": 53.5,
+        "step_count": 2
+      },
+      {
+        "end_frame": 2566,
+        "end_t": 85.533333,
+        "max_speed_m_s": 16.31565,
+        "max_step": {
+          "distance_m": 0.543855,
+          "dt_s": 0.033333,
+          "from_frame": 2565,
+          "from_t": 85.5,
+          "from_world_xy": [
+            -2.431481,
+            6.947099
+          ],
+          "speed_m_s": 16.31565,
+          "to_frame": 2566,
+          "to_t": 85.533333,
+          "to_world_xy": [
+            -2.248674,
+            6.434888
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2565,
+        "start_t": 85.5,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2571,
+        "end_t": 85.7,
+        "max_speed_m_s": 23.284672,
+        "max_step": {
+          "distance_m": 0.776156,
+          "dt_s": 0.033333,
+          "from_frame": 2570,
+          "from_t": 85.666667,
+          "from_world_xy": [
+            -2.369542,
+            6.408069
+          ],
+          "speed_m_s": 23.284672,
+          "to_frame": 2571,
+          "to_t": 85.7,
+          "to_world_xy": [
+            -2.036408,
+            5.707042
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2570,
+        "start_t": 85.666667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2575,
+        "end_t": 85.833333,
+        "max_speed_m_s": 17.586686,
+        "max_step": {
+          "distance_m": 0.586223,
+          "dt_s": 0.033333,
+          "from_frame": 2574,
+          "from_t": 85.8,
+          "from_world_xy": [
+            -2.272617,
+            6.08798
+          ],
+          "speed_m_s": 17.586686,
+          "to_frame": 2575,
+          "to_t": 85.833333,
+          "to_world_xy": [
+            -2.024377,
+            5.556911
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2574,
+        "start_t": 85.8,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2577,
+        "end_t": 85.9,
+        "max_speed_m_s": 11.951662,
+        "max_step": {
+          "distance_m": 0.398389,
+          "dt_s": 0.033333,
+          "from_frame": 2576,
+          "from_t": 85.866667,
+          "from_world_xy": [
+            -1.929714,
+            5.314419
+          ],
+          "speed_m_s": 11.951662,
+          "to_frame": 2577,
+          "to_t": 85.9,
+          "to_world_xy": [
+            -1.768993,
+            4.949888
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2576,
+        "start_t": 85.866667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2579,
+        "end_t": 85.966667,
+        "max_speed_m_s": 10.470492,
+        "max_step": {
+          "distance_m": 0.349016,
+          "dt_s": 0.033333,
+          "from_frame": 2578,
+          "from_t": 85.933333,
+          "from_world_xy": [
+            -1.702279,
+            4.760284
+          ],
+          "speed_m_s": 10.470492,
+          "to_frame": 2579,
+          "to_t": 85.966667,
+          "to_world_xy": [
+            -1.554946,
+            4.44389
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2578,
+        "start_t": 85.933333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2758,
+        "end_t": 91.933333,
+        "max_speed_m_s": 13.025347,
+        "max_step": {
+          "distance_m": 0.434178,
+          "dt_s": 0.033333,
+          "from_frame": 2757,
+          "from_t": 91.9,
+          "from_world_xy": [
+            -0.969777,
+            7.066671
+          ],
+          "speed_m_s": 13.025347,
+          "to_frame": 2758,
+          "to_t": 91.933333,
+          "to_world_xy": [
+            -1.121172,
+            7.473599
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2757,
+        "start_t": 91.9,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2761,
+        "end_t": 92.033333,
+        "max_speed_m_s": 10.393233,
+        "max_step": {
+          "distance_m": 0.346441,
+          "dt_s": 0.033333,
+          "from_frame": 2760,
+          "from_t": 92.0,
+          "from_world_xy": [
+            -0.989757,
+            7.217365
+          ],
+          "speed_m_s": 10.393233,
+          "to_frame": 2761,
+          "to_t": 92.033333,
+          "to_world_xy": [
+            -0.853766,
+            6.898731
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2760,
+        "start_t": 92.0,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2899,
+        "end_t": 96.633333,
+        "max_speed_m_s": 11.013188,
+        "max_step": {
+          "distance_m": 0.367106,
+          "dt_s": 0.033333,
+          "from_frame": 2898,
+          "from_t": 96.6,
+          "from_world_xy": [
+            -1.000388,
+            6.942992
+          ],
+          "speed_m_s": 11.013188,
+          "to_frame": 2899,
+          "to_t": 96.633333,
+          "to_world_xy": [
+            -1.12467,
+            7.28842
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2898,
+        "start_t": 96.6,
+        "step_count": 1
+      },
+      {
+        "end_frame": 2903,
+        "end_t": 96.766667,
+        "max_speed_m_s": 14.038884,
+        "max_step": {
+          "distance_m": 0.467963,
+          "dt_s": 0.033333,
+          "from_frame": 2902,
+          "from_t": 96.733333,
+          "from_world_xy": [
+            -1.12567,
+            7.227031
+          ],
+          "speed_m_s": 14.038884,
+          "to_frame": 2903,
+          "to_t": 96.766667,
+          "to_world_xy": [
+            -0.95851,
+            6.789943
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2901,
+        "start_t": 96.7,
+        "step_count": 2
+      },
+      {
+        "end_frame": 2907,
+        "end_t": 96.9,
+        "max_speed_m_s": 25.835367,
+        "max_step": {
+          "distance_m": 0.861179,
+          "dt_s": 0.033333,
+          "from_frame": 2906,
+          "from_t": 96.866667,
+          "from_world_xy": [
+            -1.234332,
+            7.50947
+          ],
+          "speed_m_s": 25.835367,
+          "to_frame": 2907,
+          "to_t": 96.9,
+          "to_world_xy": [
+            -0.907529,
+            6.712709
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2904,
+        "start_t": 96.8,
+        "step_count": 3
+      },
+      {
+        "end_frame": 2923,
+        "end_t": 97.433333,
+        "max_speed_m_s": 10.856314,
+        "max_step": {
+          "distance_m": 0.361877,
+          "dt_s": 0.033333,
+          "from_frame": 2922,
+          "from_t": 97.4,
+          "from_world_xy": [
+            -0.702651,
+            6.454858
+          ],
+          "speed_m_s": 10.856314,
+          "to_frame": 2923,
+          "to_t": 97.433333,
+          "to_world_xy": [
+            -0.848017,
+            6.786255
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 2922,
+        "start_t": 97.4,
+        "step_count": 1
+      },
+      {
+        "end_frame": 3118,
+        "end_t": 103.933333,
+        "max_speed_m_s": 37.484943,
+        "max_step": {
+          "distance_m": 1.249498,
+          "dt_s": 0.033333,
+          "from_frame": 3117,
+          "from_t": 103.9,
+          "from_world_xy": [
+            -0.920533,
+            2.687456
+          ],
+          "speed_m_s": 37.484943,
+          "to_frame": 3118,
+          "to_t": 103.933333,
+          "to_world_xy": [
+            -1.522695,
+            3.782283
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 3117,
+        "start_t": 103.9,
+        "step_count": 1
+      },
+      {
+        "end_frame": 3230,
+        "end_t": 107.666667,
+        "max_speed_m_s": 14.982907,
+        "max_step": {
+          "distance_m": 0.49943,
+          "dt_s": 0.033333,
+          "from_frame": 3229,
+          "from_t": 107.633333,
+          "from_world_xy": [
+            0.503403,
+            3.518731
+          ],
+          "speed_m_s": 14.982907,
+          "to_frame": 3230,
+          "to_t": 107.666667,
+          "to_world_xy": [
+            0.694698,
+            3.057389
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 3228,
+        "start_t": 107.6,
+        "step_count": 2
+      },
+      {
+        "end_frame": 4368,
+        "end_t": 145.6,
+        "max_speed_m_s": 15.671808,
+        "max_step": {
+          "distance_m": 4.179149,
+          "dt_s": 0.266667,
+          "from_frame": 4358,
+          "from_t": 145.266667,
+          "from_world_xy": [
+            0.527468,
+            2.045212
+          ],
+          "speed_m_s": 15.671808,
+          "to_frame": 4366,
+          "to_t": 145.533333,
+          "to_world_xy": [
+            -0.705874,
+            6.038225
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 4358,
+        "start_t": 145.266667,
+        "step_count": 3
+      },
+      {
+        "end_frame": 4409,
+        "end_t": 146.966667,
+        "max_speed_m_s": 40.631911,
+        "max_step": {
+          "distance_m": 1.354397,
+          "dt_s": 0.033333,
+          "from_frame": 4406,
+          "from_t": 146.866667,
+          "from_world_xy": [
+            -0.283134,
+            5.734798
+          ],
+          "speed_m_s": 40.631911,
+          "to_frame": 4407,
+          "to_t": 146.9,
+          "to_world_xy": [
+            0.222793,
+            4.478443
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 4406,
+        "start_t": 146.866667,
+        "step_count": 3
+      },
+      {
+        "end_frame": 4412,
+        "end_t": 147.066667,
+        "max_speed_m_s": 10.386757,
+        "max_step": {
+          "distance_m": 0.346225,
+          "dt_s": 0.033333,
+          "from_frame": 4411,
+          "from_t": 147.033333,
+          "from_world_xy": [
+            -0.475092,
+            6.33239
+          ],
+          "speed_m_s": 10.386757,
+          "to_frame": 4412,
+          "to_t": 147.066667,
+          "to_world_xy": [
+            -0.600294,
+            6.655185
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 4411,
+        "start_t": 147.033333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 4439,
+        "end_t": 147.966667,
+        "max_speed_m_s": 10.171921,
+        "max_step": {
+          "distance_m": 0.339064,
+          "dt_s": 0.033333,
+          "from_frame": 4438,
+          "from_t": 147.933333,
+          "from_world_xy": [
+            -0.860606,
+            6.734201
+          ],
+          "speed_m_s": 10.171921,
+          "to_frame": 4439,
+          "to_t": 147.966667,
+          "to_world_xy": [
+            -0.70206,
+            6.434489
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 4438,
+        "start_t": 147.933333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 4755,
+        "end_t": 158.5,
+        "max_speed_m_s": 12.596826,
+        "max_step": {
+          "distance_m": 0.419894,
+          "dt_s": 0.033333,
+          "from_frame": 4754,
+          "from_t": 158.466667,
+          "from_world_xy": [
+            -0.039865,
+            2.336051
+          ],
+          "speed_m_s": 12.596826,
+          "to_frame": 4755,
+          "to_t": 158.5,
+          "to_world_xy": [
+            -0.296143,
+            2.668667
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 4754,
+        "start_t": 158.466667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 5111,
+        "end_t": 170.366667,
+        "max_speed_m_s": 19.983077,
+        "max_step": {
+          "distance_m": 0.666103,
+          "dt_s": 0.033333,
+          "from_frame": 5110,
+          "from_t": 170.333333,
+          "from_world_xy": [
+            -1.978795,
+            6.957663
+          ],
+          "speed_m_s": 19.983077,
+          "to_frame": 5111,
+          "to_t": 170.366667,
+          "to_world_xy": [
+            -2.325394,
+            7.526488
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 5110,
+        "start_t": 170.333333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 5120,
+        "end_t": 170.666667,
+        "max_speed_m_s": 12.920425,
+        "max_step": {
+          "distance_m": 0.430681,
+          "dt_s": 0.033333,
+          "from_frame": 5117,
+          "from_t": 170.566667,
+          "from_world_xy": [
+            -2.521998,
+            7.590392
+          ],
+          "speed_m_s": 12.920425,
+          "to_frame": 5118,
+          "to_t": 170.6,
+          "to_world_xy": [
+            -2.369331,
+            7.187677
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 5117,
+        "start_t": 170.566667,
+        "step_count": 3
+      },
+      {
+        "end_frame": 5133,
+        "end_t": 171.1,
+        "max_speed_m_s": 21.158208,
+        "max_step": {
+          "distance_m": 0.705274,
+          "dt_s": 0.033333,
+          "from_frame": 5131,
+          "from_t": 171.033333,
+          "from_world_xy": [
+            -1.91986,
+            5.585128
+          ],
+          "speed_m_s": 21.158208,
+          "to_frame": 5132,
+          "to_t": 171.066667,
+          "to_world_xy": [
+            -1.614897,
+            4.949197
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 5131,
+        "start_t": 171.033333,
+        "step_count": 2
+      },
+      {
+        "end_frame": 5136,
+        "end_t": 171.2,
+        "max_speed_m_s": 10.898261,
+        "max_step": {
+          "distance_m": 0.363275,
+          "dt_s": 0.033333,
+          "from_frame": 5135,
+          "from_t": 171.166667,
+          "from_world_xy": [
+            -1.300916,
+            4.213886
+          ],
+          "speed_m_s": 10.898261,
+          "to_frame": 5136,
+          "to_t": 171.2,
+          "to_world_xy": [
+            -1.153863,
+            3.881705
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 5135,
+        "start_t": 171.166667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 6121,
+        "end_t": 204.033333,
+        "max_speed_m_s": 14.224389,
+        "max_step": {
+          "distance_m": 0.474146,
+          "dt_s": 0.033333,
+          "from_frame": 6120,
+          "from_t": 204.0,
+          "from_world_xy": [
+            -0.738177,
+            6.80045
+          ],
+          "speed_m_s": 14.224389,
+          "to_frame": 6121,
+          "to_t": 204.033333,
+          "to_world_xy": [
+            -0.560209,
+            6.36097
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 6120,
+        "start_t": 204.0,
+        "step_count": 1
+      },
+      {
+        "end_frame": 6213,
+        "end_t": 207.1,
+        "max_speed_m_s": 14.027064,
+        "max_step": {
+          "distance_m": 0.467569,
+          "dt_s": 0.033333,
+          "from_frame": 6212,
+          "from_t": 207.066667,
+          "from_world_xy": [
+            -0.503723,
+            3.375622
+          ],
+          "speed_m_s": 14.027064,
+          "to_frame": 6213,
+          "to_t": 207.1,
+          "to_world_xy": [
+            -0.325793,
+            2.943232
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 6212,
+        "start_t": 207.066667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 6581,
+        "end_t": 219.366667,
+        "max_speed_m_s": 11.25123,
+        "max_step": {
+          "distance_m": 0.375041,
+          "dt_s": 0.033333,
+          "from_frame": 6580,
+          "from_t": 219.333333,
+          "from_world_xy": [
+            -0.509862,
+            3.838527
+          ],
+          "speed_m_s": 11.25123,
+          "to_frame": 6581,
+          "to_t": 219.366667,
+          "to_world_xy": [
+            -0.395919,
+            3.481214
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 6580,
+        "start_t": 219.333333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 6697,
+        "end_t": 223.233333,
+        "max_speed_m_s": 24.925212,
+        "max_step": {
+          "distance_m": 0.83084,
+          "dt_s": 0.033333,
+          "from_frame": 6696,
+          "from_t": 223.2,
+          "from_world_xy": [
+            -0.934254,
+            6.925827
+          ],
+          "speed_m_s": 24.925212,
+          "to_frame": 6697,
+          "to_t": 223.233333,
+          "to_world_xy": [
+            -0.592125,
+            6.168698
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 6694,
+        "start_t": 223.133333,
+        "step_count": 3
+      },
+      {
+        "end_frame": 6734,
+        "end_t": 224.466667,
+        "max_speed_m_s": 10.734824,
+        "max_step": {
+          "distance_m": 0.357827,
+          "dt_s": 0.033333,
+          "from_frame": 6733,
+          "from_t": 224.433333,
+          "from_world_xy": [
+            -0.471103,
+            6.989142
+          ],
+          "speed_m_s": 10.734824,
+          "to_frame": 6734,
+          "to_t": 224.466667,
+          "to_world_xy": [
+            -0.340166,
+            6.656131
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 6733,
+        "start_t": 224.433333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7258,
+        "end_t": 241.933333,
+        "max_speed_m_s": 13.236357,
+        "max_step": {
+          "distance_m": 0.441212,
+          "dt_s": 0.033333,
+          "from_frame": 7257,
+          "from_t": 241.9,
+          "from_world_xy": [
+            -0.518563,
+            2.370467
+          ],
+          "speed_m_s": 13.236357,
+          "to_frame": 7258,
+          "to_t": 241.933333,
+          "to_world_xy": [
+            -0.297732,
+            1.988496
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7257,
+        "start_t": 241.9,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7417,
+        "end_t": 247.233333,
+        "max_speed_m_s": 24.332493,
+        "max_step": {
+          "distance_m": 0.811083,
+          "dt_s": 0.033333,
+          "from_frame": 7415,
+          "from_t": 247.166667,
+          "from_world_xy": [
+            0.478537,
+            3.895757
+          ],
+          "speed_m_s": 24.332493,
+          "to_frame": 7416,
+          "to_t": 247.2,
+          "to_world_xy": [
+            0.784413,
+            3.144561
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7415,
+        "start_t": 247.166667,
+        "step_count": 2
+      },
+      {
+        "end_frame": 7419,
+        "end_t": 247.3,
+        "max_speed_m_s": 15.418461,
+        "max_step": {
+          "distance_m": 0.513949,
+          "dt_s": 0.033333,
+          "from_frame": 7418,
+          "from_t": 247.266667,
+          "from_world_xy": [
+            0.888801,
+            2.945732
+          ],
+          "speed_m_s": 15.418461,
+          "to_frame": 7419,
+          "to_t": 247.3,
+          "to_world_xy": [
+            0.712918,
+            3.428649
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7418,
+        "start_t": 247.266667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7467,
+        "end_t": 248.9,
+        "max_speed_m_s": 19.335348,
+        "max_step": {
+          "distance_m": 0.644512,
+          "dt_s": 0.033333,
+          "from_frame": 7466,
+          "from_t": 248.866667,
+          "from_world_xy": [
+            0.817093,
+            5.189104
+          ],
+          "speed_m_s": 19.335348,
+          "to_frame": 7467,
+          "to_t": 248.9,
+          "to_world_xy": [
+            1.039947,
+            4.584347
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7466,
+        "start_t": 248.866667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7473,
+        "end_t": 249.1,
+        "max_speed_m_s": 28.895589,
+        "max_step": {
+          "distance_m": 0.963186,
+          "dt_s": 0.033333,
+          "from_frame": 7472,
+          "from_t": 249.066667,
+          "from_world_xy": [
+            0.700567,
+            5.718835
+          ],
+          "speed_m_s": 28.895589,
+          "to_frame": 7473,
+          "to_t": 249.1,
+          "to_world_xy": [
+            0.997356,
+            4.802514
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7470,
+        "start_t": 249.0,
+        "step_count": 3
+      },
+      {
+        "end_frame": 7475,
+        "end_t": 249.166667,
+        "max_speed_m_s": 12.482893,
+        "max_step": {
+          "distance_m": 0.416096,
+          "dt_s": 0.033333,
+          "from_frame": 7474,
+          "from_t": 249.133333,
+          "from_world_xy": [
+            1.008121,
+            4.767111
+          ],
+          "speed_m_s": 12.482893,
+          "to_frame": 7475,
+          "to_t": 249.166667,
+          "to_world_xy": [
+            0.878072,
+            5.162363
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7474,
+        "start_t": 249.133333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7477,
+        "end_t": 249.233333,
+        "max_speed_m_s": 14.016513,
+        "max_step": {
+          "distance_m": 0.467217,
+          "dt_s": 0.033333,
+          "from_frame": 7476,
+          "from_t": 249.2,
+          "from_world_xy": [
+            0.781762,
+            5.43421
+          ],
+          "speed_m_s": 14.016513,
+          "to_frame": 7477,
+          "to_t": 249.233333,
+          "to_world_xy": [
+            0.627894,
+            5.875363
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7476,
+        "start_t": 249.2,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7503,
+        "end_t": 250.1,
+        "max_speed_m_s": 13.396718,
+        "max_step": {
+          "distance_m": 0.446557,
+          "dt_s": 0.033333,
+          "from_frame": 7502,
+          "from_t": 250.066667,
+          "from_world_xy": [
+            -0.055205,
+            6.636847
+          ],
+          "speed_m_s": 13.396718,
+          "to_frame": 7503,
+          "to_t": 250.1,
+          "to_world_xy": [
+            -0.209422,
+            7.05593
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7502,
+        "start_t": 250.066667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 7989,
+        "end_t": 266.3,
+        "max_speed_m_s": 17.147537,
+        "max_step": {
+          "distance_m": 0.571585,
+          "dt_s": 0.033333,
+          "from_frame": 7984,
+          "from_t": 266.133333,
+          "from_world_xy": [
+            -0.251025,
+            7.419215
+          ],
+          "speed_m_s": 17.147537,
+          "to_frame": 7985,
+          "to_t": 266.166667,
+          "to_world_xy": [
+            -0.038111,
+            6.888766
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7984,
+        "start_t": 266.133333,
+        "step_count": 5
+      },
+      {
+        "end_frame": 7992,
+        "end_t": 266.4,
+        "max_speed_m_s": 36.799874,
+        "max_step": {
+          "distance_m": 1.226662,
+          "dt_s": 0.033333,
+          "from_frame": 7991,
+          "from_t": 266.366667,
+          "from_world_xy": [
+            0.238904,
+            6.360007
+          ],
+          "speed_m_s": 36.799874,
+          "to_frame": 7992,
+          "to_t": 266.4,
+          "to_world_xy": [
+            -0.170373,
+            7.516378
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 7991,
+        "start_t": 266.366667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 8001,
+        "end_t": 266.7,
+        "max_speed_m_s": 18.493385,
+        "max_step": {
+          "distance_m": 0.616446,
+          "dt_s": 0.033333,
+          "from_frame": 8000,
+          "from_t": 266.666667,
+          "from_world_xy": [
+            0.016076,
+            7.231065
+          ],
+          "speed_m_s": 18.493385,
+          "to_frame": 8001,
+          "to_t": 266.7,
+          "to_world_xy": [
+            0.195334,
+            6.641257
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 8000,
+        "start_t": 266.666667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 8015,
+        "end_t": 267.166667,
+        "max_speed_m_s": 11.037449,
+        "max_step": {
+          "distance_m": 0.367915,
+          "dt_s": 0.033333,
+          "from_frame": 8014,
+          "from_t": 267.133333,
+          "from_world_xy": [
+            0.05695,
+            5.980997
+          ],
+          "speed_m_s": 11.037449,
+          "to_frame": 8015,
+          "to_t": 267.166667,
+          "to_world_xy": [
+            -0.084752,
+            6.320529
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 8014,
+        "start_t": 267.133333,
+        "step_count": 1
+      },
+      {
+        "end_frame": 8050,
+        "end_t": 268.333333,
+        "max_speed_m_s": 90.451606,
+        "max_step": {
+          "distance_m": 3.015054,
+          "dt_s": 0.033333,
+          "from_frame": 8046,
+          "from_t": 268.2,
+          "from_world_xy": [
+            -0.725148,
+            7.114322
+          ],
+          "speed_m_s": 90.451606,
+          "to_frame": 8047,
+          "to_t": 268.233333,
+          "to_world_xy": [
+            0.320949,
+            4.286562
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 8042,
+        "start_t": 268.066667,
+        "step_count": 8
+      },
+      {
+        "end_frame": 8054,
+        "end_t": 268.466667,
+        "max_speed_m_s": 32.129499,
+        "max_step": {
+          "distance_m": 1.070983,
+          "dt_s": 0.033333,
+          "from_frame": 8051,
+          "from_t": 268.366667,
+          "from_world_xy": [
+            -0.629132,
+            6.280846
+          ],
+          "speed_m_s": 32.129499,
+          "to_frame": 8052,
+          "to_t": 268.4,
+          "to_world_xy": [
+            -1.072648,
+            7.255679
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 8051,
+        "start_t": 268.366667,
+        "step_count": 3
+      },
+      {
+        "end_frame": 8075,
+        "end_t": 269.166667,
+        "max_speed_m_s": 14.652199,
+        "max_step": {
+          "distance_m": 2.93044,
+          "dt_s": 0.2,
+          "from_frame": 8069,
+          "from_t": 268.966667,
+          "from_world_xy": [
+            -0.679185,
+            5.15924
+          ],
+          "speed_m_s": 14.652199,
+          "to_frame": 8075,
+          "to_t": 269.166667,
+          "to_world_xy": [
+            0.542487,
+            2.495598
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 8069,
+        "start_t": 268.966667,
+        "step_count": 1
+      },
+      {
+        "end_frame": 8434,
+        "end_t": 281.133333,
+        "max_speed_m_s": 11.52905,
+        "max_step": {
+          "distance_m": 0.384302,
+          "dt_s": 0.033333,
+          "from_frame": 8433,
+          "from_t": 281.1,
+          "from_world_xy": [
+            0.83173,
+            6.847859
+          ],
+          "speed_m_s": 11.52905,
+          "to_frame": 8434,
+          "to_t": 281.133333,
+          "to_world_xy": [
+            0.947591,
+            6.481439
+          ]
+        },
+        "player_id": 4,
+        "start_frame": 8433,
+        "start_t": 281.1,
+        "step_count": 1
+      }
+    ],
+    "implausible_motion_step_count": 238,
+    "implausible_motion_worst_offender": {
+      "end_frame": 5263,
+      "end_t": 175.433333,
+      "max_speed_m_s": 98.90414,
+      "max_step": {
+        "distance_m": 3.296805,
+        "dt_s": 0.033333,
+        "from_frame": 5261,
+        "from_t": 175.366667,
+        "from_world_xy": [
+          -2.887273,
+          0.832941
+        ],
+        "speed_m_s": 98.90414,
+        "to_frame": 5262,
+        "to_t": 175.4,
+        "to_world_xy": [
+          -0.757276,
+          -1.683412
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 5256,
+      "start_t": 175.2,
+      "step_count": 7
+    },
+    "not_gt": true,
+    "notes": [
+      "Diagnostic-only world_xy speed gate. It flags output-track motion that should not feed foot-lock or replay as physically trustworthy.",
+      "No smoothing, holding, deletion, or identity repair is applied by this diagnostic."
+    ],
+    "schema_version": 1,
+    "source_only": true,
+    "speed_threshold_m_s": 10.0,
+    "uses_cvat_labels": false
+  },
+  "implausible_motion_player_count": 4,
+  "implausible_motion_span_count": 149,
+  "implausible_motion_spans": [
+    {
+      "end_frame": 270,
+      "end_t": 9.0,
+      "max_speed_m_s": 41.748499,
+      "max_step": {
+        "distance_m": 9.741316,
+        "dt_s": 0.233333,
+        "from_frame": 261,
+        "from_t": 8.7,
+        "from_world_xy": [
+          1.472567,
+          7.617086
+        ],
+        "speed_m_s": 41.748499,
+        "to_frame": 268,
+        "to_t": 8.933333,
+        "to_world_xy": [
+          -3.974897,
+          -0.458704
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 261,
+      "start_t": 8.7,
+      "step_count": 3
+    },
+    {
+      "end_frame": 844,
+      "end_t": 28.133333,
+      "max_speed_m_s": 10.45529,
+      "max_step": {
+        "distance_m": 0.34851,
+        "dt_s": 0.033333,
+        "from_frame": 843,
+        "from_t": 28.1,
+        "from_world_xy": [
+          1.393096,
+          -6.008598
+        ],
+        "speed_m_s": 10.45529,
+        "to_frame": 844,
+        "to_t": 28.133333,
+        "to_world_xy": [
+          1.174243,
+          -5.737374
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 843,
+      "start_t": 28.1,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1429,
+      "end_t": 47.633333,
+      "max_speed_m_s": 42.047412,
+      "max_step": {
+        "distance_m": 1.40158,
+        "dt_s": 0.033333,
+        "from_frame": 1427,
+        "from_t": 47.566667,
+        "from_world_xy": [
+          0.579909,
+          -7.297851
+        ],
+        "speed_m_s": 42.047412,
+        "to_frame": 1428,
+        "to_t": 47.6,
+        "to_world_xy": [
+          -0.744871,
+          -6.840265
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1427,
+      "start_t": 47.566667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 1432,
+      "end_t": 47.733333,
+      "max_speed_m_s": 11.27232,
+      "max_step": {
+        "distance_m": 0.375744,
+        "dt_s": 0.033333,
+        "from_frame": 1431,
+        "from_t": 47.7,
+        "from_world_xy": [
+          -0.26731,
+          -6.943942
+        ],
+        "speed_m_s": 11.27232,
+        "to_frame": 1432,
+        "to_t": 47.733333,
+        "to_world_xy": [
+          0.09381,
+          -7.047747
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1431,
+      "start_t": 47.7,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1438,
+      "end_t": 47.933333,
+      "max_speed_m_s": 43.538874,
+      "max_step": {
+        "distance_m": 1.451296,
+        "dt_s": 0.033333,
+        "from_frame": 1437,
+        "from_t": 47.9,
+        "from_world_xy": [
+          -0.082634,
+          -6.943731
+        ],
+        "speed_m_s": 43.538874,
+        "to_frame": 1438,
+        "to_t": 47.933333,
+        "to_world_xy": [
+          -1.43288,
+          -6.411665
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1437,
+      "start_t": 47.9,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1490,
+      "end_t": 49.666667,
+      "max_speed_m_s": 10.052298,
+      "max_step": {
+        "distance_m": 0.335077,
+        "dt_s": 0.033333,
+        "from_frame": 1489,
+        "from_t": 49.633333,
+        "from_world_xy": [
+          -4.035953,
+          -5.113771
+        ],
+        "speed_m_s": 10.052298,
+        "to_frame": 1490,
+        "to_t": 49.666667,
+        "to_world_xy": [
+          -3.731288,
+          -5.253254
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1489,
+      "start_t": 49.633333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1539,
+      "end_t": 51.3,
+      "max_speed_m_s": 10.836567,
+      "max_step": {
+        "distance_m": 0.361219,
+        "dt_s": 0.033333,
+        "from_frame": 1538,
+        "from_t": 51.266667,
+        "from_world_xy": [
+          0.025324,
+          -7.035131
+        ],
+        "speed_m_s": 10.836567,
+        "to_frame": 1539,
+        "to_t": 51.3,
+        "to_world_xy": [
+          0.355318,
+          -7.182041
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1538,
+      "start_t": 51.266667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1805,
+      "end_t": 60.166667,
+      "max_speed_m_s": 42.883553,
+      "max_step": {
+        "distance_m": 1.429452,
+        "dt_s": 0.033333,
+        "from_frame": 1804,
+        "from_t": 60.133333,
+        "from_world_xy": [
+          0.170317,
+          -6.62051
+        ],
+        "speed_m_s": 42.883553,
+        "to_frame": 1805,
+        "to_t": 60.166667,
+        "to_world_xy": [
+          -1.140801,
+          -6.051036
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1804,
+      "start_t": 60.133333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1807,
+      "end_t": 60.233333,
+      "max_speed_m_s": 23.796549,
+      "max_step": {
+        "distance_m": 0.793218,
+        "dt_s": 0.033333,
+        "from_frame": 1806,
+        "from_t": 60.2,
+        "from_world_xy": [
+          -1.200694,
+          -6.069142
+        ],
+        "speed_m_s": 23.796549,
+        "to_frame": 1807,
+        "to_t": 60.233333,
+        "to_world_xy": [
+          -1.945296,
+          -5.795714
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1806,
+      "start_t": 60.2,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1856,
+      "end_t": 61.866667,
+      "max_speed_m_s": 33.030843,
+      "max_step": {
+        "distance_m": 1.101028,
+        "dt_s": 0.033333,
+        "from_frame": 1854,
+        "from_t": 61.8,
+        "from_world_xy": [
+          -2.318213,
+          -7.242464
+        ],
+        "speed_m_s": 33.030843,
+        "to_frame": 1855,
+        "to_t": 61.833333,
+        "to_world_xy": [
+          -1.248858,
+          -7.50465
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1854,
+      "start_t": 61.8,
+      "step_count": 2
+    },
+    {
+      "end_frame": 1877,
+      "end_t": 62.566667,
+      "max_speed_m_s": 42.46789,
+      "max_step": {
+        "distance_m": 1.415596,
+        "dt_s": 0.033333,
+        "from_frame": 1874,
+        "from_t": 62.466667,
+        "from_world_xy": [
+          -1.577141,
+          -7.502387
+        ],
+        "speed_m_s": 42.46789,
+        "to_frame": 1875,
+        "to_t": 62.5,
+        "to_world_xy": [
+          -2.958301,
+          -7.192052
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1874,
+      "start_t": 62.466667,
+      "step_count": 3
+    },
+    {
+      "end_frame": 1940,
+      "end_t": 64.666667,
+      "max_speed_m_s": 15.672788,
+      "max_step": {
+        "distance_m": 0.522426,
+        "dt_s": 0.033333,
+        "from_frame": 1939,
+        "from_t": 64.633333,
+        "from_world_xy": [
+          -2.083736,
+          -6.833062
+        ],
+        "speed_m_s": 15.672788,
+        "to_frame": 1940,
+        "to_t": 64.666667,
+        "to_world_xy": [
+          -2.585429,
+          -6.687347
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1938,
+      "start_t": 64.6,
+      "step_count": 2
+    },
+    {
+      "end_frame": 1942,
+      "end_t": 64.733333,
+      "max_speed_m_s": 17.110357,
+      "max_step": {
+        "distance_m": 0.570345,
+        "dt_s": 0.033333,
+        "from_frame": 1941,
+        "from_t": 64.7,
+        "from_world_xy": [
+          -2.536114,
+          -6.709173
+        ],
+        "speed_m_s": 17.110357,
+        "to_frame": 1942,
+        "to_t": 64.733333,
+        "to_world_xy": [
+          -1.991156,
+          -6.877443
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 1941,
+      "start_t": 64.7,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2956,
+      "end_t": 98.533333,
+      "max_speed_m_s": 11.758542,
+      "max_step": {
+        "distance_m": 0.391951,
+        "dt_s": 0.033333,
+        "from_frame": 2955,
+        "from_t": 98.5,
+        "from_world_xy": [
+          2.383906,
+          -6.62898
+        ],
+        "speed_m_s": 11.758542,
+        "to_frame": 2956,
+        "to_t": 98.533333,
+        "to_world_xy": [
+          2.120978,
+          -6.3383
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 2955,
+      "start_t": 98.5,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2966,
+      "end_t": 98.866667,
+      "max_speed_m_s": 10.363057,
+      "max_step": {
+        "distance_m": 0.345435,
+        "dt_s": 0.033333,
+        "from_frame": 2965,
+        "from_t": 98.833333,
+        "from_world_xy": [
+          2.025749,
+          -5.349296
+        ],
+        "speed_m_s": 10.363057,
+        "to_frame": 2966,
+        "to_t": 98.866667,
+        "to_world_xy": [
+          1.827878,
+          -5.066149
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 2965,
+      "start_t": 98.833333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 4312,
+      "end_t": 143.733333,
+      "max_speed_m_s": 47.391283,
+      "max_step": {
+        "distance_m": 1.579709,
+        "dt_s": 0.033333,
+        "from_frame": 4310,
+        "from_t": 143.666667,
+        "from_world_xy": [
+          -1.27996,
+          -3.52057
+        ],
+        "speed_m_s": 47.391283,
+        "to_frame": 4311,
+        "to_t": 143.7,
+        "to_world_xy": [
+          -0.060376,
+          -4.52461
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 4306,
+      "start_t": 143.533333,
+      "step_count": 6
+    },
+    {
+      "end_frame": 5679,
+      "end_t": 189.3,
+      "max_speed_m_s": 16.766875,
+      "max_step": {
+        "distance_m": 0.558896,
+        "dt_s": 0.033333,
+        "from_frame": 5677,
+        "from_t": 189.233333,
+        "from_world_xy": [
+          -1.96672,
+          -6.456084
+        ],
+        "speed_m_s": 16.766875,
+        "to_frame": 5678,
+        "to_t": 189.266667,
+        "to_world_xy": [
+          -2.488214,
+          -6.255065
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 5677,
+      "start_t": 189.233333,
+      "step_count": 2
+    },
+    {
+      "end_frame": 5686,
+      "end_t": 189.533333,
+      "max_speed_m_s": 32.730202,
+      "max_step": {
+        "distance_m": 5.455034,
+        "dt_s": 0.166667,
+        "from_frame": 5681,
+        "from_t": 189.366667,
+        "from_world_xy": [
+          -3.524256,
+          -5.854071
+        ],
+        "speed_m_s": 32.730202,
+        "to_frame": 5686,
+        "to_t": 189.533333,
+        "to_world_xy": [
+          1.616801,
+          -7.678059
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 5680,
+      "start_t": 189.333333,
+      "step_count": 2
+    },
+    {
+      "end_frame": 8214,
+      "end_t": 273.8,
+      "max_speed_m_s": 32.631993,
+      "max_step": {
+        "distance_m": 1.087733,
+        "dt_s": 0.033333,
+        "from_frame": 8213,
+        "from_t": 273.766667,
+        "from_world_xy": [
+          -1.708678,
+          -2.848172
+        ],
+        "speed_m_s": 32.631993,
+        "to_frame": 8214,
+        "to_t": 273.8,
+        "to_world_xy": [
+          -2.529447,
+          -2.134378
+        ]
+      },
+      "player_id": 1,
+      "start_frame": 8213,
+      "start_t": 273.766667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1284,
+      "end_t": 42.8,
+      "max_speed_m_s": 13.240521,
+      "max_step": {
+        "distance_m": 0.441351,
+        "dt_s": 0.033333,
+        "from_frame": 1283,
+        "from_t": 42.766667,
+        "from_world_xy": [
+          -1.563874,
+          -2.75529
+        ],
+        "speed_m_s": 13.240521,
+        "to_frame": 1284,
+        "to_t": 42.8,
+        "to_world_xy": [
+          -1.241536,
+          -3.056768
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 1283,
+      "start_t": 42.766667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2011,
+      "end_t": 67.033333,
+      "max_speed_m_s": 14.949426,
+      "max_step": {
+        "distance_m": 0.498314,
+        "dt_s": 0.033333,
+        "from_frame": 2009,
+        "from_t": 66.966667,
+        "from_world_xy": [
+          -1.40081,
+          -7.590286
+        ],
+        "speed_m_s": 14.949426,
+        "to_frame": 2010,
+        "to_t": 67.0,
+        "to_world_xy": [
+          -1.885278,
+          -7.473635
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 2009,
+      "start_t": 66.966667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 2168,
+      "end_t": 72.266667,
+      "max_speed_m_s": 10.766936,
+      "max_step": {
+        "distance_m": 0.358898,
+        "dt_s": 0.033333,
+        "from_frame": 2167,
+        "from_t": 72.233333,
+        "from_world_xy": [
+          -1.145712,
+          -4.647394
+        ],
+        "speed_m_s": 10.766936,
+        "to_frame": 2168,
+        "to_t": 72.266667,
+        "to_world_xy": [
+          -1.379397,
+          -4.374999
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 2167,
+      "start_t": 72.233333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2484,
+      "end_t": 82.8,
+      "max_speed_m_s": 37.14496,
+      "max_step": {
+        "distance_m": 1.238165,
+        "dt_s": 0.033333,
+        "from_frame": 2483,
+        "from_t": 82.766667,
+        "from_world_xy": [
+          -3.252452,
+          -7.050774
+        ],
+        "speed_m_s": 37.14496,
+        "to_frame": 2484,
+        "to_t": 82.8,
+        "to_world_xy": [
+          -2.034766,
+          -7.275039
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 2480,
+      "start_t": 82.666667,
+      "step_count": 4
+    },
+    {
+      "end_frame": 2978,
+      "end_t": 99.266667,
+      "max_speed_m_s": 12.479687,
+      "max_step": {
+        "distance_m": 0.41599,
+        "dt_s": 0.033333,
+        "from_frame": 2977,
+        "from_t": 99.233333,
+        "from_world_xy": [
+          -0.255303,
+          -2.413484
+        ],
+        "speed_m_s": 12.479687,
+        "to_frame": 2978,
+        "to_t": 99.266667,
+        "to_world_xy": [
+          0.030594,
+          -2.71566
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 2977,
+      "start_t": 99.233333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 3778,
+      "end_t": 125.933333,
+      "max_speed_m_s": 10.707667,
+      "max_step": {
+        "distance_m": 0.356922,
+        "dt_s": 0.033333,
+        "from_frame": 3777,
+        "from_t": 125.9,
+        "from_world_xy": [
+          -1.307674,
+          -3.196345
+        ],
+        "speed_m_s": 10.707667,
+        "to_frame": 3778,
+        "to_t": 125.933333,
+        "to_world_xy": [
+          -1.603759,
+          -2.997028
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 3777,
+      "start_t": 125.9,
+      "step_count": 1
+    },
+    {
+      "end_frame": 3896,
+      "end_t": 129.866667,
+      "max_speed_m_s": 37.139471,
+      "max_step": {
+        "distance_m": 1.237982,
+        "dt_s": 0.033333,
+        "from_frame": 3894,
+        "from_t": 129.8,
+        "from_world_xy": [
+          -2.461346,
+          -1.31686
+        ],
+        "speed_m_s": 37.139471,
+        "to_frame": 3895,
+        "to_t": 129.833333,
+        "to_world_xy": [
+          -1.567977,
+          -2.173885
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 3894,
+      "start_t": 129.8,
+      "step_count": 2
+    },
+    {
+      "end_frame": 4174,
+      "end_t": 139.133333,
+      "max_speed_m_s": 57.844479,
+      "max_step": {
+        "distance_m": 1.928149,
+        "dt_s": 0.033333,
+        "from_frame": 4172,
+        "from_t": 139.066667,
+        "from_world_xy": [
+          -0.638868,
+          -2.67341
+        ],
+        "speed_m_s": 57.844479,
+        "to_frame": 4173,
+        "to_t": 139.1,
+        "to_world_xy": [
+          -2.396638,
+          -1.880943
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 4172,
+      "start_t": 139.066667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 4180,
+      "end_t": 139.333333,
+      "max_speed_m_s": 13.108553,
+      "max_step": {
+        "distance_m": 0.436952,
+        "dt_s": 0.033333,
+        "from_frame": 4179,
+        "from_t": 139.3,
+        "from_world_xy": [
+          -1.105892,
+          -2.521032
+        ],
+        "speed_m_s": 13.108553,
+        "to_frame": 4180,
+        "to_t": 139.333333,
+        "to_world_xy": [
+          -0.755483,
+          -2.782069
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 4179,
+      "start_t": 139.3,
+      "step_count": 1
+    },
+    {
+      "end_frame": 4199,
+      "end_t": 139.966667,
+      "max_speed_m_s": 15.147161,
+      "max_step": {
+        "distance_m": 0.504905,
+        "dt_s": 0.033333,
+        "from_frame": 4198,
+        "from_t": 139.933333,
+        "from_world_xy": [
+          0.510539,
+          -2.70766
+        ],
+        "speed_m_s": 15.147161,
+        "to_frame": 4199,
+        "to_t": 139.966667,
+        "to_world_xy": [
+          0.95302,
+          -2.950846
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 4197,
+      "start_t": 139.9,
+      "step_count": 2
+    },
+    {
+      "end_frame": 4315,
+      "end_t": 143.833333,
+      "max_speed_m_s": 39.503002,
+      "max_step": {
+        "distance_m": 1.316767,
+        "dt_s": 0.033333,
+        "from_frame": 4314,
+        "from_t": 143.8,
+        "from_world_xy": [
+          -1.257048,
+          -6.19738
+        ],
+        "speed_m_s": 39.503002,
+        "to_frame": 4315,
+        "to_t": 143.833333,
+        "to_world_xy": [
+          -2.513795,
+          -5.804367
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 4314,
+      "start_t": 143.8,
+      "step_count": 1
+    },
+    {
+      "end_frame": 4324,
+      "end_t": 144.133333,
+      "max_speed_m_s": 12.2203,
+      "max_step": {
+        "distance_m": 0.407343,
+        "dt_s": 0.033333,
+        "from_frame": 4323,
+        "from_t": 144.1,
+        "from_world_xy": [
+          -1.378736,
+          -6.457694
+        ],
+        "speed_m_s": 12.2203,
+        "to_frame": 4324,
+        "to_t": 144.133333,
+        "to_world_xy": [
+          -1.013079,
+          -6.637204
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 4323,
+      "start_t": 144.1,
+      "step_count": 1
+    },
+    {
+      "end_frame": 4357,
+      "end_t": 145.233333,
+      "max_speed_m_s": 37.008933,
+      "max_step": {
+        "distance_m": 12.336311,
+        "dt_s": 0.333333,
+        "from_frame": 4347,
+        "from_t": 144.9,
+        "from_world_xy": [
+          -1.216941,
+          -7.692983
+        ],
+        "speed_m_s": 37.008933,
+        "to_frame": 4357,
+        "to_t": 145.233333,
+        "to_world_xy": [
+          -0.219052,
+          4.602902
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 4347,
+      "start_t": 144.9,
+      "step_count": 1
+    },
+    {
+      "end_frame": 4659,
+      "end_t": 155.3,
+      "max_speed_m_s": 11.02789,
+      "max_step": {
+        "distance_m": 0.367596,
+        "dt_s": 0.033333,
+        "from_frame": 4658,
+        "from_t": 155.266667,
+        "from_world_xy": [
+          -1.352449,
+          -5.160505
+        ],
+        "speed_m_s": 11.02789,
+        "to_frame": 4659,
+        "to_t": 155.3,
+        "to_world_xy": [
+          -1.547884,
+          -4.849165
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 4658,
+      "start_t": 155.266667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 4927,
+      "end_t": 164.233333,
+      "max_speed_m_s": 25.09053,
+      "max_step": {
+        "distance_m": 0.836351,
+        "dt_s": 0.033333,
+        "from_frame": 4925,
+        "from_t": 164.166667,
+        "from_world_xy": [
+          -0.941035,
+          -7.542798
+        ],
+        "speed_m_s": 25.09053,
+        "to_frame": 4926,
+        "to_t": 164.2,
+        "to_world_xy": [
+          -1.756748,
+          -7.358149
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 4925,
+      "start_t": 164.166667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 4929,
+      "end_t": 164.3,
+      "max_speed_m_s": 11.814757,
+      "max_step": {
+        "distance_m": 0.393825,
+        "dt_s": 0.033333,
+        "from_frame": 4928,
+        "from_t": 164.266667,
+        "from_world_xy": [
+          -2.555575,
+          -7.202022
+        ],
+        "speed_m_s": 11.814757,
+        "to_frame": 4929,
+        "to_t": 164.3,
+        "to_world_xy": [
+          -2.944106,
+          -7.137663
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 4928,
+      "start_t": 164.266667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 5011,
+      "end_t": 167.033333,
+      "max_speed_m_s": 19.482319,
+      "max_step": {
+        "distance_m": 0.649411,
+        "dt_s": 0.033333,
+        "from_frame": 5009,
+        "from_t": 166.966667,
+        "from_world_xy": [
+          -2.175539,
+          -7.447912
+        ],
+        "speed_m_s": 19.482319,
+        "to_frame": 5010,
+        "to_t": 167.0,
+        "to_world_xy": [
+          -2.806444,
+          -7.293987
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 5009,
+      "start_t": 166.966667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 5018,
+      "end_t": 167.266667,
+      "max_speed_m_s": 25.931449,
+      "max_step": {
+        "distance_m": 0.864382,
+        "dt_s": 0.033333,
+        "from_frame": 5017,
+        "from_t": 167.233333,
+        "from_world_xy": [
+          -1.579074,
+          -7.371315
+        ],
+        "speed_m_s": 25.931449,
+        "to_frame": 5018,
+        "to_t": 167.266667,
+        "to_world_xy": [
+          -2.40892,
+          -7.129424
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 5017,
+      "start_t": 167.233333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 5068,
+      "end_t": 168.933333,
+      "max_speed_m_s": 47.778073,
+      "max_step": {
+        "distance_m": 1.592602,
+        "dt_s": 0.033333,
+        "from_frame": 5066,
+        "from_t": 168.866667,
+        "from_world_xy": [
+          -3.139271,
+          -6.654608
+        ],
+        "speed_m_s": 47.778073,
+        "to_frame": 5067,
+        "to_t": 168.9,
+        "to_world_xy": [
+          -1.615701,
+          -7.118417
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 5066,
+      "start_t": 168.866667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 5154,
+      "end_t": 171.8,
+      "max_speed_m_s": 10.378937,
+      "max_step": {
+        "distance_m": 0.345965,
+        "dt_s": 0.033333,
+        "from_frame": 5153,
+        "from_t": 171.766667,
+        "from_world_xy": [
+          -1.878966,
+          -5.527024
+        ],
+        "speed_m_s": 10.378937,
+        "to_frame": 5154,
+        "to_t": 171.8,
+        "to_world_xy": [
+          -1.552382,
+          -5.641194
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 5153,
+      "start_t": 171.766667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 5263,
+      "end_t": 175.433333,
+      "max_speed_m_s": 98.90414,
+      "max_step": {
+        "distance_m": 3.296805,
+        "dt_s": 0.033333,
+        "from_frame": 5261,
+        "from_t": 175.366667,
+        "from_world_xy": [
+          -2.887273,
+          0.832941
+        ],
+        "speed_m_s": 98.90414,
+        "to_frame": 5262,
+        "to_t": 175.4,
+        "to_world_xy": [
+          -0.757276,
+          -1.683412
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 5256,
+      "start_t": 175.2,
+      "step_count": 7
+    },
+    {
+      "end_frame": 5772,
+      "end_t": 192.4,
+      "max_speed_m_s": 10.013614,
+      "max_step": {
+        "distance_m": 0.333787,
+        "dt_s": 0.033333,
+        "from_frame": 5771,
+        "from_t": 192.366667,
+        "from_world_xy": [
+          -1.684094,
+          -4.312183
+        ],
+        "speed_m_s": 10.013614,
+        "to_frame": 5772,
+        "to_t": 192.4,
+        "to_world_xy": [
+          -1.378122,
+          -4.445578
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 5771,
+      "start_t": 192.366667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 5875,
+      "end_t": 195.833333,
+      "max_speed_m_s": 13.807335,
+      "max_step": {
+        "distance_m": 0.920489,
+        "dt_s": 0.066667,
+        "from_frame": 5873,
+        "from_t": 195.766667,
+        "from_world_xy": [
+          -0.223228,
+          -2.944508
+        ],
+        "speed_m_s": 13.807335,
+        "to_frame": 5875,
+        "to_t": 195.833333,
+        "to_world_xy": [
+          0.498402,
+          -3.515954
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 5873,
+      "start_t": 195.766667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 6795,
+      "end_t": 226.5,
+      "max_speed_m_s": 20.140314,
+      "max_step": {
+        "distance_m": 0.671344,
+        "dt_s": 0.033333,
+        "from_frame": 6794,
+        "from_t": 226.466667,
+        "from_world_xy": [
+          -2.651583,
+          -1.930354
+        ],
+        "speed_m_s": 20.140314,
+        "to_frame": 6795,
+        "to_t": 226.5,
+        "to_world_xy": [
+          -3.143827,
+          -1.473847
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 6794,
+      "start_t": 226.466667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 6797,
+      "end_t": 226.566667,
+      "max_speed_m_s": 12.882862,
+      "max_step": {
+        "distance_m": 0.429429,
+        "dt_s": 0.033333,
+        "from_frame": 6796,
+        "from_t": 226.533333,
+        "from_world_xy": [
+          -2.948899,
+          -1.656672
+        ],
+        "speed_m_s": 12.882862,
+        "to_frame": 6797,
+        "to_t": 226.566667,
+        "to_world_xy": [
+          -3.264249,
+          -1.365187
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 6796,
+      "start_t": 226.533333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 6863,
+      "end_t": 228.766667,
+      "max_speed_m_s": 43.310469,
+      "max_step": {
+        "distance_m": 1.443682,
+        "dt_s": 0.033333,
+        "from_frame": 6861,
+        "from_t": 228.7,
+        "from_world_xy": [
+          -3.812717,
+          -1.750604
+        ],
+        "speed_m_s": 43.310469,
+        "to_frame": 6862,
+        "to_t": 228.733333,
+        "to_world_xy": [
+          -2.678719,
+          -2.644062
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 6861,
+      "start_t": 228.7,
+      "step_count": 2
+    },
+    {
+      "end_frame": 7260,
+      "end_t": 242.0,
+      "max_speed_m_s": 14.715228,
+      "max_step": {
+        "distance_m": 0.490508,
+        "dt_s": 0.033333,
+        "from_frame": 7259,
+        "from_t": 241.966667,
+        "from_world_xy": [
+          -2.087229,
+          -3.177819
+        ],
+        "speed_m_s": 14.715228,
+        "to_frame": 7260,
+        "to_t": 242.0,
+        "to_world_xy": [
+          -2.484777,
+          -2.890498
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 7259,
+      "start_t": 241.966667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7288,
+      "end_t": 242.933333,
+      "max_speed_m_s": 15.10797,
+      "max_step": {
+        "distance_m": 0.503599,
+        "dt_s": 0.033333,
+        "from_frame": 7287,
+        "from_t": 242.9,
+        "from_world_xy": [
+          -1.874275,
+          -3.615719
+        ],
+        "speed_m_s": 15.10797,
+        "to_frame": 7288,
+        "to_t": 242.933333,
+        "to_world_xy": [
+          -1.450374,
+          -3.8876
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 7287,
+      "start_t": 242.9,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7960,
+      "end_t": 265.333333,
+      "max_speed_m_s": 10.830624,
+      "max_step": {
+        "distance_m": 0.361021,
+        "dt_s": 0.033333,
+        "from_frame": 7959,
+        "from_t": 265.3,
+        "from_world_xy": [
+          -2.869881,
+          -7.664378
+        ],
+        "speed_m_s": 10.830624,
+        "to_frame": 7960,
+        "to_t": 265.333333,
+        "to_world_xy": [
+          -3.204744,
+          -7.52946
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 7959,
+      "start_t": 265.3,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7982,
+      "end_t": 266.066667,
+      "max_speed_m_s": 11.208371,
+      "max_step": {
+        "distance_m": 0.373612,
+        "dt_s": 0.033333,
+        "from_frame": 7981,
+        "from_t": 266.033333,
+        "from_world_xy": [
+          -1.497908,
+          -6.371257
+        ],
+        "speed_m_s": 11.208371,
+        "to_frame": 7982,
+        "to_t": 266.066667,
+        "to_world_xy": [
+          -1.124302,
+          -6.369146
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 7981,
+      "start_t": 266.033333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 8223,
+      "end_t": 274.1,
+      "max_speed_m_s": 16.601233,
+      "max_step": {
+        "distance_m": 0.553374,
+        "dt_s": 0.033333,
+        "from_frame": 8222,
+        "from_t": 274.066667,
+        "from_world_xy": [
+          -1.530927,
+          -2.400328
+        ],
+        "speed_m_s": 16.601233,
+        "to_frame": 8223,
+        "to_t": 274.1,
+        "to_world_xy": [
+          -1.152277,
+          -2.803873
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 8222,
+      "start_t": 274.066667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 8229,
+      "end_t": 274.3,
+      "max_speed_m_s": 20.082937,
+      "max_step": {
+        "distance_m": 0.669431,
+        "dt_s": 0.033333,
+        "from_frame": 8227,
+        "from_t": 274.233333,
+        "from_world_xy": [
+          -1.198879,
+          -2.876576
+        ],
+        "speed_m_s": 20.082937,
+        "to_frame": 8228,
+        "to_t": 274.266667,
+        "to_world_xy": [
+          -1.703172,
+          -2.436319
+        ]
+      },
+      "player_id": 2,
+      "start_frame": 8227,
+      "start_t": 274.233333,
+      "step_count": 2
+    },
+    {
+      "end_frame": 7964,
+      "end_t": 265.466667,
+      "max_speed_m_s": 11.986478,
+      "max_step": {
+        "distance_m": 0.399549,
+        "dt_s": 0.033333,
+        "from_frame": 7963,
+        "from_t": 265.433333,
+        "from_world_xy": [
+          1.610335,
+          7.132812
+        ],
+        "speed_m_s": 11.986478,
+        "to_frame": 7964,
+        "to_t": 265.466667,
+        "to_world_xy": [
+          1.72556,
+          6.750238
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 7963,
+      "start_t": 265.433333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7982,
+      "end_t": 266.066667,
+      "max_speed_m_s": 10.900057,
+      "max_step": {
+        "distance_m": 0.363335,
+        "dt_s": 0.033333,
+        "from_frame": 7981,
+        "from_t": 266.033333,
+        "from_world_xy": [
+          1.982381,
+          6.681906
+        ],
+        "speed_m_s": 10.900057,
+        "to_frame": 7982,
+        "to_t": 266.066667,
+        "to_world_xy": [
+          1.902242,
+          7.036293
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 7981,
+      "start_t": 266.033333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 8492,
+      "end_t": 283.066667,
+      "max_speed_m_s": 10.320293,
+      "max_step": {
+        "distance_m": 0.34401,
+        "dt_s": 0.033333,
+        "from_frame": 8491,
+        "from_t": 283.033333,
+        "from_world_xy": [
+          -0.465737,
+          6.80579
+        ],
+        "speed_m_s": 10.320293,
+        "to_frame": 8492,
+        "to_t": 283.066667,
+        "to_world_xy": [
+          -0.591948,
+          7.125811
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 8491,
+      "start_t": 283.033333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 8501,
+      "end_t": 283.366667,
+      "max_speed_m_s": 12.460457,
+      "max_step": {
+        "distance_m": 2.90744,
+        "dt_s": 0.233333,
+        "from_frame": 8494,
+        "from_t": 283.133333,
+        "from_world_xy": [
+          -0.807331,
+          7.631011
+        ],
+        "speed_m_s": 12.460457,
+        "to_frame": 8501,
+        "to_t": 283.366667,
+        "to_world_xy": [
+          0.328446,
+          4.954592
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 8494,
+      "start_t": 283.133333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 9025,
+      "end_t": 300.833333,
+      "max_speed_m_s": 29.018682,
+      "max_step": {
+        "distance_m": 0.967289,
+        "dt_s": 0.033333,
+        "from_frame": 9023,
+        "from_t": 300.766667,
+        "from_world_xy": [
+          -1.80212,
+          7.602584
+        ],
+        "speed_m_s": 29.018682,
+        "to_frame": 9024,
+        "to_t": 300.8,
+        "to_world_xy": [
+          -1.39092,
+          6.727048
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 9023,
+      "start_t": 300.766667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 9062,
+      "end_t": 302.066667,
+      "max_speed_m_s": 21.451374,
+      "max_step": {
+        "distance_m": 0.715046,
+        "dt_s": 0.033333,
+        "from_frame": 9060,
+        "from_t": 302.0,
+        "from_world_xy": [
+          -0.984692,
+          6.426909
+        ],
+        "speed_m_s": 21.451374,
+        "to_frame": 9061,
+        "to_t": 302.033333,
+        "to_world_xy": [
+          -0.687203,
+          5.776686
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 9060,
+      "start_t": 302.0,
+      "step_count": 2
+    },
+    {
+      "end_frame": 9162,
+      "end_t": 305.4,
+      "max_speed_m_s": 17.501684,
+      "max_step": {
+        "distance_m": 0.583389,
+        "dt_s": 0.033333,
+        "from_frame": 9161,
+        "from_t": 305.366667,
+        "from_world_xy": [
+          -2.912544,
+          7.283222
+        ],
+        "speed_m_s": 17.501684,
+        "to_frame": 9162,
+        "to_t": 305.4,
+        "to_world_xy": [
+          -2.694813,
+          6.741986
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 9159,
+      "start_t": 305.3,
+      "step_count": 3
+    },
+    {
+      "end_frame": 9237,
+      "end_t": 307.9,
+      "max_speed_m_s": 47.142194,
+      "max_step": {
+        "distance_m": 1.571406,
+        "dt_s": 0.033333,
+        "from_frame": 9235,
+        "from_t": 307.833333,
+        "from_world_xy": [
+          -2.490144,
+          7.362825
+        ],
+        "speed_m_s": 47.142194,
+        "to_frame": 9236,
+        "to_t": 307.866667,
+        "to_world_xy": [
+          -1.800096,
+          5.951035
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 9235,
+      "start_t": 307.833333,
+      "step_count": 2
+    },
+    {
+      "end_frame": 9387,
+      "end_t": 312.9,
+      "max_speed_m_s": 14.572866,
+      "max_step": {
+        "distance_m": 0.485762,
+        "dt_s": 0.033333,
+        "from_frame": 9386,
+        "from_t": 312.866667,
+        "from_world_xy": [
+          -1.534828,
+          7.510216
+        ],
+        "speed_m_s": 14.572866,
+        "to_frame": 9387,
+        "to_t": 312.9,
+        "to_world_xy": [
+          -1.347132,
+          7.062181
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 9386,
+      "start_t": 312.866667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 9914,
+      "end_t": 330.466667,
+      "max_speed_m_s": 11.386695,
+      "max_step": {
+        "distance_m": 0.379556,
+        "dt_s": 0.033333,
+        "from_frame": 9913,
+        "from_t": 330.433333,
+        "from_world_xy": [
+          -2.005304,
+          2.301577
+        ],
+        "speed_m_s": 11.386695,
+        "to_frame": 9914,
+        "to_t": 330.466667,
+        "to_world_xy": [
+          -2.213061,
+          2.619225
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 9913,
+      "start_t": 330.433333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 9947,
+      "end_t": 331.566667,
+      "max_speed_m_s": 32.427536,
+      "max_step": {
+        "distance_m": 1.080918,
+        "dt_s": 0.033333,
+        "from_frame": 9946,
+        "from_t": 331.533333,
+        "from_world_xy": [
+          -2.06143,
+          3.556911
+        ],
+        "speed_m_s": 32.427536,
+        "to_frame": 9947,
+        "to_t": 331.566667,
+        "to_world_xy": [
+          -1.470109,
+          2.652079
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 9945,
+      "start_t": 331.5,
+      "step_count": 2
+    },
+    {
+      "end_frame": 10387,
+      "end_t": 346.233333,
+      "max_speed_m_s": 13.673721,
+      "max_step": {
+        "distance_m": 0.455791,
+        "dt_s": 0.033333,
+        "from_frame": 10386,
+        "from_t": 346.2,
+        "from_world_xy": [
+          -1.426927,
+          6.915543
+        ],
+        "speed_m_s": 13.673721,
+        "to_frame": 10387,
+        "to_t": 346.233333,
+        "to_world_xy": [
+          -1.240126,
+          6.49979
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 10386,
+      "start_t": 346.2,
+      "step_count": 1
+    },
+    {
+      "end_frame": 10448,
+      "end_t": 348.266667,
+      "max_speed_m_s": 52.053287,
+      "max_step": {
+        "distance_m": 1.73511,
+        "dt_s": 0.033333,
+        "from_frame": 10445,
+        "from_t": 348.166667,
+        "from_world_xy": [
+          -0.885118,
+          5.906042
+        ],
+        "speed_m_s": 52.053287,
+        "to_frame": 10446,
+        "to_t": 348.2,
+        "to_world_xy": [
+          -1.584146,
+          7.494111
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 10445,
+      "start_t": 348.166667,
+      "step_count": 3
+    },
+    {
+      "end_frame": 10465,
+      "end_t": 348.833333,
+      "max_speed_m_s": 31.871564,
+      "max_step": {
+        "distance_m": 1.062385,
+        "dt_s": 0.033333,
+        "from_frame": 10463,
+        "from_t": 348.766667,
+        "from_world_xy": [
+          -1.580963,
+          6.656569
+        ],
+        "speed_m_s": 31.871564,
+        "to_frame": 10464,
+        "to_t": 348.8,
+        "to_world_xy": [
+          -1.132974,
+          5.693257
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 10461,
+      "start_t": 348.7,
+      "step_count": 4
+    },
+    {
+      "end_frame": 11565,
+      "end_t": 385.5,
+      "max_speed_m_s": 18.737928,
+      "max_step": {
+        "distance_m": 0.624598,
+        "dt_s": 0.033333,
+        "from_frame": 11564,
+        "from_t": 385.466667,
+        "from_world_xy": [
+          -0.053375,
+          5.782399
+        ],
+        "speed_m_s": 18.737928,
+        "to_frame": 11565,
+        "to_t": 385.5,
+        "to_world_xy": [
+          0.047281,
+          5.165965
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 11564,
+      "start_t": 385.466667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 11570,
+      "end_t": 385.666667,
+      "max_speed_m_s": 10.952111,
+      "max_step": {
+        "distance_m": 0.36507,
+        "dt_s": 0.033333,
+        "from_frame": 11569,
+        "from_t": 385.633333,
+        "from_world_xy": [
+          -0.135236,
+          3.984207
+        ],
+        "speed_m_s": 10.952111,
+        "to_frame": 11570,
+        "to_t": 385.666667,
+        "to_world_xy": [
+          -0.114321,
+          3.619736
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 11569,
+      "start_t": 385.633333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 11785,
+      "end_t": 392.833333,
+      "max_speed_m_s": 29.786137,
+      "max_step": {
+        "distance_m": 0.992871,
+        "dt_s": 0.033333,
+        "from_frame": 11783,
+        "from_t": 392.766667,
+        "from_world_xy": [
+          0.319967,
+          4.847421
+        ],
+        "speed_m_s": 29.786137,
+        "to_frame": 11784,
+        "to_t": 392.8,
+        "to_world_xy": [
+          0.68624,
+          3.924579
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 11781,
+      "start_t": 392.7,
+      "step_count": 4
+    },
+    {
+      "end_frame": 11801,
+      "end_t": 393.366667,
+      "max_speed_m_s": 22.282987,
+      "max_step": {
+        "distance_m": 0.742766,
+        "dt_s": 0.033333,
+        "from_frame": 11800,
+        "from_t": 393.333333,
+        "from_world_xy": [
+          1.378957,
+          4.002982
+        ],
+        "speed_m_s": 22.282987,
+        "to_frame": 11801,
+        "to_t": 393.366667,
+        "to_world_xy": [
+          1.197787,
+          4.723314
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 11800,
+      "start_t": 393.333333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 12291,
+      "end_t": 409.7,
+      "max_speed_m_s": 11.056384,
+      "max_step": {
+        "distance_m": 0.368546,
+        "dt_s": 0.033333,
+        "from_frame": 12290,
+        "from_t": 409.666667,
+        "from_world_xy": [
+          -1.148789,
+          5.838092
+        ],
+        "speed_m_s": 11.056384,
+        "to_frame": 12291,
+        "to_t": 409.7,
+        "to_world_xy": [
+          -1.011217,
+          5.496185
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 12290,
+      "start_t": 409.666667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 12587,
+      "end_t": 419.566667,
+      "max_speed_m_s": 18.067284,
+      "max_step": {
+        "distance_m": 0.602243,
+        "dt_s": 0.033333,
+        "from_frame": 12586,
+        "from_t": 419.533333,
+        "from_world_xy": [
+          1.707725,
+          7.591142
+        ],
+        "speed_m_s": 18.067284,
+        "to_frame": 12587,
+        "to_t": 419.566667,
+        "to_world_xy": [
+          1.84523,
+          7.004807
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 12586,
+      "start_t": 419.533333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 12693,
+      "end_t": 423.1,
+      "max_speed_m_s": 10.808012,
+      "max_step": {
+        "distance_m": 0.360267,
+        "dt_s": 0.033333,
+        "from_frame": 12692,
+        "from_t": 423.066667,
+        "from_world_xy": [
+          -0.407192,
+          4.565198
+        ],
+        "speed_m_s": 10.808012,
+        "to_frame": 12693,
+        "to_t": 423.1,
+        "to_world_xy": [
+          -0.296667,
+          4.222303
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 12692,
+      "start_t": 423.066667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 13603,
+      "end_t": 453.433333,
+      "max_speed_m_s": 16.298409,
+      "max_step": {
+        "distance_m": 0.54328,
+        "dt_s": 0.033333,
+        "from_frame": 13601,
+        "from_t": 453.366667,
+        "from_world_xy": [
+          -1.877042,
+          7.350534
+        ],
+        "speed_m_s": 16.298409,
+        "to_frame": 13602,
+        "to_t": 453.4,
+        "to_world_xy": [
+          -1.654453,
+          6.854945
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 13601,
+      "start_t": 453.366667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 13695,
+      "end_t": 456.5,
+      "max_speed_m_s": 11.576443,
+      "max_step": {
+        "distance_m": 0.385881,
+        "dt_s": 0.033333,
+        "from_frame": 13694,
+        "from_t": 456.466667,
+        "from_world_xy": [
+          -0.016427,
+          4.598365
+        ],
+        "speed_m_s": 11.576443,
+        "to_frame": 13695,
+        "to_t": 456.5,
+        "to_world_xy": [
+          -0.159371,
+          4.956795
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 13694,
+      "start_t": 456.466667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 13900,
+      "end_t": 463.333333,
+      "max_speed_m_s": 13.238511,
+      "max_step": {
+        "distance_m": 0.441284,
+        "dt_s": 0.033333,
+        "from_frame": 13899,
+        "from_t": 463.3,
+        "from_world_xy": [
+          -0.956379,
+          6.903067
+        ],
+        "speed_m_s": 13.238511,
+        "to_frame": 13900,
+        "to_t": 463.333333,
+        "to_world_xy": [
+          -1.076408,
+          7.327714
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 13899,
+      "start_t": 463.3,
+      "step_count": 1
+    },
+    {
+      "end_frame": 13920,
+      "end_t": 464.0,
+      "max_speed_m_s": 10.835845,
+      "max_step": {
+        "distance_m": 0.361195,
+        "dt_s": 0.033333,
+        "from_frame": 13919,
+        "from_t": 463.966667,
+        "from_world_xy": [
+          -1.419719,
+          7.035749
+        ],
+        "speed_m_s": 10.835845,
+        "to_frame": 13920,
+        "to_t": 464.0,
+        "to_world_xy": [
+          -1.585911,
+          7.356439
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 13919,
+      "start_t": 463.966667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 14122,
+      "end_t": 470.733333,
+      "max_speed_m_s": 15.437431,
+      "max_step": {
+        "distance_m": 0.514581,
+        "dt_s": 0.033333,
+        "from_frame": 14121,
+        "from_t": 470.7,
+        "from_world_xy": [
+          -1.196141,
+          6.610522
+        ],
+        "speed_m_s": 15.437431,
+        "to_frame": 14122,
+        "to_t": 470.733333,
+        "to_world_xy": [
+          -1.017611,
+          6.127904
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 14121,
+      "start_t": 470.7,
+      "step_count": 1
+    },
+    {
+      "end_frame": 14189,
+      "end_t": 472.966667,
+      "max_speed_m_s": 14.077946,
+      "max_step": {
+        "distance_m": 0.469265,
+        "dt_s": 0.033333,
+        "from_frame": 14188,
+        "from_t": 472.933333,
+        "from_world_xy": [
+          -0.757774,
+          3.41937
+        ],
+        "speed_m_s": 14.077946,
+        "to_frame": 14189,
+        "to_t": 472.966667,
+        "to_world_xy": [
+          -0.983128,
+          3.830983
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 14188,
+      "start_t": 472.933333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 14193,
+      "end_t": 473.1,
+      "max_speed_m_s": 12.211761,
+      "max_step": {
+        "distance_m": 0.407059,
+        "dt_s": 0.033333,
+        "from_frame": 14192,
+        "from_t": 473.066667,
+        "from_world_xy": [
+          -0.924347,
+          3.646957
+        ],
+        "speed_m_s": 12.211761,
+        "to_frame": 14193,
+        "to_t": 473.1,
+        "to_world_xy": [
+          -0.732136,
+          3.288137
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 14192,
+      "start_t": 473.066667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 14590,
+      "end_t": 486.333333,
+      "max_speed_m_s": 42.784139,
+      "max_step": {
+        "distance_m": 1.426138,
+        "dt_s": 0.033333,
+        "from_frame": 14588,
+        "from_t": 486.266667,
+        "from_world_xy": [
+          -2.547951,
+          3.834363
+        ],
+        "speed_m_s": 42.784139,
+        "to_frame": 14589,
+        "to_t": 486.3,
+        "to_world_xy": [
+          -1.755189,
+          2.648868
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 14584,
+      "start_t": 486.133333,
+      "step_count": 6
+    },
+    {
+      "end_frame": 14784,
+      "end_t": 492.8,
+      "max_speed_m_s": 13.20295,
+      "max_step": {
+        "distance_m": 0.440098,
+        "dt_s": 0.033333,
+        "from_frame": 14783,
+        "from_t": 492.766667,
+        "from_world_xy": [
+          -1.328562,
+          2.71041
+        ],
+        "speed_m_s": 13.20295,
+        "to_frame": 14784,
+        "to_t": 492.8,
+        "to_world_xy": [
+          -1.538847,
+          3.097019
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 14783,
+      "start_t": 492.766667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 15115,
+      "end_t": 503.833333,
+      "max_speed_m_s": 16.921073,
+      "max_step": {
+        "distance_m": 0.564036,
+        "dt_s": 0.033333,
+        "from_frame": 15113,
+        "from_t": 503.766667,
+        "from_world_xy": [
+          -1.922666,
+          6.704629
+        ],
+        "speed_m_s": 16.921073,
+        "to_frame": 15114,
+        "to_t": 503.8,
+        "to_world_xy": [
+          -1.68897,
+          6.191285
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 15113,
+      "start_t": 503.766667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 15140,
+      "end_t": 504.666667,
+      "max_speed_m_s": 10.723238,
+      "max_step": {
+        "distance_m": 0.357441,
+        "dt_s": 0.033333,
+        "from_frame": 15139,
+        "from_t": 504.633333,
+        "from_world_xy": [
+          -1.290118,
+          3.791419
+        ],
+        "speed_m_s": 10.723238,
+        "to_frame": 15140,
+        "to_t": 504.666667,
+        "to_world_xy": [
+          -1.137682,
+          3.468113
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 15139,
+      "start_t": 504.633333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 15996,
+      "end_t": 533.2,
+      "max_speed_m_s": 13.943342,
+      "max_step": {
+        "distance_m": 0.464778,
+        "dt_s": 0.033333,
+        "from_frame": 15995,
+        "from_t": 533.166667,
+        "from_world_xy": [
+          -1.62784,
+          6.610449
+        ],
+        "speed_m_s": 13.943342,
+        "to_frame": 15996,
+        "to_t": 533.2,
+        "to_world_xy": [
+          -1.823598,
+          7.031991
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 15995,
+      "start_t": 533.166667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 16213,
+      "end_t": 540.433333,
+      "max_speed_m_s": 19.55179,
+      "max_step": {
+        "distance_m": 0.651726,
+        "dt_s": 0.033333,
+        "from_frame": 16211,
+        "from_t": 540.366667,
+        "from_world_xy": [
+          -2.22235,
+          3.225763
+        ],
+        "speed_m_s": 19.55179,
+        "to_frame": 16212,
+        "to_t": 540.4,
+        "to_world_xy": [
+          -1.848822,
+          2.6917
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 16211,
+      "start_t": 540.366667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 16398,
+      "end_t": 546.6,
+      "max_speed_m_s": 14.378488,
+      "max_step": {
+        "distance_m": 0.479283,
+        "dt_s": 0.033333,
+        "from_frame": 16397,
+        "from_t": 546.566667,
+        "from_world_xy": [
+          -2.137986,
+          3.32114
+        ],
+        "speed_m_s": 14.378488,
+        "to_frame": 16398,
+        "to_t": 546.6,
+        "to_world_xy": [
+          -1.826611,
+          2.95678
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 16397,
+      "start_t": 546.566667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 16466,
+      "end_t": 548.866667,
+      "max_speed_m_s": 10.239745,
+      "max_step": {
+        "distance_m": 0.341325,
+        "dt_s": 0.033333,
+        "from_frame": 16465,
+        "from_t": 548.833333,
+        "from_world_xy": [
+          0.376836,
+          2.977515
+        ],
+        "speed_m_s": 10.239745,
+        "to_frame": 16466,
+        "to_t": 548.866667,
+        "to_world_xy": [
+          0.265492,
+          3.300168
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 16465,
+      "start_t": 548.833333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 17188,
+      "end_t": 572.933333,
+      "max_speed_m_s": 10.151458,
+      "max_step": {
+        "distance_m": 0.338382,
+        "dt_s": 0.033333,
+        "from_frame": 17187,
+        "from_t": 572.9,
+        "from_world_xy": [
+          -1.56192,
+          7.110937
+        ],
+        "speed_m_s": 10.151458,
+        "to_frame": 17188,
+        "to_t": 572.933333,
+        "to_world_xy": [
+          -1.705948,
+          7.417137
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17187,
+      "start_t": 572.9,
+      "step_count": 1
+    },
+    {
+      "end_frame": 17305,
+      "end_t": 576.833333,
+      "max_speed_m_s": 12.481856,
+      "max_step": {
+        "distance_m": 0.416062,
+        "dt_s": 0.033333,
+        "from_frame": 17304,
+        "from_t": 576.8,
+        "from_world_xy": [
+          -1.913212,
+          7.53922
+        ],
+        "speed_m_s": 12.481856,
+        "to_frame": 17305,
+        "to_t": 576.833333,
+        "to_world_xy": [
+          -1.588284,
+          7.279357
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17304,
+      "start_t": 576.8,
+      "step_count": 1
+    },
+    {
+      "end_frame": 17315,
+      "end_t": 577.166667,
+      "max_speed_m_s": 10.653285,
+      "max_step": {
+        "distance_m": 0.355109,
+        "dt_s": 0.033333,
+        "from_frame": 17314,
+        "from_t": 577.133333,
+        "from_world_xy": [
+          -1.841924,
+          7.266445
+        ],
+        "speed_m_s": 10.653285,
+        "to_frame": 17315,
+        "to_t": 577.166667,
+        "to_world_xy": [
+          -1.724599,
+          6.931277
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17314,
+      "start_t": 577.133333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 17320,
+      "end_t": 577.333333,
+      "max_speed_m_s": 21.01834,
+      "max_step": {
+        "distance_m": 0.700611,
+        "dt_s": 0.033333,
+        "from_frame": 17319,
+        "from_t": 577.3,
+        "from_world_xy": [
+          -1.693027,
+          6.528679
+        ],
+        "speed_m_s": 21.01834,
+        "to_frame": 17320,
+        "to_t": 577.333333,
+        "to_world_xy": [
+          -2.007033,
+          7.154983
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17319,
+      "start_t": 577.3,
+      "step_count": 1
+    },
+    {
+      "end_frame": 17323,
+      "end_t": 577.433333,
+      "max_speed_m_s": 21.792636,
+      "max_step": {
+        "distance_m": 0.726421,
+        "dt_s": 0.033333,
+        "from_frame": 17322,
+        "from_t": 577.4,
+        "from_world_xy": [
+          -1.831733,
+          6.613331
+        ],
+        "speed_m_s": 21.792636,
+        "to_frame": 17323,
+        "to_t": 577.433333,
+        "to_world_xy": [
+          -1.538436,
+          5.948752
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17322,
+      "start_t": 577.4,
+      "step_count": 1
+    },
+    {
+      "end_frame": 17329,
+      "end_t": 577.633333,
+      "max_speed_m_s": 19.19417,
+      "max_step": {
+        "distance_m": 0.639806,
+        "dt_s": 0.033333,
+        "from_frame": 17327,
+        "from_t": 577.566667,
+        "from_world_xy": [
+          -1.500986,
+          5.567246
+        ],
+        "speed_m_s": 19.19417,
+        "to_frame": 17328,
+        "to_t": 577.6,
+        "to_world_xy": [
+          -1.255614,
+          4.976363
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17327,
+      "start_t": 577.566667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 17337,
+      "end_t": 577.9,
+      "max_speed_m_s": 10.485357,
+      "max_step": {
+        "distance_m": 0.349512,
+        "dt_s": 0.033333,
+        "from_frame": 17336,
+        "from_t": 577.866667,
+        "from_world_xy": [
+          -1.380352,
+          4.512651
+        ],
+        "speed_m_s": 10.485357,
+        "to_frame": 17337,
+        "to_t": 577.9,
+        "to_world_xy": [
+          -1.298086,
+          4.172959
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17336,
+      "start_t": 577.866667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 17921,
+      "end_t": 597.366667,
+      "max_speed_m_s": 13.793438,
+      "max_step": {
+        "distance_m": 0.459781,
+        "dt_s": 0.033333,
+        "from_frame": 17916,
+        "from_t": 597.2,
+        "from_world_xy": [
+          -0.442891,
+          5.985962
+        ],
+        "speed_m_s": 13.793438,
+        "to_frame": 17917,
+        "to_t": 597.233333,
+        "to_world_xy": [
+          -0.759907,
+          6.318978
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17916,
+      "start_t": 597.2,
+      "step_count": 5
+    },
+    {
+      "end_frame": 17923,
+      "end_t": 597.433333,
+      "max_speed_m_s": 11.089811,
+      "max_step": {
+        "distance_m": 0.36966,
+        "dt_s": 0.033333,
+        "from_frame": 17922,
+        "from_t": 597.4,
+        "from_world_xy": [
+          -2.021713,
+          7.628888
+        ],
+        "speed_m_s": 11.089811,
+        "to_frame": 17923,
+        "to_t": 597.433333,
+        "to_world_xy": [
+          -1.867165,
+          7.293085
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17922,
+      "start_t": 597.4,
+      "step_count": 1
+    },
+    {
+      "end_frame": 17981,
+      "end_t": 599.366667,
+      "max_speed_m_s": 18.151274,
+      "max_step": {
+        "distance_m": 0.605042,
+        "dt_s": 0.033333,
+        "from_frame": 17980,
+        "from_t": 599.333333,
+        "from_world_xy": [
+          -1.983457,
+          7.558396
+        ],
+        "speed_m_s": 18.151274,
+        "to_frame": 17981,
+        "to_t": 599.366667,
+        "to_world_xy": [
+          -1.732889,
+          7.007676
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 17980,
+      "start_t": 599.333333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 18113,
+      "end_t": 603.766667,
+      "max_speed_m_s": 40.01085,
+      "max_step": {
+        "distance_m": 1.333695,
+        "dt_s": 0.033333,
+        "from_frame": 18112,
+        "from_t": 603.733333,
+        "from_world_xy": [
+          -1.26255,
+          6.674295
+        ],
+        "speed_m_s": 40.01085,
+        "to_frame": 18113,
+        "to_t": 603.766667,
+        "to_world_xy": [
+          -0.771367,
+          5.434343
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 18112,
+      "start_t": 603.733333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 18118,
+      "end_t": 603.933333,
+      "max_speed_m_s": 10.513851,
+      "max_step": {
+        "distance_m": 0.350462,
+        "dt_s": 0.033333,
+        "from_frame": 18117,
+        "from_t": 603.9,
+        "from_world_xy": [
+          -0.857982,
+          5.102611
+        ],
+        "speed_m_s": 10.513851,
+        "to_frame": 18118,
+        "to_t": 603.933333,
+        "to_world_xy": [
+          -0.795505,
+          4.757763
+        ]
+      },
+      "player_id": 3,
+      "start_frame": 18117,
+      "start_t": 603.9,
+      "step_count": 1
+    },
+    {
+      "end_frame": 853,
+      "end_t": 28.433333,
+      "max_speed_m_s": 14.152419,
+      "max_step": {
+        "distance_m": 0.471747,
+        "dt_s": 0.033333,
+        "from_frame": 852,
+        "from_t": 28.4,
+        "from_world_xy": [
+          -0.918004,
+          6.049736
+        ],
+        "speed_m_s": 14.152419,
+        "to_frame": 853,
+        "to_t": 28.433333,
+        "to_world_xy": [
+          -0.748427,
+          5.609521
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 852,
+      "start_t": 28.4,
+      "step_count": 1
+    },
+    {
+      "end_frame": 871,
+      "end_t": 29.033333,
+      "max_speed_m_s": 12.999403,
+      "max_step": {
+        "distance_m": 0.433313,
+        "dt_s": 0.033333,
+        "from_frame": 870,
+        "from_t": 29.0,
+        "from_world_xy": [
+          -0.971399,
+          5.055726
+        ],
+        "speed_m_s": 12.999403,
+        "to_frame": 871,
+        "to_t": 29.033333,
+        "to_world_xy": [
+          -1.150829,
+          5.450144
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 870,
+      "start_t": 29.0,
+      "step_count": 1
+    },
+    {
+      "end_frame": 965,
+      "end_t": 32.166667,
+      "max_speed_m_s": 13.381907,
+      "max_step": {
+        "distance_m": 0.446064,
+        "dt_s": 0.033333,
+        "from_frame": 964,
+        "from_t": 32.133333,
+        "from_world_xy": [
+          -1.569392,
+          2.769516
+        ],
+        "speed_m_s": 13.381907,
+        "to_frame": 965,
+        "to_t": 32.166667,
+        "to_world_xy": [
+          -1.737799,
+          3.182568
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 964,
+      "start_t": 32.133333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1261,
+      "end_t": 42.033333,
+      "max_speed_m_s": 10.617719,
+      "max_step": {
+        "distance_m": 0.353924,
+        "dt_s": 0.033333,
+        "from_frame": 1260,
+        "from_t": 42.0,
+        "from_world_xy": [
+          -0.834708,
+          3.694912
+        ],
+        "speed_m_s": 10.617719,
+        "to_frame": 1261,
+        "to_t": 42.033333,
+        "to_world_xy": [
+          -0.765201,
+          3.34788
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 1260,
+      "start_t": 42.0,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1368,
+      "end_t": 45.6,
+      "max_speed_m_s": 29.076643,
+      "max_step": {
+        "distance_m": 0.969221,
+        "dt_s": 0.033333,
+        "from_frame": 1367,
+        "from_t": 45.566667,
+        "from_world_xy": [
+          -0.001896,
+          4.191658
+        ],
+        "speed_m_s": 29.076643,
+        "to_frame": 1368,
+        "to_t": 45.6,
+        "to_world_xy": [
+          0.366277,
+          3.295088
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 1367,
+      "start_t": 45.566667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1399,
+      "end_t": 46.633333,
+      "max_speed_m_s": 11.359998,
+      "max_step": {
+        "distance_m": 0.378667,
+        "dt_s": 0.033333,
+        "from_frame": 1398,
+        "from_t": 46.6,
+        "from_world_xy": [
+          -0.338953,
+          5.857951
+        ],
+        "speed_m_s": 11.359998,
+        "to_frame": 1399,
+        "to_t": 46.633333,
+        "to_world_xy": [
+          -0.504196,
+          6.198661
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 1398,
+      "start_t": 46.6,
+      "step_count": 1
+    },
+    {
+      "end_frame": 1607,
+      "end_t": 53.566667,
+      "max_speed_m_s": 42.914804,
+      "max_step": {
+        "distance_m": 1.430493,
+        "dt_s": 0.033333,
+        "from_frame": 1605,
+        "from_t": 53.5,
+        "from_world_xy": [
+          -0.158201,
+          3.564266
+        ],
+        "speed_m_s": 42.914804,
+        "to_frame": 1606,
+        "to_t": 53.533333,
+        "to_world_xy": [
+          0.412344,
+          2.252477
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 1605,
+      "start_t": 53.5,
+      "step_count": 2
+    },
+    {
+      "end_frame": 2566,
+      "end_t": 85.533333,
+      "max_speed_m_s": 16.31565,
+      "max_step": {
+        "distance_m": 0.543855,
+        "dt_s": 0.033333,
+        "from_frame": 2565,
+        "from_t": 85.5,
+        "from_world_xy": [
+          -2.431481,
+          6.947099
+        ],
+        "speed_m_s": 16.31565,
+        "to_frame": 2566,
+        "to_t": 85.533333,
+        "to_world_xy": [
+          -2.248674,
+          6.434888
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2565,
+      "start_t": 85.5,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2571,
+      "end_t": 85.7,
+      "max_speed_m_s": 23.284672,
+      "max_step": {
+        "distance_m": 0.776156,
+        "dt_s": 0.033333,
+        "from_frame": 2570,
+        "from_t": 85.666667,
+        "from_world_xy": [
+          -2.369542,
+          6.408069
+        ],
+        "speed_m_s": 23.284672,
+        "to_frame": 2571,
+        "to_t": 85.7,
+        "to_world_xy": [
+          -2.036408,
+          5.707042
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2570,
+      "start_t": 85.666667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2575,
+      "end_t": 85.833333,
+      "max_speed_m_s": 17.586686,
+      "max_step": {
+        "distance_m": 0.586223,
+        "dt_s": 0.033333,
+        "from_frame": 2574,
+        "from_t": 85.8,
+        "from_world_xy": [
+          -2.272617,
+          6.08798
+        ],
+        "speed_m_s": 17.586686,
+        "to_frame": 2575,
+        "to_t": 85.833333,
+        "to_world_xy": [
+          -2.024377,
+          5.556911
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2574,
+      "start_t": 85.8,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2577,
+      "end_t": 85.9,
+      "max_speed_m_s": 11.951662,
+      "max_step": {
+        "distance_m": 0.398389,
+        "dt_s": 0.033333,
+        "from_frame": 2576,
+        "from_t": 85.866667,
+        "from_world_xy": [
+          -1.929714,
+          5.314419
+        ],
+        "speed_m_s": 11.951662,
+        "to_frame": 2577,
+        "to_t": 85.9,
+        "to_world_xy": [
+          -1.768993,
+          4.949888
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2576,
+      "start_t": 85.866667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2579,
+      "end_t": 85.966667,
+      "max_speed_m_s": 10.470492,
+      "max_step": {
+        "distance_m": 0.349016,
+        "dt_s": 0.033333,
+        "from_frame": 2578,
+        "from_t": 85.933333,
+        "from_world_xy": [
+          -1.702279,
+          4.760284
+        ],
+        "speed_m_s": 10.470492,
+        "to_frame": 2579,
+        "to_t": 85.966667,
+        "to_world_xy": [
+          -1.554946,
+          4.44389
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2578,
+      "start_t": 85.933333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2758,
+      "end_t": 91.933333,
+      "max_speed_m_s": 13.025347,
+      "max_step": {
+        "distance_m": 0.434178,
+        "dt_s": 0.033333,
+        "from_frame": 2757,
+        "from_t": 91.9,
+        "from_world_xy": [
+          -0.969777,
+          7.066671
+        ],
+        "speed_m_s": 13.025347,
+        "to_frame": 2758,
+        "to_t": 91.933333,
+        "to_world_xy": [
+          -1.121172,
+          7.473599
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2757,
+      "start_t": 91.9,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2761,
+      "end_t": 92.033333,
+      "max_speed_m_s": 10.393233,
+      "max_step": {
+        "distance_m": 0.346441,
+        "dt_s": 0.033333,
+        "from_frame": 2760,
+        "from_t": 92.0,
+        "from_world_xy": [
+          -0.989757,
+          7.217365
+        ],
+        "speed_m_s": 10.393233,
+        "to_frame": 2761,
+        "to_t": 92.033333,
+        "to_world_xy": [
+          -0.853766,
+          6.898731
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2760,
+      "start_t": 92.0,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2899,
+      "end_t": 96.633333,
+      "max_speed_m_s": 11.013188,
+      "max_step": {
+        "distance_m": 0.367106,
+        "dt_s": 0.033333,
+        "from_frame": 2898,
+        "from_t": 96.6,
+        "from_world_xy": [
+          -1.000388,
+          6.942992
+        ],
+        "speed_m_s": 11.013188,
+        "to_frame": 2899,
+        "to_t": 96.633333,
+        "to_world_xy": [
+          -1.12467,
+          7.28842
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2898,
+      "start_t": 96.6,
+      "step_count": 1
+    },
+    {
+      "end_frame": 2903,
+      "end_t": 96.766667,
+      "max_speed_m_s": 14.038884,
+      "max_step": {
+        "distance_m": 0.467963,
+        "dt_s": 0.033333,
+        "from_frame": 2902,
+        "from_t": 96.733333,
+        "from_world_xy": [
+          -1.12567,
+          7.227031
+        ],
+        "speed_m_s": 14.038884,
+        "to_frame": 2903,
+        "to_t": 96.766667,
+        "to_world_xy": [
+          -0.95851,
+          6.789943
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2901,
+      "start_t": 96.7,
+      "step_count": 2
+    },
+    {
+      "end_frame": 2907,
+      "end_t": 96.9,
+      "max_speed_m_s": 25.835367,
+      "max_step": {
+        "distance_m": 0.861179,
+        "dt_s": 0.033333,
+        "from_frame": 2906,
+        "from_t": 96.866667,
+        "from_world_xy": [
+          -1.234332,
+          7.50947
+        ],
+        "speed_m_s": 25.835367,
+        "to_frame": 2907,
+        "to_t": 96.9,
+        "to_world_xy": [
+          -0.907529,
+          6.712709
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2904,
+      "start_t": 96.8,
+      "step_count": 3
+    },
+    {
+      "end_frame": 2923,
+      "end_t": 97.433333,
+      "max_speed_m_s": 10.856314,
+      "max_step": {
+        "distance_m": 0.361877,
+        "dt_s": 0.033333,
+        "from_frame": 2922,
+        "from_t": 97.4,
+        "from_world_xy": [
+          -0.702651,
+          6.454858
+        ],
+        "speed_m_s": 10.856314,
+        "to_frame": 2923,
+        "to_t": 97.433333,
+        "to_world_xy": [
+          -0.848017,
+          6.786255
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 2922,
+      "start_t": 97.4,
+      "step_count": 1
+    },
+    {
+      "end_frame": 3118,
+      "end_t": 103.933333,
+      "max_speed_m_s": 37.484943,
+      "max_step": {
+        "distance_m": 1.249498,
+        "dt_s": 0.033333,
+        "from_frame": 3117,
+        "from_t": 103.9,
+        "from_world_xy": [
+          -0.920533,
+          2.687456
+        ],
+        "speed_m_s": 37.484943,
+        "to_frame": 3118,
+        "to_t": 103.933333,
+        "to_world_xy": [
+          -1.522695,
+          3.782283
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 3117,
+      "start_t": 103.9,
+      "step_count": 1
+    },
+    {
+      "end_frame": 3230,
+      "end_t": 107.666667,
+      "max_speed_m_s": 14.982907,
+      "max_step": {
+        "distance_m": 0.49943,
+        "dt_s": 0.033333,
+        "from_frame": 3229,
+        "from_t": 107.633333,
+        "from_world_xy": [
+          0.503403,
+          3.518731
+        ],
+        "speed_m_s": 14.982907,
+        "to_frame": 3230,
+        "to_t": 107.666667,
+        "to_world_xy": [
+          0.694698,
+          3.057389
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 3228,
+      "start_t": 107.6,
+      "step_count": 2
+    },
+    {
+      "end_frame": 4368,
+      "end_t": 145.6,
+      "max_speed_m_s": 15.671808,
+      "max_step": {
+        "distance_m": 4.179149,
+        "dt_s": 0.266667,
+        "from_frame": 4358,
+        "from_t": 145.266667,
+        "from_world_xy": [
+          0.527468,
+          2.045212
+        ],
+        "speed_m_s": 15.671808,
+        "to_frame": 4366,
+        "to_t": 145.533333,
+        "to_world_xy": [
+          -0.705874,
+          6.038225
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 4358,
+      "start_t": 145.266667,
+      "step_count": 3
+    },
+    {
+      "end_frame": 4409,
+      "end_t": 146.966667,
+      "max_speed_m_s": 40.631911,
+      "max_step": {
+        "distance_m": 1.354397,
+        "dt_s": 0.033333,
+        "from_frame": 4406,
+        "from_t": 146.866667,
+        "from_world_xy": [
+          -0.283134,
+          5.734798
+        ],
+        "speed_m_s": 40.631911,
+        "to_frame": 4407,
+        "to_t": 146.9,
+        "to_world_xy": [
+          0.222793,
+          4.478443
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 4406,
+      "start_t": 146.866667,
+      "step_count": 3
+    },
+    {
+      "end_frame": 4412,
+      "end_t": 147.066667,
+      "max_speed_m_s": 10.386757,
+      "max_step": {
+        "distance_m": 0.346225,
+        "dt_s": 0.033333,
+        "from_frame": 4411,
+        "from_t": 147.033333,
+        "from_world_xy": [
+          -0.475092,
+          6.33239
+        ],
+        "speed_m_s": 10.386757,
+        "to_frame": 4412,
+        "to_t": 147.066667,
+        "to_world_xy": [
+          -0.600294,
+          6.655185
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 4411,
+      "start_t": 147.033333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 4439,
+      "end_t": 147.966667,
+      "max_speed_m_s": 10.171921,
+      "max_step": {
+        "distance_m": 0.339064,
+        "dt_s": 0.033333,
+        "from_frame": 4438,
+        "from_t": 147.933333,
+        "from_world_xy": [
+          -0.860606,
+          6.734201
+        ],
+        "speed_m_s": 10.171921,
+        "to_frame": 4439,
+        "to_t": 147.966667,
+        "to_world_xy": [
+          -0.70206,
+          6.434489
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 4438,
+      "start_t": 147.933333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 4755,
+      "end_t": 158.5,
+      "max_speed_m_s": 12.596826,
+      "max_step": {
+        "distance_m": 0.419894,
+        "dt_s": 0.033333,
+        "from_frame": 4754,
+        "from_t": 158.466667,
+        "from_world_xy": [
+          -0.039865,
+          2.336051
+        ],
+        "speed_m_s": 12.596826,
+        "to_frame": 4755,
+        "to_t": 158.5,
+        "to_world_xy": [
+          -0.296143,
+          2.668667
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 4754,
+      "start_t": 158.466667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 5111,
+      "end_t": 170.366667,
+      "max_speed_m_s": 19.983077,
+      "max_step": {
+        "distance_m": 0.666103,
+        "dt_s": 0.033333,
+        "from_frame": 5110,
+        "from_t": 170.333333,
+        "from_world_xy": [
+          -1.978795,
+          6.957663
+        ],
+        "speed_m_s": 19.983077,
+        "to_frame": 5111,
+        "to_t": 170.366667,
+        "to_world_xy": [
+          -2.325394,
+          7.526488
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 5110,
+      "start_t": 170.333333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 5120,
+      "end_t": 170.666667,
+      "max_speed_m_s": 12.920425,
+      "max_step": {
+        "distance_m": 0.430681,
+        "dt_s": 0.033333,
+        "from_frame": 5117,
+        "from_t": 170.566667,
+        "from_world_xy": [
+          -2.521998,
+          7.590392
+        ],
+        "speed_m_s": 12.920425,
+        "to_frame": 5118,
+        "to_t": 170.6,
+        "to_world_xy": [
+          -2.369331,
+          7.187677
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 5117,
+      "start_t": 170.566667,
+      "step_count": 3
+    },
+    {
+      "end_frame": 5133,
+      "end_t": 171.1,
+      "max_speed_m_s": 21.158208,
+      "max_step": {
+        "distance_m": 0.705274,
+        "dt_s": 0.033333,
+        "from_frame": 5131,
+        "from_t": 171.033333,
+        "from_world_xy": [
+          -1.91986,
+          5.585128
+        ],
+        "speed_m_s": 21.158208,
+        "to_frame": 5132,
+        "to_t": 171.066667,
+        "to_world_xy": [
+          -1.614897,
+          4.949197
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 5131,
+      "start_t": 171.033333,
+      "step_count": 2
+    },
+    {
+      "end_frame": 5136,
+      "end_t": 171.2,
+      "max_speed_m_s": 10.898261,
+      "max_step": {
+        "distance_m": 0.363275,
+        "dt_s": 0.033333,
+        "from_frame": 5135,
+        "from_t": 171.166667,
+        "from_world_xy": [
+          -1.300916,
+          4.213886
+        ],
+        "speed_m_s": 10.898261,
+        "to_frame": 5136,
+        "to_t": 171.2,
+        "to_world_xy": [
+          -1.153863,
+          3.881705
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 5135,
+      "start_t": 171.166667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 6121,
+      "end_t": 204.033333,
+      "max_speed_m_s": 14.224389,
+      "max_step": {
+        "distance_m": 0.474146,
+        "dt_s": 0.033333,
+        "from_frame": 6120,
+        "from_t": 204.0,
+        "from_world_xy": [
+          -0.738177,
+          6.80045
+        ],
+        "speed_m_s": 14.224389,
+        "to_frame": 6121,
+        "to_t": 204.033333,
+        "to_world_xy": [
+          -0.560209,
+          6.36097
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 6120,
+      "start_t": 204.0,
+      "step_count": 1
+    },
+    {
+      "end_frame": 6213,
+      "end_t": 207.1,
+      "max_speed_m_s": 14.027064,
+      "max_step": {
+        "distance_m": 0.467569,
+        "dt_s": 0.033333,
+        "from_frame": 6212,
+        "from_t": 207.066667,
+        "from_world_xy": [
+          -0.503723,
+          3.375622
+        ],
+        "speed_m_s": 14.027064,
+        "to_frame": 6213,
+        "to_t": 207.1,
+        "to_world_xy": [
+          -0.325793,
+          2.943232
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 6212,
+      "start_t": 207.066667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 6581,
+      "end_t": 219.366667,
+      "max_speed_m_s": 11.25123,
+      "max_step": {
+        "distance_m": 0.375041,
+        "dt_s": 0.033333,
+        "from_frame": 6580,
+        "from_t": 219.333333,
+        "from_world_xy": [
+          -0.509862,
+          3.838527
+        ],
+        "speed_m_s": 11.25123,
+        "to_frame": 6581,
+        "to_t": 219.366667,
+        "to_world_xy": [
+          -0.395919,
+          3.481214
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 6580,
+      "start_t": 219.333333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 6697,
+      "end_t": 223.233333,
+      "max_speed_m_s": 24.925212,
+      "max_step": {
+        "distance_m": 0.83084,
+        "dt_s": 0.033333,
+        "from_frame": 6696,
+        "from_t": 223.2,
+        "from_world_xy": [
+          -0.934254,
+          6.925827
+        ],
+        "speed_m_s": 24.925212,
+        "to_frame": 6697,
+        "to_t": 223.233333,
+        "to_world_xy": [
+          -0.592125,
+          6.168698
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 6694,
+      "start_t": 223.133333,
+      "step_count": 3
+    },
+    {
+      "end_frame": 6734,
+      "end_t": 224.466667,
+      "max_speed_m_s": 10.734824,
+      "max_step": {
+        "distance_m": 0.357827,
+        "dt_s": 0.033333,
+        "from_frame": 6733,
+        "from_t": 224.433333,
+        "from_world_xy": [
+          -0.471103,
+          6.989142
+        ],
+        "speed_m_s": 10.734824,
+        "to_frame": 6734,
+        "to_t": 224.466667,
+        "to_world_xy": [
+          -0.340166,
+          6.656131
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 6733,
+      "start_t": 224.433333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7258,
+      "end_t": 241.933333,
+      "max_speed_m_s": 13.236357,
+      "max_step": {
+        "distance_m": 0.441212,
+        "dt_s": 0.033333,
+        "from_frame": 7257,
+        "from_t": 241.9,
+        "from_world_xy": [
+          -0.518563,
+          2.370467
+        ],
+        "speed_m_s": 13.236357,
+        "to_frame": 7258,
+        "to_t": 241.933333,
+        "to_world_xy": [
+          -0.297732,
+          1.988496
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7257,
+      "start_t": 241.9,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7417,
+      "end_t": 247.233333,
+      "max_speed_m_s": 24.332493,
+      "max_step": {
+        "distance_m": 0.811083,
+        "dt_s": 0.033333,
+        "from_frame": 7415,
+        "from_t": 247.166667,
+        "from_world_xy": [
+          0.478537,
+          3.895757
+        ],
+        "speed_m_s": 24.332493,
+        "to_frame": 7416,
+        "to_t": 247.2,
+        "to_world_xy": [
+          0.784413,
+          3.144561
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7415,
+      "start_t": 247.166667,
+      "step_count": 2
+    },
+    {
+      "end_frame": 7419,
+      "end_t": 247.3,
+      "max_speed_m_s": 15.418461,
+      "max_step": {
+        "distance_m": 0.513949,
+        "dt_s": 0.033333,
+        "from_frame": 7418,
+        "from_t": 247.266667,
+        "from_world_xy": [
+          0.888801,
+          2.945732
+        ],
+        "speed_m_s": 15.418461,
+        "to_frame": 7419,
+        "to_t": 247.3,
+        "to_world_xy": [
+          0.712918,
+          3.428649
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7418,
+      "start_t": 247.266667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7467,
+      "end_t": 248.9,
+      "max_speed_m_s": 19.335348,
+      "max_step": {
+        "distance_m": 0.644512,
+        "dt_s": 0.033333,
+        "from_frame": 7466,
+        "from_t": 248.866667,
+        "from_world_xy": [
+          0.817093,
+          5.189104
+        ],
+        "speed_m_s": 19.335348,
+        "to_frame": 7467,
+        "to_t": 248.9,
+        "to_world_xy": [
+          1.039947,
+          4.584347
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7466,
+      "start_t": 248.866667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7473,
+      "end_t": 249.1,
+      "max_speed_m_s": 28.895589,
+      "max_step": {
+        "distance_m": 0.963186,
+        "dt_s": 0.033333,
+        "from_frame": 7472,
+        "from_t": 249.066667,
+        "from_world_xy": [
+          0.700567,
+          5.718835
+        ],
+        "speed_m_s": 28.895589,
+        "to_frame": 7473,
+        "to_t": 249.1,
+        "to_world_xy": [
+          0.997356,
+          4.802514
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7470,
+      "start_t": 249.0,
+      "step_count": 3
+    },
+    {
+      "end_frame": 7475,
+      "end_t": 249.166667,
+      "max_speed_m_s": 12.482893,
+      "max_step": {
+        "distance_m": 0.416096,
+        "dt_s": 0.033333,
+        "from_frame": 7474,
+        "from_t": 249.133333,
+        "from_world_xy": [
+          1.008121,
+          4.767111
+        ],
+        "speed_m_s": 12.482893,
+        "to_frame": 7475,
+        "to_t": 249.166667,
+        "to_world_xy": [
+          0.878072,
+          5.162363
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7474,
+      "start_t": 249.133333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7477,
+      "end_t": 249.233333,
+      "max_speed_m_s": 14.016513,
+      "max_step": {
+        "distance_m": 0.467217,
+        "dt_s": 0.033333,
+        "from_frame": 7476,
+        "from_t": 249.2,
+        "from_world_xy": [
+          0.781762,
+          5.43421
+        ],
+        "speed_m_s": 14.016513,
+        "to_frame": 7477,
+        "to_t": 249.233333,
+        "to_world_xy": [
+          0.627894,
+          5.875363
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7476,
+      "start_t": 249.2,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7503,
+      "end_t": 250.1,
+      "max_speed_m_s": 13.396718,
+      "max_step": {
+        "distance_m": 0.446557,
+        "dt_s": 0.033333,
+        "from_frame": 7502,
+        "from_t": 250.066667,
+        "from_world_xy": [
+          -0.055205,
+          6.636847
+        ],
+        "speed_m_s": 13.396718,
+        "to_frame": 7503,
+        "to_t": 250.1,
+        "to_world_xy": [
+          -0.209422,
+          7.05593
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7502,
+      "start_t": 250.066667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 7989,
+      "end_t": 266.3,
+      "max_speed_m_s": 17.147537,
+      "max_step": {
+        "distance_m": 0.571585,
+        "dt_s": 0.033333,
+        "from_frame": 7984,
+        "from_t": 266.133333,
+        "from_world_xy": [
+          -0.251025,
+          7.419215
+        ],
+        "speed_m_s": 17.147537,
+        "to_frame": 7985,
+        "to_t": 266.166667,
+        "to_world_xy": [
+          -0.038111,
+          6.888766
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7984,
+      "start_t": 266.133333,
+      "step_count": 5
+    },
+    {
+      "end_frame": 7992,
+      "end_t": 266.4,
+      "max_speed_m_s": 36.799874,
+      "max_step": {
+        "distance_m": 1.226662,
+        "dt_s": 0.033333,
+        "from_frame": 7991,
+        "from_t": 266.366667,
+        "from_world_xy": [
+          0.238904,
+          6.360007
+        ],
+        "speed_m_s": 36.799874,
+        "to_frame": 7992,
+        "to_t": 266.4,
+        "to_world_xy": [
+          -0.170373,
+          7.516378
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 7991,
+      "start_t": 266.366667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 8001,
+      "end_t": 266.7,
+      "max_speed_m_s": 18.493385,
+      "max_step": {
+        "distance_m": 0.616446,
+        "dt_s": 0.033333,
+        "from_frame": 8000,
+        "from_t": 266.666667,
+        "from_world_xy": [
+          0.016076,
+          7.231065
+        ],
+        "speed_m_s": 18.493385,
+        "to_frame": 8001,
+        "to_t": 266.7,
+        "to_world_xy": [
+          0.195334,
+          6.641257
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 8000,
+      "start_t": 266.666667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 8015,
+      "end_t": 267.166667,
+      "max_speed_m_s": 11.037449,
+      "max_step": {
+        "distance_m": 0.367915,
+        "dt_s": 0.033333,
+        "from_frame": 8014,
+        "from_t": 267.133333,
+        "from_world_xy": [
+          0.05695,
+          5.980997
+        ],
+        "speed_m_s": 11.037449,
+        "to_frame": 8015,
+        "to_t": 267.166667,
+        "to_world_xy": [
+          -0.084752,
+          6.320529
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 8014,
+      "start_t": 267.133333,
+      "step_count": 1
+    },
+    {
+      "end_frame": 8050,
+      "end_t": 268.333333,
+      "max_speed_m_s": 90.451606,
+      "max_step": {
+        "distance_m": 3.015054,
+        "dt_s": 0.033333,
+        "from_frame": 8046,
+        "from_t": 268.2,
+        "from_world_xy": [
+          -0.725148,
+          7.114322
+        ],
+        "speed_m_s": 90.451606,
+        "to_frame": 8047,
+        "to_t": 268.233333,
+        "to_world_xy": [
+          0.320949,
+          4.286562
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 8042,
+      "start_t": 268.066667,
+      "step_count": 8
+    },
+    {
+      "end_frame": 8054,
+      "end_t": 268.466667,
+      "max_speed_m_s": 32.129499,
+      "max_step": {
+        "distance_m": 1.070983,
+        "dt_s": 0.033333,
+        "from_frame": 8051,
+        "from_t": 268.366667,
+        "from_world_xy": [
+          -0.629132,
+          6.280846
+        ],
+        "speed_m_s": 32.129499,
+        "to_frame": 8052,
+        "to_t": 268.4,
+        "to_world_xy": [
+          -1.072648,
+          7.255679
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 8051,
+      "start_t": 268.366667,
+      "step_count": 3
+    },
+    {
+      "end_frame": 8075,
+      "end_t": 269.166667,
+      "max_speed_m_s": 14.652199,
+      "max_step": {
+        "distance_m": 2.93044,
+        "dt_s": 0.2,
+        "from_frame": 8069,
+        "from_t": 268.966667,
+        "from_world_xy": [
+          -0.679185,
+          5.15924
+        ],
+        "speed_m_s": 14.652199,
+        "to_frame": 8075,
+        "to_t": 269.166667,
+        "to_world_xy": [
+          0.542487,
+          2.495598
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 8069,
+      "start_t": 268.966667,
+      "step_count": 1
+    },
+    {
+      "end_frame": 8434,
+      "end_t": 281.133333,
+      "max_speed_m_s": 11.52905,
+      "max_step": {
+        "distance_m": 0.384302,
+        "dt_s": 0.033333,
+        "from_frame": 8433,
+        "from_t": 281.1,
+        "from_world_xy": [
+          0.83173,
+          6.847859
+        ],
+        "speed_m_s": 11.52905,
+        "to_frame": 8434,
+        "to_t": 281.133333,
+        "to_world_xy": [
+          0.947591,
+          6.481439
+        ]
+      },
+      "player_id": 4,
+      "start_frame": 8433,
+      "start_t": 281.1,
+      "step_count": 1
+    }
+  ],
+  "implausible_motion_speed_threshold_m_s": 10.0,
+  "implausible_motion_step_count": 238,
+  "implausible_motion_worst_offender": {
+    "end_frame": 5263,
+    "end_t": 175.433333,
+    "max_speed_m_s": 98.90414,
+    "max_step": {
+      "distance_m": 3.296805,
+      "dt_s": 0.033333,
+      "from_frame": 5261,
+      "from_t": 175.366667,
+      "from_world_xy": [
+        -2.887273,
+        0.832941
+      ],
+      "speed_m_s": 98.90414,
+      "to_frame": 5262,
+      "to_t": 175.4,
+      "to_world_xy": [
+        -0.757276,
+        -1.683412
+      ]
+    },
+    "player_id": 2,
+    "start_frame": 5256,
+    "start_t": 175.2,
+    "step_count": 7
+  },
+  "raw_pool_dir": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed",
+  "reid_checkpoint_provenance": {
+    "artifact_type": "racketsport_reid_checkpoint_training_provenance",
+    "dataset_manifest_path": null,
+    "has_local_training_provenance": false,
+    "held_out_val_clip_ids": [],
+    "notes": [
+      "No training_summary.json found near this checkpoint; treated as a stock/upstream ReID weight with no local fine-tune provenance."
+    ],
+    "schema_version": 1,
+    "trained_on_clip_ids": [],
+    "training_summary_path": null,
+    "weights_path": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/osnet_x1_0_market1501.pt",
+    "weights_sha256": "2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154"
+  },
+  "reused_embedding_export": false,
+  "schema_version": 1,
+  "score": null,
+  "score_bbox_scale_x": 1.0,
+  "score_bbox_scale_y": 1.0,
+  "score_image_height": 720.0,
+  "score_image_width": 1280.0,
+  "score_path": null,
+  "source_only": true,
+  "status": "ok",
+  "summary_path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed/global_association/raw_pool_authority_summary.json",
+  "tracks_path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed/global_association/tracks.json",
+  "uses_cvat_labels_for_candidate": false,
+  "wall_time_s": 384.444249
+}

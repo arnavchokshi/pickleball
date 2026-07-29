@@ -1,0 +1,5 @@
+gpu-eval-run: WARNING: could not use /run/gpu-lease; falling back to /tmp/gpu-lease (per-user TMPDIR). Another agent/user with a different TMPDIR will NOT share this lock -- coordinate a shared GPU_LEASE_ROOT on this host if concurrent GPU jobs are expected.
+/home/arnavchokshi/coldstart_20260706/body_runtime/Fast-SAM-3D-Body/sam_3d_body/models/heads/mhr_head.py:51: UserWarning: Momentum is not enabled
+  warnings.warn("Momentum is not enabled")
+/home/arnavchokshi/coldstart_20260706/body_runtime/body_venv/lib/python3.10/site-packages/torchreid/reid/metrics/rank.py:11: UserWarning: Cython evaluation (very fast so highly recommended) is unavailable, now use python evaluation.
+  warnings.warn(

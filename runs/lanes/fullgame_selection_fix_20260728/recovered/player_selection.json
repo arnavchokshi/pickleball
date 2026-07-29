@@ -1,0 +1,8 @@
+{
+  "artifact_type": "racketsport_process_video_stage_error",
+  "exception_type": "ValueError",
+  "message": "bound, unbound, and dropped raw UID sets must be disjoint",
+  "schema_version": 1,
+  "stage": "player_selection",
+  "traceback": "Traceback (most recent call last):\n  File \"/home/arnavchokshi/coldstart_20260706/repo/scripts/racketsport/process_video.py\", line 1687, in _run_stage_safely\n    outcome = fn()\n  File \"/home/arnavchokshi/coldstart_20260706/repo/scripts/racketsport/process_video.py\", line 3185, in _stage_player_selection\n    selected, report = select_players_payload(\n  File \"/home/arnavchokshi/coldstart_20260706/repo/threed/racketsport/player_selection.py\", line 1509, in select_players_payload\n    ) = _select_slot_players(\n  File \"/home/arnavchokshi/coldstart_20260706/repo/threed/racketsport/player_selection.py\", line 3605, in _select_slot_players\n    raise ValueError(\"bound, unbound, and dropped raw UID sets must be disjoint\")\nValueError: bound, unbound, and dropped raw UID sets must be disjoint\n"
+}

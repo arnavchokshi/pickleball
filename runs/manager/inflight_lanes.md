@@ -8,6 +8,34 @@ Standing fence: `brand-exploration/` is the OWNER'S untracked brand work — no 
 `cvat_upload/court_diversity_20260712/` + `w7_audit_stratum_20260709/` are staged local-only owner
 labeling packages (storage-allowlisted, intentionally untracked).
 
+## 2026-07-29T06:41Z — `fullgame_selection_fix_20260728` CLAIMED (in progress)
+
+GPU diagnosis + fix lane, continuing `fullgame_demo_20260728` (FAILED at
+player_selection, hung 2.5h, see that lane's REPORT.md). Recovered
+`tracks.json` + `PIPELINE_SUMMARY.json` + the typed `player_selection.json`
+stage error from the preserved `pickleball-gpu-court23` boot disk. Root
+cause reproduced CPU-locally at full scale (267 raw detection UIDs counted
+in both the unbound and dropped sets -- a Layer-C-recovered-then-hard-
+excluded detection was never removed from the stale pre-recovery unbound
+snapshot). Fixed in `threed/racketsport/player_selection.py`
+(`_select_slot_players`, commit `dadfcd4`); added a synthetic full-scale-
+mechanism regression test, TDD-verified against the pre-fix code. Also
+mitigated the separate post-failure-hang defect
+(`scripts/racketsport/process_video.py`'s `__main__` guard now hard-exits
+right after `main()` returns instead of trusting normal interpreter
+shutdown to be prompt). Synced court23 to this fix (stamp-verified
+`dadfcd4`) and dispatched the full 697.4s/20,922-frame rerun co-located
+(`court_skeletons`, `--body-local`, `--force`, `--max-players 4`, same
+input video + calibration file already staged from yesterday) at 06:55Z.
+Fence: this lane dir + VM-side work on court23 (did not touch night2). No
+`best_stack.json` changes. In progress; full findings + final rerun status
+will be delivered as this agent's text response to its caller (same
+harness restriction on committed `REPORT.md` files hit by
+`fullgame_demo_20260728`/`wolverine_slide_diag_20260728`/
+`plant_phase_plausibility_20260728` above) plus this ledger entry updated
+at close.
+
+
 ## 2026-07-28 — `ball_labels_round2_20260728` CLAIMED AND CLOSED (prep half: 4th clip online)
 
 Scope: small local CPU lane, no cloud actions. Fence: `runs/lanes/ball_labels_round2_20260728/`

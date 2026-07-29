@@ -1,0 +1,599 @@
+WARNING ⚠️ 'source' is missing. Using 'source=/home/arnavchokshi/coldstart_20260706/body_runtime/body_venv/lib/python3.10/site-packages/ultralytics/assets'.
+{
+  "artifact_type": "racketsport_process_video_pipeline_summary",
+  "best_stack": {
+    "manifest_revision": 18,
+    "overrides": {
+      "ball.arc_chain": {
+        "manifest": true,
+        "resolved": false
+      },
+      "body.skeleton_stride": {
+        "manifest": 2,
+        "resolved": 1
+      },
+      "camera_motion.policy": {
+        "manifest": {
+          "disable_flag_default": false,
+          "enable_flag_default": false,
+          "estimator": "hardened",
+          "flow_backend": "lk",
+          "mode": "auto",
+          "person_masks": true,
+          "threshold": 2.5
+        },
+        "resolved": {
+          "disable_flag_default": true,
+          "enable_flag_default": false,
+          "estimator": "hardened",
+          "flow_backend": "lk",
+          "mode": "disabled",
+          "person_masks": true,
+          "threshold": 2.5
+        }
+      },
+      "input_quality.preflight": {
+        "manifest": {
+          "allowed_modes": [
+            "advisory",
+            "strict",
+            "off"
+          ],
+          "band_on_rejection": "degraded_input",
+          "mode": "advisory",
+          "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+          "sampling": {
+            "sample_cadence_s": 1.0,
+            "sample_frame_count": 5
+          },
+          "thresholds": {
+            "max_duration_s": 900.0,
+            "max_luminance_mean": 0.98,
+            "max_missing_required_court_lines": 0,
+            "min_blur_laplacian_var": 25.0,
+            "min_camera_height_m": 1.0,
+            "min_duration_s": 1.0,
+            "min_fps": 30.0,
+            "min_full_court_corner_visibility_fraction": 1.0,
+            "min_height_px": 360,
+            "min_luminance_mean": 0.02,
+            "min_width_px": 640
+          }
+        },
+        "resolved": {
+          "allowed_modes": [
+            "advisory",
+            "strict",
+            "off"
+          ],
+          "band_on_rejection": "degraded_input",
+          "mode": "strict",
+          "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+          "sampling": {
+            "sample_cadence_s": 1.0,
+            "sample_frame_count": 5
+          },
+          "thresholds": {
+            "max_duration_s": 900.0,
+            "max_luminance_mean": 0.98,
+            "max_missing_required_court_lines": 0,
+            "min_blur_laplacian_var": 25.0,
+            "min_camera_height_m": 1.0,
+            "min_duration_s": 1.0,
+            "min_fps": 30.0,
+            "min_full_court_corner_visibility_fraction": 1.0,
+            "min_height_px": 360,
+            "min_luminance_mean": 0.02,
+            "min_width_px": 640
+          }
+        }
+      },
+      "paddle.fused_estimator": {
+        "manifest": {
+          "artifact": "racket_pose_estimate.json",
+          "enabled": true,
+          "source": "wrist_palm_grip_fused",
+          "trust_band": "estimated_preview"
+        },
+        "resolved": {
+          "artifact": "racket_pose_estimate.json",
+          "enabled": false,
+          "source": "wrist_palm_grip_fused",
+          "trust_band": "estimated_preview"
+        }
+      },
+      "stats.match_stats_v0": {
+        "manifest": {
+          "artifact": "match_stats.json",
+          "consumer_only": true,
+          "enabled": true,
+          "excluded_inputs": [
+            "ball",
+            "paddle"
+          ],
+          "opt_out_flag": "--no-match-stats",
+          "required_inputs": [
+            "placement.json",
+            "court_zones.json"
+          ]
+        },
+        "resolved": {
+          "artifact": "match_stats.json",
+          "consumer_only": true,
+          "enabled": false,
+          "excluded_inputs": [
+            "ball",
+            "paddle"
+          ],
+          "opt_out_flag": "--no-match-stats",
+          "required_inputs": [
+            "placement.json",
+            "court_zones.json"
+          ]
+        }
+      },
+      "tracking.player_selection_layer": {
+        "manifest": {
+          "disable_flag": "--no-player-selection",
+          "do_not_promote": true,
+          "enable_flag": "--player-selection",
+          "enabled": false,
+          "preselection_artifact": "tracks_preselection.json",
+          "registered_constants": {
+            "COURT_REGION_HARD_BOUND_M": 1.0,
+            "EXACTLY_FOUR_HARD_CAP": 4
+          },
+          "report_artifact": "selection_report.json",
+          "selected_artifact": "tracks.json",
+          "selective_reid_policy": {
+            "ambiguous_definition": "zero or two-plus candidate real detections inside the registered court region competing for a slot",
+            "policy": "ambiguous_frames_only",
+            "unambiguous_log": "reid_skipped_unambiguous",
+            "unavailable_policy": "typed_warning_and_nonzero_reid_unavailable_including_provider_absence"
+          },
+          "stage_order": 35,
+          "trust_band": "preview"
+        },
+        "resolved": {
+          "disable_flag": "--no-player-selection",
+          "do_not_promote": true,
+          "enable_flag": "--player-selection",
+          "enabled": true,
+          "preselection_artifact": "tracks_preselection.json",
+          "registered_constants": {
+            "COURT_REGION_HARD_BOUND_M": 1.0,
+            "EXACTLY_FOUR_HARD_CAP": 4
+          },
+          "report_artifact": "selection_report.json",
+          "selected_artifact": "tracks.json",
+          "selective_reid_policy": {
+            "ambiguous_definition": "zero or two-plus candidate real detections inside the registered court region competing for a slot",
+            "policy": "ambiguous_frames_only",
+            "unambiguous_log": "reid_skipped_unambiguous",
+            "unavailable_policy": "typed_warning_and_nonzero_reid_unavailable_including_provider_absence"
+          },
+          "stage_order": 35,
+          "trust_band": "preview"
+        }
+      }
+    },
+    "resolved": {
+      "ball.arc_chain": false,
+      "ball.detection_stride": 1,
+      "ball.wasb_checkpoint": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/wasb/wasb_tennis_best.pth.tar",
+      "ball.wasb_repo": "/home/arnavchokshi/coldstart_20260706/repo/third_party/WASB-SBDT",
+      "body.detector_fov": {
+        "detector_name": "",
+        "fov_checkpoint_model_id": "moge_2_vitl_normal",
+        "fov_checkpoint_required_when_fov_enabled": true,
+        "fov_name": ""
+      },
+      "body.experimental_body_array_native": true,
+      "body.placement_trajectory_refine": {
+        "artifact": "placement_trajectory_refined.json",
+        "config": "PlacementTrajectoryConfig schema_v1",
+        "enabled": true
+      },
+      "body.schedule": "serial",
+      "body.skeleton_stride": 1,
+      "camera_motion.policy": {
+        "disable_flag_default": true,
+        "enable_flag_default": false,
+        "estimator": "hardened",
+        "flow_backend": "lk",
+        "mode": "disabled",
+        "person_masks": true,
+        "threshold": 2.5
+      },
+      "confidence.calibration_curves": "/home/arnavchokshi/coldstart_20260706/repo/runs/waveb_confidence_gate_20260702T183158Z/calibration_curves.json",
+      "input_quality.preflight": {
+        "allowed_modes": [
+          "advisory",
+          "strict",
+          "off"
+        ],
+        "band_on_rejection": "degraded_input",
+        "mode": "strict",
+        "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+        "sampling": {
+          "sample_cadence_s": 1.0,
+          "sample_frame_count": 5
+        },
+        "thresholds": {
+          "max_duration_s": 900.0,
+          "max_luminance_mean": 0.98,
+          "max_missing_required_court_lines": 0,
+          "min_blur_laplacian_var": 25.0,
+          "min_camera_height_m": 1.0,
+          "min_duration_s": 1.0,
+          "min_fps": 30.0,
+          "min_full_court_corner_visibility_fraction": 1.0,
+          "min_height_px": 360,
+          "min_luminance_mean": 0.02,
+          "min_width_px": 640
+        }
+      },
+      "mesh.byte_budget_mib": 300.0,
+      "mesh.coverage_mode": "ball_aware",
+      "mesh.target_frame_budget": null,
+      "paddle.fused_estimator": {
+        "artifact": "racket_pose_estimate.json",
+        "enabled": false,
+        "source": "wrist_palm_grip_fused",
+        "trust_band": "estimated_preview"
+      },
+      "placement.undistort": true,
+      "stats.match_stats_v0": {
+        "artifact": "match_stats.json",
+        "consumer_only": true,
+        "enabled": false,
+        "excluded_inputs": [
+          "ball",
+          "paddle"
+        ],
+        "opt_out_flag": "--no-match-stats",
+        "required_inputs": [
+          "placement.json",
+          "court_zones.json"
+        ]
+      },
+      "tracking.association_court_margin": {
+        "candidate_flag": "association_court_margin_m",
+        "enabled": true,
+        "fallback_candidate_m": 0.5,
+        "margin_m": 1.0,
+        "rejected_arm_m": 2.0,
+        "strongest_arm_m": 1.0,
+        "surviving_arms_m": [
+          0.5,
+          1.0
+        ]
+      },
+      "tracking.global_association_profile": "owner_directed_margin1p0_osnet",
+      "tracking.player_selection_layer": {
+        "disable_flag": "--no-player-selection",
+        "do_not_promote": true,
+        "enable_flag": "--player-selection",
+        "enabled": true,
+        "preselection_artifact": "tracks_preselection.json",
+        "registered_constants": {
+          "COURT_REGION_HARD_BOUND_M": 1.0,
+          "EXACTLY_FOUR_HARD_CAP": 4
+        },
+        "report_artifact": "selection_report.json",
+        "selected_artifact": "tracks.json",
+        "selective_reid_policy": {
+          "ambiguous_definition": "zero or two-plus candidate real detections inside the registered court region competing for a slot",
+          "policy": "ambiguous_frames_only",
+          "unambiguous_log": "reid_skipped_unambiguous",
+          "unavailable_policy": "typed_warning_and_nonzero_reid_unavailable_including_provider_absence"
+        },
+        "stage_order": 35,
+        "trust_band": "preview"
+      },
+      "tracking.reid_model": "/home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/osnet_x1_0_market1501.pt"
+    }
+  },
+  "camera_motion_auto": {
+    "enabled": false,
+    "forced": "auto",
+    "probe_wall_seconds": 0.0,
+    "sampled_frame_count": 0,
+    "score": null,
+    "threshold": 2.5
+  },
+  "clip": "pbvision_11min_20260713_demo_seed",
+  "clip_dir": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed",
+  "degraded_reasons": [
+    {
+      "reasons": [
+        "unexpected ValueError: bound, unbound, and dropped raw UID sets must be disjoint",
+        "full traceback persisted to stage_errors/player_selection.json"
+      ],
+      "stage": "player_selection",
+      "status": "failed"
+    }
+  ],
+  "input_quality": {
+    "artifact_type": "racketsport_input_quality",
+    "band": "accepted_input",
+    "clip": "pbvision_11min_20260713_demo_seed",
+    "metrics": {
+      "court_visibility_angle": {
+        "available": true,
+        "below_acceptance": false,
+        "camera_height_m": 1.072675,
+        "court_corner_count": 4,
+        "full_court_corner_visibility_fraction": 1.0,
+        "image_size": [
+          1280,
+          720
+        ],
+        "missing_required_court_line_count": 0,
+        "source": "court_calibration.json+court_line_evidence.json",
+        "visible_corner_count": 4,
+        "visible_net_evidence_required": false
+      },
+      "duration_s": 697.4,
+      "fps": 30.0,
+      "frame_count": 20922,
+      "resolution": {
+        "height_px": 720,
+        "width_px": 1280
+      },
+      "video_quality": {
+        "blur_laplacian_var": 396.839766,
+        "luminance_max": 0.449038,
+        "luminance_mean": 0.447762,
+        "luminance_min": 0.446053,
+        "sampled_frame_count": 5,
+        "sampled_frame_indexes": [
+          0,
+          30,
+          60,
+          90,
+          120
+        ]
+      }
+    },
+    "mode": "strict",
+    "policy": {
+      "advisory_continues_downstream": false,
+      "nominal_fps_tolerance": "1000/1001 NTSC rate accepted",
+      "owner_policy_rejection_reason": "court_not_fully_visible_low_angle",
+      "required_court_evidence_scope": "floor_only",
+      "strict_fail_closes": true,
+      "structured_lock_reconciliation": "lock_eligible required; blur override limited to within five percent"
+    },
+    "rejection_reasons": [],
+    "sampling": {
+      "sample_cadence_s": 1.0,
+      "sample_frame_count": 5
+    },
+    "schema_version": 1,
+    "status": "accepted",
+    "strict": true,
+    "thresholds": {
+      "max_duration_s": 900.0,
+      "max_luminance_mean": 0.98,
+      "max_missing_required_court_lines": 0,
+      "min_blur_laplacian_var": 25.0,
+      "min_camera_height_m": 1.0,
+      "min_duration_s": 1.0,
+      "min_fps": 30.0,
+      "min_full_court_corner_visibility_fraction": 1.0,
+      "min_height_px": 360,
+      "min_luminance_mean": 0.02,
+      "min_width_px": 640
+    },
+    "video": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/input/source_video.mp4",
+    "warning_reasons": []
+  },
+  "missing_capabilities": [
+    {
+      "capability": "body",
+      "reason": "scheduled joint skeleton coverage is missing"
+    },
+    {
+      "capability": "assets",
+      "reason": "recursive replay assets are missing"
+    },
+    {
+      "capability": "trust_bands",
+      "reason": "trust bands artifact is missing"
+    },
+    {
+      "capability": "manifest",
+      "reason": "replay manifest is missing"
+    }
+  ],
+  "performance": {
+    "body_crops_per_second": null,
+    "body_inference_seconds": null,
+    "body_model_load_seconds": null,
+    "body_scheduled_player_crops": 246,
+    "gpu_resource_usage_source": "external_monitor_pending_or_unavailable",
+    "gpu_utilization_avg_pct": null,
+    "output_size_bytes": 1162934965,
+    "peak_vram_mb": null,
+    "seconds_per_video_second": 3.407881,
+    "total_wall_seconds": 2376.656,
+    "video_duration_s": 697.4
+  },
+  "pipeline_preset": "court_skeletons",
+  "run_dir": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out",
+  "schema_version": 1,
+  "stages": [
+    {
+      "artifacts": [
+        "source.mp4",
+        "frame_times.json",
+        "timebase_decode_evidence.json",
+        "timebase_contract.json"
+      ],
+      "metrics": {},
+      "notes": [
+        "ingested /home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/input/source_video.mp4 as source.mp4 (1280x720 @ 30.000fps)",
+        "wrote frame_times.json from ffprobe PTS",
+        "wrote schema-valid timebase_contract.json with exact ffprobe PTS and explicit frame availability"
+      ],
+      "stage": "ingest",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 46.599
+    },
+    {
+      "artifacts": [
+        "court_proposals.json",
+        "court_lock.json",
+        "court_lock_visualization_adapter.json",
+        "court_calibration.json",
+        "court_zones.json",
+        "net_plane.json",
+        "court_line_evidence.json"
+      ],
+      "metrics": {
+        "authority_state": "review_only",
+        "court_lock_source": "clearest_frame_point_and_line",
+        "line_evidence_ready": false,
+        "measurement_valid": false,
+        "pipeline_preset": "court_skeletons",
+        "supporting_frame_count": 8
+      },
+      "notes": [
+        "ran the selected structured court model over up to eight static frames without manual corners, sidecars, or prior calibration",
+        "accepted a static point-and-line court lock with recoverable pose",
+        "adapted the lock for visualization only; review_only, measurement_valid=false, VERIFIED=0"
+      ],
+      "stage": "calibration",
+      "status": "ran",
+      "trust_badge": "preview",
+      "wall_seconds": 36.899
+    },
+    {
+      "artifacts": [
+        "input_quality.json"
+      ],
+      "metrics": {
+        "input_quality": {
+          "band": "accepted_input",
+          "court_visibility_angle": {
+            "available": true,
+            "below_acceptance": false,
+            "camera_height_m": 1.072675,
+            "court_corner_count": 4,
+            "full_court_corner_visibility_fraction": 1.0,
+            "image_size": [
+              1280,
+              720
+            ],
+            "missing_required_court_line_count": 0,
+            "source": "court_calibration.json+court_line_evidence.json",
+            "visible_corner_count": 4,
+            "visible_net_evidence_required": false
+          },
+          "duration_s": 697.4,
+          "fps": 30.0,
+          "mode": "strict",
+          "rejection_reasons": [],
+          "resolution": {
+            "height_px": 720,
+            "width_px": 1280
+          },
+          "status": "accepted",
+          "strict": true,
+          "warning_reasons": []
+        }
+      },
+      "notes": [
+        "input_quality preflight accepted input for configured thresholds"
+      ],
+      "stage": "input_quality",
+      "status": "ran",
+      "trust_badge": null,
+      "wall_seconds": 0.283
+    },
+    {
+      "artifacts": [
+        "tracks.json",
+        "raw_tracked_detections.json",
+        "tracked_detections.json",
+        "metrics.json",
+        "global_association"
+      ],
+      "metrics": {
+        "person_detector": {
+          "conf_floor": 0.05,
+          "model_id": "yolo26m",
+          "native_input_size": 1536,
+          "override_source": "best_stack_default",
+          "person_class_id": 0,
+          "stack_entry_key": "tracking.person_detector",
+          "stack_entry_status": "WIRED_DEFAULT",
+          "stack_revision": 18,
+          "tracker_config": "/home/arnavchokshi/coldstart_20260706/repo/configs/racketsport/botsort_reid.yaml",
+          "tracker_config_source": "run_pipeline_argument"
+        },
+        "source_mode": "yolo26m_botsort_reid"
+      },
+      "notes": [
+        "ran real loose-pool tracking via threed.racketsport.orchestrator (returned source_mode='yolo26m_botsort_reid')",
+        "runtime manifest override: yolo26m declared checkpoint /home/arnavchokshi/pickleball_git/models/checkpoints/yolo26m.pt was missing on this host; using repo-local /home/arnavchokshi/coldstart_20260706/repo/models/checkpoints/yolo26m.pt",
+        "refined tracks.json with raw-pool global association (profile=owner_directed_margin1p0_osnet, osnet ReID + motion, device=cuda:0, batch=64, embedding_reuse=False, out_dir=/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed/global_association)"
+      ],
+      "stage": "tracking",
+      "status": "ran",
+      "trust_badge": "preview",
+      "wall_seconds": 1839.011
+    },
+    {
+      "artifacts": [
+        "stage_errors/player_selection.json"
+      ],
+      "metrics": {
+        "reason_code": "unexpected_stage_exception"
+      },
+      "notes": [
+        "unexpected ValueError: bound, unbound, and dropped raw UID sets must be disjoint",
+        "full traceback persisted to stage_errors/player_selection.json"
+      ],
+      "stage": "player_selection",
+      "status": "failed",
+      "trust_badge": null,
+      "wall_seconds": 448.698
+    }
+  ],
+  "status": "failed",
+  "trust_bands": {
+    "court": {
+      "badge": "preview",
+      "evidence_path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed/court_calibration.json",
+      "gate_id": "court_calibration_pck5px_gate",
+      "gate_status": "automatic_lock_review_only",
+      "reason": "Calibration comes from the fresh automatic structured court lock (clearest_frame_point_and_line) with intrinsics source=bounded_image_profile_prior. It remains review-only, measurement_valid=false, and VERIFIED=0; this is not a manual sidecar and is not measurement authority. Floor homography visualization is available, while absolute 3D pose and metric scale remain limited by the current intrinsics/distortion uncertainty.",
+      "stage": "CAL"
+    },
+    "track": {
+      "badge": "preview",
+      "evidence_path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/out/pbvision_11min_20260713_demo_seed/tracks.json",
+      "gate_id": "trk_idf1_gate",
+      "gate_status": "owner_directed_stack_selection_preview",
+      "reason": "Owner-directed margin-1.0m + OSNet stack selection is active, but the fresh-clip TRK gate has not passed (coverage remains below 0.95); preview only, VERIFIED=0.",
+      "stage": "TRK"
+    }
+  },
+  "video": {
+    "path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/input/source_video.mp4",
+    "sha256": "272a2132ce7c72ea31fe6351c9ea05ac3016bbbfed0a5801d9c3a973ec628383",
+    "size": 119911668,
+    "timing": {
+      "duration_s": 697.4,
+      "fps": 30.0,
+      "frame_count": 20922,
+      "height": 720,
+      "width": 1280
+    }
+  },
+  "video_path": "/home/arnavchokshi/coldstart_20260706/fullgame_demo_20260728/input/source_video.mp4",
+  "wall_seconds": 2376.656
+}
