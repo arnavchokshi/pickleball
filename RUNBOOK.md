@@ -1,6 +1,6 @@
 # Process Video Runbook
 
-Last updated: 2026-07-16.
+Last updated: 2026-07-28.
 
 `scripts/racketsport/process_video.py` is the current one-command pipeline for a
 video-to-scrubber bundle. It is the entrypoint future agents should start from
