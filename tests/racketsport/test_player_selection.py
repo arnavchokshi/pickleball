@@ -2495,6 +2495,144 @@ def test_layer_c_recovery_runs_end_to_end_and_consumes_uid_once() -> None:
     assert report["output_counts"]["recovered_real_detections"] == 1
 
 
+def test_layer_c_recovered_detection_from_later_hard_excluded_source_stays_dropped() -> (
+    None
+):
+    """Full-game-scale regression (`fullgame_selection_fix_20260728`).
+
+    Root cause reproduced on the real 20,922-frame pb.vision full-game run
+    (`runs/lanes/fullgame_selection_fix_20260728/recovered/`): Layer C
+    (`recover_identity_conditioned_pool`) can pull a single raw detection out
+    of an originally-unbound fragment into `used_uids`/`measured_by_slot` for
+    a slot's gap. If that detection's `source_track_id` is only later found
+    to be hard-excluded (its OTHER, far-away detections sit well outside the
+    registered court region), the hard-drop pass removes the UID from
+    `used_uids` again and correctly records it in the dropped set -- but the
+    unbound-fragment snapshot used to recompute `residual_uids` predates the
+    recovery, so without excluding already-dropped UIDs too, the same UID
+    would be resurrected as an unbound observation as well, violating the
+    bound/unbound/dropped disjointness invariant. This is rare on short
+    clips (it needs a gap-recovery candidate whose source track is later
+    hard-excluded) and only became reachable at full-game scale, where many
+    more gaps and many more hard-excluded spectator/implausible-motion
+    tracks coexist over 20k frames. This synthetic fixture reproduces the
+    exact mechanism at unit scale.
+    """
+    records, positions, embeddings = _four_slot_records(end_frame=30)
+    records.append(
+        {
+            "frame": 34,
+            "source": 1,
+            "xy": positions[1],
+            "embedding": embeddings[1],
+        }
+    )
+    # A 3-frame fragment shaped exactly like the one the existing
+    # `test_layer_c_recovery_runs_end_to_end_and_consumes_uid_once` test
+    # proves lands in `unbound_fragments` (not bound directly, not
+    # destructively dropped) and is then partially recovered by Layer C:
+    # only the frame-32 detection matches slot 1's gap; 31/33 sit at slot
+    # 2's position and are never accepted for any slot.
+    records.extend(
+        [
+            {
+                "frame": 31,
+                "source": 60,
+                "xy": positions[2],
+                "embedding": embeddings[1],
+            },
+            {
+                "frame": 32,
+                "source": 60,
+                "xy": positions[1],
+                "embedding": embeddings[1],
+            },
+            {
+                "frame": 33,
+                "source": 60,
+                "xy": positions[2],
+                "embedding": embeddings[1],
+            },
+        ]
+    )
+    # Source 60's OTHER lifetime detections are far off-court (well beyond
+    # COURT_REGION_HARD_BOUND_M), so registered_hard_constraint_exclusions
+    # marks source 60 hard-excluded even though the frame-32 detection above
+    # is plausible in isolation and gets soft-recovered by Layer C.
+    for offset, frame_idx in enumerate((200, 201, 202)):
+        records.append(
+            {
+                "frame": frame_idx,
+                "source": 60,
+                "xy": (40.0 + offset, 40.0),
+                "embedding": embeddings[1],
+            }
+        )
+    raw_pool, embedding_payload = _raw_selection_inputs(records)
+
+    selected, report = select_players_payload(
+        _empty_tracks(),
+        raw_pool_payload=raw_pool,
+        embedding_payload=embedding_payload,
+        calibration=_identity_calibration(),
+        enabled=True,
+    )
+
+    decisions = report["decisions"]
+    hard_rows = [
+        row
+        for row in decisions
+        if isinstance(row, dict)
+        and row.get("action") == "hard_exclude_court_region"
+        and row.get("source_track_id") == 60
+    ]
+    assert hard_rows
+    assert hard_rows[0]["median_real_footpoint_court_excess_m"] > COURT_REGION_HARD_BOUND_M
+
+    recovered = [
+        decision for decision in decisions if decision.get("action") == "recover_real"
+    ]
+    assert any(row["frame_idx"] == 32 for row in recovered), (
+        "fixture must exercise Layer C recovery at frame 32, or this test is "
+        "not reproducing the bug's mechanism"
+    )
+
+    hard_drop_rows = [
+        row
+        for row in decisions
+        if row.get("action") == "hard_drop_bound_detection"
+        and row.get("source_track_id") == 60
+    ]
+    assert len(hard_drop_rows) == 1
+    dropped_uid = hard_drop_rows[0]["raw_detection_uid"]
+
+    # The recovered-then-hard-excluded detection must end up counted exactly
+    # once, in the dropped set only -- never left bound, and never also
+    # resurrected as an unbound observation (the disjointness bug).
+    slot_one = next(
+        player
+        for player in selected["players"]
+        if (player["side"], player["role"]) == ("near", "left")
+    )
+    assert all(frame["frame_idx"] != 32 for frame in slot_one["frames"])
+
+    unbound_uids = {
+        uid
+        for observation in selected["unbound_observations"]
+        for uid in observation.get("raw_detection_uids", [])
+    }
+    assert dropped_uid not in unbound_uids
+
+    bound_uids = {
+        uid
+        for row in report["tracks"]
+        if row.get("selection_state") == "bound_slot"
+        for uid in row.get("raw_detection_uids", [])
+    }
+    assert dropped_uid not in bound_uids
+    assert report["output_counts"]["dropped_real_detections"] >= 1
+
+
 def test_ambiguous_real_gap_observation_is_preserved_and_vetoes_synthesis() -> None:
     records, positions, embeddings = _four_slot_records(end_frame=30)
     records.append(

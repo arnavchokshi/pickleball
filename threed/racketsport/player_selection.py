@@ -3562,7 +3562,32 @@ def _select_slot_players(
             }
         )
 
-    residual_unbound = _residual_fragments(unbound_fragments, excluded_uids=used_uids)
+    dropped_uids = {
+        _required_raw_uid(detection)
+        for fragment in dropped_fragments
+        for detection in fragment.detections
+    }
+    dropped_uids.update(hard_dropped_uids)
+
+    # Layer C (`recover_identity_conditioned_pool`) can pull a raw detection
+    # out of an originally-unbound fragment and into `used_uids`/
+    # `measured_by_slot` for some slot. If that same detection's
+    # `source_track_id` is then found to be hard-excluded, the hard-drop pass
+    # above removes its UID from `used_uids` again (and records it in
+    # `dropped_uids` via `hard_dropped_uids`) without ever mutating
+    # `unbound_fragments`, which still holds the pre-recovery fragment. If
+    # the residual/unbound recomputation below excluded only `used_uids`, a
+    # recovered-then-hard-dropped UID would be resurrected as unbound from
+    # that stale snapshot while also already being counted in `dropped_uids`
+    # -- violating the bound/unbound/dropped disjointness invariant. This is
+    # rare on short clips (it needs a gap-recovery candidate whose source
+    # track is later hard-excluded) and became reachable at full-game scale
+    # (many more gaps and hard-excluded spectator/implausible-motion tracks
+    # over 20k frames). Excluding `dropped_uids` too keeps such a UID solely
+    # in the dropped set.
+    residual_unbound = _residual_fragments(
+        unbound_fragments, excluded_uids=used_uids | dropped_uids
+    )
     unbound_observations, unbound_track_rows = _unbound_observations(
         residual_unbound,
         excluded_uids=set(),
@@ -3587,12 +3612,6 @@ def _select_slot_players(
             ]
             decision["output_unbound_observation_ids"] = output_ids
 
-    dropped_uids = {
-        _required_raw_uid(detection)
-        for fragment in dropped_fragments
-        for detection in fragment.detections
-    }
-    dropped_uids.update(hard_dropped_uids)
     residual_uids = {
         uid for row in unbound_track_rows for uid in row["raw_detection_uids"]
     }

@@ -10227,4 +10227,24 @@ def main(argv: Sequence[str] | None = None) -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    # `main()` itself already returns promptly on both success and stage
+    # failure (it writes the summary/stage-error artifacts and returns) --
+    # left as `raise SystemExit(main())`, prior CLI runs were observed to
+    # sit alive for hours afterward with a flat, already-final summary
+    # (fullgame_demo_20260728: player_selection failed and its typed error
+    # artifact was written within the reported wall_seconds, but the process
+    # was still alive per `pgrep` ~2.5h later with no further progress,
+    # until an unrelated poweroff rail killed the VM). That gap is normal
+    # Python interpreter shutdown (atexit hooks, GC of any native/GPU
+    # objects still referenced) running *after* `main()` returns, which is
+    # not bounded by anything in this module's control flow and became
+    # newly reachable at full-game (20k-frame) scale. Do not rely on it
+    # being prompt: flush explicitly and hard-exit the process instead of
+    # letting normal shutdown decide when we actually terminate. This only
+    # applies to the real CLI entry point -- in-process callers (tests call
+    # `process_video.main(...)` directly and expect an ordinary return
+    # value) are unaffected, since they never reach this guard.
+    _exit_code = main()
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(_exit_code)
