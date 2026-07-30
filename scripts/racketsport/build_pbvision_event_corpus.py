@@ -17,6 +17,7 @@ import json
 import math
 import statistics
 import subprocess
+import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
@@ -758,6 +759,68 @@ def assign_source_splits(
     return assignment
 
 
+def _load_split_manifest_override(split_manifest: Path) -> dict[str, str]:
+    """Load and validate a frozen ledger split override.
+
+    ``assign_source_splits`` derives its own seed-hashed train/val/test split
+    from whatever sources happen to be eligible in a given input root. That
+    self-computed split has no relationship to the authoritative ledger
+    partition (``runs/manager/data_ledger.json``) and can silently disagree
+    with it -- which is exactly what happened: it assigned ledger-VAL videos
+    to TRAIN and ledger-TRAIN videos to test/val. This override lets a caller
+    hand in the frozen split explicitly instead of trusting the self-computed
+    one.
+
+    The override file uses the same rows schema, and is validated with the
+    exact same function, that ``build_pbvision_ball_sst.py`` uses for its own
+    ``--split-manifest``: ``_validate_frozen_split``. Reusing that function
+    (rather than re-implementing equivalent checks here) is what makes drift
+    between the two builders' notions of the frozen ten pb.vision source ids
+    structurally impossible instead of merely tested-for.
+    """
+
+    try:
+        # Mirrors the sys.path bootstrap build_pbvision_ball_sst.py and
+        # build_abc_arm_manifests.py already use for their own ROOT-relative
+        # imports: when this file runs as a standalone CLI (rather than
+        # under pytest's `pythonpath = ["."]`), ROOT is not on sys.path yet.
+        if str(ROOT) not in sys.path:
+            sys.path.insert(0, str(ROOT))
+        from scripts.racketsport.build_pbvision_ball_sst import (
+            BallSstBuildError as _SstBallSstBuildError,
+        )
+        from scripts.racketsport.build_pbvision_ball_sst import (
+            COMPARE_ONLY_IDS as _SST_COMPARE_ONLY_IDS,
+        )
+        from scripts.racketsport.build_pbvision_ball_sst import (
+            _validate_frozen_split as _sst_validate_frozen_split,
+        )
+    except ImportError as exc:
+        raise CorpusBuildError(
+            "--split-manifest requires scripts/racketsport/build_pbvision_ball_sst.py "
+            f"to import cleanly (it is the frozen-split single source of truth): {exc}"
+        ) from exc
+
+    # This builder's own compare-only denylist must agree with the SST
+    # builder's before any override row is trusted; otherwise a compare-only
+    # id absent from one list but present in the other could slip through.
+    if frozenset(COMPARE_ONLY_HOLDOUTS) != frozenset(_SST_COMPARE_ONLY_IDS):
+        raise CorpusBuildError(
+            "compare-only id drift between build_pbvision_event_corpus.py "
+            f"COMPARE_ONLY_HOLDOUTS={sorted(COMPARE_ONLY_HOLDOUTS)} and "
+            f"build_pbvision_ball_sst.COMPARE_ONLY_IDS={sorted(_SST_COMPARE_ONLY_IDS)}"
+        )
+
+    payload = _load_json(split_manifest)
+    try:
+        _sst_validate_frozen_split(payload, split_manifest)
+    except _SstBallSstBuildError as exc:
+        raise CorpusBuildError(f"split-manifest override rejected: {exc}") from exc
+
+    rows = payload["rows"]
+    return {str(row["video"]): str(row["split"]) for row in rows}
+
+
 def _window_starts(num_frames: int, *, window_frames: int, stride_frames: int) -> list[int]:
     tail_start = max(0, num_frames - window_frames)
     starts = list(range(0, tail_start + 1, stride_frames))
@@ -917,13 +980,28 @@ def build_corpus(
     seed: int = DEFAULT_SEED,
     window_frames: int = DEFAULT_WINDOW_FRAMES,
     stride_frames: int = DEFAULT_WINDOW_STRIDE,
+    split_manifest: Path | None = None,
 ) -> tuple[
     dict[str, Any], dict[str, Any], list[dict[str, Any]], list[dict[str, Any]]
 ]:
-    """Build raw staging manifest, report, eligible context, compare-only context."""
+    """Build raw staging manifest, report, eligible context, compare-only context.
+
+    ``split_manifest``, when given, is a frozen-split override that replaces
+    ``assign_source_splits()`` entirely -- see ``_load_split_manifest_override``.
+    It is validated before any gallery or source file is read, so a
+    compare-only id named in the override is refused immediately regardless
+    of whether ``input_root`` exists or is readable. When ``split_manifest``
+    is ``None`` (the default), behavior is unchanged from before this option
+    existed: the seed-hashed self-computed split is used.
+    """
 
     if window_frames < 1 or stride_frames < 1:
         raise CorpusBuildError("window_frames and stride_frames must be positive")
+    split_override = (
+        _load_split_manifest_override(split_manifest)
+        if split_manifest is not None
+        else None
+    )
     manifest_entries, gallery_manifest_sha256 = _gallery_entries(input_root)
     export_paths = sorted(input_root.glob("*/cv_export.json"))
     if not export_paths:
@@ -942,9 +1020,21 @@ def build_corpus(
         raise CorpusBuildError("duplicate video ids in input")
 
     eligible = [item for item in parsed_videos if item.video_id not in COMPARE_ONLY_HOLDOUTS]
-    split_assignment = assign_source_splits(
-        {item.video_id: item.source_lineage_key for item in eligible}, seed=seed
-    )
+    if split_override is not None:
+        eligible_ids = {item.video_id for item in eligible}
+        override_ids = set(split_override)
+        missing = sorted(eligible_ids - override_ids)
+        extra = sorted(override_ids - eligible_ids)
+        if missing or extra:
+            raise CorpusBuildError(
+                "split-manifest override must exactly cover the eligible source "
+                f"videos discovered under {input_root}; missing={missing} extra={extra}"
+            )
+        split_assignment = dict(split_override)
+    else:
+        split_assignment = assign_source_splits(
+            {item.video_id: item.source_lineage_key for item in eligible}, seed=seed
+        )
     rows: list[dict[str, Any]] = []
     contexts: list[dict[str, Any]] = []
     compare_contexts: list[dict[str, Any]] = []
@@ -1093,6 +1183,13 @@ def build_corpus(
         },
         "rows": rows,
     }
+    if split_manifest is not None:
+        # Additive only: when split_manifest is None this key never exists,
+        # so absent-override output is byte-identical to pre-override output.
+        manifest["config"]["split_manifest_override"] = {
+            "path": _portable_path(split_manifest),
+            "sha256": _sha256_file(split_manifest),
+        }
     row_ids = {row["source_video"] for row in rows}
     holdouts = [
         {
@@ -1483,6 +1580,20 @@ def main() -> int:
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
     parser.add_argument("--window-frames", type=int, default=DEFAULT_WINDOW_FRAMES)
     parser.add_argument("--stride-frames", type=int, default=DEFAULT_WINDOW_STRIDE)
+    parser.add_argument(
+        "--split-manifest",
+        type=Path,
+        default=None,
+        help=(
+            "Optional frozen ledger split override, same rows schema (and "
+            "same _validate_frozen_split semantics) as "
+            "build_pbvision_ball_sst.py --split-manifest. When given, "
+            "replaces assign_source_splits() entirely and must cover exactly "
+            "the frozen ten pb.vision source ids in their frozen roles. When "
+            "omitted, behavior is unchanged: the seed-hashed self-computed "
+            "split is used."
+        ),
+    )
     args = parser.parse_args()
     try:
         built = build_corpus(
@@ -1492,6 +1603,7 @@ def main() -> int:
             seed=args.seed,
             window_frames=args.window_frames,
             stride_frames=args.stride_frames,
+            split_manifest=args.split_manifest,
         )
         manifest = built[0]
         hashes = write_corpus_artifacts(args.output_dir, *built)

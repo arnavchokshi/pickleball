@@ -9,6 +9,20 @@ from typing import Any, Iterable
 import cv2
 import pytest
 
+from scripts.racketsport.build_abc_arm_manifests import (
+    COMPARE_ONLY_HOLDOUTS as ABC_ARM_COMPARE_ONLY_HOLDOUTS,
+)
+from scripts.racketsport.build_abc_arm_manifests import (
+    _validate_teacher_manifest,
+)
+from scripts.racketsport.build_pbvision_ball_sst import (
+    COMPARE_ONLY_IDS as SST_COMPARE_ONLY_IDS,
+)
+from scripts.racketsport.build_pbvision_ball_sst import (
+    TEACHER_TEST_ONLY_IDS,
+    TEACHER_VAL_ONLY_IDS,
+    TRAIN_IDS,
+)
 from scripts.racketsport.build_pbvision_event_corpus import (
     ABC_WEIGHTING_POLICY,
     BUILDER_PATH,
@@ -35,6 +49,12 @@ FRAME_TIMES = (
     "xkadsq9bli3h/frame_times.json"
 )
 CLI = "scripts/racketsport/build_pbvision_event_corpus.py"
+# This is the real, already-committed frozen split manifest that
+# build_pbvision_ball_sst.py itself pins as FROZEN_SPLIT_RELATIVE_PATH /
+# FROZEN_SPLIT_SHA256. Reusing it here (rather than a synthetic fixture)
+# proves the override works against the actual authoritative artifact, not
+# just a look-alike.
+FROZEN_SPLIT_MANIFEST = ROOT / "runs/lanes/pbv_pickleball_corpus_20260720/manifest.json"
 
 
 def _sha256(path: Path) -> str:
@@ -515,3 +535,215 @@ def test_build_and_artifacts_are_byte_deterministic(tmp_path: Path) -> None:
     assert json.loads(completed.stdout)["training_ready"] is False
     for name in expected_names:
         assert (cli_output / name).read_bytes() == (output_a / name).read_bytes()
+
+
+# ---------------------------------------------------------------------------
+# --split-manifest frozen-ledger override
+#
+# assign_source_splits() derives its own seed-hashed train/val/test split
+# from whichever sources happen to be eligible. Against the real gallery that
+# self-computed split disagrees with the authoritative ledger partition: it
+# puts ledger-VAL ids pldtjpw3h0jw/utasf5hnozwz into TRAIN and demotes
+# ledger-TRAIN ids bewqc0glhgpq/tqjlrcntpjvt out of TRAIN. These tests pin
+# down the override that replaces it, and prove the refusal that originally
+# caught the mismatch downstream in build_abc_arm_manifests.py still fires.
+# ---------------------------------------------------------------------------
+
+
+def _frozen_role_assignment() -> dict[str, str]:
+    assignment = {video_id: "train" for video_id in TRAIN_IDS}
+    assignment.update({video_id: "val" for video_id in TEACHER_VAL_ONLY_IDS})
+    assignment.update({video_id: "test" for video_id in TEACHER_TEST_ONLY_IDS})
+    return assignment
+
+
+def _write_split_manifest(path: Path, assignment: dict[str, str]) -> Path:
+    path.write_text(json.dumps({
+        "rows": [
+            {"video": video_id, "source_video": video_id, "split": split}
+            for video_id, split in assignment.items()
+        ],
+    }))
+    return path
+
+
+def test_split_manifest_override_replaces_self_computed_split_with_ledger_roles() -> None:
+    manifest, _, _, _ = build_corpus(GALLERY_ROOT, split_manifest=FROZEN_SPLIT_MANIFEST)
+    by_id = {row["source_video"]: row["split"] for row in manifest["rows"]}
+
+    for video_id in TRAIN_IDS:
+        assert by_id[video_id] == "train"
+    for video_id in TEACHER_VAL_ONLY_IDS:
+        assert by_id[video_id] == "val"
+    for video_id in TEACHER_TEST_ONLY_IDS:
+        assert by_id[video_id] == "test"
+
+    # Prove the override actually overrode something: the self-computed split
+    # for this real gallery disagrees with the ledger for exactly the ids the
+    # original defect flipped.
+    self_computed = assign_source_splits(
+        {row["source_video"]: row["source_lineage_key"] for row in manifest["rows"]},
+        seed=20260720,
+    )
+    assert self_computed["pldtjpw3h0jw"] == "train"
+    assert self_computed["bewqc0glhgpq"] == "test"
+    assert self_computed != by_id
+
+    assert manifest["config"]["split_manifest_override"] == {
+        "path": "runs/lanes/pbv_pickleball_corpus_20260720/manifest.json",
+        "sha256": _sha256(FROZEN_SPLIT_MANIFEST),
+    }
+
+
+def test_frozen_split_manifest_fixture_matches_sst_builders_pinned_identity() -> None:
+    # Sanity check on the fixture itself: build_pbvision_ball_sst.py pins this
+    # exact file's SHA-256 as FROZEN_SPLIT_SHA256. If the committed file ever
+    # changes without updating that constant, both builders' tests should
+    # fail loudly rather than silently validating against a stale artifact.
+    from scripts.racketsport.build_pbvision_ball_sst import FROZEN_SPLIT_SHA256
+
+    assert _sha256(FROZEN_SPLIT_MANIFEST) == FROZEN_SPLIT_SHA256
+
+
+def test_cli_accepts_split_manifest_and_applies_ledger_split(tmp_path: Path) -> None:
+    cli_output = tmp_path / "cli_split_output"
+    completed = subprocess.run(
+        [
+            str(ROOT / ".venv/bin/python"),
+            CLI,
+            "--input-root", str(GALLERY_ROOT),
+            "--media-root", str(tmp_path / "absent_media"),
+            "--frame-times-root", str(tmp_path / "absent_frame_times"),
+            "--output-dir", str(cli_output),
+            "--seed", "20260720",
+            "--split-manifest", str(FROZEN_SPLIT_MANIFEST),
+        ],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    manifest = json.loads((cli_output / "manifest.json").read_text())
+    by_id = {row["source_video"]: row["split"] for row in manifest["rows"]}
+    for video_id in TRAIN_IDS:
+        assert by_id[video_id] == "train"
+    for video_id in TEACHER_VAL_ONLY_IDS:
+        assert by_id[video_id] == "val"
+    for video_id in TEACHER_TEST_ONLY_IDS:
+        assert by_id[video_id] == "test"
+
+
+def test_split_manifest_absent_is_byte_identical_to_pre_override_behavior(
+    tmp_path: Path,
+) -> None:
+    gallery = _fixture_gallery(tmp_path / "gallery")
+    without_kwarg = build_corpus(gallery, media_root=None, frame_times_root=None, seed=20260720)
+    with_explicit_none = build_corpus(
+        gallery, media_root=None, frame_times_root=None, seed=20260720, split_manifest=None
+    )
+    assert without_kwarg == with_explicit_none
+
+    manifest, _, _, _ = without_kwarg
+    assert "split_manifest_override" not in manifest["config"]
+    expected_assignment = assign_source_splits(
+        {row["source_video"]: row["source_lineage_key"] for row in manifest["rows"]},
+        seed=20260720,
+    )
+    assert {row["source_video"]: row["split"] for row in manifest["rows"]} == expected_assignment
+
+
+def test_split_manifest_override_refuses_compare_only_alias_before_any_source_read(
+    tmp_path: Path,
+) -> None:
+    compare_only_id = sorted(SST_COMPARE_ONLY_IDS)[0]
+    split_manifest = _write_split_manifest(
+        tmp_path / "split.json",
+        {**_frozen_role_assignment(), compare_only_id: "train"},
+    )
+    # Also swap a legitimate id's row out for the compare-only id under an
+    # alias key, matching _validate_frozen_split's alias-scan shape.
+    payload = json.loads(split_manifest.read_text())
+    payload["rows"] = [
+        row for row in payload["rows"] if row["video"] != TRAIN_IDS[0]
+    ]
+    payload["rows"].append(
+        {"video": compare_only_id, "source_video": compare_only_id, "clip_id": compare_only_id, "split": "train"}
+    )
+    split_manifest.write_text(json.dumps(payload))
+
+    bogus_input_root = tmp_path / "this_input_root_does_not_exist"
+    with pytest.raises(CorpusBuildError, match="compare-only alias"):
+        build_corpus(bogus_input_root, split_manifest=split_manifest)
+
+
+def test_split_manifest_override_refuses_wrong_frozen_role_assignment(tmp_path: Path) -> None:
+    # Reproduce the exact real defect this override exists to prevent: a
+    # ledger-VAL id relabeled TRAIN and a ledger-TRAIN id relabeled VAL. The
+    # refusal that originally caught this mismatch downstream must still
+    # fire -- now directly in the corpus builder, before the buggy split
+    # can ever reach build_abc_arm_manifests.py.
+    assignment = _frozen_role_assignment()
+    assignment[TEACHER_VAL_ONLY_IDS[0]] = "train"
+    assignment[TRAIN_IDS[0]] = "val"
+    split_manifest = _write_split_manifest(tmp_path / "split.json", assignment)
+
+    with pytest.raises(CorpusBuildError, match="violates frozen source roles"):
+        build_corpus(GALLERY_ROOT, split_manifest=split_manifest)
+
+
+def test_split_manifest_override_refuses_incomplete_frozen_id_set(tmp_path: Path) -> None:
+    assignment = _frozen_role_assignment()
+    del assignment[TRAIN_IDS[-1]]
+    split_manifest = _write_split_manifest(tmp_path / "split.json", assignment)
+
+    with pytest.raises(CorpusBuildError, match="frozen ten"):
+        build_corpus(GALLERY_ROOT, split_manifest=split_manifest)
+
+
+def test_split_manifest_override_refuses_id_set_disagreeing_with_local_gallery(
+    tmp_path: Path,
+) -> None:
+    # The frozen ten is internally consistent, but if the local gallery's
+    # eligible videos are not exactly that set, the override must not be
+    # silently applied to a mismatched population.
+    gallery = _fixture_gallery(tmp_path / "gallery")
+    split_manifest = _write_split_manifest(tmp_path / "split.json", _frozen_role_assignment())
+
+    with pytest.raises(CorpusBuildError, match="must exactly cover the eligible source"):
+        build_corpus(gallery, media_root=None, frame_times_root=None, split_manifest=split_manifest)
+
+
+def test_compare_only_holdouts_agree_with_sst_builder_frozen_ids() -> None:
+    # build_pbvision_ball_sst.py's COMPARE_ONLY_IDS is the frozen source of
+    # truth the override validator (_validate_frozen_split) checks against.
+    # If this builder's own denylist ever drifts from it, a compare-only id
+    # could be silently accepted or rejected inconsistently between the two
+    # builders. This is a standing regression guard, independent of whether
+    # --split-manifest is ever used.
+    assert frozenset(COMPARE_ONLY_HOLDOUTS) == frozenset(SST_COMPARE_ONLY_IDS)
+
+
+def test_abc_arm_compare_only_holdouts_agree_with_sst_builder_frozen_ids() -> None:
+    assert frozenset(ABC_ARM_COMPARE_ONLY_HOLDOUTS) == frozenset(SST_COMPARE_ONLY_IDS)
+
+
+def test_split_manifest_override_makes_abc_arm_consume_ledger_train_rows() -> None:
+    # build_abc_arm_manifests.py never recomputes or validates splits itself
+    # -- _validate_teacher_manifest simply trusts row["split"] as written by
+    # the corpus builder. That makes it correct by construction once the
+    # corpus builder's split is correct, and it means there is no second
+    # split opinion anywhere downstream to keep in sync.
+    overridden_manifest, _, _, _ = build_corpus(
+        GALLERY_ROOT, split_manifest=FROZEN_SPLIT_MANIFEST
+    )
+    rows = _validate_teacher_manifest(overridden_manifest)
+    assert {row["source_video"] for row in rows} == set(TRAIN_IDS)
+
+    # Without the override, abc-arm would have silently ingested the wrong
+    # train population -- the original defect this override closes.
+    buggy_manifest, _, _, _ = build_corpus(GALLERY_ROOT)
+    buggy_train_ids = {
+        row["source_video"] for row in buggy_manifest["rows"] if row["split"] == "train"
+    }
+    assert buggy_train_ids != set(TRAIN_IDS)
